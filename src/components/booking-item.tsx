@@ -1,18 +1,18 @@
 import { useFormatCurrency } from "@/hooks/use-format-currency"
-import { HandCoins, Wallet, Landmark, PiggyBank, Pencil } from 'lucide-react'
+import { HandCoins, Wallet, Landmark, PiggyBank, Pencil, type LucideIcon } from 'lucide-react'
 import Link from "next/link"
 
 export default function BookingItem({
-  key, id, teamName, date, status, category, description, amount, onRemoved
+  key, id, teamName, date, amount, status = 'confirmed'
 }: {
-  id: string;
-  type: 'confirmed' | 'pending' | 'waitlisted' | 'cancelled';
-  category?: string;
-  description: string;
+  key: string;
+        id: string;
+  status?: 'confirmed' | 'pending' | 'waitlisted' | 'cancelled';
+  teamName?: string;
+  date?: string;
   amount: number;
-  onRemoved: (id: string) => void;
 }) {
-  const statusMap = {
+  const statusMap: Record<'confirmed'|'pending'|'waitlisted'|'cancelled', { icon: LucideIcon; colors: string }> = {
     'confirmed': {
       icon: HandCoins,
       colors: 'text-green-500 dark:text-green-400'
@@ -30,18 +30,17 @@ export default function BookingItem({
       colors: 'text-yellow-500 dark:text-yellow-400'
     }
   }
-  const IconComponent = statusMap[status].icon
-    const colors = statusMap[status].colors
+  const { icon: IconComponent, colors } = statusMap[status]
     const formattedAmount = useFormatCurrency(amount)
 
   return (<div className="w-full flex items-center">
     <div className="flex items-center mr-4 grow">
       <IconComponent className={`${colors} mr-2 w-4 h-4 hidden sm:block`} />
-      <span>{description}</span>
+      <span>{teamName}</span>
     </div>
 
     <div className="min-w-37.5 items-center hidden md:flex">
-      {category && <div className="rounded-md text-xs bg-gray-700 dark:bg-gray-100 text-gray-100 dark:text-black px-2 py-0.5">{category}</div>}
+      {date && <div className="rounded-md text-xs bg-gray-700 dark:bg-gray-100 text-gray-100 dark:text-black px-2 py-0.5">{date}</div>}
     </div>
 
     <div className="min-w-17.5 text-right">{formattedAmount}</div>
