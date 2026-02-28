@@ -55,22 +55,21 @@ export default async function BookingList() {
             full_name,
             email,
             country_code,
-            phone_no,
+            phone_no
           ),
           events(
             event_date: date,
             event_title: title,
             description,
-            event_types_id,
             event_types(
               category: type,
-              sub_type,
-            ),
-          ),
+              sub_type
+            )
+          )
         `)
         .order('created_at', { ascending: true });
     
-    console.log(bookings)
+    console.log(JSON.stringify(bookings, null, 2));
 
     if (error || !bookings) {
         return <div>Failed to load bookings</div>
