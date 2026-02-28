@@ -22,7 +22,7 @@ interface ContactRow {
 }
 
 interface RawBooking {
-    booking_id: string;
+    id: string;
     event_id?: string;
     group_name?: string;
     team_id?: string;
@@ -41,7 +41,7 @@ export default async function BookingList() {
     const { data: bookings, error } = await supabase
         .from('bookings')
         .select(`
-          booking_id: id,
+          id,
           event_id,
           group_name,
           team_id,
@@ -68,7 +68,7 @@ export default async function BookingList() {
             ),
           ),
         `)
-        .order('booking_id', { ascending: true });
+        .order('created_at', { ascending: true });
     
     console.log(bookings)
 
@@ -91,8 +91,8 @@ export default async function BookingList() {
                 
                  return (
                    <BookingItem 
-                     key={booking.booking_id}
-                     id={booking.booking_id}
+                     key={booking.id}
+                     id={booking.id}
                      teamName={booking.group_name ?? ""}
                      date={eventDate}
                      amount={teamSize * 2}
