@@ -3,7 +3,7 @@ import { HandCoins, Wallet, Landmark, PiggyBank, Pencil } from 'lucide-react'
 import Link from "next/link"
 
 export default function BookingItem({
-  id, type, category, description, amount, onRemoved
+  key, id, teamName, date, status, category, description, amount, onRemoved
 }: {
   id: string;
   type: 'confirmed' | 'pending' | 'waitlisted' | 'cancelled';
@@ -30,8 +30,8 @@ export default function BookingItem({
       colors: 'text-yellow-500 dark:text-yellow-400'
     }
   }
-  const IconComponent = statusMap[type].icon
-    const colors = statusMap[type].colors
+  const IconComponent = statusMap[status].icon
+    const colors = statusMap[status].colors
     const formattedAmount = useFormatCurrency(amount)
 
   return (<div className="w-full flex items-center">
