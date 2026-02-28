@@ -7,7 +7,7 @@ export default async function QuizBookingPage() {
     const client = createClient()
 
   console.log(
-    await client.from('bookings').select()
+    (await client).from('bookings').select()
   )
 
   return (
