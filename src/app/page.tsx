@@ -5,9 +5,11 @@ import { Sheet, SheetContent,SheetHeader, SheetTitle } from "@/components/ui/she
 import BookingForm from "./(public)/_components/booking-form";
 
 
+
 export default function HomePage() {
   const [openAuthSheet, setOpenAuthSheet] = React.useState(false);
 
+    
   return (
     <div className="flex flex-col">
       <div className="bg-primary px-20 py-5 flex justify-between items-center">

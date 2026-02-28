@@ -1,8 +1,15 @@
 import React from 'react'
 import BookingForm from "../_components/booking-form"; // Note: Adjust this import if your component is not the default export
 import { Calendar, Clock, MapPin, Users, Beer } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
-export default function QuizBookingPage() {
+export default async function QuizBookingPage() {
+    const client = createClient()
+
+  console.log(
+    await client.from('bookings').select()
+  )
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 py-12 px-4 sm:px-6 lg:px-8">
       
@@ -12,7 +19,7 @@ export default function QuizBookingPage() {
           <Beer className="w-8 h-8 text-amber-600" />
         </div>
         <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
-          The Local Tavern Quiz Night
+          Don Fentica&apos;s Quiz Night
         </h1>
         <p className="mt-4 text-lg text-slate-600">
           Test your knowledge, drink great beer, and win the £100 bar tab. Tables fill up fast!
@@ -54,8 +61,8 @@ export default function QuizBookingPage() {
               <div className="flex items-start">
                 <MapPin className="w-5 h-5 text-amber-500 mt-0.5 mr-4" />
                 <div>
-                  <p className="font-medium text-slate-900">The Local Tavern</p>
-                  <p className="text-sm text-slate-500">123 Pub Street, London</p>
+                  <p className="font-medium text-slate-900">Don Fentica&apos;s</p>
+                  <p className="text-sm text-slate-500">1 Regent Street, Hinckley</p>
                 </div>
               </div>
             </div>

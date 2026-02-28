@@ -1,4 +1,5 @@
-"use client"
+"use client";
+
 import React, { useState } from "react";
 import { CheckCircle, ChevronRight, CalendarDays } from "lucide-react";
 
@@ -102,6 +103,7 @@ export default function BookingForm() {
                     name="quizDate"
                     required
                     min={minDate}
+                    suppressHydrationWarning
                     value={formData.quizDate}
                     onChange={handleDateChange}
                     className="w-full bg-white border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
