@@ -1,6 +1,6 @@
 import React from 'react'
 import BookingForm from "../_components/booking-form"; // Note: Adjust this import if your component is not the default export
-import { Calendar, Clock, MapPin, Users, Beer } from "lucide-react";
+import { Calendar, Clock, MapPin, Users } from "lucide-react";
 
 export const metadata = {
   title: 'Book a Quiz | Bar App',
@@ -10,79 +10,70 @@ export const metadata = {
 export default async function QuizBookingPage() {
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] text-slate-900 flex items-center justify-center py-12 px-4 sm:p-6 md:p-8 lg:p-12">
-      <div className="w-full max-w-6xl bg-[#26300D] rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden border border-gray-100 flex flex-col transition-all duration-300">
-
+    <main className="min-h-screen bg-[#26300D] text-[#fdcc4b] py-8 px-4 sm:px-6 lg:px-8 selection:bg-[#fdcc4b] selection:text-[#26300D]">
+      <div className="max-w-2xl mx-auto">
+        
         {/* Header Section */}
-        <div className="max-w-2xl mx-auto text-center mb-4">
-          <div className="inline-flex items-center justify-center p-3 bg-amber-100 rounded-full mb-4">
-            <Beer className="w-8 h-8 text-amber-600" />
+        <div className="flex flex-col sm:flex-row items-center justify-center sm:text-left text-center mb-8 gap-4 sm:gap-6">
+          <div className="w-24 h-24 flex-shrink-0 rounded-full overflow-hidden border-2 border-[#fdcc4b] shadow-[0_0_15px_rgba(253,204,75,0.3)]">
+            <img 
+              src="/logo.jpeg" 
+              alt="Don Fenticas Logo" 
+              className="w-full h-full object-cover"
+              // onError={(e) => {
+              //   e.currentTarget.src = "https://placehold.co/100x100/26300D/fdcc4b?text=DF";
+              // }}
+            />
           </div>
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
-            Don Fenticas Quiz Night
-          </h1>
-          <p className="mt-4 text-lg text-slate-600">
+          <div className="flex flex-col">
+            <img 
+              src="/DF Name no background .png" 
+              alt="Don Fenticas Quiz Night" 
+              className="w-auto h-16 object-contain mb-2 mx-auto sm:mx-0" 
+              //onError={(e) => {
+                // Fallback text just in case the image fails to load
+                //e.currentTarget.outerHTML = '<h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl uppercase mb-2">Don Fenticas Quiz Night</h1>';
+              //}}
+            />
+          <p className="text-sm sm:text-base text-[#fdcc4b]/80 max-w-md">
             Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.
-          </p>
+            </p>
+            </div>
         </div>
 
-        <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-5 gap-8 lg:gap-12">
-
-          {/* Left Column: Event Details */}
-          <div className="md:col-span-2 space-y-6">
-            <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-900 mb-6">Event Details</h3>
-
-              <div className="space-y-5">
-                <div className="flex items-start">
-                  <Calendar className="w-5 h-5 text-amber-500 mt-0.5 mr-4" />
-                  <div>
-                    <p className="font-medium text-slate-900">Every Thursday</p>
-                    <p className="text-sm text-slate-500">Next quiz is coming up soon!</p>
-                  </div>
-                </div>
-
-                <div className="flex items-start">
-                  <Clock className="w-5 h-5 text-amber-500 mt-0.5 mr-4" />
-                  <div>
-                    <p className="font-medium text-slate-900">8:00 PM Start</p>
-                    <p className="text-sm text-slate-500">Arrive by 7:30 PM to grab drinks and seats.</p>
-                  </div>
-                </div>
-
-                {/* <div className="flex items-start">
-                  <Users className="w-5 h-5 text-amber-500 mt-0.5 mr-4" />
-                  <div>
-                    <p className="font-medium text-slate-900">Max 6 per team</p>
-                    <p className="text-sm text-slate-500">£2 entry fee per person (cash only).</p>
-                  </div>
-                </div> */}
-
-                <div className="flex items-start">
-                  <MapPin className="w-5 h-5 text-amber-500 mt-0.5 mr-4" />
-                  <div>
-                    <p className="font-medium text-slate-900">Don Fenticas</p>
-                    <p className="text-sm text-slate-500">Regent Street, Hinckley, LE10 0BB</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+        
+        
+        {/* Quick Event Badges (Saves vertical scrolling space!) */}
+        <div className="flex flex-wrap justify-center gap-3 mb-8">
+          <div className="flex items-center bg-black/20 border border-[#fdcc4b]/20 rounded-full px-3 py-1.5 text-sm">
+            <Calendar className="w-4 h-4 mr-2 opacity-80" />
+            <span>Every Thursday</span>
           </div>
-
-          {/* Right Column: The Booking Form (Client Component) */}
-          <div className="md:col-span-3">
-            <div className="bg-white rounded-2xl p-6 sm:p-8 border border-slate-200 shadow-xl">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Reserve Your Table</h3>
-              <p className="text-slate-500 mb-8">Lock in your team before we sell out.</p>
-
-              {/* This is where your existing Booking Form component gets injected!
-              Because it handles user typing (state), it acts as the "Client" piece.
-            */}
-              <BookingForm />
-
-            </div>
+          <div className="flex items-center bg-black/20 border border-[#fdcc4b]/20 rounded-full px-3 py-1.5 text-sm">
+            <Clock className="w-4 h-4 mr-2 opacity-80" />
+            <span>8:00 PM</span>
+          </div>
+          <div className="flex items-center bg-black/20 border border-[#fdcc4b]/20 rounded-full px-3 py-1.5 text-sm">
+            <Users className="w-4 h-4 mr-2 opacity-80" />
+            <span>Max 6 per team</span>
+          </div>
+          <div className="flex items-center bg-black/20 border border-[#fdcc4b]/20 rounded-full px-3 py-1.5 text-sm">
+            <MapPin className="w-4 h-4 mr-2 opacity-80" />
+            <span>Don Fenticas</span>
           </div>
         </div>
+
+       {/* Booking Form Card */}
+        <div className="bg-[#1e260a] rounded-3xl p-5 sm:p-8 border border-[#fdcc4b]/30 shadow-2xl">
+          <div className="mb-6">
+            <h3 className="text-2xl font-bold mb-1 text-white">Reserve Your Table</h3>
+            <p className="text-[#fdcc4b]/70 text-sm">Lock in your team before we sell out.</p>
+          </div>
+          
+          <BookingForm />
+          
+        </div>
+        
       </div>
     </main>
   );
