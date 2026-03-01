@@ -187,7 +187,7 @@ export default function BookingForm() {
 
         <div>
           <label htmlFor="teamName" className="flex items-center text-xs font-bold text-[#fdcc4b]/90 mb-2 uppercase tracking-wider ml-1">
-            Team Name <span className="ml-2 bg-white/10 px-2 py-0.5 rounded text-[10px] normal-case tracking-normal opacity-80">Optional</span>
+            Team Name <span className="text-red-400">*</span>
           </label>
           <div className="relative group">
             <div className={iconContainerClasses}>
@@ -197,6 +197,7 @@ export default function BookingForm() {
               type="text"
               id="teamName"
               name="teamName"
+              required
               value={formData.teamName}
               onChange={handleInputChange}
               className={`${inputBaseClasses} peer`}
