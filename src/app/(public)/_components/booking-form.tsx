@@ -164,23 +164,6 @@ export default function BookingForm() {
                         placeholder="john@example.com"
                     />
                 </div>
-
-                {/* Phone Number */}
-{/*                 <div>
-                    <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Phone Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                        type="tel"
-                        id="phone"
-                        name="phone"
-                        required
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
-                        placeholder="07700 900000"
-                    />
-                </div> */}
             </div>
 
             {/* Number of People */}
