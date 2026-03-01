@@ -10,19 +10,19 @@ export const metadata = {
 export default async function QuizBookingPage() {
 
   return (
-    <main className="min-h-dvh w-full bg-slate-50 text-slate-900 flex items-center justify-center py-12 px-4 sm:p-6 md:p-8 lg:p-12">
-      <div className="w-full max-w-6xl bg-white rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden border border-gray-100 flex flex-col transition-all duration-300">
+    <main className="min-h-dvh w-full bg-[#26300D] text-slate-900 flex items-center justify-center py-12 px-4 sm:p-6 md:p-8 lg:p-12">
+      <div className="w-full max-w-6xl bg-[#26300D] rounded-2xl sm:rounded-3xl shadow-xl overflow-hidden border border-gray-100 flex flex-col transition-all duration-300">
 
         {/* Header Section */}
-        <div className="max-w-3xl mx-auto text-center mb-12">
+        <div className="max-w-2xl mx-auto text-center mb-4">
           <div className="inline-flex items-center justify-center p-3 bg-amber-100 rounded-full mb-4">
             <Beer className="w-8 h-8 text-amber-600" />
           </div>
           <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
-            Don Fentica&apos;s Quiz Night
+            Don Fenticas Quiz Night
           </h1>
           <p className="mt-4 text-lg text-slate-600">
-            Test your knowledge, drink great beer, and win the £100 bar tab. Tables fill up fast!
+            Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.
           </p>
         </div>
 
@@ -50,19 +50,19 @@ export default async function QuizBookingPage() {
                   </div>
                 </div>
 
-                <div className="flex items-start">
+                {/* <div className="flex items-start">
                   <Users className="w-5 h-5 text-amber-500 mt-0.5 mr-4" />
                   <div>
                     <p className="font-medium text-slate-900">Max 6 per team</p>
                     <p className="text-sm text-slate-500">£2 entry fee per person (cash only).</p>
                   </div>
-                </div>
+                </div> */}
 
                 <div className="flex items-start">
                   <MapPin className="w-5 h-5 text-amber-500 mt-0.5 mr-4" />
                   <div>
-                    <p className="font-medium text-slate-900">Don Fentica&apos;s</p>
-                    <p className="text-sm text-slate-500">1 Regent Street, Hinckley</p>
+                    <p className="font-medium text-slate-900">Don Fenticas</p>
+                    <p className="text-sm text-slate-500">Regent Street, Hinckley, LE10 0BB</p>
                   </div>
                 </div>
               </div>

@@ -115,7 +115,7 @@ export default function BookingForm() {
                 {/* Person's Name */}
                 <div>
                     <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Captain&apos;s Name <span className="text-red-500">*</span>
+                        Your Name <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
@@ -132,12 +132,13 @@ export default function BookingForm() {
                 {/* Team Name */}
                 <div>
                     <label htmlFor="teamName" className="block text-sm font-medium text-slate-700 mb-1.5">
-                        Team Name <span className="text-slate-400 font-normal text-xs">(Optional)</span>
+                        Team Name <span className="text-red-500">*</span>
                     </label>
                     <input
                         type="text"
                         id="teamName"
                         name="teamName"
+                        required
                         value={formData.teamName}
                         onChange={handleInputChange}
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
@@ -165,7 +166,7 @@ export default function BookingForm() {
                 </div>
 
                 {/* Phone Number */}
-                <div>
+{/*                 <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-slate-700 mb-1.5">
                         Phone Number <span className="text-red-500">*</span>
                     </label>
@@ -179,7 +180,7 @@ export default function BookingForm() {
                         className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
                         placeholder="07700 900000"
                     />
-                </div>
+                </div> */}
             </div>
 
             {/* Number of People */}
@@ -194,7 +195,7 @@ export default function BookingForm() {
                     onChange={handleInputChange}
                     className="w-full bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all cursor-pointer"
                 >
-                    {[1, 2, 3, 4, 5, 6].map((num) => (
+                    {[4, 5, 6].map((num) => (
                         <option key={num} value={num}>
                             {num} {num === 1 ? "Person" : "People"}
                         </option>
