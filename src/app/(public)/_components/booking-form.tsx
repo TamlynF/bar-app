@@ -241,7 +241,7 @@ export default function BookingForm() {
               id="name"
               name="name"
               required
-              value={formData.name}
+              value={formData.name}              
               onChange={handleInputChange}
               className={`${inputBaseClasses} peer`}
               placeholder="John Doe"

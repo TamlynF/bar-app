@@ -1,24 +1,55 @@
 "use client"
 
-import React, { useState, useTransition } from "react"
+import React, { useState, useTransition, useMemo } from "react"
 import { Calendar } from "@/components/ui/calendar"
-import { updateBookingStatus } from "../actions"
-import { 
-  Users, Phone, Mail, CheckCircle, Clock3, 
-  AlertCircle, CalendarDays, Loader2, Inbox,
-  MoreVertical, Pencil, Trash2, ExternalLink
+import { deleteBooking, updateBookingStatus } from "../actions"
+import {
+  CheckCircle,
+  Clock3,
+  AlertCircle,
+  CalendarDays,
+  Inbox,
+  Loader2,
+  Trash2,
+  Users,
+  Pencil,
+  Mail,
+  Phone,
+  MessageSquare,
+  CalendarClock,
+  BadgePoundSterling,
 } from "lucide-react"
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu" // Ensure you have this shadcn component
+import Link from "next/link"
 
 const formatDateStr = (d: Date) => {
-  const date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
-  return date.toISOString().split('T')[0]
+  const date = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
+  return date.toISOString().split("T")[0]
+}
+
+const formatCurrency = (value?: number) => {
+  if (typeof value !== "number") return "—"
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 2,
+  }).format(value)
+}
+
+const statusClasses: Record<string, string> = {
+  confirmed:
+    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  waitlisted:
+    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  pending: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+  cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
 }
 
 export interface EventType {
@@ -27,15 +58,15 @@ export interface EventType {
 }
 
 export interface EventRow {
-  event_date?: string;      // aliased from date
-  event_title?: string;     // aliased from title
+  event_date?: string;
+  event_title?: string;
   description?: string;
   event_types?: EventType;
 }
 
 export interface ContactRow {
-  full_name?: string;      // aliased from date
-  email?: string;     // aliased from title
+  full_name?: string; 
+  email?: string;
   country_code?: string;
   phone_no?: string;
 }
@@ -58,8 +89,9 @@ export interface Booking {
 export default function BookingListClient({ initialBookings }: { initialBookings: Booking[] }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [isPending, startTransition] = useTransition()
+  const [bookingActionId, setBookingActionId] = useState<string | null>(null)
 
-    console.log(JSON.stringify(initialBookings, null, 2));
+  console.log(JSON.stringify(initialBookings, null, 2));
 
   // -- Calculate Statistics --
   const today = new Date()
@@ -70,149 +102,233 @@ export default function BookingListClient({ initialBookings }: { initialBookings
   nextWeek.setDate(today.getDate() + 7)
   const nextWeekStr = formatDateStr(nextWeek)
 
-  // Filter bookings for the coming 7 days
-  const weekBookings = initialBookings.filter(b => b.events?.event_date && b.events.event_date >= todayStr && b.events.event_date <= nextWeekStr)
-  const confirmedWeek = weekBookings.filter(b => b.status?.toLowerCase() === 'confirmed')
-  const waitlistedWeek = weekBookings.filter(b => b.status?.toLowerCase() === 'waitlisted')
-  const todayBookingsCount = initialBookings.filter(b => b.events?.event_date === todayStr).length
+    const weekBookings = useMemo(
+    () =>
+      initialBookings.filter(
+        (b) => b.events?.event_date && b.events.event_date >= todayStr && b.events.event_date <= nextWeekStr,
+      ),
+    [initialBookings, nextWeekStr, todayStr],
+  )
 
-  // -- Current View Data --
+  const confirmedWeek = weekBookings.filter((b) => b.status?.toLowerCase() === "confirmed")
+  const waitlistedWeek = weekBookings.filter((b) => b.status?.toLowerCase() === "waitlisted")
+  const todayBookingsCount = initialBookings.filter((b) => b.events?.event_date === todayStr).length
+
   const activeDateStr = selectedDate ? formatDateStr(selectedDate) : todayStr
-  const dayBookings = initialBookings.filter(b => b.events?.event_date === activeDateStr)
+  const dayBookings = initialBookings.filter((b) => b.events?.event_date === activeDateStr)
 
-  const handleStatusChange = (id: string, newStatus: string) => {
-    startTransition(() => {
-      updateBookingStatus(id, newStatus)
+const handleStatusChange = (id: string, newStatus: string) => {
+    setBookingActionId(id)
+    startTransition(async () => {
+      await updateBookingStatus(id, newStatus)
+      setBookingActionId(null)
+    })
+  }
+
+  const handleDeleteBooking = (id: string, bookingName?: string) => {
+    const confirmDelete = window.confirm(
+      `Delete booking${bookingName ? ` for ${bookingName}` : ""}? This action cannot be undone.`,
+    )
+
+    if (!confirmDelete) return
+
+    setBookingActionId(id)
+    startTransition(async () => {
+      await deleteBooking(id)
+      setBookingActionId(null)
     })
   }
 
   return (
     <div className="space-y-6">
-      {/* Stats Section remains similar but with more refined borders */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-       <StatCard title="Coming Week" value={weekBookings.length} subtitle="Total requests" icon={<CalendarDays className="h-5 w-5 text-blue-500" />} />
-               <StatCard title="Confirmed" value={confirmedWeek.length} subtitle="Next 7 days" icon={<CheckCircle className="h-5 w-5 text-emerald-500" />} />
-               <StatCard title="Waitlisted" value={waitlistedWeek.length} subtitle="Next 7 days" icon={<Clock3 className="h-5 w-5 text-amber-500" />} />
-               <StatCard title="Today's Tables" value={todayBookingsCount} subtitle="Total for today" icon={<AlertCircle className="h-5 w-5 text-indigo-500" />} />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <StatCard
+          title="Coming Week"
+          value={weekBookings.length}
+          subtitle="Total requests"
+          icon={<CalendarDays className="h-5 w-5 text-blue-500" />}
+        />
+        <StatCard
+          title="Confirmed"
+          value={confirmedWeek.length}
+          subtitle="Next 7 days"
+          icon={<CheckCircle className="h-5 w-5 text-emerald-500" />}
+        />
+        <StatCard
+          title="Waitlisted"
+          value={waitlistedWeek.length}
+          subtitle="Next 7 days"
+          icon={<Clock3 className="h-5 w-5 text-amber-500" />}
+        />
+        <StatCard
+          title="Today's Tables"
+          value={todayBookingsCount}
+          subtitle="Total for today"
+          icon={<AlertCircle className="h-5 w-5 text-indigo-500" />}
+        />
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8">
-        {/* Calendar Sidebar */}
-        <div className="w-full lg:w-72 shrink-0">
-          <div className="bg-white dark:bg-zinc-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date) => date && setSelectedDate(date)}
-              className="rounded-md"
-            />
-          </div>
-        </div>
+               <div className="grid grid-cols-1 gap-6 xl:grid-cols-[280px,1fr]">
+        <aside className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-zinc-950">
+          <h2 className="mb-3 text-sm font-semibold text-slate-600 dark:text-slate-300">Choose a date</h2>
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={(date) => date && setSelectedDate(date)}
+            className="rounded-md"
+          />
+        </aside>
 
-        {/* Main Table Area */}
-        <div className="flex-1 bg-white dark:bg-zinc-950 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-            <h2 className="font-semibold text-slate-900 dark:text-white">
-              {selectedDate?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
-            </h2>
-            <div className="text-xs font-medium px-2 py-1 bg-slate-200 dark:bg-slate-800 rounded-md">
-              {dayBookings.length} Bookings
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-zinc-950">
+          <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/60 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
+            <div>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
+                {selectedDate?.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Bookings and guest details for the selected date.</p>
             </div>
-          </div>
+            <span className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+              {dayBookings.length} bookings
+            </span>
+          </header>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+            <table className="min-w-[1100px] w-full text-left text-sm">
+              <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900 dark:text-slate-400">
                 <tr>
-                  <th className="px-6 py-4 font-medium">Customer</th>
-                  <th className="px-6 py-4 font-medium hidden md:table-cell">Contact</th>
-                  <th className="px-6 py-4 font-medium text-center">Guests</th>
-                  <th className="px-6 py-4 font-medium">Status</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                 <th className="px-4 py-3 font-medium">Booking</th>
+                  <th className="px-4 py-3 font-medium">Contact</th>
+                  <th className="px-4 py-3 font-medium text-center">Guests</th>
+                  <th className="px-4 py-3 font-medium">Event</th>
+                  <th className="px-4 py-3 font-medium">Paid</th>
+                  <th className="px-4 py-3 font-medium">Status</th>
+                  <th className="px-4 py-3 font-medium">Requests</th>
+                  <th className="px-4 py-3 font-medium text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
                 {dayBookings.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
-                      <Inbox className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                    <td colSpan={8} className="px-6 py-12 text-center text-slate-500">
+                      <Inbox className="mx-auto mb-2 h-8 w-8 opacity-20" />
                       No reservations found for this date.
                     </td>
                   </tr>
                 ) : (
-                  dayBookings.map((booking) => (
-                    <tr key={booking.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-slate-900 dark:text-white">{booking.contacts?.full_name}</div>
-                        <div className="text-xs text-slate-500 truncate max-w-[150px]">{booking.special_requests || 'No special requests'}</div>
-                      </td>
-                      <td className="px-6 py-4 hidden md:table-cell">
-                        <div className="flex flex-col gap-1 text-xs">
-                          <span className="flex items-center gap-1.5"><Phone className="w-3 h-3"/> {booking.contacts?.phone_no}</span>
-                          <span className="flex items-center gap-1.5"><Mail className="w-3 h-3"/> {booking.contacts?.email}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                          {booking.group_size}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <select
-                          aria-label={`Update status for ${booking.contacts?.full_name}`}
-                          value={booking.status?.toLowerCase()}
-                          onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                          className="bg-transparent font-medium focus:ring-0 cursor-pointer text-xs border-none p-0"
-                        >
-                          <option value="confirmed">Confirmed</option>
-                          <option value="waitlisted">Waitlisted</option>
-                          <option value="pending">Pending</option>
-                          <option value="cancelled">Cancelled</option>
-                        </select>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors">
-                            <MoreVertical className="w-4 h-4 text-slate-500" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-40">
-                            <DropdownMenuItem className="gap-2">
-                              <Pencil className="w-4 h-4" /> Edit Booking
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="gap-2">
-                              <ExternalLink className="w-4 h-4" /> View Details
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="gap-2 text-red-600 dark:text-red-400 focus:text-red-600">
-                              <Trash2 className="w-4 h-4" /> Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))
+                    dayBookings.map((booking) => {
+                    const status = booking.status?.toLowerCase() || "pending"
+                    const isRowPending = isPending && bookingActionId === booking.id
+                    const phone = [booking.contacts?.country_code, booking.contacts?.phone_no].filter(Boolean).join(" ")
+
+                    return (
+                      <tr key={booking.id} className="align-top transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-900/40">
+                        <td className="px-4 py-4">
+                          <div className="font-semibold text-slate-900 dark:text-white">{booking.group_name || "Unnamed Group"}</div>
+                          <div className="mt-1 flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
+                            <CalendarClock className="h-3.5 w-3.5" />
+                            Created {booking.booking_created_at ? new Date(booking.booking_created_at).toLocaleDateString("en-GB") : "—"}
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="text-sm font-medium text-slate-800 dark:text-slate-100">{booking.contacts?.full_name || "—"}</div>
+                          <div className="mt-1 space-y-0.5 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center gap-1.5">
+                              <Mail className="h-3.5 w-3.5" />
+                              <span>{booking.contacts?.email || "—"}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <Phone className="h-3.5 w-3.5" />
+                              <span>{phone || "—"}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                            <Users className="h-3.5 w-3.5" />
+                            {booking.group_size ?? 0}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="font-medium text-slate-900 dark:text-slate-100">{booking.events?.event_title || "—"}</div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">{booking.events?.event_types?.category || "General"}</div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <span className="inline-flex items-center gap-1 text-sm font-medium text-slate-700 dark:text-slate-200">
+                            <BadgePoundSterling className="h-3.5 w-3.5" />
+                            {formatCurrency(booking.paid_amount)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-2">
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold capitalize ${statusClasses[status] || statusClasses.pending}`}>
+                              {status}
+                            </span>
+                            <select
+                              aria-label={`Update status for ${booking.contacts?.full_name || "booking"}`}
+                              value={status}
+                              onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                              disabled={isRowPending}
+                              className="rounded-md border border-slate-200 bg-transparent px-2 py-1 text-xs dark:border-slate-700"
+                            >
+                              <option value="confirmed">Confirmed</option>
+                              <option value="waitlisted">Waitlisted</option>
+                              <option value="pending">Pending</option>
+                              <option value="cancelled">Cancelled</option>
+                            </select>
+                          </div>
+                        </td>
+                        <td className="max-w-[220px] px-4 py-4">
+                          <div className="line-clamp-2 flex items-start gap-1 text-xs text-slate-600 dark:text-slate-300">
+                            <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <span>{booking.special_requests || "No special requests"}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-4">
+                          <div className="flex justify-end gap-2">
+                            <Button variant="outline" size="sm" asChild>
+                              <Link href={`/manage-booking/${booking.id}`}>
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edit
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeleteBooking(booking.id, booking.group_name || booking.contacts?.full_name)}
+                              disabled={isRowPending}
+                            >
+                              {isRowPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })
                 )}
               </tbody>
             </table>
           </div>
-        </div>
+        </section>
       </div>
+      {isPending && (
+        <div className="fixed bottom-4 right-4 flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
+          <Loader2 className="h-4 w-4 animate-spin" /> Saving changes...
+        </div>
+      )}
     </div>
   )
 }
 
-// Minimal Stat Card Component
-function StatCard({ title, value, subtitle, icon }: { title: string, value: number, subtitle: string, icon: React.ReactNode }) {
+function StatCard({ title, value, subtitle, icon }: { title: string; value: number; subtitle: string; icon: React.ReactNode }) {
   return (
-    <div className="bg-white dark:bg-zinc-950 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-start justify-between">
+    <div className="flex items-start justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-zinc-950">
       <div>
         <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-        <h3 className="text-3xl font-bold mt-1 text-slate-900 dark:text-white">{value}</h3>
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{subtitle}</p>
+        <h3 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">{value}</h3>
+        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{subtitle}</p>
       </div>
-      <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
-        {icon}
-      </div>
+      <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">{icon}</div>
     </div>
   )
 }
