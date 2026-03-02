@@ -12,8 +12,17 @@ import {
   CalendarDays,
   User,
   Mail,
-  Beer
+  Beer,
+  Clock
 } from "lucide-react";
+
+interface BookingResponse {
+  success: boolean;
+  isWaitlisted?: boolean;
+  error?: string;
+  message?: string;
+  data?: unknown;
+}
 
 const getNextThursday = () => {
   const today = new Date();
@@ -30,6 +39,7 @@ const getNextThursday = () => {
 export default function BookingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isWaitlisted, setIsWaitlisted] = useState(false);
   const [dateError, setDateError] = useState("");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
@@ -59,8 +69,7 @@ export default function BookingForm() {
     setDateError("");
 
     try {
-      // Call the server action with the form data
-      const response = await createBooking({
+      const response: BookingResponse = await createBooking({
         quiz_date: formData.quizDate,
         name: formData.name,
         team_name: formData.teamName,
@@ -71,8 +80,11 @@ export default function BookingForm() {
 
       if (response.success) {
         setIsSuccess(true);
+        if (response.isWaitlisted) {
+          setIsWaitlisted(true);
+        }
       } else {
-        setDateError(response.error || "Failed to make reservation. Please try again.");
+        setDateError(response.error || response.message || "Failed to make reservation. Please try again.");
       }
     } catch (error) {
       console.error("Booking submission error:", error);
@@ -84,23 +96,45 @@ export default function BookingForm() {
 
   if (isSuccess) {
     return (
-      <div className="text-center py-10 animate-in fade-in zoom-in duration-300 bg-black/20 rounded-2xl border border-[#fdcc4b]/10 p-8">
+      <div className={`text-center py-10 animate-in fade-in zoom-in duration-300 bg-black/20 rounded-2xl border p-8 ${isWaitlisted ? 'border-amber-500/20' : 'border-[#fdcc4b]/10'}`}>
         <div className="flex justify-center mb-5">
           <div className="relative">
-            <div className="absolute inset-0 bg-[#fdcc4b] blur-xl opacity-20 rounded-full"></div>
-            <CheckCircle className="w-20 h-20 text-[#fdcc4b] relative z-10" />
+            <div className={`absolute inset-0 blur-xl opacity-20 rounded-full ${isWaitlisted ? 'bg-amber-500' : 'bg-[#fdcc4b]'}`}></div>
+            {isWaitlisted ? (
+              <Clock className="w-20 h-20 text-amber-500 relative z-10" />
+            ) : (
+              <CheckCircle className="w-20 h-20 text-[#fdcc4b] relative z-10" />
+            )}
           </div>
         </div>
-        <h2 className="text-3xl font-black text-white mb-2 tracking-wide uppercase">You&apos;re Locked In!</h2>
+        
+        <h2 className="text-3xl font-black text-white mb-2 tracking-wide uppercase">
+          {isWaitlisted ? "You're on the waitlist!" : "You're Locked In!"}
+        </h2>
+        
         <p className="text-[#fdcc4b]/80 mb-8 text-base max-w-sm mx-auto">
-          Table reserved for <strong className="text-white">{formData.teamName || formData.name}&apos;s Team</strong> on {format(new Date(formData.quizDate), "do MMMM yyyy")}. Confirmation sent to <span className="text-white">{formData.email}</span>.
+          {isWaitlisted ? (
+            <>
+              All tables are currently taken for {format(new Date(formData.quizDate), "do MMMM yyyy")}. You have been added to the waitlist for <strong className="text-white">{formData.teamName || formData.name}&apos;s Team</strong>. We will notify <span className="text-white">{formData.email}</span> if a table becomes available.
+            </>
+          ) : (
+            <>
+              Table reserved for <strong className="text-white">{formData.teamName || formData.name}&apos;s Team</strong> on {format(new Date(formData.quizDate), "do MMMM yyyy")}. Confirmation sent to <span className="text-white">{formData.email}</span>.
+            </>
+          )}
         </p>
+        
         <button
           onClick={() => {
             setIsSuccess(false);
+            setIsWaitlisted(false);
             setFormData({ quizDate: getNextThursday(), name: "", teamName: "", teamSize: "4", email: "", phone: "" });
           }}
-          className="bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black py-4 px-8 rounded-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(253,204,75,0.3)] w-full sm:w-auto uppercase tracking-wider"
+          className={`font-black py-4 px-8 rounded-xl transition-all duration-200 hover:-translate-y-1 w-full sm:w-auto uppercase tracking-wider text-[#26300D] ${
+            isWaitlisted 
+            ? "bg-amber-500 hover:bg-amber-400 hover:shadow-[0_10px_20px_rgba(245,158,11,0.3)]" 
+            : "bg-[#fdcc4b] hover:bg-[#e5b843] hover:shadow-[0_10px_20px_rgba(253,204,75,0.3)]"
+          }`}
         >
           Book Another Table
         </button>
@@ -108,7 +142,6 @@ export default function BookingForm() {
     );
   }
 
-  // Consistent, premium input styling with focus-scale
   const inputBaseClasses = "w-full bg-black/40 border border-[#fdcc4b]/20 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/30 focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] focus:scale-[1.01] transition-all duration-200 hover:border-[#fdcc4b]/40";
   const labelClasses = "block text-xs font-bold text-[#fdcc4b]/90 mb-2 uppercase tracking-wider ml-1";
   const iconContainerClasses = "absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none";

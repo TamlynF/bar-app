@@ -1,104 +1,100 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 
-// Initialize the Resend client using your environment variable
-const resend = new Resend(process.env.RESEND_API_KEY);
-
-
-export async function createBooking(formData: {
+interface BookingFormData {
   quiz_date: string;
   name: string;
   team_name: string;
   team_size: number;
   email: string;
   phone?: string;
-}) {
-    console.log(formData);
+}
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function createBooking(formData: BookingFormData) {
+  console.log(formData);
+  const supabase = await createClient();
+
   try {
-    const supabase = await createClient();
+    // 1. Get the total number of physical tables from the 'tables' table
+    const { count: totalTables, error: tablesError } = await supabase
+      .from('tables')
+      .select('*', { count: 'exact', head: true })
 
-    // 1. Handle Contact (Find existing or create new)
-    let contactId;
-    const { data: existingContact } = await supabase
-      .from("contacts")
-      .select("id")
-      .eq("email", formData.email)
-      .maybeSingle(); // maybeSingle returns null instead of an error if not found
-
-    if (existingContact) {
-      contactId = existingContact.id;
-    } else {
-      const { data: newContact, error: contactError } = await supabase
-        .from("contacts")
-        .insert([
-          { 
-            full_name: formData.name, 
-            email: formData.email, 
-            phone_no: formData.phone || null 
-          }
-        ])
-        .select("id")
-        .single();
-
-      if (contactError) {
-        console.error("Contact insert error:", contactError);
-        return { success: false, error: "Failed to save contact details." };
-      }
-      contactId = newContact.id;
+    if (tablesError) {
+      console.error('Error fetching tables count:', tablesError)
+      throw new Error('Could not verify table availability')
     }
 
-    // 2. Handle Event Type (Find existing 'quiz' or create new to get next ID)
-    let eventTypeId;
-    const { data: existingEventType } = await supabase
-      .from("event_types")
-      .select("id")
-      .eq("type", "game")
-      .eq("sub_type", "quiz")
-      .maybeSingle();
-
-    if (existingEventType) {
-      eventTypeId = existingEventType.id;
-    } else {
-      // If not found, insert a new record. The database will automatically increment and assign the next ID.
-      const { data: newEventType, error: typeError } = await supabase
-        .from("event_types")
-        .insert([
-          { 
-            type: "game", 
-            sub_type: "quiz" 
-          }
-        ])
-        .select("id")
-        .single();
-
-      if (typeError) {
-        console.error("Event type insert error:", typeError);
-        return { success: false, error: "Failed to setup event type." };
-      }
-      eventTypeId = newEventType.id;
-    }
-
-    // 3. Handle Event (Find existing for this date or create new)
     let eventId;
-    const { data: existingEvent } = await supabase
-      .from("events")
-      .select("id")
-      .eq("date", formData.quiz_date)
-      .maybeSingle();
+    let reservedCount = 0;
+    const maxTables = totalTables || 9;
 
-    if (existingEvent) {
-      eventId = existingEvent.id;
+    const { data: eventData } = await supabase
+      .from('events')
+      .select('id')
+      .eq('date', formData.quiz_date)
+      .maybeSingle()
+
+    if (eventData) {
+      eventId = eventData.id;
+
+      const { count: bookedCount, error: countError } = await supabase
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', eventId)
+        .eq('status', 'confirmed')
+
+      if (countError) {
+        console.error('Error counting existing bookings:', countError)
+        throw new Error('Could not verify existing bookings')
+      }
+      reservedCount = bookedCount ?? 0;
     } else {
+      // 2. Handle Event Type (Find existing 'quiz' or create new to get next ID)
+      let eventTypeId;
+      const { data: existingEventType } = await supabase
+        .from("event_types")
+        .select("id")
+        .eq("type", "game")
+        .eq("sub_type", "quiz")
+        .maybeSingle();
+
+      if (existingEventType) {
+        eventTypeId = existingEventType.id;
+      } else {
+        const { data: newEventType, error: typeError } = await supabase
+          .from("event_types")
+          .insert([
+            {
+              type: "game",
+              sub_type: "quiz"
+            }
+          ])
+          .select("id")
+          .single();
+
+        if (typeError) {
+          console.error("Event type insert error:", typeError);
+          throw new Error('Failed to setup event type.')
+          //return { success: false, error: "Failed to setup event type." };
+        }
+        eventTypeId = newEventType.id;
+      }
+
+      // 3. Handle Event (Find existing for this date or create new)
       const { data: newEvent, error: eventError } = await supabase
         .from("events")
         .insert([
-          { 
-            date: formData.quiz_date, 
-            title: "Quiz Night", 
-            description: "Thursday Night Quiz Night", 
-            event_types_id: eventTypeId 
+          {
+            date: formData.quiz_date,
+            title: "Quiz Night",
+            description: "Thursday Night Quiz Night",
+            event_types_id: eventTypeId
           }
         ])
         .select("id")
@@ -106,9 +102,45 @@ export async function createBooking(formData: {
 
       if (eventError) {
         console.error("Event insert error:", eventError);
-        return { success: false, error: "Failed to setup event." };
+        throw new Error('Failed to setup event.')
+        //return { success: false, error: "Failed to setup event." };
       }
       eventId = newEvent.id;
+    } 
+
+    // 3. Determine if we have reached max capacity
+    const isWaitlisted = (reservedCount ?? 0) >= maxTables;
+    const status = isWaitlisted ? "waitlisted" : "confirmed";
+
+    // 1. Handle Contact (Find existing or create new)
+    let contactId;
+    const { data: existingContact } = await supabase
+      .from("contacts")
+      .select("id")
+      .eq("email", formData.email)
+      .maybeSingle();
+
+    if (existingContact) {
+      contactId = existingContact.id;
+    } else {
+      const { data: newContact, error: contactError } = await supabase
+        .from("contacts")
+        .insert([
+          {
+            full_name: formData.name,
+            email: formData.email,
+            phone_no: formData.phone || null
+          }
+        ])
+        .select("id")
+        .single();
+
+      if (contactError) {
+        console.error("Contact insert error:", contactError);
+        throw new Error('Failed to save booking')
+        //return { success: false, error: "Failed to save contact details." };
+      }
+      contactId = newContact.id;
     }
 
     // 4. Create the actual Booking
@@ -120,7 +152,7 @@ export async function createBooking(formData: {
           contact_id: contactId,
           group_name: formData.team_name,
           group_size: formData.team_size,
-          status: "confirmed",
+          status: status,
           paid_amount: 0,
           // Note: Omitting team_id as it appears to be optional or handled elsewhere.
           // If Supabase complains about team_id being required, you will need a 4th step for 'teams'.
@@ -131,7 +163,8 @@ export async function createBooking(formData: {
 
     if (bookingError || !newBooking) {
       console.error("Supabase insert error:", bookingError);
-      return { success: false, error: bookingError?.message };
+      throw new Error(bookingError?.message)
+      //return { success: false, error: bookingError?.message };
     }
 
     const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
@@ -140,8 +173,7 @@ export async function createBooking(formData: {
     // 5. Send Confirmation Email
     try {
       const { error: resendError } = await resend.emails.send({
-        // Note: You will need to verify a domain in Resend and update this "from" address
-        from: 'Quiz Night <admin@bookingsdonfenticas.co.uk>', 
+        from: 'Quiz Night <admin@bookingsdonfenticas.co.uk>',
         to: formData.email,
         subject: 'Quiz Night Table Confirmed! 🎉',
         html: `
@@ -179,19 +211,36 @@ export async function createBooking(formData: {
 
       if (resendError) {
         console.error("Resend API Error:", resendError);
-        return { success: false, error: `Booking saved, but email failed: ${resendError.message}` };
+        throw new Error(`Booking saved, but email failed: ${resendError.message}`)
+        //return { success: false, error: `Booking saved, but email failed: ${resendError.message}` };
       }
 
-    
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (emailError: any) {
+    } catch (emailError) {
       console.error("Failed to execute email send:", emailError);
-      return { success: false, error: `Booking saved, but email failed: ${emailError.message || JSON.stringify(emailError)}` };
+      const errorMessage = emailError instanceof Error 
+        ? emailError.message 
+        : typeof emailError === "string" 
+          ? emailError 
+          : JSON.stringify(emailError);
+      
+      throw new Error(`Booking saved, but email failed: ${errorMessage}`);
+      //return { success: false, error: `Booking saved, but email failed: ${emailError.message || JSON.stringify(emailError)}` };
     }
 
-    return { success: true };
-  } catch (err) {
-    console.error("Action error:", err);
-    return { success: false, error: "An unexpected error occurred." };
+    revalidatePath("/dashboard");
+    revalidatePath("/book");
+
+    return {
+      success: true,
+      booking: newBooking,
+      isWaitlisted,
+      message: isWaitlisted
+        ? "Warning: All tables are currently booked. You have been placed on the waitlist."
+        : "Success: Your booking is confirmed!"
+    };
+  } catch (error) {
+    console.error("Server action error:", error);
+    throw new Error("An unexpected error occurred.")
+    //return { success: false, error: error.message || "An unexpected error occurred." };
   }
 }

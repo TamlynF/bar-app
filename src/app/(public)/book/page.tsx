@@ -31,7 +31,7 @@ export default function QuizBookingPage() {
             className="w-full max-w-70 sm:max-w-100 md:max-w-125 object-contain drop-shadow-2xl z-10"
             priority
           />
-          <p className="-mt-5 sm:mt-2 text-xs sm:text-sm text-[#dcf5c7]/90 font-sans max-w-md mx-auto px-4">
+          <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-[#dcf5c7]/90 font-sans max-w-md mx-auto px-4">
             Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.
           </p>
         </div>

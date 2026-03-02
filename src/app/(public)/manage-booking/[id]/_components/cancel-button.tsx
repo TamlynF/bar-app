@@ -72,7 +72,9 @@ export default function CancelButton({
           <div>
             <label htmlFor="teamName" className="block text-xs font-bold text-[#fdcc4b]/90 mb-2 uppercase tracking-wider ml-1">Team Name</label>
             <input
-              id="teamName"  
+               id="teamName"
+              name="teamName"
+              title="Team Name"
               type="text" 
               value={teamName}
               onChange={(e) => setTeamName(e.target.value)}
@@ -84,6 +86,8 @@ export default function CancelButton({
             <label htmlFor="teamSize" className="block text-xs font-bold text-[#fdcc4b]/90 mb-2 uppercase tracking-wider ml-1">Team Size</label>
             <select 
               id="teamSize"
+              name="teamSize"
+              title="Team Size"
               value={teamSize}
               onChange={(e) => setTeamSize(Number(e.target.value))}
               className="w-full bg-[#1e260a] border border-[#fdcc4b]/20 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all appearance-none"
