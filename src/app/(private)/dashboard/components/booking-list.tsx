@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import BookingListClient from './booking-list-client';
+import BookingListClient from './booking-list-client copy';
 
 
 export interface EventType {
@@ -70,7 +70,7 @@ export default async function BookingList() {
         `)
     .order('created_at', { ascending: true });
 
-  console.log(JSON.stringify(bookings, null, 2));
+  //console.log(JSON.stringify(bookings, null, 2));
 
   if (error) {
     return <div className="p-4 text-red-500 bg-red-50 rounded-lg border border-red-200">Error loading bookings: {error.message}</div>;
