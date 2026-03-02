@@ -1,6 +1,9 @@
 "use client";
 
 import React, { useState } from "react";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   CheckCircle,
   ChevronRight,
@@ -8,10 +11,21 @@ import {
   User,
   Users,
   Mail,
-  Phone,
   Beer,
   ChevronDown
 } from "lucide-react";
+
+const getNextThursday = () => {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  // 4 represents Thursday (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)
+  const daysUntilThursday = (4 - dayOfWeek + 7) % 7;
+
+  const nextThursday = new Date(today);
+  nextThursday.setDate(today.getDate() + (daysUntilThursday === 0 ? 0 : daysUntilThursday));
+
+  return nextThursday.toISOString().split("T")[0];
+};
 
 export default function BookingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,7 +34,7 @@ export default function BookingForm() {
   const [minDate] = useState(() => new Date().toISOString().split("T")[0]);
 
   const [formData, setFormData] = useState({
-    quizDate: "",
+    quizDate: getNextThursday(),
     name: "",
     teamName: "",
     teamSize: "4",
@@ -90,7 +104,7 @@ export default function BookingForm() {
         <button
           onClick={() => {
             setIsSuccess(false);
-            setFormData({ quizDate: "", name: "", teamName: "", teamSize: "4", email: "", phone: "" });
+            setFormData({ quizDate: getNextThursday(), name: "", teamName: "", teamSize: "4", email: "", phone: "" });
           }}
           className="bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black py-4 px-8 rounded-xl transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_10px_20px_rgba(253,204,75,0.3)] w-full sm:w-auto uppercase tracking-wider"
         >
@@ -100,11 +114,14 @@ export default function BookingForm() {
     );
   }
 
+
+
   // Consistent, premium input styling
   const inputBaseClasses = "w-full bg-black/40 border border-[#fdcc4b]/20 rounded-xl pl-12 pr-4 py-3.5 text-white placeholder-white/30 focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-200 hover:border-[#fdcc4b]/40";
   const labelClasses = "block text-xs font-bold text-[#fdcc4b]/90 mb-2 uppercase tracking-wider ml-1";
   const iconContainerClasses = "absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none";
   const iconClasses = "w-5 h-5 text-[#fdcc4b]/60 transition-colors duration-200 peer-focus:text-[#fdcc4b]";
+
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -115,22 +132,47 @@ export default function BookingForm() {
           <label htmlFor="quizDate" className={labelClasses}>
             Date <span className="text-red-400">*</span>
           </label>
-          <div className="relative group">
-            <div className={iconContainerClasses}>
-              <CalendarDays className={iconClasses} />
-            </div>
-            <input
-              type="date"
-              id="quizDate"
-              name="quizDate"
-              required
-              min={minDate}
-              suppressHydrationWarning
-              value={formData.quizDate}
-              onChange={handleDateChange}
-              className={`${inputBaseClasses} scheme-dark peer`}
-            />
-          </div>
+
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={`relative w-full text-left bg-black/40 border border-[#fdcc4b]/20 rounded-xl pl-12 pr-4 py-3.5 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-200 hover:border-[#fdcc4b]/40 ${!formData.quizDate ? "text-white/30" : ""}`}
+              >
+                <div className={iconContainerClasses}>
+                  <CalendarDays className={iconClasses} />
+                </div>
+                {formData.quizDate ? (
+                  format(new Date(formData.quizDate), "PPP")
+                ) : (
+                  <span>Pick a Thursday</span>
+                )}
+              </button>
+            </PopoverTrigger>
+
+            <PopoverContent className="w-auto p-0 bg-[#26250a] border-[#fdcc4b]/30 text-white" align="start">
+              <Calendar
+                mode="single"
+                selected={formData.quizDate ? new Date(formData.quizDate) : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    // Convert back to YYYY-MM-DD string for your state
+                    const dateString = date.toISOString().split("T")[0];
+                    setFormData((prev) => ({ ...prev, quizDate: dateString }));
+                    setDateError("");
+                  }
+                }}
+                // THIS IS THE MAGIC LINE: 
+                // Disables days that are NOT Thursday (4) OR are in the past
+                disabled={(date) =>
+                  date.getDay() !== 4 || date < new Date(new Date().setHours(0, 0, 0, 0))
+                }
+                autoFocus
+                className="bg-[#887d1a] text-white rounded-xl"
+              />
+            </PopoverContent>
+          </Popover>
+
           {dateError && <p className="text-red-400 text-xs mt-2 font-medium ml-1 animate-in fade-in">{dateError}</p>}
         </div>
 
@@ -237,8 +279,8 @@ export default function BookingForm() {
           type="submit"
           disabled={isSubmitting}
           className={`relative overflow-hidden w-full flex items-center justify-center py-4 px-4 rounded-xl text-[#26300D] font-black text-lg uppercase tracking-widest transition-all duration-300 ${isSubmitting
-              ? "bg-[#fdcc4b]/50 cursor-not-allowed"
-              : "bg-[#fdcc4b] hover:bg-[#e5b843] shadow-[0_0_20px_rgba(253,204,75,0.15)] hover:shadow-[0_5px_25px_rgba(253,204,75,0.35)] hover:-translate-y-1"
+            ? "bg-[#fdcc4b]/50 cursor-not-allowed"
+            : "bg-[#fdcc4b] hover:bg-[#e5b843] shadow-[0_0_20px_rgba(253,204,75,0.15)] hover:shadow-[0_5px_25px_rgba(253,204,75,0.35)] hover:-translate-y-1"
             }`}
         >
           {isSubmitting ? (

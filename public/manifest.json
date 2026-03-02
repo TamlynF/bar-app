@@ -1,0 +1,9 @@
+{
+  "name": "Bar App",
+  "short_name": "Bar App",
+  "description": "Book your quiz night",
+  "start_url": "/book",
+  "display": "fullscreen", 
+  "background_color": "#26300D",
+  "theme_color": "#26300D"
+}
