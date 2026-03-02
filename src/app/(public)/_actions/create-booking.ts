@@ -112,7 +112,7 @@ export async function createBooking(formData: {
     }
 
     // 4. Create the actual Booking
-    const { error: bookingError } = await supabase
+    const { data: newBooking, error: bookingError } = await supabase
       .from("bookings")
       .insert([
         {
@@ -125,12 +125,17 @@ export async function createBooking(formData: {
           // Note: Omitting team_id as it appears to be optional or handled elsewhere.
           // If Supabase complains about team_id being required, you will need a 4th step for 'teams'.
         },
-      ]);
+      ])
+      .select("id")
+      .single();
 
-    if (bookingError) {
+    if (bookingError || !newBooking) {
       console.error("Supabase insert error:", bookingError);
-      return { success: false, error: bookingError.message };
+      return { success: false, error: bookingError?.message };
     }
+
+    const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const manageUrl = `${appUrl}/manage-booking/${newBooking.id}`;
 
     // 5. Send Confirmation Email
     try {
@@ -140,15 +145,34 @@ export async function createBooking(formData: {
         to: formData.email,
         subject: 'Quiz Night Table Confirmed! 🎉',
         html: `
-          <div style="font-family: sans-serif; color: #333;">
-            <h2>You're locked in, ${formData.name}!</h2>
-            <p>We've successfully reserved a table for your team for our upcoming Quiz Night.</p>
-            <ul>
-              <li><strong>Date:</strong> ${formData.quiz_date}</li>
-              <li><strong>Team Name:</strong> ${formData.team_name}</li>
-              <li><strong>Team Size:</strong> ${formData.team_size} people</li>
-            </ul>
-            <p>Please aim to arrive a bit early to grab drinks before the quiz starts. See you there!</p>
+          <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 40px 20px; border-radius: 12px; color: #1f2937;">
+            <div style="background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
+              <h2 style="margin-top: 0; color: #111827; font-size: 24px;">You're locked in, ${formData.name}! 🍻</h2>
+              <p style="font-size: 16px; line-height: 1.6; color: #4b5563;">
+                We've successfully reserved a table for your team. Here are your booking details for the upcoming Quiz Night:
+              </p>
+
+              <div style="background-color: #f3f4f6; padding: 24px; border-radius: 8px; margin: 24px 0;">
+                <p style="margin: 0 0 12px 0; font-size: 16px;"><strong>📅 Date:</strong> ${formData.quiz_date}</p>
+                <p style="margin: 0 0 12px 0; font-size: 16px;"><strong>👥 Team Name:</strong> ${formData.team_name}</p>
+                <p style="margin: 0; font-size: 16px;"><strong>🎟️ Team Size:</strong> ${formData.team_size} people</p>
+              </div>
+
+              <p style="font-size: 16px; line-height: 1.6; color: #4b5563;">
+                Please aim to arrive a bit early to grab drinks and settle in before the quiz starts. See you there!
+              </p>
+              
+              <div style="text-align: center; margin: 40px 0;">
+                <a href="${manageUrl}" style="background-color: #fdcc4b; color: #26300d; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; text-transform: uppercase; letter-spacing: 0.5px; font-size: 14px;">Manage or Cancel Booking</a>
+              </div>
+
+              <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;" />
+
+              <p style="font-size: 12px; color: #6b7280; line-height: 1.5; margin: 0; text-align: center;">
+                If the button above doesn't work, copy and paste this link into your browser:<br/>
+                <a href="${manageUrl}" style="color: #3b82f6; text-decoration: underline; word-break: break-all; margin-top: 8px; display: inline-block;">${manageUrl}</a>
+              </p>
+            </div>
           </div>
         `,
       });
