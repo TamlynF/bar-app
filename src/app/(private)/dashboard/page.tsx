@@ -63,8 +63,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* STAT CARDS - Separated into a distinct top row */}
-      <div className="grid gap-4 grid-cols-5 md:grid-cols-5">
-        {/* Stat Card 1 */}
+      {/* <div className="grid gap-4 grid-cols-5 md:grid-cols-5">
         <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between space-y-0">
             <h3 className="tracking-tight text-sm font-medium">Total Bookings</h3>
@@ -76,7 +75,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Stat Card 2 */}
         <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between space-y-0 pb-2">
             <h3 className="tracking-tight text-sm font-medium">Active Guests</h3>
@@ -88,7 +86,6 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Stat Card 3 */}
         <div className="rounded-xl border bg-card text-card-foreground shadow-sm p-6 flex flex-col justify-between">
           <div className="flex flex-row items-center justify-between space-y-0 pb-2">
             <h3 className="tracking-tight text-sm font-medium">Revenue</h3>
@@ -99,7 +96,7 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground mt-1">+12% from last month</p>
           </div>
         </div>
-      </div>
+      </div> */}
 
                   {hasDataSourceError ? (
          <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100">
