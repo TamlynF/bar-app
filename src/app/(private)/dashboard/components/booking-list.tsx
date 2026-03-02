@@ -11,7 +11,7 @@ export interface EventRow {
   event_date?: string;      // aliased from date
   event_title?: string;     // aliased from title
   description?: string;
-  event_types?: EventType | EventType[];
+  event_types?: EventType;
 }
 
 export interface ContactRow {
@@ -32,10 +32,9 @@ export interface RawBooking {
   status?: string;
   special_requests?: string;
   booking_created_at?: string;
-  contacts?: ContactRow | ContactRow[];
-  events?: EventRow | EventRow[];
+  contacts?: ContactRow;
+  events?: EventRow;
 }
-
 
 export default async function BookingList() {
   const supabase = await createClient();
@@ -76,6 +75,8 @@ export default async function BookingList() {
     return <div className="p-4 text-red-500 bg-red-50 rounded-lg border border-red-200">Error loading bookings: {error.message}</div>;
   }
 
+  const typedBookings = (bookings as unknown) as RawBooking[];
+
   if (!bookings || bookings.length === 0) {
     return (
       <div className="p-12 mt-6 text-center text-gray-500 bg-gray-50 rounded-xl border border-dashed border-gray-300">
@@ -85,6 +86,6 @@ export default async function BookingList() {
     );
   }
 
-return <BookingListClient initialBookings={bookings} />;
+return <BookingListClient initialBookings={typedBookings} />;
 
 }

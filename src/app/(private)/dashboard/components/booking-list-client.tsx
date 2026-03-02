@@ -3,9 +3,19 @@
 import React, { useState, useTransition } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { updateBookingStatus } from "../actions"
-import { Users, Phone, Mail, CheckCircle, Clock3, AlertCircle, CalendarDays, Loader2, Inbox } from "lucide-react"
+import { 
+  Users, Phone, Mail, CheckCircle, Clock3, 
+  AlertCircle, CalendarDays, Loader2, Inbox,
+  MoreVertical, Pencil, Trash2, ExternalLink
+} from "lucide-react"
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu" // Ensure you have this shadcn component
 
-// Helper to format date as YYYY-MM-DD reliably, ignoring timezones shifts
 const formatDateStr = (d: Date) => {
   const date = new Date(d.getTime() - (d.getTimezoneOffset() * 60000))
   return date.toISOString().split('T')[0]
@@ -48,8 +58,8 @@ export interface Booking {
 export default function BookingListClient({ initialBookings }: { initialBookings: Booking[] }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [isPending, startTransition] = useTransition()
-  
-  console.log(JSON.stringify(initialBookings, null, 2));
+
+    console.log(JSON.stringify(initialBookings, null, 2));
 
   // -- Calculate Statistics --
   const today = new Date()
@@ -70,30 +80,26 @@ export default function BookingListClient({ initialBookings }: { initialBookings
   const activeDateStr = selectedDate ? formatDateStr(selectedDate) : todayStr
   const dayBookings = initialBookings.filter(b => b.events?.event_date === activeDateStr)
 
-  const handleStatusChange = (id: string | number, newStatus: string) => {
+  const handleStatusChange = (id: string, newStatus: string) => {
     startTransition(() => {
-      // Ensure we pass a string to the server action, as IDs might be numbers now
-      updateBookingStatus(id.toString(), newStatus)
+      updateBookingStatus(id, newStatus)
     })
   }
 
-
   return (
-    <div className="space-y-8">
-      {/* 1. Indicators / Stats Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Coming Week" value={weekBookings.length} subtitle="Total requests" icon={<CalendarDays className="h-5 w-5 text-blue-500" />} />
-        <StatCard title="Confirmed" value={confirmedWeek.length} subtitle="Next 7 days" icon={<CheckCircle className="h-5 w-5 text-emerald-500" />} />
-        <StatCard title="Waitlisted" value={waitlistedWeek.length} subtitle="Next 7 days" icon={<Clock3 className="h-5 w-5 text-amber-500" />} />
-        <StatCard title="Today's Tables" value={todayBookingsCount} subtitle="Total for today" icon={<AlertCircle className="h-5 w-5 text-indigo-500" />} />
+    <div className="space-y-6">
+      {/* Stats Section remains similar but with more refined borders */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+       <StatCard title="Coming Week" value={weekBookings.length} subtitle="Total requests" icon={<CalendarDays className="h-5 w-5 text-blue-500" />} />
+               <StatCard title="Confirmed" value={confirmedWeek.length} subtitle="Next 7 days" icon={<CheckCircle className="h-5 w-5 text-emerald-500" />} />
+               <StatCard title="Waitlisted" value={waitlistedWeek.length} subtitle="Next 7 days" icon={<Clock3 className="h-5 w-5 text-amber-500" />} />
+               <StatCard title="Today's Tables" value={todayBookingsCount} subtitle="Total for today" icon={<AlertCircle className="h-5 w-5 text-indigo-500" />} />
       </div>
 
-      {/* 2. Main Workspace: Calendar & List */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-        {/* Left Column: Calendar */}
-        <div className="lg:col-span-4 xl:col-span-3">
-          <div className="bg-white dark:bg-zinc-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex justify-center sticky top-8">
+      <div className="flex flex-col lg:flex-row gap-8">
+        {/* Calendar Sidebar */}
+        <div className="w-full lg:w-72 shrink-0">
+          <div className="bg-white dark:bg-zinc-950 p-4 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
             <Calendar
               mode="single"
               selected={selectedDate}
@@ -103,86 +109,92 @@ export default function BookingListClient({ initialBookings }: { initialBookings
           </div>
         </div>
 
-        {/* Right Column: Bookings List */}
-        <div className="lg:col-span-8 xl:col-span-9 space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              Bookings for {selectedDate ? selectedDate.toLocaleDateString('en-GB', { weekday: 'long', month: 'short', day: 'numeric' }) : 'Selected Date'}
+        {/* Main Table Area */}
+        <div className="flex-1 bg-white dark:bg-zinc-950 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+            <h2 className="font-semibold text-slate-900 dark:text-white">
+              {selectedDate?.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
             </h2>
-            <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-3 py-1 rounded-full text-sm font-medium">
-              {dayBookings.length} {dayBookings.length === 1 ? 'Table' : 'Tables'}
-            </span>
+            <div className="text-xs font-medium px-2 py-1 bg-slate-200 dark:bg-slate-800 rounded-md">
+              {dayBookings.length} Bookings
+            </div>
           </div>
 
-          {dayBookings.length === 0 ? (
-            <div className="bg-slate-50 dark:bg-slate-900/50 border border-dashed border-slate-300 dark:border-slate-700 rounded-xl p-12 flex flex-col items-center justify-center text-slate-500 text-center">
-              <Inbox className="w-10 h-10 mb-3 text-slate-400" />
-              <p className="text-lg font-medium text-slate-700 dark:text-slate-300">No bookings for this date.</p>
-              <p className="text-sm">Try selecting another date from the calendar.</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {dayBookings.map((booking) => (
-                <div
-                  key={booking.id}
-                  className={`bg-white dark:bg-zinc-950 p-5 rounded-xl border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all
-                    ${booking.status?.toLowerCase() === 'cancelled' ? 'border-red-100 dark:border-red-900/30 opacity-75' : 'border-slate-200 dark:border-slate-800'}
-                  `}
-                >
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                      <span className="text-lg font-bold text-slate-900 dark:text-white min-w-17.5">
-                        {booking.events?.event_date}
-                      </span>
-                      <span className="text-lg font-medium">{booking.contacts?.full_name}</span>
-                      <span className="flex items-center text-sm font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2.5 py-0.5 rounded-md">
-                        <Users className="w-3.5 h-3.5 mr-1.5" />
-                        {booking.group_size} {booking.group_size === 1 ? 'Guest' : 'Guests'}
-                      </span>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
-                      {booking.contacts?.phone_no && (
-                        <span className="flex items-center">
-                          <Phone className="w-3.5 h-3.5 mr-1.5" />
-                          {booking.contacts?.phone_no}
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left">
+              <thead className="text-xs uppercase bg-slate-50 dark:bg-slate-900 text-slate-500 dark:text-slate-400">
+                <tr>
+                  <th className="px-6 py-4 font-medium">Customer</th>
+                  <th className="px-6 py-4 font-medium hidden md:table-cell">Contact</th>
+                  <th className="px-6 py-4 font-medium text-center">Guests</th>
+                  <th className="px-6 py-4 font-medium">Status</th>
+                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800">
+                {dayBookings.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                      <Inbox className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                      No reservations found for this date.
+                    </td>
+                  </tr>
+                ) : (
+                  dayBookings.map((booking) => (
+                    <tr key={booking.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="font-semibold text-slate-900 dark:text-white">{booking.contacts?.full_name}</div>
+                        <div className="text-xs text-slate-500 truncate max-w-[150px]">{booking.special_requests || 'No special requests'}</div>
+                      </td>
+                      <td className="px-6 py-4 hidden md:table-cell">
+                        <div className="flex flex-col gap-1 text-xs">
+                          <span className="flex items-center gap-1.5"><Phone className="w-3 h-3"/> {booking.contacts?.phone_no}</span>
+                          <span className="flex items-center gap-1.5"><Mail className="w-3 h-3"/> {booking.contacts?.email}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                          {booking.group_size}
                         </span>
-                      )}
-                      {booking.contacts?.email && (
-                        <span className="flex items-center">
-                          <Mail className="w-3.5 h-3.5 mr-1.5" />
-                          {booking.contacts?.email}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    {isPending && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
-
-                    <select
-                      aria-label={`Update status for ${booking.contacts?.full_name}`}
-                      value={booking.status?.toLowerCase() || 'pending'}
-                      onChange={(e) => handleStatusChange(booking.id, e.target.value)}
-                      disabled={isPending}
-                      className={`text-sm border rounded-full px-4 py-1.5 font-semibold appearance-none outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400 cursor-pointer shadow-sm transition-colors
-                        ${booking.status?.toLowerCase() === 'confirmed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20' :
-                          booking.status?.toLowerCase() === 'waitlisted' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' :
-                            booking.status?.toLowerCase() === 'cancelled' ? 'bg-red-50 text-red-700 border-red-200 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20' :
-                              'bg-slate-50 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-                        }
-                      `}
-                    >
-                      <option value="pending">⏳ Pending</option>
-                      <option value="confirmed">✅ Confirmed</option>
-                      <option value="waitlisted">📝 Waitlist</option>
-                      <option value="cancelled">❌ Cancelled</option>
-                    </select>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+                      </td>
+                      <td className="px-6 py-4">
+                        <select
+                          aria-label={`Update status for ${booking.contacts?.full_name}`}
+                          value={booking.status?.toLowerCase()}
+                          onChange={(e) => handleStatusChange(booking.id, e.target.value)}
+                          className="bg-transparent font-medium focus:ring-0 cursor-pointer text-xs border-none p-0"
+                        >
+                          <option value="confirmed">Confirmed</option>
+                          <option value="waitlisted">Waitlisted</option>
+                          <option value="pending">Pending</option>
+                          <option value="cancelled">Cancelled</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors">
+                            <MoreVertical className="w-4 h-4 text-slate-500" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-40">
+                            <DropdownMenuItem className="gap-2">
+                              <Pencil className="w-4 h-4" /> Edit Booking
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2">
+                              <ExternalLink className="w-4 h-4" /> View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem className="gap-2 text-red-600 dark:text-red-400 focus:text-red-600">
+                              <Trash2 className="w-4 h-4" /> Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

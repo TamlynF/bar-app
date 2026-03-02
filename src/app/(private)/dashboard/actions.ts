@@ -19,3 +19,14 @@ export async function updateBookingStatus(id: string, status: string) {
   // Refresh the dashboard data
   revalidatePath("/dashboard")
 }
+
+export async function deleteBooking(id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from("bookings")
+    .delete()
+    .eq("id", id)
+
+  if (error) throw new Error("Failed to delete")
+  revalidatePath("/dashboard")
+}
