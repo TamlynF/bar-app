@@ -18,6 +18,7 @@ import {
   MessageSquare,
   CalendarClock,
   BadgePoundSterling,
+  MoreVertical,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -86,7 +87,7 @@ export interface Booking {
   events?: EventRow;
 }
 
-export default function BookingListClient({ initialBookings }: { initialBookings: Booking[] }) {
+export default function BookingListClient1({ initialBookings }: { initialBookings: Booking[] }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [isPending, startTransition] = useTransition()
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
@@ -141,7 +142,7 @@ const handleStatusChange = (id: string, newStatus: string) => {
 
   return (
     <div className="space-y-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-7">
         <StatCard
           title="Coming Week"
           value={weekBookings.length}
@@ -169,7 +170,7 @@ const handleStatusChange = (id: string, newStatus: string) => {
       </div>
 
                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[280px,1fr]">
-        <aside className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-zinc-950">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-zinc-950">
           <h2 className="mb-3 text-sm font-semibold text-slate-600 dark:text-slate-300">Choose a date</h2>
           <Calendar
             mode="single"
@@ -177,7 +178,7 @@ const handleStatusChange = (id: string, newStatus: string) => {
             onSelect={(date) => date && setSelectedDate(date)}
             className="rounded-md"
           />
-        </aside>
+        </div>
 
         <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-zinc-950">
           <header className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50/60 px-4 py-3 dark:border-slate-800 dark:bg-slate-900/50">
@@ -193,7 +194,7 @@ const handleStatusChange = (id: string, newStatus: string) => {
           </header>
 
           <div className="overflow-x-auto">
-            <table className="min-w-[1100px] w-full text-left text-sm">
+            <table className="min-w-275 w-full text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500 dark:bg-slate-900 dark:text-slate-400">
                 <tr>
                  <th className="px-4 py-3 font-medium">Booking</th>
@@ -277,13 +278,35 @@ const handleStatusChange = (id: string, newStatus: string) => {
                             </select>
                           </div>
                         </td>
-                        <td className="max-w-[220px] px-4 py-4">
+                         <td className="max-w-55 px-4 py-4">
                           <div className="line-clamp-2 flex items-start gap-1 text-xs text-slate-600 dark:text-slate-300">
                             <MessageSquare className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                             <span>{booking.special_requests || "No special requests"}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-4 py-4 text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger className="rounded-md p-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+                              <MoreVertical className="h-4 w-4 text-slate-500" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-44">
+                              <DropdownMenuItem asChild>
+                                <Link href={`/manage-booking/${booking.id}`} className="flex items-center gap-2">
+                                  <Pencil className="h-4 w-4" /> Edit booking
+                                </Link>
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onClick={() => handleDeleteBooking(booking.id, booking.group_name || booking.contacts?.full_name)}
+                                className="gap-2 text-red-600 focus:text-red-600 dark:text-red-400"
+                              >
+                                <Trash2 className="h-4 w-4" /> Delete booking
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                       
+{/*                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-2">
                             <Button variant="outline" size="sm" asChild>
                               <Link href={`/manage-booking/${booking.id}`}>
@@ -301,7 +324,7 @@ const handleStatusChange = (id: string, newStatus: string) => {
                               Delete
                             </Button>
                           </div>
-                        </td>
+                        </td> */}
                       </tr>
                     )
                   })
