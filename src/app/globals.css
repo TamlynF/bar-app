@@ -178,3 +178,14 @@
     min-height: -webkit-fill-available;
   }
 }
+
+/* Add to globals.css */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
