@@ -1,6 +1,6 @@
 import React from 'react'
 import BookingForm from "../_components/booking-form";
-import { Calendar, Banknote, MapPin, Users, Trophy, Wine } from "lucide-react";
+import { Calendar, Banknote, Users, Trophy, Wine } from "lucide-react";
 import Image from "next/image";
 
 export const metadata = {
@@ -15,7 +15,7 @@ export default function QuizBookingPage() {
       <div className="max-w-4xl mx-auto">
 
         {/* Header Section */}
-        <div className="flex flex-col items-center text-center mb-6">
+        <div className="flex flex-col items-center text-center mb-5">
           <Image
             src="/DF X PJ Quiz Night.png"
             alt="Don Fenticas x Papa Johns Quiz Night"
@@ -30,7 +30,7 @@ export default function QuizBookingPage() {
         </div>
 
         {/* Event Badges - Condensing the grid to be much tighter */}
-        <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-3xl mx-auto">
+        <div className="flex flex-wrap justify-center gap-2 mb-5 max-w-3xl mx-auto">
 
           {/* Top Row: Basic Info */}
           <div className="flex items-center justify-center gap-1 w-full sm:w-auto">
@@ -60,13 +60,16 @@ export default function QuizBookingPage() {
         </div>
 
         {/* Booking Form Card */}
-        <div className="bg-[#1e260a] rounded-3xl p-5 sm:p-8 border border-[#fdcc4b]/30 shadow-2xl">
-          <div className="mb-6 text-center sm:text-left">
-            <h3 className="text-2xl font-bold mb-1 text-white">Reserve Your Table</h3>
-            <p className="text-[#fdcc4b]/70 text-sm">Lock in your team before we sell out.</p>
+        <div className="bg-[#1e260a] rounded-3xl p-5 sm:p-8 border border-[#fdcc4b]/30 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-32 bg-[#fdcc4b]/5 blur-3xl pointer-events-none rounded-full"></div>
+          <div className="mb-6 text-center sm:text-left relative z-10">
+            <h3 className="text-2xl font-bold mb-1 text-white tracking-wide uppercase">Reserve Your Table</h3>
+            <p className="text-[#fdcc4b]/70 text-sm font-medium">Lock in your team before we sell out.</p>
           </div>
 
-          <BookingForm />
+          <div className="relative z-10">
+            <BookingForm />
+          </div>
 
         </div>
 

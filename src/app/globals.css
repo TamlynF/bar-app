@@ -169,7 +169,12 @@
   * {
     @apply border-border outline-ring/50;
   }
-  body {
-    @apply bg-background text-foreground;
+
+  /* Update html and body to use your brand's dark green */
+  html, body {
+    @apply bg-[#26300D] text-[#fdcc4b] antialiased;
+    /* This ensures the background stretches the entire viewport height */
+    min-height: 100vh;
+    min-height: -webkit-fill-available;
   }
 }
