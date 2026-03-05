@@ -20,7 +20,7 @@ export type Table = {
   max_capacity: number;
 };
 
-export default function TablesClient({ initialTables }: { initialTables: Table[] }) {
+export default function TablesClient({ initialTables = [] }: { initialTables: Table[] }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingTable, setEditingTable] = useState<Table | null>(null);
   

@@ -82,7 +82,7 @@ export default function SettingsLayout({
           })}
         </nav>
       </aside>
-      <main className="flex-1 lg:max-w-4xl bg-card rounded-xl border shadow-sm min-h-[600px] overflow-hidden">
+      <main className="flex-1 lg:max-w-4xl bg-card rounded-xl border shadow-sm min-h-150 overflow-hidden">
         {children}
       </main>
     </div>
