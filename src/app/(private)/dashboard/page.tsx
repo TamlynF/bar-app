@@ -1,7 +1,9 @@
 import React, { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server"
 import BookingListClient, { Booking } from "./components/booking-list-client"
-import { Users, DollarSign, CalendarDays } from "lucide-react";
+import { Users, DollarSign, CalendarDays, Settings } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export const dynamic = 'force-dynamic'
 
@@ -59,7 +61,17 @@ export default async function DashboardPage() {
     return (
           <div className="flex-1 space-y-8 p-4 md:p-8 pt-6">
       <div className="flex items-center justify-between space-y-2">
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2>
+          <div className="flex justify-between items-center mb-6">
+        <h1 className="text-3xl font-bold">Dashboard</h1>
+        
+        <Link href="/dashboard/settings">
+          <Button variant="outline" className="gap-2">
+            <Settings className="w-4 h-4" />
+            Settings
+          </Button>
+        </Link>
+      </div>
       </div>
 
       {/* STAT CARDS - Separated into a distinct top row */}
