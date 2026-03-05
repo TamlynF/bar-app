@@ -1,17 +1,17 @@
 import { createClient } from "@/lib/supabase/server";
-import TablesClient from "./tables-client";
+import EmployeesClient from "./users-client";
 
 export default async function TablesPage() {
   const supabase = await createClient();
 
-  const { data: tables, error } = await supabase
-    .from("tables")
+  const { data: employees, error } = await supabase
+    .from("employees")
     .select("*")
-    .order("id", { ascending: true });
+    .order("full_name", { ascending: true });
 
   if (error) {
     console.error("Error fetching tables:", error);
   }
 
-  return <TablesClient initialTables={tables || []} />;
+  return <EmployeesClient initialEmployees={employees || []} />;
 }

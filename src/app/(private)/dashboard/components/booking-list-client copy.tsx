@@ -91,6 +91,7 @@ export default function BookingListClient1({ initialBookings }: { initialBooking
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [isPending, startTransition] = useTransition()
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
   console.log(JSON.stringify(initialBookings, null, 2));
 

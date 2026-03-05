@@ -48,10 +48,8 @@ const formatCurrency = (value?: number) => {
 }
 
 const statusClasses: Record<string, string> = {
-  confirmed:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
-  waitlisted:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  confirmed: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
+  waitlisted: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
   pending: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
   cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
 }
@@ -92,13 +90,13 @@ export interface Booking {
 
 export default function BookingListClient1({ initialBookings }: { initialBookings: Booking[] }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
-   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
 
   console.log(JSON.stringify(initialBookings, null, 2));
 
-    const referenceDate = selectedDate || new Date()
+  const referenceDate = selectedDate || new Date()
   referenceDate.setHours(0, 0, 0, 0)
   const referenceDateStr = formatDateStr(referenceDate)
 
@@ -116,6 +114,8 @@ export default function BookingListClient1({ initialBookings }: { initialBooking
 
   const confirmedWeek = weekBookings.filter((b) => b.status?.toLowerCase() === "confirmed")
   const waitlistedWeek = weekBookings.filter((b) => b.status?.toLowerCase() === "waitlisted")
+  const pendingWeek = weekBookings.filter((b) => b.status?.toLowerCase() === "pending")
+  const cancelledWeek = weekBookings.filter((b) => b.status?.toLowerCase() === "cancelled")
   const dateBookingsCount = initialBookings.filter((b) => b.events?.event_date === referenceDateStr).length
 
   const dayBookings = selectedDate 
@@ -126,7 +126,6 @@ export default function BookingListClient1({ initialBookings }: { initialBooking
     ? Array.from(new Set(dayBookings.map((b) => b.events?.event_title).filter(Boolean)))
     : [];
   const eventTitleDisplay = eventTitlesForDate.length > 0 ? eventTitlesForDate.join(" & ") : null;
-
 
   const handleStatusChange = (id: string, newStatus: string) => {
     setBookingActionId(id)
