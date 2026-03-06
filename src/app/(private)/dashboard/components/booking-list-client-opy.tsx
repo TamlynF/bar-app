@@ -37,6 +37,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 const formatDateStr = (d: Date) => {
   const date = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
@@ -117,16 +118,26 @@ export default function BookingListClient({ initialBookings }: { initialBookings
     };
   }, [initialBookings, selectedDate]);
 
-  const handleStatusChange = (id: string, newStatus: string) => {
-    setBookingActionId(id)
-    startTransition(async () => {
-      try {
-        await updateBookingStatus(id, newStatus)
-      } finally {
-        setBookingActionId(null)
-      }
-    })
+  // Around line 103
+const handleStatusChange = (id: string, newStatus: string) => {
+  setBookingActionId(id)
+  
+  // Update local state immediately so the sheet stays open and UI updates
+  if (selectedBooking && selectedBooking.id === id) {
+    setSelectedBooking({ ...selectedBooking, status: newStatus });
   }
+
+  startTransition(async () => {
+    try {
+      await updateBookingStatus(id, newStatus)
+    } catch (error) {
+      // If it fails, revert the local state or show an error
+      console.error(error)
+    } finally {
+      setBookingActionId(null)
+    }
+  })
+}
 
   return (
     <div className="space-y-6">
@@ -270,7 +281,10 @@ export default function BookingListClient({ initialBookings }: { initialBookings
 
       {/* 5. Team Profile Sheet */}
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
-        <SheetContent side="bottom" className="bg-[#1a2109] border-t border-white/10 rounded-t-[3rem] p-6 max-h-[85vh] overflow-y-auto isolate z-9999"
+        <SheetContent side="bottom"
+          onCloseAutoFocus={(e) => e.preventDefault()} 
+    onPointerDownOutside={(e) => e.preventDefault()}
+          className="bg-[#1a2109] border-t border-white/10 rounded-t-[3rem] p-6 max-h-[85vh] overflow-y-auto isolate z-9999"
           style={{ backgroundColor: '#1a2109' }}
         >
           {selectedBooking && (
@@ -339,7 +353,10 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                       Set Status
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-[#1a2109] border-white/10 w-56 p-2 isolate z-9999" style={{ backgroundColor: '#1a2109' }}>
+                  <DropdownMenuContent                    
+                    className="bg-[#1a2109] border-white/10 w-56 p-2 isolate z-9999"
+                    style={{ backgroundColor: '#1a2109' }}                    
+                  >
                     {Object.keys(statusTheme).map((s) => (
                       <DropdownMenuItem 
                         key={s} 
@@ -354,10 +371,10 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                 </DropdownMenu>
 
                 <Button asChild className="h-16 rounded-2xl bg-primary text-primary-foreground font-black text-[11px] uppercase tracking-widest">
-                  <a href={`/manage-booking/${selectedBooking.id}`}>
-                    <Pencil className="w-4 h-4 mr-2" /> Manage
-                  </a>
-                </Button>
+  <Link href={`/manage-booking/${selectedBooking.id}`}>
+    <Pencil className="w-4 h-4 mr-2" /> Manage
+  </Link>
+</Button>
               </div>
             </div>
           )}
