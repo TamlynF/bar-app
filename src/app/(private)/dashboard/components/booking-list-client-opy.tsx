@@ -118,11 +118,9 @@ export default function BookingListClient({ initialBookings }: { initialBookings
     };
   }, [initialBookings, selectedDate]);
 
-  // Around line 103
 const handleStatusChange = (id: string, newStatus: string) => {
   setBookingActionId(id)
   
-  // Update local state immediately so the sheet stays open and UI updates
   if (selectedBooking && selectedBooking.id === id) {
     setSelectedBooking({ ...selectedBooking, status: newStatus });
   }
@@ -131,7 +129,6 @@ const handleStatusChange = (id: string, newStatus: string) => {
     try {
       await updateBookingStatus(id, newStatus)
     } catch (error) {
-      // If it fails, revert the local state or show an error
       console.error(error)
     } finally {
       setBookingActionId(null)
@@ -281,14 +278,13 @@ const handleStatusChange = (id: string, newStatus: string) => {
 
       {/* 5. Team Profile Sheet */}
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
-        <SheetContent side="bottom"
-          onCloseAutoFocus={(e) => e.preventDefault()} 
-    onPointerDownOutside={(e) => e.preventDefault()}
-          className="bg-[#1a2109] border-t border-white/10 rounded-t-[3rem] p-6 max-h-[85vh] overflow-y-auto isolate z-9999"
+        <SheetContent 
+          side="bottom"
+          className="bg-[#1a2109] border-t border-white/10 rounded-t-[3rem] p-6 max-h-[85vh] overflow-y-auto"
           style={{ backgroundColor: '#1a2109' }}
         >
           {selectedBooking && (
-            <div className="space-y-6 pb-6">
+            <div className="space-y-6 pb-12"> {/* Added more bottom padding for mobile reach */}
               <div className="flex justify-center -mt-2">
                 <div className="w-12 h-1.5 bg-white/10 rounded-full" />
               </div>
@@ -346,21 +342,21 @@ const handleStatusChange = (id: string, newStatus: string) => {
                 </div>
               )}
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-2 gap-3 pt-2 relative z-[10000]">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-16 rounded-2xl border-white/10 bg-white/5 text-white font-black text-[11px] uppercase tracking-widest">
+                    <Button variant="outline" className="h-16 rounded-2xl border-white/10 bg-white/5 text-white font-black text-[11px] uppercase tracking-widest active:scale-95">
                       Set Status
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent                    
-                    className="bg-[#1a2109] border-white/10 w-56 p-2 isolate z-9999"
+                    className="bg-[#1a2109] border-white/10 w-56 p-2"
                     style={{ backgroundColor: '#1a2109' }}                    
                   >
                     {Object.keys(statusTheme).map((s) => (
                       <DropdownMenuItem 
                         key={s} 
-                        onClick={() => handleStatusChange(selectedBooking.id, s)}
+                        onClick={() => handleStatusChange(selectedBooking!.id, s)}
                         className="font-bold text-xs p-3 capitalize rounded-xl cursor-pointer"
                       >
                          <div className={cn("w-2 h-2 rounded-full mr-2", statusTheme[s].dot)} />
@@ -370,11 +366,11 @@ const handleStatusChange = (id: string, newStatus: string) => {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button asChild className="h-16 rounded-2xl bg-primary text-primary-foreground font-black text-[11px] uppercase tracking-widest">
-  <Link href={`/manage-booking/${selectedBooking.id}`}>
-    <Pencil className="w-4 h-4 mr-2" /> Manage
-  </Link>
-</Button>
+                <Button asChild className="h-16 rounded-2xl bg-primary text-primary-foreground font-black text-[11px] uppercase tracking-widest active:scale-95 shadow-lg">
+                  <Link href={`/manage-booking/${selectedBooking.id}`}>
+                    <Pencil className="w-4 h-4 mr-2" /> Manage
+                  </Link>
+                </Button>
               </div>
             </div>
           )}
@@ -383,7 +379,7 @@ const handleStatusChange = (id: string, newStatus: string) => {
 
       {/* Global Sync Overlay */}
       {isPending && (
-        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+        <div className="fixed top-8 left-1/2 -translate-x-1/2 z-[10001] bg-primary text-primary-foreground px-5 py-2.5 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
           <Loader2 className="w-3 h-3 animate-spin" /> Syncing Floor
         </div>
       )}
@@ -398,7 +394,7 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
   return (
     <div 
       onClick={onClick}
-      className="group hover:bg-white/5 active:scale-[0.99] transition-all border border-white/5 rounded-2xl p-4 flex items-center justify-between cursor-pointer isolate z-9999 bg-card-solid"
+      className="group hover:bg-white/5 active:scale-[0.99] transition-all border border-white/5 rounded-2xl p-4 flex items-center justify-between cursor-pointer bg-card-solid"
       style={{ backgroundColor: '#1a2109' }}
     >
       <div className="flex items-center gap-4 min-w-0 text-left">
