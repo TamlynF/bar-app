@@ -13,8 +13,6 @@ export default async function DashboardPage() {
 
   try {
     const supabase = await createClient()
-
-    // Fetch all bookings with associated contact and event data
     const { data: bookings, error } = await supabase
       .from("bookings")
       .select(`
@@ -52,7 +50,6 @@ export default async function DashboardPage() {
       console.error("Error fetching bookings:", error)
       hasDataSourceError = true
     }
-
     typedBookings = (bookings as unknown as Booking[]) ?? []
   } catch (error) {
     console.error("Dashboard data source unavailable:", error)
@@ -61,7 +58,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex-1 bg-[#26300D] min-h-screen relative">
-      {/* Top Header */}
       <div className="px-6 pt-8 pb-4 flex justify-between items-center sticky top-0 bg-[#26300D]/90 backdrop-blur-md z-30 border-b border-white/5">
         <div>
           <h1 className="text-2xl font-black text-white uppercase tracking-tight">Floor Manager</h1>
@@ -90,8 +86,7 @@ export default async function DashboardPage() {
           <BookingListClient initialBookings={typedBookings} />
         </Suspense>
       </div>
-
-      {/* Floating Action Button for Mobile */}
+      
       <div className="fixed bottom-6 right-6 z-40 lg:hidden">
         <Link href="/book">
           <Button size="lg" className="h-16 w-16 rounded-full shadow-[0_10px_30px_-5px_rgba(253,204,75,0.5)] bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-transform">

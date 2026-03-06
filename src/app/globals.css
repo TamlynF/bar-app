@@ -5,25 +5,25 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.1450 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.1450 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.1450 0 0);
-  --primary: oklch(85% 0.15 85); 
+  --background: #26300D;
+  --foreground: #fdcc4b;
+  --card: #1e260a;
+  --card-foreground: #ffffff;
+  --popover: #1a2109;
+  --popover-foreground: #ffffff;
+  --primary: #fdcc4b;
   --primary-foreground: #26300D;
-  --secondary: oklch(0.9700 0 0);
-  --secondary-foreground: oklch(0.2050 0 0);
-  --muted: oklch(0.9700 0 0);
-  --muted-foreground: oklch(0.5560 0 0);
-  --accent: oklch(0.9700 0 0);
-  --accent-foreground: oklch(0.2050 0 0);
-  --destructive: oklch(0.5770 0.2450 27.3250);
-  --destructive-foreground: oklch(1 0 0);
-  --border: oklch(0.9220 0 0);
-  --input: oklch(0.9220 0 0);
-  --ring: oklch(0.7080 0 0);
+  --secondary: oklch(0.2690 0 0);
+  --secondary-foreground: oklch(0.9850 0 0);
+  --muted: #3d3d17;
+  --muted-foreground: color-mix(in srgb, #fdcc4b 60%, transparent);
+  --accent: oklch(0.3710 0 0);
+  --accent-foreground: oklch(0.9850 0 0);
+  --destructive: oklch(0.7040 0.1910 22.2160);
+  --destructive-foreground: oklch(0.9850 0 0);
+  --border: color-mix(in srgb, #fdcc4b 20%, transparent);
+  --input: color-mix(in srgb, #fdcc4b 10%, transparent);
+  --ring: #fdcc4b;
   --radius: 0.625rem;
 }
 
@@ -32,12 +32,11 @@
   --foreground: #fdcc4b;
   --card: #1e260a;
   --card-foreground: #ffffff;
-  --popover: #1a2109; /* This will now be picked up by dropdowns and popovers */
+  --popover: #1a2109;
   --popover-foreground: #ffffff;
   --primary: #fdcc4b;
   --primary-foreground: #26300D;
   --muted: #3d3d17;
-  /* Fixed invalid #hex/opacity syntax to standard CSS color-mix */
   --muted-foreground: color-mix(in srgb, #fdcc4b 60%, transparent);
   --border: color-mix(in srgb, #fdcc4b 20%, transparent);
   --input: color-mix(in srgb, #fdcc4b 10%, transparent);
@@ -66,16 +65,36 @@
   --color-ring: var(--ring);
 }
 
+/* 2. Global Portal Fixes - Placed outside of layers to ensure they win specificity. */
+
+/* Ensure the portal wrapper is always on top of the dashboard content */
+[data-radix-popper-content-wrapper] {
+  z-index: 100 !important;
+}
+
+/* Force solid background and full opacity on all Radix content surfaces 
+   Targeting the data-slot attributes used in your UI components. */
+[data-slot="popover-content"],
+[data-slot="dropdown-menu-content"],
+[data-slot="calendar"],
+div[role="menu"],
+div[role="dialog"] {
+  background-color: #1a2109 !important; /* Hardcoded solid brand color */
+  background-image: none !important;
+  opacity: 1 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
+  border: 1px solid rgba(253, 204, 75, 0.25) !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
   }
-
-  html, body {
+  html {
+    color-scheme: dark;
+  }
+  body {
     @apply bg-background text-foreground antialiased;
-    /* This ensures the background stretches the entire viewport height */
-    min-height: 100vh;
-    /* min-height: -webkit-fill-available; */
   }
 }
 
