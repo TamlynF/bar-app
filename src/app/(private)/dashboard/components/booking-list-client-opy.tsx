@@ -144,7 +144,10 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                     <ChevronDown className="w-5 h-5 text-primary transition-transform group-data-[state=open]:rotate-180" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="bg-[#1a2109] border-white/10 w-64 p-2 shadow-2xl">
+                <DropdownMenuContent 
+			align="start" 
+			className="bg-[#1a2109] border-white/10 w-64 p-2 shadow-2xl isolate z-9999" style={{ backgroundColor: '#1a2109' }}
+			>
                   <DropdownMenuLabel className="text-[9px] uppercase font-black text-stone-500 tracking-widest px-3 py-2">Quick Selection</DropdownMenuLabel>
                   <DropdownMenuItem onClick={() => setSelectedDate(undefined)} className="font-bold text-xs p-3 rounded-xl cursor-pointer">
                     Show All History
@@ -173,12 +176,13 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                 <CalendarIcon className="w-3.5 h-3.5 mr-2 opacity-60" /> Custom
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="bg-[#1a2109] border-white/10 p-0 w-auto shadow-2xl" align="end">
+            <PopoverContent className="bg-[#1a2109] border-white/10 p-0 w-auto shadow-2xl isolate z-9999" style={{ backgroundColor: '#1a2109' }} align="end">
               <Calendar
                 mode="single"
                 selected={selectedDate}
                 onSelect={(d) => { if(d) setSelectedDate(d); setIsCalendarOpen(false); }}
-                className="bg-[#1a2109] rounded-t-xl" 
+                className="bg-[#1a2109] rounded-t-xl isolate z-9999" 
+                style={{ backgroundColor: '#1a2109' }}
               />
               <div className="p-3 border-t border-white/5 bg-[#141a07]/50 rounded-b-xl">
                 <Button 
@@ -226,7 +230,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
               <span className="text-[9px] uppercase font-black tracking-widest">{statusFilter === 'all' ? 'Filter' : statusFilter}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#1a2109] border-white/10 w-48">
+          <DropdownMenuContent align="end" className="bg-[#1a2109] border-white/10 w-48 isolate z-9999" style={{ backgroundColor: '#1a2109' }}>
             <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
               <DropdownMenuRadioItem value="all" className="text-xs font-bold p-3">All Statuses</DropdownMenuRadioItem>
               <DropdownMenuRadioItem value="confirmed" className="text-xs font-bold p-3 text-emerald-400">Confirmed</DropdownMenuRadioItem>
@@ -266,7 +270,9 @@ export default function BookingListClient({ initialBookings }: { initialBookings
 
       {/* 5. Team Profile Sheet */}
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
-        <SheetContent side="bottom" className="bg-[#1a2109] border-t border-white/10 rounded-t-[3rem] p-6 max-h-[85vh] overflow-y-auto">
+        <SheetContent side="bottom" className="bg-[#1a2109] border-t border-white/10 rounded-t-[3rem] p-6 max-h-[85vh] overflow-y-auto isolate z-9999"
+          style={{ backgroundColor: '#1a2109' }}
+        >
           {selectedBooking && (
             <div className="space-y-6 pb-6">
               <div className="flex justify-center -mt-2">
@@ -333,7 +339,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                       Set Status
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-[#1a2109] border-white/10 w-56 p-2">
+                  <DropdownMenuContent className="bg-[#1a2109] border-white/10 w-56 p-2 isolate z-9999" style={{ backgroundColor: '#1a2109' }}>
                     {Object.keys(statusTheme).map((s) => (
                       <DropdownMenuItem 
                         key={s} 
@@ -375,7 +381,8 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
   return (
     <div 
       onClick={onClick}
-      className="group bg-white/3 hover:bg-white/5 active:scale-[0.99] transition-all border border-white/5 rounded-2xl p-4 flex items-center justify-between cursor-pointer"
+      className="group hover:bg-white/5 active:scale-[0.99] transition-all border border-white/5 rounded-2xl p-4 flex items-center justify-between cursor-pointer isolate z-9999 bg-card-solid"
+      style={{ backgroundColor: '#1a2109' }}
     >
       <div className="flex items-center gap-4 min-w-0 text-left">
         <div className={cn("w-1 h-8 rounded-full shrink-0", theme.dot)} />
@@ -411,7 +418,6 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
     </div>
   );
 }
-
 function KPIBox({ 
   label, 
   value, 
