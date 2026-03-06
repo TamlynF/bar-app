@@ -49,6 +49,7 @@ const statusTheme: Record<
     text: string
     border: string
     dot: string
+    ring: string
     cardBorder: string
     icon: React.ReactNode
   }
@@ -57,7 +58,8 @@ const statusTheme: Record<
     bg: "bg-slate-100 dark:bg-slate-800",
     text: "text-slate-700 dark:text-slate-300",
     border: "border-slate-300 dark:border-slate-600",
-    dot: "bg-slate-500",
+    dot: "bg-slate-600",
+    ring: "ring-slate-500/40",
     cardBorder: "border-slate-200 dark:border-slate-700",
     icon: <TableIcon className="w-3 h-3" />,
   },
@@ -66,6 +68,7 @@ const statusTheme: Record<
     text: "text-green-700 dark:text-green-400",
     border: "border-green-200 dark:border-green-500/30",
     dot: "bg-green-500",
+    ring: "ring-green-500/40",
     cardBorder: "border-green-500/50 dark:border-green-500/40",
     icon: <CheckCircle2 className="w-3 h-3" />,
   },
@@ -74,6 +77,7 @@ const statusTheme: Record<
     text: "text-orange-700 dark:text-orange-400",
     border: "border-orange-200 dark:border-orange-500/30",
     dot: "bg-orange-500",
+    ring: "ring-orange-500/40",
     cardBorder: "border-orange-500/50 dark:border-orange-500/40",
     icon: <Clock3 className="w-3 h-3" />,
   },
@@ -82,6 +86,7 @@ const statusTheme: Record<
     text: "text-yellow-700 dark:text-yellow-400",
     border: "border-yellow-200 dark:border-yellow-500/30",
     dot: "bg-yellow-500",
+    ring: "ring-yellow-500/40",
     cardBorder: "border-yellow-500/50 dark:border-yellow-500/40",
     icon: <HelpCircle className="w-3 h-3" />,
   },
@@ -90,6 +95,7 @@ const statusTheme: Record<
     text: "text-red-700 dark:text-red-400",
     border: "border-red-200 dark:border-red-500/30",
     dot: "bg-red-500",
+    ring: "ring-red-500/40",
     cardBorder: "border-red-500/50 dark:border-red-500/40",
     icon: <XCircle className="w-3 h-3" />,
   },
@@ -311,12 +317,12 @@ export default function BookingListClient({ initialBookings }: { initialBookings
 
         {/* Status Filters Bar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-3 flex items-center justify-between shadow-sm overflow-x-auto relative z-10">
-          <div className="flex items-center justify-start gap-1 sm:gap-2 w-full px-1 min-w-max pb-1 sm:pb-0">
+          <div className="flex items-center justify-start gap-2 sm:gap-3 w-full px-1 min-w-max py-1 overflow-x-visible">
             <StatusCircle
               count={stats.totalTeams}
               status="all"
               label="Total"
-              isActive={stats.totalTeams === 0}
+              isActive={activeStatusFilters.size === 0}
               onClick={() => setActiveStatusFilters(new Set())}
             />
             <StatusCircle
@@ -349,7 +355,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
             />
           </div>
           <span className="hidden sm:block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Filter by Status
+            Filters
           </span>
         </div>
       </div>
@@ -543,42 +549,26 @@ function StatusCircle({
 }) {
   const theme = statusTheme[status] || statusTheme.pending
 
-  const activeCircleClass: Record<string, string> = {
-    all: "bg-slate-500 border-slate-500 shadow-md ring-4 ring-slate-500/40",
-    confirmed: "bg-green-500 border-green-500 shadow-md ring-4 ring-green-500/40",
-    waitlisted: "bg-orange-500 border-orange-500 shadow-md ring-4 ring-orange-500/40",
-    pending: "bg-yellow-500 border-yellow-500 shadow-md ring-4 ring-yellow-500/40",
-    cancelled: "bg-red-500 border-red-500 shadow-md ring-4 ring-red-500/40",
-  }
-
-  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-    console.log('🔘 StatusCircle clicked:', status)
-    onClick()
-  }
-
   return (
-    <div className="flex flex-col items-center gap-1 min-w-10">
+    <div className="flex flex-col items-center gap-1.5 min-w-10">
       <button
         type="button"
-        onClick={handleClick}
+        onClick={onClick}
         className={cn(
-          styles.statusCircleButton,
-          "group relative flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all z-10",
+          "appearance-none outline-none group relative flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all z-10 touch-manipulation",
           "hover:scale-105 active:scale-95",
           isActive
-            ? `${theme.dot} ${theme.border} shadow-md ring-4 ring-green-500/40`
+            ? `${theme.dot} ${theme.border} shadow-md ring-4 ${theme.ring}`
             : `bg-white dark:bg-slate-800 ${theme.border}`,
         )}
       >
-        <span className={cn("text-xs font-black pointer-events-none", isActive ? "text-white" : theme.text)}>
+        <span className={cn("text-xs font-black", isActive ? "text-white" : theme.text)}>
           {count}
         </span>
       </button>
       <span
         className={cn(
-          "text-[10px] sm:text-[10px] scale-[0.55] sm:scale-100 origin-top font-bold uppercase tracking-tight leading-none text-center pointer-events-none whitespace-nowrap",
+          "text-[10px] font-bold uppercase tracking-tight text-center whitespace-nowrap transition-colors",
           isActive ? theme.text : "text-slate-400",
         )}
       >
