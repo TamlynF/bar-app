@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import BookingListClient from './booking-list-client copy 2';
+import BookingListClient from './booking-list-client-opy';
 
 
 export interface EventType {
@@ -86,6 +86,6 @@ export default async function BookingList() {
     );
   }
 
-return <BookingListClient initialBookings={typedBookings} />;
+// return <BookingListClient initialBookings={typedBookings} />;
 
 }

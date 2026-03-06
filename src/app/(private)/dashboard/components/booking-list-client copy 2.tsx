@@ -2,41 +2,42 @@
 
 import React, { useState, useTransition, useMemo } from "react"
 import { Calendar } from "@/components/ui/calendar"
-import { format } from "date-fns"
-import { deleteBooking, updateBookingStatus } from "@/app/(private)/dashboard/actions"
+import { format, addDays, isSameDay, startOfDay } from "date-fns"
+import { updateBookingStatus } from "@/app/(private)/dashboard/actions"
 import {
   CheckCircle,
   Clock3,
-  AlertCircle,
   CalendarDays,
   Inbox,
   Loader2,
-  Trash2,
   Users,
   Pencil,
-  Mail,
-  CalendarIcon,
   Search,
   Filter,
   ChevronRight,
-  Info,
-  ExternalLink,
+  BadgePoundSterling,
+  Table as TableIcon,
+  MessageSquare,
+  CalendarIcon,
+  X,
+  ChevronDown
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
+import Link from "next/link"
 
 const formatDateStr = (d: Date) => {
   const date = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
@@ -52,9 +53,10 @@ const statusTheme: Record<string, { bg: string; text: string; border: string; do
 
 export interface Booking {
   id: string;
-  event_id?: string;
   group_name?: string;
-  group_size?: number;
+  group_size: number;
+  paid_amount?: number;
+  total_amount?: number;
   status?: string;
   special_requests?: string;
   booking_created_at?: string;
@@ -65,48 +67,64 @@ export interface Booking {
   events?: {
     event_date?: string;
     event_title?: string;
+    payment_amount?: number;
   };
 }
 
-export default function BookingListClient2({ initialBookings }: { initialBookings: Booking[] }) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+export default function BookingListClient({ initialBookings }: { initialBookings: Booking[] }) {
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(startOfDay(new Date()))
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
   
-  // Quick View State
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
 
   const filteredBookings = useMemo(() => {
     return initialBookings.filter((b) => {
-      const matchesDate = selectedDate ? b.events?.event_date === formatDateStr(selectedDate) : true;
+      const bDate = b.events?.event_date ? new Date(b.events.event_date) : null;
+      const matchesDate = selectedDate && bDate ? isSameDay(bDate, selectedDate) : !selectedDate;
       const matchesStatus = statusFilter === "all" ? true : b.status?.toLowerCase() === statusFilter;
       const matchesSearch = searchQuery.toLowerCase() === "" ? true : 
         b.group_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
         b.contacts?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
       
       return matchesDate && matchesStatus && matchesSearch;
+    }).sort((a, b) => {
+      if (!selectedDate) {
+        return new Date(b.events?.event_date || 0).getTime() - new Date(a.events?.event_date || 0).getTime();
+      }
+      return new Date(b.booking_created_at || 0).getTime() - new Date(a.booking_created_at || 0).getTime();
     });
   }, [initialBookings, selectedDate, statusFilter, searchQuery]);
 
   const stats = useMemo(() => {
-    const reference = selectedDate || new Date();
-    const contextBookings = initialBookings.filter(b => b.events?.event_date === formatDateStr(reference));
+    const contextBookings = selectedDate 
+      ? initialBookings.filter(b => b.events?.event_date === formatDateStr(selectedDate))
+      : initialBookings;
+
+    const confirmed = contextBookings.filter(b => b.status === "confirmed");
     
     return {
-      total: contextBookings.length,
-      confirmed: contextBookings.filter(b => b.status === "confirmed").length,
-      waitlisted: contextBookings.filter(b => b.status === "waitlisted").length,
+      totalGuests: confirmed.reduce((acc, curr) => acc + (Number(curr.group_size) || 0), 0),
+      totalTeams: contextBookings.length,
+      revenue: contextBookings.reduce((acc, curr) => acc + (curr.paid_amount || 0), 0),
+      waitlist: contextBookings.filter(b => b.status === "waitlisted").length,
     };
   }, [initialBookings, selectedDate]);
 
   const handleStatusChange = (id: string, newStatus: string) => {
     setBookingActionId(id)
+    if (selectedBooking && selectedBooking.id === id) {
+      setSelectedBooking({ ...selectedBooking, status: newStatus });
+    }
+
     startTransition(async () => {
       try {
         await updateBookingStatus(id, newStatus)
+      } catch (error) {
+        console.error(error)
       } finally {
         setBookingActionId(null)
       }
@@ -114,241 +132,286 @@ export default function BookingListClient2({ initialBookings }: { initialBooking
   }
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* 1. Slim Stats Bar */}
-      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:mx-0">
-        <CompactStatCard 
-          label="Total" 
-          value={stats.total} 
-          icon={<CalendarDays className="w-3 h-3" />} 
-          color="blue"
-        />
-        <CompactStatCard 
-          label="Confirmed" 
-          value={stats.confirmed} 
-          icon={<CheckCircle className="w-3 h-3" />} 
-          color="emerald"
-        />
-        <CompactStatCard 
-          label="Waitlist" 
-          value={stats.waitlisted} 
-          icon={<Clock3 className="w-3 h-3" />} 
-          color="amber"
-        />
-      </div>
+    <div className="space-y-4 animate-in fade-in duration-500">
+      
+      {/* 1. Date Navigation Bar - Clean & Slim */}
+      <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10 shadow-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
+              <CalendarDays className="w-4 h-4 text-primary" />
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[9px] font-black uppercase tracking-widest text-primary/50">Schedule</span>
+              <span className="text-xs font-bold text-white uppercase truncate max-w-[120px]">
+                {selectedDate ? format(selectedDate, "do MMMM") : "All History"}
+              </span>
+            </div>
+          </div>
 
-      {/* 2. Integrated Search & Date */}
-      <div className="grid grid-cols-12 gap-2">
-        <div className="col-span-8 relative">
-           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
-           <Input 
-              placeholder="Search teams..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 bg-white/5 border-white/10 rounded-2xl h-12 focus:ring-primary/30"
-            />
-        </div>
-        <div className="col-span-4">
           <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full h-12 rounded-2xl bg-white/5 border-white/10 px-0">
-                <CalendarIcon className="w-5 h-5 text-primary" />
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-primary hover:bg-primary/10 rounded-md">
+                <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
+                <span className="text-[9px] font-black uppercase">Edit</span>
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 border-white/10 bg-[#1a2109]" align="end">
+            <PopoverContent
+              className="bg-[#1a2109] border-white/20 p-0 w-auto shadow-2xl isolate z-100"
+              style={{ backgroundColor: '#1a2109' }}
+              align="start"
+            >
               <Calendar
                 mode="single"
                 selected={selectedDate}
-                onSelect={(d) => { setSelectedDate(d); setIsCalendarOpen(false); }}
-                className="text-white"
+                onSelect={(d) => { if(d) setSelectedDate(d); setIsCalendarOpen(false); }}
+                className="bg-[#1a2109] isolate z-9999" 
+                style={{ backgroundColor: '#1a2109' }}
               />
+              <div className="p-2 border-t border-white/5 bg-black/40 text-center">
+                <Button 
+                  variant="ghost" 
+                  size="sm"
+                  className="w-full text-[9px] font-black uppercase tracking-widest text-primary"
+                  onClick={() => { setSelectedDate(undefined); setIsCalendarOpen(false); }}
+                >
+                  Show All History
+                </Button>
+              </div>
             </PopoverContent>
           </Popover>
         </div>
+
+      {/* 2. KPI Grid - Micro Tiles */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+        <KPIBox label="Guests" value={stats.totalGuests} icon={<Users />} />
+        <KPIBox label="Revenue" value={`£${stats.revenue}`} icon={<BadgePoundSterling />} />
+        <KPIBox label="Waitlist" value={stats.waitlist} icon={<Clock3 />} color={stats.waitlist > 0 ? "amber" : "default"} />
+        <KPIBox label="Teams" value={stats.totalTeams} icon={<TableIcon />} />
       </div>
 
-      {/* 3. The List */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between px-2 mb-2">
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
-            {selectedDate ? format(selectedDate, "do MMMM") : "All Bookings"}
-          </span>
-          <DropdownMenu>
-            <DropdownMenuTrigger className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1">
-              <Filter className="w-3 h-3" /> {statusFilter === 'all' ? 'Status' : statusFilter}
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-[#1a2109] border-white/10">
-              <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
-                <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="confirmed">Confirmed</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="waitlisted">Waitlisted</DropdownMenuRadioItem>
-                <DropdownMenuRadioItem value="cancelled">Cancelled</DropdownMenuRadioItem>
-              </DropdownMenuRadioGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      {/* 3. Search & Filter - Forced Horizontal Row */}
+      <div className="flex flex-row items-center gap-2">
+        <div className="relative flex-1 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 group-focus-within:text-primary transition-colors" />
+          <Input 
+            placeholder="Search..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 rounded-lg bg-black/40 border-white/10 pl-9 text-[11px] text-white placeholder:text-white/20 focus:ring-primary/20 transition-all"
+          />
         </div>
+        
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="h-9 rounded-lg bg-white/5 border-white/10 text-stone-400 px-2.5 min-w-[36px]">
+              <Filter className="w-3.5 h-3.5 opacity-50" />
+              <span className="hidden sm:inline-block ml-2 text-[9px] font-black uppercase tracking-widest">
+                {statusFilter === 'all' ? 'Filter' : statusFilter}
+              </span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-[#1a2109] border-white/20 w-40 p-1 isolate z-100" style={{ backgroundColor: '#1a2109' }}>
+            <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
+              {['all', 'confirmed', 'waitlisted', 'pending', 'cancelled'].map(s => (
+                <DropdownMenuRadioItem key={s} value={s} className="text-[10px] font-black uppercase tracking-widest p-2.5 rounded-md cursor-pointer">
+                  {s}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
 
+      {/* 4. Floor List Content */}
+      <div className="space-y-1.5 pb-20">
         {filteredBookings.length === 0 ? (
-          <div className="py-20 text-center bg-white/3 rounded-3xl border border-dashed border-white/5">
-            <Inbox className="w-10 h-10 text-white/10 mx-auto mb-3" />
-            <p className="text-white/30 text-xs font-bold uppercase tracking-widest">No matching results</p>
+          <div className="py-16 text-center bg-white/2 rounded-2xl border border-dashed border-white/5">
+            <Inbox className="w-8 h-8 text-white/5 mx-auto mb-2" />
+            <p className="text-stone-600 text-[9px] font-black uppercase tracking-widest">No entries found</p>
           </div>
         ) : (
           filteredBookings.map((b) => (
-            <CompactBookingRow 
+            <BookingCard 
               key={b.id} 
               booking={b} 
-              onViewDetails={() => setSelectedBooking(b)}
+              showDate={!selectedDate}
+              onClick={() => setSelectedBooking(b)} 
             />
           ))
         )}
       </div>
 
-      {/* 4. Quick View Detail Sheet */}
-      <Sheet open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
-        <SheetContent side="bottom" className="bg-[#1a2109] border-white/10 rounded-t-[2.5rem] h-[70vh] p-8">
+      {/* 5. Team Profile Sheet - Refresh Design */}
+      <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
+        <SheetContent 
+          side="bottom"
+          className="bg-[#1a2109] border-t border-primary/20 rounded-t-[2.5rem] p-5 pb-8 max-h-[80vh] overflow-y-auto"
+          style={{ backgroundColor: '#1a2109' }}
+        >
           {selectedBooking && (
-            <div className="space-y-8">
-              <SheetHeader>
-                <div className={cn(
-                  "inline-flex w-max rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest mb-2 border",
-                  statusTheme[selectedBooking.status || 'pending']?.bg,
-                  statusTheme[selectedBooking.status || 'pending']?.text,
-                  statusTheme[selectedBooking.status || 'pending']?.border,
-                )}>
-                  {selectedBooking.status}
+            <div className="space-y-5 max-w-lg mx-auto">
+              <div className="flex justify-center -mt-1 mb-2">
+                <div className="w-10 h-1 bg-white/10 rounded-full" />
+              </div>
+              
+              <SheetHeader className="text-left p-0">
+                <div className="space-y-2">
+                  <div className={cn(
+                    "inline-flex px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
+                    statusTheme[selectedBooking.status || 'pending']?.bg,
+                    statusTheme[selectedBooking.status || 'pending']?.text,
+                    statusTheme[selectedBooking.status || 'pending']?.border
+                  )}>
+                    {selectedBooking.status}
+                  </div>
+                  <SheetTitle className="text-xl font-black text-white uppercase tracking-tight leading-none">
+                    {selectedBooking.group_name || "Guest Team"}
+                  </SheetTitle>
+                  <div className="flex items-center gap-3 text-stone-500 font-bold text-[9px] uppercase tracking-wider">
+                    <span className="flex items-center gap-1.5"><CalendarDays className="w-3 h-3 text-primary/40" /> {selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM") : "—"}</span>
+                    <span>Ref: #{selectedBooking.id}</span>
+                  </div>
                 </div>
-                <SheetTitle className="text-3xl font-black text-white uppercase tracking-tight">
-                  {selectedBooking.group_name}
-                </SheetTitle>
-                <SheetDescription className="text-stone-400">
-                  Reference ID: #{selectedBooking.id}
-                </SheetDescription>
               </SheetHeader>
 
-              <div className="grid grid-cols-2 gap-4">
-                <DetailBox label="Team Size" value={`${selectedBooking.group_size} People`} icon={<Users />} />
-                <DetailBox label="Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM") : "—"} icon={<CalendarDays />} />
+              <div className="grid grid-cols-2 gap-2">
+                <DetailTile icon={<Users className="w-3 h-3"/>} label="Team Size" value={`${selectedBooking.group_size} Guests`} />
+                <DetailTile icon={<BadgePoundSterling className="w-3 h-3"/>} label="Deposit" value={selectedBooking.paid_amount && selectedBooking.paid_amount > 0 ? "Settled" : "Pending"} />
               </div>
 
-              <div className="space-y-4 pt-4 border-t border-white/5">
-                <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-primary font-black">
-                    {selectedBooking.contacts?.full_name?.charAt(0)}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-white uppercase">{selectedBooking.contacts?.full_name}</p>
-                    <p className="text-xs text-stone-500">{selectedBooking.contacts?.email}</p>
-                  </div>
+              <div className="bg-black/30 p-3 rounded-xl border border-white/5 flex items-center gap-3">
+                <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-black text-base">
+                  {selectedBooking.contacts?.full_name?.charAt(0)}
                 </div>
-
-                {selectedBooking.special_requests && (
-                  <div className="bg-white/3 p-4 rounded-2xl">
-                    <p className="text-[10px] font-black uppercase text-stone-500 mb-1">Special Requests</p>
-                    <p className="text-sm italic text-stone-300">&quot;{selectedBooking.special_requests}&quot;</p>
-                  </div>
-                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-black text-white uppercase truncate">{selectedBooking.contacts?.full_name}</p>
+                  <p className="text-[9px] font-bold text-stone-500 truncate">{selectedBooking.contacts?.email}</p>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-6">
-                <Button 
-                  asChild 
-                  className="bg-[#fdcc4b] text-[#26300D] font-black rounded-xl h-14 uppercase tracking-widest"
-                >
-                  <a href={`/manage-booking/${selectedBooking.id}`}>
-                    <Pencil className="w-4 h-4 mr-2" /> Manage
-                  </a>
-                </Button>
-                <DropdownMenu>
+              {selectedBooking.special_requests && (
+                <div className="bg-amber-500/5 p-4 rounded-2xl border border-amber-500/10">
+                  <p className="text-[8px] font-black uppercase tracking-widest text-amber-500/50 mb-1">Special Request</p>
+                  <p className="text-xs text-stone-300 italic leading-snug">
+                    &quot;{selectedBooking.special_requests}&quot;
+                  </p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="border-white/10 bg-white/5 text-white font-black rounded-xl h-14 uppercase tracking-widest">
+                    <Button variant="outline" className="h-12 rounded-xl border-white/10 bg-white/5 text-white font-black text-[10px] uppercase tracking-widest shadow-inner">
                       Set Status
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent className="bg-[#1a2109] border-white/10 w-48">
-                    {['confirmed', 'waitlisted', 'pending', 'cancelled'].map(s => (
-                      <DropdownMenuItem key={s} onClick={() => handleStatusChange(selectedBooking.id, s)} className="capitalize font-bold">
-                        {s}
+                  <DropdownMenuContent                    
+		  className="bg-[#1a2109] border-primary/40 w-44 p-1 z-9999"
+                    style={{ backgroundColor: '#1a2109' }}                    
+                    onPointerDownOutside={(e) => e.preventDefault()}
+                    onInteractOutside={(e) => e.preventDefault()}
+                  >
+                    {Object.keys(statusTheme).map((s) => (
+                      <DropdownMenuItem 
+                        key={s} 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStatusChange(selectedBooking!.id, s);
+                        }}
+                        className="font-bold text-[10px] p-2.5 uppercase rounded-md cursor-pointer hover:bg-white/5"
+                      >
+                         <div className={cn("w-2 h-2 rounded-full mr-2", statusTheme[s].dot)} />
+                         {s}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
+
+                <Button asChild className="h-12 rounded-xl bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/10">
+                  <Link href={`/manage-booking/${selectedBooking.id}`}>
+                    <Pencil className="w-3.5 h-3.5 mr-2" /> Manage
+                  </Link>
+                </Button>
               </div>
             </div>
           )}
         </SheetContent>
       </Sheet>
 
-      {/* Global Transition Loader */}
+      {/* Global Sync Overlay */}
       {isPending && (
-        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
-          <Loader2 className="w-3 h-3 animate-spin" /> Syncing
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
+          <Loader2 className="w-3 h-3 animate-spin" /> Updating Floor
         </div>
       )}
     </div>
   )
 }
 
-function CompactBookingRow({ booking, onViewDetails }: { booking: Booking, onViewDetails: () => void }) {
+function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick: () => void, showDate?: boolean }) {
   const status = booking.status?.toLowerCase() || 'pending';
   const theme = statusTheme[status];
 
   return (
     <div 
-      onClick={onViewDetails}
-      className="group bg-white/3 hover:bg-white/5 active:bg-white/10 border border-white/5 rounded-2xl p-4 flex items-center justify-between transition-all cursor-pointer"
+      onClick={onClick}
+      className="group hover:bg-white/5 active:scale-[0.99] transition-all border border-white/5 rounded-xl p-3 flex items-center justify-between cursor-pointer bg-white/2 relative overflow-hidden"
+      style={{ backgroundColor: '#1a2109' }}
     >
-      <div className="flex items-center gap-4 min-w-0">
-        <div className={cn("w-1.5 h-6 rounded-full shrink-0", theme.dot)} />
-        <div className="min-w-0">
-          <h4 className="text-sm font-bold text-white truncate uppercase tracking-tight">
-            {booking.group_name || "Guest"}
-          </h4>
-          <p className="text-[10px] font-black text-stone-600 uppercase tracking-widest">
+      <div className={cn("absolute left-0 top-0 bottom-0 w-1", theme.dot)} />
+
+      <div className="flex items-center gap-3 min-w-0 text-left">
+        <div className="min-w-0 pl-1">
+          <div className="flex items-center gap-2">
+            <h4 className="text-[13px] font-bold text-white truncate uppercase tracking-tight">
+              {booking.group_name || "Guest Team"}
+            </h4>
+            {showDate && booking.events?.event_date && (
+              <span className="px-1 py-0 rounded bg-primary/10 text-[7px] font-black text-primary border border-primary/20">
+                {format(new Date(booking.events.event_date), "dd/MM")}
+              </span>
+            )}
+          </div>
+          <p className="text-[8px] font-bold text-stone-600 uppercase tracking-widest truncate mt-0.5">
             {booking.contacts?.full_name}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg">
-          <Users className="w-3 h-3 text-stone-500" />
-          <span className="text-xs font-bold text-stone-300">{booking.group_size}</span>
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
+          <Users className="w-2.5 h-2.5 text-primary/40" />
+          <span className="text-[10px] font-black text-white">{booking.group_size}</span>
         </div>
-        <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-primary transition-colors" />
+        <ChevronRight className="w-3.5 h-3.5 text-white/5 group-hover:text-primary transition-colors" />
       </div>
     </div>
   );
 }
 
-function CompactStatCard({ label, value, icon, color }: { label: string, value: number, icon: React.ReactNode, color: string }) {
-  const colorMap: Record<string, string> = {
-    blue: "text-blue-400 bg-blue-500/5 border-blue-500/10",
-    emerald: "text-emerald-400 bg-emerald-500/5 border-emerald-500/10",
-    amber: "text-amber-400 bg-amber-500/5 border-amber-500/10",
-  }
-  
+function KPIBox({ label, value, icon, color = "default" }: { label: string, value: string | number, icon: React.ReactNode, color?: "amber" | "default" }) {
   return (
-    <div className={cn("flex-none min-w-28 rounded-2xl border p-3 flex flex-col gap-1 shadow-sm", colorMap[color])}>
-      <div className="flex items-center justify-between opacity-60">
-        <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
-        {icon}
+    <div className={cn(
+      "bg-white/5 border border-white/10 rounded-xl p-2.5 space-y-0.5 transition-all shadow-sm",
+      color === "amber" && "bg-amber-500/10 border-amber-500/20"
+    )}>
+      <div className="flex items-center justify-between mb-0.5 opacity-40">
+        <span className="text-[7px] font-black uppercase tracking-widest text-white">{label}</span>
+        <div className="scale-75 origin-right">{icon}</div>
       </div>
-      <span className="text-lg font-black">{value}</span>
+      <div className="text-lg font-black text-white leading-none tracking-tight">{value}</div>
     </div>
   )
 }
 
-function DetailBox({ label, value, icon }: { label: string, value: string, icon: React.ReactElement<{ className?: string }> }) {
+function DetailTile({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
-    <div className="bg-white/3 border border-white/5 p-4 rounded-4xl flex flex-col gap-1 shadow-inner">
-      <div className="flex items-center gap-2 text-white/20">
-        {React.cloneElement(icon, { 
-          className: "w-3 h-3"
-        })}
-        <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
+    <div className="bg-white/4 border border-white/5 p-3 rounded-xl flex flex-col gap-0.5 text-left group">
+      <div className="flex items-center gap-1.5 text-white/20 group-hover:text-primary transition-colors">
+        <div className="scale-75 origin-left">{icon}</div>
+        <span className="text-[7px] font-black uppercase tracking-widest">{label}</span>
       </div>
-      <span className="text-white font-bold text-base uppercase tracking-tight leading-tight">{value}</span>
+      <span className="text-white font-bold text-[11px] uppercase tracking-tight">{value}</span>
     </div>
   )
 }
