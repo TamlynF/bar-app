@@ -3,7 +3,6 @@
 import React, { useState, useTransition, useMemo } from "react"
 import { Calendar } from "@/components/ui/calendar"
 import { format, addDays, isSameDay, startOfDay } from "date-fns"
-// Using absolute alias path to ensure resolution within the Next.js environment
 import { updateBookingStatus } from "@/app/(private)/dashboard/actions"
 import {
   CheckCircle,
@@ -19,7 +18,6 @@ import {
   BadgePoundSterling,
   Table as TableIcon,
   MessageSquare,
-  History,
   CalendarIcon,
   X,
   ChevronDown
@@ -82,7 +80,6 @@ export default function BookingListClient({ initialBookings }: { initialBookings
   
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
 
-  // Quick date options for the scroller
   const quickDates = useMemo(() => {
     return Array.from({ length: 7 }).map((_, i) => addDays(new Date(), i));
   }, []);
@@ -142,10 +139,10 @@ export default function BookingListClient({ initialBookings }: { initialBookings
             <div className="flex items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 text-xl font-black text-white uppercase tracking-tight leading-none group outline-none">
+                  <Button className="flex items-center gap-2 text-xl font-black text-white uppercase tracking-tight leading-none group outline-none">
                     {selectedDate ? format(selectedDate, "do MMMM") : "All History"}
                     <ChevronDown className="w-5 h-5 text-primary transition-transform group-data-[state=open]:rotate-180" />
-                  </button>
+                  </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="bg-[#1a2109] border-white/10 w-64 p-2 shadow-2xl">
                   <DropdownMenuLabel className="text-[9px] uppercase font-black text-stone-500 tracking-widest px-3 py-2">Quick Selection</DropdownMenuLabel>
@@ -276,8 +273,9 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                 <div className="w-12 h-1.5 bg-white/10 rounded-full" />
               </div>
               
+              <SheetHeader>
               <div className="flex justify-between items-start">
-                <div className="space-y-2">
+                  <div className="space-y-2 text-left">
                   <div className={cn(
                     "w-max px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest border",
                     statusTheme[selectedBooking.status || 'pending']?.bg,
@@ -286,19 +284,20 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                   )}>
                     {selectedBooking.status}
                   </div>
-                  <h2 className="text-2xl font-black text-white uppercase tracking-tight leading-none">
+                    <SheetTitle className="text-2xl font-black text-white uppercase tracking-tight leading-none">
                     {selectedBooking.group_name}
-                  </h2>
+                    </SheetTitle>
                 </div>
                 <div className="text-right flex flex-col items-end">
                   <div className="bg-primary/10 px-2 py-1 rounded text-[9px] font-black text-primary uppercase border border-primary/20">
                     #{selectedBooking.id}
                   </div>
-                  <p className="text-[9px] text-stone-500 font-bold uppercase mt-1.5 tracking-wider">
+                    <SheetDescription className="text-[9px] text-stone-500 font-bold uppercase mt-1.5 tracking-wider">
                     {selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM") : "—"}
-                  </p>
+                    </SheetDescription>
                 </div>
               </div>
+              </SheetHeader>
 
               <div className="grid grid-cols-2 gap-3">
                 <DetailTile icon={<Users />} label="Team Size" value={`${selectedBooking.group_size} People`} />
@@ -309,14 +308,14 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                 <div className="w-12 h-12 rounded-full bg-[#26300D] flex items-center justify-center text-primary font-black border border-white/5 text-lg">
                   {selectedBooking.contacts?.full_name?.charAt(0)}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="flex-1 min-w-0 text-left">
                   <p className="text-xs font-black text-white uppercase truncate tracking-wide">{selectedBooking.contacts?.full_name}</p>
                   <p className="text-[10px] font-bold text-stone-500 truncate mt-0.5 tracking-tight">{selectedBooking.contacts?.email}</p>
                 </div>
               </div>
 
               {selectedBooking.special_requests && (
-                <div className="bg-amber-500/5 p-5 rounded-3xl border border-amber-500/10">
+                <div className="bg-amber-500/5 p-5 rounded-3xl border border-amber-500/10 text-left">
                   <div className="flex items-center gap-2 mb-2">
                     <MessageSquare className="w-3.5 h-3.5 text-amber-500/50" />
                     <span className="text-[9px] font-black uppercase tracking-widest text-amber-500/50">Host Note</span>
@@ -445,7 +444,7 @@ function KPIBox({
 
 function DetailTile({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
-    <div className="bg-white/3 border border-white/5 p-5 rounded-3xl flex flex-col gap-0.5 shadow-inner">
+    <div className="bg-white/3 border border-white/5 p-5 rounded-3xl flex flex-col gap-0.5 shadow-inner text-left">
       <div className="flex items-center gap-1.5 text-white/10 mb-0.5">
         <div className="scale-75 origin-left">{icon}</div>
         <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>

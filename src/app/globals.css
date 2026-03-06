@@ -13,16 +13,16 @@
   --popover-foreground: #ffffff;
   --primary: #fdcc4b;
   --primary-foreground: #26300D;
-  --secondary: oklch(0.2690 0 0);
-  --secondary-foreground: oklch(0.9850 0 0);
+  --secondary: #1a2109;
+  --secondary-foreground: #ffffff;
   --muted: #3d3d17;
-  --muted-foreground: color-mix(in srgb, #fdcc4b 60%, transparent);
-  --accent: oklch(0.3710 0 0);
-  --accent-foreground: oklch(0.9850 0 0);
-  --destructive: oklch(0.7040 0.1910 22.2160);
-  --destructive-foreground: oklch(0.9850 0 0);
-  --border: color-mix(in srgb, #fdcc4b 20%, transparent);
-  --input: color-mix(in srgb, #fdcc4b 10%, transparent);
+  --muted-foreground: #a1a1aa;
+  --accent: #3d3d17;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #3d3d17;
+  --input: #3d3d17;
   --ring: #fdcc4b;
   --radius: 0.625rem;
 }
@@ -37,9 +37,9 @@
   --primary: #fdcc4b;
   --primary-foreground: #26300D;
   --muted: #3d3d17;
-  --muted-foreground: color-mix(in srgb, #fdcc4b 60%, transparent);
-  --border: color-mix(in srgb, #fdcc4b 20%, transparent);
-  --input: color-mix(in srgb, #fdcc4b 10%, transparent);
+  --muted-foreground: #a1a1aa;
+  --border: #3d3d17;
+  --input: #3d3d17;
   --ring: #fdcc4b;
 }
 
@@ -65,36 +65,53 @@
   --color-ring: var(--ring);
 }
 
-/* 2. Global Portal Fixes - Placed outside of layers to ensure they win specificity. */
-
-/* Ensure the portal wrapper is always on top of the dashboard content */
-[data-radix-popper-content-wrapper] {
-  z-index: 100 !important;
-}
-
-/* Force solid background and full opacity on all Radix content surfaces 
-   Targeting the data-slot attributes used in your UI components. */
-[data-slot="popover-content"],
-[data-slot="dropdown-menu-content"],
-[data-slot="calendar"],
-div[role="menu"],
-div[role="dialog"] {
-  background-color: #1a2109 !important; /* Hardcoded solid brand color */
-  background-image: none !important;
-  opacity: 1 !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.6) !important;
-  border: 1px solid rgba(253, 204, 75, 0.25) !important;
-}
-
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
   html {
     color-scheme: dark;
   }
+  
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background text-foreground;
+    /* isolation: isolate prevents the dashboard blur from leaking into portals */
+    isolation: isolate;
+  }
+
+  /* PORTAL FIX: Ensure Portals are 100% opaque and on top */
+  [data-radix-portal] {
+    z-index: 9999 !important;
+  }
+
+  /* Target all popup content areas */
+  [data-slot="popover-content"],
+  [data-slot="dropdown-menu-content"],
+  [data-slot="calendar"],
+  [role="menu"],
+  [role="dialog"],
+  .popover-content,
+  .dropdown-content,
+  .rdp {
+    background-color: #1a2109 !important; /* Force Solid HEX */
+    opacity: 1 !important;
+    
+    /* CRITICAL FIX FOR MOBILE SAFARI:
+       Forces the browser to treat the popup as a separate hardware-accelerated layer.
+       This prevents the background backdrop-blur from 'bleeding through'.
+    */
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    
+    /* Disable internal transparency */
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.9) !important;
+    border: 1px solid rgba(253, 204, 75, 0.4) !important;
+  }
+  
+  /* Ensure the calendar doesn't have transparent gaps */
+  .rdp-months, .rdp-month, .rdp-table {
+    background-color: transparent !important;
+    opacity: 1 !important;
   }
 }
 

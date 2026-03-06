@@ -68,7 +68,7 @@ export interface Booking {
   };
 }
 
-export default function BookingListClient({ initialBookings }: { initialBookings: Booking[] }) {
+export default function BookingListClient2({ initialBookings }: { initialBookings: Booking[] }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [isPending, startTransition] = useTransition()

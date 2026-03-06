@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning className="dark" style={{ colorScheme: "dark" }}>
-      <body suppressHydrationWarning className="bg-background text-foreground">
+      <body suppressHydrationWarning className="dark bg-[#26300D] text-[#fdcc4b] antialiased min-h-screen">
         {children}
       </body>
     </html>
