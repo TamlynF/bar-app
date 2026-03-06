@@ -93,26 +93,24 @@ export default function SettingsLayout({
         {/* Desktop Header */}
         <div className="mb-8 hidden lg:block">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-primary/20 rounded-xl">
-              <Settings className="w-6 h-6 text-primary" />
+            <div className="p-2 bg-primary rounded-xl">
+              <Settings className="w-6 h-6 text-primary-foreground" />
             </div>
             <h2 className="text-2xl font-black tracking-tight text-foreground uppercase">Settings</h2>
           </div>
-          <p className="text-muted-foreground text-sm leading-relaxed font-medium pl-1">
-            Configure venue operations, manage team databases, and adjust staff roles.
-          </p>
+          <p className="text-muted-foreground text-sm font-medium">Configure venue operations and manage databases.</p>
         </div>
 
         {/* Mobile Navigation Header & Trigger */}
         <div className="lg:hidden w-full mb-6">
           <div className="flex items-center justify-between mb-5 px-1">
             <div className="flex items-center gap-2">
-               <div className="p-2 bg-primary/10 rounded-lg">
-                <Settings className="w-5 h-5 text-primary" />
+               <div className="p-2 bg-primary rounded-lg">
+                <Settings className="w-5 h-5 text-primary-foreground" />
                </div>
-               <h2 className="text-xl font-bold tracking-tight text-foreground">Settings</h2>
+               <h2 className="text-xl font-bold tracking-tight text-foreground uppercase">Settings</h2>
             </div>
-            <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-[10px] uppercase font-black tracking-widest text-primary">
+            <div className="px-3 py-1 bg-primary/10 border border-primary/20 rounded-full text-[10px] uppercase font-black tracking-widest text-muted-foreground">
               Admin Mode
             </div>
           </div>

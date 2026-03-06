@@ -58,53 +58,49 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 bg-slate-100 dark:bg-slate-950 min-h-screen relative selection:bg-primary selection:text-primary-foreground">
+    <div className="flex-1 bg-background min-h-screen relative selection:bg-primary selection:text-primary-foreground">
       {/* Refined Ambient Glows - Made subtle for a professional look */}
-      <div className="fixed top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10" />
-      <div className="fixed bottom-0 left-0 w-80 h-80 bg-primary/5 blur-[100px] rounded-full pointer-events-none -z-10" />
+      <div className="fixed top-0 right-0 w-96 h-96 bg-accent/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+      <div className="fixed bottom-0 left-0 w-80 h-80 bg-accent/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
       {/* Header - Clean and crisp */}
-      <header className="px-4 py-4 md:px-8 md:py-6 flex justify-between items-center sticky top-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md z-30 border-b border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-800 shadow-sm">
-             <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-slate-700 dark:text-slate-300" />
-          </div>
-          <div className="hidden sm:block">
-            <h1 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-none">Floor Manager</h1>
-            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Don Fenticas</p>
+      <header className="px-4 py-4 md:px-8 md:py-6 flex items-center justify-between relative top-0 bg-[#FFFDF7]/80 backdrop-blur-md z-30 border-b border-[#E6DFC8] shadow-sm">
+        {/* Left Section: Branding - Hidden on mobile */}
+        <div className="flex items-center z-10 w-7 sm:w-auto">
+          <div className="hidden sm:flex items-center gap-3">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#26300D] flex items-center justify-center border border-[#E6DFC8] shadow-sm">
+              <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-[#FDCC4B]" />
+            </div>
+            {/* <div>
+              <h1 className="text-lg md:text-xl font-bold text-[#1F1F1A] tracking-tight leading-none">Floor Manager</h1>
+              <p className="text-[10px] font-semibold text-[#5F624F] uppercase tracking-widest mt-1">Don Fenticas</p>
+            </div> */}
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard/settings">
-            <Button variant="outline" size="icon" className="h-10 w-10 md:h-11 md:w-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-sm">
+        {/* Center Section: Dashboard Title - centered between left and right on mobile too */}
+        <div className="absolute inset-0 flex justify-center items-center pointer-events-none">
+          <h2 className="inline-flex items-center text-sm md:text-base font-black uppercase tracking-[0.25em] text-[#1F1F1A] leading-none text-center">
+            Dashboard
+          </h2>
+        </div>
+
+        {/* Right Section: Actions */}
+        <div className="flex items-center justify-end gap-1 sm:gap-1 z-10 w-7 sm:w-auto">
+          <Link href="/dashboard/settings" className="flex items-center pointer-events-auto">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7 md:h-11 md:w-11 rounded-xl bg-[#FFFDF7] border border-[#E6DFC8] text-[#5F624F] hover:bg-[#FFF4CC] hover:text-[#26300D] flex items-center justify-center transition-all shadow-sm"
+            >
               <Settings className="w-4 h-4 md:w-5 md:h-5" />
-            </Button>
-          </Link>
-          <Link href="/book" className="hidden sm:block">
-            <Button className="h-10 md:h-11 rounded-xl font-bold uppercase text-[11px] tracking-wider px-5 shadow-sm">
-              <Plus className="w-4 h-4 mr-2" /> New Booking
             </Button>
           </Link>
         </div>
       </header>
 
-      <div className="p-4 md:p-8 max-w-5xl mx-auto">
-        {hasDataSourceError && (
-          <div className="mb-6 rounded-xl border border-red-500/20 bg-red-50 dark:bg-red-500/10 p-4 text-[11px] font-medium text-red-600 dark:text-red-400 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            Live sync unavailable.
-          </div>
-        )}
-
-        <Suspense fallback={
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[1,2,3,4].map(i => <div key={i} className="h-20 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />)}
-            </div>
-            <div className="h-64 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
-          </div>
-        }>
+      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+        <Suspense fallback={<div className="h-64 bg-card rounded-2xl animate-pulse" />}>
           <BookingListClient initialBookings={typedBookings} />
         </Suspense>
       </div>
@@ -112,7 +108,7 @@ export default async function DashboardPage() {
       {/* Floating Action Button - Mobile Only */}
       <div className="fixed bottom-6 right-6 z-40 sm:hidden">
         <Link href="/book">
-          <Button size="lg" className="h-14 w-14 rounded-full shadow-lg bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all">
+          <Button size="lg" className="h-14 w-14 rounded-full shadow-lg bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all flex items-center justify-center border-2 border-[#FDCC4B]/20">
             <Plus className="w-6 h-6 stroke-[2.5]" />
           </Button>
         </Link>
