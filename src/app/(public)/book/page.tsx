@@ -4,7 +4,7 @@ import { Calendar, Banknote, Users, Trophy, Wine } from "lucide-react";
 import Image from "next/image";
 
 export const metadata = {
-  title: 'Book a Quiz | Bar App',
+  title: 'Book a Quiz | Don Fenticas',
   description: 'Secure your spot for our next quiz night.',
 };
 
@@ -12,33 +12,37 @@ export default function QuizBookingPage() {
   const eventBadges = [
     { icon: Banknote, text: "Free Entry" },
     { icon: Calendar, text: "Thursdays: 8:00PM" },
-    { icon: Users, text: "Max 6 per team" },
+    // { icon: Users, text: "Max 6 per team" },
     { icon: Trophy, text: "Win Prosecco" },
     { icon: Wine, text: "Happy Hour: 6:00PM - 9:00PM" },
   ];
 
   return (
-    <main className="min-h-screen bg-[#26300D] text-[#fdcc4b] py-1 sm:py-8 px-4 sm:px-6 lg:px-8 selection:bg-[#fdcc4b] selection:text-[#26300D] overflow-hidden">
-      <div className="max-w-4xl mx-auto">
+    <main className="min-h-screen bg-[#26300D] text-stone-300 py-6 sm:py-12 px-4 sm:px-6 lg:px-8 selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
+      <div className="max-w-3xl mx-auto">
 
         {/* Header Section */}
-        <div className="flex flex-col items-center text-center mb-8">
-          <Image
-            src="/DF X PJ Quiz Night.png"
-            alt="Don Fenticas x Papa Johns Quiz Night"
-            width={600}
-            height={260}
-            className="w-full max-w-70 sm:max-w-100 md:max-w-125 object-contain drop-shadow-2xl z-10"
-            priority
-          />
-          <p className="mt-1 sm:mt-2 text-xs sm:text-sm text-[#dcf5c7]/90 font-sans max-w-md mx-auto px-4">
-            Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.
-          </p>
+        <div className="flex flex-col items-center text-center mb-8 sm:mb-12">
+          <div className="w-full max-w-60 sm:max-w-105 transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98]">
+            <Image
+              src="/DF X PJ Quiz Night.png"
+              alt="Don Fenticas x Papa Johns Quiz Night"
+              width={600}
+              height={260}
+              className="w-full h-auto object-contain drop-shadow-[0_20px_40px_rgba(0,0,0,0.4)]"
+              priority
+            />
+          </div>
+          <div className="mt-6 space-y-2 px-4">
+            <h1 className="text-white text-xs sm:text-sm font-black uppercase tracking-[0.3em] opacity-80">Weekly Pub Trivia</h1>
+            <p className="text-stone-400 text-sm sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic">
+              Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.
+            </p>
+          </div>
         </div>
 
         {/* Event Badges - Horizontal Scrollable Row */}
-        <div className="mb-5 -mx-4 px-4 sm:mx-0 sm:px-0 relative">
-          {/* Subtle gradient indicators for scroll overflow on mobile */}
+        {/* <div className="mb-5 -mx-4 px-4 sm:mx-0 sm:px-0 relative">
           <div className="absolute left-0 top-0 bottom-0 w-8 bg-linear-to-r from-[#26300D] to-transparent pointer-events-none sm:hidden z-10"></div>
           <div className="absolute right-0 top-0 bottom-0 w-8 bg-linear-to-l from-[#26300D] to-transparent pointer-events-none sm:hidden z-10"></div>
 
@@ -53,22 +57,46 @@ export default function QuizBookingPage() {
               </div>
             ))}
           </div>
+        </div> */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-8 sm:mb-12">
+          {eventBadges.map((badge, index) => (
+            <div
+              key={index}
+              className={`flex items-center justify-center bg-white/3 border border-white/8 rounded-xl px-3 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/[0.08] ${index === eventBadges.length - 1 && eventBadges.length % 2 !== 0 ? "col-span-2 sm:col-span-1" : ""
+                }`}
+            >
+              <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />
+              <span className="truncate text-stone-200">{badge.text}</span>
+            </div>
+          ))}
         </div>
 
         {/* Booking Form Card */}
-        <div className="bg-linear-to-b from-[#1e260a] to-[#151a07] rounded-3xl p-5 sm:p-8 border border-[#fdcc4b]/30 shadow-2xl relative overflow-hidden">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-32 bg-[#fdcc4b]/5 blur-3xl pointer-events-none rounded-full"></div>
-          <div className="mb-6 text-center sm:text-left relative z-10">
-            <h3 className="text-2xl font-bold mb-1 text-white tracking-wide uppercase">Reserve Your Table</h3>
-            <p className="text-[#fdcc4b]/70 text-sm font-medium">Lock in your team before we are fully booked.</p>
+        <div className="bg-white/3 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5">
+          <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#fdcc4b]/10 blur-[100px] rounded-full pointer-events-none"></div>
+
+          <div className="mb-8 text-center sm:text-left relative z-10 pl-1">
+            {/* <div className="inline-block px-3 py-1 rounded-full bg-[#fdcc4b]/10 border border-[#fdcc4b]/20 text-[#fdcc4b] text-[10px] font-black uppercase tracking-widest mb-3">
+              Limited Tables
+            </div> */}
+            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase leading-none">Book Your Table</h3>
+            <p className="text-stone-500 text-xs sm:text-sm mt-2 font-medium">Lock in your team before we are fully booked.</p>
           </div>
 
           <div className="relative z-10">
             <BookingForm />
           </div>
-
         </div>
-
+        <div className="mt-12 mb-6 flex flex-col items-center gap-6">
+          <div className="flex items-center gap-4 text-stone-600">
+            <div className="h-px w-8 bg-stone-800"></div>
+            <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
+            <div className="h-px w-8 bg-stone-800"></div>
+          </div>
+          <p className="text-[9px] text-stone-500 uppercase tracking-widest opacity-50">
+            Licensed Venue • Please Drink Responsibly
+          </p>
+        </div>
       </div>
     </main>
   );
