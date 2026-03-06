@@ -1,3 +1,4 @@
+// src/app/(private)/dashboard/page.tsx
 import React, { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server"
 import BookingListClient, { Booking } from "./components/booking-list-client-opy"
@@ -57,40 +58,40 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 bg-[#1a2109] min-h-screen relative selection:bg-primary selection:text-primary-foreground">
-      {/* Refined Ambient Glows */}
-      <div className="fixed top-0 right-0 w-96 h-96 bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+    <div className="flex-1 bg-slate-100 dark:bg-slate-950 min-h-screen relative selection:bg-primary selection:text-primary-foreground">
+      {/* Refined Ambient Glows - Made subtle for a professional look */}
+      <div className="fixed top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-0 left-0 w-80 h-80 bg-primary/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      {/* Header - Compact for Mobile */}
-      <header className="px-4 py-4 md:px-8 md:py-6 flex justify-between items-center sticky top-0 bg-[#1a2109]/90 backdrop-blur-md z-30 border-b border-white/10 shadow-lg">
+      {/* Header - Clean and crisp */}
+      <header className="px-4 py-4 md:px-8 md:py-6 flex justify-between items-center sticky top-0 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md z-30 border-b border-slate-200 dark:border-slate-800 shadow-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30 shadow-inner">
-             <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-primary" />
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-slate-100 dark:bg-slate-900 flex items-center justify-center border border-slate-200 dark:border-slate-800 shadow-sm">
+             <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-slate-700 dark:text-slate-300" />
           </div>
           <div className="hidden sm:block">
-            <h1 className="text-lg md:text-xl font-black text-white uppercase tracking-tight leading-none">Floor Manager</h1>
-            <p className="text-[9px] font-black text-primary/60 uppercase tracking-[0.2em] mt-1">Don Fenticas</p>
+            <h1 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-tight leading-none">Floor Manager</h1>
+            <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Don Fenticas</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <Link href="/dashboard/settings">
-            <Button variant="outline" size="icon" className="h-10 w-10 md:h-11 md:w-11 rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10 transition-all">
+            <Button variant="outline" size="icon" className="h-10 w-10 md:h-11 md:w-11 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all shadow-sm">
               <Settings className="w-4 h-4 md:w-5 md:h-5" />
             </Button>
           </Link>
           <Link href="/book" className="hidden sm:block">
-            <Button className="h-10 md:h-11 rounded-xl font-black uppercase text-[10px] tracking-widest px-5">
+            <Button className="h-10 md:h-11 rounded-xl font-bold uppercase text-[11px] tracking-wider px-5 shadow-sm">
               <Plus className="w-4 h-4 mr-2" /> New Booking
             </Button>
           </Link>
         </div>
       </header>
 
-      <div className="p-4 md:p-8 max-w-7xl mx-auto">
+      <div className="p-4 md:p-8 max-w-5xl mx-auto">
         {hasDataSourceError && (
-          <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-[10px] font-bold text-red-200 flex items-center gap-3">
+          <div className="mb-6 rounded-xl border border-red-500/20 bg-red-50 dark:bg-red-500/10 p-4 text-[11px] font-medium text-red-600 dark:text-red-400 flex items-center gap-3">
             <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
             Live sync unavailable.
           </div>
@@ -99,9 +100,9 @@ export default async function DashboardPage() {
         <Suspense fallback={
           <div className="space-y-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {[1,2,3,4].map(i => <div key={i} className="h-20 bg-white/5 rounded-2xl animate-pulse" />)}
+              {[1,2,3,4].map(i => <div key={i} className="h-20 bg-slate-200 dark:bg-slate-800 rounded-xl animate-pulse" />)}
             </div>
-            <div className="h-64 bg-white/5 rounded-3xl animate-pulse" />
+            <div className="h-64 bg-slate-200 dark:bg-slate-800 rounded-2xl animate-pulse" />
           </div>
         }>
           <BookingListClient initialBookings={typedBookings} />
@@ -111,8 +112,8 @@ export default async function DashboardPage() {
       {/* Floating Action Button - Mobile Only */}
       <div className="fixed bottom-6 right-6 z-40 sm:hidden">
         <Link href="/book">
-          <Button size="lg" className="h-14 w-14 rounded-2xl shadow-2xl bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all border-2 border-white/20">
-            <Plus className="w-6 h-6 stroke-3" />
+          <Button size="lg" className="h-14 w-14 rounded-full shadow-lg bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all">
+            <Plus className="w-6 h-6 stroke-[2.5]" />
           </Button>
         </Link>
       </div>

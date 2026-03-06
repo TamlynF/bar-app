@@ -20,7 +20,8 @@ import {
   MessageSquare,
   CalendarIcon,
   X,
-  ChevronDown
+  ChevronDown,
+  User
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -44,11 +45,11 @@ const formatDateStr = (d: Date) => {
   return date.toISOString().split("T")[0]
 }
 
-const statusTheme: Record<string, { bg: string; text: string; border: string; dot: string }> = {
-  confirmed: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20", dot: "bg-emerald-500" },
-  waitlisted: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/20", dot: "bg-amber-500" },
-  pending: { bg: "bg-slate-500/10", text: "text-slate-400", border: "border-slate-500/20", dot: "bg-slate-400" },
-  cancelled: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/20", dot: "bg-red-500" },
+const statusTheme: Record<string, { bg: string; text: string; border: string; dot: string; cardBorder: string }> = {
+  confirmed: { bg: "bg-green-100 dark:bg-green-500/20", text: "text-green-700 dark:text-green-400", border: "border-green-200 dark:border-green-500/30", dot: "bg-green-500", cardBorder: "border-green-500" },
+  waitlisted: { bg: "bg-orange-100 dark:bg-orange-500/20", text: "text-orange-700 dark:text-orange-400", border: "border-orange-200 dark:border-orange-500/30", dot: "bg-orange-500", cardBorder: "border-orange-500" },
+  pending: { bg: "bg-yellow-100 dark:bg-yellow-500/20", text: "text-yellow-700 dark:text-yellow-400", border: "border-yellow-300 dark:border-yellow-500/40", dot: "bg-yellow-400", cardBorder: "border-yellow-400" },
+  cancelled: { bg: "bg-red-100 dark:bg-red-500/20", text: "text-red-700 dark:text-red-400", border: "border-red-200 dark:border-red-500/30", dot: "bg-red-500", cardBorder: "border-red-500" },
 }
 
 export interface Booking {
@@ -78,7 +79,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
-  
+
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
 
   const filteredBookings = useMemo(() => {
@@ -86,10 +87,10 @@ export default function BookingListClient({ initialBookings }: { initialBookings
       const bDate = b.events?.event_date ? new Date(b.events.event_date) : null;
       const matchesDate = selectedDate && bDate ? isSameDay(bDate, selectedDate) : !selectedDate;
       const matchesStatus = statusFilter === "all" ? true : b.status?.toLowerCase() === statusFilter;
-      const matchesSearch = searchQuery.toLowerCase() === "" ? true : 
-        b.group_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+      const matchesSearch = searchQuery.toLowerCase() === "" ? true :
+        b.group_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         b.contacts?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
-      
+
       return matchesDate && matchesStatus && matchesSearch;
     }).sort((a, b) => {
       if (!selectedDate) {
@@ -100,12 +101,12 @@ export default function BookingListClient({ initialBookings }: { initialBookings
   }, [initialBookings, selectedDate, statusFilter, searchQuery]);
 
   const stats = useMemo(() => {
-    const contextBookings = selectedDate 
+    const contextBookings = selectedDate
       ? initialBookings.filter(b => b.events?.event_date === formatDateStr(selectedDate))
       : initialBookings;
 
     const confirmed = contextBookings.filter(b => b.status === "confirmed");
-    
+
     return {
       totalGuests: confirmed.reduce((acc, curr) => acc + (Number(curr.group_size) || 0), 0),
       totalTeams: contextBookings.length,
@@ -133,87 +134,132 @@ export default function BookingListClient({ initialBookings }: { initialBookings
 
   return (
     <div className="space-y-4 animate-in fade-in duration-500">
-      
-      {/* 1. Date Navigation Bar - Clean & Slim */}
-      <div className="flex items-center justify-between bg-white/5 p-3 rounded-xl border border-white/10 shadow-sm">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0">
-              <CalendarDays className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[9px] font-black uppercase tracking-widest text-primary/50">Schedule</span>
-              <span className="text-xs font-bold text-white uppercase truncate max-w-[120px]">
-                {selectedDate ? format(selectedDate, "do MMMM") : "All History"}
-              </span>
-            </div>
-          </div>
 
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-primary hover:bg-primary/10 rounded-md">
-                <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
-                <span className="text-[9px] font-black uppercase">Edit</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent
-              className="bg-[#1a2109] border-white/20 p-0 w-auto shadow-2xl isolate z-100"
-              style={{ backgroundColor: '#1a2109' }}
-              align="start"
-            >
-              <Calendar
-                mode="single"
-                selected={selectedDate}
-                onSelect={(d) => { if(d) setSelectedDate(d); setIsCalendarOpen(false); }}
-                className="bg-[#1a2109] isolate z-9999" 
-                style={{ backgroundColor: '#1a2109' }}
-              />
-              <div className="p-2 border-t border-white/5 bg-black/40 text-center">
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  className="w-full text-[9px] font-black uppercase tracking-widest text-primary"
-                  onClick={() => { setSelectedDate(undefined); setIsCalendarOpen(false); }}
-                >
-                  Show All History
-                </Button>
+      {/* 1. Date Navigation Bar - Clean & Slim */}
+      <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 rounded-lg bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
+                <CalendarDays className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+                          
+              <div className="flex flex-col">
+                {/* <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Date</span> */}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm font-bold text-slate-900 dark:text-white uppercase truncate max-w-40">
+                    {selectedDate ? format(selectedDate, "dd MMMM yyyy") : "All Dates"}
+                  </span>
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                </div>
               </div>
-            </PopoverContent>
-          </Popover>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 w-auto shadow-xl rounded-xl overflow-hidden isolate z-9999"
+            style={{ backgroundColor: '#1a2109' }}
+            align="start"
+          >
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(d) => { if (d) setSelectedDate(d); setIsCalendarOpen(false); }}
+              className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white isolate z-9999"
+              style={{ backgroundColor: '#1a2109' }}
+            />
+            <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                onClick={() => { setSelectedDate(undefined); setIsCalendarOpen(false); }}
+              >
+                Show All History
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+{/* 
+      <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm">
+      <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center border border-slate-200 dark:border-slate-700 shrink-0">
+            <CalendarDays className="w-4 h-4 text-slate-600 dark:text-slate-300" />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Date Filter:</span>
+            <span className="text-sm font-bold text-slate-900 dark:text-white uppercase truncate max-w-30">
+              {selectedDate ? format(selectedDate, "dd MMMM yyyy") : "All Dates"}
+            </span>
+          </div>
         </div>
+        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+           <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className="h-8 px-3 rounded-lg bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm">
+              <CalendarIcon className="w-3.5 h-3.5 mr-1.5" />
+              <span className="text-[10px] font-bold uppercase tracking-wider">Date</span>
+            </Button>
+          </PopoverTrigger> 
+          <PopoverContent
+            className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 w-auto shadow-xl z-50 rounded-xl overflow-hidden isolate z-100"
+            style={{ backgroundColor: '#1a2109' }}
+            align="end"
+          >
+            <Calendar
+              mode="single"
+              selected={selectedDate}
+              onSelect={(d) => { if (d) setSelectedDate(d); setIsCalendarOpen(false); }}
+              className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white isolate z-9999"
+              style={{ backgroundColor: '#1a2109' }}
+            />
+            <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-center">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                onClick={() => { setSelectedDate(undefined); setIsCalendarOpen(false); }}
+              >
+                Show All History
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div> */}
 
       {/* 2. KPI Grid - Micro Tiles */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <KPIBox label="Guests" value={stats.totalGuests} icon={<Users />} />
-        <KPIBox label="Revenue" value={`£${stats.revenue}`} icon={<BadgePoundSterling />} />
-        <KPIBox label="Waitlist" value={stats.waitlist} icon={<Clock3 />} color={stats.waitlist > 0 ? "amber" : "default"} />
-        <KPIBox label="Teams" value={stats.totalTeams} icon={<TableIcon />} />
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <KPIBox label="Teams" value={stats.totalGuests} icon={<Users />} />
+        <KPIBox label="Tables" value={`${stats.revenue}`} icon={<TableIcon />} />
+        <KPIBox label="Customers" value={stats.waitlist} icon={<Clock3 />} color={stats.waitlist > 0 ? "amber" : "default"} />
+        <KPIBox label="Paid" value={`£${stats.revenue}`} icon={<BadgePoundSterling />} />
       </div>
 
-      {/* 3. Search & Filter - Forced Horizontal Row */}
-      <div className="flex flex-row items-center gap-2">
+      {/* 3. Search & Filter - Clean inputs */}
+      <div className="flex flex-row items-center gap-3">
         <div className="relative flex-1 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20 group-focus-within:text-primary transition-colors" />
-          <Input 
-            placeholder="Search..." 
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-700 dark:group-focus-within:text-slate-300 transition-colors" />
+          <Input
+            placeholder="Search bookings..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="h-9 rounded-lg bg-black/40 border-white/10 pl-9 text-[11px] text-white placeholder:text-white/20 focus:ring-primary/20 transition-all"
+            className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 pl-9 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus:ring-slate-300 dark:focus:ring-slate-700 transition-all shadow-sm"
           />
         </div>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="h-9 rounded-lg bg-white/5 border-white/10 text-stone-400 px-2.5 min-w-[36px]">
-              <Filter className="w-3.5 h-3.5 opacity-50" />
-              <span className="hidden sm:inline-block ml-2 text-[9px] font-black uppercase tracking-widest">
-                {statusFilter === 'all' ? 'Filter' : statusFilter}
+            <Button variant="outline" className="h-10 rounded-xl bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 px-4 min-w-24 shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800">
+              <Filter className="w-4 h-4 mr-2 text-slate-400" />
+              <span className="text-[11px] font-bold uppercase tracking-wider">
+                {statusFilter === 'all' ? 'All' : statusFilter}
               </span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-[#1a2109] border-white/20 w-40 p-1 isolate z-100" style={{ backgroundColor: '#1a2109' }}>
+          <DropdownMenuContent align="end" className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 w-44 p-1.5 shadow-xl rounded-xl z-50 isolate z-100" style={{ backgroundColor: '#1a2109' }}>
             <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
               {['all', 'confirmed', 'waitlisted', 'pending', 'cancelled'].map(s => (
-                <DropdownMenuRadioItem key={s} value={s} className="text-[10px] font-black uppercase tracking-widest p-2.5 rounded-md cursor-pointer">
+                <DropdownMenuRadioItem key={s} value={s} className="text-xs font-semibold uppercase tracking-wider p-2.5 rounded-lg cursor-pointer focus:bg-slate-100 dark:focus:bg-slate-800">
                   {s}
                 </DropdownMenuRadioItem>
               ))}
@@ -222,20 +268,20 @@ export default function BookingListClient({ initialBookings }: { initialBookings
         </DropdownMenu>
       </div>
 
-      {/* 4. Floor List Content */}
-      <div className="space-y-1.5 pb-20">
+      {/* 4. Floor List Content - Re-structured for readability */}
+      <div className="space-y-3 pb-20">
         {filteredBookings.length === 0 ? (
-          <div className="py-16 text-center bg-white/2 rounded-2xl border border-dashed border-white/5">
-            <Inbox className="w-8 h-8 text-white/5 mx-auto mb-2" />
-            <p className="text-stone-600 text-[9px] font-black uppercase tracking-widest">No entries found</p>
+          <div className="py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
+            <Inbox className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">No entries found matching criteria</p>
           </div>
         ) : (
           filteredBookings.map((b) => (
-            <BookingCard 
-              key={b.id} 
-              booking={b} 
+            <BookingCard
+              key={b.id}
+              booking={b}
               showDate={!selectedDate}
-              onClick={() => setSelectedBooking(b)} 
+              onClick={() => setSelectedBooking(b)}
             />
           ))
         )}
@@ -243,93 +289,94 @@ export default function BookingListClient({ initialBookings }: { initialBookings
 
       {/* 5. Team Profile Sheet - Refresh Design */}
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
-        <SheetContent 
+        <SheetContent
           side="bottom"
-          className="bg-[#1a2109] border-t border-primary/20 rounded-t-[2.5rem] p-5 pb-8 max-h-[80vh] overflow-y-auto"
+          className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 rounded-t-[2rem] p-6 pb-8 max-h-[85vh] overflow-y-auto"
           style={{ backgroundColor: '#1a2109' }}
         >
           {selectedBooking && (
-            <div className="space-y-5 max-w-lg mx-auto">
-              <div className="flex justify-center -mt-1 mb-2">
-                <div className="w-10 h-1 bg-white/10 rounded-full" />
+            <div className="space-y-6 max-w-lg mx-auto">
+              <div className="flex justify-center -mt-2 mb-2">
+                <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full" />
               </div>
-              
+
               <SheetHeader className="text-left p-0">
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className={cn(
-                    "inline-flex px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest border",
+                    "inline-flex px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border",
                     statusTheme[selectedBooking.status || 'pending']?.bg,
                     statusTheme[selectedBooking.status || 'pending']?.text,
                     statusTheme[selectedBooking.status || 'pending']?.border
                   )}>
                     {selectedBooking.status}
                   </div>
-                  <SheetTitle className="text-xl font-black text-white uppercase tracking-tight leading-none">
+                  <SheetTitle className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight leading-none">
                     {selectedBooking.group_name || "Guest Team"}
                   </SheetTitle>
-                  <div className="flex items-center gap-3 text-stone-500 font-bold text-[9px] uppercase tracking-wider">
-                    <span className="flex items-center gap-1.5"><CalendarDays className="w-3 h-3 text-primary/40" /> {selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM") : "—"}</span>
+                  <div className="flex items-center gap-4 text-slate-500 dark:text-slate-400 font-semibold text-xs tracking-wide">
+                    <span className="flex items-center gap-1.5"><CalendarDays className="w-3.5 h-3.5" /> {selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM yyyy") : "—"}</span>
                     <span>Ref: #{selectedBooking.id}</span>
                   </div>
                 </div>
               </SheetHeader>
 
-              <div className="grid grid-cols-2 gap-2">
-                <DetailTile icon={<Users className="w-3 h-3"/>} label="Team Size" value={`${selectedBooking.group_size} Guests`} />
-                <DetailTile icon={<BadgePoundSterling className="w-3 h-3"/>} label="Deposit" value={selectedBooking.paid_amount && selectedBooking.paid_amount > 0 ? "Settled" : "Pending"} />
+              <div className="grid grid-cols-2 gap-3">
+                <DetailTile icon={<Users className="w-4 h-4" />} label="Team Size" value={`${selectedBooking.group_size} Guests`} />
+                <DetailTile icon={<BadgePoundSterling className="w-4 h-4" />} label="Status" value={selectedBooking.paid_amount && selectedBooking.paid_amount > 0 ? "Paid" : "Unpaid"} />
               </div>
 
-              <div className="bg-black/30 p-3 rounded-xl border border-white/5 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-primary text-primary-foreground flex items-center justify-center font-black text-base">
-                  {selectedBooking.contacts?.full_name?.charAt(0)}
+              <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center gap-4 shadow-sm">
+                <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold text-base shadow-sm">
+                  {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] font-black text-white uppercase truncate">{selectedBooking.contacts?.full_name}</p>
-                  <p className="text-[9px] font-bold text-stone-500 truncate">{selectedBooking.contacts?.email}</p>
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{selectedBooking.contacts?.full_name}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">{selectedBooking.contacts?.email}</p>
                 </div>
               </div>
 
-              {selectedBooking.special_requests && (
+              {/* {selectedBooking.special_requests && (
                 <div className="bg-amber-500/5 p-4 rounded-2xl border border-amber-500/10">
                   <p className="text-[8px] font-black uppercase tracking-widest text-amber-500/50 mb-1">Special Request</p>
                   <p className="text-xs text-stone-300 italic leading-snug">
                     &quot;{selectedBooking.special_requests}&quot;
                   </p>
                 </div>
-              )}
+              )} */}
 
-              <div className="grid grid-cols-2 gap-2 pt-1">
+              <div className="grid grid-cols-2 gap-3 pt-2">
                 <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="h-12 rounded-xl border-white/10 bg-white/5 text-white font-black text-[10px] uppercase tracking-widest shadow-inner">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="h-12 rounded-xl border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold text-xs shadow-sm hover:bg-slate-50 dark:hover:bg-slate-800"
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
                       Set Status
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent                    
-		  className="bg-[#1a2109] border-primary/40 w-44 p-1 z-9999"
-                    style={{ backgroundColor: '#1a2109' }}                    
-                    onPointerDownOutside={(e) => e.preventDefault()}
-                    onInteractOutside={(e) => e.preventDefault()}
+                  <DropdownMenuContent
+                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 w-52 p-2 shadow-xl rounded-xl z-9999 isolated"
+                    style={{ backgroundColor: '#1a2109' }}
+                    onCloseAutoFocus={(e) => e.preventDefault()}
                   >
                     {Object.keys(statusTheme).map((s) => (
-                      <DropdownMenuItem 
-                        key={s} 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStatusChange(selectedBooking!.id, s);
-                        }}
-                        className="font-bold text-[10px] p-2.5 uppercase rounded-md cursor-pointer hover:bg-white/5"
+                      <DropdownMenuItem
+                        key={s}
+                        onSelect={() => handleStatusChange(selectedBooking!.id, s)}
+                        className="font-bold text-xs p-3 uppercase tracking-wider rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 focus:bg-slate-100 dark:focus:bg-slate-800"
                       >
-                         <div className={cn("w-2 h-2 rounded-full mr-2", statusTheme[s].dot)} />
-                         {s}
+                        <div className={cn("w-2.5 h-2.5 rounded-full mr-3", statusTheme[s].dot)} />
+                        {s}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                <Button asChild className="h-12 rounded-xl bg-primary text-primary-foreground font-black text-[10px] uppercase tracking-widest shadow-lg shadow-primary/10">
+                <Button asChild className="h-12 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-xs shadow-md hover:bg-slate-800 dark:hover:bg-slate-200 transition-colors">
                   <Link href={`/manage-booking/${selectedBooking.id}`}>
-                    <Pencil className="w-3.5 h-3.5 mr-2" /> Manage
+                    <Pencil className="w-4 h-4 mr-2" /> Manage
                   </Link>
                 </Button>
               </div>
@@ -340,8 +387,8 @@ export default function BookingListClient({ initialBookings }: { initialBookings
 
       {/* Global Sync Overlay */}
       {isPending && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-1">
-          <Loader2 className="w-3 h-3 animate-spin" /> Updating Floor
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[100] bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-5 py-2.5 rounded-full text-xs font-bold shadow-xl flex items-center gap-2 animate-in fade-in slide-in-from-top-2">
+          <Loader2 className="w-4 h-4 animate-spin" /> Syncing Floor
         </div>
       )}
     </div>
@@ -350,40 +397,46 @@ export default function BookingListClient({ initialBookings }: { initialBookings
 
 function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick: () => void, showDate?: boolean }) {
   const status = booking.status?.toLowerCase() || 'pending';
-  const theme = statusTheme[status];
+  const theme = statusTheme[status] || statusTheme.pending;
 
   return (
-    <div 
+    <div
       onClick={onClick}
-      className="group hover:bg-white/5 active:scale-[0.99] transition-all border border-white/5 rounded-xl p-3 flex items-center justify-between cursor-pointer bg-white/2 relative overflow-hidden"
-      style={{ backgroundColor: '#1a2109' }}
+      className={cn(
+        "group hover:bg-slate-50 dark:hover:bg-slate-800/60 active:scale-[0.99] transition-all border-2 rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between cursor-pointer bg-white dark:bg-slate-900 shadow-sm",
+        theme.cardBorder
+      )}
     >
-      <div className={cn("absolute left-0 top-0 bottom-0 w-1", theme.dot)} />
-
-      <div className="flex items-center gap-3 min-w-0 text-left">
-        <div className="min-w-0 pl-1">
+      <div className="flex items-center gap-3.5 min-w-0 text-left">
+        <div className={cn("w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 hidden sm:flex", theme.bg, theme.text)}>
+          {booking.contacts?.full_name?.charAt(0) || "G"}
+        </div>
+        <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <h4 className="text-[13px] font-bold text-white truncate uppercase tracking-tight">
-              {booking.group_name || "Guest Team"}
+            <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
+              {booking.group_name || "Guest Entry"}
             </h4>
             {showDate && booking.events?.event_date && (
-              <span className="px-1 py-0 rounded bg-primary/10 text-[7px] font-black text-primary border border-primary/20">
-                {format(new Date(booking.events.event_date), "dd/MM")}
+              <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[10px] font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap tracking-tight">
+                {format(new Date(booking.events.event_date), "dd MMM")}
               </span>
             )}
           </div>
-          <p className="text-[8px] font-bold text-stone-600 uppercase tracking-widest truncate mt-0.5">
-            {booking.contacts?.full_name}
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-1 flex items-center gap-1.5 font-medium">
+            <User className="w-3.5 h-3.5 opacity-70" /> {booking.contacts?.full_name || "No name provided"}
           </p>
         </div>
       </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg border border-white/5">
-          <Users className="w-2.5 h-2.5 text-primary/40" />
-          <span className="text-[10px] font-black text-white">{booking.group_size}</span>
+      <div className="flex items-center justify-between sm:justify-end gap-3 mt-3 sm:mt-0">
+        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
+          <Users className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400" />
+          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{booking.group_size}</span>
         </div>
-        <ChevronRight className="w-3.5 h-3.5 text-white/5 group-hover:text-primary transition-colors" />
+        <div className={cn("px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider border", theme.bg, theme.text, theme.border)}>
+          {status}
+        </div>
+        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors hidden sm:block" />
       </div>
     </div>
   );
@@ -392,26 +445,26 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
 function KPIBox({ label, value, icon, color = "default" }: { label: string, value: string | number, icon: React.ReactNode, color?: "amber" | "default" }) {
   return (
     <div className={cn(
-      "bg-white/5 border border-white/10 rounded-xl p-2.5 space-y-0.5 transition-all shadow-sm",
-      color === "amber" && "bg-amber-500/10 border-amber-500/20"
+      "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-3 flex flex-col gap-1 shadow-sm transition-all",
+      color === "amber" && "border-orange-300 dark:border-orange-500/50 bg-orange-50/50 dark:bg-orange-500/10"
     )}>
-      <div className="flex items-center justify-between mb-0.5 opacity-40">
-        <span className="text-[7px] font-black uppercase tracking-widest text-white">{label}</span>
-        <div className="scale-75 origin-right">{icon}</div>
+      <div className="flex items-center justify-between text-slate-500 dark:text-slate-400">
+        <span className="text-[10px] font-bold uppercase tracking-wider">{label}</span>
+        <div className="scale-75 opacity-70">{icon}</div>
       </div>
-      <div className="text-lg font-black text-white leading-none tracking-tight">{value}</div>
+      <div className="text-lg font-bold text-slate-900 dark:text-white leading-none tracking-tight">{value}</div>
     </div>
   )
 }
 
 function DetailTile({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
-    <div className="bg-white/4 border border-white/5 p-3 rounded-xl flex flex-col gap-0.5 text-left group">
-      <div className="flex items-center gap-1.5 text-white/20 group-hover:text-primary transition-colors">
-        <div className="scale-75 origin-left">{icon}</div>
-        <span className="text-[7px] font-black uppercase tracking-widest">{label}</span>
+    <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex flex-col gap-1 text-left shadow-sm">
+      <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+        <div className="scale-75 origin-left opacity-80">{icon}</div>
+        <span className="text-[9px] font-bold uppercase tracking-wider">{label}</span>
       </div>
-      <span className="text-white font-bold text-[11px] uppercase tracking-tight">{value}</span>
+      <span className="text-slate-900 dark:text-white font-semibold text-xs tracking-tight">{value}</span>
     </div>
   )
 }
