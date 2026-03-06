@@ -57,56 +57,62 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 bg-[#141a07] min-h-screen relative selection:bg-primary selection:text-primary-foreground">
-      {/* Background Ambient Glows */}
-      <div className="fixed top-0 right-0 w-125 h-125 bg-primary/5 blur-[150px] rounded-full pointer-events-none -z-10" />
-      <div className="fixed bottom-0 left-0 w-100 h-100 bg-primary/3 blur-[120px] rounded-full pointer-events-none -z-10" />
+    <div className="flex-1 bg-[#1a2109] min-h-screen relative selection:bg-primary selection:text-primary-foreground">
+      {/* Refined Ambient Glows */}
+      <div className="fixed top-0 right-0 w-96 h-96 bg-primary/10 blur-[120px] rounded-full pointer-events-none -z-10" />
+      <div className="fixed bottom-0 left-0 w-80 h-80 bg-primary/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      {/* Header */}
-      <div className="px-6 py-8 flex justify-between items-center sticky top-0 bg-[#141a07]/80 backdrop-blur-xl z-30 border-b border-white/5 shadow-2xl">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shadow-inner">
-             <LayoutDashboard className="w-6 h-6 text-primary" />
+      {/* Header - Compact for Mobile */}
+      <header className="px-4 py-4 md:px-8 md:py-6 flex justify-between items-center sticky top-0 bg-[#1a2109]/90 backdrop-blur-md z-30 border-b border-white/10 shadow-lg">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary/20 flex items-center justify-center border border-primary/30 shadow-inner">
+             <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-primary" />
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-white uppercase tracking-tight leading-none">Floor Manager</h1>
-            <p className="text-[10px] font-black text-primary/60 uppercase tracking-[0.3em] mt-1.5">Don Fenticas Venue</p>
+          <div className="hidden sm:block">
+            <h1 className="text-lg md:text-xl font-black text-white uppercase tracking-tight leading-none">Floor Manager</h1>
+            <p className="text-[9px] font-black text-primary/60 uppercase tracking-[0.2em] mt-1">Don Fenticas</p>
           </div>
         </div>
 
-        <Link href="/dashboard/settings">
-          <Button variant="outline" size="icon" className="h-12 w-12 rounded-2xl bg-white/5 border-white/10 text-white hover:bg-white/10 hover:border-primary/30 transition-all">
-            <Settings className="w-5 h-5" />
-          </Button>
-        </Link>
-      </div>
+        <div className="flex items-center gap-2">
+          <Link href="/dashboard/settings">
+            <Button variant="outline" size="icon" className="h-10 w-10 md:h-11 md:w-11 rounded-xl bg-white/5 border-white/10 text-white hover:bg-white/10 transition-all">
+              <Settings className="w-4 h-4 md:w-5 md:h-5" />
+            </Button>
+          </Link>
+          <Link href="/book" className="hidden sm:block">
+            <Button className="h-10 md:h-11 rounded-xl font-black uppercase text-[10px] tracking-widest px-5">
+              <Plus className="w-4 h-4 mr-2" /> New Booking
+            </Button>
+          </Link>
+        </div>
+      </header>
 
-      <div className="p-4 md:p-10 max-w-7xl mx-auto">
+      <div className="p-4 md:p-8 max-w-7xl mx-auto">
         {hasDataSourceError && (
-          <div className="mb-8 rounded-4xl border border-amber-500/20 bg-amber-500/10 p-5 text-xs font-bold text-amber-200 flex items-center gap-3 animate-in slide-in-from-top-4">
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-            Live data sync unavailable. Displaying local cache.
+          <div className="mb-6 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 text-[10px] font-bold text-red-200 flex items-center gap-3">
+            <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+            Live sync unavailable.
           </div>
         )}
 
         <Suspense fallback={
-          <div className="space-y-6 pt-10">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-              {[1,2,3,4].map(i => <div key={i} className="h-32 bg-white/5 rounded-4xl animate-pulse" />)}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              {[1,2,3,4].map(i => <div key={i} className="h-20 bg-white/5 rounded-2xl animate-pulse" />)}
             </div>
-            <div className="h-96 bg-white/5 rounded-[3rem] animate-pulse" />
+            <div className="h-64 bg-white/5 rounded-3xl animate-pulse" />
           </div>
         }>
           <BookingListClient initialBookings={typedBookings} />
         </Suspense>
       </div>
 
-      {/* Fixed Action Button */}
-      <div className="fixed bottom-8 right-8 z-40 lg:hidden group">
-        <div className="absolute inset-0 bg-primary blur-2xl opacity-20 group-hover:opacity-40 transition-opacity rounded-full" />
+      {/* Floating Action Button - Mobile Only */}
+      <div className="fixed bottom-6 right-6 z-40 sm:hidden">
         <Link href="/book">
-          <Button size="lg" className="h-16 w-16 rounded-4xl shadow-2xl bg-primary text-primary-foreground hover:scale-110 active:scale-90 transition-all border-4 border-[#0f1405]">
-            <Plus className="w-8 h-8 stroke-3" />
+          <Button size="lg" className="h-14 w-14 rounded-2xl shadow-2xl bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-all border-2 border-white/20">
+            <Plus className="w-6 h-6 stroke-3" />
           </Button>
         </Link>
       </div>
