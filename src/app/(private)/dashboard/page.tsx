@@ -1,12 +1,11 @@
 import React, { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server"
-import BookingListClient, { Booking } from "./components/booking-list-client copy 2"
-import { Users, DollarSign, CalendarDays, Settings } from "lucide-react";
+import BookingListClient, { Booking } from "./components/booking-list-client copy"
+import { Settings, Plus } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export const dynamic = 'force-dynamic'
-
 
 export default async function DashboardPage() {
   let typedBookings: Booking[] = []
@@ -15,7 +14,7 @@ export default async function DashboardPage() {
   try {
     const supabase = await createClient()
 
-    // Fetch all bookings, ordered by date and time
+    // Fetch all bookings with associated contact and event data
     const { data: bookings, error } = await supabase
       .from("bookings")
       .select(`
@@ -26,6 +25,7 @@ export default async function DashboardPage() {
         contact_id,
         group_size,
         paid_amount,
+        total_amount,
         status,
         special_requests,
         booking_created_at: created_at,
@@ -39,12 +39,14 @@ export default async function DashboardPage() {
           event_date: date,
           event_title: title,
           description,
+          payment_amount,
           event_types(
             category: type,
             sub_type
           )
         )
       `)
+      .order('created_at', { ascending: false });
 
     if (error) {
       console.error("Error fetching bookings:", error)
@@ -58,31 +60,45 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="flex-1 space-y-8 p-4 md:p-8 pt-6">
-      <div className="flex items-center justify-between space-y-2">
-        {/* <h2 className="text-3xl font-bold tracking-tight">Dashboard Overview</h2> */}
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold">Dashboard</h1>
-
-          <Link href="/dashboard/settings">
-            <Button variant="outline" className="gap-2">
-              <Settings className="w-4 h-4" />
-              Settings
-            </Button>
-          </Link>
+    <div className="flex-1 bg-[#26300D] min-h-screen relative">
+      {/* Top Header */}
+      <div className="px-6 pt-8 pb-4 flex justify-between items-center sticky top-0 bg-[#26300D]/90 backdrop-blur-md z-30 border-b border-white/5">
+        <div>
+          <h1 className="text-2xl font-black text-white uppercase tracking-tight">Floor Manager</h1>
+          <p className="text-[10px] font-bold text-primary uppercase tracking-[0.2em]">Don Fenticas Venue</p>
         </div>
+
+        <Link href="/dashboard/settings">
+          <Button variant="outline" size="icon" className="rounded-full bg-white/5 border-white/10 text-white">
+            <Settings className="w-5 h-5" />
+          </Button>
+        </Link>
       </div>
 
-      {hasDataSourceError ? (
-        <div className="mb-6 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800/80 dark:bg-amber-950/30 dark:text-amber-100">
-          Booking data is temporarily unavailable. The dashboard UI is shown, but live booking records could not be loaded.
-        </div>
-      ) : null}
+      <div className="p-4 md:p-8">
+        {hasDataSourceError && (
+          <div className="mb-6 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-xs font-bold text-amber-200 flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            Live data sync unavailable. Showing cached records.
+          </div>
+        )}
 
-      <Suspense fallback={<div className="animate-pulse h-96 bg-muted rounded-xl"></div>}>
-        <BookingListClient initialBookings={typedBookings} />
-      </Suspense>
+        <Suspense fallback={<div className="animate-pulse space-y-4 pt-10 px-4">
+          <div className="h-24 bg-white/5 rounded-3xl" />
+          <div className="h-64 bg-white/5 rounded-3xl" />
+        </div>}>
+          <BookingListClient initialBookings={typedBookings} />
+        </Suspense>
+      </div>
+
+      {/* Floating Action Button for Mobile */}
+      <div className="fixed bottom-6 right-6 z-40 lg:hidden">
+        <Link href="/book">
+          <Button size="lg" className="h-16 w-16 rounded-full shadow-[0_10px_30px_-5px_rgba(253,204,75,0.5)] bg-primary text-primary-foreground hover:scale-105 active:scale-95 transition-transform">
+            <Plus className="w-8 h-8 stroke-3" />
+          </Button>
+        </Link>
+      </div>
     </div>
   )
 }
-
