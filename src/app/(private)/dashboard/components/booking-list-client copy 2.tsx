@@ -1,13 +1,9 @@
 "use client"
 
 import React, { useState, useTransition, useMemo } from "react"
-import { format } from "date-fns";
-import { Calendar as CalendarIcon, MoreHorizontal, Edit, Eye, Trash2, MapPin, User, Clock } from "lucide-react";
-
-
-
 import { Calendar } from "@/components/ui/calendar"
-import { deleteBooking, updateBookingStatus } from "../actions"
+import { format } from "date-fns"
+import { deleteBooking, updateBookingStatus } from "@/app/(private)/dashboard/actions"
 import {
   CheckCircle,
   Clock3,
@@ -15,16 +11,16 @@ import {
   CalendarDays,
   Inbox,
   Loader2,
-Group,
+  Trash2,
   Users,
   Pencil,
   Mail,
-  Phone,
-  MessageSquare,
-  CalendarClock,
-  BadgePoundSterling,
-  MoreVertical,
-
+  CalendarIcon,
+  Search,
+  Filter,
+  ChevronRight,
+  Info,
+  ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -33,276 +29,326 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuLabel
-} from "@/components/ui/dropdown-menu" // Ensure you have this shadcn component
-import Link from "next/link"
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from "@/components/ui/dropdown-menu"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet"
+import { Input } from "@/components/ui/input"
+import { cn } from "@/lib/utils"
 
 const formatDateStr = (d: Date) => {
   const date = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
   return date.toISOString().split("T")[0]
 }
 
-const formatCurrency = (value?: number) => {
-  if (typeof value !== "number") return "—"
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "GBP",
-    maximumFractionDigits: 2,
-  }).format(value)
-}
-
-const statusClasses: Record<string, string> = {
-  confirmed:
-    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300",
-  waitlisted:
-    "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
-  pending: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
-  cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
-}
-
-export interface EventType {
-  category?: string;
-  sub_type?: string;
-}
-
-export interface EventRow {
-  event_date?: string;
-  event_title?: string;
-  description?: string;
-  event_types?: EventType;
-}
-
-export interface ContactRow {
-  full_name?: string;
-  email?: string;
-  country_code?: string;
-  phone_no?: string;
+const statusTheme: Record<string, { bg: string; text: string; border: string; dot: string }> = {
+  confirmed: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20", dot: "bg-emerald-500" },
+  waitlisted: { bg: "bg-amber-500/10", text: "text-amber-400", border: "border-amber-500/20", dot: "bg-amber-500" },
+  pending: { bg: "bg-slate-500/10", text: "text-slate-400", border: "border-slate-500/20", dot: "bg-slate-400" },
+  cancelled: { bg: "bg-red-500/10", text: "text-red-400", border: "border-red-500/20", dot: "bg-red-500" },
 }
 
 export interface Booking {
   id: string;
   event_id?: string;
   group_name?: string;
-  team_id?: string;
-  contact_id?: string;
   group_size?: number;
-  paid_amount?: number;
   status?: string;
   special_requests?: string;
   booking_created_at?: string;
-  contacts?: ContactRow;
-  events?: EventRow;
+  contacts?: {
+    full_name?: string;
+    email?: string;
+  };
+  events?: {
+    event_date?: string;
+    event_title?: string;
+  };
 }
 
-export default function BookingListClient2({ initialBookings }: { initialBookings: Booking[] }) {
+export default function BookingListClient({ initialBookings }: { initialBookings: Booking[] }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(new Date())
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
-  const [date, setDate] = useState<Date | undefined>(new Date());
-  const [bookings, setBookings] = useState<Booking[]>(initialBookings);
+  const [searchQuery, setSearchQuery] = useState("")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
+  
+  // Quick View State
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
 
-  console.log(JSON.stringify(initialBookings, null, 2));
+  const filteredBookings = useMemo(() => {
+    return initialBookings.filter((b) => {
+      const matchesDate = selectedDate ? b.events?.event_date === formatDateStr(selectedDate) : true;
+      const matchesStatus = statusFilter === "all" ? true : b.status?.toLowerCase() === statusFilter;
+      const matchesSearch = searchQuery.toLowerCase() === "" ? true : 
+        b.group_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+        b.contacts?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      return matchesDate && matchesStatus && matchesSearch;
+    });
+  }, [initialBookings, selectedDate, statusFilter, searchQuery]);
 
-  // -- Calculate Statistics --
-  const filteredBookings = date
-    ? bookings.filter((b) => {
-      if (!b.events?.event_date) return false;
-      const bDate = new Date(b.events?.event_date);
-      return (
-        bDate.getDate() === date.getDate() &&
-        bDate.getMonth() === date.getMonth() &&
-        bDate.getFullYear() === date.getFullYear()
-      );
-    })
-    : bookings;
+  const stats = useMemo(() => {
+    const reference = selectedDate || new Date();
+    const contextBookings = initialBookings.filter(b => b.events?.event_date === formatDateStr(reference));
+    
+    return {
+      total: contextBookings.length,
+      confirmed: contextBookings.filter(b => b.status === "confirmed").length,
+      waitlisted: contextBookings.filter(b => b.status === "waitlisted").length,
+    };
+  }, [initialBookings, selectedDate]);
 
   const handleStatusChange = (id: string, newStatus: string) => {
     setBookingActionId(id)
     startTransition(async () => {
-      await updateBookingStatus(id, newStatus)
-      setBookingActionId(null)
-    })
-  }
-
-  const handleDeleteBooking = (id: string, bookingName?: string) => {
-    const confirmDelete = window.confirm(
-      `Delete booking${bookingName ? ` for ${bookingName}` : ""}? This action cannot be undone.`,
-    )
-
-    if (!confirmDelete) return
-
-    setBookingActionId(id)
-    startTransition(async () => {
-      await deleteBooking(id)
-      setBookingActionId(null)
+      try {
+        await updateBookingStatus(id, newStatus)
+      } finally {
+        setBookingActionId(null)
+      }
     })
   }
 
   return (
-    <div className="grid grid-cols-5 lg:grid-cols-5 gap-6 items-start">
+    <div className="space-y-6 pb-20">
+      {/* 1. Slim Stats Bar */}
+      <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar -mx-4 px-4 sm:mx-0">
+        <CompactStatCard 
+          label="Total" 
+          value={stats.total} 
+          icon={<CalendarDays className="w-3 h-3" />} 
+          color="blue"
+        />
+        <CompactStatCard 
+          label="Confirmed" 
+          value={stats.confirmed} 
+          icon={<CheckCircle className="w-3 h-3" />} 
+          color="emerald"
+        />
+        <CompactStatCard 
+          label="Waitlist" 
+          value={stats.waitlisted} 
+          icon={<Clock3 className="w-3 h-3" />} 
+          color="amber"
+        />
+      </div>
 
+      {/* 2. Integrated Search & Date */}
+      <div className="grid grid-cols-12 gap-2">
+        <div className="col-span-8 relative">
+           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+           <Input 
+              placeholder="Search teams..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-white/5 border-white/10 rounded-2xl h-12 focus:ring-primary/30"
+            />
+        </div>
+        <div className="col-span-4">
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full h-12 rounded-2xl bg-white/5 border-white/10 px-0">
+                <CalendarIcon className="w-5 h-5 text-primary" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 border-white/10 bg-[#1a2109]" align="end">
+              <Calendar
+                mode="single"
+                selected={selectedDate}
+                onSelect={(d) => { setSelectedDate(d); setIsCalendarOpen(false); }}
+                className="text-white"
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
+      </div>
 
-      <div className="lg:col-span-1 rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden sticky top-2">
-        <div className="flex flex-col space-y-1.5 p-4 pb-3 border-b bg-muted/20">
-          <h3 className="font-semibold leading-none tracking-tight flex items-center gap-2">
-            <CalendarIcon className="h-4 w-4 text-primary" />
-            Select Date
-          </h3>
-          <p className="text-sm text-muted-foreground mt-1">Filter bookings by day</p>
+      {/* 3. The List */}
+      <div className="space-y-2">
+        <div className="flex items-center justify-between px-2 mb-2">
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/40">
+            {selectedDate ? format(selectedDate, "do MMMM") : "All Bookings"}
+          </span>
+          <DropdownMenu>
+            <DropdownMenuTrigger className="text-[10px] font-black uppercase tracking-widest text-primary flex items-center gap-1">
+              <Filter className="w-3 h-3" /> {statusFilter === 'all' ? 'Status' : statusFilter}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-[#1a2109] border-white/10">
+              <DropdownMenuRadioGroup value={statusFilter} onValueChange={setStatusFilter}>
+                <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="confirmed">Confirmed</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="waitlisted">Waitlisted</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="cancelled">Cancelled</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
-        <div className="p-4 flex justify-center bg-card">
-          <Calendar
-            mode="single"
-            selected={date}
-            onSelect={setDate}
-            className="rounded-s-sm"
-          />
-        </div>
-        {/* {date && (
-          <div className="p-4 border-t bg-muted/10 flex justify-between items-center text-sm">
-            <span className="text-muted-foreground">Selected:</span>
-            <span className="font-medium text-foreground">{format(date, "MMM d, yyyy")}</span>
+
+        {filteredBookings.length === 0 ? (
+          <div className="py-20 text-center bg-white/3 rounded-3xl border border-dashed border-white/5">
+            <Inbox className="w-10 h-10 text-white/10 mx-auto mb-3" />
+            <p className="text-white/30 text-xs font-bold uppercase tracking-widest">No matching results</p>
           </div>
-        )} */}
+        ) : (
+          filteredBookings.map((b) => (
+            <CompactBookingRow 
+              key={b.id} 
+              booking={b} 
+              onViewDetails={() => setSelectedBooking(b)}
+            />
+          ))
+        )}
       </div>
 
-      <div className="lg:col-span-4 rounded-xl border bg-card text-card-foreground shadow-sm overflow-hidden">
-        <div className="flex flex-col space-y-1.5 p-6 bg-muted/10 border-b">
-          <h3 className="font-semibold leading-none tracking-tight text-xl flex items-center justify-between">
-            <span>{date ? format(date, "dd MMMM yyyy") : "All Bookings"}</span>
-            <span className="text-sm font-normal text-muted-foreground bg-muted px-2.5 py-1 rounded-full border">
-              {filteredBookings.length} Total
-            </span>
-          </h3>
-        </div>
+      {/* 4. Quick View Detail Sheet */}
+      <Sheet open={!!selectedBooking} onOpenChange={(open) => !open && setSelectedBooking(null)}>
+        <SheetContent side="bottom" className="bg-[#1a2109] border-white/10 rounded-t-[2.5rem] h-[70vh] p-8">
+          {selectedBooking && (
+            <div className="space-y-8">
+              <SheetHeader>
+                <div className={cn(
+                  "inline-flex w-max rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest mb-2 border",
+                  statusTheme[selectedBooking.status || 'pending']?.bg,
+                  statusTheme[selectedBooking.status || 'pending']?.text,
+                  statusTheme[selectedBooking.status || 'pending']?.border,
+                )}>
+                  {selectedBooking.status}
+                </div>
+                <SheetTitle className="text-3xl font-black text-white uppercase tracking-tight">
+                  {selectedBooking.group_name}
+                </SheetTitle>
+                <SheetDescription className="text-stone-400">
+                  Reference ID: #{selectedBooking.id}
+                </SheetDescription>
+              </SheetHeader>
 
-        <div className="relative w-full overflow-auto">
-          <table className="w-full caption-bottom text-sm text-left">
-            <thead className="[&_tr]:border-b bg-muted/30 text-muted-foreground">
-              <tr className="border-b transition-colors hover:bg-muted/10">
+              <div className="grid grid-cols-2 gap-4">
+                <DetailBox label="Team Size" value={`${selectedBooking.group_size} People`} icon={<Users />} />
+                <DetailBox label="Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM") : "—"} icon={<CalendarDays />} />
+              </div>
 
-                <th className="h-12 px-6 align-middle font-medium">
-                    <div className="flex items-center gap-1.5">
-                    <User className="h-3.5 w-3.5" />
-                    <span>Booked by</span>
+              <div className="space-y-4 pt-4 border-t border-white/5">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-primary font-black">
+                    {selectedBooking.contacts?.full_name?.charAt(0)}
                   </div>
-                  </th>
-                <th className="h-12 px-4 align-middle font-medium">Team Name</th>
-
-                <th className="h-12 px-4 align-middle font-medium">
-                  <div className="flex items-center gap-1.5">
-                    <Group className="h-3.5 w-3.5" />
-                    <span>No. of People</span>
+                  <div>
+                    <p className="text-sm font-bold text-white uppercase">{selectedBooking.contacts?.full_name}</p>
+                    <p className="text-xs text-stone-500">{selectedBooking.contacts?.email}</p>
                   </div>
-                </th>
-                <th className="h-12 px-4 align-middle font-medium">Status</th>
-                <th className="h-12 px-6 align-middle font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="[&_tr:last-child]:border-0 bg-background">
-              {filteredBookings.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center justify-center space-y-3">
-                      <CalendarIcon className="h-8 w-8 text-muted-foreground/50" />
-                      <p>No bookings found for the selected date.</p>
-                      <Button variant="outline" size="sm" onClick={() => setDate(undefined)}>
-                        View All Dates
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                filteredBookings.map((booking) => (
-                  <tr key={booking.id} className="border-b transition-colors hover:bg-muted/30">
-                    <td className="py-4 px-4 align-middle">
-                      <div className="flex items-center gap-3">
-                        <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center text-primary font-semibold text-sm">
-                          {booking.contacts?.full_name?.charAt(0)}
-                        </div>
+                </div>
 
-                          <span className="font-medium text-foreground">{booking.contacts?.full_name}</span>
+                {selectedBooking.special_requests && (
+                  <div className="bg-white/3 p-4 rounded-2xl">
+                    <p className="text-[10px] font-black uppercase text-stone-500 mb-1">Special Requests</p>
+                    <p className="text-sm italic text-stone-300">&quot;{selectedBooking.special_requests}&quot;</p>
+                  </div>
+                )}
+              </div>
 
-                      </div>
-                    </td>
-                    
-                    <td className="py-4 px-4">
-                      <div className="flex items-center gap-1.5 font-medium text-foreground/80">
-                                                {booking.group_name}
-                      </div>
-                    </td>
-                    <td className="p-4 align-middle text-muted-foreground">
-
-
-                      {booking.group_size} {booking.group_size === 1 ? 'People' : 'People'}
-
-                    </td>
-                    <td className="p-4 align-middle">
-                      <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold ${booking.status === "confirmed" ? "border-transparent bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" :
-                        booking.status === "waitlisted" ? "border-transparent bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400" :
-                          "border-transparent bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                        }`}>
-                        {booking.status}
-                      </span>
-                    </td>
-
-                    <td className="p-4 px-6 align-middle text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild className="rounded-md p-1.5 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
-                          <Button variant="ghost" className="h-8 w-8 p-0 hover:bg-muted">
-                            <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4 text-foreground/70" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 rounded-xl shadow-lg border-muted">
-                          <DropdownMenuLabel className="text-xs text-muted-foreground">Booking Actions</DropdownMenuLabel>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem className="cursor-pointer py-2">
-                            <Eye className="mr-2 h-4 w-4 text-muted-foreground" />
-                            <span>View Details</span>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href={`/manage-booking/${booking.id}`} className="flex items-center gap-2">
-                              <Pencil className="h-4 w-4" /> Edit booking
-                            </Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            onClick={() => handleDeleteBooking(booking.id, booking.group_name || booking.contacts?.full_name)}
-                            className="gap-2 text-red-600 focus:text-red-600 dark:text-red-400"
-                          >
-                            <Trash2 className="h-4 w-4" /> Delete booking
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-        {
-          isPending && (
-            <div className="fixed bottom-4 right-4 flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 shadow-lg dark:border-slate-800 dark:bg-slate-900 dark:text-slate-200">
-              <Loader2 className="h-4 w-4 animate-spin" /> Saving changes...
+              <div className="grid grid-cols-2 gap-3 pt-6">
+                <Button 
+                  asChild 
+                  className="bg-[#fdcc4b] text-[#26300D] font-black rounded-xl h-14 uppercase tracking-widest"
+                >
+                  <a href={`/manage-booking/${selectedBooking.id}`}>
+                    <Pencil className="w-4 h-4 mr-2" /> Manage
+                  </a>
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" className="border-white/10 bg-white/5 text-white font-black rounded-xl h-14 uppercase tracking-widest">
+                      Set Status
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="bg-[#1a2109] border-white/10 w-48">
+                    {['confirmed', 'waitlisted', 'pending', 'cancelled'].map(s => (
+                      <DropdownMenuItem key={s} onClick={() => handleStatusChange(selectedBooking.id, s)} className="capitalize font-bold">
+                        {s}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
             </div>
-          )
-        }
-      </div>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Global Transition Loader */}
+      {isPending && (
+        <div className="fixed top-6 left-1/2 -translate-x-1/2 z-50 bg-primary text-primary-foreground px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-[0.2em] shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-top-4">
+          <Loader2 className="w-3 h-3 animate-spin" /> Syncing
+        </div>
+      )}
     </div>
   )
 }
 
-function StatCard({ title, value, subtitle, icon }: { title: string; value: number; subtitle: string; icon: React.ReactNode }) {
+function CompactBookingRow({ booking, onViewDetails }: { booking: Booking, onViewDetails: () => void }) {
+  const status = booking.status?.toLowerCase() || 'pending';
+  const theme = statusTheme[status];
+
   return (
-    <div className="flex items-start justify-between rounded-xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-zinc-950">
-      <div>
-        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{title}</p>
-        <h3 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">{value}</h3>
-        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">{subtitle}</p>
+    <div 
+      onClick={onViewDetails}
+      className="group bg-white/3 hover:bg-white/5 active:bg-white/10 border border-white/5 rounded-2xl p-4 flex items-center justify-between transition-all cursor-pointer"
+    >
+      <div className="flex items-center gap-4 min-w-0">
+        <div className={cn("w-1.5 h-6 rounded-full shrink-0", theme.dot)} />
+        <div className="min-w-0">
+          <h4 className="text-sm font-bold text-white truncate uppercase tracking-tight">
+            {booking.group_name || "Guest"}
+          </h4>
+          <p className="text-[10px] font-black text-stone-600 uppercase tracking-widest">
+            {booking.contacts?.full_name}
+          </p>
+        </div>
       </div>
-      <div className="rounded-lg bg-slate-50 p-3 dark:bg-slate-900">{icon}</div>
+
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 bg-black/20 px-2 py-1 rounded-lg">
+          <Users className="w-3 h-3 text-stone-500" />
+          <span className="text-xs font-bold text-stone-300">{booking.group_size}</span>
+        </div>
+        <ChevronRight className="w-4 h-4 text-white/10 group-hover:text-primary transition-colors" />
+      </div>
+    </div>
+  );
+}
+
+function CompactStatCard({ label, value, icon, color }: { label: string, value: number, icon: React.ReactNode, color: string }) {
+  const colorMap: Record<string, string> = {
+    blue: "text-blue-400 bg-blue-500/5 border-blue-500/10",
+    emerald: "text-emerald-400 bg-emerald-500/5 border-emerald-500/10",
+    amber: "text-amber-400 bg-amber-500/5 border-amber-500/10",
+  }
+  
+  return (
+    <div className={cn("flex-none min-w-28 rounded-2xl border p-3 flex flex-col gap-1 shadow-sm", colorMap[color])}>
+      <div className="flex items-center justify-between opacity-60">
+        <span className="text-[8px] font-black uppercase tracking-widest">{label}</span>
+        {icon}
+      </div>
+      <span className="text-lg font-black">{value}</span>
+    </div>
+  )
+}
+
+function DetailBox({ label, value, icon }: { label: string, value: string, icon: React.ReactElement<{ className?: string }> }) {
+  return (
+    <div className="bg-white/3 border border-white/5 p-4 rounded-4xl flex flex-col gap-1 shadow-inner">
+      <div className="flex items-center gap-2 text-white/20">
+        {React.cloneElement(icon, { 
+          className: "w-3 h-3"
+        })}
+        <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
+      </div>
+      <span className="text-white font-bold text-base uppercase tracking-tight leading-tight">{value}</span>
     </div>
   )
 }

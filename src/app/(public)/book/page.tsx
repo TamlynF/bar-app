@@ -34,7 +34,7 @@ export default function QuizBookingPage() {
             />
           </div>
           <div className="mt-6 space-y-2 px-4">
-            <h1 className="text-white text-xs sm:text-sm font-black uppercase tracking-[0.3em] opacity-80">Weekly Pub Trivia</h1>
+            {/* <h1 className="text-white text-xs sm:text-sm font-black uppercase tracking-[0.3em] opacity-80">Weekly Pub Trivia</h1> */}
             <p className="text-stone-400 text-sm sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic">
               Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.
             </p>
