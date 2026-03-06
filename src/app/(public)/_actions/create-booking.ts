@@ -15,6 +15,34 @@ interface BookingFormData {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+export async function checkTeamName(teamName: string, quizDate: string) {
+  if (!teamName || !quizDate) return { isAvailable: true };
+  
+  const supabase = await createClient();
+
+  // 1. Find the event ID for this date
+  const { data: eventData } = await supabase
+    .from('events')
+    .select('id')
+    .eq('date', quizDate)
+    .maybeSingle();
+
+  // If no event exists for this date yet, the name is definitely available
+  if (!eventData) return { isAvailable: true };
+
+  // 2. Check for duplicate team names (case-insensitive, non-cancelled)
+  const { data: duplicateTeam } = await supabase
+    .from("bookings")
+    .select("id")
+    .eq("event_id", eventData.id)
+    .ilike("group_name", teamName.trim())
+    .not("status", "eq", "cancelled")
+    .maybeSingle();
+
+  return { isAvailable: !duplicateTeam };
+}
+
+
 export async function createBooking(formData: BookingFormData) {
   console.log(formData);
   const supabase = await createClient();

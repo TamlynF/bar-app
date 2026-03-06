@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { createBooking } from "../_actions/create-booking";
+import { createBooking, checkTeamName } from "../_actions/create-booking";
 import {
   CheckCircle,
   ChevronRight,
@@ -13,7 +13,9 @@ import {
   User,
   Mail,
   Beer,
-  Clock
+  Clock,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 
 interface BookingResponse {
@@ -42,6 +44,8 @@ export default function BookingForm() {
   const [isWaitlisted, setIsWaitlisted] = useState(false);
   const [dateError, setDateError] = useState("");
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isCheckingTeam, setIsCheckingTeam] = useState(false);
+  const [teamNameError, setTeamNameError] = useState("");
 
   const [formData, setFormData] = useState({
     quizDate: getNextThursday(),
@@ -52,6 +56,34 @@ export default function BookingForm() {
     phone: "",
   });
 
+  useEffect(() => {
+    const validateTeam = async () => {
+      if (formData.teamName.trim().length < 2) {
+        setTeamNameError("");
+        return;
+      }
+
+      setIsCheckingTeam(true);
+      try {
+        const { isAvailable } = await checkTeamName(formData.teamName, formData.quizDate);
+        if (!isAvailable) {
+          setTeamNameError("This team name is already taken for the selected date.");
+        } else {
+          setTeamNameError("");
+        }
+      } catch (err) {
+        console.error("Validation error:", err);
+      } finally {
+        setIsCheckingTeam(false);
+      }
+    };
+
+    const timer = setTimeout(validateTeam, 500);
+    return () => clearTimeout(timer);
+  }, [formData.teamName, formData.quizDate]);
+
+
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -59,6 +91,8 @@ export default function BookingForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (teamNameError) return; // Don't submit if name is taken
 
     if (!formData.quizDate) {
       setDateError("Please select a valid Thursday.");
@@ -161,10 +195,10 @@ export default function BookingForm() {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className={`relative w-full text-left bg-black/40 border border-[#fdcc4b]/20 rounded-xl pl-12 pr-4 py-3.5 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] focus:scale-[1.01] transition-all duration-200 hover:border-[#fdcc4b]/40 ${!formData.quizDate ? "text-white/60" : ""}`}
+                className={`relative w-full text-left bg-black/40 border border-[#fdcc4b]/20 rounded-xl pl-12 pr-4 py-3.5 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] focus:scale-[1.01] transition-all duration-200 hover:border-[#fdcc4b]/40 group ${!formData.quizDate ? "text-white/60" : ""}`}
               >
                 <div className={iconContainerClasses}>
-                  <CalendarDays className={iconClasses} />
+                  <CalendarDays className="w-5 h-5 text-[#fdcc4b]/60 transition-colors duration-200 group-focus:text-[#fdcc4b]" />
                 </div>
                 {formData.quizDate ? (
                   format(new Date(formData.quizDate), "dd MMMM yyyy")
@@ -264,10 +298,21 @@ export default function BookingForm() {
               required
               value={formData.teamName}
               onChange={handleInputChange}
-              className={`${inputBaseClasses} peer`}
+              className={`${inputBaseClasses} peer ${teamNameError ? 'border-red-400 ring-1 ring-red-400' : ''}`}
               placeholder="Quizzy McQuizface"
             />
+          
+          {/* Real-time status indicators */}
+            <div className="absolute inset-y-0 right-0 pr-4 flex items-center">
+              {isCheckingTeam && <Loader2 className="w-4 h-4 text-[#fdcc4b] animate-spin" />}
+              {!isCheckingTeam && teamNameError && <AlertCircle className="w-4 h-4 text-red-400" />}
           </div>
+          </div>
+          {teamNameError && (
+            <p className="text-red-400 text-[10px] mt-1.5 font-bold uppercase tracking-tight ml-1 animate-in slide-in-from-top-1">
+              {teamNameError}
+            </p>
+          )}
         </div>
       </div>
 
@@ -299,18 +344,15 @@ export default function BookingForm() {
       <div className="pt-4">
         <button
           type="submit"
-          disabled={isSubmitting}
-          className={`relative overflow-hidden w-full flex items-center justify-center py-4 px-4 rounded-xl text-[#26300D] font-black text-lg uppercase tracking-widest transition-all duration-300 ${isSubmitting
+          disabled={isSubmitting || !!teamNameError}
+          className={`relative overflow-hidden w-full flex items-center justify-center py-4 px-4 rounded-xl text-[#26300D] font-black text-lg uppercase tracking-widest transition-all duration-300 ${(isSubmitting || !!teamNameError)
             ? "bg-[#fdcc4b]/50 cursor-not-allowed"
             : "bg-[#fdcc4b] hover:bg-[#e5b843] shadow-[0_0_20px_rgba(253,204,75,0.15)] hover:shadow-[0_5px_25px_rgba(253,204,75,0.35)] hover:-translate-y-1"
             }`}
         >
           {isSubmitting ? (
             <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-[#26300D]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <Loader2 className="mr-3 h-5 w-5 animate-spin" />
               Processing...
             </span>
           ) : (

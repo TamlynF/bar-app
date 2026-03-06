@@ -94,7 +94,7 @@ export default function BookingListClient1({ initialBookings }: { initialBooking
   const [isPending, startTransition] = useTransition()
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
 
-  console.log(JSON.stringify(initialBookings, null, 2));
+  //console.log(JSON.stringify(initialBookings, null, 2));
 
   const referenceDate = selectedDate || new Date()
   referenceDate.setHours(0, 0, 0, 0)
