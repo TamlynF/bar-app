@@ -22,7 +22,7 @@ import {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Beer,
   ChevronDown, ChevronRight, Banknote, Trophy, Wine,
-  MoreVertical
+  MoreVertical, RotateCcw
 } from "lucide-react";
 import {
   saveEventTypeAction,
@@ -73,6 +73,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [activeTypeId, setActiveTypeId] = useState<number | null>(null);
   const [selectedIcon, setSelectedIcon] = useState<string>("");
   const [typeSheetError, setTypeSheetError] = useState<string | null>(null);
+  
+  // Track if user is adding a completely new category name manually
+  const [isCustomType, setIsCustomType] = useState(false);
 
   const { groupedEventTypes, uniqueTypes } = useMemo(() => {
     const groups: Record<string, EventTypeRecord[]> = {};
@@ -125,12 +128,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     );
 
     if (isDuplicate && sheetMode === 'subtype') {
-      setTypeSheetError(`The sub-type "${formattedSubType}" already exists within the "${formattedType}" category.`);
+      setTypeSheetError(`The sub-type "${formattedSubType}" already exists for event type "${formattedType}".`);
       return;
     }
 
-    formData.set("type", formattedType);
-    formData.set("sub_type", formattedSubType);
+    formData.set("type", formattedType.toLowerCase());
+    formData.set("sub_type", formattedSubType.toLowerCase());
 
     startTransition(async () => {
       const result = await saveEventTypeAction(formData);
@@ -139,6 +142,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         console.error(result.error);
       } else {
         setIsTypeSheetOpen(false);
+        setIsCustomType(false);
       }
     });
   };
@@ -197,6 +201,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             setEditingType(null);
             setSheetMode('category');
             setTypeSheetError(null);
+            setIsCustomType(false);
             setIsTypeSheetOpen(true);
           }}
         >
@@ -250,6 +255,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           setEditingType({ type: toTitleCase(typeKey) });
                           setSheetMode('subtype');
                           setTypeSheetError(null);
+                          setIsCustomType(false);
                           setIsTypeSheetOpen(true);
                         }}
                       >
@@ -271,6 +277,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                               });
                               setSheetMode('category');
                               setTypeSheetError(null);
+                              setIsCustomType(false);
                               setIsTypeSheetOpen(true);
                             }}
                           >
@@ -304,6 +311,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             setEditingType({ type: toTitleCase(typeKey) });
                             setSheetMode('subtype');
                             setTypeSheetError(null);
+                            setIsCustomType(false);
                             setIsTypeSheetOpen(true);
                           }}>
                             <Plus className="w-4 h-4 mr-2" /> Sub-type
@@ -319,6 +327,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 });
                                 setSheetMode('category');
                                 setTypeSheetError(null);
+                                setIsCustomType(false);
                                 setIsTypeSheetOpen(true);
                               }}>
                                 <Edit2 className="w-4 h-4 mr-2" /> Edit
@@ -375,6 +384,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                   });
                                   setSheetMode('subtype');
                                   setTypeSheetError(null);
+                                  setIsCustomType(false);
                                   setIsTypeSheetOpen(true);
                                 }}
                               >
@@ -406,6 +416,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                     });
                                     setSheetMode('subtype');
                                     setTypeSheetError(null);
+                                    setIsCustomType(false);
                                     setIsTypeSheetOpen(true);
                                   }}>
                                     <Edit2 className="w-4 h-4 mr-2" /> Edit
@@ -523,19 +534,22 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       </div>
 
       {/* 1. Add/Edit Event Type Sheet */}
-      <Sheet open={isTypeSheetOpen} onOpenChange={setIsTypeSheetOpen}>
+      <Sheet open={isTypeSheetOpen} onOpenChange={(open) => {
+        setIsTypeSheetOpen(open);
+        if (!open) setIsCustomType(false);
+      }}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
             <SheetTitle>
               {sheetMode === 'category'
-                ? (editingType?.id ? "Edit Category Name" : "Add Event Category")
+                ? (editingType?.id ? "Edit Event Type" : "Add Event Type")
                 : (editingType?.id ? "Edit Sub-type" : "Add Sub-type")
               }
             </SheetTitle>
             <SheetDescription>
               {sheetMode === 'category'
                 ? "Define the primary classification for your events."
-                : "Define the specific variant within this category."
+                : "Define the specific variant within this type."
               }
             </SheetDescription>
           </SheetHeader>
@@ -547,32 +561,69 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               {/* Event Type Dropdown */}
               <div className="space-y-2">
                 <Label htmlFor="type">Event Type <span className="text-destructive">*</span></Label>
-                <div className="relative group">
-                  <select
-                    id="type"
-                    title="type"
-                    name="type"
-                    required
-                    defaultValue={editingType?.type ? toTitleCase(editingType.type) : ""}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
-                  >
-                    <option value="" disabled>Select an event type...</option>
-                    {uniqueTypes.map(t => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                    <option value="custom">+ Create New Event Type...</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground group-hover:text-foreground transition-colors">
-                    <ChevronDown className="h-4 w-4" />
+                
+                {!isCustomType ? (
+                  <div className="relative group">
+                    <select
+                      id="type"
+                      title="type"
+                      name="type"
+                      required
+                      defaultValue={editingType?.type ? toTitleCase(editingType.type) : ""}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                      onChange={(e) => {
+                        if (e.target.value === "custom") {
+                          setIsCustomType(true);
+                        }
+                      }}
+                    >
+                      <option value="" disabled>Select an event type...</option>
+                      {uniqueTypes.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                      <option value="custom" className="font-bold text-primary">+ Create New Event Type...</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground group-hover:text-foreground transition-colors">
+                      <ChevronDown className="h-4 w-4" />
+                    </div>
                   </div>
-                </div>
-                {/* Fallback for adding a completely new event type if the user chooses 'custom' logic or wants to type it */}
-                <p className="text-[10px] text-muted-foreground italic px-1">Note: You can also type a new name if your database is empty.</p>
+                ) : (
+                  <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex gap-2">
+                      <Input
+                        id="type"
+                        name="type"
+                        placeholder="Enter new event type..."
+                        required
+                        autoFocus
+                      />
+                      <Button 
+                        type="button" 
+                        variant="ghost" 
+                        size="icon" 
+                        title="Back to list"
+                        onClick={() => setIsCustomType(false)}
+                        className="shrink-0"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground italic px-1">
+                      Typing a new name will create a fresh event type in your database.
+                    </p>
+                  </div>
+                )}
+                
+                {!isCustomType && (
+                  <p className="text-[10px] text-muted-foreground italic px-1">
+                    Choose an existing event type or create a new one.
+                  </p>
+                )}
               </div>
 
               {sheetMode === 'subtype' && (
                 <div className="space-y-2">
-                  <Label htmlFor="sub_type">Sub-type Name <span className="text-destructive">*</span></Label>
+                  <Label htmlFor="sub_type">Sub-type <span className="text-destructive">*</span></Label>
                   <Input
                     id="sub_type"
                     name="sub_type"
