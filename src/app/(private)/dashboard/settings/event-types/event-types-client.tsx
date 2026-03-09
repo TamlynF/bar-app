@@ -45,13 +45,11 @@ export type EventTypeRecord = {
   event_information: EventInfo[];
 };
 
-/**
- * Helper to capitalize the first letter of a string (Title Case)
- */
 const toTitleCase = (str: string) => {
-  console.log("Converting to title case:", str);
+  //console.log("Converting to title case:", str);
   if (!str) return "";
-   return str
+  return str
+    .trim()
     .split(/\s+/)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(" ");
@@ -61,23 +59,39 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [expandedSubtype, setExpandedSubtype] = useState<number | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
+  
+  // Sheet State
   const [isTypeSheetOpen, setIsTypeSheetOpen] = useState(false);
   const [editingType, setEditingType] = useState<Partial<EventTypeRecord> | null>(null);
   const [isInfoSheetOpen, setIsInfoSheetOpen] = useState(false);
   const [editingInfo, setEditingInfo] = useState<EventInfo | null>(null);
+  
+  // Form State
   const [activeTypeId, setActiveTypeId] = useState<number | null>(null);  
   const [selectedIcon, setSelectedIcon] = useState<string>("");
+  const [typeSheetError, setTypeSheetError] = useState<string | null>(null);
 
-  const groupedEventTypes = useMemo(() => {
+  // Grouping and extracting unique types for the dropdown
+  const { groupedEventTypes, uniqueTypes } = useMemo(() => {
     const groups: Record<string, EventTypeRecord[]> = {};
+    const typeSet = new Set<string>();
     
     initialEventTypes.forEach((item) => {
       const key = item.type.toLowerCase();
+      typeSet.add(toTitleCase(item.type));
       if (!groups[key]) groups[key] = [];
       groups[key].push(item);
     });
 
-    return Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0]));
+    // Sort sub-types alphabetically within each category group
+    Object.values(groups).forEach(items => {
+      items.sort((a, b) => a.sub_type.localeCompare(b.sub_type));
+    });
+
+    return {
+      groupedEventTypes: Object.entries(groups).sort((a, b) => a[0].localeCompare(b[0])),
+      uniqueTypes: Array.from(typeSet).sort()
+    };
   }, [initialEventTypes]);
 
   const toggleGroup = (type: string) => {
@@ -92,17 +106,38 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   };
 
   // --- Handlers ---
+  
   const handleTypeSubmit = (formData: FormData) => {
     console.log(Object.fromEntries(formData.entries()));
-    const type = formData.get("type")?.toString().trim().toLowerCase() || "";
-    const subType = formData.get("sub_type")?.toString().trim().toLowerCase() || "";
+    setTypeSheetError(null);
     
-    formData.set("type", type);
-    formData.set("sub_type", subType);
+    // 1. Extract and Apply Title Case
+    const rawType = formData.get("type")?.toString() || "";
+    const rawSubType = formData.get("sub_type")?.toString() || "";
+    
+    const formattedType = toTitleCase(rawType);
+    const formattedSubType = toTitleCase(rawSubType);
+
+    // 2. Uniqueness Validation
+    const isDuplicate = initialEventTypes.some(item => 
+      item.type.toLowerCase() === formattedType.toLowerCase() && 
+      item.sub_type.toLowerCase() === formattedSubType.toLowerCase() &&
+      item.id !== editingType?.id
+    );
+
+    if (isDuplicate) {
+      setTypeSheetError(`The sub-type "${formattedSubType}" already exists within the "${formattedType}" category.`);
+      return;
+    }
+
+    // 3. Update FormData with normalized strings
+    formData.set("type", formattedType);
+    formData.set("sub_type", formattedSubType);
 
     startTransition(async () => {
       const result = await saveEventTypeAction(formData);
       if (result?.error) {
+        setTypeSheetError(result.error);
         console.error(result.error);
       } else {
         setIsTypeSheetOpen(false);
@@ -111,6 +146,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   };
 
   const handleDeleteType = (id: number) => {
+    // Note: confirm() is used here as requested in previous patterns for consistency, 
+    // though the system instructions suggest custom UI modals for better reliability in iframes.
     if (window.confirm("Are you sure? This will delete all linked information.")) {
       startTransition(async () => {
         const result = await deleteEventTypeAction(id);
@@ -160,7 +197,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         </div>
         <Button 
           size="sm" 
-          onClick={() => { setEditingType(null); setIsTypeSheetOpen(true); }}
+          onClick={() => { 
+            setEditingType(null); 
+            setTypeSheetError(null);
+            setIsTypeSheetOpen(true); 
+          }}
         >
           <Plus className="w-4 h-4 mr-2" />
           Add Type
@@ -180,16 +221,14 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             return (
               <div key={typeKey} className="border rounded-2xl bg-card overflow-hidden shadow-sm transition-all duration-300">
                 {/* Group Header */}
-                <div 
-                  className="w-full flex items-center justify-between bg-muted/5 transition-colors text-left"
-                >
+                <div className="w-full flex items-center justify-between bg-muted/5 transition-colors text-left">
                   <button
                     type="button"  
                     onClick={() => toggleGroup(typeKey)}
                     className="flex-1 p-4 flex items-center gap-3 hover:bg-muted/5 transition-colors"
                   >
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
-                      <Layers className="w-5 h-5" />
+                      <Layers className="w-4 h-4" />
                     </div>
                     <div>
                       <h4 className="text-base font-black tracking-tight text-foreground">
@@ -210,10 +249,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         onClick={(e) => {
                           e.stopPropagation();
                           setEditingType({ type: toTitleCase(typeKey) });
+                          setTypeSheetError(null);
                           setIsTypeSheetOpen(true);
                         }}
                       >
-                        <Plus className="w-3 h-3 mr-1" /> Add Sub-type
+                        <Plus className="w-3 h-3 mr-1" /> Sub-type 
                       </Button>
                     )}
                     <button type="button" onClick={() => toggleGroup(typeKey)} className="p-1">
@@ -248,7 +288,15 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                               variant="ghost" 
                               size="icon" 
                               className="h-8 w-8 text-muted-foreground"
-                              onClick={() => { setEditingType(item); setIsTypeSheetOpen(true); }}
+                              onClick={() => { 
+                                setEditingType({
+                                  ...item,
+                                  type: toTitleCase(item.type),
+                                  sub_type: toTitleCase(item.sub_type)
+                                }); 
+                                setTypeSheetError(null);
+                                setIsTypeSheetOpen(true); 
+                              }}
                             >
                               <Edit2 className="w-3.5 h-3.5" />
                             </Button>
@@ -279,7 +327,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                   setIsInfoSheetOpen(true); 
                                 }}
                               >
-                                <Plus className="w-3 h-3 mr-1" /> Add Detail
+                                <Plus className="w-3 h-3 mr-1" /> Info
                               </Button>
                             </div>
 
@@ -306,13 +354,13 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                           setIsInfoSheetOpen(true); 
                                         }}
                                       >
-                                        <Edit2 className="w-3 h-3" />
+                                        <Edit2 className="w-3.5 h-3.5" />
                                       </Button>
                                       <Button 
                                         className="p-1 text-destructive hover:bg-destructive/10 rounded"
                                         onClick={() => handleDeleteInfo(info.id)}
                                       >
-                                        <Trash2 className="w-3 h-3" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </Button>
                                     </div>
                                   </div>
@@ -332,6 +380,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       </div>
 
       {/* --- SHEETS --- */}
+      
+      {/* 1. Add/Edit Event Type Sheet */}
       <Sheet open={isTypeSheetOpen} onOpenChange={setIsTypeSheetOpen}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
@@ -341,28 +391,54 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           
           <form action={handleTypeSubmit} className="flex flex-col h-full mt-6">
             {editingType?.id && <input type="hidden" name="id" value={editingType.id} />}
-            <div className="space-y-4 flex-1">
+            
+            <div className="space-y-5 flex-1">
+              {/* Event Type Dropdown */}
               <div className="space-y-2">
-                <Label htmlFor="type">Event Type</Label>
-                <Input 
-                  id="type" 
-                  name="type" 
-                  placeholder="Primary event type" 
-                  defaultValue={editingType?.type || ""} 
-                  required 
-                />
+                <Label htmlFor="type">Event Type <span className="text-destructive">*</span></Label>
+                <div className="relative group">
+                  <select
+                    id="type"
+                    title="type"
+                    name="type"
+                    required
+                    defaultValue={editingType?.type ? toTitleCase(editingType.type) : ""}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 appearance-none"
+                  >
+                    <option value="" disabled>Select an event type...</option>
+                    {uniqueTypes.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                    <option value="custom">+ Create New Event Type...</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground group-hover:text-foreground transition-colors">
+                    <ChevronDown className="h-4 w-4" />
+                  </div>
+                </div>
+                {/* Fallback for adding a completely new event type if the user chooses 'custom' logic or wants to type it */}
+                <p className="text-[10px] text-muted-foreground italic px-1">Note: You can also type a new name if your database is empty.</p>
               </div>
+
+              {/* Sub-type Input */}
               <div className="space-y-2">
-                <Label htmlFor="sub_type">Sub-type</Label>
+                <Label htmlFor="sub_type">Sub-type Name <span className="text-destructive">*</span></Label>
                 <Input 
                   id="sub_type" 
                   name="sub_type" 
-                  placeholder="Specific sub-type" 
-                  defaultValue={editingType?.sub_type || ""} 
+                  placeholder="e.g. Speed Quiz" 
+                  defaultValue={editingType?.sub_type ? toTitleCase(editingType.sub_type) : ""} 
                   required 
                 />
               </div>
+
+              {typeSheetError && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 flex items-start gap-2 animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="w-4 h-4 text-destructive shrink-0 mt-0.5" />
+                  <p className="text-xs font-bold text-destructive leading-tight">{typeSheetError}</p>
+                </div>
+              )}
             </div>
+
             <div className="flex justify-end gap-3 mt-8 pb-4">
               <Button type="button" variant="outline" onClick={() => setIsTypeSheetOpen(false)} disabled={isPending}>Cancel</Button>
               <Button type="submit" disabled={isPending}>
@@ -374,6 +450,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         </SheetContent>
       </Sheet>
 
+      {/* 2. Add/Edit Event Information Detail Sheet */}
       <Sheet open={isInfoSheetOpen} onOpenChange={setIsInfoSheetOpen}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>

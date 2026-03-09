@@ -44,14 +44,41 @@ export async function deleteEventTypeAction(id: number) {
   const supabase = await createClient();
   
   try {
-    const { error } = await supabase.from("event_types").delete().eq("id", id);
+    // 1. Check for scheduled events using this type
+    const { count, error: countError } = await supabase
+      .from("events")
+      .select("*", { count: 'exact', head: true })
+      .eq("event_types_id", id);
+
+    if (countError) throw countError;
+    
+    if (count && count > 0) {
+      return { 
+        error: `Action Denied: This sub-type is currently used by ${count} scheduled event(s). You must delete or reassign those events before removing this type.` 
+      };
+    }
+
+    // 2. Delete linked information items (Manual Cascade)
+    const { error: infoError } = await supabase
+      .from("event_information")
+      .delete()
+      .eq("event_types_id", id);
+
+    if (infoError) throw infoError;
+
+    // 3. Delete the event type
+    const { error } = await supabase
+      .from("event_types")
+      .delete()
+      .eq("id", id);
+
     if (error) throw error;
     
     revalidatePath("/dashboard/settings/event-types");
     return { success: true };
   } catch (error) {
     console.error("Error deleting event type:", error);
-      return { error: error instanceof Error ? error.message : "Failed to delete event type." };
+    return { error: error instanceof Error ? error.message : "An internal error occurred while deleting." };
   }
 }
 
@@ -74,7 +101,7 @@ export async function saveEventInfoAction(formData: FormData) {
     if (id) {
       const { error } = await supabase
         .from("event_information")
-        .update({ title, description, icon }) // We don't usually change the parent ID once linked
+        .update({ title, description, icon })
         .eq("id", id);
         
       if (error) throw error;
