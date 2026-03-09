@@ -40,10 +40,6 @@ export async function saveEventTypeAction(formData: FormData) {
   }
 }
 
-/**
- * Renames an entire category of event types.
- * This satisfies the requirement that changing an event type updates all associated sub-types.
- */
 export async function renameEventTypeGroupAction(oldType: string, newType: string) {
   const supabase = await createClient();
   
@@ -51,7 +47,7 @@ export async function renameEventTypeGroupAction(oldType: string, newType: strin
     const { error } = await supabase
       .from("event_types")
       .update({ type: newType.toLowerCase() })
-      .eq("type", oldType.toLowerCase());
+      .ilike("type", oldType);
 
     if (error) throw error;
 
@@ -64,6 +60,7 @@ export async function renameEventTypeGroupAction(oldType: string, newType: strin
 }
 
 export async function deleteEventTypeAction(id: number) {
+  console.log("Attempting to delete event type with ID:", id);
   const supabase = await createClient();
   
   try {
