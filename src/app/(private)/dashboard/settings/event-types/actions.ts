@@ -9,8 +9,8 @@ export async function saveEventTypeAction(formData: FormData) {
   const supabase = await createClient();
   
   const id = formData.get("id")?.toString();
-  const type = formData.get("type")?.toString();
-  const sub_type = formData.get("sub_type")?.toString();
+  const type = formData.get("type")?.toString()?.toLowerCase();
+  const sub_type = formData.get("sub_type")?.toString()?.toLowerCase();
 
   if (!type || !sub_type) {
     return { error: "Primary type and Sub-type are required." };
@@ -37,6 +37,29 @@ export async function saveEventTypeAction(formData: FormData) {
   } catch (error) {
     console.error("Error saving event type:", error);
       return { error: error instanceof Error ? error.message : "Failed to save event type." };
+  }
+}
+
+/**
+ * Renames an entire category of event types.
+ * This satisfies the requirement that changing an event type updates all associated sub-types.
+ */
+export async function renameEventTypeGroupAction(oldType: string, newType: string) {
+  const supabase = await createClient();
+  
+  try {
+    const { error } = await supabase
+      .from("event_types")
+      .update({ type: newType.toLowerCase() })
+      .eq("type", oldType.toLowerCase());
+
+    if (error) throw error;
+
+    revalidatePath("/dashboard/settings/event-types");
+    return { success: true };
+  } catch (error) {
+    console.error("Error renaming group:", error);
+    return { error: error instanceof Error ? error.message : "Failed to rename event type group." };
   }
 }
 
