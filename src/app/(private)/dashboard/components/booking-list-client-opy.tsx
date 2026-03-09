@@ -200,7 +200,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
     }
   }, [initialBookings, selectedDate])
 
-  console.log("Active Status Filters:", Array.from(activeStatusFilters));
+  //console.log("Active Status Filters:", Array.from(activeStatusFilters));
 
   const handleStatusChange = (id: string, newStatus: string) => {
     setBookingActionId(id)
@@ -228,7 +228,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
             <Button
               variant="outline"
               size="sm"
-              className="h-8 px-3 rounded-lg bg-slate-50 dark:bg-slate-50 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm"
+              className="h-8 px-3 rounded-lg bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm"
             >
               <CalendarDays className="w-4 h-4 text-slate-600 dark:text-slate-300" />
               <div className="flex flex-col">
@@ -253,14 +253,15 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                 if (d) setSelectedDate(d)
                 setIsCalendarOpen(false)
               }}
-              className="text-white bg-[#aabf7a] isolate z-9999"
+              className="text-white bg-[#1a2109] isolate z-9999"
               style={{ backgroundColor: "#9aa67e" }}
+              defaultMonth={selectedDate || new Date()}
             />
-            <div className="p-2 border-t border-white/10 bg-white text-center">
+            <div className="p-2 border-t border-white/10 bg-black/20 text-center">
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full text-xs font-semibold text-slate-300 dark:text-slate-900 hover:text-white dark:hover:text-white"
+                className="w-full text-xs font-semibold text-slate-300 hover:text-white"
                 onClick={() => {
                   setSelectedDate(undefined)
                   setIsCalendarOpen(false)
