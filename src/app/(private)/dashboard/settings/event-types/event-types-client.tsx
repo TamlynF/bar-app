@@ -53,7 +53,6 @@ export type EventTypeRecord = {
 };
 
 const toTitleCase = (str: string) => {
-  //console.log("Converting to title case:", str);
   if (!str) return "";
   return str
     .trim()
@@ -117,15 +116,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const handleTypeSubmit = (formData: FormData) => {
     console.log(Object.fromEntries(formData.entries()));
     setTypeSheetError(null);
-    
-    // 1. Extract and Apply Title Case
     const rawType = formData.get("type")?.toString() || "";
     const rawSubType = formData.get("sub_type")?.toString() || "";
-    
     const formattedType = toTitleCase(rawType);
     const formattedSubType = toTitleCase(rawSubType);
 
-    // 2. Uniqueness Validation
     const isDuplicate = initialEventTypes.some(item => 
       item.type.toLowerCase() === formattedType.toLowerCase() && 
       item.sub_type.toLowerCase() === formattedSubType.toLowerCase() &&
@@ -137,7 +132,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       return;
     }
 
-    // 3. Update FormData with normalized strings
     formData.set("type", formattedType);
     formData.set("sub_type", formattedSubType);
 
@@ -239,55 +233,109 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       <Layers className="w-4 h-4" />
                     </div>
                     
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                      <h4 className="text-base font-black tracking-tight text-foreground">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <h4 className="text-base font-black tracking-tight text-foreground truncate">
                         {toTitleCase(typeKey)}
                       </h4>
-                      {/* Subtype Counter: More prominent on Mobile */}
-                      <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter w-fit">
+                      {/* Subtype Counter: Inline on both mobile and desktop */}
+                      <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shrink-0">
                         {items.length} {items.length === 1 ? 'Sub-type' : 'Sub-types'}
                       </span>
                     </div>
                   </button>
 
                   <div className="flex items-center pr-2 sm:pr-4 gap-1 sm:gap-2">
-                    {/* Desktop Actions */}
-                    {isGroupExpanded && (
-                      <div className="hidden sm:flex items-center gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="xs" 
-                          className="h-7 px-2 rounded-lg border-primary/20 text-primary font-bold uppercase tracking-wider text-[9px]"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setEditingType({ type: toTitleCase(typeKey) });
-                            setTypeSheetError(null);
-                            setIsTypeSheetOpen(true);
-                          }}
-                        >
-                          <Plus className="w-3 h-3 mr-1" /> Sub-type 
-                        </Button>
-                      </div>
-                    )}
+                    {/* DESKTOP ACTIONS: Visible Buttons */}
+                    <div className="hidden sm:flex items-center gap-1">
+                      <Button 
+                        variant="outline" 
+                        size="xs" 
+                        className="h-7 px-2 rounded-lg border-primary/20 text-primary font-bold uppercase tracking-wider text-[9px]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingType({ type: toTitleCase(typeKey) });
+                          setTypeSheetError(null);
+                          setIsTypeSheetOpen(true);
+                        }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Sub-type 
+                      </Button>
+                      
+                      {items.length > 0 && (
+                        <>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditingType({
+                                ...items[0],
+                                type: toTitleCase(items[0].type),
+                                sub_type: toTitleCase(items[0].sub_type)
+                              }); 
+                              setTypeSheetError(null);
+                              setIsTypeSheetOpen(true);
+                            }}
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteType(items[0].id);
+                            }}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
 
-                    {/* Shared 3-Dots Menu (Primary for Mobile, secondary for Desktop) */}
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }}>
-                         <DropdownMenuItem onClick={() => {
-                            setEditingType({ type: toTitleCase(typeKey) });
-                            setTypeSheetError(null);
-                            setIsTypeSheetOpen(true);
-                         }}>
-                          <Plus className="w-4 h-4 mr-2" /> Add Sub-type
-                        </DropdownMenuItem>
-                        {/* Note: Editing the Category string is done via editing any subtype within it in this schema */}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {/* MOBILE ACTIONS: 3-Dot Menu */}
+                    <div className="sm:hidden">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
+                            <MoreVertical className="w-5 h-5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }} className="z-9999">
+                           <DropdownMenuItem onClick={() => {
+                              setEditingType({ type: toTitleCase(typeKey) });
+                              setTypeSheetError(null);
+                              setIsTypeSheetOpen(true);
+                           }}>
+                            <Plus className="w-4 h-4 mr-2" /> Add Sub-type
+                          </DropdownMenuItem>
+                          
+                          {items.length > 0 && (
+                            <>
+                              <DropdownMenuItem onClick={() => {
+                                setEditingType({
+                                  ...items[0],
+                                  type: toTitleCase(items[0].type),
+                                  sub_type: toTitleCase(items[0].sub_type)
+                                }); 
+                                setTypeSheetError(null);
+                                setIsTypeSheetOpen(true);
+                              }}>
+                                <Edit2 className="w-4 h-4 mr-2" /> Edit Type Name
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => handleDeleteType(items[0].id)}
+                              >
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete Type
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
 
                     <button type="button" onClick={() => toggleGroup(typeKey)} className="p-1">
                       {isGroupExpanded ? <ChevronDown className="w-5 h-5 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-muted-foreground" />}
