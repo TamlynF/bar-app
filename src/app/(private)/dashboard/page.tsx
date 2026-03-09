@@ -1,7 +1,7 @@
 // src/app/(private)/dashboard/page.tsx
 import React, { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server"
-import BookingListClient, { Booking } from "./components/booking-list-client-opy"
+import BookingListClient, { Booking } from "./components/booking-list-client"
 import { Settings, Plus, LayoutDashboard } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";

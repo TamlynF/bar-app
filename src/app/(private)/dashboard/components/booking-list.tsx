@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import BookingListClient from './booking-list-client-opy';
+import BookingListClient from './booking-list-client';
 
 
 export interface EventType {

@@ -1,6 +1,6 @@
 .statusCircleButton {
   touch-action: manipulation;
-  /* appearance: none;
+  appearance: none;
   -webkit-appearance: none;
-  -webkit-tap-highlight-color: transparent; */
+  -webkit-tap-highlight-color: transparent;
 }
