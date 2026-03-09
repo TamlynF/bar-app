@@ -29,7 +29,8 @@ import {
   renameEventTypeGroupAction,
   deleteEventTypeAction,
   saveEventInfoAction,
-  deleteEventInfoAction
+  deleteEventInfoAction,
+  deleteEventTypeGroupAction
 } from "@/app/(private)/dashboard/settings/event-types/actions";
 import { cn } from "@/lib/utils";
 
@@ -74,11 +75,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [activeTypeId, setActiveTypeId] = useState<number | null>(null);
   const [selectedIcon, setSelectedIcon] = useState<string>("");
   const [typeSheetError, setTypeSheetError] = useState<string | null>(null);
-
   const [isCustomType, setIsCustomType] = useState(false);
   const [selectedTypeValue, setSelectedTypeValue] = useState<string>("");
-  
-  // Real-time validation state
   const [typeInput, setTypeInput] = useState("");
   const [subTypeInput, setSubTypeInput] = useState("");
 
@@ -105,20 +103,48 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
   // Real-time check for existing Type + Sub-type combination
   const subTypeConflictError = useMemo(() => {
-    if (!typeInput || !subTypeInput || sheetMode === 'type') return null;
+    if (!typeInput) return null;
 
     const formattedType = typeInput.trim().toLowerCase();
     const formattedSubType = subTypeInput.trim().toLowerCase();
+     if (sheetMode === 'subtype' && subTypeInput) {
+      const formattedSubType = subTypeInput.trim().toLowerCase();
 
-    const isDuplicate = initialEventTypes.some(item =>
-      item.type.toLowerCase() === formattedType &&
-      item.sub_type.toLowerCase() === formattedSubType &&
-      item.id !== editingType?.id
-    );
+      const isDuplicate = initialEventTypes.some(item =>
+        item.type.toLowerCase() === formattedType &&
+        item.sub_type.toLowerCase() === formattedSubType &&
+        item.id !== editingType?.id
+      );
 
-    if (isDuplicate) {
-      return `"${toTitleCase(subTypeInput)}" already exists in "${toTitleCase(typeInput)}".`;
+      if (isDuplicate) {
+        return `"${toTitleCase(subTypeInput)}" already exists in "${toTitleCase(typeInput)}".`;
+      }
     }
+
+    if (sheetMode === 'type' && editingType?.type) {
+      const oldType = editingType.type.toLowerCase();
+      
+      // If the name hasn't actually changed, there's no conflict
+      if (oldType === formattedType) return null;
+
+      // 1. Identify all sub-types currently in the group we are renaming
+      const subTypesToMigrate = initialEventTypes
+        .filter(item => item.type.toLowerCase() === oldType)
+        .map(item => item.sub_type.toLowerCase());
+
+      // 2. Identify all sub-types already existing in the target group name
+      const existingSubTypesInTarget = initialEventTypes
+        .filter(item => item.type.toLowerCase() === formattedType)
+        .map(item => item.sub_type.toLowerCase());
+
+      // 3. Find intersections
+      const conflicts = subTypesToMigrate.filter(sub => existingSubTypesInTarget.includes(sub));
+
+      if (conflicts.length > 0) {
+        const list = conflicts.map(s => `"${toTitleCase(s)}"`).join(", ");
+        return `Cannot merge into "${toTitleCase(typeInput)}" because these sub-types already exist there: ${list}.`;
+      }
+    }  
     return null;
   }, [typeInput, subTypeInput, initialEventTypes, editingType, sheetMode]);
 
@@ -188,8 +214,18 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     });
   };
 
-  const handleDeleteType = (id: number) => {
-    if (window.confirm("Are you sure? This will delete all linked information.")) {
+    const handleDeleteGroup = (type: string) => {
+    const formatted = toTitleCase(type);
+    if (window.confirm(`Warning: This will delete the entire "${formatted}" category, including all its sub-types and linked information. Proceed?`)) {
+      startTransition(async () => {
+        const result = await deleteEventTypeGroupAction(type);
+        if (result?.error) alert(result.error);
+      });
+    }
+  };
+  
+  const handleDeleteSubType = (id: number) => {
+    if (window.confirm("Are you sure? This will delete this sub-type and all its linked information.")) {
       startTransition(async () => {
         const result = await deleteEventTypeAction(id);
         if (result?.error) alert(result.error);
@@ -344,7 +380,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             className="h-8 w-8 text-destructive hover:bg-destructive/10"
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteType(items[0].id);
+                              handleDeleteGroup(typeKey);
                             }}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -395,11 +431,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 setSubTypeInput(subVal);
                                 setIsTypeSheetOpen(true);
                               }}>
-                                <Edit2 className="w-4 h-4 mr-2" /> Rename Type
+                                <Edit2 className="w-4 h-4 mr-2" /> Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
-                                onClick={() => handleDeleteType(items[0].id)}
+                                onClick={() => handleDeleteGroup(typeKey)}
                               >
                                 <Trash2 className="w-4 h-4 mr-2" /> Delete
                               </DropdownMenuItem>
@@ -464,7 +500,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDeleteType(item.id)}
+                                onClick={() => handleDeleteSubType(item.id)}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </Button>
@@ -498,7 +534,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     className="text-destructive"
-                                    onClick={() => handleDeleteType(item.id)}
+                                    onClick={() => handleDeleteSubType(item.id)}
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" /> Delete
                                   </DropdownMenuItem>
@@ -628,7 +664,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             </SheetTitle>
             <SheetDescription>
               {sheetMode === 'type'
-                ? "Manage the primary category for these events."
+                ? "Manage the primary type for these events."
                 : `Defining a specific sub-type within the ${typeInput || 'selected'} type.`
               }
             </SheetDescription>
@@ -725,21 +761,26 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     onChange={(e) => setSubTypeInput(e.target.value)}
                     required
                   />
-                  
-                  {/* REAL-TIME VALIDATION MESSAGE */}
-                  {subTypeConflictError ? (
-                    <p className="text-[10px] text-destructive font-bold uppercase tracking-tight flex items-center gap-1 animate-in fade-in slide-in-from-top-1">
-                      <AlertCircle className="w-3 h-3" /> {subTypeConflictError}
+                  {!editingType?.id && (
+                    <p className="text-[10px] text-muted-foreground italic px-1">
+                      Every type needs at least one sub-type to be created.
                     </p>
-                  ) : !editingType?.id && (
-                  <p className="text-[10px] text-muted-foreground italic px-1">
-                    Every type needs at least one sub-type to be created.
-                  </p>
                   )}
                 </div>
               )}
 
-              {/* Neat Error Display */}
+               {/* REAL-TIME VALIDATION MESSAGE - VISIBLE FOR ALL MODES */}
+              {subTypeConflictError && (
+                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                  <div>
+                    <h5 className="text-xs font-black text-destructive uppercase tracking-wider mb-1">Conflict Detected</h5>
+                    <p className="text-xs text-destructive font-medium leading-tight">{subTypeConflictError}</p>
+                  </div>
+                </div>
+              )}
+
+              {/* SERVER-SIDE ERROR DISPLAY */}
               {typeSheetError && (
                 <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1">
                   <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
@@ -769,7 +810,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       <Sheet open={isInfoSheetOpen} onOpenChange={setIsInfoSheetOpen}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>{editingInfo ? "Edit Detail" : "Add Detail"}</SheetTitle>
+            <SheetTitle>{editingInfo ? `Edit Detail: ${toTitleCase(typeInput)}` : "Add Detail"}</SheetTitle>
             <SheetDescription>Provide specific parameters for this event type.</SheetDescription>
           </SheetHeader>
 

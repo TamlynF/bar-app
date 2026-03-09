@@ -59,12 +59,64 @@ export async function renameEventTypeGroupAction(oldType: string, newType: strin
   }
 }
 
+export async function deleteEventTypeGroupAction(type: string) {
+  const supabase = await createClient();
+  const typeLower = type.toLowerCase();
+
+  try {
+    // 1. Get all IDs for this primary type
+    const { data: types, error: fetchError } = await supabase
+      .from("event_types")
+      .select("id")
+      .ilike("type", typeLower);
+
+    if (fetchError) throw fetchError;
+    if (!types || types.length === 0) return { success: true };
+
+    const ids = types.map(t => t.id);
+
+    // 2. Check for scheduled events using ANY of these types
+    const { count, error: countError } = await supabase
+      .from("events")
+      .select("*", { count: 'exact', head: true })
+      .in("event_types_id", ids);
+
+    if (countError) throw countError;
+    
+    if (count && count > 0) {
+      return { 
+        error: `Action Denied: This group contains types currently used by ${count} scheduled event(s).` 
+      };
+    }
+
+    const { error: infoError } = await supabase
+      .from("event_information")
+      .delete()
+      .in("event_types_id", ids);
+
+    if (infoError) throw infoError;
+
+    // 4. Delete the event types themselves
+    const { error } = await supabase
+      .from("event_types")
+      .delete()
+      .in("id", ids);
+
+    if (error) throw error;
+    
+    revalidatePath("/dashboard/settings/event-types");
+    return { success: true };
+  } catch (error) {
+    console.error("Error deleting event type group:", error);
+    return { error: error instanceof Error ? error.message : "Failed to delete the event group." };
+  }
+}
+
 export async function deleteEventTypeAction(id: number) {
   console.log("Attempting to delete event type with ID:", id);
   const supabase = await createClient();
   
   try {
-    // 1. Check for scheduled events using this type
     const { count, error: countError } = await supabase
       .from("events")
       .select("*", { count: 'exact', head: true })
@@ -78,7 +130,6 @@ export async function deleteEventTypeAction(id: number) {
       };
     }
 
-    // 2. Delete linked information items (Manual Cascade)
     const { error: infoError } = await supabase
       .from("event_information")
       .delete()
@@ -86,7 +137,6 @@ export async function deleteEventTypeAction(id: number) {
 
     if (infoError) throw infoError;
 
-    // 3. Delete the event type
     const { error } = await supabase
       .from("event_types")
       .delete()
