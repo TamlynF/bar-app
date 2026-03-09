@@ -17,18 +17,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { 
+import {
   Plus, Edit2, Trash2, Layers, Info, Image as ImageIcon, Loader2,
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Beer,
   ChevronDown, ChevronRight, Banknote, Trophy, Wine,
   MoreVertical
 } from "lucide-react";
-import { 
-  saveEventTypeAction, 
-  deleteEventTypeAction, 
-  saveEventInfoAction, 
-  deleteEventInfoAction 
+import {
+  saveEventTypeAction,
+  deleteEventTypeAction,
+  saveEventInfoAction,
+  deleteEventInfoAction
 } from "@/app/(private)/dashboard/settings/event-types/actions";
 import { cn } from "@/lib/utils";
 
@@ -65,26 +65,19 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [expandedSubtype, setExpandedSubtype] = useState<number | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
-  
-  // Sheet State
   const [isTypeSheetOpen, setIsTypeSheetOpen] = useState(false);
   const [editingType, setEditingType] = useState<Partial<EventTypeRecord> | null>(null);
   const [isInfoSheetOpen, setIsInfoSheetOpen] = useState(false);
   const [editingInfo, setEditingInfo] = useState<EventInfo | null>(null);
-  
-  // Modes: 'category' (Type only) or 'subtype' (Type + Sub-type)
   const [sheetMode, setSheetMode] = useState<'category' | 'subtype'>('subtype');
-
-  // Form State
-  const [activeTypeId, setActiveTypeId] = useState<number | null>(null);  
+  const [activeTypeId, setActiveTypeId] = useState<number | null>(null);
   const [selectedIcon, setSelectedIcon] = useState<string>("");
   const [typeSheetError, setTypeSheetError] = useState<string | null>(null);
 
-  // Grouping and extracting unique types for the dropdown
   const { groupedEventTypes, uniqueTypes } = useMemo(() => {
     const groups: Record<string, EventTypeRecord[]> = {};
     const typeSet = new Set<string>();
-    
+
     initialEventTypes.forEach((item) => {
       const key = item.type.toLowerCase();
       typeSet.add(toTitleCase(item.type));
@@ -113,22 +106,20 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setExpandedSubtype(expandedSubtype === id ? null : id);
   };
 
-  // --- Handlers ---
-  
   const handleTypeSubmit = (formData: FormData) => {
     console.log(Object.fromEntries(formData.entries()));
     setTypeSheetError(null);
     const rawType = formData.get("type")?.toString() || "";
-    // If in category mode and adding new, we need a default sub-type to satisfy DB constraints
-    const rawSubType = sheetMode === 'category' 
-      ? (editingType?.sub_type || "General") 
+
+    const rawSubType = sheetMode === 'category'
+      ? (editingType?.sub_type || "General")
       : (formData.get("sub_type")?.toString() || "");
 
     const formattedType = toTitleCase(rawType);
     const formattedSubType = toTitleCase(rawSubType);
 
-    const isDuplicate = initialEventTypes.some(item => 
-      item.type.toLowerCase() === formattedType.toLowerCase() && 
+    const isDuplicate = initialEventTypes.some(item =>
+      item.type.toLowerCase() === formattedType.toLowerCase() &&
       item.sub_type.toLowerCase() === formattedSubType.toLowerCase() &&
       item.id !== editingType?.id
     );
@@ -153,8 +144,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   };
 
   const handleDeleteType = (id: number) => {
-    // Note: confirm() is used here as requested in previous patterns for consistency, 
-    // though the system instructions suggest custom UI modals for better reliability in iframes.
     if (window.confirm("Are you sure? This will delete all linked information.")) {
       startTransition(async () => {
         const result = await deleteEventTypeAction(id);
@@ -202,17 +191,17 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             Manage your event categories and specific requirements.
           </p>
         </div>
-        <Button 
-          size="sm" 
-          onClick={() => { 
-            setEditingType(null); 
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditingType(null);
             setSheetMode('category');
             setTypeSheetError(null);
-            setIsTypeSheetOpen(true); 
+            setIsTypeSheetOpen(true);
           }}
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Type
+           Type
         </Button>
       </div>
 
@@ -225,25 +214,24 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         ) : (
           groupedEventTypes.map(([typeKey, items]) => {
             const isGroupExpanded = expandedGroups.has(typeKey) || groupedEventTypes.length === 1;
-            
+
             return (
               <div key={typeKey} className="border rounded-2xl bg-card overflow-hidden shadow-sm transition-all duration-300">
                 {/* Group Header */}
                 <div className="w-full flex items-center justify-between bg-muted/5 transition-colors text-left">
                   <button
-                    type="button"  
+                    type="button"
                     onClick={() => toggleGroup(typeKey)}
                     className="flex-1 p-4 flex items-center gap-3 hover:bg-muted/5 transition-colors"
                   >
                     <div className="hidden sm:flex w-10 h-10 rounded-xl bg-primary/10 items-center justify-center text-primary shrink-0">
                       <Layers className="w-4 h-4" />
                     </div>
-                    
+
                     <div className="flex items-center gap-2 sm:gap-3">
                       <h4 className="text-base font-black tracking-tight text-foreground truncate">
                         {toTitleCase(typeKey)}
                       </h4>
-                      {/* Subtype Counter: Inline on both mobile and desktop */}
                       <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shrink-0">
                         {items.length} {items.length === 1 ? 'Sub-type' : 'Sub-types'}
                       </span>
@@ -253,9 +241,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   <div className="flex items-center pr-2 sm:pr-4 gap-1 sm:gap-2">
                     {/* DESKTOP ACTIONS: Visible Buttons */}
                     <div className="hidden sm:flex items-center gap-1">
-                      <Button 
-                        variant="outline" 
-                        size="xs" 
+                      <Button
+                        variant="outline"
+                        size="xs"
                         className="h-7 px-2 rounded-lg border-primary/20 text-primary font-bold uppercase tracking-wider text-[9px]"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -265,14 +253,14 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           setIsTypeSheetOpen(true);
                         }}
                       >
-                        <Plus className="w-3 h-3 mr-1" /> Sub-type 
+                        <Plus className="w-3 h-3 mr-1" /> Sub-type
                       </Button>
-                      
+
                       {items.length > 0 && (
                         <>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-muted-foreground"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -280,7 +268,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 ...items[0],
                                 type: toTitleCase(items[0].type),
                                 sub_type: toTitleCase(items[0].sub_type)
-                              }); 
+                              });
                               setSheetMode('category');
                               setTypeSheetError(null);
                               setIsTypeSheetOpen(true);
@@ -288,9 +276,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
+                          <Button
+                            variant="ghost"
+                            size="icon"
                             className="h-8 w-8 text-destructive hover:bg-destructive/10"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -312,15 +300,15 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }} className="z-9999">
-                           <DropdownMenuItem onClick={() => {
-                              setEditingType({ type: toTitleCase(typeKey) });
-                              setSheetMode('subtype');
-                              setTypeSheetError(null);
-                              setIsTypeSheetOpen(true);
-                           }}>
-                            <Plus className="w-4 h-4 mr-2" /> Add Sub-type
+                          <DropdownMenuItem onClick={() => {
+                            setEditingType({ type: toTitleCase(typeKey) });
+                            setSheetMode('subtype');
+                            setTypeSheetError(null);
+                            setIsTypeSheetOpen(true);
+                          }}>
+                            <Plus className="w-4 h-4 mr-2" /> Sub-type
                           </DropdownMenuItem>
-                          
+
                           {items.length > 0 && (
                             <>
                               <DropdownMenuItem onClick={() => {
@@ -328,18 +316,18 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                   ...items[0],
                                   type: toTitleCase(items[0].type),
                                   sub_type: toTitleCase(items[0].sub_type)
-                                }); 
+                                });
                                 setSheetMode('category');
                                 setTypeSheetError(null);
                                 setIsTypeSheetOpen(true);
                               }}>
-                                <Edit2 className="w-4 h-4 mr-2" /> Edit Type Name
+                                <Edit2 className="w-4 h-4 mr-2" /> Edit
                               </DropdownMenuItem>
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => handleDeleteType(items[0].id)}
                               >
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete Type
+                                <Trash2 className="w-4 h-4 mr-2" /> Delete
                               </DropdownMenuItem>
                             </>
                           )}
@@ -359,49 +347,48 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     {items.map((item) => (
                       <div key={item.id} className="border rounded-xl bg-card overflow-hidden border-slate-200 dark:border-slate-800">
                         <div className="p-1 flex items-center justify-between">
-                          <button 
+                          <button
                             type="button"
                             onClick={() => toggleSubtypeExpand(item.id)}
                             className="flex-1 flex items-center gap-3 p-2 hover:bg-muted/5 transition-colors text-left"
                           >
                             <div className="shrink-0">
-                               {expandedSubtype === item.id ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
+                              {expandedSubtype === item.id ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
                             </div>
                             <span className="font-bold text-sm text-foreground">
                               {toTitleCase(item.sub_type)}
                             </span>
                             <span className="text-[10px] text-muted-foreground font-medium ml-1">({item.event_information?.length || 0} items)</span>
                           </button>
-                          
+
                           <div className="flex items-center gap-1 pr-1">
                             <div className="hidden sm:flex items-center gap-1">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="h-8 w-8 text-muted-foreground"
-                                onClick={() => { 
+                                onClick={() => {
                                   setEditingType({
                                     ...item,
                                     type: toTitleCase(item.type),
                                     sub_type: toTitleCase(item.sub_type)
-                                  }); 
+                                  });
                                   setSheetMode('subtype');
                                   setTypeSheetError(null);
-                                  setIsTypeSheetOpen(true); 
+                                  setIsTypeSheetOpen(true);
                                 }}
                               >
                                 <Edit2 className="w-3.5 h-3.5" />
                               </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="h-8 w-8 text-destructive hover:bg-destructive/10"
                                 onClick={() => handleDeleteType(item.id)}
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </Button>
                             </div>
-
                             {/* Mobile Actions Dropdown */}
                             <div className="sm:hidden">
                               <DropdownMenu>
@@ -416,14 +403,14 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                       ...item,
                                       type: toTitleCase(item.type),
                                       sub_type: toTitleCase(item.sub_type)
-                                    }); 
+                                    });
                                     setSheetMode('subtype');
                                     setTypeSheetError(null);
-                                    setIsTypeSheetOpen(true); 
+                                    setIsTypeSheetOpen(true);
                                   }}>
-                                    <Edit2 className="w-4 h-4 mr-2" /> Edit Sub-type
+                                    <Edit2 className="w-4 h-4 mr-2" /> Edit
                                   </DropdownMenuItem>
-                                  <DropdownMenuItem 
+                                  <DropdownMenuItem
                                     className="text-destructive"
                                     onClick={() => handleDeleteType(item.id)}
                                   >
@@ -440,15 +427,15 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           <div className="px-3 pb-3 pt-1 border-t bg-muted/5 animate-in fade-in slide-in-from-top-1">
                             <div className="flex items-center justify-between mb-3 mt-2">
                               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Linked Info</span>
-                              <Button 
-                                variant="outline" 
-                                size="xs" 
+                              <Button
+                                variant="outline"
+                                size="xs"
                                 className="rounded-lg h-7 border-primary/20 text-primary"
-                                onClick={() => { 
-                                  setEditingInfo(null); 
-                                  setActiveTypeId(item.id); 
-                                  setSelectedIcon(""); 
-                                  setIsInfoSheetOpen(true); 
+                                onClick={() => {
+                                  setEditingInfo(null);
+                                  setActiveTypeId(item.id);
+                                  setSelectedIcon("");
+                                  setIsInfoSheetOpen(true);
                                 }}
                               >
                                 <Plus className="w-3 h-3 mr-1" /> Info
@@ -460,56 +447,34 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             ) : (
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {item.event_information.map((info) => (
-                                  <div key={info.id} className="flex items-start gap-3 p-3 border rounded-lg bg-background relative group transition-colors hover:border-primary/30">
+                                  <div key={info.id} className="flex items-center gap-3 p-3 border rounded-lg bg-background relative group transition-colors hover:border-primary/30">
                                     <div className="shrink-0 w-8 h-8 flex items-center justify-center bg-secondary text-primary rounded-lg">
                                       {renderIcon(info.icon)}
                                     </div>
-                                    <div className="flex-1 min-w-0 pr-8 sm:pr-12">
+
+                                    <div className="flex-1 min-w-0 pr-2">
                                       <h6 className="font-bold text-[13px] text-foreground leading-none mb-1">{info.title}</h6>
                                       <p className="text-[11px] text-muted-foreground line-clamp-1">{info.description}</p>
                                     </div>
 
-                                    {/* Desktop Actions (Hover) */}
-                                    <div className="absolute top-2 right-2 hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                      <Button 
-                                        variant="ghost"
-                                        className="p-1 h-auto text-muted-foreground hover:text-foreground"
-                                        onClick={() => { 
-                                          setEditingInfo(info); 
-                                          setActiveTypeId(item.id); 
-                                          setSelectedIcon(info.icon || ""); 
-                                          setIsInfoSheetOpen(true); 
-                                        }}
-                                      >
-                                        <Edit2 className="w-3.5 h-3.5" />
-                                      </Button>
-                                      <Button 
-                                        variant="ghost"
-                                        className="p-1 h-auto text-destructive hover:bg-destructive/10 rounded"
-                                        onClick={() => handleDeleteInfo(info.id)}
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </Button>
-                                    </div>
-
                                     {/* Mobile Actions Dropdown */}
-                                    <div className="absolute top-1.5 right-1 sm:hidden">
+                                    <div className="sm:hidden shrink-0">
                                       <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                          <Button variant="secondary" size="icon" className="h-7 w-7 text-muted-foreground">
+                                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
                                             <MoreVertical className="w-3.5 h-3.5" />
                                           </Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }}>
                                           <DropdownMenuItem onClick={() => {
-                                            setEditingInfo(info); 
-                                            setActiveTypeId(item.id); 
-                                            setSelectedIcon(info.icon || ""); 
-                                            setIsInfoSheetOpen(true); 
+                                            setEditingInfo(info);
+                                            setActiveTypeId(item.id);
+                                            setSelectedIcon(info.icon || "");
+                                            setIsInfoSheetOpen(true);
                                           }}>
                                             <Edit2 className="w-4 h-4 mr-2" /> Edit
                                           </DropdownMenuItem>
-                                          <DropdownMenuItem 
+                                          <DropdownMenuItem
                                             className="text-destructive"
                                             onClick={() => handleDeleteInfo(info.id)}
                                           >
@@ -517,6 +482,29 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                           </DropdownMenuItem>
                                         </DropdownMenuContent>
                                       </DropdownMenu>
+                                    </div>
+
+                                    {/* Desktop Actions (Hover) */}
+                                    <div className="absolute top-2 right-2 hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <Button
+                                        variant="ghost"
+                                        className="p-1 h-auto text-muted-foreground hover:text-foreground"
+                                        onClick={() => {
+                                          setEditingInfo(info);
+                                          setActiveTypeId(item.id);
+                                          setSelectedIcon(info.icon || "");
+                                          setIsInfoSheetOpen(true);
+                                        }}
+                                      >
+                                        <Edit2 className="w-3.5 h-3.5" />
+                                      </Button>
+                                      <Button
+                                        variant="ghost"
+                                        className="p-1 h-auto text-destructive hover:bg-destructive/10 rounded"
+                                        onClick={() => handleDeleteInfo(info.id)}
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </Button>
                                     </div>
                                   </div>
                                 ))}
@@ -539,22 +527,22 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
             <SheetTitle>
-              {sheetMode === 'category' 
+              {sheetMode === 'category'
                 ? (editingType?.id ? "Edit Category Name" : "Add Event Category")
                 : (editingType?.id ? "Edit Sub-type" : "Add Sub-type")
               }
             </SheetTitle>
             <SheetDescription>
-              {sheetMode === 'category' 
+              {sheetMode === 'category'
                 ? "Define the primary classification for your events."
                 : "Define the specific variant within this category."
               }
             </SheetDescription>
           </SheetHeader>
-          
+
           <form action={handleTypeSubmit} className="flex flex-col h-full mt-6">
             {editingType?.id && <input type="hidden" name="id" value={editingType.id} />}
-            
+
             <div className="space-y-5 flex-1">
               {/* Event Type Dropdown */}
               <div className="space-y-2">
@@ -585,12 +573,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               {sheetMode === 'subtype' && (
                 <div className="space-y-2">
                   <Label htmlFor="sub_type">Sub-type Name <span className="text-destructive">*</span></Label>
-                  <Input 
-                    id="sub_type" 
-                    name="sub_type" 
-                    placeholder="e.g. Speed Quiz" 
-                    defaultValue={editingType?.sub_type ? toTitleCase(editingType.sub_type) : ""} 
-                    required 
+                  <Input
+                    id="sub_type"
+                    name="sub_type"
+                    placeholder="e.g. Speed Quiz"
+                    defaultValue={editingType?.sub_type ? toTitleCase(editingType.sub_type) : ""}
+                    required
                   />
                 </div>
               )}
@@ -621,12 +609,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             <SheetTitle>{editingInfo ? "Edit Detail" : "Add Detail"}</SheetTitle>
             <SheetDescription>Provide specific parameters for this event type.</SheetDescription>
           </SheetHeader>
-          
+
           <form action={handleInfoSubmit} className="flex flex-col h-full mt-6">
             {editingInfo && <input type="hidden" name="id" value={editingInfo.id} />}
             <input type="hidden" name="event_types_id" value={activeTypeId || ""} />
             <input type="hidden" name="icon" value={selectedIcon} />
-            
+
             <div className="space-y-4 flex-1 overflow-y-auto pr-2 pb-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Title</Label>
@@ -647,8 +635,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       onClick={() => setSelectedIcon(name)}
                       className={cn(
                         "flex items-center justify-center p-3 rounded-xl border transition-all",
-                        selectedIcon === name 
-                          ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105' 
+                        selectedIcon === name
+                          ? 'bg-primary text-primary-foreground border-primary shadow-md scale-105'
                           : 'hover:bg-muted bg-background text-muted-foreground'
                       )}
                     >
@@ -658,7 +646,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 </div>
               </div>
             </div>
-            
+
             <div className="flex justify-end gap-3 pt-4 mt-auto border-t">
               <Button type="button" variant="outline" onClick={() => setIsInfoSheetOpen(false)} disabled={isPending}>Cancel</Button>
               <Button type="submit" disabled={isPending}>
