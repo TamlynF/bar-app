@@ -76,6 +76,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [typeSheetError, setTypeSheetError] = useState<string | null>(null);
 
   const [isCustomType, setIsCustomType] = useState(false);
+  // Track the value of the dropdown separately to control its selection state
+  const [selectedTypeValue, setSelectedTypeValue] = useState<string>("");
 
   const { groupedEventTypes, uniqueTypes } = useMemo(() => {
     const groups: Record<string, EventTypeRecord[]> = {};
@@ -114,77 +116,58 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setTypeSheetError(null);
 
     const rawType = formData.get("type")?.toString() || "";
-
-    const rawSubType = sheetMode === 'type'
-      ? (editingType?.sub_type || "General")
-      : (formData.get("sub_type")?.toString() || "");
+    const rawSubType = formData.get("sub_type")?.toString() || "General";
 
     const formattedType = rawType.trim().toLowerCase();
     const formattedSubType = rawSubType.trim().toLowerCase();
 
-    // 1. Validation for "Type" Mode (Renaming the Group)
-    if (sheetMode === 'type') {
-      const oldType = editingType?.type?.toLowerCase();
+    if (!formattedType) {
+      setTypeSheetError("The primary type name is required.");
+      return;
+    }
 
-      // Case: Rename existing group
-      if (oldType && oldType !== formattedType) {
-        // Check if destination group already exists
-        const destinationExists = uniqueTypes.some(t => t.toLowerCase() === formattedType);
-        if (destinationExists) {
-          setTypeSheetError(`The type "${toTitleCase(formattedType)}" already exists. Renaming this type would merge them. Please edit sub-types individually instead.`);
-          return;
-        }
-
-        startTransition(async () => {
-          const result = await renameEventTypeGroupAction(oldType, formattedType);
-          if (result?.error) {
-            setTypeSheetError(result.error);
-          } else {
-            setIsTypeSheetOpen(false);
-          }
-        });
+    if (sheetMode === 'type' && editingType?.type) {
+      const oldType = editingType.type.toLowerCase();
+      
+      if (oldType === formattedType) {
+        setIsTypeSheetOpen(false);
         return;
       }
 
-      // Case: Creating a brand new type (Add Type)
-      if (!editingType?.id) {
-        const typeExists = uniqueTypes.some(t => t.toLowerCase() === formattedType);
-        if (typeExists) {
-          setTypeSheetError(`The type "${toTitleCase(formattedType)}" already exists.`);
-          return;
-        }
-
-        // When creating a new type, we also need a starting sub-type
-        if (!formattedSubType) {
-          setTypeSheetError("A sub-type (e.g. 'General') is required when creating a new type.");
-          return;
-        }
-      }
-    }
-
-    // 2. Validation for "Sub-type" Mode (Adding or Editing a specific row)
-    if (sheetMode === 'subtype') {
-      const isDuplicate = initialEventTypes.some(item =>
-        item.type.toLowerCase() === formattedType &&
-        item.sub_type.toLowerCase() === formattedSubType &&
-        item.id !== editingType?.id
-      );
-
-      if (isDuplicate) {
-        setTypeSheetError(`The sub-type "${toTitleCase(formattedSubType)}" already exists within the "${toTitleCase(formattedType)}" type.`);
+      if (isCustomType && uniqueTypes.some(t => t.toLowerCase() === formattedType)) {
+        setTypeSheetError(`The type "${toTitleCase(formattedType)}" already exists.`);
         return;
       }
+
+      startTransition(async () => {
+        const result = await renameEventTypeGroupAction(oldType, formattedType);
+        if (result?.error) {
+          setTypeSheetError(result.error);
+        } else {
+          setIsTypeSheetOpen(false);
+        }
+      });
+      return;
     }
 
-    // Prepare data for the single-row save action
+    const isDuplicate = initialEventTypes.some(item =>
+      item.type.toLowerCase() === formattedType &&
+      item.sub_type.toLowerCase() === formattedSubType &&
+      item.id !== editingType?.id
+    );
+
+    if (isDuplicate) {
+      setTypeSheetError(`This sub-type already exists under "${toTitleCase(formattedType)}".`);
+      return;
+    }
+
     formData.set("type", formattedType);
-    formData.set("sub_type", formattedSubType || "general");
+    formData.set("sub_type", formattedSubType);
 
     startTransition(async () => {
       const result = await saveEventTypeAction(formData);
       if (result?.error) {
         setTypeSheetError(result.error);
-        console.error(result.error);
       } else {
         setIsTypeSheetOpen(false);
         setIsCustomType(false);
@@ -207,7 +190,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     startTransition(async () => {
       const result = await saveEventInfoAction(formData);
       if (result?.error) {
-        console.error(result.error);
         alert(result.error);
       } else {
         setIsInfoSheetOpen(false);
@@ -244,15 +226,16 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         <Button
           size="sm"
           onClick={() => {
-            setEditingType(null);
+            setEditingType({ sub_type: "General" });
             setSheetMode('type');
             setTypeSheetError(null);
-            setIsCustomType(true); // Default to custom input when adding a new type
+            setIsCustomType(true); 
+            setSelectedTypeValue("custom");
             setIsTypeSheetOpen(true);
           }}
         >
           <Plus className="w-4 h-4 mr-2" />
-          Type
+          New
         </Button>
       </div>
 
@@ -265,7 +248,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         ) : (
           groupedEventTypes.map(([typeKey, items]) => {
             const isGroupExpanded = expandedGroups.has(typeKey) || groupedEventTypes.length === 1;
-
+            console.log(items);
+            
             return (
               <div key={typeKey} className="border rounded-2xl bg-card overflow-hidden shadow-sm transition-all duration-300">
                 {/* Group Header */}
@@ -297,7 +281,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         className="h-7 px-2 rounded-lg border-primary/20 text-primary font-bold uppercase tracking-wider text-[9px]"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setEditingType({ type: toTitleCase(typeKey) });
+                          const val = toTitleCase(typeKey);
+                          setEditingType({ type: val, sub_type: "General" });
+                          setSelectedTypeValue(val);
                           setSheetMode('subtype');
                           setTypeSheetError(null);
                           setIsCustomType(false);
@@ -315,14 +301,16 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             className="h-8 w-8 text-muted-foreground"
                             onClick={(e) => {
                               e.stopPropagation();
+                              const val = toTitleCase(items[0].type);
                               setEditingType({
                                 ...items[0],
-                                type: toTitleCase(items[0].type),
+                                type: val,
                                 sub_type: toTitleCase(items[0].sub_type)
                               });
+                              setSelectedTypeValue(val);
                               setSheetMode('type');
                               setTypeSheetError(null);
-                              setIsCustomType(true);
+                              setIsCustomType(false); // Default to dropdown for renaming
                               setIsTypeSheetOpen(true);
                             }}
                           >
@@ -353,7 +341,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }} className="z-9999">
                           <DropdownMenuItem onClick={() => {
-                            setEditingType({ type: toTitleCase(typeKey) });
+                            const val = toTitleCase(typeKey);
+                            setEditingType({ type: val, sub_type: "General" });
+                            setSelectedTypeValue(val);
                             setSheetMode('subtype');
                             setTypeSheetError(null);
                             setIsCustomType(false);
@@ -365,14 +355,16 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           {items.length > 0 && (
                             <>
                               <DropdownMenuItem onClick={() => {
+                                const val = toTitleCase(items[0].type);
                                 setEditingType({
                                   ...items[0],
-                                  type: toTitleCase(items[0].type),
+                                  type: val,
                                   sub_type: toTitleCase(items[0].sub_type)
                                 });
-                                setSheetMode('subtype');
+                                setSelectedTypeValue(val);
+                                setSheetMode('type');
                                 setTypeSheetError(null);
-                                setIsCustomType(true);
+                                setIsCustomType(false);
                                 setIsTypeSheetOpen(true);
                               }}>
                                 <Edit2 className="w-4 h-4 mr-2" /> Rename Type
@@ -422,14 +414,16 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 size="icon"
                                 className="h-8 w-8 text-muted-foreground"
                                 onClick={() => {
+                                  const val = toTitleCase(item.type);
                                   setEditingType({
                                     ...item,
-                                    type: toTitleCase(item.type),
+                                    type: val,
                                     sub_type: toTitleCase(item.sub_type)
                                   });
+                                  setSelectedTypeValue(val);
                                   setSheetMode('subtype');
                                   setTypeSheetError(null);
-                                  setIsCustomType(true);
+                                  setIsCustomType(false);
                                   setIsTypeSheetOpen(true);
                                 }}
                               >
@@ -454,11 +448,13 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }}>
                                   <DropdownMenuItem onClick={() => {
+                                    const val = toTitleCase(item.type);
                                     setEditingType({
                                       ...item,
-                                      type: toTitleCase(item.type),
+                                      type: val,
                                       sub_type: toTitleCase(item.sub_type)
                                     });
+                                    setSelectedTypeValue(val);
                                     setSheetMode('subtype');
                                     setTypeSheetError(null);
                                     setIsCustomType(false);
@@ -578,7 +574,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         )}
       </div>
 
-      {/* 1. Add/Edit Event Type Sheet */}
+      {/* --- ADD/EDIT EVENT TYPE SHEET --- */}
       <Sheet open={isTypeSheetOpen} onOpenChange={(open) => {
         setIsTypeSheetOpen(open);
         if (!open) {
@@ -596,7 +592,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             </SheetTitle>
             <SheetDescription>
               {sheetMode === 'type'
-                ? "Renaming this type will update all sub-types currently assigned to it."
+                ? "Manage the primary category for these events."
                 : `Defining a specific sub-type within the ${editingType?.type || 'selected'} type.`
               }
             </SheetDescription>
@@ -608,44 +604,24 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             <div className="space-y-5 flex-1">
               {/* Event Type Input/Selection */}
               <div className="space-y-2">
-                <Label htmlFor="type">Type <span className="text-destructive">*</span></Label>
+                <Label htmlFor="type-select">Type <span className="text-destructive">*</span></Label>
 
-                {(isCustomType || sheetMode === 'type') ? (
-                  <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
-                    <div className="flex gap-2">
-                      <Input
-                        id="type"
-                        name="type"
-                        placeholder="e.g. Music, Game Nights..."
-                        required
-                        defaultValue={editingType?.type ? toTitleCase(editingType.type) : ""}
-                        autoFocus
-                      />
-                      {sheetMode === 'subtype' && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setIsCustomType(false)}
-                          className="shrink-0"
-                        >
-                          <RotateCcw className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ) : (
+                <div className="space-y-4">
                   <div className="relative group">
                     <select
-                      id="type"
-                      title="type"
-                      name="type"
-                      required
-                      defaultValue={editingType?.type ? toTitleCase(editingType.type) : ""}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm appearance-none"
+                      id="type-select"
+                      title="Type Selection"
+                      name="type-select"
+                      required={!isCustomType}
+                      value={selectedTypeValue}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm appearance-none focus:ring-2 focus:ring-primary/20 outline-none"
                       onChange={(e) => {
-                        if (e.target.value === "custom") {
+                        const val = e.target.value;
+                        setSelectedTypeValue(val);
+                        if (val === "custom") {
                           setIsCustomType(true);
+                        } else {
+                          setIsCustomType(false);
                         }
                       }}
                     >
@@ -658,36 +634,62 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-muted-foreground">
                       <ChevronDown className="h-4 w-4" />
                     </div>
+                    
+                    {/* Only provide the 'type' value from the select if we are NOT using the custom input */}
+                    {!isCustomType && (
+                       <input type="hidden" name="type" value={selectedTypeValue} />
+                    )}
                   </div>
-                )}
+
+                  {isCustomType && (
+                    <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <Label htmlFor="custom-type" className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1">Enter New Type Name</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="custom-type"
+                          name="type"
+                          placeholder="e.g. Music, Game Nights..."
+                          required
+                          defaultValue={editingType?.type && editingType.type !== "custom" ? toTitleCase(editingType.type) : ""}
+                          autoFocus
+                        />
+                        {uniqueTypes.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setIsCustomType(false);
+                              setSelectedTypeValue("");
+                            }}
+                            className="shrink-0"
+                            title="Back to list"
+                          >
+                            <RotateCcw className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {sheetMode === 'subtype' && (
-                <div className="space-y-2">
-                  <Label htmlFor="sub_type">Sub-type <span className="text-destructive">*</span></Label>
-                  <Input
-                    id="sub_type"
-                    name="sub_type"
-                    placeholder="e.g. Speed Quiz"
-                    defaultValue={editingType?.sub_type ? toTitleCase(editingType.sub_type) : ""}
-                    required
-                  />
-                </div>
-              )}
-
-              {/* Duplicate Type Start Sub-type (Only for brand new types) */}
-              {sheetMode === 'type' && !editingType?.id && (
+              {/* Show Sub-type ONLY if NOT renaming a group (sheetMode type with editing ID) */}
+              {(sheetMode === 'subtype' || !editingType?.id) && (
                 <div className="space-y-2">
                   <Label htmlFor="sub_type">Sub-type <span className="text-destructive">*</span></Label>
                   <Input
                     id="sub_type"
                     name="sub_type"
                     placeholder="e.g. General"
+                    defaultValue={editingType?.sub_type ? toTitleCase(editingType.sub_type) : "General"}
                     required
                   />
+                  {!editingType?.id && (
                   <p className="text-[10px] text-muted-foreground italic px-1">
                     Every type needs at least one sub-type to be created.
                   </p>
+                  )}
                 </div>
               )}
 
