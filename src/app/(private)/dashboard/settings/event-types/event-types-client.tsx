@@ -11,11 +11,18 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Plus, Edit2, Trash2, Layers, Info, Image as ImageIcon, Loader2,
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Beer,
-  ChevronDown, ChevronRight, Banknote, Trophy, Wine
+  ChevronDown, ChevronRight, Banknote, Trophy, Wine,
+  MoreVertical
 } from "lucide-react";
 import { 
   saveEventTypeAction, 
@@ -227,35 +234,61 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     onClick={() => toggleGroup(typeKey)}
                     className="flex-1 p-4 flex items-center gap-3 hover:bg-muted/5 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                    {/* Layer Icon: Shown on Desktop, Hidden on Mobile */}
+                    <div className="hidden sm:flex w-10 h-10 rounded-xl bg-primary/10 items-center justify-center text-primary shrink-0">
                       <Layers className="w-4 h-4" />
                     </div>
-                    <div>
+                    
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                       <h4 className="text-base font-black tracking-tight text-foreground">
                         {toTitleCase(typeKey)}
                       </h4>
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
+                      {/* Subtype Counter: More prominent on Mobile */}
+                      <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter w-fit">
                         {items.length} {items.length === 1 ? 'Sub-type' : 'Sub-types'}
-                      </p>
+                      </span>
                     </div>
                   </button>
 
-                  <div className="flex items-center pr-4 gap-2">
+                  <div className="flex items-center pr-2 sm:pr-4 gap-1 sm:gap-2">
+                    {/* Desktop Actions */}
                     {isGroupExpanded && (
-                      <Button 
-                        variant="outline" 
-                        size="xs" 
-                        className="h-7 px-2 rounded-lg border-primary/20 text-primary font-bold uppercase tracking-wider text-[9px]"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingType({ type: toTitleCase(typeKey) });
-                          setTypeSheetError(null);
-                          setIsTypeSheetOpen(true);
-                        }}
-                      >
-                        <Plus className="w-3 h-3 mr-1" /> Sub-type 
-                      </Button>
+                      <div className="hidden sm:flex items-center gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="xs" 
+                          className="h-7 px-2 rounded-lg border-primary/20 text-primary font-bold uppercase tracking-wider text-[9px]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingType({ type: toTitleCase(typeKey) });
+                            setTypeSheetError(null);
+                            setIsTypeSheetOpen(true);
+                          }}
+                        >
+                          <Plus className="w-3 h-3 mr-1" /> Sub-type 
+                        </Button>
+                      </div>
                     )}
+
+                    {/* Shared 3-Dots Menu (Primary for Mobile, secondary for Desktop) */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }}>
+                         <DropdownMenuItem onClick={() => {
+                            setEditingType({ type: toTitleCase(typeKey) });
+                            setTypeSheetError(null);
+                            setIsTypeSheetOpen(true);
+                         }}>
+                          <Plus className="w-4 h-4 mr-2" /> Add Sub-type
+                        </DropdownMenuItem>
+                        {/* Note: Editing the Category string is done via editing any subtype within it in this schema */}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+
                     <button type="button" onClick={() => toggleGroup(typeKey)} className="p-1">
                       {isGroupExpanded ? <ChevronDown className="w-5 h-5 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-muted-foreground" />}
                     </button>
@@ -284,30 +317,64 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             >
                               {expandedSubtype === item.id ? "Close" : `Details (${item.event_information?.length || 0})`}
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-muted-foreground"
-                              onClick={() => { 
-                                setEditingType({
-                                  ...item,
-                                  type: toTitleCase(item.type),
-                                  sub_type: toTitleCase(item.sub_type)
-                                }); 
-                                setTypeSheetError(null);
-                                setIsTypeSheetOpen(true); 
-                              }}
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                              onClick={() => handleDeleteType(item.id)}
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </Button>
+
+                            {/* Desktop Actions */}
+                            <div className="hidden sm:flex items-center gap-1">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-muted-foreground"
+                                onClick={() => { 
+                                  setEditingType({
+                                    ...item,
+                                    type: toTitleCase(item.type),
+                                    sub_type: toTitleCase(item.sub_type)
+                                  }); 
+                                  setTypeSheetError(null);
+                                  setIsTypeSheetOpen(true); 
+                                }}
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                                onClick={() => handleDeleteType(item.id)}
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </Button>
+                            </div>
+
+                            {/* Mobile Actions Dropdown */}
+                            <div className="sm:hidden">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                                    <MoreVertical className="w-4 h-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }}>
+                                  <DropdownMenuItem onClick={() => {
+                                    setEditingType({
+                                      ...item,
+                                      type: toTitleCase(item.type),
+                                      sub_type: toTitleCase(item.sub_type)
+                                    }); 
+                                    setTypeSheetError(null);
+                                    setIsTypeSheetOpen(true); 
+                                  }}>
+                                    <Edit2 className="w-4 h-4 mr-2" /> Edit
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    className="text-destructive"
+                                    onClick={() => handleDeleteType(item.id)}
+                                  >
+                                    <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
                           </div>
                         </div>
 
@@ -340,13 +407,16 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                     <div className="shrink-0 w-8 h-8 flex items-center justify-center bg-secondary text-primary rounded-lg">
                                       {renderIcon(info.icon)}
                                     </div>
-                                    <div className="flex-1 min-w-0 pr-12">
+                                    <div className="flex-1 min-w-0 pr-8 sm:pr-12">
                                       <h6 className="font-bold text-[13px] text-foreground leading-none mb-1">{info.title}</h6>
                                       <p className="text-[11px] text-muted-foreground line-clamp-1">{info.description}</p>
                                     </div>
-                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+
+                                    {/* Desktop Actions (Hover) */}
+                                    <div className="absolute top-2 right-2 hidden sm:flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                       <Button 
-                                        className="p-1 text-muted-foreground hover:text-foreground"
+                                        variant="ghost"
+                                        className="p-1 h-auto text-muted-foreground hover:text-foreground"
                                         onClick={() => { 
                                           setEditingInfo(info); 
                                           setActiveTypeId(item.id); 
@@ -357,11 +427,39 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                         <Edit2 className="w-3.5 h-3.5" />
                                       </Button>
                                       <Button 
-                                        className="p-1 text-destructive hover:bg-destructive/10 rounded"
+                                        variant="ghost"
+                                        className="p-1 h-auto text-destructive hover:bg-destructive/10 rounded"
                                         onClick={() => handleDeleteInfo(info.id)}
                                       >
                                         <Trash2 className="w-3.5 h-3.5" />
                                       </Button>
+                                    </div>
+
+                                    {/* Mobile Actions Dropdown */}
+                                    <div className="absolute top-1.5 right-1 sm:hidden">
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                          <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground">
+                                            <MoreVertical className="w-3.5 h-3.5" />
+                                          </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }}>
+                                          <DropdownMenuItem onClick={() => {
+                                            setEditingInfo(info); 
+                                            setActiveTypeId(item.id); 
+                                            setSelectedIcon(info.icon || ""); 
+                                            setIsInfoSheetOpen(true); 
+                                          }}>
+                                            <Edit2 className="w-4 h-4 mr-2" /> Edit
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem 
+                                            className="text-destructive"
+                                            onClick={() => handleDeleteInfo(info.id)}
+                                          >
+                                            <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
                                     </div>
                                   </div>
                                 ))}
