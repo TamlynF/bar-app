@@ -316,8 +316,8 @@ export default function BookingListClient({ initialBookings }: { initialBookings
         </div>
 
         {/* Status Filters Bar */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-3 flex items-center justify-between shadow-sm overflow-x-auto relative z-10">
-          <div className="flex items-center justify-start gap-2 sm:gap-3 w-full px-1 min-w-max py-1 overflow-x-visible">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-3 flex items-center justify-between shadow-sm relative z-10 overflow-visible">
+          <div className="flex items-center justify-start gap-4 sm:gap-5 w-full px-2 min-w-max py-4 overflow-visible">
             <StatusCircle
               count={stats.totalTeams}
               status="all"
@@ -550,25 +550,25 @@ function StatusCircle({
   const theme = statusTheme[status] || statusTheme.pending
 
   return (
-    <div className="flex flex-col items-center gap-1.5 min-w-10">
+    <div className="flex flex-col items-center gap-2 min-w-[50px] shrink-0 overflow-visible">
       <button
         type="button"
         onClick={onClick}
         className={cn(
-          "appearance-none outline-none group relative flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all z-10 touch-manipulation",
-          "hover:scale-105 active:scale-95",
+          "appearance-none outline-none group relative flex items-center justify-center w-11 h-11 rounded-full border-2 transition-all z-10 touch-manipulation",
+          "hover:scale-105 active:scale-95 overflow-visible",
           isActive
-            ? `${theme.dot} ${theme.border} shadow-md ring-4 ${theme.ring}`
+            ? `${theme.dot} !${theme.dot} ${theme.border} shadow-lg ring-4 ${theme.ring}`
             : `bg-white dark:bg-slate-800 ${theme.border}`,
         )}
       >
-        <span className={cn("text-xs font-black", isActive ? "text-white" : theme.text)}>
+        <span className={cn("text-xs font-black pointer-events-none", isActive ? "text-white" : theme.text)}>
           {count}
         </span>
       </button>
       <span
         className={cn(
-          "text-[10px] font-bold uppercase tracking-tight text-center whitespace-nowrap transition-colors",
+          "text-[10px] font-bold uppercase tracking-tight text-center whitespace-nowrap transition-colors pointer-events-none",
           isActive ? theme.text : "text-slate-400",
         )}
       >
