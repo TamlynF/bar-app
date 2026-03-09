@@ -15,7 +15,7 @@ import {
   Plus, Edit2, Trash2, Layers, Info, Image as ImageIcon, Loader2,
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Beer,
-  ChevronDown, ChevronRight
+  ChevronDown, ChevronRight, Banknote, Trophy, Wine
 } from "lucide-react";
 import { 
   saveEventTypeAction, 
@@ -28,7 +28,7 @@ import { cn } from "@/lib/utils";
 const ICON_OPTIONS = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Info,
-  Beer
+  Beer, Banknote, Trophy, Wine
 };
 
 export type EventInfo = {

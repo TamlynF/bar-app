@@ -1,21 +1,64 @@
 import React from 'react'
 import BookingForm from "../_components/booking-form";
-import { Calendar, Banknote, Users, Trophy, Wine } from "lucide-react";
+import { 
+  Calendar, Banknote, Users, Trophy, Wine, 
+  MapPin, Clock, DollarSign, Star, CheckCircle, 
+  Music, Utensils, GlassWater, Heart, Smile, 
+  Sparkles, AlertCircle, Beer, Info
+} from "lucide-react";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: 'Book a Quiz | Don Fenticas',
   description: 'Secure your spot for our next quiz night.',
 };
 
-export default function QuizBookingPage() {
-  const eventBadges = [
+// Map of available icons to match strings stored in database
+const ICON_MAP: Record<string, React.ElementType> = {
+  Banknote, Calendar, Users, Trophy, Wine,
+  MapPin, Clock, DollarSign, Star, CheckCircle,
+  Music, Utensils, GlassWater, Heart, Smile,
+  Sparkles, AlertCircle, Beer, Info
+};
+
+export default async function QuizBookingPage() {
+  const supabase = await createClient();
+
+    const { data: infoItems } = await supabase
+    .from("event_information")
+    .select(`
+      icon,
+      title,
+      event_types!inner (
+        type,
+        sub_type
+      )
+    `)
+    .eq("event_types.type", "game")
+    .eq("event_types.sub_type", "quiz");
+  
+    // Map database items to badge format, falling back to Info icon if map fails
+  const dbBadges = (infoItems || []).map(item => ({
+    icon: ICON_MAP[item.icon || ""] || Info,
+    text: item.title
+  }));
+
+  // Fallback to defaults if no records found in database
+  const eventBadges = dbBadges.length > 0 ? dbBadges : [
     { icon: Banknote, text: "Free Entry" },
     { icon: Calendar, text: "Thursdays: 8:00PM" },
-    // { icon: Users, text: "Max 6 per team" },
     { icon: Trophy, text: "Win Prosecco" },
     { icon: Wine, text: "Happy Hour: 6:00PM - 9:00PM" },
   ];
+
+  // const eventBadges = [
+  //   { icon: Banknote, text: "Free Entry" },
+  //   { icon: Calendar, text: "Thursdays: 8:00PM" },
+  //   // { icon: Users, text: "Max 6 per team" },
+  //   { icon: Trophy, text: "Win Prosecco" },
+  //   { icon: Wine, text: "Happy Hour: 6:00PM - 9:00PM" },
+  // ];
 
   return (
     <main className="min-h-screen bg-[#26300D] text-stone-300 py-6 sm:py-12 px-4 sm:px-6 lg:px-8 selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
@@ -62,7 +105,8 @@ export default function QuizBookingPage() {
           {eventBadges.map((badge, index) => (
             <div
               key={index}
-              className={`flex items-center justify-center bg-white/3 border border-white/8 rounded-xl px-3 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/[0.08] ${index === eventBadges.length - 1 && eventBadges.length % 2 !== 0 ? "col-span-2 sm:col-span-1" : ""
+              className={`flex items-center justify-center bg-white/3 border border-white/8 rounded-xl px-3 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 
+                ${index === eventBadges.length - 1 && eventBadges.length % 2 !== 0 ? "col-span-2 sm:col-span-1" : ""
                 }`}
             >
               <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />
