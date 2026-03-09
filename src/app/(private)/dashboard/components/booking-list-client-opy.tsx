@@ -21,6 +21,7 @@ import {
   Table as TableIcon,
   Users,
   XCircle,
+  MessageSquare,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -218,21 +219,18 @@ export default function BookingListClient({ initialBookings }: { initialBookings
     })
   }
 
-  
-
   return (
     <div className="space-y-3 animate-in fade-in duration-500">
-      {/* 1. Date Navigation Bar - Clean & Slim */}
+      {/* 1. Date Navigation Bar */}
       <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               size="sm"
-              className="h-8 px-3 rounded-lg bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm"
+              className="h-8 px-3 rounded-lg bg-slate-50 dark:bg-slate-50 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm"
             >
               <CalendarDays className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold text-slate-900 dark:text-white uppercase truncate max-w-40">
@@ -244,8 +242,8 @@ export default function BookingListClient({ initialBookings }: { initialBookings
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 p-0 w-auto shadow-xl rounded-xl overflow-hidden isolate z-9999"
-            style={{ backgroundColor: "#1a2109" }}
+            className="border-amber-500/20 p-0 w-auto shadow-xl rounded-xl overflow-hidden isolate z-9999"
+            style={{ backgroundColor: "#c8cfb8" }}
             align="start"
           >
             <Calendar
@@ -255,14 +253,14 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                 if (d) setSelectedDate(d)
                 setIsCalendarOpen(false)
               }}
-              className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white isolate z-9999"
-              style={{ backgroundColor: "#1a2109" }}
+              className="text-white bg-[#aabf7a] isolate z-9999"
+              style={{ backgroundColor: "#9aa67e" }}
             />
-            <div className="p-2 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-center">
+            <div className="p-2 border-t border-white/10 bg-white text-center">
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
+                className="w-full text-xs font-semibold text-slate-300 dark:text-slate-900 hover:text-white dark:hover:text-white"
                 onClick={() => {
                   setSelectedDate(undefined)
                   setIsCalendarOpen(false)
@@ -298,7 +296,6 @@ export default function BookingListClient({ initialBookings }: { initialBookings
 
       {/* 2. KPI Grid & Interactive Status Filter (Compact Redesign) */}
       <div className="flex flex-col gap-2 sm:gap-2">
-        {/* Top KPIs Row */}
         <div className="flex w-full justify-between gap-2 overflow-x-auto pb-1">
           <div className="flex-1 min-w-0">
             <KPIBox label="Guests" value={stats.totalGuests} icon={<Users className="w-4 h-4" />} />
@@ -402,7 +399,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
         <SheetContent
           side="bottom"
-          className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 rounded-t-[2rem] p-6 pb-8 max-h-[85vh] overflow-y-auto"
+          className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800 rounded-t-4xl p-6 pb-8 max-h-[85vh] overflow-y-auto"
           style={{ backgroundColor: "#1a2109" }}
         >
           {selectedBooking && (
@@ -438,6 +435,19 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                 </div>
               </SheetHeader>
 
+              {/* Special Requests Detail - Prominent in Sheet */}
+              {selectedBooking.special_requests && (
+                <div className="bg-amber-500/10 dark:bg-amber-500/20 p-4 rounded-xl border border-amber-200/50 dark:border-amber-500/30">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageSquare className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400">Special Request</span>
+                  </div>
+                  <p className="text-sm text-slate-800 dark:text-slate-200 italic leading-snug font-medium">
+                    &quot;{selectedBooking.special_requests}&quot;
+                  </p>
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-3">
                 <DetailTile
                   icon={<Users className="w-4 h-4" />}
@@ -468,17 +478,6 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                   </p>
                 </div>
               </div>
-
-              {selectedBooking.special_requests && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-xl border border-blue-100 dark:border-blue-900/40">
-                  <p className="text-[9px] font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 mb-1">
-                    Requests
-                  </p>
-                  <p className="text-sm text-slate-700 dark:text-slate-300 italic">
-                    {selectedBooking.special_requests}
-                  </p>
-                </div>
-              )}
 
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <DropdownMenu modal={false}>
@@ -550,7 +549,7 @@ function StatusCircle({
   const theme = statusTheme[status] || statusTheme.pending
 
   return (
-    <div className="flex flex-col items-center gap-2 min-w-[50px] shrink-0 overflow-visible">
+    <div className="flex flex-col items-center gap-2 min-w-12.5 shrink-0 overflow-visible">
       <button
         type="button"
         onClick={onClick}
@@ -590,6 +589,7 @@ function BookingCard({
   const status = normStatus(booking.status) || "pending"
   //console.log('Booking status:', booking.status, 'Normalized:', status, 'Theme:', statusTheme[status])
   const theme = statusTheme[status] || statusTheme.pending
+  const hasRequest = booking.special_requests && booking.special_requests.trim() !== ""
 
   return (
     <div
@@ -614,6 +614,11 @@ function BookingCard({
             <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
               {booking.group_name || "Guest Entry"}
             </h4>
+            {hasRequest && (
+               <div className="flex items-center justify-center bg-amber-500 rounded-full w-5 h-5 shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse">
+                <MessageSquare className="w-3 h-3 text-white" />
+              </div>
+            )}
             {showDate && booking.events?.event_date && (
               <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap tracking-tight hidden sm:inline-flex">
                 {format(new Date(booking.events.event_date), "dd MMM")}
