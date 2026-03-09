@@ -49,28 +49,25 @@ export type EventTypeRecord = {
  * Helper to capitalize the first letter of a string (Title Case)
  */
 const toTitleCase = (str: string) => {
+  console.log("Converting to title case:", str);
   if (!str) return "";
-  return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+   return str
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 };
 
 export default function EventTypesClient({ initialEventTypes = [] }: { initialEventTypes: EventTypeRecord[] }) {
   const [expandedSubtype, setExpandedSubtype] = useState<number | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-
   const [isPending, startTransition] = useTransition();
-
   const [isTypeSheetOpen, setIsTypeSheetOpen] = useState(false);
-  const [editingType, setEditingType] = useState<EventTypeRecord | null>(null);
-
+  const [editingType, setEditingType] = useState<Partial<EventTypeRecord> | null>(null);
   const [isInfoSheetOpen, setIsInfoSheetOpen] = useState(false);
   const [editingInfo, setEditingInfo] = useState<EventInfo | null>(null);
-  const [activeTypeId, setActiveTypeId] = useState<number | null>(null);
-  
+  const [activeTypeId, setActiveTypeId] = useState<number | null>(null);  
   const [selectedIcon, setSelectedIcon] = useState<string>("");
 
-  /**
-   * Group event types by their primary 'type' field
-   */
   const groupedEventTypes = useMemo(() => {
     const groups: Record<string, EventTypeRecord[]> = {};
     
@@ -96,6 +93,13 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
   // --- Handlers ---
   const handleTypeSubmit = (formData: FormData) => {
+    console.log(Object.fromEntries(formData.entries()));
+    const type = formData.get("type")?.toString().trim().toLowerCase() || "";
+    const subType = formData.get("sub_type")?.toString().trim().toLowerCase() || "";
+    
+    formData.set("type", type);
+    formData.set("sub_type", subType);
+
     startTransition(async () => {
       const result = await saveEventTypeAction(formData);
       if (result?.error) {
@@ -116,6 +120,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   };
 
   const handleInfoSubmit = (formData: FormData) => {
+    console.log("Submitting Event Info Form with data:", Object.fromEntries(formData.entries()));
+
     startTransition(async () => {
       const result = await saveEventInfoAction(formData);
       if (result?.error) {
@@ -157,7 +163,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           onClick={() => { setEditingType(null); setIsTypeSheetOpen(true); }}
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Event Type
+          Add Type
         </Button>
       </div>
 
@@ -174,30 +180,51 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             return (
               <div key={typeKey} className="border rounded-2xl bg-card overflow-hidden shadow-sm transition-all duration-300">
                 {/* Group Header */}
-                <button 
-                  type="button"
-                  onClick={() => toggleGroup(typeKey)}
-                  className="w-full p-4 flex items-center justify-between bg-muted/5 hover:bg-muted/10 transition-colors text-left"
+                <div 
+                  className="w-full flex items-center justify-between bg-muted/5 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-3">
+                  <button
+                    type="button"  
+                    onClick={() => toggleGroup(typeKey)}
+                    className="flex-1 p-4 flex items-center gap-3 hover:bg-muted/5 transition-colors"
+                  >
                     <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
                       <Layers className="w-5 h-5" />
                     </div>
                     <div>
-                      <h4 className="text-base font-black uppercase tracking-tight text-foreground">
+                      <h4 className="text-base font-black tracking-tight text-foreground">
                         {toTitleCase(typeKey)}
                       </h4>
                       <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                         {items.length} {items.length === 1 ? 'Sub-type' : 'Sub-types'}
                       </p>
                     </div>
+                  </button>
+
+                  <div className="flex items-center pr-4 gap-2">
+                    {isGroupExpanded && (
+                      <Button 
+                        variant="outline" 
+                        size="xs" 
+                        className="h-7 px-2 rounded-lg border-primary/20 text-primary font-bold uppercase tracking-wider text-[9px]"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingType({ type: toTitleCase(typeKey) });
+                          setIsTypeSheetOpen(true);
+                        }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add Sub-type
+                      </Button>
+                    )}
+                    <button type="button" onClick={() => toggleGroup(typeKey)} className="p-1">
+                      {isGroupExpanded ? <ChevronDown className="w-5 h-5 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-muted-foreground" />}
+                    </button>
                   </div>
-                  {isGroupExpanded ? <ChevronDown className="w-5 h-5 text-muted-foreground" /> : <ChevronRight className="w-5 h-5 text-muted-foreground" />}
-                </button>
+                </div>
 
                 {/* Sub-types List */}
                 {isGroupExpanded && (
-                  <div className="p-2 space-y-2 bg-background/50">
+                  <div className="p-2 space-y-2 bg-background/50 border-t border-slate-100 dark:border-slate-800">
                     {items.map((item) => (
                       <div key={item.id} className="border rounded-xl bg-card overflow-hidden border-slate-200 dark:border-slate-800">
                         <div className="p-3 flex items-center justify-between">
@@ -308,27 +335,39 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       <Sheet open={isTypeSheetOpen} onOpenChange={setIsTypeSheetOpen}>
         <SheetContent className="sm:max-w-md">
           <SheetHeader>
-            <SheetTitle>{editingType ? "Edit Event Type" : "Add Event Type"}</SheetTitle>
-            <SheetDescription>Set the category and sub-category for your events.</SheetDescription>
+            <SheetTitle>{editingType?.id ? "Edit Event Type" : "Add Event Type"}</SheetTitle>
+            <SheetDescription>Set the event type and sub-type for your events.</SheetDescription>
           </SheetHeader>
           
           <form action={handleTypeSubmit} className="flex flex-col h-full mt-6">
-            {editingType && <input type="hidden" name="id" value={editingType.id} />}
+            {editingType?.id && <input type="hidden" name="id" value={editingType.id} />}
             <div className="space-y-4 flex-1">
               <div className="space-y-2">
-                <Label htmlFor="type">Category (e.g. Masterclass)</Label>
-                <Input id="type" name="type" placeholder="Primary category" defaultValue={editingType?.type || ""} required />
+                <Label htmlFor="type">Event Type</Label>
+                <Input 
+                  id="type" 
+                  name="type" 
+                  placeholder="Primary event type" 
+                  defaultValue={editingType?.type || ""} 
+                  required 
+                />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="sub_type">Name (e.g. Cocktail Experience)</Label>
-                <Input id="sub_type" name="sub_type" placeholder="Specific sub-type" defaultValue={editingType?.sub_type || ""} required />
+                <Label htmlFor="sub_type">Sub-type</Label>
+                <Input 
+                  id="sub_type" 
+                  name="sub_type" 
+                  placeholder="Specific sub-type" 
+                  defaultValue={editingType?.sub_type || ""} 
+                  required 
+                />
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-8 pb-4">
               <Button type="button" variant="outline" onClick={() => setIsTypeSheetOpen(false)} disabled={isPending}>Cancel</Button>
               <Button type="submit" disabled={isPending}>
                 {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Save Type
+                {editingType?.id ? "Update Type" : "Save Type"}
               </Button>
             </div>
           </form>
@@ -349,15 +388,15 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             
             <div className="space-y-4 flex-1 overflow-y-auto pr-2 pb-4">
               <div className="space-y-2">
-                <Label htmlFor="title">Label (e.g. Duration)</Label>
-                <Input id="title" name="title" placeholder="e.g. Price Per Person" defaultValue={editingInfo?.title || ""} required />
+                <Label htmlFor="title">Title</Label>
+                <Input id="title" name="title" placeholder="e.g. Every Thursday" defaultValue={editingInfo?.title || ""} required />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Value/Description</Label>
-                <Input id="description" name="description" placeholder="e.g. £35.00" defaultValue={editingInfo?.description || ""} />
+                <Label htmlFor="description">Description</Label>
+                <Input id="description" name="description" placeholder="e.g. 8:00PM start" defaultValue={editingInfo?.description || ""} />
               </div>
               <div className="space-y-2 pt-2">
-                <Label>Identify with Icon</Label>
+                <Label>Icon</Label>
                 <div className="grid grid-cols-5 gap-2 pt-1">
                   {Object.entries(ICON_OPTIONS).map(([name, IconComponent]) => (
                     <button
