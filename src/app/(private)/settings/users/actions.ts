@@ -53,7 +53,7 @@ export async function saveEmployeeAction(formData: FormData) {
       }
     }
 
-    revalidatePath("/dashboard/settings/system-users"); // Adjust to your actual route
+    revalidatePath("/settings/system-users"); // Adjust to your actual route
     return { success: true };
   } catch (error) {
     console.error("Error saving employee:", error);
@@ -69,7 +69,7 @@ export async function deleteEmployeeAction(id: number) {
     const { error } = await supabase.from("employees").delete().eq("id", id);
     if (error) throw error;
     
-    revalidatePath("/dashboard/settings/system-users");
+    revalidatePath("/settings/system-users");
     return { success: true };
   } catch (error) {
     console.error("Error deleting employee:", error);

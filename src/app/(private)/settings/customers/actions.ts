@@ -44,7 +44,7 @@ export async function saveContactAction(formData: FormData) {
       }
     }
 
-    revalidatePath("/dashboard/settings/customers"); // Adjust to your actual route
+    revalidatePath("/settings/customers"); // Adjust to your actual route
     return { success: true };
   } catch (error) {
     console.error("Error saving contact:", error);
@@ -59,7 +59,7 @@ export async function deleteContactAction(id: number) {
     const { error } = await supabase.from("contacts").delete().eq("id", id);
     if (error) throw error;
     
-    revalidatePath("/dashboard/settings/customers");
+    revalidatePath("/settings/customers");
     return { success: true };
   } catch (error) {
     console.error("Error deleting contact:", error);

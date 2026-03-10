@@ -4,8 +4,6 @@ import EventTypesClient from "./event-types-client";
 export default async function EventTypesPage() {
   const supabase = await createClient();
 
-  // Supabase will automatically join the event_information table 
-  // because of your foreign key (event_types_id)
   const { data: eventTypes, error } = await supabase
     .from("event_types")
     .select(`

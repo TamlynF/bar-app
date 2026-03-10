@@ -33,7 +33,7 @@ export async function saveTableAction(formData: FormData) {
     }
 
     // Refresh the page data
-    revalidatePath("/dashboard/settings/tables");
+    revalidatePath("/settings/tables");
     return { success: true };
   } catch (error) {
     console.error("Error saving table:", error);
@@ -48,7 +48,7 @@ export async function deleteTableAction(id: number) {
     const { error } = await supabase.from("tables").delete().eq("id", id);
     if (error) throw error;
     
-    revalidatePath("/dashboard/settings/tables");
+    revalidatePath("/settings/tables");
     return { success: true };
   } catch (error) {
     console.error("Error deleting table:", error);

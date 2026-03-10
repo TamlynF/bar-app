@@ -31,7 +31,7 @@ import {
   saveEventInfoAction,
   deleteEventInfoAction,
   deleteEventTypeGroupAction
-} from "@/app/(private)/dashboard/settings/event-types/actions";
+} from "@/app/(private)/settings/event-types/actions";
 import { cn } from "@/lib/utils";
 
 const ICON_OPTIONS = {
@@ -821,7 +821,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               </Button>
             </div>
           </form>
-          {/* </div> */}
         </SheetContent>
       </Sheet>
 

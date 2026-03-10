@@ -16,7 +16,6 @@ export async function updateBookingStatus(id: string, status: string) {
     throw new Error("Failed to update booking status")
   }
 
-  // Refresh the dashboard data
   revalidatePath("/dashboard")
 }
 

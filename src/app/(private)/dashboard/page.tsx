@@ -82,7 +82,7 @@ export default async function DashboardPage() {
 
         {/* Right Section: Actions */}
         <div className="flex items-center justify-end gap-1 sm:gap-1 z-10 w-7 sm:w-auto">
-          <Link href="/dashboard/settings" className="flex items-center pointer-events-auto">
+          <Link href="/settings" className="flex items-center pointer-events-auto">
             <Button
               variant="outline"
               size="icon"
