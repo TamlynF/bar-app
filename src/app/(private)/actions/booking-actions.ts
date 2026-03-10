@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function getBookings(type: string, subType: string, selectedDate: string | null) {
-  console.log("Fetching bookings with filters:", { type, subType, selectedDate })
+  //console.log("Fetching bookings with filters:", { type, subType, selectedDate })
   try {
     const supabase = await createClient()
 
@@ -57,14 +57,14 @@ export async function getBookings(type: string, subType: string, selectedDate: s
       .ilike("events.event_types.type", type)
       .ilike("events.event_types.sub_type", subType)
       .order('date', { referencedTable: 'events', ascending: false })
-      .order('created_at', { ascending: true });
+      .order('group_name', { ascending: true });
 
     if (selectedDate) {
       query = query.eq("events.date", selectedDate);
     }
 
     const { data: bookings, error } = await query;
-    console.log("Fetched bookings:", { bookings, error })
+    //console.log("Fetched bookings:", { bookings, error })
 
     if (error) {
       console.error("Error fetching bookings:", error)

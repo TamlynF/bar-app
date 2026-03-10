@@ -106,9 +106,9 @@ const statusTheme: Record<
   },
 }
 
-export default function BookingListClient({ initialBookings }: { initialBookings: Booking[] }) {
-  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+export default function BookingListClient({ initialBookings, selectedDate }: { initialBookings: Booking[], selectedDate?: string | undefined  }) {
+  //const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
+  //const [isCalendarOpen, setIsCalendarOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -126,7 +126,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
     return initialBookings
       .filter((b) => {
         const bDate = b.events?.event_date ? new Date(b.events.event_date) : null
-        const matchesDate = selectedDate && bDate ? isSameDay(bDate, selectedDate) : !selectedDate
+        const matchesDate = selectedDate && bDate ? isSameDay(bDate, new Date(selectedDate)) : !selectedDate
 
         const bStatus = normStatus(b.status)
         const matchesStatus = activeStatusFilters.size === 0 ? true : activeStatusFilters.has(bStatus)
@@ -187,7 +187,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
   return (
     <div className="space-y-3 animate-in fade-in duration-500">
       {/* 1. Date Navigation Bar */}
-      {/* <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
+    {/*   <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -258,7 +258,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
             </div>
           </div>
         </div>
-      </div> */}
+      </div>  */}
 
       {/* 2. KPI Grid & Interactive Status Filter (Compact Redesign) */}
       <div className="flex flex-col gap-2 sm:gap-2">

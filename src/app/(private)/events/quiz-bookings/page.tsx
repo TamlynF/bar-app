@@ -157,7 +157,10 @@ export default async function QuizBookingsPage({
         </div>
         
         <Suspense fallback={<div className="h-64 bg-white rounded-3xl animate-pulse border border-[#E6DFC8]" />}>
-          <BookingListClient initialBookings={quizBookings} />
+          <BookingListClient
+            initialBookings={quizBookings}
+            selectedDate={selectedDate}
+          />
         </Suspense>
 
         {quizBookings.length === 0 && (
