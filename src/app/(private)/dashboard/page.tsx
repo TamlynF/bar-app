@@ -1,6 +1,7 @@
 import React, { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server"
-import BookingListClient, { RawBooking } from "./components/booking-list-client"
+import BookingListClient from "./components/booking-list-client"
+import { Booking } from "../events/quiz-bookings/page"
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -8,47 +9,57 @@ import { Plus } from "lucide-react";
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  let typedBookings: RawBooking[] = []
+  let typedBookings: Booking[] = []
 
   try {
     const supabase = await createClient()
     const { data: bookings, error } = await supabase
       .from("bookings")
       .select(`
-        id,
-        event_id,
-        group_name,
-        team_id,
-        contact_id,
-        group_size,
-        paid_amount,
-        total_amount,
-        status,
-        special_requests,
-        booking_created_at: created_at,
-        contacts(
-          full_name,
-          email,
-          country_code,
-          phone_no
-        ),
-        events(
-          event_date: date,
-          event_title: title,
-          description,
-          payment_amount,
-          event_types(
-            category: type,
-            sub_type
-          )
-        )
-      `)
+          id,
+          event_id,
+          group_name,
+          team_id,
+          contact_id,
+          group_size,
+          paid_amount,
+          total_amount,
+          status,
+          special_requests,
+          booking_created_at: created_at,
+          contacts(
+            full_name,
+            email,
+            country_code,
+            phone_no
+          ),
+          events!inner(
+            event_date: date,
+        event_start_time: start_time,
+        event_end_time: end_time,
+        event_title: title,
+        event_description: description,
+        event_payment_amount: payment_amount,
+            event_types!inner(
+              category: type,
+              sub_type
+            )
+          ),
+          booking_table_mappings(
+            tables(
+            tables_id: id,  
+            tables_name: name,
+              tables_capacity: max_capacity,
+              tables_description: description,
+              tables_available: available              
+            )
+        `)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error("Error fetching bookings:", error)
     }
-    typedBookings = (bookings as unknown as RawBooking[]) ?? []
+    typedBookings = (bookings as unknown as Booking[]) ?? []
   } catch (error) {
     console.error("Dashboard data source unavailable:", error)
   }

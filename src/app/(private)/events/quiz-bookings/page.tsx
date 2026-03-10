@@ -2,15 +2,22 @@ import React, { Suspense } from "react";
 import { getBookings } from "../../actions/booking-actions";
 import BookingListClient from "../../dashboard/components/booking-list-client";
 import BookingCalendarFilter from "@/components/booking-calendar-filter";
-import { Calendar } from "@/components/ui/calendar";
 import { 
   Trophy, 
   Calendar as CalendarIcon, 
   Users, 
-  Info 
+  Info, 
+  History
 } from "lucide-react";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
 
+export interface TableRow {
+  tables_id: string;
+  tables_name?: string;
+  tables_capacity?: number;
+  tables_description?: string;
+  tables_available?: boolean;
+}
 export interface EventType {
   category?: string;
   sub_type?: string;
@@ -46,6 +53,9 @@ export interface Booking {
   booking_created_at?: string;
   contacts?: ContactRow;
   events?: EventRow;
+  booking_table_mappings?: {
+    tables?: TableRow;
+  }[];
 }
 
 export const dynamic = 'force-dynamic';
@@ -64,13 +74,11 @@ export default async function QuizBookingsPage({
   const selectedDate = params.date;
   console.log("Quiz Bookings - Search Params:", params);
 
-  const type = "game"; // Assuming 'game' is the main type for quiz events
-  const subType = "quiz"; // We specifically want the 'quiz' subtype
-  // Use today's date as default if no date is provided in URL
-  const date = params.date || new Date().toISOString().split("T")[0];
+  const type = "game"; 
+  const subType = "quiz"; 
 
   // Fetch all bookings for the selected date
-  const allBookings = await getBookings(type, subType, date);
+  const allBookings = await getBookings(type, subType, selectedDate || null);
   const quizBookings = (allBookings as unknown as Booking[]) ?? [];
   const totalParticipants = quizBookings.reduce((acc, b) => acc + (b.group_size || 0), 0);
 
@@ -84,7 +92,7 @@ export default async function QuizBookingsPage({
   }); */
 
   return (
-  <div className="flex flex-col gap-6">
+ <div className="flex flex-col gap-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-[#26300D] rounded-3xl p-6 text-[#FDCC4B] shadow-xl flex flex-col justify-between min-h-[140px]">
@@ -108,32 +116,43 @@ export default async function QuizBookingsPage({
           </div>
         </div>
 
-        <div className="bg-[#FDCC4B] rounded-3xl p-6 shadow-sm flex flex-col justify-between min-h-[140px]">
+        <div className={cn(
+          "rounded-3xl p-6 shadow-sm flex flex-col justify-between min-h-[140px] transition-colors duration-500",
+          selectedDate ? "bg-[#FDCC4B]" : "bg-blue-600 text-white"
+        )}>
           <div className="flex justify-between items-start">
-            <CalendarIcon className="w-8 h-8 text-[#26300D] opacity-40" />
+            {selectedDate ? <CalendarIcon className="w-8 h-8 text-[#26300D] opacity-40" /> : <History className="w-8 h-8 text-white opacity-40" />}
           </div>
           <div>
-            <h2 className="text-lg font-black text-[#26300D] uppercase tracking-tighter leading-tight">
+            <h2 className={cn(
+              "text-lg font-black uppercase tracking-tighter leading-tight",
+              selectedDate ? "text-[#26300D]" : "text-white"
+            )}>
               {selectedDate 
                 ? new Date(selectedDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' })
-                : "All History"}
+                : "Full History"}
             </h2>
-            <p className="text-xs font-bold uppercase tracking-wider text-[#26300D] opacity-60 mt-1">Viewing Mode</p>
+            <p className={cn(
+              "text-xs font-bold uppercase tracking-wider opacity-60 mt-1",
+              selectedDate ? "text-[#26300D]" : "text-white"
+            )}>Viewing Mode</p>
           </div>
         </div>
       </div>
 
-      {/* Filter Bar - Now horizontal and matching Dashboard style */}
+      {/* Filter Bar - Matches Dashboard style */}
       <div className="w-full">
           <BookingCalendarFilter selectedDate={selectedDate} />
       </div>
 
       <div className="flex flex-col gap-4">
         <div className="flex items-center justify-between px-2">
-          <h3 className="font-black text-xs uppercase tracking-[0.2em] text-[#1F1F1A]">Quiz Entries</h3>
+          <h3 className="font-black text-xs uppercase tracking-[0.2em] text-[#1F1F1A]">
+            {selectedDate ? "Event Entries" : "Historical Entries"}
+          </h3>
           <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold text-[#5F624F] uppercase bg-white px-3 py-1 rounded-full border border-[#E6DFC8]">
             <Info className="w-3 h-3" />
-            Filtered by Quiz Sub-type
+            {selectedDate ? `Showing ${quizBookings.length} teams for this date` : `Showing all ${quizBookings.length} lifetime bookings`}
           </div>
         </div>
         

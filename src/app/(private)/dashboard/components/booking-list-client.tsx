@@ -22,6 +22,7 @@ import {
   Users,
   XCircle,
   MessageSquare,
+  LayoutDashboard,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -103,26 +104,6 @@ const statusTheme: Record<
   },
 }
 
-export interface RawBooking {
-  id: string
-  group_name?: string
-  group_size: number
-  paid_amount?: number
-  total_amount?: number
-  status?: string
-  special_requests?: string
-  booking_created_at?: string
-  contacts?: {
-    full_name?: string
-    email?: string
-  }
-  events?: {
-    event_date?: string
-    event_title?: string
-    payment_amount?: number
-  }
-}
-
 export default function BookingListClient({ initialBookings }: { initialBookings: Booking[] }) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [isCalendarOpen, setIsCalendarOpen] = useState(false)
@@ -158,18 +139,6 @@ export default function BookingListClient({ initialBookings }: { initialBookings
               (b.contacts?.full_name || "").toLowerCase().includes(q)
 
         return matchesDate && matchesStatus && matchesSearch
-      })
-      .sort((a, b) => {
-        if (!selectedDate) {
-          return (
-            new Date(b.events?.event_date || 0).getTime() -
-            new Date(a.events?.event_date || 0).getTime()
-          )
-        }
-        return (
-          new Date(b.booking_created_at || 0).getTime() -
-          new Date(a.booking_created_at || 0).getTime()
-        )
       })
   }, [initialBookings, selectedDate, activeStatusFilters, searchQuery])
 
@@ -230,7 +199,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
               className="h-8 px-3 rounded-lg bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm"
             >
               <CalendarDays className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-              <div className="flex flex-col">
+              <div className="flex flex-col text-left">
                 <div className="flex items-center gap-1.5">
                   <span className="text-sm font-bold text-slate-900 dark:text-white uppercase truncate max-w-40">
                     {selectedDate ? format(selectedDate, "dd MMMM yyyy") : "All Dates"}
@@ -313,7 +282,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
         </div>
 
         {/* Status Filters Bar */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 sm:p-3 flex items-center justify-between shadow-sm relative z-10 overflow-visible">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 flex items-center justify-between shadow-sm relative z-10 overflow-visible">
           <div className="flex items-center justify-start gap-4 sm:gap-5 w-full px-2 min-w-max py-4 overflow-visible">
             <StatusCircle
               count={stats.totalTeams}
@@ -351,9 +320,6 @@ export default function BookingListClient({ initialBookings }: { initialBookings
               onClick={() => toggleStatusFilter("cancelled")}
             />
           </div>
-          <span className="hidden sm:block text-[10px] font-bold uppercase tracking-wider text-slate-400">
-            Filters
-          </span>
         </div>
       </div>
 
@@ -455,13 +421,9 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                   value={`${selectedBooking.group_size} Guests`}
                 />
                 <DetailTile
-                  icon={<BadgePoundSterling className="w-4 h-4" />}
-                  label="Payment"
-                  value={
-                    selectedBooking.paid_amount && selectedBooking.paid_amount > 0
-                      ? `£${selectedBooking.paid_amount}`
-                      : "Pending"
-                  }
+                  icon={<LayoutDashboard className="w-4 h-4" />}
+                  label="Table"
+                  value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"}
                 />
               </div>
 
@@ -492,7 +454,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent
-                    className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 w-52 p-2 shadow-xl rounded-xl z-9999 isolated"
+                    className="bg-[#1a2109] dark:bg-slate-900 border-slate-200 dark:border-slate-800 w-52 p-2 shadow-xl rounded-xl z-9999 isolated"
                     style={{ backgroundColor: "#1a2109" }}
                     onCloseAutoFocus={(e) => e.preventDefault()}
                   >
@@ -590,6 +552,8 @@ function BookingCard({
   //console.log('Booking status:', booking.status, 'Normalized:', status, 'Theme:', statusTheme[status])
   const theme = statusTheme[status] || statusTheme.pending
   const hasRequest = booking.special_requests && booking.special_requests.trim() !== ""
+  // Get mapped table name
+  const tableName = booking.booking_table_mappings?.[0]?.tables?.tables_name;
 
   return (
     <div
@@ -619,11 +583,16 @@ function BookingCard({
                 <MessageSquare className="w-3 h-3 text-white" />
               </div>
             )}
-            {showDate && booking.events?.event_date && (
-              <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap tracking-tight hidden sm:inline-flex">
-                {format(new Date(booking.events.event_date), "dd MMM")}
-              </span>
-            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+             <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium">
+               {booking.contacts?.full_name}
+             </p>
+             {showDate && booking.events?.event_date && (
+                <span className="text-[10px] text-slate-400 font-bold uppercase">
+                  • {format(new Date(booking.events.event_date), "dd MMM")}
+                </span>
+             )}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 flex items-center gap-1.5 font-medium">
             {booking.contacts?.full_name || "No name provided"}
@@ -631,10 +600,19 @@ function BookingCard({
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 sm:gap-3 shrink-0">
-        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800 px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 shadow-sm">
-          <Users className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+      <div className="flex items-center justify-end gap-2 shrink-0">
+        {/* Table Badge */}
+        {tableName && (
+          <div className="hidden xs:flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg border border-blue-100 dark:border-blue-800 shadow-sm">
+            <LayoutDashboard className="w-3 h-3 text-blue-500" />
+            <span className="text-[10px] font-black text-blue-700 dark:text-blue-400 uppercase tracking-tighter">
+              {tableName}
+            </span>
+          </div>
+        )}
+        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+          <Users className="w-3 h-3 text-slate-400" />
+          <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">
             {booking.group_size}
           </span>
         </div>

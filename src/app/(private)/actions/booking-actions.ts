@@ -39,17 +39,28 @@ export async function getBookings(type: string, subType: string, selectedDate: s
               category: type,
               sub_type
             )
-          )
+          ),
+          booking_table_mappings(
+            tables(
+            tables_id: id,  
+            tables_name: name,
+              tables_capacity: max_capacity,
+              tables_description: description,
+              tables_available: available              
+            )
+      )
         `)
       .ilike("events.event_types.type", type)
       .ilike("events.event_types.sub_type", subType)
-      .order('date', { referencedTable: 'events', ascending: false });
-    
+      .order('date', { referencedTable: 'events', ascending: false })
+      .order('created_at', { ascending: true });
+
     if (selectedDate) {
-    query = query.eq("events.date", selectedDate);
-  }
+      query = query.eq("events.date", selectedDate);
+    }
 
     const { data: bookings, error } = await query;
+    console.log("Fetched bookings:", { bookings, error })
 
     if (error) {
       console.error("Error fetching bookings:", error)
