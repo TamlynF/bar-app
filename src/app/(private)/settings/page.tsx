@@ -57,18 +57,13 @@ const settingsItems = [
 
 export default function SettingsBasePage() {
   return (
-    <div className="p-4 sm:p-8 space-y-6">
-      <div className="lg:hidden mb-2">
-        <h1 className="text-3xl font-black tracking-tight text-[#1F1F1A] uppercase">Settings</h1>
-        <p className="text-sm text-[#5F624F] font-medium opacity-70">Manage venue operations</p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+    <div className="p-2 sm:p-8 space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {settingsItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="group flex items-center justify-between p-5 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#26300D] hover:shadow-md transition-all active:scale-[0.98]"
+            className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#26300D] hover:shadow-md transition-all active:scale-[0.98]"
           >
             <div className="flex items-center gap-4">
               <div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center shrink-0 transition-transform group-hover:scale-110`}>
