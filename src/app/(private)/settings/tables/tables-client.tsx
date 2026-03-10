@@ -52,6 +52,7 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
   };
 
   const handleOpenAdd = () => {
+    setFormError(null);
     setEditingTable(null);
     setIsSheetOpen(true);
   };
@@ -80,22 +81,17 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6 sm:p-6">
       {/* Page Header */}
       <div className="flex items-center justify-between pb-4 border-b">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            Configure your floor plan and seat capacities.
+        <div className="pr-4">
+          <p className="text-xs text-muted-foreground line-clamp-1">
+            Manage floor plan and seat capacities.
           </p>
         </div>
-        
-        <Button onClick={handleOpenAdd} size="sm">
-          <Plus className="w-4 h-4 mr-2" />
-          New
-        </Button>
       </div>
 
-      {/* Sheet Modal - Styled like Event Types */}
+      {/* Sheet Modal */}
       <Sheet open={isSheetOpen} onOpenChange={(open) => {
         setIsSheetOpen(open);
         if (!open) setFormError(null);
@@ -103,7 +99,7 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
         <SheetContent side="right" className="w-full sm:max-w-md h-full flex flex-col p-0 gap-0 border-l border-border/50">
           <SheetHeader className="px-6 pt-6 pb-4 text-left border-b border-border/40 shrink-0">
             <SheetTitle className="text-xl font-bold">
-              {editingTable ? "Edit Table" : "New Table"}
+              {editingTable ? "Edit Table" : "Add New Table"}
             </SheetTitle>
             <SheetDescription className="text-sm text-muted-foreground">
               {editingTable 
@@ -125,7 +121,7 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
                   placeholder="e.g. Window Booth 1" 
                   defaultValue={editingTable?.name || ""} 
                   required
-                  className="h-11 rounded-xl shadow-sm"
+                  className="h-11 rounded-xl shadow-sm bg-white dark:bg-slate-900"
                 />
               </div>
 
@@ -141,7 +137,7 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
                     placeholder="e.g. 4" 
                     required
                     defaultValue={editingTable?.max_capacity || ""} 
-                    className="h-11 rounded-xl pl-10 shadow-sm"
+                    className="h-11 rounded-xl pl-10 shadow-sm bg-white dark:bg-slate-900"
                   />
                   <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 </div>
@@ -158,7 +154,7 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
                   name="description" 
                   placeholder="e.g. Near the fireplace, quiet corner..." 
                   defaultValue={editingTable?.description || ""} 
-                  className="h-11 rounded-xl shadow-sm"
+                  className="h-11 rounded-xl shadow-sm bg-white dark:bg-slate-900"
                 />
               </div>
 
@@ -167,13 +163,13 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
                 <div className="flex items-center justify-between">
                   <div className="space-y-0.5">
                     <Label htmlFor="available" className="text-sm font-bold">Currently Available</Label>
-                    <p className="text-xs text-muted-foreground">Toggle if this table can be booked.</p>
+                    <p className="text-xs text-muted-foreground">Allow this table to be booked.</p>
                   </div>
                   <Input 
                     type="checkbox" 
                     id="available" 
                     name="available"
-                    className="h-5 w-5 rounded-md border-input bg-background"
+                    className="h-6 w-6 rounded-lg border-primary/20 accent-[#26300D]"
                     defaultChecked={editingTable ? editingTable.available : true}
                   />
                 </div>
@@ -181,7 +177,7 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
 
               {/* Error Display */}
               {formError && (
-                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1">
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
                   <p className="text-sm text-destructive font-medium leading-snug">{formError}</p>
                 </div>
@@ -195,13 +191,13 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
                 variant="outline" 
                 onClick={() => setIsSheetOpen(false)}
                 disabled={isPending}
-                className="flex-1 sm:flex-none h-11 rounded-xl"
+                className="flex-1 sm:flex-none h-11 rounded-xl font-bold uppercase tracking-wider text-[10px]"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending} className="flex-1 sm:flex-none h-11 rounded-xl font-bold shadow-md">
+              <Button type="submit" disabled={isPending} className="flex-1 sm:flex-none h-11 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-md">
                 {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editingTable ? "Update Table" : "Save Table"}
+                {editingTable ? "Update" : "Save"}
               </Button>
             </div>
           </form>
@@ -209,52 +205,60 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
       </Sheet>
 
       {/* Data Table */}
-      <div className="mt-6 border rounded-2xl overflow-hidden bg-card shadow-sm transition-all">
+      <div className="mt-6 border rounded-2xl overflow-hidden bg-card shadow-sm transition-all border-[#E6DFC8]">
+        {/* Table Toolbar */}
+        <div className="p-3 border-b border-[#E6DFC8] bg-muted/5 flex items-center justify-between">
+           <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"></span>
+           <Button onClick={handleOpenAdd} size="sm" className="font-bold uppercase tracking-wider text-[10px] h-8 px-3 rounded-xl">
+             <Plus className="w-3.5 h-3.5 mr-1.5" />
+             Add
+           </Button>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-muted/30 border-b">
+          <table className="w-full text-sm text-left border-collapse min-w-[320px]">
+            <thead className="bg-muted/30 border-b border-[#E6DFC8]">
               <tr>
-                <th className="px-3 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">No.</th>
-                <th className="px-3 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Max Capacity</th>
-                <th className="px-3 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Avail.</th>
-                <th className="px-3 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-right">Actions</th>
+                <th className="px-2 sm:px-4 py-4 font-black uppercase tracking-widest text-[9px] sm:text-[10px] text-muted-foreground">No.</th>
+                <th className="px-2 sm:px-4 py-4 font-black uppercase tracking-widest text-[9px] sm:text-[10px] text-muted-foreground text-center">Capacity</th>
+                <th className="px-2 sm:px-4 py-4 font-black uppercase tracking-widest text-[9px] sm:text-[10px] text-muted-foreground">Available</th>
+                <th className="px-2 sm:px-4 py-4 font-black uppercase tracking-widest text-[9px] sm:text-[10px] text-muted-foreground text-right">Edit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40">
               {initialTables.map((table) => (
                 <tr key={table.id} className="hover:bg-muted/20 transition-colors group">
-                  <td className="px-3 py-3">
+                  <td className="px-2 sm:px-4 py-4">
                     <div className="flex flex-col gap-0.5">
-                      <span className="font-bold text-foreground">
+                      <span className="font-bold text-foreground truncate max-w-[100px] sm:max-w-none">
                         {table.name || `Table ${table.id}`}
                       </span>
                       {table.description && (
-                        <span className="text-[11px] text-muted-foreground line-clamp-1 italic font-medium">
+                        <span className="text-[11px] text-muted-foreground line-clamp-1 italic font-medium hidden sm:block">
                           {table.description}
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-3 py-3 text-center">
-                   <span className="inline-flex items-center gap-1 px-1 py-1 rounded-lg text-xs font-bold bg-secondary text-secondary-foreground border border-secondary-foreground/10">
+                  <td className="px-2 sm:px-4 py-4 text-center">
+                   <span className="inline-flex items-center gap-1.5 px-1.5 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-secondary text-secondary-foreground border border-secondary-foreground/10">
+                      <Users className="w-3 h-3 opacity-70 hidden xs:block" />
                       {table.max_capacity}
-                      <Users className="w-3 h-3 opacity-70" />                      
                     </span>
                   </td>
-                  <td className="px-3 py-3 text-center">
+                  <td className="px-2 sm:px-4 py-4">
                     {table.available !== false ? (
-                      <span className="inline-flex items-center gap-1 text-emerald-600 font-bold text-[10px] uppercase tracking-wider">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold text-[9px] sm:text-[10px] uppercase tracking-wider">
+                        <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                         Yes
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 text-destructive font-bold text-[10px] uppercase tracking-wider">
-                        <XCircle className="w-3.5 h-3.5" />
+                      <span className="inline-flex items-center gap-1.5 text-destructive font-bold text-[9px] sm:text-[10px] uppercase tracking-wider">
+                        <XCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                         No
                       </span>
                     )}
                   </td>
-                  <td className="px-3 py-3 text-right">
+                  <td className="px-2 sm:px-4 py-4 text-right">
                     <div className="flex items-center justify-end gap-1">
                       {/* Desktop Actions */}
                       <div className="hidden sm:flex items-center gap-1">
@@ -282,8 +286,8 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
                       <div className="sm:hidden">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground rounded-full">
-                              <MoreVertical className="w-5 h-5" />
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full">
+                              <MoreVertical className="w-4 h-4" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="z-9999 w-32" style={{ backgroundColor: "#E2EDBF" }}>
@@ -307,7 +311,7 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
               ))}
               {initialTables.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-3 py-16 text-center">
+                  <td colSpan={4} className="px-4 py-16 text-center">
                     <LayoutDashboard className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
                     <p className="text-sm text-muted-foreground italic">No tables configured yet.</p>
                   </td>
