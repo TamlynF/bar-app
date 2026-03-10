@@ -10,53 +10,59 @@ export type QuizQuestion = {
 }
 
 /**
- * Generates a quiz using the Gemini 1.5 Flash model.
- * Uses a highly compatible payload structure to prevent 404/400 errors across different environments.
+ * Generates a quiz using the Gemini 2.5 Flash model with Structured Outputs.
+ * This fixes the 404 error by using the correct model name and API structure.
  */
 export async function generateQuizAction(topic: string, numberOfQuestions: number = 10): Promise<QuizQuestion[]> {
   const supabase = await createClient()
 
-  // 1. Fetch recent questions from the database for semantic exclusion
+  // 1. Fetch recent questions for exclusion
   const { data: pastQuestions, error: dbError } = await supabase
     .from('past_quiz_questions')
     .select('question_text')
     .order('asked_on', { ascending: false })
-    .limit(100);
-
-  if (dbError) {
-    console.error("Database fetch error:", dbError);
-  }
+    .limit(50);
 
   const pastQuestionsList = pastQuestions && pastQuestions.length > 0
     ? pastQuestions.map(q => q.question_text).join(' | ')
     : "None.";
 
-  // 2. Prepare the Gemini API call
-  // We use the stable v1beta endpoint and gemini-1.5-flash
-  const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""; 
-  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  // 2. Setup Gemini API
+  // Note: Canvas automatically provides the key if apiKey is an empty string in the fetch call, 
+  // but if you have it in your .env, we'll use that.
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""; 
+  //const model = "gemini-2.5-flash-preview-09-2025";
+  const model = "gemini-2.5-flash";
+  //const model = "gemini-3.1-flash-preview"; 
+  //const model = "gemini-3.1-pro-preview";
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  // Combined prompt to maximize compatibility with all API versions
-  const combinedPrompt = `Act as the Pub Quiz Master for "Don Fenticas". Generate a creative trivia round.
-
-  TOPIC: ${topic || 'General Knowledge'}
-  QUANTITY: ${numberOfQuestions} unique questions
+  const prompt = `Act as the Pub Quiz Master for "Don Fenticas". Generate a creative trivia round about "${topic || 'General Knowledge'}".
   
-  CRITICAL RULES:
-  1. DO NOT repeat or use questions similar to these previously used ones: [${pastQuestionsList}]
-  2. The tone must be fun and suitable for a local pub audience.
-  3. Output the result ONLY as a RAW JSON array of objects.
-  4. Each object MUST have keys: "question", "answer", "category".
-  5. DO NOT include markdown formatting like \`\`\`json or any conversational text.`;
+  You must provide exactly ${numberOfQuestions} unique questions.
+  Avoid repeating these past topics/questions: [${pastQuestionsList}].
+  The tone should be fun, engaging, and suitable for a local pub audience.`;
 
+  // 3. Construct the Payload with Structured Output (JSON Schema)
   const payload = {
     contents: [{ 
-      parts: [{ text: combinedPrompt }] 
+      parts: [{ text: prompt }] 
     }],
     generationConfig: {
-      temperature: 0.7,
-      topP: 0.95,
-      maxOutputTokens: 4096,
+      temperature: 0.8,
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            "question": { "type": "STRING" },
+            "answer": { "type": "STRING" },
+            "category": { "type": "STRING" }
+          },
+          required: ["question", "answer", "category"]
+        }
+      }
     }
   };
 
@@ -70,33 +76,18 @@ export async function generateQuizAction(topic: string, numberOfQuestions: numbe
     if (!response.ok) {
       const errorData = await response.json();
       console.error("Gemini API Error Detail:", JSON.stringify(errorData, null, 2));
-      
-      if (response.status === 403) {
-        throw new Error("API Key Permission Denied. Please ensure GEMINI_API_KEY is set in your .env file.");
-      }
-      
-      throw new Error(`The AI Quiz Master encountered an error (${response.status}). Please try again.`);
+      throw new Error(`The AI Quiz Master (Error ${response.status}): ${errorData.error?.message || 'Unknown Error'}`);
     }
 
     const result = await response.json();
-    const rawContent = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
     
-    if (!rawContent) {
+    if (!content) {
       throw new Error("The Quiz Master returned an empty script.");
     }
 
-    // 3. Clean and Parse JSON
-    // Some models include markdown backticks even when told not to; we strip them here.
-    const jsonMatch = rawContent.match(/\[[\s\S]*\]/);
-    const cleanedContent = jsonMatch ? jsonMatch[0] : rawContent.replace(/```json/g, "").replace(/```/g, "").trim();
-
-    try {
-      const parsed = JSON.parse(cleanedContent);
-      return parsed as QuizQuestion[];
-    } catch (parseErr) {
-      console.error("Failed to parse AI JSON. Raw content:", rawContent);
-      throw new Error("The AI response was not in a valid JSON format. Please try again.");
-    }
+    // Since we used responseMimeType: "application/json", 'content' is already a clean JSON string
+    return JSON.parse(content) as QuizQuestion[];
     
   } catch (error: unknown) {
     console.error("AI Generation failed:", error);
