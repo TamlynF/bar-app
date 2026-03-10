@@ -24,7 +24,8 @@ import {
   MessageSquare,
   LayoutDashboard,
   Trophy,
-  Target
+  Target,
+  AlertCircle
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -40,7 +41,8 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Booking } from "../../events/quiz-bookings/page"
 
-const formatDateStr = (d: Date) => {
+const formatDateStr = (d: Date | string) => {
+  if (typeof d === 'string') return d;
   const date = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
   return date.toISOString().split("T")[0]
 }
@@ -106,9 +108,7 @@ const statusTheme: Record<
   },
 }
 
-export default function BookingListClient({ initialBookings, selectedDate }: { initialBookings: Booking[], selectedDate?: string | undefined  }) {
-  //const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
-  //const [isCalendarOpen, setIsCalendarOpen] = useState(false)
+export default function BookingListClient({ initialBookings, selectedDate }: { initialBookings: Booking[], selectedDate?: string | undefined }) {
   const [isPending, startTransition] = useTransition()
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
@@ -136,7 +136,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
           q === ""
             ? true
             : (b.group_name || "").toLowerCase().includes(q) ||
-              (b.contacts?.full_name || "").toLowerCase().includes(q)
+            (b.contacts?.full_name || "").toLowerCase().includes(q)
 
         return matchesDate && matchesStatus && matchesSearch
       })
@@ -155,10 +155,12 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   }, [initialBookings, selectedDate, activeStatusFilters, searchQuery])
 
   const stats = useMemo(() => {
-    const contextBookings = selectedDate
-      ? initialBookings.filter((b) => b.events?.event_date === formatDateStr(selectedDate))
+    const dateFilter = selectedDate ? (typeof selectedDate === 'string' ? selectedDate : formatDateStr(selectedDate)) : null;
+
+    const contextBookings = dateFilter
+      ? initialBookings.filter((b) => b.events?.event_date === dateFilter)
       : initialBookings
-    
+
     const counts = {
       confirmed: contextBookings.filter((b) => normStatus(b.status) === "confirmed").length,
       waitlisted: contextBookings.filter((b) => normStatus(b.status) === "waitlisted").length,
@@ -198,81 +200,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
   return (
     <div className="space-y-3 animate-in fade-in duration-500">
-      {/* 1. Date Navigation Bar */}
-    {/*   <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
-        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 px-3 rounded-lg bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm"
-            >
-              <CalendarDays className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-              <div className="flex flex-col text-left">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white uppercase truncate max-w-40">
-                    {selectedDate ? format(selectedDate, "dd MMMM yyyy") : "All Dates"}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </div>
-              </div>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="border-amber-500/20 p-0 w-auto shadow-xl rounded-xl overflow-hidden isolate z-9999"
-            style={{ backgroundColor: "#c8cfb8" }}
-            align="start"
-          >
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(d) => {
-                if (d) setSelectedDate(d)
-                setIsCalendarOpen(false)
-              }}
-              className="text-white bg-[#1a2109] isolate z-9999"
-              style={{ backgroundColor: "#9aa67e" }}
-              defaultMonth={selectedDate || new Date()}
-            />
-            <div className="p-2 border-t border-white/10 bg-black/20 text-center">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-xs font-semibold text-slate-300 hover:text-white"
-                onClick={() => {
-                  setSelectedDate(undefined)
-                  setIsCalendarOpen(false)
-                }}
-              >
-                Show All History
-              </Button>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-
-        <div className="hidden md:flex items-center gap-2">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">
-            Quick Stats:
-          </span>
-          <div className="flex -space-x-2">
-            <div
-              className="w-6 h-6 rounded-full bg-green-500/20 border border-green-500/30 flex items-center justify-center text-[10px] font-bold text-green-600"
-              title="Confirmed"
-            >
-              {stats.counts.confirmed}
-            </div>
-            <div
-              className="w-6 h-6 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-[10px] font-bold text-orange-600"
-              title="Waitlisted"
-            >
-              {stats.counts.waitlisted}
-            </div>
-          </div>
-        </div>
-      </div>  */}
-
-      {/* 1. KPI Grid & Interactive Status Filter */}
+      {/* KPI Grid & Interactive Status Filter */}
       <div className="flex flex-col gap-2 sm:gap-2">
         <div className="flex w-full justify-between gap-2 overflow-x-auto pb-1">
           <div className="flex-1 min-w-0">
@@ -411,17 +339,17 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               </SheetHeader>
 
               {selectedBooking.booking_scores?.[0] && (
-                 <div className="bg-primary text-primary-foreground p-5 rounded-2xl shadow-lg flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Official Score</p>
-                      <h3 className="text-4xl font-black tracking-tighter">{selectedBooking.booking_scores[0].score} <span className="text-sm">pts</span></h3>
+                <div className="bg-primary text-primary-foreground p-5 rounded-2xl shadow-lg flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Official Score</p>
+                    <h3 className="text-4xl font-black tracking-tighter">{selectedBooking.booking_scores[0].score} <span className="text-sm">pts</span></h3>
+                  </div>
+                  {selectedBooking.booking_scores[0].is_winner && (
+                    <div className="bg-white/20 p-3 rounded-xl border border-white/30">
+                      <Trophy className="w-8 h-8 text-white" />
                     </div>
-                    {selectedBooking.booking_scores[0].is_winner && (
-                      <div className="bg-white/20 p-3 rounded-xl border border-white/30">
-                        <Trophy className="w-8 h-8 text-white" />
-                      </div>
-                    )}
-                 </div>
+                  )}
+                </div>
               )}
 
               {selectedBooking.special_requests && (
@@ -576,44 +504,119 @@ function BookingCard({
   const score = booking.booking_scores?.[0]?.score;
   const isWinner = booking.booking_scores?.[0]?.is_winner;
   const tableName = booking.booking_table_mappings?.[0]?.tables?.tables_name;
-
-  return (
-    <div onClick={onClick} className={cn("group active:scale-[0.99] transition-all border-2 rounded-xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-2", theme.cardBorder)}>
-      <div className="flex items-center gap-3 min-w-0 text-left flex-1">
-        <div className={cn("w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0", theme.bg, theme.text)}>
-          {isWinner ? <Trophy className="w-4 h-4" /> : theme.icon}
+ return (
+  <div 
+      onClick={onClick} 
+      className={cn(
+        "group active:scale-[0.99] transition-all border-2 rounded-2xl p-4 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-4", 
+        theme.cardBorder
+      )}
+    >
+      <div className="flex items-center gap-4 min-w-0 flex-1">
+        {/* Leading Container: Mobile shows Date in All-History mode, otherwise Icon */}
+        <div className={cn(
+          "w-11 h-11 rounded-full flex flex-col items-center justify-center shrink-0 shadow-xs text-center overflow-hidden border",
+          theme.bg, theme.text, theme.border
+        )}>
+          {/* Mobile only date block replacement for icon */}
+          {showDate && booking.events?.event_date ? (
+            <>
+               <div className="sm:hidden flex flex-col leading-none items-center justify-center">
+                  <span className="text-[10px] font-black uppercase tracking-tighter opacity-80 mb-0.5">
+                    {format(new Date(booking.events.event_date), "MMM")}
+                  </span>
+                  <span className="text-base font-black tracking-tighter">
+                    {format(new Date(booking.events.event_date), "dd")}
+                  </span>
+               </div>
+               {/* Hide date in leading circle on larger screens to keep consistent icons */}
+               <div className="hidden sm:flex items-center justify-center">
+                  {isWinner ? <Trophy className="w-5 h-5" /> : theme.icon}
+               </div>
+            </>
+          ) : (
+            isWinner ? <Trophy className="w-5 h-5" /> : theme.icon
+          )}
         </div>
+
+        {/* Info Content - Optimized for One Row on Desktop */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h4 className="text-sm font-bold text-slate-900 truncate uppercase tracking-tight">{booking.group_name || "Guest Team"}</h4>
-            {hasRequest && <div className="bg-amber-500 rounded-full w-5 h-5 flex items-center justify-center shadow-sm ring-2 ring-white animate-pulse"><MessageSquare className="w-3 h-3 text-white" /></div>}
+          {/* Row 1: Team Name + Table Name (Mobile) */}
+          <div className="flex items-center justify-between sm:justify-start min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <h4 className="text-sm sm:text-base font-black text-[#1F1F1A] truncate uppercase tracking-tight leading-none">
+                {booking.group_name || "Guest Team"}
+              </h4>
+              {hasRequest && (
+                <div className="bg-red-500 rounded-full w-5 h-5 flex items-center justify-center shadow-sm ring-2 ring-white animate-pulse shrink-0" title="Special Request">
+                  <AlertCircle className="w-3 h-3 text-white" />
+                </div>
+              )}
+            </div>
+
+            {/* Mobile-only Table Name positioned at end of Team row */}
+            <div className="sm:hidden shrink-0 ml-2">
+              <span className="text-sm font-black text-blue-700 uppercase bg-blue-50 px-2 rounded-md border border-blue-100 leading-none py-1">
+                {tableName || "-"}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center gap-2 mt-0.5">
-             <p className="text-[11px] text-slate-500 truncate font-medium">{booking.contacts?.full_name}</p>
-             {showDate && booking.events?.event_date && (
-                <span className="text-[10px] text-slate-400 font-bold uppercase">• {format(new Date(booking.events.event_date), "dd MMM")}</span>
-             )}
+
+          {/* Row 2 (Mobile) / Unified Line (Desktop) */}
+                    <div className="flex items-center justify-between sm:justify-start gap-2 min-w-0 mt-1 sm:mt-0 text-slate-500 font-medium overflow-hidden">
+            {/* Left side of Row 2: Contact Name and Date */}
+             <div className="flex items-center gap-2 min-w-0">
+               <span className="hidden sm:inline text-slate-200 font-normal">|</span>
+               {/* Contact Name - Enlarged on mobile (text-sm) */}
+               <p className="text-sm sm:text-xs truncate max-w-[150px] sm:max-w-none font-semibold sm:font-medium">
+                 {booking.contacts?.full_name}
+               </p>
+               
+               {/* Desktop Only Date (Since mobile has it in the icon circle) */}
+               {showDate && booking.events?.event_date && (
+                  <span className="hidden sm:inline text-[10px] sm:text-xs text-slate-400 font-bold uppercase shrink-0 whitespace-nowrap">
+                    • {format(new Date(booking.events.event_date), "dd MMM")}
+                  </span>
+               )}
+           </div>
+           
+           {/* Right side of Row 2: Mobile Group Size / Desktop Badges */}
+             <div className="flex items-center shrink-0">
+                {/* Mobile-only guest count positioned directly under Table name */}
+                <div className="sm:hidden flex items-center gap-1.5 text-slate-700">
+                  <Users className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="text-sm font-black leading-none">
+                    {booking.group_size || "-"}
+                  </span>
+                </div>
+
+                           {/* Desktop Inline Badges for Table/Size */}
+                <div className="hidden sm:flex items-center gap-3 ml-2">
+                  <span className="text-slate-200 font-normal">|</span>
+                  {tableName && (
+                      <div className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
+                        <LayoutDashboard className="w-3 h-3 text-blue-500" />
+                        <span className="text-[10px] font-black text-blue-700 uppercase tracking-tighter">{tableName}</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200">
+                      <Users className="w-3 h-3 text-slate-400" />
+                      <span className="text-[10px] font-black text-slate-700">{booking.group_size}</span>
+                    </div>
+                </div>
+             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-end gap-2 shrink-0">
+        {/* Extreme Right: Score Badge (preserved across all views) */}
+      <div className="flex items-center gap-3 shrink-0 ml-1">
         {score !== undefined && (
-          <div className="flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded-lg border border-primary/20 shadow-sm">
-             <Target className="w-3 h-3" />
-             <span className="text-[10px] font-black">{score}</span>
+          <div className="flex items-center gap-1.5 bg-[#1F1F1A] text-white px-2.5 py-1.5 rounded-xl shadow-lg border border-white/10 group-hover:scale-105 transition-transform">
+             <Target className="w-3.5 h-3.5 text-[#FDCC4B]" />
+             <span className="text-xs font-black">{score}</span>
           </div>
         )}
-        {tableName && (
-          <div className="hidden xs:flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 shadow-sm">
-            <LayoutDashboard className="w-3 h-3 text-blue-500" />
-            <span className="text-[10px] font-black text-blue-700 uppercase tracking-tighter">{tableName}</span>
-          </div>
-        )}
-        <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
-          <Users className="w-3 h-3 text-slate-400" />
-          <span className="text-[10px] font-black text-slate-700">{booking.group_size}</span>
-        </div>
       </div>
     </div>
   )
@@ -635,7 +638,7 @@ function KPIBox({
       className={cn(
         "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg py-2 px-1.5 flex flex-col items-center justify-center gap-1 shadow-sm transition-all relative overflow-hidden h-full",
         color === "amber" &&
-          "border-orange-300 dark:border-orange-500/50 bg-orange-50/50 dark:bg-orange-500/10",
+        "border-orange-300 dark:border-orange-500/50 bg-orange-50/50 dark:bg-orange-500/10",
       )}
     >
       <div className="flex flex-col items-center gap-0.5 w-full">
