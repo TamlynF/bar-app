@@ -11,7 +11,8 @@ import {
     Tags,
     UserCircle,
     Users,
-    Shield
+    Shield,
+    ArrowLeft
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -33,22 +34,26 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
         { label: "System Users", href: "/settings/users", icon: Shield },
     ]
 
-    const getPageTitle = () => {
-        if (!pathname) return "Venue Manager"
-        if (pathname === "/dashboard") return "Dashboard"
-        if (pathname.startsWith("/events")) {
-            if (pathname === "/events") return "Events"
+    const getPageInfo = () => {
+        if (!pathname) return { title: "Venue Manager", subtitle: null, backHref: null }
+        
+        const normalizedPath = pathname.replace(/\/$/, "")
+        if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null }
+        
+        if (normalizedPath.startsWith("/events")) {
+            if (normalizedPath === "/events") return { title: "Events", subtitle: null, backHref: null }
             const eventsMap: Record<string, string> = {
                 "music-bookings": "Music Bookings",
                 "private-bookings": "Private Hire Bookings",
                 "quiz-bookings": "Quiz Bookings",
             }
-            const segment = pathname.split("/")[2]
-            const subTitle = eventsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
-            return `Events > ${subTitle}`
+            const segment = normalizedPath.split("/")[2]
+            const subtitle = eventsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
+            return { title: "Events", subtitle, backHref: "/events" }
         }
-        if (pathname.startsWith("/settings")) {
-            if (pathname === "/settings") return "Settings"
+        
+        if (normalizedPath.startsWith("/settings")) {
+            if (normalizedPath === "/settings") return { title: "Settings", subtitle: null, backHref: null }
             const settingsMap: Record<string, string> = {
                 "tables": "Table Setups",
                 "events": "Events",
@@ -57,13 +62,15 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                 "teams": "Teams",
                 "users": "System Users",
             }
-
-            const segment = pathname.split("/")[2]
-            const subTitle = settingsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
-            return `Settings > ${subTitle}`
+            const segment = normalizedPath.split("/")[2]
+            const subtitle = settingsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
+            return { title: "Settings", subtitle, backHref: "/settings" }
         }
-        return "Venue Manager"
+        
+        return { title: "Venue Manager", subtitle: null, backHref: null }
     }
+
+    const { title, subtitle, backHref } = getPageInfo()
 
     return (
         <div className="flex min-h-screen bg-[#F7F4EA]">
@@ -142,9 +149,24 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
             {/* 2. Main Content Wrapper */}
             <div className="flex flex-col flex-1 min-w-0">
                 <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
-                    <div className="flex items-center justify-center max-w-7xl mx-auto">
-                        <h1 className="text-lg font-black uppercase tracking-widest text-[#1F1F1A]">
-                            {getPageTitle()}
+                    <div className="flex items-center justify-between max-w-7xl mx-auto relative min-h-10">
+                        {/* Mobile Back Button - Arrow only */}
+                        {backHref && (
+                            <Link 
+                                href={backHref}
+                                className="sm:hidden absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
+                            >
+                                <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
+                            </Link>
+                        )}
+                        
+                        <h1 className="text-lg font-black uppercase tracking-widest text-[#1F1F1A] mx-auto text-center px-8">
+                            <span className="hidden sm:inline">
+                                {subtitle ? `${title} > ${subtitle}` : title}
+                            </span>
+                            <span className="sm:hidden">
+                                {subtitle || title}
+                            </span>
                         </h1>
                     </div>
                 </header>

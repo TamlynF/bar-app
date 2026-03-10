@@ -11,8 +11,24 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Plus, Edit2, Trash2, Loader2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
+  Plus, 
+  Edit2, 
+  Trash2, 
+  Loader2, 
+  CheckCircle2, 
+  XCircle, 
+  MoreVertical, 
+  Users
+} from "lucide-react";
 import { saveTableAction, deleteTableAction } from "./actions";
+import { cn } from "@/lib/utils";
 
 export type Table = {
   id: number;
@@ -59,17 +75,18 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between pb-4 border-b">
-        <div>
-          <h3 className="text-lg font-medium">Table Setups</h3>
-          <p className="text-sm text-muted-foreground">
-            Manage your physical tables and their maximum capacities.
-          </p>
-        </div>
-        
+    <div className="p-4">
+      {/* Page Information Section */}
+      <div className="pb-4 border-b">
+        <p className="text-sm text-muted-foreground font-medium">
+          Manage your physical tables and their maximum capacities.
+        </p>
+      </div>
+
+      {/* Action Section - Positioned under the line */}
+      <div className="mt-4">
         <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-          <Button onClick={handleOpenAdd} size="sm">
+          <Button onClick={handleOpenAdd} size="sm" className="font-bold uppercase tracking-wider">
             <Plus className="w-4 h-4 mr-2" />
             Add Table
           </Button>
@@ -130,52 +147,98 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
         </Sheet>
       </div>
 
-      <div className="mt-6">
-        <div className="rounded-md border">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-muted/50 text-muted-foreground">
+      {/* Table Data Section - Wrapped for horizontal scroll on mobile */}
+      <div className="mt-6 border rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left border-collapse min-w-[500px] sm:min-w-full">
+            <thead className="bg-muted/50 border-b">
               <tr>
-                <th className="px-4 py-3 font-medium">Table Name</th>
-                <th className="px-4 py-3 font-medium">Max Capacity</th>
-                <th className="px-4 py-3 font-medium text-right">Actions</th>
+                <th className="px-3 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">No.</th>
+                <th className="px-3 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Max Capacity</th>
+                <th className="px-3 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground">Available</th>
+                <th className="px-3 py-4 font-black uppercase tracking-widest text-[10px] text-muted-foreground text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y">
+            <tbody className="divide-y divide-border">
               {initialTables.map((table) => (
-                <tr key={table.id} className="hover:bg-muted/50 transition-colors">
-                  <td className="px-4 py-3 font-medium">{table.name || `Table ${table.id}`}</td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-secondary text-secondary-foreground">
-                      {table.max_capacity} Guests
+                <tr key={table.id} className="hover:bg-muted/30 transition-colors group">
+                  <td className="px-3 py-3 font-bold text-foreground">
+                    {table.name || `Table ${table.id}`}
+                  </td>
+                  <td className="px-3 py-3">
+                   <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold bg-secondary text-secondary-foreground border border-secondary-foreground/10">
+                      <Users className="w-3.5 h-3.5 opacity-70" />
+                      {table.max_capacity}
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleOpenEdit(table)}
-                        disabled={isPending}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                        onClick={() => handleDelete(table.id)}
-                        disabled={isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                  <td className="px-3 py-3">
+                    {table.available !== false ? (
+                      <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold text-xs uppercase tracking-tight">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Yes
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 text-destructive font-bold text-xs uppercase tracking-tight">
+                        <XCircle className="w-4 h-4" />
+                        No
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-3 py-3 text-right">
+                    <div className="flex items-center justify-end">
+                      {/* Desktop Actions: sm screens and up */}
+                      <div className="hidden sm:flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => handleOpenEdit(table)}
+                          disabled={isPending}
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDelete(table.id)}
+                          disabled={isPending}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+
+                      {/* Mobile Actions: 3-dot menu for smaller screens */}
+                      <div className="sm:hidden">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground rounded-full">
+                              <MoreVertical className="w-5 h-5" />
+                              <span className="sr-only">Open menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="z-9999 w-32">
+                            <DropdownMenuItem onClick={() => handleOpenEdit(table)} className="font-bold text-xs uppercase tracking-wide">
+                              <Edit2 className="mr-2 h-3.5 w-3.5" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive font-bold text-xs uppercase tracking-wide" 
+                              onClick={() => handleDelete(table.id)}
+                            >
+                              <Trash2 className="mr-2 h-3.5 w-3.5" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   </td>
                 </tr>
               ))}
               {initialTables.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={4} className="px-4 py-12 text-center text-muted-foreground italic">
                     No tables configured yet.
                   </td>
                 </tr>

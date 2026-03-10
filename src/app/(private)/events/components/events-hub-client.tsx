@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useRef, useEffect } from "react"
+import React, { useState, useRef, useEffect, useMemo } from "react"
 import { 
   Trophy, 
   Mic2, 
@@ -13,7 +13,10 @@ import {
   LayoutGrid,
   TrendingUp,
   Music,
-  LucideIcon
+  LucideIcon,
+  History,
+  CalendarCheck2,
+  MessageSquare
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
@@ -28,6 +31,7 @@ export interface EventTypeInfo {
 export interface BookingInfo {
   status: string;
   group_size: number;
+  special_requests?: string;
 }
 
 export interface EventWithDetails {
@@ -72,6 +76,7 @@ export default function EventsHubClient({
   // Mobile-first: Default to collapsed for secondary sections
   const [expandedSections, setExpandedSections] = useState({
     quiz: true,
+    historicQuiz: false,
     music: false,
     private: false
   })
@@ -84,7 +89,18 @@ export default function EventsHubClient({
   }
 
   // Aggregate stats for events
-  const quizEvents = initialEvents.filter(e => e.event_types?.sub_type === 'quiz')
+  const allQuizEvents = initialEvents.filter(e => e.event_types?.sub_type === 'quiz')
+  
+  // Categorize Quiz Events
+  const today = new Date().toISOString().split('T')[0]
+  const { upcomingQuiz, historicQuiz } = useMemo(() => {
+    const sorted = [...allQuizEvents].sort((a, b) => a.date.localeCompare(b.date));
+    return {
+      upcomingQuiz: sorted.filter(e => e.date >= today),
+      historicQuiz: sorted.filter(e => e.date < today).reverse() // Show most recent past first
+    }
+  }, [allQuizEvents, today])
+
   const liveMusic = initialEvents.filter(e => e.event_types?.type === 'music')
   const privateHire = initialEvents.filter(e => e.event_types?.type === 'private')
 
@@ -108,63 +124,49 @@ export default function EventsHubClient({
 
       <div className="space-y-5 sm:space-y-6">
         
-        {/* QUIZ SECTION */}
+        {/* UPCOMING QUIZ SECTION */}
         <CollapsibleSection 
-          title="Quiz Bookings" 
-          icon={Trophy} 
-          badge={`${quizEvents.length} Active`}
+          title="Upcoming Quizzes" 
+          icon={CalendarCheck2} 
+          badge={`${upcomingQuiz.length} Live`}
           isOpen={expandedSections.quiz}
           onToggle={() => toggleSection('quiz')}
         >
-          <div className="grid grid-cols-1 gap-3 pt-2">
-            {quizEvents.length === 0 ? (
-              <EmptyState message="No Quiz Nights scheduled" icon={Trophy} />
+          <div className="grid grid-cols-1 gap-4 pt-2">
+            {upcomingQuiz.length === 0 ? (
+              <EmptyState message="No upcoming Quiz Nights" icon={Trophy} />
             ) : (
-              quizEvents.map(event => {
-                const confirmedBookings = event.bookings.filter(b => b.status === 'confirmed')
-                const waitlistedCount = event.bookings.filter(b => b.status === 'waitlisted').length
-                const confirmedGuestCount = confirmedBookings.reduce((a, b) => a + b.group_size, 0)
-                const tablesReserved = confirmedBookings.length
-                
-                // NEW LOGIC: totalTables is 0 if seating not required, otherwise use venue available count
-                const eventTotalTables = event.seating_required ? availableTablesCount : 0
-                const occupancy = eventTotalTables > 0 ? Math.round((tablesReserved / eventTotalTables) * 100) : 0
-                
-                return (
-                  <Link key={event.id} href={`/dashboard?date=${event.date}`} className="group block bg-white border border-[#E6DFC8] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-[#26300D] transition-all hover:shadow-md active:scale-[0.99]">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="min-w-0 pr-2">
-                        <h4 className="font-black text-base sm:text-lg text-[#1F1F1A] uppercase tracking-tight truncate leading-tight">{event.title}</h4>
-                        <p className="text-[10px] text-[#5F624F] font-bold opacity-60 uppercase mt-1">
-                          {new Date(event.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
-                        </p>
-                      </div>
-                      <StatusBadge occupancy={occupancy} />
-                    </div>
+              upcomingQuiz.map(event => (
+                <QuizEventCard 
+                  key={event.id} 
+                  event={event} 
+                  availableTablesCount={availableTablesCount} 
+                  isHistoric={false} 
+                />
+              ))
+            )}
+          </div>
+        </CollapsibleSection>
 
-                   <div className="bg-[#F7F4EA]/50 p-3 rounded-xl border border-[#E6DFC8]/50 mb-4">
-                      <div className="flex justify-between text-[9px] font-black uppercase text-[#5F624F] mb-2 px-1">
-                        <span>Floor Utilization</span>
-                        <span className={cn(occupancy > 90 ? "text-red-600" : "text-[#26300D]")}>
-                          {tablesReserved} / {eventTotalTables} Tables
-                        </span>
-                      </div>
-                      <ProgressBar occupancy={occupancy} />
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex gap-4">
-                         <StatMini icon={Users} value={confirmedGuestCount} label="Guests" />
-                         <StatMini icon={CheckCircle2} value={tablesReserved} label="Teams" color="green" />
-                         {waitlistedCount > 0 && <StatMini icon={Clock3} value={waitlistedCount} label="Wait" color="amber" />}
-                      </div>
-                      <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center group-hover:bg-[#26300D] group-hover:text-white transition-colors">
-                        <ChevronRight className="w-4 h-4" />
-                      </div>
-                    </div>
-                  </Link>
-                )
-              })
+        {/* HISTORIC QUIZ SECTION */}
+        <CollapsibleSection 
+          title="Historic Quizzes" 
+          icon={History} 
+          isOpen={expandedSections.historicQuiz}
+          onToggle={() => toggleSection('historicQuiz')}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 opacity-80">
+            {historicQuiz.length === 0 ? (
+              <EmptyState message="No previous data found" icon={History} />
+            ) : (
+              historicQuiz.map(event => (
+                <QuizEventCard 
+                  key={event.id} 
+                  event={event} 
+                  availableTablesCount={availableTablesCount} 
+                  isHistoric={true} 
+                />
+              ))
             )}
           </div>
         </CollapsibleSection>
@@ -233,6 +235,89 @@ export default function EventsHubClient({
 /**
  * REUSABLE INTERNAL COMPONENTS
  */
+
+function QuizEventCard({ 
+  event, 
+  availableTablesCount, 
+  isHistoric 
+}: { 
+  event: EventWithDetails, 
+  availableTablesCount: number, 
+  isHistoric: boolean 
+}) {
+  const confirmedBookings = event.bookings.filter(b => b.status === 'confirmed')
+  const waitlistedCount = event.bookings.filter(b => b.status === 'waitlisted').length
+  const specialRequestsCount = event.bookings.filter(b => b.special_requests && b.special_requests.trim() !== "").length
+  const confirmedGuestCount = confirmedBookings.reduce((a, b) => a + b.group_size, 0)
+  const tablesReserved = confirmedBookings.length
+  
+  const eventTotalTables = event.seating_required ? availableTablesCount : 0
+  const occupancy = eventTotalTables > 0 ? Math.round((tablesReserved / eventTotalTables) * 100) : 0
+
+  return (
+    <Link 
+      href={`/dashboard?date=${event.date}`} 
+      className={cn(
+        "group block bg-white border border-[#E6DFC8] rounded-2xl p-4 sm:p-5 shadow-sm transition-all active:scale-[0.99]",
+        isHistoric ? "hover:border-slate-400" : "hover:border-[#26300D] hover:shadow-md"
+      )}
+    >
+      <div className="flex justify-between items-start mb-4">
+        <div className="min-w-0 pr-2">
+          <div className="flex items-center gap-2 mb-1">
+             <h4 className="font-black text-base sm:text-lg text-[#1F1F1A] uppercase tracking-tight truncate leading-tight">{event.title}</h4>
+             {specialRequestsCount > 0 && !isHistoric && (
+               <div className="flex items-center justify-center bg-amber-500 rounded-full px-1.5 py-0.5 shadow-sm">
+                  <MessageSquare className="w-3 h-3 text-white mr-1" />
+                  <span className="text-[9px] font-black text-white">{specialRequestsCount}</span>
+               </div>
+             )}
+          </div>
+          <p className="text-[10px] text-[#5F624F] font-bold opacity-60 uppercase">
+            {new Date(event.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short', year: isHistoric ? 'numeric' : undefined })}
+          </p>
+        </div>
+        <div className="flex flex-col items-end gap-1">
+          <StatusBadge occupancy={occupancy} isHistoric={isHistoric} />
+          {isHistoric && <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Completed</span>}
+        </div>
+      </div>
+
+      {!isHistoric && (
+        <div className="bg-[#F7F4EA]/50 p-3 rounded-xl border border-[#E6DFC8]/50 mb-4">
+          <div className="flex justify-between text-[9px] font-black uppercase text-[#5F624F] mb-2 px-1">
+            <span>Floor Utilization</span>
+            <span className={cn(occupancy > 90 ? "text-red-600" : "text-[#26300D]")}>
+              {tablesReserved} / {eventTotalTables} Tables
+            </span>
+          </div>
+          <ProgressBar occupancy={occupancy} />
+        </div>
+      )}
+
+      <div className="flex items-center justify-between">
+        <div className="flex gap-4">
+          <StatMini icon={Users} value={confirmedGuestCount} label="Guests" />
+          <StatMini icon={CheckCircle2} value={tablesReserved} label="Teams" color={isHistoric ? "default" : "green"} />
+          {waitlistedCount > 0 && (
+            <StatMini 
+              icon={Clock3} 
+              value={waitlistedCount} 
+              label="Wait" 
+              color={isHistoric ? "default" : "amber"} 
+            />
+          )}
+        </div>
+        <div className={cn(
+          "w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center transition-colors",
+          !isHistoric && "group-hover:bg-[#26300D] group-hover:text-white"
+        )}>
+          <ChevronRight className="w-4 h-4" />
+        </div>
+      </div>
+    </Link>
+  )
+}
 
 function CollapsibleSection({ 
   title, 
@@ -318,7 +403,15 @@ function StatMini({ icon: Icon, value, label, color = "default" }: { icon: Lucid
   )
 }
 
-function StatusBadge({ occupancy }: { occupancy: number }) {
+function StatusBadge({ occupancy, isHistoric }: { occupancy: number, isHistoric: boolean }) {
+  if (isHistoric) {
+    return (
+      <div className="px-2 sm:px-3 py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border shrink-0 bg-slate-50 text-slate-400 border-slate-200">
+        Closed
+      </div>
+    )
+  }
+
   const isFull = occupancy >= 100
   return (
     <div className={cn(
