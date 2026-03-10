@@ -1,6 +1,5 @@
 import { useFormatCurrency } from "@/hooks/use-format-currency"
-import { HandCoins, Wallet, Landmark, PiggyBank, Pencil, type LucideIcon } from 'lucide-react'
-import Link from "next/link"
+import { HandCoins, Wallet, Landmark, PiggyBank, type LucideIcon } from 'lucide-react'
 
 export default function BookingItem({
   key, id, teamName, date, amount, status = 'confirmed'

@@ -307,7 +307,6 @@ async function sendBookingEmail(
     
   } else {
     subject = "You are on the Waitlist";
-    const text = `Hi ${name},\n\nThank you for choosing us. Unfortunately, we don't currently have a table available for ${team_size} guests on ${quiz_date}.\n\nYou have been added to our waiting list, and we will notify you immediately if a table opens up.`;
     html = `
           <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 40px 20px; border-radius: 12px; color: #1f2937;">
             <div style="background-color: #ffffff; padding: 40px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;">
