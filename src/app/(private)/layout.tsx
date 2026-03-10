@@ -12,7 +12,8 @@ import {
     UserCircle,
     Users,
     Shield,
-    ArrowLeft
+    ArrowLeft,
+    Sparkles
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +23,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
     const navItems = [
         { label: "Home", href: "/dashboard", icon: LayoutDashboard },
         { label: "Events", href: "/events", icon: CalendarRange },
+        { label: "Quiz AI", href: "/quiz-generator", icon: Sparkles },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
@@ -39,6 +41,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
         
         const normalizedPath = pathname.replace(/\/$/, "")
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null }
+        if (normalizedPath === "/quiz-generator") return { title: "Quiz AI", subtitle: "Generator", backHref: "/dashboard" }
         
         if (normalizedPath.startsWith("/events")) {
             if (normalizedPath === "/events") return { title: "Events", subtitle: null, backHref: null }
@@ -75,7 +78,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
     return (
         <div className="flex min-h-screen bg-[#F7F4EA]">
             {/* 1. Sidebar for Tablets/Desktops */}
-            <aside className="hidden sm:flex flex-col w-64 bg-white border-r border-[#E6DFC8] sticky top-0 h-screen shrink-0">
+            <aside className="hidden sm:flex flex-col w-64 bg-white border-r border-[#E6DFC8] sticky top-0 h-screen shrink-0 z-50">
                 {/* Sidebar Brand */}
                 <div className="p-6 border-b border-[#E6DFC8] flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-[#26300D] flex items-center justify-center shrink-0 shadow-sm">
@@ -98,7 +101,6 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                         return (
                             <React.Fragment key={item.href}>
                                 <Link
-                                    key={item.href}
                                     href={item.href}
                                     className={cn(
                                         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
@@ -149,8 +151,9 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
             {/* 2. Main Content Wrapper */}
             <div className="flex flex-col flex-1 min-w-0">
                 <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
-                    <div className="flex items-center justify-between max-w-7xl mx-auto relative min-h-10">
-                        {/* Mobile Back Button - Arrow only */}
+                    <div className="flex items-center max-w-7xl mx-auto min-h-10 relative">
+                        
+                        {/* Mobile Back Button - Using 'absolute' to keep it out of flex flow for easier h1 centering */}
                         {backHref && (
                             <Link 
                                 href={backHref}
@@ -160,31 +163,31 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                             </Link>
                         )}
                         
-                        <h1 className="text-lg font-black uppercase tracking-widest text-[#1F1F1A] mx-auto text-center px-8">
-                            <span className="hidden sm:inline">
-                                {subtitle ? `${title} > ${subtitle}` : title}
-                            </span>
-                            <span className="sm:hidden">
-                                {subtitle || title}
-                            </span>
-                        </h1>
+                        {/* Title - Simplified logic to ensure it shows on both desktop and mobile */}
+                        <div className="flex flex-col items-center justify-center w-full">
+                            <h1 className="text-sm sm:text-base font-black uppercase tracking-widest text-[#1F1F1A] text-center px-8 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+                                <span>{title}</span>
+                                {subtitle && (
+                                    <>
+                                        <span className="hidden sm:inline opacity-30">/</span>
+                                        <span className="text-[#5F624F] opacity-70 sm:opacity-100">{subtitle}</span>
+                                    </>
+                                )}
+                            </h1>
+                        </div>
                     </div>
                 </header>
 
-                {/* Scrollable Content Area */}
                 <main className="flex-1 w-full max-w-7xl mx-auto p-1 sm:p-6 pb-20 sm:pb-8">
                     {children}
                 </main>
 
-                {/* 3. Persistent Mobile Bottom Navigation (Visible only on mobile) */}
+                {/* 3. Persistent Mobile Bottom Navigation */}
                 <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E6DFC8] py-2 sm:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                     <div className="flex justify-around items-center w-full max-w-md mx-auto px-6">
                         {navItems.map((item) => {
-                            // Normalize paths by removing trailing slashes for the comparison
                             const normalizedPathname = pathname?.replace(/\/$/, "") || ""
                             const normalizedHref = item.href.replace(/\/$/, "")
-
-                            // Check if it's an exact match or a sub-route
                             const isActive = normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)
 
                             return (

@@ -4,30 +4,6 @@ import EventsHubClient, { EventWithDetails } from "./components/events-hub-clien
 
 export const dynamic = 'force-dynamic'
 
-const eventBookingItems = [
-  {
-    title: "Quiz Bookings",
-    description: "Floor plans and capacities",
-    href: "/settings/tables",
-    icon: LayoutDashboard,
-    color: "bg-blue-500/10 text-blue-600",
-  },
-  {
-    title: "Music Bookings",
-    description: "Schedule and manage dates",
-    href: "/settings/events",
-    icon: CalendarDays,
-    color: "bg-amber-500/10 text-amber-600",
-  },
-  {
-    title: "Private Event Bookings",
-    description: "Categories and requirements",
-    href: "/settings/event-types",
-    icon: Tags,
-    color: "bg-purple-500/10 text-purple-600",
-  },
-];
-
 export default async function EventsHubPage() {
   const supabase = await createClient()
 
