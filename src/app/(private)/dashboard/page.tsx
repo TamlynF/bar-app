@@ -1,9 +1,10 @@
 import React, { Suspense } from "react";
-import { createClient } from "@/lib/supabase/server"
+// Switched to relative paths to resolve environment-specific compilation errors
+import { createClient } from "../../../lib/supabase/server"
 import BookingListClient from "./components/booking-list-client"
 import { Booking } from "../events/quiz-bookings/page"
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../../components/ui/button";
 import { Plus } from "lucide-react";
 
 export const dynamic = 'force-dynamic'
@@ -35,11 +36,11 @@ export default async function DashboardPage() {
           ),
           events!inner(
             event_date: date,
-        event_start_time: start_time,
-        event_end_time: end_time,
-        event_title: title,
-        event_description: description,
-        event_payment_amount: payment_amount,
+            event_start_time: start_time,
+            event_end_time: end_time,
+            event_title: title,
+            event_description: description,
+            event_payment_amount: payment_amount,
             event_types!inner(
               category: type,
               sub_type
@@ -47,12 +48,13 @@ export default async function DashboardPage() {
           ),
           booking_table_mappings(
             tables(
-            tables_id: id,  
-            tables_name: name,
+              tables_id: id,  
+              tables_name: name,
               tables_capacity: max_capacity,
               tables_description: description,
               tables_available: available              
             )
+          )
         `)
       .order('created_at', { ascending: false });
 
@@ -70,7 +72,7 @@ export default async function DashboardPage() {
       <div className="fixed top-0 right-0 w-96 h-96 bg-accent/10 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-0 left-0 w-80 h-80 bg-accent/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6">
+      <div className="p-4 md:p-8 max-w-5xl mx-auto space-y-6 text-left">
         <Suspense fallback={<div className="h-64 bg-card rounded-2xl animate-pulse" />}>
           <BookingListClient initialBookings={typedBookings} />
         </Suspense>
