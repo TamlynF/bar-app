@@ -4,7 +4,7 @@ import React, { useMemo, useState, useTransition } from "react"
 import styles from "./booking-list-client.module.css"
 import { Calendar } from "@/components/ui/calendar"
 import { format, isSameDay } from "date-fns"
-import { updateBookingStatus } from "@/app/(private)/dashboard/actions"
+import { updateBookingStatus } from "@/app/(private)/actions/booking-actions"
 import {
   BadgePoundSterling,
   CalendarDays,
@@ -35,6 +35,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
+import { Booking } from "../../events/quiz-bookings/page"
 
 const formatDateStr = (d: Date) => {
   const date = new Date(d.getTime() - d.getTimezoneOffset() * 60000)
@@ -102,7 +103,7 @@ const statusTheme: Record<
   },
 }
 
-export interface Booking {
+export interface RawBooking {
   id: string
   group_name?: string
   group_size: number

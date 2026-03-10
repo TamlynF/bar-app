@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server"
-import BookingListClient, { Booking } from "./components/booking-list-client"
+import BookingListClient, { RawBooking } from "./components/booking-list-client"
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
@@ -8,7 +8,7 @@ import { Plus } from "lucide-react";
 export const dynamic = 'force-dynamic'
 
 export default async function DashboardPage() {
-  let typedBookings: Booking[] = []
+  let typedBookings: RawBooking[] = []
 
   try {
     const supabase = await createClient()
@@ -48,7 +48,7 @@ export default async function DashboardPage() {
     if (error) {
       console.error("Error fetching bookings:", error)
     }
-    typedBookings = (bookings as unknown as Booking[]) ?? []
+    typedBookings = (bookings as unknown as RawBooking[]) ?? []
   } catch (error) {
     console.error("Dashboard data source unavailable:", error)
   }

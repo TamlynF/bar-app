@@ -30,6 +30,12 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
+    const eventSubItems = [
+        { label: "Quiz Bookings", href: "/events/quiz-bookings", icon: Trophy },
+        { label: "Music Bookings", href: "/events/music-bookings", icon: Music },
+        { label: "Private Hire", href: "/events/private-bookings", icon: Lock },
+    ]
+
     const settingsSubItems = [
         { label: "Table Setups", href: "/settings/tables", icon: LayoutDashboard },
         { label: "Events", href: "/settings/events", icon: CalendarDays },
@@ -39,19 +45,13 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
         { label: "System Users", href: "/settings/users", icon: Shield },
     ]
 
-    const eventBookingSubItems = [
-        { label: "Quiz Bookings", href: "/events/quiz-bookings", icon: Trophy },
-        { label: "Music Bookings", href: "/events/music-bookings", icon: Music },
-        { label: "Private Event Bookings", href: "/events/private-bookings", icon: Lock },
-    ];
-
     const getPageInfo = () => {
         if (!pathname) return { title: "Venue Manager", subtitle: null, backHref: null }
-
+        
         const normalizedPath = pathname.replace(/\/$/, "")
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null }
         if (normalizedPath === "/quiz-generator") return { title: "Quiz AI", subtitle: "Generator", backHref: "/dashboard" }
-
+        
         if (normalizedPath.startsWith("/events")) {
             if (normalizedPath === "/events") return { title: "Events", subtitle: null, backHref: null }
             const eventsMap: Record<string, string> = {
@@ -63,7 +63,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
             const subtitle = eventsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
             return { title: "Events", subtitle, backHref: "/events" }
         }
-
+        
         if (normalizedPath.startsWith("/settings")) {
             if (normalizedPath === "/settings") return { title: "Settings", subtitle: null, backHref: null }
             const settingsMap: Record<string, string> = {
@@ -78,7 +78,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
             const subtitle = settingsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
             return { title: "Settings", subtitle, backHref: "/settings" }
         }
-
+        
         return { title: "Venue Manager", subtitle: null, backHref: null }
     }
 
@@ -105,7 +105,9 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                         const normalizedPathname = pathname?.replace(/\/$/, "") || ""
                         const normalizedHref = item.href.replace(/\/$/, "")
                         const isActive = normalizedPathname === normalizedHref || (item.href !== "/dashboard" && normalizedPathname.startsWith(`${normalizedHref}/`))
+                        
                         const isSettings = item.label === "Settings"
+                        const isEvents = item.label === "Events"
 
                         return (
                             <React.Fragment key={item.href}>
@@ -121,6 +123,31 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                                     <item.icon className={cn("w-5 h-5", isActive ? "text-[#FDCC4B]" : "text-[#5F624F]")} />
                                     {item.label}
                                 </Link>
+
+                                {/* Sub-items for Events */}
+                                {isEvents && (
+                                    <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
+                                        {eventSubItems.map((sub) => {
+                                            const isSubActive = normalizedPathname === sub.href
+                                            return (
+                                                <Link
+                                                    key={sub.href}
+                                                    href={sub.href}
+                                                    className={cn(
+                                                        "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[11px] uppercase tracking-wider",
+                                                        isSubActive
+                                                            ? "text-[#26300D] bg-[#FDCC4B]/20"
+                                                            : "text-[#5F624F] hover:text-[#26300D] hover:bg-[#26300D]/5"
+                                                    )}
+                                                >
+                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#26300D]" : "text-[#5F624F]/50")} />
+                                                    {sub.label}
+                                                </Link>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+
                                 {/* Sub-items for Settings */}
                                 {isSettings && (
                                     <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
@@ -131,7 +158,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                                                     key={sub.href}
                                                     href={sub.href}
                                                     className={cn(
-                                                        "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[10px] uppercase tracking-tighter",
+                                                        "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[11px] uppercase tracking-wider",
                                                         isSubActive
                                                             ? "text-[#26300D] bg-[#FDCC4B]/20"
                                                             : "text-[#5F624F] hover:text-[#26300D] hover:bg-[#26300D]/5"
@@ -161,8 +188,8 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
             <div className="flex flex-col flex-1 min-w-0">
                 <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
                     <div className="flex items-center max-w-7xl mx-auto min-h-10 relative">
-
-                        {/* Mobile Back Button - Using 'absolute' to keep it out of flex flow for easier h1 centering */}
+                        
+                        {/* Mobile Back Button */}
                         {backHref && (
                             <Link
                                 href={backHref}
@@ -171,8 +198,8 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                                 <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
                             </Link>
                         )}
-
-                        {/* Title - Simplified logic to ensure it shows on both desktop and mobile */}
+                        
+                        {/* Title */}
                         <div className="flex flex-col items-center justify-center w-full">
                             <h1 className="text-sm sm:text-base font-black uppercase tracking-widest text-[#1F1F1A] text-center px-8 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
                                 <span>{title}</span>
