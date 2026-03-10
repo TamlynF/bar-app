@@ -160,7 +160,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   };
 
   const handleTypeSubmit = (formData: FormData) => {
-    console.log(Object.fromEntries(formData.entries()));
+    // console.log(Object.fromEntries(formData.entries()));
     setTypeSheetError(null);
 
     const rawType = formData.get("type")?.toString() || typeInput;
@@ -234,7 +234,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   };
 
   const handleInfoSubmit = (formData: FormData) => {
-    console.log("Submitting Event Info Form with data:", Object.fromEntries(formData.entries()));
+    // console.log("Submitting Event Info Form with data:", Object.fromEntries(formData.entries()));
 
     startTransition(async () => {
       const result = await saveEventInfoAction(formData);
@@ -300,7 +300,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         ) : (
           groupedEventTypes.map(([typeKey, items]) => {
             const isGroupExpanded = expandedGroups.has(typeKey) || groupedEventTypes.length === 1;
-            console.log(items);
 
             return (
               <div key={typeKey} className="border rounded-2xl bg-card overflow-hidden shadow-sm transition-all duration-300">
@@ -654,266 +653,266 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           setSubTypeInput("");
         }
       }}>
-        <SheetContent className="sm:max-w-md flex flex-col p-0 gap-0 border-l border-border/50">
-          <div className="flex flex-col h-full overflow-hidden">
-            <SheetHeader className="px-6 pt-6 pb-4 text-left border-b border-border/40 shrink-0">
-              <SheetTitle className="text-xl font-bold">
-                {sheetMode === 'type'
-                  ? (editingType?.type ? `Rename Type: ${toTitleCase(typeInput)}` : "Add Event Type")
-                  : (editingType?.id ? "Edit Sub-type" : "Add Sub-type")
-                }
-              </SheetTitle>
-              <SheetDescription className="text-sm text-muted-foreground">
-                {sheetMode === 'type'
-                  ? "Manage the primary type for these events."
-                  : `Defining a specific sub-type within the ${typeInput || 'selected'} type.`
-                }
-              </SheetDescription>
-            </SheetHeader>
+        <SheetContent side="right" className="w-full sm:max-w-md h-full flex flex-col p-0 gap-0 border-l border-border/50">
+          {/* <div className="flex flex-col h-full overflow-hidden"> */}
+          <SheetHeader className="px-6 pt-6 pb-4 text-left border-b border-border/40 shrink-0">
+            <SheetTitle className="text-xl font-bold">
+              {sheetMode === 'type'
+                ? (editingType?.type ? `Rename Type: ${toTitleCase(typeInput)}` : "Add Event Type")
+                : (editingType?.id ? "Edit Sub-type" : "Add Sub-type")
+              }
+            </SheetTitle>
+            <SheetDescription className="text-sm text-muted-foreground">
+              {sheetMode === 'type'
+                ? "Manage the primary type for these events."
+                : `Defining a specific sub-type within the ${typeInput || 'selected'} type.`
+              }
+            </SheetDescription>
+          </SheetHeader>
 
-            <form action={handleTypeSubmit} className="flex flex-col flex-1 overflow-hidden bg-background/50">
-              {editingType?.id && <input type="hidden" name="id" value={editingType.id} />}
+          <form action={handleTypeSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden bg-background/50">
+            {editingType?.id && <input type="hidden" name="id" value={editingType.id} />}
 
-              {/* Scrollable Form Body */}
-              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-                {/* Event Type Input/Selection */}
-                <div className="space-y-3">
-                  <Label htmlFor="type-select" className="text-sm font-semibold text-foreground">
-                    Type <span className="text-destructive">*</span>
-                  </Label>
+            {/* Scrollable Form Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+              {/* Event Type Input/Selection */}
+              <div className="space-y-3">
+                <Label htmlFor="type-select" className="text-sm font-semibold text-foreground">
+                  Type <span className="text-destructive">*</span>
+                </Label>
 
-                  <div className="space-y-4">
-                    <div className="relative group">
-                      <select
-                        id="type-select"
-                        title="Type Selection"
-                        name="type-select"
-                        required={!isCustomType}
-                        value={selectedTypeValue}
-                        className="flex h-12 sm:h-11 w-full rounded-xl sm:rounded-lg border border-input bg-background px-4 py-2 text-base sm:text-sm appearance-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
-                        onChange={(e) => {
-                          const val = e.target.value;
-                          setSelectedTypeValue(val);
-                          if (val === "custom") {
-                            setIsCustomType(true);
-                            setTypeInput(""); // User needs to enter the name
-                          } else {
-                            setIsCustomType(false);
-                            setTypeInput(val);
-                          }
-                        }}
-                      >
-                        <option value="" disabled>Select an event type...</option>
-                        {uniqueTypes.map(t => (
-                          <option key={t} value={t}>{t}</option>
-                        ))}
-                        <option value="custom" className="font-bold text-primary">+ New Type...</option>
-                      </select>
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-muted-foreground">
-                        <ChevronDown className="h-5 w-5" />
-                      </div>
-
-                      {!isCustomType && (
-                        <input type="hidden" name="type" value={typeInput} />
-                      )}
+                <div className="space-y-4">
+                  <div className="relative group">
+                    <select
+                      id="type-select"
+                      title="Type Selection"
+                      name="type-select"
+                      required={!isCustomType}
+                      value={selectedTypeValue}
+                      className="flex h-12 sm:h-11 w-full rounded-xl sm:rounded-lg border border-input bg-background px-4 py-2 text-base sm:text-sm appearance-none focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all shadow-sm"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setSelectedTypeValue(val);
+                        if (val === "custom") {
+                          setIsCustomType(true);
+                          setTypeInput(""); // User needs to enter the name
+                        } else {
+                          setIsCustomType(false);
+                          setTypeInput(val);
+                        }
+                      }}
+                    >
+                      <option value="" disabled>Select an event type...</option>
+                      {uniqueTypes.map(t => (
+                        <option key={t} value={t}>{t}</option>
+                      ))}
+                      <option value="custom" className="font-bold text-primary">+ New Type...</option>
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-muted-foreground">
+                      <ChevronDown className="h-5 w-5" />
                     </div>
 
-                    {isCustomType && (
-                      <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200 bg-muted/30 p-4 rounded-2xl border border-border/50">
-                        <Label htmlFor="custom-type" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                          Enter New Type Name
-                        </Label>
-                        <div className="flex gap-3">
-                          <Input
-                            id="custom-type"
-                            name="type"
-                            placeholder="e.g. Music, Game Nights..."
-                            required
-                            value={typeInput}
-                            onChange={(e) => setTypeInput(e.target.value)}
-                            autoFocus
-                            className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm bg-background"
-                          />
-                          {uniqueTypes.length > 0 && (
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="icon"
-                              onClick={() => {
-                                setIsCustomType(false);
-                                setSelectedTypeValue("");
-                                setTypeInput("");
-                              }}
-                              className="h-12 w-12 sm:h-11 sm:w-11 shrink-0 rounded-xl sm:rounded-lg shadow-sm bg-background hover:bg-muted"
-                              title="Back to list"
-                            >
-                              <RotateCcw className="w-5 h-5 sm:w-4 sm:h-4 text-muted-foreground" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
+                    {!isCustomType && (
+                      <input type="hidden" name="type" value={typeInput} />
                     )}
+                  </div>
+
+                  {isCustomType && (
+                    <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200 bg-muted/30 p-4 rounded-2xl border border-border/50">
+                      <Label htmlFor="custom-type" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                        Enter New Type Name
+                      </Label>
+                      <div className="flex gap-3">
+                        <Input
+                          id="custom-type"
+                          name="type"
+                          placeholder="e.g. Music, Game Nights..."
+                          required
+                          value={typeInput}
+                          onChange={(e) => setTypeInput(e.target.value)}
+                          autoFocus
+                          className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm bg-background"
+                        />
+                        {uniqueTypes.length > 0 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            onClick={() => {
+                              setIsCustomType(false);
+                              setSelectedTypeValue("");
+                              setTypeInput("");
+                            }}
+                            className="h-12 w-12 sm:h-11 sm:w-11 shrink-0 rounded-xl sm:rounded-lg shadow-sm bg-background hover:bg-muted"
+                            title="Back to list"
+                          >
+                            <RotateCcw className="w-5 h-5 sm:w-4 sm:h-4 text-muted-foreground" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Show Sub-type ONLY if NOT renaming a group (sheetMode type with editing ID) */}
+              {(sheetMode === 'subtype' || !editingType?.id) && (
+                <div className="space-y-3">
+                  <Label htmlFor="sub_type" className="text-sm font-semibold text-foreground">
+                    Sub-type <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="sub_type"
+                    name="sub_type"
+                    placeholder="e.g. General"
+                    value={subTypeInput}
+                    onChange={(e) => setSubTypeInput(e.target.value)}
+                    required
+                    className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm"
+                  />
+                  {!editingType?.id && (
+                    <p className="text-xs text-muted-foreground italic px-1">
+                      Every type needs at least one sub-type to be created.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* REAL-TIME VALIDATION MESSAGE - VISIBLE FOR ALL MODES */}
+              {subTypeConflictError && (
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 shadow-sm">
+                  <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                  <div className="flex flex-col gap-1">
+                    <h5 className="text-xs font-black text-destructive uppercase tracking-widest">Conflict Detected</h5>
+                    <p className="text-sm text-destructive/90 font-medium leading-snug">{subTypeConflictError}</p>
                   </div>
                 </div>
+              )}
 
-                {/* Show Sub-type ONLY if NOT renaming a group (sheetMode type with editing ID) */}
-                {(sheetMode === 'subtype' || !editingType?.id) && (
-                  <div className="space-y-3">
-                    <Label htmlFor="sub_type" className="text-sm font-semibold text-foreground">
-                      Sub-type <span className="text-destructive">*</span>
-                    </Label>
-                    <Input
-                      id="sub_type"
-                      name="sub_type"
-                      placeholder="e.g. General"
-                      value={subTypeInput}
-                      onChange={(e) => setSubTypeInput(e.target.value)}
-                      required
-                      className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm"
-                    />
-                    {!editingType?.id && (
-                      <p className="text-xs text-muted-foreground italic px-1">
-                        Every type needs at least one sub-type to be created.
-                      </p>
-                    )}
+              {/* SERVER-SIDE ERROR DISPLAY */}
+              {typeSheetError && (
+                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 shadow-sm">
+                  <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
+                  <div className="flex flex-col gap-1">
+                    <h5 className="text-xs font-black text-destructive uppercase tracking-widest">Configuration Error</h5>
+                    <p className="text-sm text-destructive/90 font-medium leading-snug">{typeSheetError}</p>
                   </div>
-                )}
+                </div>
+              )}
+            </div>
 
-                {/* REAL-TIME VALIDATION MESSAGE - VISIBLE FOR ALL MODES */}
-                {subTypeConflictError && (
-                  <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 shadow-sm">
-                    <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-                    <div className="flex flex-col gap-1">
-                      <h5 className="text-xs font-black text-destructive uppercase tracking-widest">Conflict Detected</h5>
-                      <p className="text-sm text-destructive/90 font-medium leading-snug">{subTypeConflictError}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* SERVER-SIDE ERROR DISPLAY */}
-                {typeSheetError && (
-                  <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 shadow-sm">
-                    <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-                    <div className="flex flex-col gap-1">
-                      <h5 className="text-xs font-black text-destructive uppercase tracking-widest">Configuration Error</h5>
-                      <p className="text-sm text-destructive/90 font-medium leading-snug">{typeSheetError}</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="shrink-0 border-t border-border/40 bg-card/95 backdrop-blur p-4 sm:px-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 z-10">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsTypeSheetOpen(false)}
-                  disabled={isPending}
-                  className="h-12 sm:h-10 rounded-xl sm:rounded-lg w-full sm:w-auto font-medium"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isPending || !!subTypeConflictError}
-                  className="h-12 sm:h-10 rounded-xl sm:rounded-lg w-full sm:w-auto font-bold shadow-md"
-                >
-                  {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingType?.id || (sheetMode === 'type' && editingType?.type) ? "Update" : "Save"}
-                </Button>
-              </div>
-            </form>
-          </div>
+            <div className="shrink-0 border-t border-border/40 bg-card/95 backdrop-blur p-4 pb-10 sm:pb-4 sm:px-6 flex flex-row justify-end gap-3 z-10">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsTypeSheetOpen(false)}
+                disabled={isPending}
+                className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl sm:rounded-lg font-medium"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending || !!subTypeConflictError}
+                className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl sm:rounded-lg font-bold shadow-md"
+              >
+                {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editingType?.id || (sheetMode === 'type' && editingType?.type) ? "Update" : "Save"}
+              </Button>
+            </div>
+          </form>
+          {/* </div> */}
         </SheetContent>
       </Sheet>
 
       {/* Detail Sheet */}
       <Sheet open={isInfoSheetOpen} onOpenChange={setIsInfoSheetOpen}>
-        <SheetContent className="sm:max-w-md flex flex-col p-0 gap-0 border-l border-border/50">
-          <div className="flex flex-col h-full overflow-hidden">
-            <SheetHeader className="px-6 pt-6 pb-4 text-left border-b border-border/40 shrink-0">
-              <SheetTitle className="text-xl font-bold">
-                {editingInfo ? `Edit Detail` : "Add Detail"}
-              </SheetTitle>
-              <SheetDescription className="text-sm">
-                Provide specific parameters and icons for this event type.
-              </SheetDescription>
-            </SheetHeader>
+        <SheetContent side="right" className="w-full sm:max-w-md h-full flex flex-col p-0 gap-0 border-l border-border/50">
 
-            <form action={handleInfoSubmit} className="flex flex-col flex-1 overflow-hidden bg-background/50">
-              {editingInfo && <input type="hidden" name="id" value={editingInfo.id} />}
-              <input type="hidden" name="event_types_id" value={activeTypeId || ""} />
-              <input type="hidden" name="icon" value={selectedIcon} />
+          <SheetHeader className="px-6 pt-6 pb-4 text-left border-b border-border/40 shrink-0">
+            <SheetTitle className="text-xl font-bold">
+              {editingInfo ? `Edit Detail` : "Add Detail"}
+            </SheetTitle>
+            <SheetDescription className="text-sm">
+              Provide specific parameters and icons for this event type.
+            </SheetDescription>
+          </SheetHeader>
 
-              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-                <div className="space-y-3">
-                  <Label htmlFor="title" className="text-sm font-semibold text-foreground">
-                    Title <span className="text-destructive">*</span>
-                  </Label>
-                  <Input
-                    id="title"
-                    name="title"
-                    placeholder="e.g. Every Thursday"
-                    defaultValue={editingInfo?.title || ""}
-                    required
-                    className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <Label htmlFor="description" className="text-sm font-semibold text-foreground">
-                    Description
-                  </Label>
-                  <Input
-                    id="description"
-                    name="description"
-                    placeholder="e.g. 8:00PM start"
-                    defaultValue={editingInfo?.description || ""}
-                    className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm"
-                  />
-                </div>
-                <div className="space-y-4 pt-2">
-                  <Label className="text-sm font-semibold text-foreground">Select Icon</Label>
-                  <div className="grid grid-cols-5 sm:grid-cols-6 gap-3 pt-1">
-                    {Object.entries(ICON_OPTIONS).map(([name, IconComponent]) => (
-                      <button
-                        key={name}
-                        title={name}
-                        type="button"
-                        onClick={() => setSelectedIcon(name)}
-                        className={cn(
-                          "flex items-center justify-center aspect-square rounded-xl border transition-all duration-200 active:scale-95",
-                          selectedIcon === name
-                            ? 'bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 scale-105'
-                            : 'hover:bg-muted bg-background text-muted-foreground border-border/60 hover:border-border'
-                        )}
-                      >
-                        <IconComponent className="w-6 h-6 sm:w-5 sm:h-5" />
-                      </button>
-                    ))}
-                  </div>
+          <form action={handleInfoSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden bg-background/50">
+            {editingInfo && <input type="hidden" name="id" value={editingInfo.id} />}
+            <input type="hidden" name="event_types_id" value={activeTypeId || ""} />
+            <input type="hidden" name="icon" value={selectedIcon} />
+
+            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+              <div className="space-y-3">
+                <Label htmlFor="title" className="text-sm font-semibold text-foreground">
+                  Title <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="title"
+                  name="title"
+                  placeholder="e.g. Every Thursday"
+                  defaultValue={editingInfo?.title || ""}
+                  required
+                  className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm"
+                />
+              </div>
+              <div className="space-y-3">
+                <Label htmlFor="description" className="text-sm font-semibold text-foreground">
+                  Description
+                </Label>
+                <Input
+                  id="description"
+                  name="description"
+                  placeholder="e.g. 8:00PM start"
+                  defaultValue={editingInfo?.description || ""}
+                  className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm"
+                />
+              </div>
+              <div className="space-y-4 pt-2">
+                <Label className="text-sm font-semibold text-foreground">Select Icon</Label>
+                <div className="grid grid-cols-5 sm:grid-cols-6 gap-3 pt-1">
+                  {Object.entries(ICON_OPTIONS).map(([name, IconComponent]) => (
+                    <button
+                      key={name}
+                      title={name}
+                      type="button"
+                      onClick={() => setSelectedIcon(name)}
+                      className={cn(
+                        "flex items-center justify-center aspect-square rounded-xl border transition-all duration-200 active:scale-95",
+                        selectedIcon === name
+                          ? 'bg-primary text-primary-foreground border-primary shadow-md ring-2 ring-primary/20 scale-105'
+                          : 'hover:bg-muted bg-background text-muted-foreground border-border/60 hover:border-border'
+                      )}
+                    >
+                      <IconComponent className="w-6 h-6 sm:w-5 sm:h-5" />
+                    </button>
+                  ))}
                 </div>
               </div>
+            </div>
 
-              <div className="shrink-0 border-t border-border/40 bg-card/95 backdrop-blur p-4 sm:px-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-3 z-10">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsInfoSheetOpen(false)}
-                  disabled={isPending}
-                  className="h-12 sm:h-10 rounded-xl sm:rounded-lg w-full sm:w-auto font-medium"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={isPending}
-                  className="h-12 sm:h-10 rounded-xl sm:rounded-lg w-full sm:w-auto font-bold shadow-md"
-                >
-                  {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingInfo ? "Update" : "Save"}
-                </Button>
-              </div>
-            </form>
-          </div>
+            <div className="shrink-0 border-t border-border/40 bg-card/95 backdrop-blur p-4 pb-10 sm:pb-4 sm:px-6 flex flex-row justify-end gap-3 z-10">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsInfoSheetOpen(false)}
+                disabled={isPending}
+                className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl sm:rounded-lg font-medium"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className="flex-1 sm:flex-none h-12 sm:h-10 rounded-xl sm:rounded-lg font-bold shadow-md"
+              >
+                {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                {editingInfo ? "Update" : "Save"}
+              </Button>
+            </div>
+          </form>
+
         </SheetContent>
       </Sheet>
     </div>
