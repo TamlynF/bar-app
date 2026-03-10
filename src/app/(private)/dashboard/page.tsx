@@ -1,4 +1,3 @@
-// src/app/(private)/dashboard/page.tsx
 import React, { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server"
 import BookingListClient, { Booking } from "./components/booking-list-client"
@@ -71,10 +70,6 @@ export default async function DashboardPage() {
             <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-[#26300D] flex items-center justify-center border border-[#E6DFC8] shadow-sm">
               <LayoutDashboard className="w-5 h-5 md:w-6 md:h-6 text-[#FDCC4B]" />
             </div>
-            {/* <div>
-              <h1 className="text-lg md:text-xl font-bold text-[#1F1F1A] tracking-tight leading-none">Floor Manager</h1>
-              <p className="text-[10px] font-semibold text-[#5F624F] uppercase tracking-widest mt-1">Don Fenticas</p>
-            </div> */}
           </div>
         </div>
 

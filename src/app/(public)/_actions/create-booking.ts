@@ -48,7 +48,6 @@ export async function createBooking(formData: BookingFormData) {
   const supabase = await createClient();
 
   try {
-    // 1. Get the total number of physical tables from the 'tables' table
     let eventId;
 
     const { data: eventData } = await supabase

@@ -134,11 +134,9 @@ export default function BookingListClient({ initialBookings }: { initialBookings
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
 
   const toggleStatusFilter = (status: string) => {
-    console.log('🔘 Toggling filter:', status, 'Current filters:', Array.from(activeStatusFilters))
     const next = new Set(activeStatusFilters)
     if (next.has(status)) next.delete(status)
     else next.add(status)
-    console.log('✅ New filters:', Array.from(next))
     setActiveStatusFilters(next)
   }
 

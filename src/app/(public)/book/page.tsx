@@ -85,22 +85,6 @@ export default async function QuizBookingPage() {
         </div>
 
         {/* Event Badges - Horizontal Scrollable Row */}
-        {/* <div className="mb-5 -mx-4 px-4 sm:mx-0 sm:px-0 relative">
-          <div className="absolute left-0 top-0 bottom-0 w-8 bg-linear-to-r from-[#26300D] to-transparent pointer-events-none sm:hidden z-10"></div>
-          <div className="absolute right-0 top-0 bottom-0 w-8 bg-linear-to-l from-[#26300D] to-transparent pointer-events-none sm:hidden z-10"></div>
-
-          <div className="flex flex-nowrap gap-1 overflow-x-auto pb-2 no-scrollbar scroll-smooth snap-x">
-            {eventBadges.map((badge, index) => (
-              <div
-                key={index}
-                className="flex-none snap-center flex items-center bg-black/20 border border-[#fdcc4b]/40 shadow-sm rounded-full px-4 py-2 text-xs text-white sm:text-sm whitespace-nowrap transition-colors hover:bg-black/40 hover:border-[#fdcc4b]"
-              >
-                <badge.icon className="w-4 h-4 mr-2 text-[#fdcc4b]" />
-                <span className="font-medium tracking-wide">{badge.text}</span>
-              </div>
-            ))}
-          </div>
-        </div> */}
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-8 sm:mb-12">
           {eventBadges.map((badge, index) => (
             <div
