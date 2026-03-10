@@ -4,18 +4,16 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-// Using relative import to resolve compilation and resolution issues
-import { getRecentQuestionsAction, saveQuizToDatabase } from '@/app/(private)/quiz-generator/actions'
+// Fixed: Changed from @ alias to relative import to resolve compilation errors
+import { generateQuizAction, saveQuizToDatabase } from './actions'
 import { 
   Sparkles, 
   History, 
   CheckCircle2, 
   BrainCircuit, 
   Loader2, 
-  Trophy,
   AlertCircle,
   RefreshCw,
-  Check,
   Plus,
   FileCheck
 } from 'lucide-react'
@@ -45,54 +43,8 @@ export default function QuizGeneratorPage() {
     setError('')
     
     try {
-      // 1. Fetch history from server to inform AI
-      const pastQuestions = await getRecentQuestionsAction()
-      const pastQuestionsList = pastQuestions.length > 0 ? pastQuestions.join(' | ') : "None."
-
-      // 2. Call Gemini API directly on client to use injected Canvas API Key
-      const apiKey = process.env.GEMINI_API_KEY || '';
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
-
-      const systemPrompt = `You are the Pub Quiz Master for "Don Fenticas". Generate a unique trivia round.
-      CRITICAL RULE: Avoid any questions semantically similar to these previous ones: [${pastQuestionsList}]
-      Output MUST be a RAW JSON array of objects with keys: "question", "answer", "category".`;
-
-      const userQuery = `Generate ${numQuestions} unique trivia questions about "${topic || 'General Knowledge'}".`;
-
-      const payload = {
-        contents: [{ parts: [{ text: userQuery }] }],
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: "ARRAY",
-            items: {
-              type: "OBJECT",
-              properties: {
-                "question": { "type": "STRING" },
-                "answer": { "type": "STRING" },
-                "category": { "type": "STRING" }
-              },
-              "required": ["question", "answer", "category"]
-            }
-          }
-        }
-      };
-
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!response.ok) {
-        const errJson = await response.json();
-        console.error("Gemini API Error:", errJson);
-        throw new Error("The Quiz Master is momentarily unavailable. Please check your connection and try again.");
-      }
-
-      const result = await response.json();
-      const generated: QuizQuestion[] = JSON.parse(result.candidates[0].content.parts[0].text);
+      // Use the Server Action which handles API security and formatting
+      const generated = await generateQuizAction(topic, numQuestions)
       
       setQuestions(generated)
       setSelectedIndices(new Set(generated.map((_, i) => i)))
