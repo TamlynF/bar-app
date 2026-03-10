@@ -9,6 +9,93 @@ export type QuizQuestion = {
   category: string;
 }
 
+/**
+ * Generates a quiz using Gemini 2.5 Flash.
+ * Implements strict duplicate checking by passing historical questions to the model.
+ */
+export async function generateQuizActionGemini(topic: string, numberOfQuestions: number = 10): Promise<QuizQuestion[]> {
+  const supabase = await createClient()
+
+  // 1. Fetch past questions to ensure uniqueness
+  // We fetch the most recent 150 questions to keep the prompt context manageable but effective
+  const { data: pastQuestions } = await supabase
+    .from('past_quiz_questions')
+    .select('question_text')
+    .order('asked_on', { ascending: false })
+    .limit(150);
+
+  const pastQuestionsList = pastQuestions && pastQuestions.length > 0
+    ? pastQuestions.map(q => q.question_text).join('|')
+    : "None.";
+
+  // 2. Prepare the Gemini API call
+  const apiKey = ""; // Canvas provides this automatically in runtime
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+  const systemPrompt = `You are an elite Pub Quiz Master for "Don Fenticas". 
+Your task is to generate a fun, challenging, and unique trivia quiz. 
+
+CRITICAL CONSTRAINT: You MUST NOT generate any questions that are semantically identical or highly similar to the following list of previously used questions:
+[${pastQuestionsList}]
+
+Your output must be a valid JSON array of objects.`;
+
+  const userQuery = `Generate ${numberOfQuestions} unique questions about the topic: "${topic || 'General Knowledge'}". 
+Make sure the difficulty is balanced for a general pub audience.`;
+
+  const payload = {
+    contents: [{ parts: [{ text: userQuery }] }],
+    systemInstruction: {
+      parts: [{ text: systemPrompt }]
+    },
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          properties: {
+            "question": { "type": "STRING" },
+            "answer": { "type": "STRING" },
+            "category": { "type": "STRING" }
+          },
+          "required": ["question", "answer", "category"]
+        }
+      }
+    }
+  };
+
+  try {
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!response.ok) {
+      const err = await response.json();
+      console.error("Gemini API Error:", err);
+      throw new Error("Failed to consult the Quiz Master.");
+    }
+
+    const result = await response.json();
+    const questionsJson = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    
+    if (!questionsJson) {
+      throw new Error("The Quiz Master is currently silent. Try again.");
+    }
+
+    return JSON.parse(questionsJson);
+    
+  } catch (error) {
+    console.error("Error generating quiz:", error);
+    throw new Error("Failed to generate quiz. Check API availability.");
+  }
+}
+/**
+ * Generates a quiz using Gemini 2.5 Flash.
+ * Implements strict duplicate checking by passing historical questions to the model.
+ */
 export async function generateQuizAction(topic: string, numberOfQuestions: number = 10): Promise<QuizQuestion[]> {
   const supabase = await createClient()
 
@@ -68,15 +155,17 @@ Please generate ${numberOfQuestions} unique questions about the topic: ${topic |
   }
 }
 
+/**
+ * Saves approved questions to history so they are ignored in future generations.
+ */
 export async function saveQuizToDatabase(questions: QuizQuestion[]) {
   const supabase = await createClient()
 
-  // Format data for Supabase
   const insertData = questions.map(q => ({
     question_text: q.question,
     answer_text: q.answer,
     category: q.category,
-    asked_on: new Date().toISOString(), // Setting it to today
+    asked_on: new Date().toISOString(),
   }));
 
   const { error } = await supabase
