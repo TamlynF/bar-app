@@ -18,6 +18,12 @@ export interface TableRow {
   tables_description?: string;
   tables_available?: boolean;
 }
+
+export interface ScoreRow {
+  score: number;
+  is_winner: boolean;
+}
+
 export interface EventType {
   category?: string;
   sub_type?: string;
@@ -56,15 +62,11 @@ export interface Booking {
   booking_table_mappings?: {
     tables?: TableRow;
   }[];
+  booking_scores?: ScoreRow[];
 }
 
 export const dynamic = 'force-dynamic';
 
-/**
- * QuizBookingsPage
- * * A specialized version of the dashboard for managing Quiz Nights.
- * Filters the global bookings list to only show "quiz" subtype events.
- */
 export default async function QuizBookingsPage({
   searchParams,
 }: {
@@ -72,15 +74,13 @@ export default async function QuizBookingsPage({
 }) {
   const params = await searchParams;
   const selectedDate = params.date;
-  console.log("Quiz Bookings - Search Params:", params);
 
   const type = "game"; 
   const subType = "quiz"; 
 
-  // Fetch all bookings for the selected date
   const allBookings = await getBookings(type, subType, selectedDate || null);
   const quizBookings = (allBookings as unknown as Booking[]) ?? [];
-  const totalParticipants = quizBookings.reduce((acc, b) => acc + (b.group_size || 0), 0);
+  const totalParticipants = quizBookings.reduce((acc, b) => acc + (Number(b.group_size) || 0), 0);
 
   // Filter for quiz subtype
   // Note: We filter by 'quiz' subtype as requested. 

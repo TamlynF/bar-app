@@ -23,6 +23,8 @@ import {
   XCircle,
   MessageSquare,
   LayoutDashboard,
+  Trophy,
+  Target
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -110,8 +112,6 @@ export default function BookingListClient({ initialBookings }: { initialBookings
   const [isPending, startTransition] = useTransition()
   const [bookingActionId, setBookingActionId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
-
-  // Status Filters via circles
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set())
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
 
@@ -146,7 +146,6 @@ export default function BookingListClient({ initialBookings }: { initialBookings
     const contextBookings = selectedDate
       ? initialBookings.filter((b) => b.events?.event_date === formatDateStr(selectedDate))
       : initialBookings
-    // console.log(contextBookings);
     
     const counts = {
       confirmed: contextBookings.filter((b) => normStatus(b.status) === "confirmed").length,
@@ -168,8 +167,6 @@ export default function BookingListClient({ initialBookings }: { initialBookings
     }
   }, [initialBookings, selectedDate])
 
-  //console.log("Active Status Filters:", Array.from(activeStatusFilters));
-
   const handleStatusChange = (id: string, newStatus: string) => {
     setBookingActionId(id)
     if (selectedBooking && selectedBooking.id === id) {
@@ -190,7 +187,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
   return (
     <div className="space-y-3 animate-in fade-in duration-500">
       {/* 1. Date Navigation Bar */}
-      <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
+      {/* <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30">
         <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -241,7 +238,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
           </PopoverContent>
         </Popover>
 
-        {/* Desktop Quick Actions */}
+
         <div className="hidden md:flex items-center gap-2">
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mr-2">
             Quick Stats:
@@ -261,7 +258,7 @@ export default function BookingListClient({ initialBookings }: { initialBookings
             </div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* 2. KPI Grid & Interactive Status Filter (Compact Redesign) */}
       <div className="flex flex-col gap-2 sm:gap-2">
@@ -401,7 +398,20 @@ export default function BookingListClient({ initialBookings }: { initialBookings
                 </div>
               </SheetHeader>
 
-              {/* Special Requests Detail - Prominent in Sheet */}
+              {selectedBooking.booking_scores?.[0] && (
+                 <div className="bg-primary text-primary-foreground p-5 rounded-2xl shadow-lg flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Official Score</p>
+                      <h3 className="text-4xl font-black tracking-tighter">{selectedBooking.booking_scores[0].score} <span className="text-sm">pts</span></h3>
+                    </div>
+                    {selectedBooking.booking_scores[0].is_winner && (
+                      <div className="bg-white/20 p-3 rounded-xl border border-white/30">
+                        <Trophy className="w-8 h-8 text-white" />
+                      </div>
+                    )}
+                 </div>
+              )}
+
               {selectedBooking.special_requests && (
                 <div className="bg-amber-500/10 dark:bg-amber-500/20 p-4 rounded-xl border border-amber-200/50 dark:border-amber-500/30">
                   <div className="flex items-center gap-2 mb-2">
@@ -549,49 +559,27 @@ function BookingCard({
   showDate?: boolean
 }) {
   const status = normStatus(booking.status) || "pending"
-  //console.log('Booking status:', booking.status, 'Normalized:', status, 'Theme:', statusTheme[status])
   const theme = statusTheme[status] || statusTheme.pending
   const hasRequest = booking.special_requests && booking.special_requests.trim() !== ""
-  // Get mapped table name
+  const score = booking.booking_scores?.[0]?.score;
+  const isWinner = booking.booking_scores?.[0]?.is_winner;
   const tableName = booking.booking_table_mappings?.[0]?.tables?.tables_name;
 
   return (
-    <div
-      onClick={onClick}
-      className={cn(
-        "group hover:bg-slate-50 dark:hover:bg-slate-800/60 active:scale-[0.99] transition-all border-2 rounded-xl p-3 flex items-center justify-between cursor-pointer bg-white dark:bg-slate-900 shadow-sm gap-2",
-        theme.cardBorder,
-      )}
-    >
+    <div onClick={onClick} className={cn("group active:scale-[0.99] transition-all border-2 rounded-xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-2", theme.cardBorder)}>
       <div className="flex items-center gap-3 min-w-0 text-left flex-1">
-        <div
-          className={cn(
-            "w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0",
-            theme.bg,
-            theme.text,
-          )}
-        >
-          {theme.icon}
+        <div className={cn("w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0", theme.bg, theme.text)}>
+          {isWinner ? <Trophy className="w-4 h-4" /> : theme.icon}
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h4 className="text-sm font-bold text-slate-900 dark:text-white truncate">
-              {booking.group_name || "Guest Entry"}
-            </h4>
-            {hasRequest && (
-               <div className="flex items-center justify-center bg-amber-500 rounded-full w-5 h-5 shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse">
-                <MessageSquare className="w-3 h-3 text-white" />
-              </div>
-            )}
+            <h4 className="text-sm font-bold text-slate-900 truncate uppercase tracking-tight">{booking.group_name || "Guest Team"}</h4>
+            {hasRequest && <div className="bg-amber-500 rounded-full w-5 h-5 flex items-center justify-center shadow-sm ring-2 ring-white animate-pulse"><MessageSquare className="w-3 h-3 text-white" /></div>}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
-             <p className="text-xs text-slate-500 dark:text-slate-400 truncate font-medium">
-               {booking.contacts?.full_name}
-             </p>
+             <p className="text-[11px] text-slate-500 truncate font-medium">{booking.contacts?.full_name}</p>
              {showDate && booking.events?.event_date && (
-                <span className="text-[10px] text-slate-400 font-bold uppercase">
-                  • {format(new Date(booking.events.event_date), "dd MMM")}
-                </span>
+                <span className="text-[10px] text-slate-400 font-bold uppercase">• {format(new Date(booking.events.event_date), "dd MMM")}</span>
              )}
           </div>
           <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 flex items-center gap-1.5 font-medium">
@@ -601,32 +589,22 @@ function BookingCard({
       </div>
 
       <div className="flex items-center justify-end gap-2 shrink-0">
-        {/* Table Badge */}
-        {tableName && (
-          <div className="hidden xs:flex items-center gap-1.5 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-lg border border-blue-100 dark:border-blue-800 shadow-sm">
-            <LayoutDashboard className="w-3 h-3 text-blue-500" />
-            <span className="text-[10px] font-black text-blue-700 dark:text-blue-400 uppercase tracking-tighter">
-              {tableName}
-            </span>
+        {score !== undefined && (
+          <div className="flex items-center gap-1 bg-primary text-primary-foreground px-2 py-1 rounded-lg border border-primary/20 shadow-sm">
+             <Target className="w-3 h-3" />
+             <span className="text-[10px] font-black">{score}</span>
           </div>
         )}
-        <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700">
+        {tableName && (
+          <div className="hidden xs:flex items-center gap-1.5 bg-blue-50 px-2 py-1 rounded-lg border border-blue-100 shadow-sm">
+            <LayoutDashboard className="w-3 h-3 text-blue-500" />
+            <span className="text-[10px] font-black text-blue-700 uppercase tracking-tighter">{tableName}</span>
+          </div>
+        )}
+        <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-lg border border-slate-200">
           <Users className="w-3 h-3 text-slate-400" />
-          <span className="text-[10px] font-black text-slate-700 dark:text-slate-300">
-            {booking.group_size}
-          </span>
+          <span className="text-[10px] font-black text-slate-700">{booking.group_size}</span>
         </div>
-        <div
-          className={cn(
-            "px-2 py-1 sm:px-3 sm:py-1.5 rounded-md text-[9px] sm:text-[10px] font-bold uppercase tracking-wider border",
-            theme.bg,
-            theme.text,
-            theme.border,
-          )}
-        >
-          {status}
-        </div>
-        <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-focus-within:text-slate-200 transition-colors hidden sm:block" />
       </div>
     </div>
   )
@@ -668,14 +646,12 @@ function KPIBox({
 
 function DetailTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-xl flex flex-col gap-1 text-left shadow-sm">
-      <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400">
+    <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl flex flex-col gap-1 text-left shadow-sm">
+      <div className="flex items-center gap-1.5 text-slate-500">
         <div className="scale-75 origin-left opacity-80">{icon}</div>
         <span className="text-[9px] font-bold uppercase tracking-wider">{label}</span>
       </div>
-      <span className="text-slate-900 dark:text-white font-semibold text-xs tracking-tight">
-        {value}
-      </span>
+      <span className="text-slate-900 font-semibold text-xs tracking-tight">{value}</span>
     </div>
   )
 }

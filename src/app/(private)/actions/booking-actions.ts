@@ -48,7 +48,11 @@ export async function getBookings(type: string, subType: string, selectedDate: s
               tables_description: description,
               tables_available: available              
             )
-      )
+          ),
+          booking_scores(
+            score,
+            is_winner
+          )
         `)
       .ilike("events.event_types.type", type)
       .ilike("events.event_types.sub_type", subType)
