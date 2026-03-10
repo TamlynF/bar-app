@@ -9,17 +9,26 @@ export async function saveTableAction(formData: FormData) {
   const id = formData.get("id")?.toString();
   const name = formData.get("name")?.toString();
   const max_capacity = parseInt(formData.get("capacity")?.toString() || "0", 10);
+  const description = formData.get("description")?.toString() || null;
+  const available = formData.get("available") === "on"; // Checkbox value
 
   if (!max_capacity || max_capacity <= 0) {
     return { error: "A valid capacity is required." };
   }
+
+  const payload = { 
+    name, 
+    max_capacity, 
+    description,
+    available 
+  };
 
   try {
     if (id) {
       // Update existing table
       const { error } = await supabase
         .from("tables")
-        .update({ name, max_capacity })
+        .update(payload)
         .eq("id", id);
         
       if (error) throw error;
@@ -27,7 +36,7 @@ export async function saveTableAction(formData: FormData) {
       // Insert new table
       const { error } = await supabase
         .from("tables")
-        .insert({ name, max_capacity });
+        .insert(payload);
         
       if (error) throw error;
     }
@@ -45,6 +54,18 @@ export async function deleteTableAction(id: number) {
   const supabase = await createClient();
   
   try {
+    // Check for active bookings before deleting
+    const { count, error: countError } = await supabase
+      .from("booking_table_mappings")
+      .select("*", { count: 'exact', head: true })
+      .eq("table_id", id);
+
+    if (countError) throw countError;
+
+    if (count && count > 0) {
+      return { error: "Cannot delete this table as it has associated booking history. Try marking it as 'unavailable' instead." };
+    }
+
     const { error } = await supabase.from("tables").delete().eq("id", id);
     if (error) throw error;
     
