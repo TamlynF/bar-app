@@ -1,70 +1,68 @@
-import React, { Suspense } from "react"
-import { createClient } from "../../../lib/supabase/server"
-import EventsHubClient, { EventWithDetails } from "./components/events-hub-client"
-
-export const dynamic = 'force-dynamic'
+import React from "react";
+import Link from "next/link";
+import { 
+  Trophy, 
+  Music, 
+  Lock, 
+  ChevronRight 
+} from "lucide-react";
 
 const eventBookingItems = [
   {
     title: "Quiz Bookings",
-    description: "Floor plans and capacities",
-    href: "/settings/tables",
-    icon: LayoutDashboard,
+    description: "Manage quiz teams, seating and scores",
+    href: "/events/quiz-bookings",
+    icon: Trophy,
     color: "bg-blue-500/10 text-blue-600",
   },
   {
     title: "Music Bookings",
-    description: "Schedule and manage dates",
-    href: "/settings/events",
-    icon: CalendarDays,
+    description: "Schedule bands and live entertainment",
+    href: "/events/music-bookings",
+    icon: Music,
     color: "bg-amber-500/10 text-amber-600",
   },
   {
     title: "Private Event Bookings",
-    description: "Categories and requirements",
-    href: "/settings/event-types",
-    icon: Tags,
+    description: "Enquiries and venue hire pipeline",
+    href: "/events/private-bookings",
+    icon: Lock,
     color: "bg-purple-500/10 text-purple-600",
   },
 ];
 
 export default async function EventsHubPage() {
-  const supabase = await createClient()
-
-  // 1. Fetch current live data from the server
-  const { data: rawEvents } = await supabase
-    .from("events")
-    .select(`
-      id, date, title, seating_required,
-      event_types (type, sub_type),
-      bookings (status, group_size)
-    `)
-    .order('date', { ascending: true })
-  
-    const { count: availableTablesCount } = await supabase
-    .from("tables")
-    .select("*", { count: 'exact', head: true })
-    .eq("available", true)
-
-  const events = (rawEvents as unknown as EventWithDetails[]) || []
-
   return (
-    <div className="flex-1 bg-background min-h-screen">
-      <Suspense fallback={
-        <div className="p-8 space-y-6">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-slate-100 rounded-2xl animate-pulse" />
-            ))}
-          </div>
-          <div className="h-64 bg-slate-100 rounded-2xl animate-pulse" />
-        </div>
-      }>
-        <EventsHubClient 
-          initialEvents={events} 
-          availableTablesCount={availableTablesCount || 0} 
-        />
-      </Suspense>
+    <div className="p-2 sm:p-8 space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {eventBookingItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#26300D] hover:shadow-md transition-all active:scale-[0.98]"
+          >
+            <div className="flex items-center gap-4">
+              {/* Icon Container with hover animation */}
+              <div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center shrink-0 transition-transform group-hover:scale-110`}>
+                <item.icon className="w-6 h-6" />
+              </div>
+              
+              {/* Text Labels */}
+              <div className="flex flex-col text-left">
+                <span className="font-black text-[#1F1F1A] uppercase tracking-tight leading-none">
+                  {item.title}
+                </span>
+                <span className="text-[11px] text-[#5F624F] font-bold opacity-60 uppercase mt-1.5 tracking-wider">
+                  {item.description}
+                </span>
+              </div>
+            </div>
+
+            {/* Trailing Chevron */}
+            <ChevronRight className="w-5 h-5 text-[#E6DFC8] group-hover:text-[#26300D] transition-colors" />
+          </Link>
+        ))}
+      </div>
     </div>
-  )
+  );
 }

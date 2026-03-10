@@ -13,7 +13,10 @@ import {
     Users,
     Shield,
     ArrowLeft,
-    Sparkles
+    Sparkles,
+    Trophy,
+    Music,
+    Lock
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -36,13 +39,19 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
         { label: "System Users", href: "/settings/users", icon: Shield },
     ]
 
+    const eventBookingSubItems = [
+        { label: "Quiz Bookings", href: "/events/quiz-bookings", icon: Trophy },
+        { label: "Music Bookings", href: "/events/music-bookings", icon: Music },
+        { label: "Private Event Bookings", href: "/events/private-bookings", icon: Lock },
+    ];
+
     const getPageInfo = () => {
         if (!pathname) return { title: "Venue Manager", subtitle: null, backHref: null }
-        
+
         const normalizedPath = pathname.replace(/\/$/, "")
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null }
         if (normalizedPath === "/quiz-generator") return { title: "Quiz AI", subtitle: "Generator", backHref: "/dashboard" }
-        
+
         if (normalizedPath.startsWith("/events")) {
             if (normalizedPath === "/events") return { title: "Events", subtitle: null, backHref: null }
             const eventsMap: Record<string, string> = {
@@ -54,7 +63,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
             const subtitle = eventsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
             return { title: "Events", subtitle, backHref: "/events" }
         }
-        
+
         if (normalizedPath.startsWith("/settings")) {
             if (normalizedPath === "/settings") return { title: "Settings", subtitle: null, backHref: null }
             const settingsMap: Record<string, string> = {
@@ -69,7 +78,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
             const subtitle = settingsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
             return { title: "Settings", subtitle, backHref: "/settings" }
         }
-        
+
         return { title: "Venue Manager", subtitle: null, backHref: null }
     }
 
@@ -152,17 +161,17 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
             <div className="flex flex-col flex-1 min-w-0">
                 <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
                     <div className="flex items-center max-w-7xl mx-auto min-h-10 relative">
-                        
+
                         {/* Mobile Back Button - Using 'absolute' to keep it out of flex flow for easier h1 centering */}
                         {backHref && (
-                            <Link 
+                            <Link
                                 href={backHref}
                                 className="sm:hidden absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
                             >
                                 <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
                             </Link>
                         )}
-                        
+
                         {/* Title - Simplified logic to ensure it shows on both desktop and mobile */}
                         <div className="flex flex-col items-center justify-center w-full">
                             <h1 className="text-sm sm:text-base font-black uppercase tracking-widest text-[#1F1F1A] text-center px-8 flex flex-wrap items-center justify-center gap-1 sm:gap-2">

@@ -4,13 +4,13 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-export default function SettingsLayout({
+export default function EventsHubLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isSettingsRoot = pathname === "/settings";
+  const isEventsRoot = pathname === "/events";
 
   return (
     <div className="flex flex-col min-h-screen bg-background lg:flex-row lg:space-x-12 p-4 md:p-8 max-w-7xl mx-auto w-full transition-all duration-500">  
@@ -18,7 +18,7 @@ export default function SettingsLayout({
       <div className="flex-1 flex flex-col">
         <main className={cn(
           "flex-1 bg-card rounded-[2.5rem] border border-slate-200 dark:border-white/10 shadow-2xl min-h-125 overflow-hidden relative",
-          isSettingsRoot && "bg-transparent border-none shadow-none lg:bg-card lg:border lg:shadow-2xl"
+          isEventsRoot && "bg-transparent border-none shadow-none lg:bg-card lg:border lg:shadow-2xl"
         )}>
           {/* Decorative background blurs */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10"></div>
