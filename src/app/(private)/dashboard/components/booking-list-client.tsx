@@ -140,6 +140,18 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
         return matchesDate && matchesStatus && matchesSearch
       })
+      .sort((a, b) => {
+        // 1. Order by event date descending (newest first)
+        const dateA = a.events?.event_date || ""
+        const dateB = b.events?.event_date || ""
+        if (dateA !== dateB) {
+          return dateB.localeCompare(dateA)
+        }
+        // 2. Order by group name ascending
+        const nameA = a.group_name || ""
+        const nameB = b.group_name || ""
+        return nameA.localeCompare(nameB)
+      })
   }, [initialBookings, selectedDate, activeStatusFilters, searchQuery])
 
   const stats = useMemo(() => {
@@ -260,7 +272,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         </div>
       </div>  */}
 
-      {/* 2. KPI Grid & Interactive Status Filter (Compact Redesign) */}
+      {/* 1. KPI Grid & Interactive Status Filter */}
       <div className="flex flex-col gap-2 sm:gap-2">
         <div className="flex w-full justify-between gap-2 overflow-x-auto pb-1">
           <div className="flex-1 min-w-0">
@@ -320,7 +332,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         </div>
       </div>
 
-      {/* 3. Search Bar */}
+      {/* 2. Search Bar */}
       <div className="relative group">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-slate-700 dark:group-focus-within:text-slate-300 transition-colors" />
         <Input
@@ -339,7 +351,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         )}
       </div>
 
-      {/* 4. Floor List Content */}
+      {/* 3. Floor List Content */}
       <div className="space-y-2.5 pb-20">
         {filteredBookings.length === 0 ? (
           <div className="py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
@@ -358,7 +370,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         )}
       </div>
 
-      {/* 5. Team Profile Sheet */}
+      {/* 4. Team Profile Sheet */}
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
         <SheetContent
           side="bottom"
@@ -582,9 +594,6 @@ function BookingCard({
                 <span className="text-[10px] text-slate-400 font-bold uppercase">• {format(new Date(booking.events.event_date), "dd MMM")}</span>
              )}
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5 flex items-center gap-1.5 font-medium">
-            {booking.contacts?.full_name || "No name provided"}
-          </p>
         </div>
       </div>
 
