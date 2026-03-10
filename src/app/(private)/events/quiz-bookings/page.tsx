@@ -84,8 +84,8 @@ export default async function QuizBookingsPage({
   }); */
 
   return (
-   <div className="flex flex-col gap-6">
-      {/* Stats Grid - Mirroring Dashboard Layout */}
+  <div className="flex flex-col gap-6">
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-[#26300D] rounded-3xl p-6 text-[#FDCC4B] shadow-xl flex flex-col justify-between min-h-[140px]">
           <div className="flex justify-between items-start">
@@ -123,36 +123,33 @@ export default async function QuizBookingsPage({
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row gap-8 mt-4">
-        {/* Main List Section */}
-        <div className="flex-1 space-y-4">
-          <div className="flex items-center justify-between px-2">
-            <h3 className="font-black text-xs uppercase tracking-[0.2em] text-[#1F1F1A]">Quiz Entries</h3>
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#5F624F] uppercase bg-white px-3 py-1 rounded-full border border-[#E6DFC8]">
-              <Info className="w-3 h-3" />
-              Sorted by Event Date
-            </div>
+      {/* Filter Bar - Now horizontal and matching Dashboard style */}
+      <div className="w-full">
+          <BookingCalendarFilter selectedDate={selectedDate} />
+      </div>
+
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center justify-between px-2">
+          <h3 className="font-black text-xs uppercase tracking-[0.2em] text-[#1F1F1A]">Quiz Entries</h3>
+          <div className="hidden sm:flex items-center gap-2 text-[10px] font-bold text-[#5F624F] uppercase bg-white px-3 py-1 rounded-full border border-[#E6DFC8]">
+            <Info className="w-3 h-3" />
+            Filtered by Quiz Sub-type
           </div>
-          
-          <Suspense fallback={<div className="h-64 bg-white rounded-3xl animate-pulse border border-[#E6DFC8]" />}>
-            <BookingListClient initialBookings={quizBookings} />
-          </Suspense>
-
-          {quizBookings.length === 0 && (
-            <div className="bg-white/50 border-2 border-dashed border-[#E6DFC8] rounded-3xl p-12 text-center">
-              <Trophy className="w-12 h-12 text-[#E6DFC8] mx-auto mb-4 opacity-20" />
-              <p className="font-black text-[#1F1F1A] uppercase tracking-tight">No Quiz Data</p>
-              <p className="text-[10px] font-bold text-[#5F624F] mt-2 opacity-60 uppercase tracking-widest">
-                No bookings found matching these criteria.
-              </p>
-            </div>
-          )}
         </div>
+        
+        <Suspense fallback={<div className="h-64 bg-white rounded-3xl animate-pulse border border-[#E6DFC8]" />}>
+          <BookingListClient initialBookings={quizBookings} />
+        </Suspense>
 
-        {/* Extracted Client Component Sidebar */}
-        <div className="w-full lg:w-80 shrink-0">
-            <BookingCalendarFilter selectedDate={selectedDate} />
-        </div>
+        {quizBookings.length === 0 && (
+          <div className="bg-white/50 border-2 border-dashed border-[#E6DFC8] rounded-3xl p-12 text-center">
+            <Trophy className="w-12 h-12 text-[#E6DFC8] mx-auto mb-4 opacity-20" />
+            <p className="font-black text-[#1F1F1A] uppercase tracking-tight">No Quiz Data</p>
+            <p className="text-[10px] font-bold text-[#5F624F] mt-2 opacity-60 uppercase tracking-widest">
+              No bookings found matching these criteria.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

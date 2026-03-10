@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function getBookings(type: string, subType: string, selectedDate: string | null) {
+  console.log("Fetching bookings with filters:", { type, subType, selectedDate })
   try {
     const supabase = await createClient()
 
@@ -49,7 +50,7 @@ export async function getBookings(type: string, subType: string, selectedDate: s
   }
 
     const { data: bookings, error } = await query;
-    
+
     if (error) {
       console.error("Error fetching bookings:", error)
       throw new Error("Failed to fetch bookings")
