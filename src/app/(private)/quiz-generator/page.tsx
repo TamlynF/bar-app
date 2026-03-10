@@ -4,18 +4,24 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-// Fixed: Changed from @ alias to relative import to resolve compilation errors
-import { generateQuizAction, saveQuizToDatabase } from './actions'
+import { generateQuizAction, saveQuizToDatabase } from '@/app/(private)/quiz-generator/actions'
 import { 
   Sparkles, 
-  History, 
   CheckCircle2, 
   BrainCircuit, 
   Loader2, 
   AlertCircle,
   RefreshCw,
-  Plus,
-  FileCheck
+  FileCheck,
+  Check,
+  X,
+  MessageSquareQuote,
+  BookOpen,
+  ChevronDown,
+  Film,
+  Music,
+  Trophy,
+  LayoutGrid
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -26,8 +32,16 @@ export type QuizQuestion = {
   category: string;
 }
 
+const CATEGORY_OPTIONS = [
+  { id: 'movies', label: 'Movies', icon: Film },
+  { id: 'music', label: 'Music', icon: Music },
+  { id: 'sports', label: 'Sports', icon: Trophy },
+  { id: 'general', label: 'General', icon: LayoutGrid },
+]
+
 export default function QuizGeneratorPage() {
   const [topic, setTopic] = useState('')
+  const [category, setCategory] = useState('movies')
   const [numQuestions, setNumQuestions] = useState(10)
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
@@ -43,16 +57,14 @@ export default function QuizGeneratorPage() {
     setError('')
     
     try {
-      // Use the Server Action which handles API security and formatting
-      const generated = await generateQuizAction(topic, numQuestions)
-      
+      const generated = await generateQuizAction(topic, category, numQuestions)
       setQuestions(generated)
       setSelectedIndices(new Set(generated.map((_, i) => i)))
       toast.success("Draft round generated!")
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'An unexpected error occurred during generation.'
+      const message = err instanceof Error ? err.message : 'Generation failed.'
       setError(message)
-      toast.error("Generation failed")
+      toast.error("AI Master is unavailable")
     } finally {
       setIsLoading(false)
     }
@@ -81,65 +93,94 @@ export default function QuizGeneratorPage() {
     
     try {
       await saveQuizToDatabase(selectedData)
-      toast.success(`${selectedData.length} questions recorded in history!`)
+      toast.success(`Approved ${selectedData.length} items!`)
       setQuestions([])
       setSelectedIndices(new Set())
       setTopic('')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save to database.'
-      toast.error(message)
+      toast.error("Failed to archive round.")
     } finally {
       setIsSaving(false)
     }
   }
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-8 animate-in fade-in duration-700 pb-24 text-left">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 animate-in fade-in duration-700 pb-32 text-end">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E6DFC8] pb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <div className="p-2 bg-[#26300D] rounded-lg shadow-sm">
-              <BrainCircuit className="w-5 h-5 text-[#FDCC4B]" />
-            </div>
-            <h1 className="text-2xl font-black uppercase tracking-tight text-[#1F1F1A]">AI Quiz Master</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#26300D] rounded-lg shadow-md shrink-0">
+            <BrainCircuit className="w-5 h-5 text-[#FDCC4B]" />
           </div>
-          <p className="text-sm text-[#5F624F] font-medium max-w-md">
-            Draft your weekly trivia. Gemini checks your history to ensure regulars don&apos;t get duplicates.
-          </p>
+          <div>
+            <h1 className="text-2xl font-black uppercase tracking-tight text-[#1F1F1A] leading-none">AI Quiz Master</h1>
+            <p className="text-[10px] text-[#5F624F] font-bold uppercase tracking-wider mt-1 opacity-60">Generate & Curate Trivia</p>
+          </div>
         </div>
       </div>
 
-      {/* Input Card */}
-      <div className="bg-white border border-[#E6DFC8] p-6 rounded-[2.5rem] shadow-sm space-y-6">
-        <form onSubmit={handleGenerate} className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="topic" className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Topic / Theme</Label>
-            <Input 
-              id="topic" 
-              placeholder="e.g. 80s Movies, World Capitals..." 
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="h-12 rounded-xl border-[#E6DFC8] bg-[#F7F4EA]/30 text-base font-medium focus:ring-[#26300D]/10"
-            />
+      {/* Input Configuration Card */}
+      <div className="bg-white border-2 border-[#E6DFC8] p-5 sm:p-6 rounded-[2.5rem] shadow-sm relative overflow-hidden">
+        <form onSubmit={handleGenerate} className="space-y-4 relative z-10">
+          
+          {/* Row 1: Category (2/5) and Theme (3/5) */}
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
+            <div className="sm:col-span-2 space-y-1.5">
+              <Label htmlFor="category" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F] ml-1">Category</Label>
+              <div className="relative group">
+                <select 
+                  id="category"
+                  title="Select quiz category"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full h-10 rounded-2xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/20 px-3 py-2 text-sm font-bold appearance-none focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] outline-none transition-all cursor-pointer"
+                >
+                  {CATEGORY_OPTIONS.map(opt => (
+                    <option key={opt.id} value={opt.id}>{opt.label}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F] pointer-events-none opacity-40 group-hover:opacity-100 transition-opacity" />
+              </div>
+            </div>
+
+            <div className="sm:col-span-4 space-y-1.5">
+              <Label htmlFor="topic" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F] ml-1">Specific Topic</Label>
+              <Input 
+                id="topic" 
+                placeholder="e.g. 90s Britpop ..." 
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                className="h-10 rounded-2xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/20 text-sm font-bold focus:ring-[#26300D]/10 focus:border-[#26300D] transition-all"
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="numQuestions" className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Quantity</Label>
-            <div className="flex gap-3">
+          
+         {/* Row 2: Quantity and Action Button */}
+          <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
+            <div className="sm:col-span-1 space-y-1.5">
+              <Label htmlFor="numQuestions" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F] ml-1">Quantity</Label>
               <Input 
                 id="numQuestions" 
                 type="number" 
                 min="1" max="25"
                 value={numQuestions}
                 onChange={(e) => setNumQuestions(parseInt(e.target.value))}
-                className="h-12 rounded-xl border-[#E6DFC8] bg-[#F7F4EA]/30 w-24 text-center font-bold"
+                className="h-11 rounded-2xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/20 text-center font-black text-lg text-[#26300D]"
               />
+            </div>
+            
+            <div className="sm:col-span-5">
               <Button 
                 type="submit" 
                 disabled={isLoading} 
-                className="flex-1 h-12 rounded-xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-xs shadow-lg hover:bg-[#1a2109] transition-all"
+                className="w-full h-11 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[10px] shadow-xl hover:bg-[#1a2109] transition-all active:scale-[0.98] group"
               >
-                {isLoading ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Thinking...</> : <><Sparkles className="w-4 h-4 mr-2" /> Generate Items</>}
+                {isLoading ? (
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Consulting the Master...</>
+                ) : (
+                  <><Sparkles className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" /> Draft New Round</>
+                )}
               </Button>
             </div>
           </div>
@@ -147,50 +188,52 @@ export default function QuizGeneratorPage() {
       </div>
 
       {error && (
-        <div className="bg-red-50 border border-red-200 p-4 rounded-2xl flex items-center gap-3 text-red-700 animate-in slide-in-from-top-2">
-          <AlertCircle className="w-5 h-5 shrink-0" />
-          <p className="text-sm font-bold">{error}</p>
+        <div className="bg-red-50 border-2 border-red-100 p-4 rounded-2xl flex items-center gap-4 text-red-700">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <p className="text-xs font-bold leading-tight">{error}</p>
         </div>
       )}
 
-      {/* Results Deck */}
+      {/* Questions Deck */}
       {questions.length > 0 && (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700">
           
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#26300D] p-5 rounded-[2rem] shadow-xl border border-white/5 sticky top-20 z-30">
-             <div className="flex items-center gap-4">
-                <div className="flex items-center gap-3">
-                   <div className="bg-[#FDCC4B] text-[#26300D] w-10 h-10 rounded-full flex items-center justify-center font-black text-lg shadow-inner">
+          {/* Batch Sticky Controls */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#26300D] p-4 sm:p-5 rounded-[2.25rem] shadow-2xl border border-white/5 sticky top-20 z-30">
+             <div className="flex items-center gap-4 px-2">
+                <div className="flex items-center gap-4">
+                   <div className="bg-[#FDCC4B] text-[#26300D] w-12 h-12 rounded-2xl flex items-center justify-center font-black text-xl shadow-inner">
                       {selectedIndices.size}
                    </div>
-                   <div className="flex flex-col">
-                      <span className="text-[#FDCC4B] text-[10px] font-black uppercase tracking-[0.15em] leading-none">Drafting</span>
-                      <span className="text-white/40 text-[9px] font-bold uppercase mt-1">Items Selected</span>
+                   <div className="flex flex-col text-left">
+                      <span className="text-[#FDCC4B] text-[11px] font-black uppercase tracking-[0.2em] leading-none">Review Batch</span>
+                      <span className="text-white/40 text-[9px] font-bold uppercase mt-1.5 tracking-wider">Keep vs Skip</span>
                    </div>
                 </div>
-                <div className="h-8 w-px bg-white/10 mx-1 hidden sm:block" />
-                <Button variant="ghost" size="sm" onClick={toggleAll} className="text-white/60 hover:text-white text-[10px] font-black uppercase tracking-widest h-8 px-4">
-                   {selectedIndices.size === questions.length ? "Deselect All" : "Select All"}
+                <div className="h-10 w-px bg-white/10 mx-2 hidden sm:block" />
+                <Button variant="ghost" size="sm" onClick={toggleAll} className="text-white/60 hover:text-white hover:bg-white/5 text-[10px] font-black uppercase tracking-widest h-10 px-4 rounded-xl transition-all">
+                   {selectedIndices.size === questions.length ? "Deselect All" : "Keep All"}
                 </Button>
              </div>
 
-             <div className="flex items-center gap-2 w-full sm:w-auto">
-                <Button variant="outline" size="sm" onClick={() => handleGenerate()} disabled={isLoading} className="flex-1 sm:flex-none rounded-xl h-10 border-white/20 text-white hover:bg-white/10 px-4 font-bold text-xs">
-                  <RefreshCw className={cn("w-3.5 h-3.5 mr-2", isLoading && "animate-spin")} />
+             <div className="flex items-center gap-3 w-full sm:w-auto">
+                <Button variant="outline" size="lg" onClick={() => handleGenerate()} disabled={isLoading} className="flex-1 sm:flex-none rounded-2xl h-12 border-white/20 text-white hover:bg-white/10 px-6 font-bold text-xs uppercase tracking-widest transition-all">
+                  <RefreshCw className={cn("w-4 h-4 mr-2.5", isLoading && "animate-spin")} />
                   Reroll
                 </Button>
                 <Button 
                   variant="default" 
                   onClick={handleSave} 
                   disabled={isSaving || selectedIndices.size === 0} 
-                  className="flex-1 sm:flex-none rounded-xl h-10 bg-[#FDCC4B] text-[#26300D] px-8 font-black uppercase text-[10px] tracking-widest shadow-md hover:bg-[#e5b843]"
+                  className="flex-1 sm:flex-none rounded-2xl h-12 bg-[#FDCC4B] text-[#26300D] px-8 font-black uppercase text-[10px] tracking-[0.15em] shadow-lg hover:bg-[#e5b843] hover:scale-[1.02] active:scale-95 transition-all"
                 >
-                  {isSaving ? "Saving..." : `Approve & Save`}
+                  {isSaving ? "Saving..." : `Approve Round`}
                 </Button>
              </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {questions.map((q, index) => {
               const isSelected = selectedIndices.has(index)
               return (
@@ -198,69 +241,92 @@ export default function QuizGeneratorPage() {
                   key={index} 
                   onClick={() => toggleSelection(index)}
                   className={cn(
-                    "group relative flex flex-col bg-white border-2 rounded-[2.25rem] p-7 transition-all cursor-pointer select-none",
+                    "group relative flex flex-col bg-white border-2 rounded-[2.5rem] transition-all cursor-pointer select-none overflow-hidden",
                     isSelected 
-                      ? "border-[#26300D] shadow-lg scale-[1.01] z-10" 
-                      : "border-transparent opacity-50 grayscale hover:opacity-100 hover:grayscale-0 hover:border-[#E6DFC8]"
+                      ? "border-[#26300D] shadow-xl translate-y-[-4px]" 
+                      : "border-transparent border-dashed border-[#E6DFC8] opacity-60 hover:opacity-100 hover:border-solid hover:translate-y-[-2px]"
                   )}
                 >
                   <div className={cn(
-                    "absolute top-6 right-6 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300",
-                    isSelected ? "bg-[#26300D] rotate-0 shadow-md" : "bg-[#F7F4EA] -rotate-45"
+                    "flex items-center justify-between px-6 py-4 border-b-2 transition-colors",
+                    isSelected ? "bg-[#26300D]/5 border-[#26300D]/10" : "bg-muted/10 border-[#E6DFC8]/40"
                   )}>
-                    {isSelected ? <FileCheck className="w-4 h-4 text-[#FDCC4B]" /> : <Plus className="w-4 h-4 text-[#5F624F] opacity-40" />}
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] font-black text-[#26300D]/30 uppercase tracking-[0.25em]">Q{index + 1}</span>
+                      <div className="px-2.5 py-0.5 rounded-lg bg-white border border-[#E6DFC8] text-[9px] font-black uppercase tracking-wider text-[#5F624F] shadow-xs">
+                        {q.category}
+                      </div>
+                    </div>
+                    <div className={cn(
+                      "flex items-center gap-2 px-3 py-1 rounded-full transition-all duration-300 shadow-sm",
+                      isSelected ? "bg-[#26300D] text-[#FDCC4B]" : "bg-white text-[#5F624F]/50 border border-[#E6DFC8]"
+                    )}>
+                      {isSelected ? <Check className="w-3 h-3 stroke-[3]" /> : <X className="w-3 h-3 stroke-[3]" />}
+                      <span className="text-[9px] font-black uppercase tracking-widest">{isSelected ? "Keep" : "Skip"}</span>
+                    </div>
                   </div>
 
-                  <div className="flex flex-col h-full">
-                    <div className="flex items-center gap-3 mb-5">
-                      <span className="text-[11px] font-black text-[#5F624F]/30 uppercase tracking-[0.2em]">#{index + 1}</span>
-                      <span className="text-[8px] font-black bg-[#F7F4EA] text-[#26300D] px-2.5 py-1 rounded-lg border border-[#E6DFC8] uppercase tracking-tighter">
-                        {q.category}
-                      </span>
+                  <div className="px-8 py-7 flex-grow flex flex-col justify-between">
+                    <div className="flex gap-4">
+                       <MessageSquareQuote className="w-6 h-6 text-[#26300D] shrink-0 opacity-10" />
+                       <p className="text-xl font-black text-[#1F1F1A] leading-[1.3] tracking-tight">
+                         {q.question}
+                       </p>
                     </div>
-                    
-                    <p className="text-lg sm:text-xl font-black text-[#1F1F1A] mb-8 leading-[1.3] flex-grow tracking-tight pr-8">
-                       {q.question}
-                    </p>
                     
                     <div className={cn(
-                      "p-5 rounded-2xl border transition-all duration-500",
-                      isSelected ? "bg-[#26300D]/5 border-[#26300D]/10" : "bg-[#F7F4EA]/30 border-[#E6DFC8]/40"
+                      "mt-8 p-6 rounded-2xl border-2 transition-all duration-500",
+                      isSelected 
+                        ? "bg-[#FDCC4B]/10 border-[#FDCC4B] shadow-inner" 
+                        : "bg-[#F7F4EA]/40 border-transparent italic"
                     )}>
-                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest mb-2 text-[#5F624F] opacity-50">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Official Answer
+                      <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] mb-3 text-[#26300D]/40">
+                        <CheckCircle2 className="w-4 h-4" />
+                        The Answer
                       </div>
-                      <p className="text-base font-black text-[#26300D] tracking-tight">{q.answer}</p>
+                      <p className={cn(
+                        "text-lg font-black tracking-tight",
+                        isSelected ? "text-[#26300D]" : "text-[#5F624F]/60"
+                      )}>
+                        {q.answer}
+                      </p>
                     </div>
                   </div>
+                  <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#26300D]/20 rounded-[2.5rem] pointer-events-none transition-colors" />
                 </div>
               )
             })}
           </div>
 
-          <div className="pt-10 flex justify-center pb-20">
+          <div className="pt-12 flex flex-col items-center gap-4 pb-24 text-center">
             <Button 
               onClick={handleSave} 
               disabled={isSaving || selectedIndices.size === 0} 
               size="lg" 
-              className="rounded-[1.5rem] h-16 px-20 bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.25em] shadow-2xl hover:scale-105 active:scale-95 transition-all"
+              className="rounded-full h-20 px-16 bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.3em] text-sm shadow-[0_20px_50px_rgba(38,48,13,0.3)] hover:scale-105 active:scale-95 transition-all group border-4 border-[#FDCC4B]/20"
             >
-              {isSaving ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Finalizing Round...</> : `Commit ${selectedIndices.size} Items to History`}
+              {isSaving ? (
+                <><Loader2 className="w-6 h-6 mr-4 animate-spin" /> Recording...</>
+              ) : (
+                <>Commit To History <FileCheck className="w-6 h-6 ml-4 group-hover:rotate-12 transition-transform" /></>
+              )}
             </Button>
+            <p className="text-[10px] font-bold text-[#5F624F] uppercase tracking-widest opacity-50">
+              Only items marked &quot;Keep&quot; will be stored in your trivia database
+            </p>
           </div>
         </div>
       )}
 
       {/* Empty State */}
-      {!isLoading && questions.length === 0 && (
-        <div className="py-24 text-center border-2 border-dashed border-[#E6DFC8] rounded-[3.5rem] bg-white/40">
-           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-[#E6DFC8]">
-              <History className="w-10 h-10 text-[#26300D]/30" />
+        {!isLoading && questions.length === 0 && (
+        <div className="py-24 text-center border-4 border-dashed border-[#E6DFC8] rounded-[3.5rem] bg-white/40 flex flex-col items-center">
+           <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm border-2 border-[#E6DFC8]">
+              <BookOpen className="w-10 h-10 text-[#26300D]/20" />
            </div>
-           <p className="font-black text-xl text-[#1F1F1A] uppercase tracking-tight">The Sheet is Blank</p>
-           <p className="text-xs text-[#5F624F] mt-3 uppercase tracking-widest opacity-60 max-w-xs mx-auto leading-relaxed font-medium">
-             Enter a theme above to generate a pool of trivia. You can then hand-pick the best ones to keep your rounds fresh.
+           <h2 className="font-black text-xl text-[#1F1F1A] uppercase tracking-tight">The Script is Blank</h2>
+           <p className="text-xs text-[#5F624F] mt-3 uppercase tracking-[0.15em] opacity-60 max-w-xs leading-relaxed font-bold">
+             Select your category and theme above to generate a fresh round of trivia for your next event.
            </p>
         </div>
       )}

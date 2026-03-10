@@ -13,7 +13,7 @@ export type QuizQuestion = {
  * Generates a quiz using the Gemini 2.5 Flash model with Structured Outputs.
  * This fixes the 404 error by using the correct model name and API structure.
  */
-export async function generateQuizAction(topic: string, numberOfQuestions: number = 10): Promise<QuizQuestion[]> {
+export async function generateQuizAction(topic: string, category: string, numberOfQuestions: number = 10): Promise<QuizQuestion[]> {
   const supabase = await createClient()
 
   // 1. Fetch recent questions for exclusion
@@ -37,11 +37,15 @@ export async function generateQuizAction(topic: string, numberOfQuestions: numbe
   //const model = "gemini-3.1-pro-preview";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  const prompt = `Act as the Pub Quiz Master for "Don Fenticas". Generate a creative trivia round about "${topic || 'General Knowledge'}".
+ const prompt = `Act as the Pub Quiz Master for "Don Fenticas". 
+  Generate a creative trivia round specifically for the category: "${category}".
+  ${topic ? `Focus specifically on this theme within that category: "${topic}".` : `Provide a balanced variety of questions within the "${category}" genre.`}
   
-  You must provide exactly ${numberOfQuestions} unique questions.
-  Avoid repeating these past topics/questions: [${pastQuestionsList}].
-  The tone should be fun, engaging, and suitable for a local pub audience.`;
+  Requirements:
+  - Exactly ${numberOfQuestions} unique questions.
+  - Difficulty: Mixture of easy, medium, and "bar-room debate" hard.
+  - Style: Witty, engaging, and British pub culture appropriate.
+  - Avoid these past questions: [${pastQuestionsList}].`;
 
   // 3. Construct the Payload with Structured Output (JSON Schema)
   const payload = {
@@ -49,7 +53,7 @@ export async function generateQuizAction(topic: string, numberOfQuestions: numbe
       parts: [{ text: prompt }] 
     }],
     generationConfig: {
-      temperature: 0.8,
+      temperature: 0.85,
       responseMimeType: "application/json",
       responseSchema: {
         type: "ARRAY",
