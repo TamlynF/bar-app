@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useRef, useEffect } from "react"
 import { 
   Trophy, 
   Mic2, 
@@ -39,7 +39,36 @@ export interface EventWithDetails {
   bookings: BookingInfo[];
 }
 
-export default function EventsHubClient({ initialEvents }: { initialEvents: EventWithDetails[] }) {
+function ProgressBar({ occupancy }: { occupancy: number }) {
+  const fillRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (fillRef.current) {
+      const percentage = `${Math.min(occupancy, 100)}%`;
+      fillRef.current.style.setProperty("--progress-width", percentage);
+    }
+  }, [occupancy]);
+
+  return (
+    <div className={styles.progressBarTrack}>
+      <div 
+        ref={fillRef}
+        className={cn(
+          styles.progressFill, 
+          occupancy > 80 && styles.highOccupancy
+        )} 
+      />
+    </div>
+  );
+}
+
+export default function EventsHubClient({ 
+  initialEvents,
+  availableTablesCount 
+}: { 
+  initialEvents: EventWithDetails[],
+  availableTablesCount: number
+}) {
   // Mobile-first: Default to collapsed for secondary sections
   const [expandedSections, setExpandedSections] = useState({
     quiz: true,
@@ -54,7 +83,7 @@ export default function EventsHubClient({ initialEvents }: { initialEvents: Even
     }))
   }
 
-  // Analytics Aggregation
+  // Aggregate stats for events
   const quizEvents = initialEvents.filter(e => e.event_types?.sub_type === 'quiz')
   const liveMusic = initialEvents.filter(e => e.event_types?.type === 'music')
   const privateHire = initialEvents.filter(e => e.event_types?.type === 'private')
@@ -65,23 +94,21 @@ export default function EventsHubClient({ initialEvents }: { initialEvents: Even
   const totalWaitlisted = initialEvents.reduce((acc, e) => 
     acc + e.bookings.filter(b => b.status === 'waitlisted').length, 0
   )
-  
-  const totalTables = 15 
 
   return (
-    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-700 max-w-5xl mx-auto pb-24 sm:pb-8">
+    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-700 max-w-5xl mx-auto pb-24 sm:pb-8 text-left">
       
-      {/* High Level Stats Card - Grid Layout optimized for mobile */}
+      {/* KPI Stats Grid */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KPICard label="Active Events" value={initialEvents.length} icon={LayoutGrid} />
         <KPICard label="Total Guests" value={totalGuests} icon={Users} color="amber" />
         <KPICard label="Waitlist Size" value={totalWaitlisted} icon={Clock3} />
-        <KPICard label="Pulse Score" value={`${Math.min(100, Math.round(totalGuests / 5))}%`} icon={TrendingUp} color="green" />
+        <KPICard label="Event Score" value={`${Math.min(100, Math.round(totalGuests / 5))}%`} icon={TrendingUp} color="green" />
       </section>
 
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-5 sm:space-y-6">
         
-        {/* QUIZ SECTION - Expandable Container */}
+        {/* QUIZ SECTION */}
         <CollapsibleSection 
           title="Quiz Bookings" 
           icon={Trophy} 
@@ -98,14 +125,16 @@ export default function EventsHubClient({ initialEvents }: { initialEvents: Even
                 const waitlistedCount = event.bookings.filter(b => b.status === 'waitlisted').length
                 const confirmedGuestCount = confirmedBookings.reduce((a, b) => a + b.group_size, 0)
                 const tablesReserved = confirmedBookings.length
-                const occupancy = Math.round((tablesReserved / totalTables) * 100)                
-                const widthClass = getOccupancyWidthClass(occupancy)
-
+                
+                // NEW LOGIC: totalTables is 0 if seating not required, otherwise use venue available count
+                const eventTotalTables = event.seating_required ? availableTablesCount : 0
+                const occupancy = eventTotalTables > 0 ? Math.round((tablesReserved / eventTotalTables) * 100) : 0
+                
                 return (
                   <Link key={event.id} href={`/dashboard?date=${event.date}`} className="group block bg-white border border-[#E6DFC8] rounded-2xl p-4 sm:p-5 shadow-sm hover:border-[#26300D] transition-all hover:shadow-md active:scale-[0.99]">
                     <div className="flex justify-between items-start mb-4">
                       <div className="min-w-0 pr-2">
-                        <h4 className="font-black text-base sm:text-lg text-[#1F1F1A] uppercase tracking-tight leading-tight truncate">{event.title}</h4>
+                        <h4 className="font-black text-base sm:text-lg text-[#1F1F1A] uppercase tracking-tight truncate leading-tight">{event.title}</h4>
                         <p className="text-[10px] text-[#5F624F] font-bold opacity-60 uppercase mt-1">
                           {new Date(event.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
                         </p>
@@ -113,23 +142,14 @@ export default function EventsHubClient({ initialEvents }: { initialEvents: Even
                       <StatusBadge occupancy={occupancy} />
                     </div>
 
-                    <div className="bg-[#F7F4EA]/50 p-3 rounded-xl border border-[#E6DFC8]/50 mb-4">
+                   <div className="bg-[#F7F4EA]/50 p-3 rounded-xl border border-[#E6DFC8]/50 mb-4">
                       <div className="flex justify-between text-[9px] font-black uppercase text-[#5F624F] mb-2 px-1">
                         <span>Floor Utilization</span>
                         <span className={cn(occupancy > 90 ? "text-red-600" : "text-[#26300D]")}>
-                          {tablesReserved} / {totalTables} Tables
+                          {tablesReserved} / {eventTotalTables} Tables
                         </span>
                       </div>
-                      <div className="h-2 w-full bg-white rounded-full overflow-hidden border border-[#E6DFC8]">
-                        <div
-                          className={cn(
-                            styles.progressFill,
-                            styles[widthClass],
-                            "h-full transition-all duration-1000 ease-out",
-                            occupancy > 80 ? "bg-red-500" : "bg-[#26300D]"
-                          )}
-                        />
-                      </div>
+                      <ProgressBar occupancy={occupancy} />
                     </div>
 
                     <div className="flex items-center justify-between">
@@ -149,7 +169,7 @@ export default function EventsHubClient({ initialEvents }: { initialEvents: Even
           </div>
         </CollapsibleSection>
 
-        {/* BANDS SECTION - Expandable Container */}
+        {/* BANDS SECTION */}
         <CollapsibleSection 
           title="Live Entertainment" 
           icon={Mic2} 
@@ -168,7 +188,7 @@ export default function EventsHubClient({ initialEvents }: { initialEvents: Even
                       <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
                         <Music className="w-5 h-5" />
                       </div>
-                      <div>
+                      <div className="text-left">
                         <p className="font-bold text-sm text-[#1F1F1A]">{band.title}</p>
                         <p className="text-[10px] font-bold text-[#5F624F] opacity-60 uppercase">{new Date(band.date).toLocaleDateString()}</p>
                       </div>
@@ -182,7 +202,7 @@ export default function EventsHubClient({ initialEvents }: { initialEvents: Even
           </div>
         </CollapsibleSection>
 
-        {/* PRIVATE HIRE SECTION - Expandable Container */}
+        {/* PRIVATE HIRE SECTION */}
         <CollapsibleSection 
           title="Private Hire CRM" 
           icon={Lock} 
@@ -195,8 +215,8 @@ export default function EventsHubClient({ initialEvents }: { initialEvents: Even
                 <Lock className="w-7 h-7" />
               </div>
               <div>
-                <p className="font-black text-[#1F1F1A] uppercase tracking-tight">Enquiry Pipeline</p>
-                <p className="text-xs text-[#5F624F] font-medium max-w-64 mt-1 opacity-70 leading-relaxed">Review wedding, party, and corporate hire enquiries for the upcoming season.</p>
+                <p className="font-black text-[#1F1F1A] uppercase tracking-tight">Hire Pipeline</p>
+                <p className="text-xs text-[#5F624F] font-medium max-w-64 mt-1 opacity-70 leading-relaxed">Review wedding, party, and corporate hire enquiries for the season.</p>
               </div>
               <Button size="sm" variant="outline" className="rounded-full px-8 h-10 font-black uppercase tracking-widest border-[#26300D] text-[#26300D] hover:bg-[#26300D] hover:text-white transition-all">
                 View {privateHire.length} Requests
@@ -211,7 +231,7 @@ export default function EventsHubClient({ initialEvents }: { initialEvents: Even
 }
 
 /**
- * REUSABLE UI COMPONENTS
+ * REUSABLE INTERNAL COMPONENTS
  */
 
 function CollapsibleSection({ 
@@ -256,10 +276,10 @@ function CollapsibleSection({
       
       {/* Animated container using grid-rows for smooth height transition */}
       <div className={cn(
-        "grid transition-all duration-300 ease-in-out overflow-hidden",
-        isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+        styles.collapsibleContainer,
+        isOpen ? styles.expanded : styles.collapsed
       )}>
-        <div className="min-h-0">
+        <div className={styles.collapsibleInner}>
           {children}
         </div>
       </div>
@@ -302,7 +322,7 @@ function StatusBadge({ occupancy }: { occupancy: number }) {
   const isFull = occupancy >= 100
   return (
     <div className={cn(
-      "px-2 sm:px-3 py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border",
+      "px-2 sm:px-3 py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border shrink-0",
       isFull ? "bg-red-50 text-red-600 border-red-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"
     )}>
       {isFull ? "Full" : "Open"}
@@ -317,10 +337,4 @@ function EmptyState({ message, icon: Icon }: { message: string, icon: LucideIcon
       <p className="text-[9px] font-black text-[#5F624F] uppercase tracking-widest opacity-40">{message}</p>
     </div>
   )
-}
-
-const getOccupancyWidthClass = (occupancy: number) => {
-  const clamped = Math.max(0, Math.min(100, occupancy))
-  const bucket = Math.round(clamped / 10) * 10
-  return `w${bucket}` as const
 }

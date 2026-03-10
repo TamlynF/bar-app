@@ -18,12 +18,12 @@ export type Table = {
   id: number;
   name: string;
   max_capacity: number;
+  available: boolean;
 };
 
 export default function TablesClient({ initialTables = [] }: { initialTables: Table[] }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [editingTable, setEditingTable] = useState<Table | null>(null);
-  
+  const [editingTable, setEditingTable] = useState<Table | null>(null); 
   const [isPending, startTransition] = useTransition();
 
   const handleOpenEdit = (table: Table) => {
@@ -53,7 +53,7 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
       if (result?.error) {
         alert(result.error);
       } else {
-        setIsSheetOpen(false); // Close sheet on success
+        setIsSheetOpen(false);
       }
     });
   };

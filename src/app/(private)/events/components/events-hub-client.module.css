@@ -13,3 +13,45 @@
 .w80 { width: 80%; }
 .w90 { width: 90%; }
 .w100 { width: 100%; }
+
+.progressBarTrack {
+  height: 0.5rem;
+  width: 100%;
+  background-color: white;
+  border-radius: 9999px;
+  overflow: hidden;
+  border: 1px solid #E6DFC8;
+}
+
+.progressFill {
+  height: 100%;
+  transition: all 1000ms ease-out;
+  width: var(--progress-width, 0%);
+  background-color: #26300D; /* Primary brand color */
+}
+
+/* Red state for high occupancy levels */
+.highOccupancy {
+  background-color: #ef4444; /* red-500 */
+}
+
+/* Collapsible container transitions using Grid trick for smooth height animation */
+.collapsibleContainer {
+  display: grid;
+  transition: grid-template-rows 300ms ease-in-out, opacity 300ms ease-in-out;
+  overflow: hidden;
+}
+
+.collapsed {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.expanded {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.collapsibleInner {
+  min-height: 0;
+}
