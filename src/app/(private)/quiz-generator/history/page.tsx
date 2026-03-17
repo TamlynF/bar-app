@@ -30,13 +30,13 @@ export type QuizEventSummary = {
 
 // UI/UX Theme palette for category differentiation
 const CATEGORY_THEMES = [
-  { bg: "bg-emerald-50/50", border: "border-blue-100", iconBg: "bg-blue-600", text: "text-blue-900" },
-  { bg: "bg-amber-50/50", border: "border-amber-100", iconBg: "bg-amber-600", text: "text-amber-900" },
-  { bg: "bg-emerald-50/50", border: "border-emerald-100", iconBg: "bg-emerald-600", text: "text-emerald-900" },
-  { bg: "bg-rose-50/50", border: "border-rose-100", iconBg: "bg-rose-600", text: "text-rose-900" },
-  { bg: "bg-indigo-50/50", border: "border-indigo-100", iconBg: "bg-indigo-600", text: "text-indigo-900" },
-  { bg: "bg-orange-50/50", border: "border-orange-100", iconBg: "bg-orange-600", text: "text-orange-900" },
-  { bg: "bg-purple-50/50", border: "border-purple-100", iconBg: "bg-purple-600", text: "text-purple-900" },
+  { bg: "bg-blue-100/40", border: "border-blue-300/50", iconBg: "bg-blue-600", text: "text-blue-900" },
+  { bg: "bg-amber-50/50", border: "border-amber-200", iconBg: "bg-amber-600", text: "text-amber-900" },
+  { bg: "bg-emerald-50/50", border: "border-emerald-200", iconBg: "bg-emerald-600", text: "text-emerald-900" },
+  { bg: "bg-orange-50/50", border: "border-orange-200", iconBg: "bg-orange-600", text: "text-orange-900" },
+  { bg: "bg-red-50/50", border: "border-red-200", iconBg: "bg-red-600", text: "text-red-900" },
+  { bg: "bg-purple-100/40", border: "border-purple-300/50", iconBg: "bg-purple-600", text: "text-purple-900" },
+  { bg: "bg-slate-100/40", border: "border-slate-300/50", iconBg: "bg-slate-600", text: "text-slate-900" },
 ];
 
 export const dynamic = 'force-dynamic'
