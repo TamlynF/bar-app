@@ -1,12 +1,17 @@
 'use client'
 
-import { useState } from 'react'
-// Standard double quotes for next/link to match working patterns
-import Link from "next/link"
+import { useState, useEffect } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { generateQuizAction, saveQuizToDatabase } from '@/app/(private)/quiz-generator/actions'
+// Using relative path for internal actions to resolve build errors
+import { 
+  generateQuizAction, 
+  saveQuizToDatabase, 
+  getUpcomingQuizzesAction,
+  QuizEventSummary 
+} from './actions'
 import { 
   Sparkles, 
   CheckCircle2, 
@@ -24,10 +29,12 @@ import {
   Music,
   Trophy,
   LayoutGrid,
-  History
+  History,
+  CalendarCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { format } from 'date-fns'
 
 export type QuizQuestion = {
   question: string;
@@ -51,6 +58,25 @@ export default function QuizGeneratorPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  
+  const [upcomingEvents, setUpcomingEvents] = useState<QuizEventSummary[]>([])
+  const [selectedEventId, setSelectedEventId] = useState<string>('')
+
+  // Load upcoming quiz events on mount
+  useEffect(() => {
+    async function loadEvents() {
+      try {
+        const events = await getUpcomingQuizzesAction()
+        setUpcomingEvents(events)
+        if (events.length > 0) {
+          setSelectedEventId(String(events[0].id))
+        }
+      } catch (err) {
+        console.error("Failed to load events", err)
+      }
+    }
+    loadEvents()
+  }, [])
 
   const handleGenerate = async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -89,11 +115,18 @@ export default function QuizGeneratorPage() {
   const handleSave = async () => {
     const selectedData = questions.filter((_, i) => selectedIndices.has(i))
     if (selectedData.length === 0 || isSaving) return
+    
+    if (!selectedEventId) {
+      toast.error("Please select a target Quiz Event first.")
+      return
+    }
+
     setIsSaving(true)
     
     try {
-      await saveQuizToDatabase(selectedData)
-      toast.success(`Approved ${selectedData.length} items!`)
+      await saveQuizToDatabase(selectedData, parseInt(selectedEventId))
+      const eventName = upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'Event'
+      toast.success(`Approved ${selectedData.length} items for ${eventName}!`)
       setQuestions([])
       setSelectedIndices(new Set())
       setTopic('')
@@ -129,11 +162,42 @@ export default function QuizGeneratorPage() {
 
       {/* Input Configuration Card */}
       <div className="bg-white border-2 border-[#E6DFC8] p-5 sm:p-6 rounded-[2rem] shadow-sm relative overflow-hidden">
-        <form onSubmit={handleGenerate} className="space-y-4 relative z-10">
+        <form onSubmit={handleGenerate} className="space-y-5 relative z-10">
           
+          {/* Target Event Selection - REQUIRED for Saving */}
+          <div className="space-y-1.5">
+            <Label htmlFor="event_id" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F] ml-1 flex items-center gap-2">
+               <CalendarCheck className="w-3 h-3" /> Target Quiz Event
+            </Label>
+            <div className="relative group">
+              <select 
+                id="event_id"
+                title='Select Quiz'
+                value={selectedEventId}
+                onChange={(e) => setSelectedEventId(e.target.value)}
+                className="w-full h-12 rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/40 px-4 py-2 text-sm font-black text-[#26300D] appearance-none focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] outline-none transition-all cursor-pointer uppercase tracking-tight"
+              >
+                {upcomingEvents.length === 0 ? (
+                  <option value="" disabled>No upcoming quiz events found...</option>
+                ) : (
+                  upcomingEvents.map(event => (
+                    <option key={event.id} value={event.id}>
+                      {event.title} — {format(new Date(event.date), "do MMMM")}
+                    </option>
+                  ))
+                )}
+              </select>
+              <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-40">
+                <ChevronDown className="w-4 h-4 text-[#26300D]" />
+              </div>
+            </div>
+          </div>
+
+          <div className="h-px bg-[#E6DFC8]/50 w-full" />
+
           {/* Row 1: Category (2/5) and Theme (3/5) */}
-          <div className="flex flex-row gap-4 items-end w-full">
-            <div className="w-2/5 shrink-0 space-y-1.5">
+          <div className="flex flex-col sm:flex-row gap-4 items-end w-full">
+            <div className="w-full sm:w-2/5 shrink-0 space-y-1.5">
               <Label htmlFor="category" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F] ml-1">Category</Label>
               <div className="relative group">
                 <select 
@@ -228,7 +292,7 @@ export default function QuizGeneratorPage() {
                 <Button 
                   variant="default" 
                   onClick={handleSave} 
-                  disabled={isSaving || selectedIndices.size === 0} 
+                  disabled={isSaving || selectedIndices.size === 0 || !selectedEventId} 
                   className="flex-1 sm:flex-none rounded-xl h-10 bg-[#FDCC4B] text-[#26300D] px-7 font-black uppercase text-[10px] tracking-[0.15em] shadow-lg hover:bg-[#e5b843] active:scale-95 transition-transform"
                 >
                   {isSaving ? "Saving..." : `Approve Round`}
@@ -307,7 +371,7 @@ export default function QuizGeneratorPage() {
           <div className="pt-8 flex flex-col items-center gap-4 pb-24 text-center">
             <Button 
               onClick={handleSave} 
-              disabled={isSaving || selectedIndices.size === 0} 
+              disabled={isSaving || selectedIndices.size === 0 || !selectedEventId} 
               size="lg" 
               className="rounded-full h-16 px-16 bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.3em] text-xs shadow-[0_15px_40px_rgba(38,48,13,0.3)] hover:scale-105 active:scale-95 transition-all group border-4 border-[#FDCC4B]/20"
             >

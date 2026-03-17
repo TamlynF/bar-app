@@ -10,11 +10,18 @@ export type QuizQuestion = {
 }
 
 export type PastQuestionRecord = {
-  id: number;
+  id: string; 
   question_text: string;
   answer_text: string;
   category: string;
   asked_on: string;
+  events_id: number | null; 
+}
+
+export type QuizEventSummary = {
+  id: number;
+  title: string | null;
+  date: string;
 }
 
 /**
@@ -104,15 +111,22 @@ export async function generateQuizAction(topic: string, category: string, number
 }
 
 /**
- * Fetches the detailed history of all past questions.
+ * Fetches the detailed history of past questions, optionally filtered by event ID.
  */
-export async function getFullQuestionHistoryAction(): Promise<PastQuestionRecord[]> {
+export async function getFullQuestionHistoryAction(eventIdFilter?: string): Promise<PastQuestionRecord[]> {
   const supabase = await createClient()
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('past_quiz_questions')
     .select('*')
-    .order('asked_on', { ascending: false });
+    .order('asked_on', { ascending: false })
+    .order('created_at', { ascending: true });
+
+  if (eventIdFilter) {
+    query = query.eq('events_id', eventIdFilter);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error("Database fetch error:", error);
@@ -123,16 +137,97 @@ export async function getFullQuestionHistoryAction(): Promise<PastQuestionRecord
 }
 
 /**
- * Saves selected questions to history.
+ * Retrieves a list of unique events that have associated questions.
  */
-export async function saveQuizToDatabase(questions: QuizQuestion[]) {
+export async function getQuizEventsWithHistoryAction() {
+    const supabase = await createClient();
+    
+    // Join with events table to get titles and dates for the filter UI
+    const { data, error } = await supabase
+      .from('past_quiz_questions')
+      .select(`
+        events_id,
+        events!inner (
+          id,
+          title,
+          date
+        )
+      `)
+      .not('events_id', 'is', null);
+  
+    if (error) {
+      console.error("Error fetching quiz events with history:", error);
+      return [];
+    }
+  
+    // Map to unique events and sort by date descending
+    const eventMap = new Map<number, QuizEventSummary>();
+    data.forEach(item => {
+        const evt = item.events as unknown as QuizEventSummary;
+        if (evt && !eventMap.has(evt.id)) {
+            eventMap.set(evt.id, evt);
+        }
+    });
+
+    return Array.from(eventMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+}
+
+/**
+ * Retrieves a list of upcoming events that are type 'game' and sub_type 'quiz'.
+ */
+export async function getUpcomingQuizzesAction(): Promise<QuizEventSummary[]> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split('T')[0];
+
+  const { data, error } = await supabase
+    .from('events')
+    .select(`
+      id,
+      title,
+      date,
+      event_types!inner (
+        type,
+        sub_type
+      )
+    `)
+    .eq('event_types.type', 'game')
+    .eq('event_types.sub_type', 'quiz')
+    .gte('date', today)
+    .order('date', { ascending: true });
+
+  if (error) {
+    console.error("Error fetching upcoming quizzes:", error);
+    return [];
+  }
+
+  return (data as unknown as QuizEventSummary[]).map(d => ({
+    id: d.id,
+    title: d.title,
+    date: d.date
+  }));
+}
+
+/**
+ * Saves selected questions to history, linked to a specific event.
+ */
+export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: number | null) {
   const supabase = await createClient()
+
+  // If an eventId is provided, we use that event's date as 'asked_on' if possible
+  // Otherwise default to today.
+  let askedOn = new Date().toISOString().split('T')[0];
+  
+  if (eventId) {
+    const { data: event } = await supabase.from('events').select('date').eq('id', eventId).single();
+    if (event?.date) askedOn = event.date;
+  }
 
   const insertData = questions.map(q => ({
     question_text: q.question,
     answer_text: q.answer,
     category: q.category,
-    asked_on: new Date().toISOString(),
+    asked_on: askedOn,
+    events_id: eventId
   }));
 
   const { error } = await supabase
