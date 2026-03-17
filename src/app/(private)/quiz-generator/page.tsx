@@ -19,7 +19,6 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { 
   Sparkles, 
-  CheckCircle2, 
   Loader2, 
   AlertCircle,
   MessageSquareQuote,
@@ -133,12 +132,11 @@ export default function QuizGeneratorPage() {
 
   /**
    * handleGenerate
-   * Prevents default form behavior to stop the page from refreshing 
-   * and losing local state when the Server Action takes time.
+   * Unified handler for the form submission.
    */
-  const handleGenerate = async (e?: React.FormEvent | React.MouseEvent) => {
-    console.log("Generate button clicked");
-    e?.preventDefault()
+  const handleGenerate = async (e: React.FormEvent) => {
+    e.preventDefault(); // CRITICAL: Stops the mobile browser reload
+    
     if (isLoading) return
     
     const stats = categoryStats.find(s => s.category_name === category);
@@ -154,7 +152,6 @@ export default function QuizGeneratorPage() {
       // Direct call to action
       const result = await generateQuizAction(topic, category, numQuestions)
       
-      // Since actions.ts was updated to return a result object
       if (result && 'error' in result && result.error) {
         setError(result.error)
         toast.error(result.error)
@@ -253,15 +250,15 @@ export default function QuizGeneratorPage() {
             <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden">
               <div 
                 className={cn("h-full transition-all duration-700", stat.isFull ? "bg-emerald-500" : "bg-[#26300D]")}
-                style={{ width: `${Math.min(100, (stat.currentCount / stat.question_count) * 100)}%` }}
+                style={{ width: `${stat.progress}%` }}
               />
             </div>
           </button>
         ))}
       </div>
 
-      {/* COMPACT CONFIGURATION ROW - IMPROVED FOR MOBILE DEVICE SCREENS */}
-      <div className="bg-white border-2 border-[#E6DFC8] p-3 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm">
+      {/* GENERATOR FORM: Now wrapped in a proper form tag with onSubmit */}
+      <form onSubmit={handleGenerate} className="bg-white border-2 border-[#E6DFC8] p-3 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           
           <div className="grid grid-cols-2 sm:grid-cols-12 gap-2.5 flex-grow">
@@ -311,12 +308,10 @@ export default function QuizGeneratorPage() {
                   placeholder="e.g. Disney, 90s..." 
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  onKeyDown={(e) => { if(e.key === 'Enter') handleGenerate(); }}
                   className="h-9 rounded-lg border-[#E6DFC8] bg-white text-[11px] font-bold focus:ring-0 focus:border-[#26300D] px-2.5 min-w-0 flex-grow"
                 />
                 <Button 
-                  type="button" 
-                  onClick={handleGenerate}
+                  type="submit" // Type set to submit
                   disabled={isLoading || categories.length === 0} 
                   className="h-9 rounded-lg bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[8px] px-3 shadow-sm active:scale-95 transition-all shrink-0"
                 >
@@ -326,7 +321,7 @@ export default function QuizGeneratorPage() {
             </div>
           </div>
         </div>
-      </div>
+      </form>
 
       {error && (
         <div className="bg-red-50 border border-red-100 p-2.5 rounded-xl flex items-center gap-2.5 text-red-700 animate-in slide-in-from-top-1">
