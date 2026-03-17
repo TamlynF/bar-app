@@ -9,15 +9,22 @@ export type QuizQuestion = {
   category: string;
 }
 
+export type PastQuestionRecord = {
+  id: number;
+  question_text: string;
+  answer_text: string;
+  category: string;
+  asked_on: string;
+}
+
 /**
  * Generates a quiz using the Gemini 2.5 Flash model with Structured Outputs.
- * This fixes the 404 error by using the correct model name and API structure.
  */
 export async function generateQuizAction(topic: string, category: string, numberOfQuestions: number = 10): Promise<QuizQuestion[]> {
   const supabase = await createClient()
 
-  // 1. Fetch recent questions for exclusion
-  const { data: pastQuestions, error: dbError } = await supabase
+  // 1. Fetch recent questions for exclusion to avoid repeats
+  const { data: pastQuestions } = await supabase
     .from('past_quiz_questions')
     .select('question_text')
     .order('asked_on', { ascending: false })
@@ -28,8 +35,6 @@ export async function generateQuizAction(topic: string, category: string, number
     : "None.";
 
   // 2. Setup Gemini API
-  // Note: Canvas automatically provides the key if apiKey is an empty string in the fetch call, 
-  // but if you have it in your .env, we'll use that.
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""; 
   //const model = "gemini-2.5-flash-preview-09-2025";
   const model = "gemini-2.5-flash";
@@ -47,7 +52,6 @@ export async function generateQuizAction(topic: string, category: string, number
   - Style: Witty, engaging, and British pub culture appropriate.
   - Avoid these past questions: [${pastQuestionsList}].`;
 
-  // 3. Construct the Payload with Structured Output (JSON Schema)
   const payload = {
     contents: [{ 
       parts: [{ text: prompt }] 
@@ -79,7 +83,7 @@ export async function generateQuizAction(topic: string, category: string, number
 
     if (!response.ok) {
       const errorData = await response.json();
-      console.error("Gemini API Error Detail:", JSON.stringify(errorData, null, 2));
+      //console.error("Gemini API Error Detail:", JSON.stringify(errorData, null, 2));
       throw new Error(`The AI Quiz Master (Error ${response.status}): ${errorData.error?.message || 'Unknown Error'}`);
     }
 
@@ -90,7 +94,6 @@ export async function generateQuizAction(topic: string, category: string, number
       throw new Error("The Quiz Master returned an empty script.");
     }
 
-    // Since we used responseMimeType: "application/json", 'content' is already a clean JSON string
     return JSON.parse(content) as QuizQuestion[];
     
   } catch (error: unknown) {
@@ -101,23 +104,22 @@ export async function generateQuizAction(topic: string, category: string, number
 }
 
 /**
- * Fetches the most recent questions from the database.
+ * Fetches the detailed history of all past questions.
  */
-export async function getRecentQuestionsAction() {
+export async function getFullQuestionHistoryAction(): Promise<PastQuestionRecord[]> {
   const supabase = await createClient()
 
   const { data, error } = await supabase
     .from('past_quiz_questions')
-    .select('question_text')
-    .order('asked_on', { ascending: false })
-    .limit(100);
+    .select('*')
+    .order('asked_on', { ascending: false });
 
   if (error) {
     console.error("Database fetch error:", error);
     return [];
   }
 
-  return data.map(q => q.question_text);
+  return data as PastQuestionRecord[];
 }
 
 /**
@@ -143,5 +145,6 @@ export async function saveQuizToDatabase(questions: QuizQuestion[]) {
   }
 
   revalidatePath('/quiz-generator');
+  revalidatePath('/quiz-generator/history');
   return { success: true };
 }

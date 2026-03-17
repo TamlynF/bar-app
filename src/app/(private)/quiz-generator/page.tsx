@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+// Standard double quotes for next/link to match working patterns
+import Link from "next/link"
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -21,7 +23,8 @@ import {
   Film,
   Music,
   Trophy,
-  LayoutGrid
+  LayoutGrid,
+  History
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -52,7 +55,6 @@ export default function QuizGeneratorPage() {
   const handleGenerate = async (e?: React.FormEvent) => {
     e?.preventDefault()
     if (isLoading) return
-    
     setIsLoading(true)
     setError('')
     
@@ -62,8 +64,7 @@ export default function QuizGeneratorPage() {
       setSelectedIndices(new Set(generated.map((_, i) => i)))
       toast.success("Draft round generated!")
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Generation failed.'
-      setError(message)
+      setError(err instanceof Error ? err.message : 'Generation failed.')
       toast.error("AI Master is unavailable")
     } finally {
       setIsLoading(false)
@@ -88,7 +89,6 @@ export default function QuizGeneratorPage() {
   const handleSave = async () => {
     const selectedData = questions.filter((_, i) => selectedIndices.has(i))
     if (selectedData.length === 0 || isSaving) return
-
     setIsSaving(true)
     
     try {
@@ -99,7 +99,7 @@ export default function QuizGeneratorPage() {
       setTopic('')
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save to database.'
-      toast.error("Failed to archive round.")
+      toast.error(message)
     } finally {
       setIsSaving(false)
     }
@@ -107,7 +107,7 @@ export default function QuizGeneratorPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6 animate-in fade-in duration-700 pb-32 text-left">
-      {/* Compact Header */}
+      {/* Header with Navigation to History */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#26300D] rounded-lg shadow-md shrink-0">
@@ -118,6 +118,13 @@ export default function QuizGeneratorPage() {
             <p className="text-[10px] text-[#5F624F] font-bold uppercase tracking-wider mt-1 opacity-60">Generate & Curate Trivia</p>
           </div>
         </div>
+
+        <Button asChild variant="outline" className="rounded-xl border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[10px] uppercase tracking-widest h-10 px-4 hover:bg-[#26300D]/5 transition-all shadow-sm">
+          <Link href="/quiz-generator/history">
+            <History className="w-4 h-4 mr-2" />
+            View Archive
+          </Link>
+        </Button>
       </div>
 
       {/* Input Configuration Card */}
@@ -131,7 +138,7 @@ export default function QuizGeneratorPage() {
               <div className="relative group">
                 <select 
                   id="category"
-                  title="Select quiz category"
+                  title="Category Select"
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
                   className="w-full h-11 rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/20 px-3 py-2 text-sm font-bold appearance-none focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] outline-none transition-all cursor-pointer"
@@ -145,37 +152,33 @@ export default function QuizGeneratorPage() {
             </div>
 
             <div className="w-full sm:flex-1 space-y-1.5">
-              <Label htmlFor="topic" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F] ml-1">Specific Theme (Optional)</Label>
+              <Label htmlFor="topic" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F] ml-1">Specific Topic</Label>
               <Input 
                 id="topic" 
                 placeholder="e.g. 90s Britpop, Disney, Olympics..." 
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
-                className="w-full h-11 rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/20 text-sm font-bold focus:ring-[#26300D]/10 focus:border-[#26300D] transition-all"
+                className="w-full h-11 rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/20 text-sm font-bold focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] transition-all"
               />
             </div>
           </div>
 
-          {/* Row 2: Quantity (1/6) and Action Button (5/6) */}
+          {/* Row 2: Number of Questions (1/6) and Action Button (5/6) */}
           <div className="grid grid-cols-1 sm:grid-cols-6 gap-4 items-end">
             <div className="sm:col-span-1 space-y-1.5">
-              <Label htmlFor="numQuestions" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F] ml-1">Qty</Label>
+              <Label htmlFor="numQuestions" className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F] ml-1">No. of Questions</Label>
               <Input 
                 id="numQuestions" 
                 type="number" 
                 min="1" max="25"
                 value={numQuestions}
                 onChange={(e) => setNumQuestions(parseInt(e.target.value))}
-                className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/20 text-center font-black text-base text-[#26300D]"
+                className="h-11 rounded-xl border-2 bg-[#F7F4EA]/20 text-center font-black text-base text-[#26300D] focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] transition-all"
               />
             </div>
             
             <div className="sm:col-span-5">
-              <Button 
-                type="submit" 
-                disabled={isLoading} 
-                className="w-full h-11 rounded-xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[10px] shadow-lg hover:bg-[#1a2109] transition-all active:scale-[0.98] group"
-              >
+              <Button type="submit" disabled={isLoading} className="w-full h-11 rounded-xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[10px] shadow-lg hover:bg-[#1a2109] transition-all active:scale-[0.98] group">
                 {isLoading ? (
                   <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Preparing round...</>
                 ) : (
@@ -211,7 +214,8 @@ export default function QuizGeneratorPage() {
                    </div>
                 </div>
                 <div className="h-8 w-px bg-white/10 mx-2 hidden sm:block" />
-                <Button variant="ghost" size="sm" onClick={toggleAll} className="text-white/60 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-4 rounded-xl">
+                <Button variant="ghost" size="sm" onClick={toggleAll} 
+		className="text-white/60 hover:text-white text-[9px] font-black uppercase tracking-widest h-9 px-4 rounded-xl">
                    {selectedIndices.size === questions.length ? "Clear All" : "Keep All"}
                 </Button>
              </div>
@@ -235,7 +239,7 @@ export default function QuizGeneratorPage() {
           {/* Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {questions.map((q, index) => {
-              const isSelected = selectedIndices.has(index)
+              const isSelected = selectedIndices.has(index);
               return (
                 <div 
                   key={index} 
@@ -259,7 +263,7 @@ export default function QuizGeneratorPage() {
                     </div>
                     
                     <div className={cn(
-                      "flex items-center gap-2 px-3 py-1 rounded-full transition-all duration-300 shadow-xs",
+                      "flex items-center gap-2 px-3 py-1 rounded-full text-[8px] font-black uppercase transition-all duration-300 shadow-xs",
                       isSelected ? "bg-[#26300D] text-[#FDCC4B]" : "bg-white text-[#5F624F]/50 border border-[#E6DFC8]"
                     )}>
                       {isSelected ? <Check className="w-2.5 h-2.5 stroke-[4]" /> : <X className="w-2.5 h-2.5 stroke-[4]" />}
@@ -321,14 +325,12 @@ export default function QuizGeneratorPage() {
       )}
 
       {/* Empty State */}
-        {!isLoading && questions.length === 0 && (
+      {!isLoading && questions.length === 0 && (
         <div className="py-24 text-center border-4 border-dashed border-[#E6DFC8] rounded-[3.5rem] bg-white/40 flex flex-col items-center">
-           <div className="w-20 h-20 bg-white rounded-2xl flex items-center justify-center mb-6 shadow-sm border-2 border-[#E6DFC8]">
-              <BookOpen className="w-10 h-10 text-[#26300D]/20" />
-           </div>
+           <BookOpen className="w-10 h-10 text-[#26300D]/20 mb-4" />
            <h2 className="font-black text-xl text-[#1F1F1A] uppercase tracking-tight">The Script is Blank</h2>
-           <p className="text-xs text-[#5F624F] mt-3 uppercase tracking-[0.15em] opacity-60 max-w-xs leading-relaxed font-bold">
-             Select your category and theme above to generate a fresh round of trivia for your next event.
+           <p className="text-xs text-[#5F624F] mt-3 uppercase tracking-widest opacity-60 max-w-xs font-bold">
+             Select your category and theme above to generate a fresh round.
            </p>
         </div>
       )}

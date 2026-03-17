@@ -26,7 +26,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
     const navItems = [
         { label: "Home", href: "/dashboard", icon: LayoutDashboard },
         { label: "Events", href: "/events", icon: CalendarRange },
-        { label: "Quiz AI", href: "/quiz-generator", icon: Sparkles },
+        { label: "Quiz", href: "/quiz-generator", icon: Sparkles },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
@@ -46,11 +46,20 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
     ]
 
     const getPageInfo = () => {
+        console.log("Current Pathname:", pathname) // Debugging line
         if (!pathname) return { title: "Venue Manager", subtitle: null, backHref: null }
         
         const normalizedPath = pathname.replace(/\/$/, "")
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null }
-        if (normalizedPath === "/quiz-generator") return { title: "Quiz AI", subtitle: "Generator", backHref: "/dashboard" }
+        if (normalizedPath.startsWith("/quiz-generator")) {
+            if (normalizedPath === "/quiz-generator") return { title: "Quiz", subtitle: "AI Generator", backHref: null }
+            const quizMap: Record<string, string> = {
+                "history": "Question Archive",
+            }
+            const segment = normalizedPath.split("/")[2]
+            const subtitle = quizMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
+            return { title: "Quiz", subtitle, backHref: "/quiz-generator" }
+        }        
         
         if (normalizedPath.startsWith("/events")) {
             if (normalizedPath === "/events") return { title: "Events", subtitle: null, backHref: null }
