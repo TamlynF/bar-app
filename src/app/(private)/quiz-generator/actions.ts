@@ -54,11 +54,17 @@ export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig
 
 /**
  * Generates trivia using AI.
+ * Updated to return a result object instead of throwing to prevent page crashes/refreshes.
  */
-export async function generateQuizAction(topic: string, category: string, numberOfQuestions: number = 10): Promise<QuizQuestion[]> {
+export async function generateQuizAction(
+  topic: string, 
+  category: string, 
+  numberOfQuestions: number = 10
+): Promise<{ questions?: QuizQuestion[], error?: string }> {
   const supabase = await createClient()
 
-  // 1. Fetch recent questions for exclusion to avoid repeats
+  try {
+    // 1. Fetch recent questions for exclusion to avoid duplicates
   const { data: pastQuestions } = await supabase
     .from('past_quiz_questions')
     .select('question_text')
@@ -71,7 +77,11 @@ export async function generateQuizAction(topic: string, category: string, number
 
   // 2. Setup Gemini API
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""; 
+    if (!apiKey) {
+      return { error: "API Key is missing. Please check your environment variables." };
+    }
   //const model = "gemini-2.5-flash-preview-09-2025";
+  //const model = "gemini-1.5-flash";
   const model = "gemini-2.5-flash";
   //const model = "gemini-3.1-flash-preview"; 
   //const model = "gemini-3.1-pro-preview";
@@ -112,7 +122,6 @@ export async function generateQuizAction(topic: string, category: string, number
     }
   };
 
-  try {
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -120,24 +129,23 @@ export async function generateQuizAction(topic: string, category: string, number
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      //console.error("Gemini API Error Detail:", JSON.stringify(errorData, null, 2));
-      throw new Error(`The AI Quiz Master (Error ${response.status}): ${errorData.error?.message || 'Unknown Error'}`);
+      const errorData = await response.json().catch(() => ({}));
+      return { error: `AI Error (${response.status}): ${errorData.error?.message || 'The Quiz Master is currently unavailable.'}` };
     }
 
     const result = await response.json();
     const content = result.candidates?.[0]?.content?.parts?.[0]?.text;
     
     if (!content) {
-      throw new Error("The Quiz Master returned an empty script.");
+      return { error: "The Quiz Master returned an empty script." };
     }
 
-    return JSON.parse(content) as QuizQuestion[];
+    const questions = JSON.parse(content) as QuizQuestion[];
+    return { questions };
     
   } catch (error: unknown) {
     console.error("AI Generation failed:", error);
-    const message = error instanceof Error ? error.message : "An unexpected error occurred.";
-    throw new Error(message);
+    return { error: "Connection lost or request timed out. Please try again." };
   }
 }
 

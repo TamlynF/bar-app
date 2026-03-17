@@ -29,7 +29,6 @@ import {
   CalendarCheck,
   Check,
   Plus,
-  LayoutGrid,
   CheckCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -60,6 +59,7 @@ export default function QuizGeneratorPage() {
 
   // Load initial data
   useEffect(() => {
+    console.log("Loading initial data for Quiz Generator page...");
     async function loadInitialData() {
       try {
         const [events, categoryConfigs] = await Promise.all([
@@ -100,6 +100,7 @@ export default function QuizGeneratorPage() {
 
   // Derived state for category progress relative to the selected quiz night
   const categoryStats = useMemo(() => {
+    console.log("Calculating category stats with categories:", categories, " and eventHistory:", eventHistory);
     return categories.map(config => {
       const currentCount = eventHistory.filter((q: PastQuestionRecord) => {
         const qCat = q.quiz_category_configs?.category_name || q.category;
@@ -116,6 +117,7 @@ export default function QuizGeneratorPage() {
   }, [categories, eventHistory]);
 
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    console.log("Event selection changed:", e.target.value);
     const id = e.target.value;
     setSelectedEventId(id);
     loadEventHistory(id);
@@ -123,12 +125,19 @@ export default function QuizGeneratorPage() {
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedName = e.target.value;
+    console.log("Category selection changed:", selectedName);
     setCategory(selectedName);
     const config = categories.find(c => c.category_name === selectedName);
     if (config) setNumQuestions(config.question_count);
   };
 
-  const handleGenerate = async (e?: React.FormEvent) => {
+  /**
+   * handleGenerate
+   * Prevents default form behavior to stop the page from refreshing 
+   * and losing local state when the Server Action takes time.
+   */
+  const handleGenerate = async (e?: React.FormEvent | React.MouseEvent) => {
+    console.log("Generate button clicked");
     e?.preventDefault()
     if (isLoading) return
     
@@ -142,19 +151,29 @@ export default function QuizGeneratorPage() {
     setError('')
     
     try {
-      const generated = await generateQuizAction(topic, category, numQuestions)
-      setQuestions(generated)
-      setSelectedIndices(new Set(generated.map((_, i) => i)))
-      toast.success("Draft round generated!")
+      // Direct call to action
+      const result = await generateQuizAction(topic, category, numQuestions)
+      
+      // Since actions.ts was updated to return a result object
+      if (result && 'error' in result && result.error) {
+        setError(result.error)
+        toast.error(result.error)
+      } else if (result && 'questions' in result && result.questions) {
+        setQuestions(result.questions)
+        setSelectedIndices(new Set(result.questions.map((_, i) => i)))
+        toast.success("Draft round generated!")
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Generation failed.')
-      toast.error("AI Master is unavailable")
+      const msg = err instanceof Error ? err.message : 'Generation failed.'
+      setError(msg)
+      toast.error("The AI Master encountered an issue")
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleSave = async () => {
+    console.log("Save button clicked with selected indices:", selectedIndices);
     const selectedData = questions.filter((_, i) => selectedIndices.has(i))
     if (selectedData.length === 0 || isSaving) return
     if (!selectedEventId) {
@@ -180,6 +199,7 @@ export default function QuizGeneratorPage() {
   }
 
   const filteredQuestions = useMemo(() => {
+    console.log("Filtering questions with filterCategory:", filterCategory, " and questions:", questions);
     if (!filterCategory) return questions;
     return questions.filter(q => q.category.toLowerCase() === filterCategory.toLowerCase());
   }, [questions, filterCategory]);
@@ -242,7 +262,7 @@ export default function QuizGeneratorPage() {
 
       {/* COMPACT CONFIGURATION ROW - IMPROVED FOR MOBILE DEVICE SCREENS */}
       <div className="bg-white border-2 border-[#E6DFC8] p-3 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm">
-        <form onSubmit={handleGenerate} className="flex flex-col gap-3 lg:flex-row lg:items-end">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           
           <div className="grid grid-cols-2 sm:grid-cols-12 gap-2.5 flex-grow">
             {/* Event Selection */}
@@ -291,10 +311,12 @@ export default function QuizGeneratorPage() {
                   placeholder="e.g. Disney, 90s..." 
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
+                  onKeyDown={(e) => { if(e.key === 'Enter') handleGenerate(); }}
                   className="h-9 rounded-lg border-[#E6DFC8] bg-white text-[11px] font-bold focus:ring-0 focus:border-[#26300D] px-2.5 min-w-0 flex-grow"
                 />
                 <Button 
-                  type="submit" 
+                  type="button" 
+                  onClick={handleGenerate}
                   disabled={isLoading || categories.length === 0} 
                   className="h-9 rounded-lg bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[8px] px-3 shadow-sm active:scale-95 transition-all shrink-0"
                 >
@@ -303,7 +325,7 @@ export default function QuizGeneratorPage() {
               </div>
             </div>
           </div>
-        </form>
+        </div>
       </div>
 
       {error && (
@@ -322,9 +344,6 @@ export default function QuizGeneratorPage() {
              <div className="flex items-center gap-3 px-1">
                 <div className="bg-[#FDCC4B] text-[#26300D] w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs">
                    {selectedIndices.size}
-
-
-
                 </div>
                 <div className="flex flex-col">
                    <span className="text-[#FDCC4B] text-[8px] font-black uppercase tracking-wider leading-none">Draft Items</span>
