@@ -7,7 +7,8 @@ import {
   UserCircle, 
   Users, 
   Shield, 
-  ChevronRight 
+  ChevronRight, 
+  BrainCircuit
 } from "lucide-react";
 
 const settingsItems = [
@@ -31,6 +32,13 @@ const settingsItems = [
     href: "/settings/event-types",
     icon: Tags,
     color: "bg-purple-500/10 text-purple-600",
+  },
+    {
+    title: "Quiz Rules",
+    description: "Category round configurations",
+    href: "/settings/quiz-categories",
+    icon: BrainCircuit,
+    color: "bg-rose-500/10 text-rose-600",
   },
   {
     title: "Customers",

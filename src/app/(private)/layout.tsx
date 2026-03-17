@@ -16,7 +16,8 @@ import {
     Sparkles,
     Trophy,
     Music,
-    Lock
+    Lock,
+    BrainCircuit
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -38,8 +39,9 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
 
     const settingsSubItems = [
         { label: "Table Setups", href: "/settings/tables", icon: LayoutDashboard },
-        { label: "Events", href: "/settings/events", icon: CalendarDays },
         { label: "Event Types", href: "/settings/event-types", icon: Tags },
+        { label: "Events", href: "/settings/events", icon: CalendarDays },
+        { label: "Quiz Rules", href: "/settings/quiz-categories", icon: BrainCircuit },
         { label: "Customers", href: "/settings/customers", icon: UserCircle },
         { label: "Teams", href: "/settings/teams", icon: Users },
         { label: "System Users", href: "/settings/users", icon: Shield },
@@ -79,6 +81,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                 "tables": "Table Setups",
                 "events": "Events",
                 "event-types": "Event Types",
+                "quiz-categories": "Quiz Rules",
                 "customers": "Customers",
                 "teams": "Teams",
                 "users": "System Users",
