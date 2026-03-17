@@ -16,6 +16,10 @@ export type PastQuestionRecord = {
   category: string;
   asked_on: string;
   events_id: number | null; 
+  quiz_category_configs_id: number | null;
+  quiz_category_configs?: {
+    category_name: string;
+  } | null;
 }
 
 export type QuizEventSummary = {
@@ -32,7 +36,7 @@ export type QuizCategoryConfig = {
 }
 
 /**
- * Retrieves all configured quiz categories and their rules.
+ * Retrieves all configured quiz categories.
  */
 export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig[]> {
   const supabase = await createClient();
@@ -49,7 +53,7 @@ export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig
 }
 
 /**
- * Generates a quiz using the Gemini 2.5 Flash model with Structured Outputs.
+ * Generates trivia using AI.
  */
 export async function generateQuizAction(topic: string, category: string, numberOfQuestions: number = 10): Promise<QuizQuestion[]> {
   const supabase = await createClient()
@@ -61,7 +65,7 @@ export async function generateQuizAction(topic: string, category: string, number
     .order('asked_on', { ascending: false })
     .limit(50);
 
-  const pastQuestionsList = pastQuestions && pastQuestions.length > 0
+  const pastQuestionsList = pastQuestions?.length 
     ? pastQuestions.map(q => q.question_text).join(' | ')
     : "None.";
 
@@ -73,15 +77,18 @@ export async function generateQuizAction(topic: string, category: string, number
   //const model = "gemini-3.1-pro-preview";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
+  //const prompt = `Act as the Pub Quiz Master. Generate a round for category: "${category}". ${topic ? `Theme: "${topic}"` : ""} Requirements: Exactly ${numberOfQuestions} unique questions. Format: JSON array.`;
+
  const prompt = `Act as the Pub Quiz Master for "Don Fenticas". 
-  Generate a creative trivia round specifically for the category: "${category}".
+  Generate a round for the category: "${category}".
   ${topic ? `Focus specifically on this theme within that category: "${topic}".` : `Provide a balanced variety of questions within the "${category}" genre.`}
   
   Requirements:
   - Exactly ${numberOfQuestions} unique questions.
   - Difficulty: Mixture of easy, medium, and "bar-room debate" hard.
   - Style: Witty, engaging, and British pub culture appropriate.
-  - Avoid these past questions: [${pastQuestionsList}].`;
+  - Avoid these past questions: [${pastQuestionsList}].
+  - Format: JSON array.`;
 
   const payload = {
     contents: [{ 
@@ -135,18 +142,17 @@ export async function generateQuizAction(topic: string, category: string, number
 }
 
 /**
- * Fetches the detailed history of past questions, optionally filtered by event ID.
+ * Fetches question history with category joins and event filtering.
  */
 export async function getFullQuestionHistoryAction(eventIdFilter?: string): Promise<PastQuestionRecord[]> {
   const supabase = await createClient()
 
   let query = supabase
     .from('past_quiz_questions')
-    .select('*')
-    .order('asked_on', { ascending: false })
-    .order('created_at', { ascending: true });
+    .select('*, quiz_category_configs(category_name)')
+    .order('asked_on', { ascending: false });
 
-  if (eventIdFilter) {
+  if (eventIdFilter && eventIdFilter !== 'all') {
     query = query.eq('events_id', eventIdFilter);
   }
 
@@ -157,63 +163,37 @@ export async function getFullQuestionHistoryAction(eventIdFilter?: string): Prom
     return [];
   }
 
-  return data as PastQuestionRecord[];
+  return data as unknown as PastQuestionRecord[];
 }
 
 /**
- * Retrieves a list of unique events that have associated questions.
+ * Fetches events filtered by game/quiz types.
  */
-export async function getQuizEventsWithHistoryAction() {
+export async function getQuizEventsAction(): Promise<QuizEventSummary[]> {
     const supabase = await createClient();
-    
-    // Join with events table to get titles and dates for the filter UI
     const { data, error } = await supabase
-      .from('past_quiz_questions')
-      .select(`
-        events_id,
-        events!inner (
-          id,
-          title,
-          date
-        )
-      `)
-      .not('events_id', 'is', null);
+      .from('events')
+      .select('id, title, date, event_types!inner(type, sub_type)')
+      .eq('event_types.type', 'game')
+      .eq('event_types.sub_type', 'quiz')
+      .order('date', { ascending: false });
   
     if (error) {
-      console.error("Error fetching quiz events with history:", error);
+      console.error("Error fetching quiz events:", error);
       return [];
     }
-  
-    // Map to unique events and sort by date descending
-    const eventMap = new Map<number, QuizEventSummary>();
-    data.forEach(item => {
-        const evt = item.events as unknown as QuizEventSummary;
-        if (evt && !eventMap.has(evt.id)) {
-            eventMap.set(evt.id, evt);
-        }
-    });
-
-    return Array.from(eventMap.values()).sort((a, b) => b.date.localeCompare(a.date));
+    return (data as unknown as QuizEventSummary[]) || [];
 }
 
 /**
- * Retrieves a list of upcoming events that are type 'game' and sub_type 'quiz'.
+ * Retrieves upcoming quiz events.
  */
 export async function getUpcomingQuizzesAction(): Promise<QuizEventSummary[]> {
   const supabase = await createClient();
   const today = new Date().toISOString().split('T')[0];
-
   const { data, error } = await supabase
     .from('events')
-    .select(`
-      id,
-      title,
-      date,
-      event_types!inner (
-        type,
-        sub_type
-      )
-    `)
+    .select('id, title, date, event_types!inner(type, sub_type)')
     .eq('event_types.type', 'game')
     .eq('event_types.sub_type', 'quiz')
     .gte('date', today)
@@ -224,23 +204,19 @@ export async function getUpcomingQuizzesAction(): Promise<QuizEventSummary[]> {
     return [];
   }
 
-  return (data as unknown as QuizEventSummary[]).map(d => ({
-    id: d.id,
-    title: d.title,
-    date: d.date
-  }));
+  return (data as unknown as QuizEventSummary[]) || [];
 }
 
 /**
- * Saves selected questions to history, linked to a specific event.
+ * Saves quiz to database, automatically resolving category config IDs.
  */
 export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: number | null) {
   const supabase = await createClient()
 
-  // If an eventId is provided, we use that event's date as 'asked_on' if possible
-  // Otherwise default to today.
+  const { data: configs } = await supabase.from('quiz_category_configs').select('id, category_name');
+  const configMap = new Map(configs?.map(c => [c.category_name.toLowerCase(), c.id]));
+
   let askedOn = new Date().toISOString().split('T')[0];
-  
   if (eventId) {
     const { data: event } = await supabase.from('events').select('date').eq('id', eventId).single();
     if (event?.date) askedOn = event.date;
@@ -251,7 +227,8 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
     answer_text: q.answer,
     category: q.category,
     asked_on: askedOn,
-    events_id: eventId
+    events_id: eventId,
+    quiz_category_configs_id: configMap.get(q.category.toLowerCase()) || null
   }));
 
   const { error } = await supabase

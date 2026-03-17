@@ -1,20 +1,39 @@
 import React from 'react'
-import { getFullQuestionHistoryAction } from '../actions'
+import { getFullQuestionHistoryAction, getQuizEventsAction, PastQuestionRecord } from '../actions'
+import Link from 'next/link'
 import { 
   History, 
-  MessageSquareQuote, 
   CheckCircle2, 
-  Calendar,
   ArrowLeft,
-  Filter
+  Filter,
+  ChevronDown,
+  LayoutGrid,
+  BookOpen
 } from 'lucide-react'
-import Link from 'next/link'
 import { format } from 'date-fns'
 
 export const dynamic = 'force-dynamic'
 
-export default async function QuizArchivePage() {
-  const history = await getFullQuestionHistoryAction()
+export default async function QuizArchivePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ event?: string }>;
+}) {
+  const params = await searchParams;
+  const eventFilter = params.event || 'all';
+  
+  const [history, quizEvents] = await Promise.all([
+    getFullQuestionHistoryAction(eventFilter),
+    getQuizEventsAction()
+  ]);
+
+  // Group questions by category name for the expandable sections
+  const groupedQuestions = history.reduce((acc, q) => {
+    const catName = q.quiz_category_configs?.category_name || q.category || "General Knowledge";
+    if (!acc[catName]) acc[catName] = [];
+    acc[catName].push(q);
+    return acc;
+  }, {} as Record<string, PastQuestionRecord[]>);
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-8 animate-in fade-in duration-700 pb-32 text-left">
@@ -39,56 +58,94 @@ export default async function QuizArchivePage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-white border border-[#E6DFC8] px-4 py-2 rounded-2xl shadow-sm">
-           <Filter className="w-3.5 h-3.5 text-[#5F624F] opacity-40" />
-           <span className="text-[10px] font-black uppercase tracking-widest text-[#1F1F1A]">{history.length} Questions Logged</span>
-        </div>
+        {/* Quiz Event Filter Dropdown */}
+        <form className="flex items-center gap-2 bg-white border-2 border-[#E6DFC8] p-1 rounded-2xl shadow-sm min-w-[280px]">
+          <div className="p-2 bg-[#F7F4EA] rounded-xl">
+            <Filter className="w-4 h-4 text-[#26300D]" />
+          </div>
+          <div className="relative flex-1 group">
+            <select 
+              name="event"
+              title="Filter by Event"
+              defaultValue={eventFilter}
+              className="w-full bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-[#1F1F1A] h-10 px-2 appearance-none outline-none cursor-pointer"
+              onChange={(e) => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('event', e.target.value);
+                window.location.href = url.toString();
+              }}
+            >
+              <option value="all">All Quiz Nights</option>
+              {quizEvents.map(evt => (
+                <option key={evt.id} value={evt.id}>
+                  {evt.title || 'Quiz Night'} — {format(new Date(evt.date), "dd/MM/yy")}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-300 pointer-events-none" />
+          </div>
+        </form>
       </div>
 
       {history.length === 0 ? (
         <div className="py-32 text-center border-4 border-dashed border-[#E6DFC8] rounded-[3.5rem] bg-white/40 flex flex-col items-center">
-          <MessageSquareQuote className="w-16 h-16 text-[#E6DFC8] mb-6" />
-          <h2 className="font-black text-xl text-[#1F1F1A] uppercase tracking-tight">The Archive is Empty</h2>
-          <p className="text-xs text-[#5F624F] mt-3 uppercase tracking-[0.15em] opacity-60 max-w-xs leading-relaxed font-bold">
-            Approve some AI-generated questions to build your bar&apos;s permanent trivia library.
+          <BookOpen className="w-16 h-16 text-[#E6DFC8] mb-6" />
+          <h2 className="font-black text-xl text-[#1F1F1A] uppercase tracking-tight">Archive Is Empty</h2>
+          <p className="text-xs text-[#5F624F] mt-3 uppercase tracking-widest opacity-60 max-w-xs font-bold leading-relaxed">
+            There are no approved questions for this specific filter.
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          {history.map((record) => (
-            <div 
-              key={record.id}
-              className="bg-white border border-[#E6DFC8] rounded-[2.25rem] overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col"
-            >
-              <div className="px-6 py-4 bg-[#F7F4EA]/30 border-b border-[#E6DFC8] flex items-center justify-between">
-                <div className="px-2.5 py-0.5 rounded-lg bg-white border border-[#E6DFC8] text-[8px] font-black uppercase tracking-wider text-[#5F624F]">
-                  {record.category}
-                </div>
-                <div className="flex items-center gap-1.5 text-[9px] font-bold text-[#5F624F] opacity-60 uppercase tracking-tight">
-                  <Calendar className="w-3 h-3" />
-                  {format(new Date(record.asked_on), "do MMM yyyy")}
-                </div>
-              </div>
-
-              <div className="p-8 flex-grow space-y-6">
-                <div className="flex gap-4">
-                  <MessageSquareQuote className="w-5 h-5 text-[#26300D] shrink-0 opacity-10" />
-                  <p className="text-lg font-black text-[#1F1F1A] leading-tight">
-                    {record.question_text}
-                  </p>
-                </div>
-
-                <div className="p-5 rounded-2xl bg-[#26300D]/5 border-2 border-dashed border-[#26300D]/10">
-                  <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] mb-2 text-[#26300D]/40">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Archive Answer
+        <div className="space-y-6">
+          {Object.entries(groupedQuestions).map(([category, questions]) => (
+            <details key={category} className="group border border-[#E6DFC8] rounded-[2rem] bg-white overflow-hidden shadow-sm" open>
+              <summary className="flex items-center justify-between p-5 cursor-pointer list-none select-none outline-none hover:bg-[#F7F4EA]/30 transition-colors">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-xl bg-[#26300D] flex items-center justify-center group-open:rotate-90 transition-transform">
+                    <LayoutGrid className="w-5 h-5 text-[#FDCC4B]" />
                   </div>
-                  <p className="text-base font-black text-[#26300D] tracking-tight">
-                    {record.answer_text}
-                  </p>
+                  <div>
+                    <h3 className="text-base font-black uppercase tracking-tight text-[#1F1F1A]">{category}</h3>
+                    <p className="text-[10px] text-[#5F624F] font-bold opacity-60 uppercase tracking-widest">{questions.length} Items Logged</p>
+                  </div>
                 </div>
+                <ChevronDown className="w-5 h-5 text-[#E6DFC8] group-open:rotate-180 transition-transform" />
+              </summary>
+
+              <div className="p-1 border-t border-[#E6DFC8]">
+                <table className="w-full border-collapse">
+                  <thead className="bg-[#F7F4EA]/30 text-left border-b border-[#E6DFC8]">
+                    <tr>
+                      <th className="px-6 py-3 text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Question Text</th>
+                      <th className="px-6 py-3 text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Verified Answer</th>
+                      <th className="px-6 py-3 text-[9px] font-black uppercase tracking-widest text-[#5F624F] text-right">Asked</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E6DFC8]/50">
+                    {questions.map((record) => (
+                      <tr key={record.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-6 py-5">
+                          <p className="text-sm font-black text-[#1F1F1A] leading-relaxed max-w-lg">
+                            {record.question_text}
+                          </p>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2 text-sm font-bold text-[#26300D]">
+                            <CheckCircle2 className="w-3.5 h-3.5 opacity-30" />
+                            {record.answer_text}
+                          </div>
+                        </td>
+                        <td className="px-6 py-5 text-right">
+                          <span className="text-[10px] font-black text-[#5F624F] opacity-40 whitespace-nowrap">
+                            {format(new Date(record.asked_on), "dd MMM")}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
+            </details>
           ))}
         </div>
       )}
