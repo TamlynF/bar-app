@@ -2,9 +2,9 @@ import React from 'react'
 // Using absolute aliases to ensure the build environment correctly locates the modules
 import { getFullQuestionHistoryAction, getQuizEventsAction } from '@/app/(private)/quiz-generator/actions'
 import Link from 'next/link'
-import { 
-  History, 
-  CheckCircle2, 
+import {
+  History,
+  CheckCircle2,
   ArrowLeft,
   LayoutGrid,
   BookOpen,
@@ -14,7 +14,7 @@ import {
 import QuizHistoryFilter from '@/app/(private)/quiz-generator/history/_components/quiz-history-filter'
 
 export type PastQuestionRecord = {
-  id: string; 
+  id: string;
   question_text: string;
   answer_text: string;
   category: string;
@@ -39,7 +39,7 @@ export default async function QuizArchivePage({
 }) {
   const params = await searchParams;
   const eventFilter = params.event || 'all';
-  
+
   // Data fetching from the server actions
   const [history, quizEvents] = await Promise.all([
     getFullQuestionHistoryAction(eventFilter),
@@ -58,29 +58,10 @@ export default async function QuizArchivePage({
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-8 animate-in fade-in duration-700 pb-32 text-left">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <Link 
-            href="/quiz-generator"
-            className="p-2 hover:bg-[#26300D]/5 rounded-full transition-colors group"
-            title="Back to Generator"
-          >
-            <ArrowLeft className="w-6 h-6 text-[#1F1F1A] group-hover:-translate-x-1 transition-transform" />
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#FDCC4B] rounded-lg shadow-sm shrink-0">
-              <History className="w-5 h-5 text-[#26300D]" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black uppercase tracking-tight text-[#1F1F1A] leading-none">Question Archive</h1>
-              <p className="text-[10px] text-[#5F624F] font-bold uppercase tracking-wider mt-1 opacity-60">Past trivia items used at the bar</p>
-            </div>
-          </div>
-        </div>
-
         {/* Filter Toolbar */}
-        <QuizHistoryFilter 
-          quizEvents={quizEvents as QuizEventSummary[]} 
-          currentFilter={eventFilter} 
+        <QuizHistoryFilter
+          quizEvents={quizEvents as QuizEventSummary[]}
+          currentFilter={eventFilter}
         />
       </div>
 
@@ -108,40 +89,31 @@ export default async function QuizArchivePage({
                   </div>
                 </div>
                 <div className="w-5 h-5 text-[#E6DFC8] group-open:rotate-180 transition-transform">
-                    <ChevronDown className="w-5 h-5" />
+                  <ChevronDown className="w-5 h-5" />
                 </div>
               </summary>
 
-              <div className="p-2 sm:p-4 border-t border-[#E6DFC8] bg-slate-50/10">
-                <div className="grid grid-cols-1 gap-3">
+              <div className="p-3 sm:p-5 border-t border-[#E6DFC8] bg-slate-50/10">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {questions.map((record) => (
-                    <div 
-                      key={record.id} 
-                      className="bg-white border border-[#E6DFC8]/60 rounded-2xl p-4 sm:p-6 shadow-xs transition-all hover:border-[#26300D]/20 group/card"
+                    <div
+                      key={record.id}
+                      className="group relative flex flex-col bg-white border-2 border-[#26300D]/10 rounded-2xl shadow-xs transition-all hover:border-[#26300D]/20 overflow-hidden"
                     >
-                      <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 sm:gap-6">
-                        {/* Question Content - Takes full width on mobile */}
-                        <div className="flex-1 space-y-3">
-                          <div className="flex items-center gap-2">
-                             <MessageSquareQuote className="w-4 h-4 text-[#26300D] opacity-20" />
-                             <span className="text-[9px] font-black text-[#5F624F] uppercase tracking-widest opacity-60">Trivia Question</span>
-                          </div>
-                          <p className="text-base sm:text-lg font-black text-[#1F1F1A] leading-[1.4] tracking-tight">
+                      <div className="px-5 py-4 space-y-4 relative">
+                        {/* Question Content - Added pr-10 to prevent overlap with floating indicator */}
+                        <div className="flex items-start gap-2.5 pr-10">
+                          <MessageSquareQuote className="w-4 h-4 text-[#26300D] shrink-0 opacity-10 mt-0.5" />
+                          <p className="text-[13px] font-black text-[#1F1F1A] leading-snug tracking-tight">
                             {record.question_text}
                           </p>
                         </div>
 
-                        {/* Answer Content - High contrast box that looks intentional even when short */}
-                        <div className="w-full md:w-1/3 shrink-0">
-                          <div className="bg-[#FDCC4B]/10 border-2 border-[#FDCC4B]/30 p-4 rounded-xl sm:rounded-2xl transition-all group-hover/card:bg-[#FDCC4B]/20 h-full flex flex-col justify-center">
-                             <div className="flex items-center gap-2 mb-2">
-                               <CheckCircle2 className="w-3.5 h-3.5 text-[#26300D] opacity-40" />
-                               <span className="text-[9px] font-black text-[#26300D]/60 uppercase tracking-widest">Verified Answer</span>
-                             </div>
-                             <p className="text-sm sm:text-base font-black text-[#26300D] leading-tight">
-                               {record.answer_text}
-                             </p>
-                          </div>
+                        {/* Answer Content - Center aligned, brand background, no "Answer" text */}
+                        <div className="p-2.5 rounded-xl border border-[#FDCC4B]/40 bg-[#FDCC4B]/10 text-center transition-all duration-500">
+                          <p className="text-[12px] font-black text-[#26300D] leading-tight">
+                            {record.answer_text}
+                          </p>
                         </div>
                       </div>
                     </div>
