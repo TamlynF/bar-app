@@ -20,7 +20,6 @@ import { Label } from '@/components/ui/label'
 import { 
   Sparkles, 
   CheckCircle2, 
-  BrainCircuit, 
   Loader2, 
   AlertCircle,
   MessageSquareQuote,
@@ -28,9 +27,10 @@ import {
   ChevronDown,
   History,
   CalendarCheck,
-  CheckCircle,
   Check,
-  Plus
+  Plus,
+  LayoutGrid,
+  CheckCircle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -39,12 +39,7 @@ import { format } from 'date-fns'
 export type QuizQuestion = {
   question: string;
   answer: string;
-
   category: string;
-
-
-
-
 }
 
 export default function QuizGeneratorPage() {
@@ -114,7 +109,8 @@ export default function QuizGeneratorPage() {
       return {
         ...config,
         currentCount,
-        isFull: currentCount >= config.question_count
+        isFull: currentCount >= config.question_count,
+        progress: Math.min(100, (currentCount / config.question_count) * 100)
       };
     });
   }, [categories, eventHistory]);
@@ -137,7 +133,6 @@ export default function QuizGeneratorPage() {
     if (isLoading) return
     
     const stats = categoryStats.find(s => s.category_name === category);
-    
     if (stats?.isFull) {
       toast.error(`${category} is already full for this event.`);
       return;
@@ -162,7 +157,6 @@ export default function QuizGeneratorPage() {
   const handleSave = async () => {
     const selectedData = questions.filter((_, i) => selectedIndices.has(i))
     if (selectedData.length === 0 || isSaving) return
-    
     if (!selectedEventId) {
       toast.error("Select a Quiz Event first.");
       return
@@ -176,7 +170,7 @@ export default function QuizGeneratorPage() {
       setQuestions([])
       setSelectedIndices(new Set())
       setTopic('')
-      loadEventHistory(selectedEventId); // Refresh progress indicators
+      loadEventHistory(selectedEventId);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save to database.'
       toast.error(message)
@@ -193,15 +187,14 @@ export default function QuizGeneratorPage() {
   return (
     <div className="max-w-6xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6 animate-in fade-in duration-700 pb-32 text-left">
       
-      {/* HEADER SECTION - ULTRA COMPACT FOR MOBILE */}
-      <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8]/40 pb-3 sm:pb-0 sm:border-none">
-
+      {/* HEADER: Archive Shortcut */}
+      <div className="flex items-center justify-end">
         <Link 
           href="/quiz-generator/history" 
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[9px] uppercase tracking-wider hover:bg-[#26300D]/5 transition-all shadow-xs shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[9px] uppercase tracking-wider hover:bg-[#26300D]/5 transition-all shadow-xs"
         >
           <History className="w-3.5 h-3.5" />
-          <span className="xs:inline">View Past Questions</span>
+          <span>History Archive</span>
         </Link>
       </div>
 
