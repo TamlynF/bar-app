@@ -10,7 +10,9 @@ import {
   generateQuizAction, 
   saveQuizToDatabase, 
   getUpcomingQuizzesAction,
-  QuizEventSummary 
+  getQuizCategoryConfigsAction,
+  QuizEventSummary,
+  QuizCategoryConfig 
 } from './actions'
 import { 
   Sparkles, 
@@ -25,10 +27,6 @@ import {
   MessageSquareQuote,
   BookOpen,
   ChevronDown,
-  Film,
-  Music,
-  Trophy,
-  LayoutGrid,
   History,
   CalendarCheck
 } from 'lucide-react'
@@ -42,16 +40,9 @@ export type QuizQuestion = {
   category: string;
 }
 
-const CATEGORY_OPTIONS = [
-  { id: 'movies', label: 'Movies', icon: Film },
-  { id: 'music', label: 'Music', icon: Music },
-  { id: 'sports', label: 'Sports', icon: Trophy },
-  { id: 'general', label: 'General', icon: LayoutGrid },
-]
-
 export default function QuizGeneratorPage() {
   const [topic, setTopic] = useState('')
-  const [category, setCategory] = useState('movies')
+  const [category, setCategory] = useState('')
   const [numQuestions, setNumQuestions] = useState(10)
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set())
@@ -60,23 +51,47 @@ export default function QuizGeneratorPage() {
   const [error, setError] = useState('')
   
   const [upcomingEvents, setUpcomingEvents] = useState<QuizEventSummary[]>([])
+  const [categories, setCategories] = useState<QuizCategoryConfig[]>([])
   const [selectedEventId, setSelectedEventId] = useState<string>('')
 
-  // Load upcoming quiz events on mount
+  // Load initial data: Upcoming quiz events and Categories from DB config
   useEffect(() => {
-    async function loadEvents() {
+    async function loadInitialData() {
       try {
-        const events = await getUpcomingQuizzesAction()
-        setUpcomingEvents(events)
+        const [events, categoryConfigs] = await Promise.all([
+          getUpcomingQuizzesAction(),
+          getQuizCategoryConfigsAction()
+        ]);
+        
+        setUpcomingEvents(events);
         if (events.length > 0) {
-          setSelectedEventId(String(events[0].id))
+          setSelectedEventId(String(events[0].id));
+        }
+
+        setCategories(categoryConfigs);
+        // Set default category and question count from the first available config
+        if (categoryConfigs.length > 0) {
+          setCategory(categoryConfigs[0].category_name);
+          setNumQuestions(categoryConfigs[0].question_count);
         }
       } catch (err) {
-        console.error("Failed to load events", err)
+        console.error("Failed to load setup data:", err);
+        toast.error("Could not load categories or events from database");
       }
     }
-    loadEvents()
+    loadInitialData();
   }, [])
+
+  // When a category is selected, we update both the state and the default question count
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedName = e.target.value;
+    setCategory(selectedName);
+    
+    const config = categories.find(c => c.category_name === selectedName);
+    if (config) {
+      setNumQuestions(config.question_count);
+    }
+  };
 
   const handleGenerate = async (e?: React.FormEvent) => {
     e?.preventDefault()
@@ -204,12 +219,16 @@ export default function QuizGeneratorPage() {
                   id="category"
                   title="Category Select"
                   value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full h-11 rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/20 px-3 py-2 text-sm font-bold appearance-none focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] outline-none transition-all cursor-pointer"
+                  onChange={handleCategoryChange}
+                  className="w-full h-11 rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/20 px-3 py-2 text-sm font-bold appearance-none focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] outline-none transition-all cursor-pointer uppercase tracking-tight"
                 >
-                  {CATEGORY_OPTIONS.map(opt => (
-                    <option key={opt.id} value={opt.id}>{opt.label}</option>
-                  ))}
+                  {categories.length === 0 ? (
+                    <option value="" disabled>Loading categories...</option>
+                  ) : (
+                    categories.map(opt => (
+                      <option key={opt.id} value={opt.category_name}>{opt.category_name}</option>
+                    ))
+                  )}
                 </select>
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F] pointer-events-none opacity-40" />
               </div>
@@ -242,11 +261,11 @@ export default function QuizGeneratorPage() {
             </div>
             
             <div className="sm:col-span-5">
-              <Button type="submit" disabled={isLoading} className="w-full h-11 rounded-xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[10px] shadow-lg hover:bg-[#1a2109] transition-all active:scale-[0.98] group">
+              <Button type="submit" disabled={isLoading || categories.length === 0} className="w-full h-11 rounded-xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[10px] shadow-lg hover:bg-[#1a2109] transition-all active:scale-[0.98] group">
                 {isLoading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Preparing round...</>
+                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Gathering Intel...</>
                 ) : (
-                  <><Sparkles className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" /> Draft New Round</>
+                  <><Sparkles className="w-4 h-4 mr-2 group-hover:rotate-12 transition-transform" /> Generate Round</>
                 )}
               </Button>
             </div>
@@ -273,8 +292,8 @@ export default function QuizGeneratorPage() {
                       {selectedIndices.size}
                    </div>
                    <div className="flex flex-col text-left">
-                      <span className="text-[#FDCC4B] text-[10px] font-black uppercase tracking-[0.2em] leading-none">Draft Batch</span>
-                      <span className="text-white/40 text-[8px] font-bold uppercase mt-1 tracking-wider">Keep vs Skip</span>
+                      <span className="text-[#FDCC4B] text-[10px] font-black uppercase tracking-[0.2em] leading-none">Selected</span>
+                      <span className="text-white/40 text-[8px] font-bold uppercase mt-1 tracking-wider">Draft Items</span>
                    </div>
                 </div>
                 <div className="h-8 w-px bg-white/10 mx-2 hidden sm:block" />
@@ -295,7 +314,7 @@ export default function QuizGeneratorPage() {
                   disabled={isSaving || selectedIndices.size === 0 || !selectedEventId} 
                   className="flex-1 sm:flex-none rounded-xl h-10 bg-[#FDCC4B] text-[#26300D] px-7 font-black uppercase text-[10px] tracking-[0.15em] shadow-lg hover:bg-[#e5b843] active:scale-95 transition-transform"
                 >
-                  {isSaving ? "Saving..." : `Approve Round`}
+                  {isSaving ? "Saving..." : `Approve Selections`}
                 </Button>
              </div>
           </div>

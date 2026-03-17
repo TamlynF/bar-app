@@ -24,6 +24,30 @@ export type QuizEventSummary = {
   date: string;
 }
 
+export type QuizCategoryConfig = {
+  id: number;
+  category_name: string;
+  question_count: number;
+  points_per_question: number;
+}
+
+/**
+ * Retrieves all configured quiz categories and their rules.
+ */
+export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("quiz_category_configs")
+    .select("*")
+    .order("category_name", { ascending: true });
+
+  if (error) {
+    console.error("Error fetching quiz category configs:", error);
+    return [];
+  }
+  return (data as QuizCategoryConfig[]) || [];
+}
+
 /**
  * Generates a quiz using the Gemini 2.5 Flash model with Structured Outputs.
  */

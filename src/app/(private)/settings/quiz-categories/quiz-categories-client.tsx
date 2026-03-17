@@ -19,11 +19,9 @@ import {
   Loader2, 
   LayoutGrid,
   Hash,
-  Target,
-  AlertCircle
+  Target
 } from "lucide-react";
 import { saveQuizCategoryAction, deleteQuizCategoryAction, QuizCategoryConfig } from "./actions";
-import { cn } from "../../../../lib/utils";
 
 export default function QuizCategoriesClient({ 
   initialConfigs = [] 
