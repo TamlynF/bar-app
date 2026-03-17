@@ -86,7 +86,7 @@ export async function generateQuizAction(topic: string, category: string, number
   Requirements:
   - Exactly ${numberOfQuestions} unique questions.
   - Difficulty: Mixture of easy, medium, and "bar-room debate" hard.
-  - Style: Witty, engaging, and British pub culture appropriate.
+  - Style: Easy to understand, simple, and British pub culture appropriate.
   - Avoid these past questions: [${pastQuestionsList}].
   - Format: JSON array.`;
 
