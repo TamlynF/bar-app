@@ -1,17 +1,15 @@
 import React from 'react'
 // Using absolute aliases to ensure the build environment correctly locates the modules
 import { getFullQuestionHistoryAction, getQuizEventsAction } from '@/app/(private)/quiz-generator/actions'
-import Link from 'next/link'
 import {
-  History,
-  CheckCircle2,
-  ArrowLeft,
   LayoutGrid,
   BookOpen,
   ChevronDown,
-  MessageSquareQuote
+  MessageSquareQuote,
+  Target
 } from 'lucide-react'
 import QuizHistoryFilter from '@/app/(private)/quiz-generator/history/_components/quiz-history-filter'
+import { cn } from '@/lib/utils'
 
 export type PastQuestionRecord = {
   id: string;
@@ -30,6 +28,17 @@ export type QuizEventSummary = {
   date: string;
 }
 
+// UI/UX Theme palette for category differentiation
+const CATEGORY_THEMES = [
+  { bg: "bg-emerald-50/50", border: "border-blue-100", iconBg: "bg-blue-600", text: "text-blue-900" },
+  { bg: "bg-amber-50/50", border: "border-amber-100", iconBg: "bg-amber-600", text: "text-amber-900" },
+  { bg: "bg-emerald-50/50", border: "border-emerald-100", iconBg: "bg-emerald-600", text: "text-emerald-900" },
+  { bg: "bg-rose-50/50", border: "border-rose-100", iconBg: "bg-rose-600", text: "text-rose-900" },
+  { bg: "bg-indigo-50/50", border: "border-indigo-100", iconBg: "bg-indigo-600", text: "text-indigo-900" },
+  { bg: "bg-orange-50/50", border: "border-orange-100", iconBg: "bg-orange-600", text: "text-orange-900" },
+  { bg: "bg-purple-50/50", border: "border-purple-100", iconBg: "bg-purple-600", text: "text-purple-900" },
+];
+
 export const dynamic = 'force-dynamic'
 
 export default async function QuizArchivePage({
@@ -40,13 +49,11 @@ export default async function QuizArchivePage({
   const params = await searchParams;
   const eventFilter = params.event || 'all';
 
-  // Data fetching from the server actions
   const [history, quizEvents] = await Promise.all([
     getFullQuestionHistoryAction(eventFilter),
     getQuizEventsAction()
   ]);
 
-  // Type-safe grouping of history data
   const groupedQuestions = (history as PastQuestionRecord[] || []).reduce((acc: Record<string, PastQuestionRecord[]>, q: PastQuestionRecord) => {
     const catName = q.quiz_category_configs?.category_name || q.category || "General Knowledge";
     if (!acc[catName]) acc[catName] = [];
@@ -56,9 +63,8 @@ export default async function QuizArchivePage({
 
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-8 animate-in fade-in duration-700 pb-32 text-left">
-      {/* Page Header */}
+      {/* Filter Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
-        {/* Filter Toolbar */}
         <QuizHistoryFilter
           quizEvents={quizEvents as QuizEventSummary[]}
           currentFilter={eventFilter}
@@ -75,53 +81,73 @@ export default async function QuizArchivePage({
         </div>
       ) : (
         <div className="space-y-6">
-          {Object.entries(groupedQuestions).map(([category, questions]) => (
-            /* ALL groupings are collapsed by default (no 'open' attribute) */
-            <details key={category} className="group border border-[#E6DFC8] rounded-[2rem] bg-white overflow-hidden shadow-sm">
-              <summary className="flex items-center justify-between p-5 cursor-pointer list-none select-none outline-none hover:bg-[#F7F4EA]/30 transition-colors">
+          {Object.entries(groupedQuestions).map(([category, questions], index) => {
+            const theme = CATEGORY_THEMES[index % CATEGORY_THEMES.length];
+            console.log("Rendering category:", index, " ", theme);
+            return (
+              <details 
+                key={category} 
+                className={cn(
+                  "group border rounded-[2rem] overflow-hidden shadow-sm transition-all duration-300",
+                  theme.bg,                  
+                  theme.border
+                )}
+              >
+                <summary className="flex items-center justify-between p-5 cursor-pointer list-none select-none outline-none hover:brightness-95 transition-all">
                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 rounded-xl bg-[#26300D] flex items-center justify-center group-open:rotate-90 transition-transform">
-                    <LayoutGrid className="w-5 h-5 text-[#FDCC4B]" />
+                    <div className={cn(
+                      "w-10 h-10 rounded-xl flex items-center justify-center group-open:rotate-90 transition-transform shadow-sm",
+                      theme.iconBg
+                    )}>
+                      <LayoutGrid className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className={cn("text-base font-black uppercase tracking-tight", theme.text)}>{category}</h3>
+                      <p className="text-[10px] text-[#5F624F] font-bold opacity-60 uppercase tracking-widest">{questions.length} Items Logged</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-base font-black uppercase tracking-tight text-[#1F1F1A]">{category}</h3>
-                    <p className="text-[10px] text-[#5F624F] font-bold opacity-60 uppercase tracking-widest">{questions.length} Items Logged</p>
+                  <div className="w-5 h-5 text-[#5F624F] opacity-40 group-open:rotate-180 transition-transform">
+                    <ChevronDown className="w-5 h-5" />
                   </div>
-                </div>
-                <div className="w-5 h-5 text-[#E6DFC8] group-open:rotate-180 transition-transform">
-                  <ChevronDown className="w-5 h-5" />
-                </div>
-              </summary>
+                </summary>
 
-              <div className="p-3 sm:p-5 border-t border-[#E6DFC8] bg-slate-50/10">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {questions.map((record) => (
-                    <div
-                      key={record.id}
-                      className="group relative flex flex-col bg-white border-2 border-[#26300D]/10 rounded-2xl shadow-xs transition-all hover:border-[#26300D]/20 overflow-hidden"
-                    >
-                      <div className="px-5 py-4 space-y-4 relative">
-                        {/* Question Content - Added pr-10 to prevent overlap with floating indicator */}
-                        <div className="flex items-start gap-2.5 pr-10">
-                          <MessageSquareQuote className="w-4 h-4 text-[#26300D] shrink-0 opacity-10 mt-0.5" />
-                          <p className="text-[13px] font-black text-[#1F1F1A] leading-snug tracking-tight">
-                            {record.question_text}
-                          </p>
-                        </div>
+                <div className="p-3 sm:p-6 border-t border-white/40">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                    {questions.map((record) => (
+                      <div
+                        key={record.id}
+                        className="flex flex-col bg-white border border-black/5 rounded-2xl shadow-sm overflow-hidden"
+                      >
+                        <div className="p-5 flex-1 space-y-5 flex flex-col">
+                          {/* Question Section */}
+                          <div className="flex items-start gap-3">
+                            <div className="mt-1 p-1 bg-slate-50 rounded-lg">
+                                <MessageSquareQuote className="w-4 h-4 text-[#26300D] opacity-40" />
+                            </div>
+                            <p className="text-[14px] font-bold text-[#1F1F1A] leading-snug tracking-tight">
+                              {record.question_text}
+                            </p>
+                          </div>
 
-                        {/* Answer Content - Center aligned, brand background, no "Answer" text */}
-                        <div className="p-2.5 rounded-xl border border-[#FDCC4B]/40 bg-[#FDCC4B]/10 text-center transition-all duration-500">
-                          <p className="text-[12px] font-black text-[#26300D] leading-tight">
-                            {record.answer_text}
-                          </p>
+                          {/* Unified Answer Box: Dark/Gold High Contrast */}
+                          <div className="mt-auto p-4 rounded-xl bg-[#26300D] text-center shadow-inner relative overflow-hidden group/answer">
+                            <div className="absolute top-0 left-0 w-full h-full bg-[#FDCC4B]/5 pointer-events-none" />
+                            <div className="flex items-center justify-center gap-1.5 mb-1.5 opacity-60">
+                                <Target className="w-3 h-3 text-[#FDCC4B]" />
+                                <span className="text-[9px] font-black text-[#FDCC4B] uppercase tracking-[0.2em]">Correct Answer</span>
+                            </div>
+                            <p className="text-[15px] font-black text-white leading-tight tracking-tight">
+                              {record.answer_text}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </details>
-          ))}
+              </details>
+            );
+          })}
         </div>
       )}
     </div>
