@@ -5,7 +5,6 @@ import styles from "./booking-list-client.module.css"
 import { format, isSameDay } from "date-fns"
 import { updateBookingStatus, deleteBooking } from "@/app/(private)/actions/booking-actions"
 import {
-  CalendarDays,
   CheckCircle2,
   ChevronRight,
   Clock3,
@@ -22,8 +21,6 @@ import {
   Trophy,
   Target,
   AlertCircle,
-  Mail,
-  User,
   Trash2,
   Calendar,
   Hash,
@@ -41,9 +38,9 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
-import { Booking } from "../../events/quiz-bookings/page"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
+import { Booking } from "../../events/quiz-bookings/page"
 
 const formatDateStr = (d: Date | string) => {
   if (typeof d === 'string') return d;
@@ -122,7 +119,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   
   // Refs for scroll and focus control
   const scrollContainerRef = useRef<HTMLDivElement>(null)
-  const topFocusRef = useRef<HTMLDivElement>(null)
+  const topFocusRef = useRef<HTMLSpanElement>(null)
 
   const isDateFiltered = !!(selectedDate || searchParams.get('date'));
 
@@ -133,10 +130,17 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     setActiveStatusFilters(next)
   }
 
-  // Ensure scroll state resets when opening a new team
+  // FIX: Force scroll to top and focus header when a booking is selected
   useEffect(() => {
-    if (selectedBooking && scrollContainerRef.current) {
-      scrollContainerRef.current.scrollTop = 0
+    if (selectedBooking) {
+      const timer = setTimeout(() => {
+        // Focus the hidden anchor at the top to ensure the viewport starts at y=0
+        topFocusRef.current?.focus();
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      }, 50); 
+      return () => clearTimeout(timer);
     }
   }, [selectedBooking])
 
@@ -318,60 +322,58 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
         <SheetContent
           side="bottom"
-          // We override the auto-focus to point to the top header instead of buttons in the footer
-          onOpenAutoFocus={(e) => {
-            e.preventDefault()
-            topFocusRef.current?.focus()
-          }}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[92vh] sm:h-[85vh] flex flex-col outline-none shadow-2xl overflow-hidden"
+          // Crucial: Disable auto-focus to prevent the browser from jumping to buttons at the bottom
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[80dvh] sm:h-[85vh] flex flex-col outline-none shadow-2xl gap-0"
           style={{ backgroundColor: "#F7F4EA" }}
         >
           {selectedBooking && (
             <>
+              {/* Invisible focus anchor to hold scroll position at the top */}
+              <span ref={topFocusRef} tabIndex={-1} className="sr-only" aria-hidden="true" />
+              
               {/* Drag handle */}
-              <div className="flex justify-center pt-3 shrink-0 pb-1">
-                <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
+              <div className="flex justify-center pt-3 shrink-0 pb-1 bg-white/50 backdrop-blur-md">
+                <div className="w-10 h-1.5 bg-slate-200 rounded-full" />
               </div>
 
-              {/* Header section - shrink-0 prevents it from collapsing or moving */}
-              <div 
-                ref={topFocusRef} 
-                tabIndex={-1} 
-                className="outline-none shrink-0"
-              >
-                <SheetHeader className="px-6 pb-4 border-b border-[#E6DFC8] bg-white/70 backdrop-blur-lg text-left pt-2">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="min-w-0 flex-1">
-                      <div className={cn(
-                          "inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border mb-2",
-                          statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
-                          statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
-                          statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
-                        )}>
-                        {normStatus(selectedBooking.status) || "pending"}
-                      </div>
-                      <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-none truncate">
-                        {selectedBooking.group_name || "Guest Team"}
-                      </SheetTitle>
-                      <p className="text-[10px] font-bold text-[#5F624F] uppercase tracking-widest mt-1.5 opacity-60">
-                        Ref: #{selectedBooking.id}
-                      </p>
+              {/* Header section - Sticky/Shrink-0 */}
+              <SheetHeader className="px-1 pb-1 border-b border-[#E6DFC8] bg-white/70 backdrop-blur-lg text-left pt-0 shrink-0">
+                <div className="flex items-center justify-between gap-1">
+                  <div className="min-w-0 flex-1">
+                    <div className={cn(
+                        "inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border mb-0",
+                        statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
+                        statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
+                        statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
+                      )}>
+                      {normStatus(selectedBooking.status) || "pending"}
                     </div>
-
-                    {selectedBooking.booking_scores?.[0] && (
-                      <div className="bg-[#26300D] text-white p-3 rounded-2xl shadow-md border border-white/10 flex flex-col items-center min-w-[70px]">
-                        <span className="text-[8px] font-black text-[#FDCC4B] uppercase tracking-widest opacity-60 mb-0.5">Score</span>
-                        <span className="text-xl font-black">{selectedBooking.booking_scores[0].score}</span>
-                      </div>
-                    )}
+                    <SheetTitle className="text-sm font-black text-[#1F1F1A] uppercase tracking-tighter leading-none truncate">
+                      {selectedBooking.group_name || "Guest Team"}
+                    </SheetTitle>
+                    <p className="text-[8px] font-bold text-[#5F624F] uppercase tracking-widest mt-1 opacity-60">
+                      Ref: #{selectedBooking.id}
+                    </p>
                   </div>
-                </SheetHeader>
-              </div>
 
-              {/* SCROLLABLE BODY - flex-1 and min-h-0 are the key combination for inner scrolling in flex parents */}
+                  {selectedBooking.booking_scores?.[0] && (
+                    <div className="bg-[#26300D] text-white p-3 rounded-2xl shadow-md border border-white/10 flex flex-col items-center min-w-[70px]">
+                      <span className="text-[8px] font-black text-[#FDCC4B] uppercase tracking-widest opacity-60 mb-0.5">Score</span>
+                      <span className="text-xl font-black">{selectedBooking.booking_scores[0].score}</span>
+                    </div>
+                  )}
+                </div>
+              </SheetHeader>
+
+              {/* SCROLLABLE BODY
+                  - flex-1 and min-h-0 are required for inner scrolling in a flex container
+                  - touch-pan-y ensures smooth mobile touch interaction
+                  - pointer-events-auto ensures the area is clickable/scrollable */}
               <div 
                 ref={scrollContainerRef}
-                className="flex-1 overflow-y-auto px-6 py-6 space-y-8 text-left overscroll-contain touch-pan-y relative min-h-0 pointer-events-auto"
+                data-radix-scroll-area-bridge=""
+                className="flex-1 overflow-y-auto px-6 py-6 space-y-8 text-left relative min-h-0 touch-pan-y overscroll-contain pointer-events-auto"
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
                 {/* Winner Badge if applicable */}
@@ -390,9 +392,9 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                 )}
 
                 {/* Section: Logistics */}
-                <div className="space-y-4">
+                <div className="space-y-1">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A] opacity-40 px-1">Reservation Info</h3>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-1">
                     <DetailTile icon={<Calendar className="w-4 h-4" />} label="Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM") : "—"} />
                     <DetailTile icon={<Clock3 className="w-4 h-4" />} label="Time" value={selectedBooking.events?.event_start_time?.substring(0, 5) || "—"} />
                     <DetailTile icon={<Users className="w-4 h-4" />} label="Size" value={`${selectedBooking.group_size} Guests`} />
@@ -401,10 +403,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                 </div>
 
                 {/* Section: Contact */}
-                <div className="space-y-4">
+                <div className="space-y-1">
                   <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A] opacity-40 px-1">Contact Lead</h3>
-                  <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl p-4 shadow-sm flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#26300D] border border-[#E6DFC8]">
+                  <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl p-4 shadow-sm flex items-center gap-1">
+                    <div className="w-12 h-12 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-sm text-[#26300D] border border-[#E6DFC8]">
                       {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
                     </div>
                     <div className="min-w-0 flex-1">
@@ -430,7 +432,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   </div>
                 )}
                 
-                {/* Visual buffer */}
+                {/* Visual padding to ensure content isn't cut off by the sticky footer */}
                 <div className="h-10" />
               </div>
 
@@ -483,7 +485,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
       {/* Syncing Overlay */}
       {isPending && (
-        <div className="fixed bottom-6 right-6 z-[100] bg-[#26300D] text-[#FDCC4B] px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed bottom-6 right-6 z-100 bg-[#26300D] text-[#FDCC4B] px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2">
           <Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating...
         </div>
       )}
@@ -667,40 +669,6 @@ function BookingCard({
         )}
         {/* Disclosure Chevron: Subtle indicator that the card is a link/button */}
         <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
-      </div>
-    </div>
-  )
-}
-
-function KPIBox({
-  label,
-  value,
-  icon,
-  color = "default",
-}: {
-  label: string
-  value: string | number
-  icon: React.ReactNode
-  color?: "amber" | "default"
-}) {
-  return (
-    <div
-      className={cn(
-        "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg py-2 px-1.5 flex flex-col items-center justify-center gap-1 shadow-sm transition-all relative overflow-hidden h-full",
-        color === "amber" &&
-        "border-orange-300 dark:border-orange-500/50 bg-orange-50/50 dark:bg-orange-500/10",
-      )}
-    >
-      <div className="flex flex-col items-center gap-0.5 w-full">
-        <div className="w-5 h-5 rounded bg-slate-50 dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400">
-          <div className="scale-[0.6]">{icon}</div>
-        </div>
-        <span className="text-[8px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate w-full text-center">
-          {label}
-        </span>
-      </div>
-      <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-none tracking-tight shrink-0">
-        {value}
       </div>
     </div>
   )
