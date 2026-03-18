@@ -116,7 +116,6 @@ const statusTheme: Record<
 
 export default function BookingListClient({ initialBookings, selectedDate }: { initialBookings: Booking[], selectedDate?: string | undefined }) {
   const [isPending, startTransition] = useTransition()
-  //const [bookingActionId, setBookingActionId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set())
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
@@ -128,8 +127,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   })
   
   const searchParams = useSearchParams()
-  
-  // Refs for scroll and focus control
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const topFocusRef = useRef<HTMLSpanElement>(null)
 
@@ -142,9 +139,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     setActiveStatusFilters(next)
   }
 
-  /**
-   * Enter edit mode and initialize the form state
-   */
   const handleEnterEditMode = () => {
     if (selectedBooking) {
       setEditForm({
@@ -156,9 +150,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     }
   }
 
-  /**
-   * Selection handler to ensure edit mode resets when switching between items
-   */
   const handleSelectBooking = (booking: Booking) => {
     setSelectedBooking(booking)
     setIsEditing(false)
@@ -199,7 +190,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
   const stats = useMemo(() => {
     const dateFilter = selectedDate ? (typeof selectedDate === 'string' ? selectedDate : formatDateStr(selectedDate)) : null;
-
     const contextBookings = dateFilter
       ? initialBookings.filter((b) => b.events?.event_date === dateFilter)
       : initialBookings
@@ -305,7 +295,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         )}
       </div>
 
-      {/* POPUP DETAIL PAGE (Sheet used as full-screenish popup) */}
+      {/* POPUP DETAIL PAGE */}
       <Sheet 
         open={!!selectedBooking} 
         onOpenChange={(open) => {
@@ -324,10 +314,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
             <>
               <span ref={topFocusRef} tabIndex={-1} className="sr-only" />
               
-              {/* Refined Header - Consistent with Quiz Generator/Settings sheets */}
-              <div className="shrink-0 p-6 pb-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              {/* HEADER: Reference visible + Edit/Delete buttons top right */}
+              <div className="shrink-0 p-6 pb-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 flex flex-row items-start justify-between gap-4">
                 <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-center gap-2 mb-1.5">
+                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                     <span className={cn(
                       "inline-flex px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
                       statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
@@ -335,36 +325,43 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     )}>
                       {normStatus(selectedBooking.status) || "pending"}
                     </span>
+                    {/* REFERENCE ID: Always visible now */}
+                    <span className="text-[10px] font-black text-[#5F624F] uppercase tracking-widest opacity-60 tabular-nums bg-slate-100 px-2 py-0.5 rounded-full">
+                      Ref: #{selectedBooking.id}
+                    </span>
                   </div>
                   <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
                     {isEditing ? "Modify Record" : (selectedBooking.group_name || "Guest Team")}
                   </SheetTitle>
                 </div>
 
-                <div className="flex items-center gap-3">
-                  <div className="hidden sm:block text-right mr-4">
-                    <p className="text-[10px] font-black text-[#5F624F] uppercase tracking-widest opacity-60">Reference</p>
-                    <p className="text-sm font-black text-[#26300D] tabular-nums leading-none">#{selectedBooking.id}</p>
-                  </div>
-                  
+                {/* TOP RIGHT ACTION GROUP (Positions buttons next to the sheet close 'X') */}
+                <div className="flex items-center gap-2 pt-1 pr-10">
                   {!isEditing && (
-                    <Button 
-                      onClick={handleEnterEditMode} 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-10 px-4 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#26300D] font-black text-[10px] uppercase tracking-widest hover:bg-[#26300D]/5 transition-all"
-                    >
-                      <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
-                    </Button>
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-9 w-9 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all active:scale-90 shadow-sm border border-red-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if(window.confirm("Permanently delete this booking?")) handleDeleteBooking(selectedBooking.id)
+                        }}
+                        title="Delete Record"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        onClick={handleEnterEditMode} 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-9 w-9 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#26300D] transition-all active:scale-90 shadow-sm"
+                        title="Edit Details"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </>
                   )}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-10 w-10 rounded-full hover:bg-black/5" 
-                    onClick={() => setSelectedBooking(null)}
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
                 </div>
               </div>
 
@@ -529,17 +526,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                         Modify Details
                       </Button>
                     </div>
-                    <Button 
-                      variant="ghost"
-                      onClick={() => {
-                        if (window.confirm("Permanently delete this booking? This cannot be undone.")) {
-                          handleDeleteBooking(selectedBooking.id)
-                        }
-                      }}
-                      className="text-red-600 font-black uppercase tracking-widest text-[9px] h-auto p-2 opacity-60 hover:opacity-100 transition-opacity"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Remove Permanent Record
-                    </Button>
                   </div>
                 )}
               </div>
