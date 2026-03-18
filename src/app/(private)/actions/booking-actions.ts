@@ -160,7 +160,7 @@ export async function getQuizEvents(type: string, subType: string) {
     const supabase = await createClient();
     const { data: events, error } = await supabase
       .from("events")
-      .select("date, event_types!inner(category: type, sub_type)")
+      .select("id, date, title, event_types!inner(category: type, sub_type)")
       .ilike("event_types.type", type)
       .ilike("event_types.sub_type", subType)
 

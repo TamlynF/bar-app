@@ -7,7 +7,8 @@ import {
   updateBookingStatus, 
   deleteBooking, 
   updateBookingDetails, 
-  getAvailableTablesForEvent 
+  getAvailableTablesForEvent,
+  getQuizEvents
 } from "@/app/(private)/actions/booking-actions"
 import {
   CheckCircle2,
@@ -33,7 +34,10 @@ import {
   ChevronDown,
   Save,
   X,
-  MessageSquareQuote
+  MessageSquareQuote,
+  RefreshCw,
+  Info,
+  CalendarDays
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
@@ -113,11 +117,17 @@ const statusTheme: Record<
   },
 }
 
-// Local interface for table selection state
+// Local interface for selection states
 interface SelectableTable {
   id: number;
   name: string;
   max_capacity: number;
+}
+
+interface SelectableEvent {
+  id: string;
+  date: string;
+  title: string;
 }
 
 export default function BookingListClient({ initialBookings, selectedDate }: { initialBookings: Booking[], selectedDate?: string | undefined }) {
@@ -127,12 +137,15 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [availableTables, setAvailableTables] = useState<SelectableTable[]>([])
+  const [availableEvents, setAvailableEvents] = useState<SelectableEvent[]>([])
   
   const [editForm, setEditForm] = useState({
     group_name: "",
     group_size: 0,
     special_requests: "",
-    table_id: ""
+    table_id: "",
+    status: "",
+    event_id: ""
   })
   
   const searchParams = useSearchParams()
@@ -151,37 +164,97 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   const handleEnterEditMode = async () => {
     if (selectedBooking) {
       const currentTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id;
+      const currentEventId = String(selectedBooking.event_id);
       
       setEditForm({
         group_name: selectedBooking.group_name || "",
-        group_size: selectedBooking.group_size || 0,
+        group_size: Number(selectedBooking.group_size) || 0,
         special_requests: selectedBooking.special_requests || "",
-        table_id: currentTableId || ""
+        table_id: currentTableId || "",
+        status: normStatus(selectedBooking.status) || "pending",
+        event_id: currentEventId
       })
       
       setIsEditing(true)
       
-      // Fetch compatible tables for current event and group size
+      // Fetch compatible tables
       if (selectedBooking.event_id) {
         const tables = await getAvailableTablesForEvent(
-          String(selectedBooking.event_id), 
-          selectedBooking.group_size || 0,
+          currentEventId, 
+          Number(selectedBooking.group_size) || 0,
           currentTableId
         );
-        // Explicitly casting the Supabase result to our typed interface
         setAvailableTables(tables as unknown as SelectableTable[]);
+      }
+
+      // Fetch all upcoming events of same type to allow movement
+      if (selectedBooking.events?.event_types) {
+        const events = await getQuizEvents(
+          selectedBooking.events.event_types.category || "game",
+          selectedBooking.events.event_types.sub_type || "quiz"
+        );
+        setAvailableEvents(events as unknown as SelectableEvent[]);
       }
     }
   }
 
+  const handleEventChange = async (newEventId: string) => {
+    // When changing event, table assignment is cleared as it's date-specific
+    setEditForm(prev => ({ ...prev, event_id: newEventId, table_id: "" }));
+    
+    // Refresh tables for the new event context
+    const tables = await getAvailableTablesForEvent(
+      newEventId, 
+      editForm.group_size,
+      "" 
+    );
+    setAvailableTables(tables as unknown as SelectableTable[]);
+  }
+
+  const handleTableChange = (newTableId: string) => {
+    const originalTableId = selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
+    const wasUnassigned = originalTableId === "";
+    const isUnassigned = newTableId === "";
+    
+    let newStatus = editForm.status;
+
+    // RULE: If table id was Unassigned and then changed to a table name -> set status to confirmed
+    if (wasUnassigned && !isUnassigned) {
+      newStatus = "confirmed";
+    } 
+    // RULE: If table id was assigned to a table and then changed to unassigned -> set status to cancelled
+    else if (!wasUnassigned && isUnassigned) {
+      newStatus = "cancelled";
+    }
+
+    setEditForm(prev => ({ ...prev, table_id: newTableId, status: newStatus }));
+  }
+
+  /**
+   * Logical rule handler for Status changes in edit mode
+   */
+  const handleStatusChangeInEdit = (newStatus: string) => {
+    const originalStatus = normStatus(selectedBooking?.status) || "pending";
+    const wasConfirmed = originalStatus === "confirmed";
+    const isNowOther = newStatus !== "confirmed";
+    
+    let newTableId = editForm.table_id;
+
+    // RULE: if the status is changed from confirmed to any other status -> set table id to unassigned
+    if (wasConfirmed && isNowOther) {
+      newTableId = "";
+    }
+
+    setEditForm(prev => ({ ...prev, status: newStatus, table_id: newTableId }));
+  }
+
   const handleGroupSizeChange = async (size: number) => {
     setEditForm(prev => ({...prev, group_size: size}));
-    // Re-fetch tables when size changes to ensure availability matches capacity
-    if (selectedBooking?.event_id) {
+    if (editForm.event_id) {
       const tables = await getAvailableTablesForEvent(
-        String(selectedBooking.event_id), 
+        editForm.event_id, 
         size,
-        selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id
+        selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id
       );
       setAvailableTables(tables as unknown as SelectableTable[]);
     }
@@ -245,28 +318,12 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     }
   }, [initialBookings, selectedDate])
 
-  const handleStatusChange = (id: string, newStatus: string) => {
-    startTransition(async () => {
-      try {
-        await updateBookingStatus(id, newStatus)
-        if (selectedBooking?.id === id) {
-          setSelectedBooking(prev => prev ? { ...prev, status: newStatus } : null)
-        }
-        toast.success(`Status updated to ${newStatus}`)
-      } catch (error) {
-        console.error(error)
-        toast.error("Failed to update status")
-      }
-    })
-  }
-
   const handleSaveDetails = () => {
     if (!selectedBooking) return
     startTransition(async () => {
       try {
         await updateBookingDetails(selectedBooking.id, editForm)
         
-        // Find selected table name for local state update
         const table = availableTables.find(t => String(t.id) === String(editForm.table_id));
         const tableMapping = editForm.table_id ? [{ 
           tables: { 
@@ -275,12 +332,23 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
           } 
         }] : [];
 
-        setSelectedBooking(prev => prev ? { 
-          ...prev, 
-          ...editForm,
-          // Correctly typed update to booking mappings
-          booking_table_mappings: tableMapping as Booking['booking_table_mappings']
-        } : null)
+        const targetEvent = availableEvents.find(e => String(e.id) === String(editForm.event_id));
+
+        setSelectedBooking(prev => {
+          if (!prev) return null;
+          return { 
+            ...prev, 
+            ...editForm,
+            // event_id is stored as string in state, matching interface requirement
+            event_id: editForm.event_id, 
+            events: targetEvent ? {
+               ...prev.events,
+               event_date: targetEvent.date,
+               event_title: targetEvent.title
+            } : prev.events,
+            booking_table_mappings: tableMapping as Booking['booking_table_mappings']
+          };
+        });
         
         setIsEditing(false)
         toast.success("Booking updated successfully")
@@ -304,6 +372,16 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       }
     })
   }
+
+  // Reactive hint flags for UI feedback
+  const originalTableIdFromRec = selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
+  const originalStatusFromRec = normStatus(selectedBooking?.status) || "pending";
+  const originalEventIdFromRec = String(selectedBooking?.event_id || "");
+  
+  const showTableConfirmedHint = originalTableIdFromRec === "" && editForm.table_id !== "" && editForm.status === "confirmed";
+  const showTableCancelledHint = originalTableIdFromRec !== "" && editForm.table_id === "" && editForm.status === "cancelled";
+  const showStatusTableUnassignedHint = originalStatusFromRec === "confirmed" && editForm.status !== "confirmed" && editForm.table_id === "";
+  const showEventMoveHint = originalEventIdFromRec !== editForm.event_id;
 
   return (
     <div className="space-y-3 animate-in fade-in duration-500">
@@ -378,7 +456,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   <div className="flex items-center gap-1.5 mt-1.5 opacity-50">
                     <Hash className="w-3 h-3 text-[#5F624F]" />
                     <span className="text-[10px] font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
-                      Record #{selectedBooking.id}
+                      Ref: {selectedBooking.id}
                     </span>
                   </div>
                 </div>
@@ -435,6 +513,31 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   // EDIT MODE FORM - Consistent with Quiz Generator inline editor
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Event Date & Session</Label>
+                      <div className="relative group">
+                        <select 
+                          title="Select Event"
+                          value={editForm.event_id}
+                          onChange={(e) => handleEventChange(e.target.value)}
+                          className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold appearance-none outline-none focus:border-[#26300D] transition-all"
+                        >
+                          {availableEvents.map(e => (
+                            <option key={e.id} value={e.id}>
+                              {format(new Date(e.date), "dd MMM yyyy")} - {e.title || "Untitled Event"}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5F624F] opacity-40 pointer-events-none" />
+                      </div>
+                      {showEventMoveHint && (
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
+                          <p className="text-[10px] font-black uppercase text-blue-700 tracking-tight">Moving event. Table assignment has been reset.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Team Name</Label>
                       <Input 
                         value={editForm.group_name} 
@@ -471,8 +574,11 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                         <select 
                           title="Select Table"
                           value={editForm.table_id}
-                          onChange={(e) => setEditForm(prev => ({...prev, table_id: e.target.value}))}
-                          className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold appearance-none outline-none focus:border-[#26300D] transition-all"
+                          onChange={(e) => handleTableChange(e.target.value)}
+                          className={cn(
+                            "w-full h-14 rounded-2xl border-2 px-4 text-sm font-bold appearance-none outline-none transition-all",
+                            editForm.table_id ? "bg-white border-[#E6DFC8] focus:border-[#26300D]" : "bg-[#F7F4EA] border-dashed border-[#E6DFC8]"
+                          )}
                         >
                           <option value="">Unassigned / No Table</option>
                           {availableTables.map(t => (
@@ -481,9 +587,20 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                         </select>
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5F624F] opacity-40 pointer-events-none" />
                       </div>
-                      <p className="text-[10px] text-muted-foreground italic px-1">
-                        Only available tables with capacity ≥ {editForm.group_size} are shown.
-                      </p>
+                      
+                      {/* TABLE TO STATUS INDICATORS */}
+                      {showTableConfirmedHint && (
+                        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <p className="text-[10px] font-black uppercase text-emerald-700 tracking-tight">Table selected. Status will update to Confirmed.</p>
+                        </div>
+                      )}
+                      {showTableCancelledHint && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                          <p className="text-[10px] font-black uppercase text-red-700 tracking-tight">Table removed. Status will update to Cancelled.</p>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="pt-6 border-t border-[#E6DFC8]">
@@ -493,10 +610,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                            <button
                              key={s}
                              type="button"
-                             onClick={() => handleStatusChange(selectedBooking.id, s)}
+                             onClick={() => handleStatusChangeInEdit(s)}
                              className={cn(
                                "px-4 py-2.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                               normStatus(selectedBooking.status) === s 
+                               editForm.status === s 
                                 ? `${statusTheme[s].bg} ${statusTheme[s].border} ${statusTheme[s].text} ring-2 ring-offset-2 ring-primary/10 shadow-sm`
                                 : "bg-white border-[#E6DFC8] text-slate-400 hover:border-[#26300D]/30"
                              )}
@@ -505,6 +622,14 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                            </button>
                          ))}
                        </div>
+                       
+                       {/* STATUS TO TABLE INDICATOR */}
+                       {showStatusTableUnassignedHint && (
+                        <div className="mt-3 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <RefreshCw className="w-3.5 h-3.5 text-amber-600 animate-spin-slow" />
+                          <p className="text-[10px] font-black uppercase text-amber-700 tracking-tight">Status changed. Table assignment will be cleared.</p>
+                        </div>
+                       )}
                     </div>
 
                     <div className="space-y-2">
@@ -578,26 +703,26 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               {/* STICKY FOOTER ACTIONS - Consistent spacing and shadow */}
               <div className="shrink-0 p-6 pt-4 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.05)] z-40">
                 {isEditing ? (
-                  <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <Button 
                       onClick={handleSaveDetails} 
                       disabled={isPending}
-                      className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-xs shadow-lg w-full active:scale-95 transition-transform"
+                      className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-xs shadow-lg active:scale-95 transition-transform"
                     >
-                      {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save Changes</>}
+                      {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save</>}
                     </Button>
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       onClick={() => setIsEditing(false)}
-                      className="text-[#5F624F] font-black uppercase tracking-widest text-[10px] h-10"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px] bg-white shadow-sm"
                     >
-                      Discard Changes
+                      Discard
                     </Button>
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
                     <div className="grid grid-cols-2 gap-3">
-                      <Button asChild className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95 transition-transform">
+                      <Button asChild className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95">
                         <Link href={`/manage-booking/${selectedBooking.id}`}>
                           <ExternalLink className="w-4 h-4 mr-2" /> Open Link
                         </Link>
@@ -605,7 +730,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                       <Button 
                         variant="outline" 
                         onClick={handleEnterEditMode}
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white hover:bg-[#26300D]/5 active:scale-95 transition-transform"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
                       >
                         Modify Details
                       </Button>
