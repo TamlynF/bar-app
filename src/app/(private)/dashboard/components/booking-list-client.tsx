@@ -1,11 +1,10 @@
 "use client"
 
-import React, { useMemo, useState, useTransition } from "react"
+import React, { useMemo, useState, useTransition, useEffect, useRef } from "react"
 import styles from "./booking-list-client.module.css"
 import { format, isSameDay } from "date-fns"
 import { updateBookingStatus, deleteBooking } from "@/app/(private)/actions/booking-actions"
 import {
-  BadgePoundSterling,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -120,6 +119,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set())
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const searchParams = useSearchParams()
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   // Determine if a date is effectively filtered (either via prop or URL)
   // This ensures that "All History" mode is detected correctly.
@@ -131,6 +131,13 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     else next.add(status)
     setActiveStatusFilters(next)
   }
+
+  // Reset scroll on sheet open
+  useEffect(() => {
+    if (selectedBooking && scrollRef.current) {
+      scrollRef.current.scrollTop = 0
+    }
+  }, [selectedBooking])
 
   const filteredBookings = useMemo(() => {
     return initialBookings
@@ -192,11 +199,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   }, [initialBookings, selectedDate])
 
   const handleStatusChange = (id: string, newStatus: string) => {
-    setBookingActionId(id)
+    //setBookingActionId(id)
     if (selectedBooking && selectedBooking.id === id) {
       setSelectedBooking({ ...selectedBooking, status: newStatus })
     }
-
     startTransition(async () => {
       try {
         await updateBookingStatus(id, newStatus)
@@ -204,8 +210,8 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       } catch (error) {
         console.error(error)
         toast.error("Failed to update status")
-      } finally {
-        setBookingActionId(null)
+      //} finally {
+      //  setBookingActionId(null)
       }
     })
   }
@@ -330,194 +336,124 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
         <SheetContent
           side="bottom"
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[92vh] sm:h-[85vh] flex flex-col outline-none shadow-2xl overflow-hidden"
+          // CRITICAL: onOpenAutoFocus={e => e.preventDefault()} prevents scrolling to the bottom buttons on open
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[88vh] flex flex-col outline-none shadow-2xl overflow-hidden"
           style={{ backgroundColor: "#F7F4EA" }}
-        >
+	>
           {selectedBooking && (
             <>
-              {/* Drag Handle for mobile affordance */}
+              {/* Top Handle */}
               <div className="flex justify-center pt-3 shrink-0">
-                <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full" />
+                <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
               </div>
 
-              {/* Header: Visual Identity & Booking Status */}
-              <SheetHeader className="px-6 pb-4 border-b border-[#E6DFC8] bg-white/50 text-left shrink-0 pt-2">
+              {/* Header - Sticky */}
+              <SheetHeader className="px-6 pb-4 border-b border-[#E6DFC8] bg-white/60 backdrop-blur-md text-left shrink-0 pt-2">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
-                    <div
-                      className={cn(
+                    <div className={cn(
                         "inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border mb-2",
                         statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
                         statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
                         statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
-                      )}
-                    >
+                      )}>
                       {normStatus(selectedBooking.status) || "pending"}
                     </div>
-                    <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-[1.1] mb-1 truncate">
+                    <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-none truncate">
                       {selectedBooking.group_name || "Guest Team"}
                     </SheetTitle>
-                    <div className="flex items-center gap-1.5">
-                      <p className="text-xs font-bold text-[#5F624F] uppercase tracking-wide opacity-70">
-                        {selectedBooking.events?.event_title || "Quiz Night"}
-                      </p>
-                    </div>
+                    <p className="text-[10px] font-bold text-[#5F624F] uppercase tracking-widest mt-1.5 opacity-60">
+                      Ref: #{selectedBooking.id}
+                    </p>
                   </div>
 
-                  {/* High Visibility Score/Winner Block */}
+                  {/* Visual Score */}
                   {selectedBooking.booking_scores?.[0] && (
-                    <div className="flex flex-col items-end shrink-0">
-                      <div className="bg-[#26300D] text-white p-2.5 rounded-2xl shadow-md border border-white/10 flex flex-col items-center min-w-[64px]">
-                        <span className="text-[8px] font-black text-[#FDCC4B] uppercase tracking-widest opacity-60 mb-0.5">Score</span>
-                        <span className="text-xl font-black">{selectedBooking.booking_scores[0].score}</span>
-                      </div>
-                      {selectedBooking.booking_scores[0].is_winner && (
-                        <div className="bg-[#FDCC4B] text-[#26300D] px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-tighter mt-1.5 shadow-sm flex items-center gap-1">
-                          <Trophy className="w-2 h-2" /> Winner
-                        </div>
-                      )}
+                    <div className="bg-[#26300D] text-white p-3 rounded-2xl shadow-md border border-white/10 flex flex-col items-center min-w-[70px]">
+                      <span className="text-[8px] font-black text-[#FDCC4B] uppercase tracking-widest opacity-60 mb-0.5">Score</span>
+                      <span className="text-xl font-black">{selectedBooking.booking_scores[0].score}</span>
                     </div>
                   )}
                 </div>
               </SheetHeader>
 
-              {/* Scrollable Data Body */}
-              <div className="flex-1 overflow-y-auto px-6 py-6 space-y-7 text-left">
-
-                {/* Section: Event Schedule */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-[#26300D] rounded-xl shadow-sm">
-                      <Calendar className="w-4 h-4 text-[#FDCC4B]" />
+              {/* Scrollable Content Area */}
+              <div 
+                ref={scrollRef}
+                className="flex-1 overflow-y-auto px-6 py-6 space-y-8 text-left overscroll-contain"
+              >
+                {/* Winner Badge if applicable */}
+                {selectedBooking.booking_scores?.[0]?.is_winner && (
+                  <div className="bg-[#FDCC4B] p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-[#26300D] rounded-xl">
+                        <Trophy className="w-5 h-5 text-[#FDCC4B]" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-black text-[#26300D] uppercase tracking-tight">Quiz Winner</p>
+                        <p className="text-[10px] font-bold text-[#26300D]/60 uppercase">Claimed 1st Place</p>
+                      </div>
                     </div>
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A]">Reservation Details</h3>
                   </div>
+                )}
 
+                {/* Section: Logistics */}
+                <div className="space-y-4">
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A] opacity-40 px-1">Reservation Info</h3>
                   <div className="grid grid-cols-2 gap-3">
-                    <DetailTile
-                      icon={<CalendarDays className="w-4 h-4" />}
-                      label="Event Date"
-                      value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM yyyy") : "—"}
-                    />
-                    <DetailTile
-                      icon={<Clock3 className="w-4 h-4" />}
-                      label="Arrival"
-                      value={selectedBooking.events?.event_start_time?.substring(0, 5) || "—"}
-                    />
+                    <DetailTile icon={<Calendar className="w-4 h-4" />} label="Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM") : "—"} />
+                    <DetailTile icon={<Clock3 className="w-4 h-4" />} label="Time" value={selectedBooking.events?.event_start_time?.substring(0, 5) || "—"} />
+                    <DetailTile icon={<Users className="w-4 h-4" />} label="Size" value={`${selectedBooking.group_size} Guests`} />
+                    <DetailTile icon={<LayoutDashboard className="w-4 h-4" />} label="Table" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
                   </div>
                 </div>
 
-                {/* Section: Logistics & Capacity */}
+                {/* Section: Contact */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-[#26300D] rounded-xl shadow-sm">
-                      <LayoutDashboard className="w-4 h-4 text-[#FDCC4B]" />
+                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A] opacity-40 px-1">Contact Lead</h3>
+                  <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl p-4 shadow-sm flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#26300D] border border-[#E6DFC8]">
+                      {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
                     </div>
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A]">Logistics</h3>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl p-4 shadow-sm flex items-center justify-between group transition-colors hover:border-[#26300D]/20">
-                      <div className="flex items-center gap-3">
-                        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
-                          <TableIcon className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <p className="text-[9px] font-black text-[#5F624F] uppercase tracking-widest opacity-60">Allocated Table</p>
-                          <p className="text-sm font-black text-[#1F1F1A] uppercase">{selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"}</p>
-                        </div>
-                      </div>
-                      {selectedBooking.booking_table_mappings?.[0]?.tables?.tables_capacity && (
-                        <div className="text-right flex flex-col items-end">
-                          <p className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Capacity</p>
-                          <div className="flex items-center gap-1">
-                            <span className="text-xs font-black text-[#26300D] bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">
-                              {selectedBooking.booking_table_mappings[0].tables.tables_capacity}
-                            </span>
-                          </div>
-                        </div>
-                      )}
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-black text-[#1F1F1A] uppercase truncate">{selectedBooking.contacts?.full_name}</p>
+                      <p className="text-xs font-bold text-[#5F624F] opacity-60 mt-0.5 truncate">{selectedBooking.contacts?.email}</p>
                     </div>
-
-                    <DetailTile
-                      icon={<Users className="w-4 h-4" />}
-                      label="Team Size"
-                      value={`${selectedBooking.group_size} Guests`}
-                    />
+                    <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-2.5 bg-slate-50 rounded-xl text-slate-400">
+                      <ExternalLink className="w-4 h-4" />
+                    </Link>
                   </div>
                 </div>
 
-                {/* Section: Main Contact */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-[#26300D] rounded-xl shadow-sm">
-                      <User className="w-4 h-4 text-[#FDCC4B]" />
-                    </div>
-                    <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A]">Main Contact</h3>
-                  </div>
-
-                  <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl p-4 shadow-sm">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#26300D] border border-[#E6DFC8]">
-                        {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-[#1F1F1A] uppercase tracking-tight truncate">{selectedBooking.contacts?.full_name}</p>
-                        <div className="flex items-center gap-1.5 text-xs font-bold text-[#5F624F] opacity-60 mt-0.5">
-                          <Mail className="w-3.5 h-3.5" />
-                          <span className="truncate">{selectedBooking.contacts?.email}</span>
-                        </div>
-                      </div>
-                      <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-2.5 bg-slate-50 rounded-xl text-slate-400 hover:text-[#26300D] transition-colors">
-                        <ExternalLink className="w-4 h-4" />
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section: Special Requests */}
+                {/* Section: Requests */}
                 {selectedBooking.special_requests && (
-                  <div className="bg-amber-500/10 p-5 rounded-[1.5rem] border-2 border-amber-500/20 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-2 opacity-5">
-                      <MessageSquare className="w-12 h-12" />
-                    </div>
-                    <div className="flex items-center gap-2 mb-3 relative z-10">
+                  <div className="bg-amber-500/5 p-5 rounded-2xl border-2 border-amber-500/10 shadow-sm">
+                    <div className="flex items-center gap-2 mb-3">
                       <AlertCircle className="w-4 h-4 text-amber-600" />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Requirement Log</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Requirement Notes</span>
                     </div>
-                    <p className="text-sm text-[#1F1F1A] italic leading-relaxed font-bold relative z-10">
+                    <p className="text-sm text-[#1F1F1A] italic leading-relaxed font-bold">
                       &quot;{selectedBooking.special_requests}&quot;
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Action Toolbar: Sticky Bottom Mobile Navigation Style */}
+              {/* Actions - Sticky Footer */}
               <div className="p-6 pt-4 border-t border-[#E6DFC8] bg-white/90 backdrop-blur-md pb-10 space-y-4 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
-                <div className="flex flex-col sm:flex-row gap-3">
-                  {/* Status Dropdown - Wider for mobile interaction */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="w-full sm:flex-1 h-14 sm:h-12 rounded-2xl border-2 border-[#E6DFC8] bg-white text-[#26300D] font-black uppercase text-[10px] tracking-widest shadow-sm active:scale-95 transition-all"
-                      >
+                      <Button variant="outline" className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-[#26300D] font-black uppercase text-[10px] tracking-widest shadow-sm">
                         <Hash className="w-3.5 h-3.5 mr-2 opacity-40" />
                         Status: {selectedBooking.status}
                         <ChevronDown className="ml-auto w-4 h-4 opacity-40" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      className="bg-[#E2EDBF] border-2 border-[#FDCC4B]/40 w-52 p-2 shadow-2xl rounded-2xl z-[9999]"
-                      onCloseAutoFocus={(e) => e.preventDefault()}
-                    >
+                    <DropdownMenuContent className="bg-[#E2EDBF] border-2 border-[#FDCC4B]/40 w-52 p-2 shadow-2xl rounded-2xl z-[9999]" onCloseAutoFocus={(e) => e.preventDefault()}>
                       {Object.keys(statusTheme).map((s) => (
-                        <DropdownMenuItem
-                          key={s}
-                          onSelect={() => handleStatusChange(selectedBooking.id, s)}
-                          className="font-black text-[10px] p-3 uppercase tracking-widest rounded-xl cursor-pointer hover:bg-white/40 focus:bg-white/40"
-                        >
+                        <DropdownMenuItem key={s} onSelect={() => handleStatusChange(selectedBooking.id, s)} className="font-black text-[10px] p-3 uppercase tracking-widest rounded-xl cursor-pointer hover:bg-white/40">
                           <div className={cn("w-2.5 h-2.5 rounded-full mr-3 shadow-xs", statusTheme[s].dot)} />
                           {s}
                         </DropdownMenuItem>
@@ -525,29 +461,24 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </DropdownMenuContent>
                   </DropdownMenu>
 
-                  {/* Primary Manage/Edit Link */}
-                  <Button
-                    asChild
-                    className="w-full sm:flex-1 h-14 sm:h-12 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95 transition-all"
-                  >
+                  <Button asChild className="w-full h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[10px] shadow-lg">
                     <Link href={`/manage-booking/${selectedBooking.id}`}>
                       <Pencil className="w-4 h-4 mr-2" /> Edit Details
                     </Link>
                   </Button>
                 </div>
 
-                {/* Secondary Actions Row */}
-                <div className="flex justify-center border-t border-[#E6DFC8]/50 pt-4">
+                <div className="flex justify-center pt-2">
                   <Button
                     onClick={() => {
-                      if (window.confirm("Are you sure you want to delete this booking permanently? This action cannot be undone.")) {
+                      if (window.confirm("Delete this booking permanently?")) {
                         handleDeleteBooking(selectedBooking.id)
                       }
                     }}
                     variant="ghost"
-                    className="w-full sm:w-auto h-12 px-8 rounded-xl text-red-600 font-black uppercase tracking-widest text-[10px] hover:bg-red-50 active:scale-95 transition-all"
+                    className="text-red-600 font-black uppercase tracking-widest text-[9px] h-auto p-2"
                   >
-                    <Trash2 className="w-4 h-4 mr-2" /> Delete Booking
+                    <Trash2 className="w-3 h-3 mr-1.5" /> Remove from floor
                   </Button>
                 </div>
               </div>
@@ -558,7 +489,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
       {/* Global Syncing Indicator */}
       {isPending && (
-        <div className="fixed bottom-6 right-6 z-[100] bg-[#26300D] text-[#FDCC4B] px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 animate-in fade-in slide-in-from-bottom-2 border border-white/10">
+        <div className="fixed bottom-6 right-6 z-[100] bg-[#26300D] text-[#FDCC4B] px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2">
           <Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating...
         </div>
       )}
@@ -788,7 +719,7 @@ function DetailTile({ icon, label, value }: { icon: React.ReactNode; label: stri
         <div className="scale-75 origin-left">{icon}</div>
         <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
       </div>
-      <span className="text-[#1F1F1A] font-black text-sm uppercase tracking-tight truncate">{value}</span>
+      <span className="text-[#1F1F1A] font-black text-sm uppercase truncate">{value}</span>
     </div>
   )
 }
