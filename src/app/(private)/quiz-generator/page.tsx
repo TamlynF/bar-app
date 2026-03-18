@@ -1,9 +1,9 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 
-// Using relative path for internal actions to resolve build errors
+// Using relative paths to resolve build errors and environment pathing issues
 import { 
   generateQuizAction, 
   saveQuizToDatabase, 
@@ -26,7 +26,6 @@ import { Label } from '@/components/ui/label'
 import {
   Sheet,
   SheetContent,
-  SheetDescription,
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
@@ -45,8 +44,7 @@ import {
   Target,
   Edit2,
   Trash2,
-  Save,
-  X
+  Save
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -86,6 +84,9 @@ export default function QuizGeneratorPage() {
   const [editForm, setEditForm] = useState({ question: '', answer: '' })
   const [isActionPending, setIsActionPending] = useState(false)
 
+  // Ref to handle scrolling the detail popup to the top
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
   // Load initial data
   useEffect(() => {
     async function loadInitialData() {
@@ -115,6 +116,19 @@ export default function QuizGeneratorPage() {
     }
     loadInitialData();
   }, [])
+
+  // Force scroll reset when category details open
+  useEffect(() => {
+    if (viewingCategory) {
+      // Small delay ensures the Sheet transition has started and auto-focus has triggered
+      const timer = setTimeout(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = 0;
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [viewingCategory]);
 
   const loadEventHistory = async (eventId: string) => {
     if (!eventId) return;
@@ -334,10 +348,14 @@ export default function QuizGeneratorPage() {
           cancelEditing()
         }
       }}>
-        <SheetContent side="bottom" className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 max-h-[90vh] overflow-hidden flex flex-col">
+        <SheetContent 
+          side="bottom" 
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh] flex flex-col outline-none shadow-2xl"
+        >
           {viewingCategory && (
             <>
-              <SheetHeader className="p-6 pb-4 border-b border-[#E6DFC8] bg-white/50 backdrop-blur-sm sticky top-0 z-10 text-left shrink-0">
+              <SheetHeader className="p-6 pb-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-20 text-left shrink-0">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -359,12 +377,16 @@ export default function QuizGeneratorPage() {
                     </p>
                   </div>
                 </div>
-                <SheetDescription className="text-xs font-bold text-[#5F624F] uppercase tracking-wider mt-2">
+                {/* <SheetDescription className="text-xs font-bold text-[#5F624F] uppercase tracking-wider mt-2">
                   Showing questions saved for {upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'this event'}.
-                </SheetDescription>
+                </SheetDescription> */}
               </SheetHeader>
 
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 no-scrollbar text-left">
+              {/* Scrollable Container Fix: Added overflow-y-auto and min-h-0 for flex context */}
+              <div 
+                ref={scrollContainerRef}
+                className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-left overscroll-contain min-h-0"
+              >
                 {savedQuestionsForCategory.length === 0 ? (
                   <div className="py-20 text-center flex flex-col items-center gap-4">
                     <div className="w-16 h-16 bg-white border-2 border-dashed border-[#E6DFC8] rounded-[2rem] flex items-center justify-center text-[#E6DFC8]">
@@ -390,7 +412,7 @@ export default function QuizGeneratorPage() {
                                     title="Edit Question Text"
                                     value={editForm.question}
                                     onChange={(e) => setEditForm({...editForm, question: e.target.value})}
-                                    className="w-full text-sm font-bold min-h-[80px] p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#26300D] rounded-xl outline-none resize-none"
+                                    className="w-full text-sm font-semibold min-h-[80px] p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#26300D] rounded-xl outline-none resize-none"
                                   />
                                </div>
                                <div className="space-y-1.5">
@@ -459,7 +481,7 @@ export default function QuizGeneratorPage() {
                 )}
               </div>
 
-              <div className="p-6 pt-2 border-t border-[#E6DFC8] bg-white/50 pb-10 shrink-0">
+              <div className="p-6 pt-2 border-t border-[#E6DFC8] bg-white/80 backdrop-blur-md pb-10 shrink-0 z-20">
                 <Button 
                   className="w-full h-12 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
                   onClick={() => {
@@ -483,7 +505,7 @@ export default function QuizGeneratorPage() {
       <form onSubmit={handleGenerate} className="bg-white border-2 border-[#E6DFC8] p-3 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
           
-          <div className="grid grid-cols-2 sm:grid-cols-12 gap-2.5 flex-grow">
+          <div className="grid grid-cols-2 sm:grid-cols-12 gap-2.5 grow">
             {/* Event Selection */}
             <div className="col-span-2 sm:col-span-4 space-y-1">
               <Label className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-[#5F624F] ml-1 flex items-center gap-1 text-left">
@@ -530,7 +552,7 @@ export default function QuizGeneratorPage() {
                   placeholder="e.g. Disney, 90s..." 
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  className="h-9 rounded-lg border-2 border-[#E6DFC8] bg-white text-[11px] font-bold focus:ring-0 focus:border-[#26300D] px-2.5 min-w-0 flex-grow"
+                  className="h-9 rounded-lg border-2 border-[#E6DFC8] bg-white text-[11px] font-bold focus:ring-0 focus:border-[#26300D] px-2.5 min-w-0 grow"
                 />
                 <Button 
                   type="submit"
@@ -611,8 +633,8 @@ export default function QuizGeneratorPage() {
                   className={cn(
                     "group relative flex flex-col bg-white border-2 rounded-2xl transition-all cursor-pointer select-none overflow-hidden",
                     isSelected 
-                      ? "border-[#26300D] shadow-md translate-y-[-1px]" 
-                      : "border-transparent border-dashed border-[#E6DFC8] opacity-50 hover:opacity-100"
+                      ? "border-[#26300D] shadow-md -translate-y-px" 
+                      : "border-dashed border-[#E6DFC8] opacity-50 hover:opacity-100"
                   )}
                 >
                   <div className="px-5 py-4 space-y-4 relative">
@@ -623,7 +645,7 @@ export default function QuizGeneratorPage() {
                         ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B] scale-110 shadow-sm" 
                         : "bg-white border-[#E6DFC8] text-[#E6DFC8]"
                     )}>
-                      {isSelected ? <Check className="w-3 h-3 stroke-[4]" /> : <Plus className="w-3 h-3" />}
+                      {isSelected ? <Check className="w-3 h-3 stroke-4" /> : <Plus className="w-3 h-3" />}
                     </div>
 
                     {/* Question Content - Added right padding to prevent overlap with indicator */}

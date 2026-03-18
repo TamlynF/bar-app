@@ -1,4 +1,23 @@
 {
   "css.lint.unknownAtRules": "ignore",
-  "workbench.colorTheme": "Pitch Black"
+  "workbench.colorTheme": "Pitch Black",
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "tailwindCSS.includeLanguages": {
+    "plaintext": "html"
+  },
+  "html.suggest.hideEndTagSuggestions": true,
+  "tailwindcss-intellisense.trace.server": "messages",
+  "tailwindCSS.experimental.configFile": "src/app/globals.css",
+  "editor.defaultFormatter": "dbaeumer.vscode-eslint",
+  "notebook.defaultFormatter": "dbaeumer.vscode-eslint",
+  "eslint.debug": true,
+  "eslint.format.enable": true,
+  "eslint.lintTask.enable": true,
+  "eslint.useESLintClass": true,
+  "npm.packageManager": "npm"
 }
