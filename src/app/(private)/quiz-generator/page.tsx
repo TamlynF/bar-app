@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import React, { useState, useEffect, useMemo, useRef, useTransition } from 'react'
 import Link from 'next/link'
 import styles from './quiz-generator.module.css'
 
@@ -45,7 +45,8 @@ import {
   Target,
   Edit2,
   Trash2,
-  Save
+  Save,
+  RotateCcw
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -143,7 +144,6 @@ export default function QuizGeneratorPage() {
   // Derived state: Includes ALL categories from config even if they have 0 questions
   const categoryStats = useMemo((): CategoryStat[] => {
     if (!categories.length) return [];
-    //console.log("Calculating category stats with categories:", categories, " and eventHistory:", eventHistory);
     return categories.map(config => {
       const currentCount = eventHistory.filter((q: PastQuestionRecord) => {
         const qCat = q.quiz_category_configs?.category_name || q.category;
@@ -158,6 +158,11 @@ export default function QuizGeneratorPage() {
       };
     });
   }, [categories, eventHistory]);
+
+  const currentCategoryIsFull = useMemo(() => {
+    const stats = categoryStats.find(s => s.category_name === category);
+    return stats?.isFull || false;
+  }, [category, categoryStats]);
 
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
@@ -176,11 +181,12 @@ export default function QuizGeneratorPage() {
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return
-    const stats = categoryStats.find(s => s.category_name === category);
-    if (stats?.isFull) {
+    
+    if (currentCategoryIsFull) {
       toast.error(`${category} is already full for this event.`);
       return;
     }
+    
     setIsLoading(true)
     setError('')
     try {
@@ -301,7 +307,7 @@ export default function QuizGeneratorPage() {
         </Link>
       </div>
 
-      {/* CATEGORY PROGRESS INDICATORS: Using CSS Module for all layout & status colors */}
+      {/* CATEGORY PROGRESS INDICATORS */}
       <div className={styles.pillsContainer}>
         {categoryStats.map((stat) => {
           const isFull = stat.isFull;
@@ -519,10 +525,10 @@ export default function QuizGeneratorPage() {
 
       {/* GENERATOR FORM */}
       <form onSubmit={handleGenerate} className="bg-white border-2 border-[#E6DFC8] p-3 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-          <div className="grid grid-cols-2 sm:grid-cols-12 gap-2.5 grow">
-            {/* Event Selection */}
-            <div className="col-span-2 sm:col-span-4 space-y-1">
+        <div className="flex flex-col gap-3 grow">
+          <div className="grid grid-cols-2 sm:grid-cols-12 gap-2.5">
+            {/* Event Selection - Full width on smallest mobile, half width on grid */}
+            <div className="col-span-1 sm:col-span-4 space-y-1">
               <Label className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-[#5F624F] ml-1 flex items-center gap-1 text-left">
                  <CalendarCheck className="w-2.5 h-2.5" /> Event
               </Label>
@@ -531,17 +537,17 @@ export default function QuizGeneratorPage() {
                   title='Event'
                   value={selectedEventId}
                   onChange={handleEventChange}
-                  className="w-full h-9 rounded-lg border-2 border-[#E6DFC8] bg-[#F7F4EA]/40 px-2.5 text-[11px] font-black text-[#26300D] appearance-none outline-none focus:border-[#26300D] transition-all uppercase truncate"
+                  className="w-full h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 border-[#E6DFC8] bg-[#F7F4EA]/40 px-2.5 text-[11px] font-black text-[#26300D] appearance-none outline-none focus:border-[#26300D] transition-all uppercase truncate"
                 >
                   {upcomingEvents.map(event => (
-                    <option key={event.id} value={event.id}>{event.title} — {format(new Date(event.date), "dd/MM")}</option>
+                    <option key={event.id} value={event.id}>{format(new Date(event.date), "dd MMM yyyy")}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#26300D] opacity-40 pointer-events-none" />
+                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#26300D] opacity-40 pointer-events-none" />
               </div>
             </div>
 
-            {/* Category Selection */}
+            {/* Category Selection - Half width on mobile grid */}
             <div className="col-span-1 sm:col-span-3 space-y-1">
               <Label className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-[#5F624F] ml-1 text-left">Category</Label>
               <div className="relative">
@@ -549,34 +555,54 @@ export default function QuizGeneratorPage() {
                   title='Category'
                   value={category}
                   onChange={handleCategoryChange}
-                  className="w-full h-9 rounded-lg border-2 border-[#E6DFC8] bg-white px-2.5 text-[11px] font-bold appearance-none outline-none focus:border-[#26300D] transition-all uppercase truncate"
+                  className={cn(
+                    "w-full h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 px-2.5 text-[11px] font-bold appearance-none outline-none transition-all uppercase truncate",
+                    currentCategoryIsFull 
+                      ? "border-red-200 bg-red-50 text-red-600" 
+                      : "border-[#E6DFC8] bg-white text-[#26300D] focus:border-[#26300D]"
+                  )}
                 >
                   {categories.map(opt => (
                     <option key={opt.id} value={opt.category_name}>{opt.category_name}</option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#5F624F] opacity-40 pointer-events-none" />
+                <ChevronDown className={cn(
+                  "absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none",
+                  currentCategoryIsFull ? "text-red-400" : "text-[#5F624F] opacity-40"
+                )} />
               </div>
             </div>
 
-            {/* Topic Input - Grouped with Roll button for space efficiency */}
-            <div className="col-span-1 sm:col-span-5 space-y-1">
+            {/* Topic Input - Full width on mobile underneath selection row */}
+            <div className="col-span-2 sm:col-span-5 space-y-1">
               <Label className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-[#5F624F] ml-1 text-left">Topic</Label>
               <div className="flex gap-1.5">
                 <Input 
                   placeholder="e.g. Disney, 90s..." 
                   value={topic}
                   onChange={(e) => setTopic(e.target.value)}
-                  className="h-9 rounded-lg border-2 border-[#E6DFC8] bg-white text-[11px] font-bold focus:ring-0 focus:border-[#26300D] px-2.5 min-w-0 grow"
+                  disabled={currentCategoryIsFull}
+                  className={cn(
+                    "h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 text-[11px] font-bold focus:ring-0 px-3 min-w-0 grow",
+                    currentCategoryIsFull 
+                      ? "bg-slate-50 border-slate-200 placeholder:text-slate-300" 
+                      : "bg-white border-[#E6DFC8] focus:border-[#26300D]"
+                  )}
                 />
                 <Button 
                   type="submit"
-                  disabled={isLoading || categories.length === 0} 
-                  className="h-9 rounded-lg bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[8px] px-3 shadow-sm active:scale-95 transition-all shrink-0"
+                  disabled={isLoading || categories.length === 0 || currentCategoryIsFull} 
+                  className="h-10 sm:h-9 rounded-xl sm:rounded-lg bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[8px] px-4 shadow-sm active:scale-95 transition-all shrink-0"
                 >
                   {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                 </Button>
               </div>
+              {currentCategoryIsFull && (
+                <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">
+                  <AlertCircle className="inline w-2.5 h-2.5 mr-1 -mt-0.5" />
+                  {category} is full for this date
+                </p>
+              )}
             </div>
           </div>
         </div>
