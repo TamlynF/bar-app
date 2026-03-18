@@ -120,7 +120,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const searchParams = useSearchParams()
   const scrollRef = useRef<HTMLDivElement>(null)
-  const topRef = useRef<HTMLDivElement>(null)
+  const topFocusRef = useRef<HTMLDivElement>(null)
 
   const isDateFiltered = !!(selectedDate || searchParams.get('date'));
 
@@ -130,21 +130,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     else next.add(status)
     setActiveStatusFilters(next)
   }
-
-  // Reset scroll to top with high priority whenever a booking is opened
-  useEffect(() => {
-    if (selectedBooking) {
-      const doReset = () => {
-        if (scrollRef.current) scrollRef.current.scrollTop = 0;
-        if (topRef.current) topRef.current.focus({ preventScroll: true });
-      }
-      doReset();
-      // Handle potential race conditions with sheet animations
-      requestAnimationFrame(doReset);
-      const timer = setTimeout(doReset, 100);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedBooking])
 
   const filteredBookings = useMemo(() => {
     return initialBookings
@@ -313,7 +298,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
             onClick={() => setActiveStatusFilters(new Set())}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-primary uppercase bg-primary/10 px-2 py-1 rounded hover:bg-primary/20 transition-colors"
           >
-            Clear Filters
+            Clear
           </button>
         )}
       </div>
@@ -341,23 +326,26 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
         <SheetContent
           side="bottom"
-          // CRITICAL FIXES FOR SCROLLING:
-          // 1. Prevent auto-focus scrolling down
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          // 2. Standardize heights for mobile and desktop flex
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[90vh] sm:h-[85vh] flex flex-col outline-none shadow-2xl overflow-hidden gap-0"
+          // We override the default focus behavior to stop the jump to the bottom buttons
+          onOpenAutoFocus={(e) => {
+            e.preventDefault();
+            topFocusRef.current?.focus();
+          }}
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[90vh] sm:h-[85vh] flex flex-col outline-none shadow-2xl overflow-hidden"
           style={{ backgroundColor: "#F7F4EA" }}
 	>
           {selectedBooking && (
             <>
-              <div ref={topRef} tabIndex={-1} className="sr-only" />
-              {/* Top Handle */}
-              <div className="flex justify-center pt-3 shrink-0">
+              {/* Invisible focus target at the very top of the content */}
+              <div ref={topFocusRef} tabIndex={-1} className="outline-none" />
+              
+              {/* Top Drag Handle */}
+              <div className="flex justify-center pt-3 shrink-0 pb-1">
                 <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
               </div>
 
-              {/* Header - Sticky */}
-              <SheetHeader className="px-6 pb-4 border-b border-[#E6DFC8] bg-white/60 backdrop-blur-md text-left shrink-0 pt-2">
+              {/* Sticky Header */}
+              <SheetHeader className="px-6 pb-4 border-b border-[#E6DFC8] bg-white/70 backdrop-blur-lg text-left shrink-0 pt-2">
                 <div className="flex items-center justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <div className={cn(
@@ -376,7 +364,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </p>
                   </div>
 
-                  {/* Visual Score */}
                   {selectedBooking.booking_scores?.[0] && (
                     <div className="bg-[#26300D] text-white p-3 rounded-2xl shadow-md border border-white/10 flex flex-col items-center min-w-[70px]">
                       <span className="text-[8px] font-black text-[#FDCC4B] uppercase tracking-widest opacity-60 mb-0.5">Score</span>
@@ -386,10 +373,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                 </div>
               </SheetHeader>
 
-              {/* Scrollable Content Area */}
+              {/* MAIN SCROLLABLE AREA */}
               <div 
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto px-6 py-6 space-y-8 text-left overscroll-contain touch-pan-y"
+                className="flex-1 overflow-y-auto px-6 py-6 space-y-8 text-left overscroll-contain touch-pan-y relative min-h-0 pointer-events-auto"
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
                 {/* Winner Badge if applicable */}
@@ -447,10 +434,13 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </p>
                   </div>
                 )}
+                
+                {/* Visual buffer */}
+                <div className="h-10" />
               </div>
 
-              {/* Actions - Sticky Footer */}
-              <div className="p-6 pt-4 border-t border-[#E6DFC8] bg-white/90 backdrop-blur-md pb-10 space-y-4 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+              {/* FOOTER ACTIONS - Fixed at bottom */}
+              <div className="p-6 pt-4 border-t border-[#E6DFC8] bg-white/95 backdrop-blur-md pb-12 space-y-4 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
@@ -460,7 +450,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                         <ChevronDown className="ml-auto w-4 h-4 opacity-40" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="bg-[#E2EDBF] border-2 border-[#FDCC4B]/40 w-52 p-2 shadow-2xl rounded-2xl z-[9999]" onCloseAutoFocus={(e) => e.preventDefault()}>
+                    <DropdownMenuContent className="bg-[#E2EDBF] border-2 border-[#FDCC4B]/40 w-52 p-2 shadow-2xl rounded-2xl z-[9999]" align="start">
                       {Object.keys(statusTheme).map((s) => (
                         <DropdownMenuItem key={s} onSelect={() => handleStatusChange(selectedBooking.id, s)} className="font-black text-[10px] p-3 uppercase tracking-widest rounded-xl cursor-pointer hover:bg-white/40">
                           <div className={cn("w-2.5 h-2.5 rounded-full mr-3 shadow-xs", statusTheme[s].dot)} />
@@ -477,7 +467,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   </Button>
                 </div>
 
-                <div className="flex justify-center pt-2">
+                <div className="flex justify-center">
                   <Button
                     onClick={() => {
                       if (window.confirm("Delete this booking permanently?")) {
@@ -496,7 +486,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         </SheetContent>
       </Sheet>
 
-      {/* Global Syncing Indicator */}
+      {/* Syncing Overlay */}
       {isPending && (
         <div className="fixed bottom-6 right-6 z-[100] bg-[#26300D] text-[#FDCC4B] px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2">
           <Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating...
