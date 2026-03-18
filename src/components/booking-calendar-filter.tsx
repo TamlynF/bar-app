@@ -109,7 +109,7 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
       </div>
 
       {/* Action Area - AI Generator shortcut */}
-      <div className="flex items-center gap-2">
+      {/* <div className="flex items-center gap-2">
         <Link href="/quiz-generator" className="hidden sm:block">
           <Button 
             variant="outline" 
@@ -119,15 +119,15 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
             <Sparkles className="w-3.5 h-3.5 mr-1.5" />
             AI Generator
           </Button>
-        </Link>
+        </Link> */}
         
         {/* Compact version for mobile */}
-        <Link href="/quiz-generator" className="sm:hidden">
+        {/* <Link href="/quiz-generator" className="sm:hidden">
            <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg bg-[#FDCC4B] text-[#26300D] border-none shadow-sm">
              <Sparkles className="w-4 h-4" />
            </Button>
-        </Link>
-      </div>
+        </Link> */}
+      {/* </div> */}
     </div>
   );
 }

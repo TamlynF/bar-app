@@ -78,6 +78,51 @@ export async function getBookings(type: string, subType: string, selectedDate: s
   }
 }
 
+export async function getAvailableTables() {
+  try {
+    const supabase = await createClient();
+
+    const { data: tables, error } = await supabase
+      .from("tables")
+      .select("max_capacity")
+      .eq("available", true);
+    
+    if (error) {
+      console.error("Error fetching available tables:", error)
+      throw new Error("Failed to fetch available tables")
+    }
+    
+    return tables;
+  } catch (error) {
+    console.error("Error fetching available tables:", error);
+    throw new Error("Failed to fetch available tables");
+  }
+}
+
+export async function getQuizEvents(type: string, subType: string) {
+  try {
+    const supabase = await createClient();
+
+     const { data: events, error } = await supabase
+      .from("events")
+      .select("date, event_types!inner(category: type, sub_type)")
+      .ilike("event_types.type", type)
+      .ilike("event_types.sub_type", subType)
+
+
+    
+    if (error) {
+      console.error("Error fetching quiz events:", error)
+      throw new Error("Failed to fetch quiz events")
+    }
+    
+    return events;
+  } catch (error) {
+    console.error("Error fetching quiz events:", error);
+    throw new Error("Failed to fetch quiz events");
+  }
+}
+
 export async function updateBookingStatus(id: string, status: string) {
   const supabase = await createClient()
 
