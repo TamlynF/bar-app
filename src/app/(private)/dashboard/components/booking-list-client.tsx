@@ -281,7 +281,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       </div>
 
       {/* 3. Floor List Content */}
-      <div className="space-y-2.5 pb-20">
+      <div className="space-y-2.5 pb-5">
         {filteredBookings.length === 0 ? (
           <div className="py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700">
             <Inbox className="w-10 h-10 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
@@ -498,7 +498,8 @@ function BookingCard({
   booking: Booking
   onClick: () => void
   showDate?: boolean
-}) {
+  }) {
+  console.log("showDate prop:", showDate);
   const status = normStatus(booking.status) || "pending"
   const theme = statusTheme[status] || statusTheme.pending
   const hasRequest = booking.special_requests && booking.special_requests.trim() !== ""
@@ -511,11 +512,11 @@ function BookingCard({
     <div
       onClick={onClick}
       className={cn(
-        "group active:scale-[0.99] transition-all border-2 rounded-2xl p-4 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-4",
+        "group active:scale-[0.98] active:bg-slate-50 transition-all border-2 rounded-2xl p-4 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3 sm:gap-4",
         theme.cardBorder
       )}
     >
-      <div className="flex items-center gap-4 min-w-0 flex-1">
+      <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
         {/* Leading Container: Mobile shows Date in All-History mode, otherwise Icon */}
         <div className={cn(
           "w-11 h-11 rounded-full flex flex-col items-center justify-center shrink-0 shadow-xs text-center overflow-hidden border",
@@ -589,7 +590,7 @@ function BookingCard({
               <div className="sm:hidden flex items-center gap-1.5 text-slate-700">
                 <Users className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-sm font-black leading-none">
-                  {booking.group_size}<span className="opacity-30 text-[9px] mx-0.5">/</span>{tableCapacity || "?"}
+                  {booking.group_size}<span className="opacity-30 text-[9px] mx-0.5">/</span>{tableCapacity || "-"}
                 </span>
               </div>
 
@@ -612,14 +613,16 @@ function BookingCard({
         </div>
       </div>
 
-      {/* Extreme Right: Score Badge (preserved across all views) */}
-      <div className="flex items-center gap-3 shrink-0 ml-1">
+      {/* Extreme Right: Score Badge and Chevron Indicator */}
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-1">
         {score !== undefined && (
           <div className="flex items-center gap-1.5 bg-[#1F1F1A] text-white px-2.5 py-1.5 rounded-xl shadow-lg border border-white/10 group-hover:scale-105 transition-transform">
             <Target className="w-3.5 h-3.5 text-[#FDCC4B]" />
             <span className="text-xs font-black">{score}</span>
           </div>
         )}
+        {/* Disclosure Chevron: Subtle indicator that the card is a link/button */}
+        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
       </div>
     </div>
   )
