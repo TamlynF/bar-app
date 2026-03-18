@@ -30,11 +30,11 @@ export async function getBookings(type: string, subType: string, selectedDate: s
           ),
           events!inner(
             event_date: date,
-        event_start_time: start_time,
-        event_end_time: end_time,
-        event_title: title,
-        event_description: description,
-        event_payment_amount: payment_amount,
+            event_start_time: start_time,
+            event_end_time: end_time,
+            event_title: title,
+            event_description: description,
+            event_payment_amount: payment_amount,
             event_types!inner(
               category: type,
               sub_type
@@ -42,8 +42,8 @@ export async function getBookings(type: string, subType: string, selectedDate: s
           ),
           booking_table_mappings(
             tables(
-            tables_id: id,  
-            tables_name: name,
+              tables_id: id,  
+              tables_name: name,
               tables_capacity: max_capacity,
               tables_description: description,
               tables_available: available              
@@ -78,6 +78,62 @@ export async function getBookings(type: string, subType: string, selectedDate: s
   }
 }
 
+/**
+ * Fetches tables that are available for a specific event and can accommodate the group size.
+ * Excludes tables already mapped to other bookings for the same event.
+ */
+export async function getAvailableTablesForEvent(eventId: string, groupSize: number, currentTableId?: string) {
+  console.log("Fetching available tables for event:", { eventId, groupSize, currentTableId })
+
+  try {
+    const supabase = await createClient();
+
+    // 1. Get all bookings for this event (excluding cancelled) to see what tables are taken
+    const { data: eventBookings } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("event_id", eventId)
+      .not("status", "eq", "cancelled");
+
+    console.log("Event bookings for table availability check:", { eventBookings })
+    const bookingIds = eventBookings?.map(b => b.id) || [];
+    console.log("Booking IDs for event:", { bookingIds }) 
+
+    // 2. Find which tables are already assigned
+    const { data: takenMappings } = await supabase
+      .from("booking_table_mappings")
+      .select("table_id")
+      .in("booking_id", bookingIds);
+
+    const takenTableIds = takenMappings?.map(m => m.table_id) || [];
+
+    // 3. Get all available tables that fit the group
+    // Note: We use >= groupSize because a table must be large enough.
+    let query = supabase
+      .from("tables")
+      .select("id, name, max_capacity")
+      .eq("available", true)
+      .gte("max_capacity", groupSize);
+
+    // 4. Filter out taken tables, but keep the current one if provided
+    const filteredTakenIds = currentTableId 
+      ? takenTableIds.filter(id => String(id) !== String(currentTableId))
+      : takenTableIds;
+
+    if (filteredTakenIds.length > 0) {
+      query = query.not("id", "in", `(${filteredTakenIds.join(',')})`);
+    }
+
+    const { data: tables, error } = await query.order('name', { ascending: true });
+    
+    if (error) throw error;
+    return tables;
+  } catch (error) {
+    console.error("Error fetching event-specific tables:", error);
+    return [];
+  }
+}
+
 export async function getAvailableTables() {
   try {
     const supabase = await createClient();
@@ -102,8 +158,7 @@ export async function getAvailableTables() {
 export async function getQuizEvents(type: string, subType: string) {
   try {
     const supabase = await createClient();
-
-     const { data: events, error } = await supabase
+    const { data: events, error } = await supabase
       .from("events")
       .select("date, event_types!inner(category: type, sub_type)")
       .ilike("event_types.type", type)
@@ -123,7 +178,7 @@ export async function getQuizEvents(type: string, subType: string) {
   }
 }
 /**
- * Updates comprehensive booking details from the dashboard
+ * Updates comprehensive booking details including table assignment
  */
 export async function updateBookingDetails(
   id: string, 
@@ -132,18 +187,40 @@ export async function updateBookingDetails(
     group_size?: number; 
     special_requests?: string;
     status?: string;
+    table_id?: string;
   }
 ) {
   const supabase = await createClient()
 
-  const { error } = await supabase
+  // 1. Update primary booking record
+  const { table_id, ...bookingUpdates } = updates;
+  const { error: bookingError } = await supabase
     .from("bookings")
-    .update(updates)
+    .update(bookingUpdates)
     .eq("id", id)
 
-  if (error) {
-    console.error("Error updating booking details:", error)
+  if (bookingError) {
+    console.error("Error updating booking details:", bookingError)
     throw new Error("Failed to update booking")
+  }
+
+  // 2. Update table mapping if table_id is provided
+  if (table_id) {
+    // Delete existing mapping first to handle re-assignment cleanly
+    await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
+    
+    // Insert new mapping
+    const { error: mappingError } = await supabase
+      .from("booking_table_mappings")
+      .insert({
+        booking_id: id,
+        table_id: parseInt(table_id)
+      });
+
+    if (mappingError) {
+      console.error("Error updating table mapping:", mappingError);
+      throw new Error("Failed to update table assignment");
+    }
   }
 
   revalidatePath("/dashboard")
@@ -152,7 +229,6 @@ export async function updateBookingDetails(
 
 export async function updateBookingStatus(id: string, status: string) {
   const supabase = await createClient()
-
   const { error } = await supabase
     .from("bookings")
     .update({ status: status.toLowerCase() })
@@ -169,6 +245,10 @@ export async function updateBookingStatus(id: string, status: string) {
 
 export async function deleteBooking(id: string) {
   const supabase = await createClient()
+  
+  // Cascade delete mappings first (if not handled by DB constraints)
+  await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
+  
   const { error } = await supabase
     .from("bookings")
     .delete()

@@ -3,7 +3,12 @@
 import React, { useMemo, useState, useTransition, useEffect, useRef } from "react"
 import styles from "./booking-list-client.module.css"
 import { format, isSameDay } from "date-fns"
-import { updateBookingStatus, deleteBooking, updateBookingDetails } from "@/app/(private)/actions/booking-actions"
+import { 
+  updateBookingStatus, 
+  deleteBooking, 
+  updateBookingDetails, 
+  getAvailableTablesForEvent 
+} from "@/app/(private)/actions/booking-actions"
 import {
   CheckCircle2,
   ChevronRight,
@@ -31,12 +36,6 @@ import {
   MessageSquareQuote
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -45,7 +44,7 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import { Booking } from "../../events/quiz-bookings/page"
+import { Booking, TableRow } from "@/app/(private)/events/quiz-bookings/page"
 
 const formatDateStr = (d: Date | string) => {
   if (typeof d === 'string') return d;
@@ -114,16 +113,26 @@ const statusTheme: Record<
   },
 }
 
+// Local interface for table selection state
+interface SelectableTable {
+  id: number;
+  name: string;
+  max_capacity: number;
+}
+
 export default function BookingListClient({ initialBookings, selectedDate }: { initialBookings: Booking[], selectedDate?: string | undefined }) {
   const [isPending, startTransition] = useTransition()
   const [searchQuery, setSearchQuery] = useState("")
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set())
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [availableTables, setAvailableTables] = useState<SelectableTable[]>([])
+  
   const [editForm, setEditForm] = useState({
     group_name: "",
     group_size: 0,
-    special_requests: ""
+    special_requests: "",
+    table_id: ""
   })
   
   const searchParams = useSearchParams()
@@ -139,14 +148,42 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     setActiveStatusFilters(next)
   }
 
-  const handleEnterEditMode = () => {
+  const handleEnterEditMode = async () => {
     if (selectedBooking) {
+      const currentTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id;
+      
       setEditForm({
         group_name: selectedBooking.group_name || "",
         group_size: selectedBooking.group_size || 0,
-        special_requests: selectedBooking.special_requests || ""
+        special_requests: selectedBooking.special_requests || "",
+        table_id: currentTableId || ""
       })
+      
       setIsEditing(true)
+      
+      // Fetch compatible tables for current event and group size
+      if (selectedBooking.event_id) {
+        const tables = await getAvailableTablesForEvent(
+          String(selectedBooking.event_id), 
+          selectedBooking.group_size || 0,
+          currentTableId
+        );
+        // Explicitly casting the Supabase result to our typed interface
+        setAvailableTables(tables as unknown as SelectableTable[]);
+      }
+    }
+  }
+
+  const handleGroupSizeChange = async (size: number) => {
+    setEditForm(prev => ({...prev, group_size: size}));
+    // Re-fetch tables when size changes to ensure availability matches capacity
+    if (selectedBooking?.event_id) {
+      const tables = await getAvailableTablesForEvent(
+        String(selectedBooking.event_id), 
+        size,
+        selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id
+      );
+      setAvailableTables(tables as unknown as SelectableTable[]);
     }
   }
 
@@ -228,7 +265,23 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     startTransition(async () => {
       try {
         await updateBookingDetails(selectedBooking.id, editForm)
-        setSelectedBooking(prev => prev ? { ...prev, ...editForm } : null)
+        
+        // Find selected table name for local state update
+        const table = availableTables.find(t => String(t.id) === String(editForm.table_id));
+        const tableMapping = editForm.table_id ? [{ 
+          tables: { 
+            tables_id: editForm.table_id, 
+            tables_name: table?.name || "Assigned" 
+          } 
+        }] : [];
+
+        setSelectedBooking(prev => prev ? { 
+          ...prev, 
+          ...editForm,
+          // Correctly typed update to booking mappings
+          booking_table_mappings: tableMapping as Booking['booking_table_mappings']
+        } : null)
+        
         setIsEditing(false)
         toast.success("Booking updated successfully")
       } catch (error) {
@@ -397,7 +450,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                           <button
                             key={size}
                             type="button"
-                            onClick={() => setEditForm(prev => ({...prev, group_size: size}))}
+                            onClick={() => handleGroupSizeChange(size)}
                             className={cn(
                               "h-12 rounded-xl border-2 font-black text-xs transition-all",
                               editForm.group_size === size 
@@ -409,6 +462,28 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                           </button>
                         ))}
                       </div>
+                    </div>
+
+                    {/* SEATING SELECTION */}
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Table Assignment</Label>
+                      <div className="relative group">
+                        <select 
+                          title="Select Table"
+                          value={editForm.table_id}
+                          onChange={(e) => setEditForm(prev => ({...prev, table_id: e.target.value}))}
+                          className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold appearance-none outline-none focus:border-[#26300D] transition-all"
+                        >
+                          <option value="">Unassigned / No Table</option>
+                          {availableTables.map(t => (
+                            <option key={t.id} value={t.id}>{t.name} (Cap: {t.max_capacity})</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5F624F] opacity-40 pointer-events-none" />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground italic px-1">
+                        Only available tables with capacity ≥ {editForm.group_size} are shown.
+                      </p>
                     </div>
                     
                     <div className="pt-6 border-t border-[#E6DFC8]">
@@ -471,7 +546,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     <div className="space-y-3">
                       <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1">Primary Contact</h3>
                       <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl p-5 shadow-sm flex items-center gap-4 transition-all hover:border-[#26300D]/30 group/contact">
-                        <div className="w-14 h-14 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#26300D] border border-[#E6DFC8] group-hover/contact:bg-[#FDCC4B] group-hover/contact:border-[#FDCC4B] transition-colors">
+                        <div className="w-14 h-14 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#26300D] border border-[#E6DFC8]">
                           {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
                         </div>
                         <div className="min-w-0 flex-1 text-left">
@@ -486,7 +561,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
                     {selectedBooking.special_requests && (
                       <div className="bg-[#FDCC4B]/5 p-6 rounded-3xl border-2 border-[#FDCC4B]/20 shadow-sm relative overflow-hidden">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-[#FDCC4B]/5 blur-2xl pointer-events-none rounded-full" />
                         <div className="flex items-center gap-2 mb-4 relative z-10">
                           <MessageSquareQuote className="w-5 h-5 text-[#26300D] opacity-40" />
                           <span className="text-[10px] font-black uppercase tracking-widest text-[#26300D]">Staff Instructions</span>
@@ -587,7 +661,7 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
         theme.cardBorder
       )}
     >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
+      <div className="flex items-center gap-3 min-w-0 flex-1 text-left">
         <div className={cn("w-11 h-11 rounded-full flex flex-col items-center justify-center shrink-0 border", theme.bg, theme.text, theme.border)}>
           {showDate && booking.events?.event_date ? (
             <div className="flex flex-col leading-none items-center justify-center">
@@ -599,7 +673,7 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
           )}
         </div>
 
-        <div className="min-w-0 flex-1 text-left">
+        <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between min-w-0">
             <h4 className="text-sm font-black text-[#1F1F1A] truncate uppercase tracking-tight">{booking.group_name || "Guest Team"}</h4>
             <span className="text-[11px] font-black text-blue-700 uppercase bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 ml-2">T: {tableName}</span>
