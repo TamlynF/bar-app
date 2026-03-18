@@ -120,9 +120,8 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const searchParams = useSearchParams()
   const scrollRef = useRef<HTMLDivElement>(null)
+  const topRef = useRef<HTMLDivElement>(null)
 
-  // Determine if a date is effectively filtered (either via prop or URL)
-  // This ensures that "All History" mode is detected correctly.
   const isDateFiltered = !!(selectedDate || searchParams.get('date'));
 
   const toggleStatusFilter = (status: string) => {
@@ -132,10 +131,18 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     setActiveStatusFilters(next)
   }
 
-  // Reset scroll on sheet open
+  // Reset scroll to top with high priority whenever a booking is opened
   useEffect(() => {
-    if (selectedBooking && scrollRef.current) {
-      scrollRef.current.scrollTop = 0
+    if (selectedBooking) {
+      const doReset = () => {
+        if (scrollRef.current) scrollRef.current.scrollTop = 0;
+        if (topRef.current) topRef.current.focus({ preventScroll: true });
+      }
+      doReset();
+      // Handle potential race conditions with sheet animations
+      requestAnimationFrame(doReset);
+      const timer = setTimeout(doReset, 100);
+      return () => clearTimeout(timer);
     }
   }, [selectedBooking])
 
@@ -144,10 +151,8 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       .filter((b) => {
         const bDate = b.events?.event_date ? new Date(b.events.event_date) : null
         const matchesDate = selectedDate && bDate ? isSameDay(bDate, new Date(selectedDate)) : !selectedDate
-
         const bStatus = normStatus(b.status)
         const matchesStatus = activeStatusFilters.size === 0 ? true : activeStatusFilters.has(bStatus)
-
         const q = searchQuery.trim().toLowerCase()
         const matchesSearch =
           q === ""
@@ -336,13 +341,16 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       <Sheet open={!!selectedBooking} onOpenChange={(o) => !o && setSelectedBooking(null)}>
         <SheetContent
           side="bottom"
-          // CRITICAL: onOpenAutoFocus={e => e.preventDefault()} prevents scrolling to the bottom buttons on open
+          // CRITICAL FIXES FOR SCROLLING:
+          // 1. Prevent auto-focus scrolling down
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[88vh] flex flex-col outline-none shadow-2xl overflow-hidden"
+          // 2. Standardize heights for mobile and desktop flex
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[90vh] sm:h-[85vh] flex flex-col outline-none shadow-2xl overflow-hidden gap-0"
           style={{ backgroundColor: "#F7F4EA" }}
 	>
           {selectedBooking && (
             <>
+              <div ref={topRef} tabIndex={-1} className="sr-only" />
               {/* Top Handle */}
               <div className="flex justify-center pt-3 shrink-0">
                 <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
@@ -381,18 +389,19 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               {/* Scrollable Content Area */}
               <div 
                 ref={scrollRef}
-                className="flex-1 overflow-y-auto px-6 py-6 space-y-8 text-left overscroll-contain"
+                className="flex-1 overflow-y-auto px-6 py-6 space-y-8 text-left overscroll-contain touch-pan-y"
+                style={{ WebkitOverflowScrolling: 'touch' }}
               >
                 {/* Winner Badge if applicable */}
                 {selectedBooking.booking_scores?.[0]?.is_winner && (
-                  <div className="bg-[#FDCC4B] p-4 rounded-2xl flex items-center justify-between shadow-sm">
+                  <div className="bg-[#FDCC4B] p-4 rounded-2xl flex items-center justify-between shadow-sm border border-[#26300D]/10">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-[#26300D] rounded-xl">
                         <Trophy className="w-5 h-5 text-[#FDCC4B]" />
                       </div>
                       <div>
                         <p className="text-xs font-black text-[#26300D] uppercase tracking-tight">Quiz Winner</p>
-                        <p className="text-[10px] font-bold text-[#26300D]/60 uppercase">Claimed 1st Place</p>
+                        <p className="text-[10px] font-bold text-[#26300D]/60 uppercase">1st Place Finish</p>
                       </div>
                     </div>
                   </div>
