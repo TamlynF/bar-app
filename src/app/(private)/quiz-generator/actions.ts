@@ -54,7 +54,6 @@ export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig
 
 /**
  * Generates trivia using AI.
- * Updated to return a result object instead of throwing to prevent page crashes/refreshes.
  */
 export async function generateQuizAction(
   topic: string, 
@@ -172,6 +171,43 @@ export async function getFullQuestionHistoryAction(eventIdFilter?: string): Prom
   }
 
   return data as unknown as PastQuestionRecord[];
+}
+
+/**
+ * Updates an existing question.
+ */
+export async function updatePastQuestionAction(id: string, question: string, answer: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('past_quiz_questions')
+    .update({ 
+      question_text: question, 
+      answer_text: answer 
+    })
+    .eq('id', id);
+
+  if (error) {
+    console.error("Update error:", error);
+    throw new Error("Failed to update question.");
+  }
+  return { success: true };
+}
+
+/**
+ * Deletes a question from history.
+ */
+export async function deletePastQuestionAction(id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('past_quiz_questions')
+    .delete()
+    .eq('id', id);
+
+  if (error) {
+    console.error("Delete error:", error);
+    throw new Error("Failed to delete question.");
+  }
+  return { success: true };
 }
 
 /**
