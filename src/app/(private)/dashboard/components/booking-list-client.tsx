@@ -317,22 +317,17 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               {/* HEADER: Reference visible + Edit/Delete buttons top right */}
               <div className="shrink-0 p-6 pb-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 flex flex-row items-start justify-between gap-4">
                 <div className="flex-1 min-w-0 text-left">
-                  <div className="flex items-center gap-2 mb-1.5 flex-wrap">
-                    <span className={cn(
-                      "inline-flex px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
-                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
-                    )}>
-                      {normStatus(selectedBooking.status) || "pending"}
-                    </span>
-                    {/* REFERENCE ID: Always visible now */}
-                    <span className="text-[10px] font-black text-[#5F624F] uppercase tracking-widest opacity-60 tabular-nums bg-slate-100 px-2 py-0.5 rounded-full">
-                      Ref: #{selectedBooking.id}
-                    </span>
-                  </div>
                   <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
                     {isEditing ? "Modify Record" : (selectedBooking.group_name || "Guest Team")}
                   </SheetTitle>
+                  
+                  {/* REFERENCE ID: Now positioned directly below the title */}
+                  <div className="flex items-center gap-1.5 mt-1.5 opacity-50">
+                    <Hash className="w-3 h-3 text-[#5F624F]" />
+                    <span className="text-[10px] font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                      Record #{selectedBooking.id}
+                    </span>
+                  </div>
                 </div>
 
                 {/* TOP RIGHT ACTION GROUP (Positions buttons next to the sheet close 'X') */}
@@ -368,6 +363,21 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               {/* Scrollable Body */}
               <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-h-0 touch-pan-y overscroll-contain text-left">
                 
+                {/* STATUS BADGE: Now inside the scrollable body content */}
+                {!isEditing && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className={cn(
+                      "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border shadow-sm",
+                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
+                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
+                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
+                    )}>
+                      <div className={cn("w-1.5 h-1.5 rounded-full", statusTheme[normStatus(selectedBooking.status) || "pending"]?.dot)} />
+                      {normStatus(selectedBooking.status) || "pending"}
+                    </div>
+                  </div>
+                )}
+
                 {isEditing ? (
                   // EDIT MODE FORM - Consistent with Quiz Generator inline editor
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -383,7 +393,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Team Size</Label>
                       <div className="grid grid-cols-5 gap-2">
-                        {[2, 4, 6, 8, 10].map(size => (
+                        {[2, 4, 6].map(size => (
                           <button
                             key={size}
                             type="button"
@@ -399,16 +409,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                           </button>
                         ))}
                       </div>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Special Requests</Label>
-                      <Textarea 
-                        value={editForm.special_requests} 
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({...prev, special_requests: e.target.value}))}
-                        placeholder="Dietary requirements, table preference..."
-                        className="min-h-[140px] rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] resize-none"
-                      />
                     </div>
                     
                     <div className="pt-6 border-t border-[#E6DFC8]">
@@ -430,6 +430,16 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                            </button>
                          ))}
                        </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Special Requests</Label>
+                      <Textarea 
+                        value={editForm.special_requests} 
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({...prev, special_requests: e.target.value}))}
+                        placeholder="Dietary requirements, table preference..."
+                        className="min-h-[140px] rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] resize-none"
+                      />
                     </div>
                   </div>
                 ) : (
