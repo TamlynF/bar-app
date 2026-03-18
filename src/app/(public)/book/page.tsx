@@ -1,13 +1,14 @@
 import React from 'react'
-import BookingForm from "../_components/booking-form";
+import BookingForm from "@/app/(public)/_components/booking-form";
 import { 
   Calendar, Banknote, Users, Trophy, Wine, 
   MapPin, Clock, DollarSign, Star, CheckCircle, 
   Music, Utensils, GlassWater, Heart, Smile, 
   Sparkles, AlertCircle, Beer, Info
 } from "lucide-react";
-import Image from "next/image";
-import { createClient } from "@/lib/supabase/server";
+// Using standard img tag to avoid potential next/image resolution issues in this environment
+import { createClient } from "../../../lib/supabase/server";
+import Image from 'next/image';
 
 export const metadata = {
   title: 'Book a Quiz | Don Fenticas',
@@ -25,7 +26,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
 export default async function QuizBookingPage() {
   const supabase = await createClient();
 
-    const { data: infoItems } = await supabase
+  const { data: infoItems } = await supabase
     .from("event_information")
     .select(`
       icon,
@@ -38,7 +39,7 @@ export default async function QuizBookingPage() {
     .eq("event_types.type", "game")
     .eq("event_types.sub_type", "quiz");
   
-    // Map database items to badge format, falling back to Info icon if map fails
+  // Map database items to badge format, falling back to Info icon if map fails
   const dbBadges = (infoItems || []).map(item => ({
     icon: ICON_MAP[item.icon || ""] || Info,
     text: item.title
@@ -61,8 +62,28 @@ export default async function QuizBookingPage() {
   // ];
 
   return (
-    <main className="min-h-screen bg-[#26300D] text-stone-300 py-6 sm:py-12 px-4 sm:px-6 lg:px-8 selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
-      <div className="max-w-3xl mx-auto">
+    /* MOBILE LAYOUT FIXES:
+      1. html/body style: Forces the background color to the very edges (notch/home bar).
+      2. overflow-x-hidden: Prevents the horizontal "white sliver" on the right.
+      3. padding-top/bottom: Uses env(safe-area-inset-...) to handle the status bar and home indicator areas properly.
+    */
+    <main className="min-h-dvh w-full overflow-x-hidden bg-[#26300D] text-stone-300 flex flex-col selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
+      <style dangerouslySetInnerHTML={{ __html: `
+        html, body { 
+          background-color: #26300D !important; 
+          margin: 0;
+          padding: 0;
+          width: 100%;
+          height: 100%;
+          overflow-x: hidden;
+        }
+        main {
+          padding-top: env(safe-area-inset-top, 20px);
+          padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+      `}} />
+      
+      <div className="flex-1 w-full max-w-3xl mx-auto py-8 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
 
         {/* Header Section */}
         <div className="flex flex-col items-center text-center mb-8 sm:mb-12">
@@ -89,7 +110,7 @@ export default async function QuizBookingPage() {
           {eventBadges.map((badge, index) => (
             <div
               key={index}
-              className={`flex items-center justify-center bg-white/3 border border-white/8 rounded-xl px-3 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 
+              className={`flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 
                 ${index === eventBadges.length - 1 && eventBadges.length % 2 !== 0 ? "col-span-2 sm:col-span-1" : ""
                 }`}
             >
@@ -99,8 +120,8 @@ export default async function QuizBookingPage() {
           ))}
         </div>
 
-        {/* Booking Form Card */}
-        <div className="bg-white/3 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5">
+        {/* Booking Form Card - Added margin-bottom and responsive rounding */}
+        <div className="bg-white/3 backdrop-blur-xl rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5 mb-12">
           <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#fdcc4b]/10 blur-[100px] rounded-full pointer-events-none"></div>
 
           <div className="mb-8 text-center sm:text-left relative z-10 pl-1">
@@ -115,7 +136,9 @@ export default async function QuizBookingPage() {
             <BookingForm />
           </div>
         </div>
-        <div className="mt-12 mb-6 flex flex-col items-center gap-6">
+
+        {/* Footer info - Uses mt-auto to push to bottom of the dvh container */}
+        <div className="mt-auto mb-10 flex flex-col items-center gap-6">
           <div className="flex items-center gap-4 text-stone-600">
             <div className="h-px w-8 bg-stone-800"></div>
             <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
