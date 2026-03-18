@@ -116,71 +116,70 @@ export default async function QuizBookingsPage({
       <div className="fixed top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-0 left-0 w-80 h-80 bg-blue-500/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      <div className="p-2 md:p-8 max-w-5xl mx-auto space-y-6">
-        {/* Calendar Filter */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-2">
+      <div className="p-3 md:p-8 max-w-5xl mx-auto space-y-4 md:space-y-6">
+        {/* Calendar Filter - Compact padding on mobile */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-1.5 sm:p-2">
           <BookingCalendarFilter selectedDate={selectedDate} />
         </div>
 
-        {/* Statistics Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {/* Daily Stat: Teams */}
+        {/* Statistics Grid - Tighter gap on mobile */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
           <StatCard
-            label="Teams Today"
+            label="Teams"
             value={quizBookings.length}
-            icon={<Users className="w-4 h-4" />}
-            subValue={selectedDate ? format(new Date(selectedDate), "MMM do") : "Total"}
+            icon={<Users className="w-3.5 h-3.5" />}
+            subValue={selectedDate ? format(new Date(selectedDate), "MMM do") : "Lifetime"}
           />
 
           {/* Daily Stat: Guests */}
           <StatCard
-            label="Total Guests"
+            label="Guests"
             value={currentTotalGuests}
-            icon={<ArrowRightLeft className="w-4 h-4" />}
-            subValue={`of ${totalMaxCapacity} cap.`}
+            icon={<ArrowRightLeft className="w-3.5 h-3.5" />}
+            subValue={`of ${totalMaxCapacity} max`}
           />
 
           {/* Conditional Stat: Tables (Only if date is selected) */}
           {selectedDate ? (
             <StatCard
-              label="Free Tables"
+              label="Available"
               value={availableTables}
-              icon={<LayoutDashboard className="w-4 h-4" />}
-              subValue={`${tablesOccupied} / ${totalTablesCount} used`}
+              icon={<LayoutDashboard className="w-3.5 h-3.5" />}
+              subValue={`${tablesOccupied}/${totalTablesCount} used`}
               color="primary"
             />
           ) : (
             <StatCard
-              label="Table Count"
+              label="Tables"
               value={totalTablesCount}
-              icon={<LayoutDashboard className="w-4 h-4" />}
-              subValue="Active assets"
+              icon={<LayoutDashboard className="w-3.5 h-3.5" />}
+              subValue="Total assets"
             />
           )}
 
           {/* Global Stat: Quiz History */}
           <StatCard
-            label="Quiz History"
+            label="History"
             value={pastQuizzesCount}
-            icon={<History className="w-4 h-4" />}
-            subValue={`${upcomingQuizzesCount} scheduled`}
+            icon={<History className="w-3.5 h-3.5" />}
+            subValue={`${upcomingQuizzesCount} upcoming`}
             color="amber"
           />
         </div>
 
         {/* Main List Section */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div className="flex items-center justify-between px-1">
-            <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-              <Timer className="w-4 h-4" />
+            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2">
+              <Timer className="w-3 h-3" />
               Bookings Stream
             </h2>
           </div>
 
           <Suspense fallback={
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {[...Array(3)].map((_, i) => (
-                <div key={i} className="h-24 bg-white rounded-2xl animate-pulse border border-slate-100" />
+                <div key={i} className="h-20 bg-white rounded-2xl animate-pulse border border-slate-100" />
               ))}
             </div>
           }>
@@ -210,24 +209,35 @@ function StatCard({
 }) {
   return (
     <div className={cn(
-      "bg-white border rounded-2xl p-4 flex flex-col gap-1 shadow-sm transition-all",
-      color === "primary" ? "border-primary/20 bg-primary/5" : "border-slate-100",
-      color === "amber" ? "border-amber-200 bg-amber-50/50" : ""
+      "bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col gap-1 shadow-sm transition-all overflow-hidden",
+      color === "primary" ? "border-primary/20 bg-primary/[0.02]" : "border-slate-100",
+      color === "amber" ? "border-amber-200 bg-amber-50/30" : ""
     )}>
-      <div className="flex items-center justify-between mb-1">
+      <div className="flex items-center justify-between mb-0.5">
+        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate mr-1">
+          {label}
+        </span>
         <div className={cn(
-          "p-2 rounded-lg bg-slate-50 border border-slate-100",
-          color === "primary" && "bg-primary/20 border-primary/20 text-primary",
-          color === "amber" && "bg-amber-100 border-amber-200 text-amber-600"
+          "p-1.5 rounded-lg shrink-0",
+          color === "primary" ? "bg-primary/10 text-primary" : 
+          color === "amber" ? "bg-amber-100 text-amber-600" : 
+          "bg-slate-50 text-slate-400 border border-slate-100/50"
         )}>
           {icon}
         </div>
-        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{label}</span>
       </div>
+      
       <div className="flex items-baseline gap-1.5">
-        <span className="text-2xl font-black text-slate-900 leading-none">{value}</span>
+        <span className="text-xl sm:text-2xl font-black text-slate-900 leading-tight tracking-tight">
+          {value}
+        </span>
       </div>
-      <span className="text-[10px] font-bold text-slate-400 truncate">{subValue}</span>
+      
+      <div className="flex items-center">
+        <span className="text-[9px] font-bold text-slate-400/80 uppercase truncate leading-none">
+          {subValue}
+        </span>
+      </div>
     </div>
   )
 }
