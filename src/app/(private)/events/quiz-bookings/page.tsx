@@ -103,7 +103,6 @@ export default async function QuizBookingsPage({
       else upcomingQuizzesCount++
     })
   }
-  const totalParticipants = quizBookings.reduce((acc, b) => acc + (Number(b.group_size) || 0), 0);
 
   const currentTotalGuests = quizBookings.reduce((sum, b) => sum + (b.group_size || 0), 0)
   const confirmedBookings = quizBookings.filter(b => b.status?.toLowerCase() === 'confirmed')
@@ -116,38 +115,39 @@ export default async function QuizBookingsPage({
       <div className="fixed top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-0 left-0 w-80 h-80 bg-blue-500/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      {/* Increased max-width to 7xl to allow components to utilize more horizontal space */}
       <div className="p-1 md:p-8 max-w-7xl mx-auto space-y-4 md:space-y-6">
-        {/* Calendar Filter - Compact padding on mobile */}
+        {/* Calendar Filter */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-1.5 sm:p-2">
           <BookingCalendarFilter selectedDate={selectedDate} />
         </div>
 
-        {/* Statistics Grid - Tighter gap on mobile */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3">
+        {/* Statistics Grid - Balanced for mobile screens */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatCard
-            label="Teams"
-            value={quizBookings.length}
-            icon={<Users className="w-3.5 h-3.5" />}
+            label="Total Teams"
+            value={`${quizBookings.length}`}
+            icon={<Users className="w-3 h-3" />}
             subValue={selectedDate ? format(new Date(selectedDate), "MMM do") : "Lifetime"}
+            color="info"
           />
 
           {/* Daily Stat: Guests */}
           <StatCard
-            label="Guests"
+            label="Guest Count"
             value={currentTotalGuests}
             icon={<ArrowRightLeft className="w-3.5 h-3.5" />}
-            subValue={`of ${totalMaxCapacity} max`}
+            subValue={`Max ${totalMaxCapacity}`}
+            color="info"
           />
 
           {/* Conditional Stat: Tables (Only if date is selected) */}
           {selectedDate ? (
             <StatCard
-              label="Available"
+              label="Free Tables"
               value={availableTables}
               icon={<LayoutDashboard className="w-3.5 h-3.5" />}
-              subValue={`${tablesOccupied}/${totalTablesCount} used`}
-              color="primary"
+              subValue={`${tablesOccupied} used`}
+              color="success"
             />
           ) : (
             <StatCard
@@ -155,27 +155,28 @@ export default async function QuizBookingsPage({
               value={totalTablesCount}
               icon={<LayoutDashboard className="w-3.5 h-3.5" />}
               subValue="Total assets"
+              color="info"
             />
           )}
 
           {/* Global Stat: Quiz History */}
           <StatCard
-            label="History"
+            label="Past Quizzes"
             value={pastQuizzesCount}
             icon={<History className="w-3.5 h-3.5" />}
-            subValue={`${upcomingQuizzesCount} upcoming`}
+            subValue={`${upcomingQuizzesCount} soon`}
             color="amber"
           />
         </div>
 
         {/* Main List Section */}
         <div className="space-y-3">
-          <div className="flex items-center justify-between px-1">
+          {/* <div className="flex items-center justify-between px-1">
             <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2">
               <Timer className="w-3 h-3" />
               Bookings Stream
             </h2>
-          </div>
+          </div> */}
 
           <Suspense fallback={
             <div className="space-y-2.5">
@@ -206,38 +207,46 @@ function StatCard({
   value: string | number;
   icon: React.ReactNode;
   subValue: string;
-  color?: "default" | "primary" | "amber"
+  color?: "default" | "info" | "success" | "amber"
 }) {
+  // Explicitly defined classes to ensure background colors are applied correctly
+  const themeClasses = {
+    default: "border-slate-100 bg-white",
+    info: "border-blue-100 bg-blue-50/50",
+    success: "border-emerald-100 bg-emerald-50/50",
+    amber: "border-amber-100 bg-amber-50/50",
+  };
+
+  const iconClasses = {
+    default: "text-slate-400",
+    info: "text-blue-600",
+    success: "text-emerald-600",
+    amber: "text-amber-600",
+  };
+
   return (
     <div className={cn(
-      "bg-white border rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col gap-1 shadow-sm transition-all overflow-hidden",
-      color === "primary" ? "border-primary/20 bg-primary/[0.02]" : "border-slate-100",
-      color === "amber" ? "border-amber-200 bg-amber-50/30" : ""
+      "border rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-sm min-h-[90px] transition-colors",
+      themeClasses[color]
     )}>
-      <div className="flex items-center justify-between mb-0.5">
-        <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider truncate mr-1">
+      {/* Top Section: Icon & Label */}
+      <div className="flex items-start justify-between gap-1">
+        <span className="text-[9px] font-bold text-slate-500/80 uppercase tracking-tight leading-[1.1] max-w-[75%] wrap-break-word">
           {label}
         </span>
-        <div className={cn(
-          "p-1.5 rounded-lg shrink-0",
-          color === "primary" ? "bg-primary/10 text-primary" : 
-          color === "amber" ? "bg-amber-100 text-amber-600" : 
-          "bg-slate-50 text-slate-400 border border-slate-100/50"
-        )}>
+        <div className={cn("shrink-0 p-1 rounded-md bg-white/50 border border-white/20 shadow-xs", iconClasses[color])}>
           {icon}
         </div>
       </div>
       
-      <div className="flex items-baseline gap-1.5">
-        <span className="text-xl sm:text-2xl font-black text-slate-900 leading-tight tracking-tight">
+      {/* Bottom Section: Value & Subtext */}
+      <div className="mt-2">
+        <div className="text-xl sm:text-2xl font-black text-slate-900 leading-none tracking-tight">
           {value}
-        </span>
-      </div>
-      
-      <div className="flex items-center">
-        <span className="text-[9px] font-bold text-slate-400/80 uppercase truncate leading-none">
+        </div>
+        <div className="text-[8px] sm:text-[9px] font-bold text-slate-400/90 mt-1 uppercase tracking-wider leading-none truncate">
           {subValue}
-        </span>
+        </div>
       </div>
     </div>
   )

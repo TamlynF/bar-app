@@ -204,7 +204,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     <div className="space-y-3 animate-in fade-in duration-500">
       {/* KPI Grid & Interactive Status Filter */}
       <div className="flex flex-col gap-2 sm:gap-2">
-        <div className="flex w-full justify-between gap-2 overflow-x-auto pb-1">
+        {/* <div className="flex w-full justify-between gap-2 overflow-x-auto pb-1">
           <div className="flex-1 min-w-0">
             <KPIBox label="Guests" value={stats.totalGuests} icon={<Users className="w-4 h-4" />} />
           </div>
@@ -218,7 +218,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
           <div className="flex-1 min-w-0">
             <KPIBox label="Teams" value={stats.totalTeams} icon={<TableIcon className="w-4 h-4" />} />
           </div>
-        </div>
+        </div> */}
 
         {/* Status Filters Bar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 flex items-center justify-between shadow-sm relative z-10 overflow-visible">
