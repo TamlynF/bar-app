@@ -45,8 +45,7 @@ import {
   Target,
   Edit2,
   Trash2,
-  Save,
-  RotateCcw
+  Save
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
