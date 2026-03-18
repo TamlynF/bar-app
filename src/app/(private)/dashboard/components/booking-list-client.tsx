@@ -27,7 +27,8 @@ import {
   ExternalLink,
   ChevronDown,
   Save,
-  X
+  X,
+  MessageSquareQuote
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -316,45 +317,50 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       >
         <SheetContent
           side="bottom"
-          onOpenAutoFocus={(e: Event) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[92dvh] sm:h-[85vh] flex flex-col outline-none shadow-2xl overflow-hidden"
-          style={{ backgroundColor: "#F7F4EA" }}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh] flex flex-col outline-none shadow-2xl"
         >
           {selectedBooking && (
             <>
               <span ref={topFocusRef} tabIndex={-1} className="sr-only" />
               
-              {/* Header with Sticky Actions */}
-              <div className="shrink-0 p-6 pb-4 border-b border-[#E6DFC8] bg-white/70 backdrop-blur-lg flex items-center justify-between z-30">
-                <div className="min-w-0 flex-1">
-                  <div className={cn(
-                    "inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border mb-1",
-                    statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
-                    statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
-                    statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
-                  )}>
-                    {normStatus(selectedBooking.status) || "pending"}
+              {/* Refined Header - Consistent with Quiz Generator/Settings sheets */}
+              <div className="shrink-0 p-6 pb-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="flex-1 min-w-0 text-left">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className={cn(
+                      "inline-flex px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest",
+                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
+                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
+                    )}>
+                      {normStatus(selectedBooking.status) || "pending"}
+                    </span>
                   </div>
-                  <SheetTitle className="text-lg font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
-                    {isEditing ? "Editing Booking" : (selectedBooking.group_name || "Guest Team")}
+                  <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+                    {isEditing ? "Modify Record" : (selectedBooking.group_name || "Guest Team")}
                   </SheetTitle>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="hidden sm:block text-right mr-4">
+                    <p className="text-[10px] font-black text-[#5F624F] uppercase tracking-widest opacity-60">Reference</p>
+                    <p className="text-sm font-black text-[#26300D] tabular-nums leading-none">#{selectedBooking.id}</p>
+                  </div>
+                  
                   {!isEditing && (
                     <Button 
                       onClick={handleEnterEditMode} 
                       variant="outline" 
                       size="sm" 
-                      className="h-9 px-3 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#26300D] font-black text-[10px] uppercase tracking-widest"
+                      className="h-10 px-4 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#26300D] font-black text-[10px] uppercase tracking-widest hover:bg-[#26300D]/5 transition-all"
                     >
-                      <Pencil className="w-3 h-3 mr-1.5" /> Edit
+                      <Pencil className="w-3.5 h-3.5 mr-2" /> Edit
                     </Button>
                   )}
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-9 w-9 rounded-full hover:bg-black/5" 
+                    className="h-10 w-10 rounded-full hover:bg-black/5" 
                     onClick={() => setSelectedBooking(null)}
                   >
                     <X className="w-5 h-5" />
@@ -363,17 +369,17 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               </div>
 
               {/* Scrollable Body */}
-              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-8 min-h-0 touch-pan-y overscroll-contain">
+              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-h-0 touch-pan-y overscroll-contain text-left">
                 
                 {isEditing ? (
-                  // EDIT MODE FORM
+                  // EDIT MODE FORM - Consistent with Quiz Generator inline editor
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Team Name</Label>
                       <Input 
                         value={editForm.group_name} 
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm(prev => ({...prev, group_name: e.target.value}))}
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-0 focus:border-[#26300D]"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D]"
                       />
                     </div>
 
@@ -388,8 +394,8 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                             className={cn(
                               "h-12 rounded-xl border-2 font-black text-xs transition-all",
                               editForm.group_size === size 
-                                ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B] scale-105" 
-                                : "bg-white border-[#E6DFC8] text-[#5F624F]"
+                                ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B] scale-105 shadow-md" 
+                                : "bg-white border-[#E6DFC8] text-[#5F624F] hover:border-[#26300D]/30"
                             )}
                           >
                             {size}
@@ -404,12 +410,12 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                         value={editForm.special_requests} 
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({...prev, special_requests: e.target.value}))}
                         placeholder="Dietary requirements, table preference..."
-                        className="min-h-[120px] rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-0 focus:border-[#26300D] resize-none"
+                        className="min-h-[140px] rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] resize-none"
                       />
                     </div>
                     
-                    <div className="pt-4 border-t border-[#E6DFC8]">
-                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1 mb-2 block">Quick Status Toggle</Label>
+                    <div className="pt-6 border-t border-[#E6DFC8]">
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1 mb-3 block">Quick Status Switch</Label>
                        <div className="flex flex-wrap gap-2">
                          {Object.keys(statusTheme).filter(s => s !== 'all').map(s => (
                            <button
@@ -417,10 +423,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                              type="button"
                              onClick={() => handleStatusChange(selectedBooking.id, s)}
                              className={cn(
-                               "px-3 py-2 rounded-xl border-2 text-[9px] font-black uppercase tracking-widest transition-all",
+                               "px-4 py-2.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
                                normStatus(selectedBooking.status) === s 
-                                ? `${statusTheme[s].bg} ${statusTheme[s].border} ${statusTheme[s].text} ring-2 ring-offset-1 ring-primary/20`
-                                : "bg-white border-[#E6DFC8] text-slate-400"
+                                ? `${statusTheme[s].bg} ${statusTheme[s].border} ${statusTheme[s].text} ring-2 ring-offset-2 ring-primary/10 shadow-sm`
+                                : "bg-white border-[#E6DFC8] text-slate-400 hover:border-[#26300D]/30"
                              )}
                            >
                              {s}
@@ -432,93 +438,95 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                 ) : (
                   // VIEW MODE DETAILS
                   <div className="space-y-8 animate-in fade-in duration-300">
-                    {/* Score Summary */}
+                    {/* Score Summary - High Contrast Theme */}
                     {selectedBooking.booking_scores?.[0] && (
-                      <div className="bg-[#26300D] text-white p-5 rounded-[2rem] shadow-lg flex items-center justify-between border border-white/10">
-                        <div>
-                          <p className="text-[10px] font-black text-[#FDCC4B] uppercase tracking-[0.2em] opacity-60">Game Score</p>
-                          <h3 className="text-4xl font-black tracking-tighter">{selectedBooking.booking_scores[0].score} <span className="text-sm opacity-40">pts</span></h3>
+                      <div className="bg-[#26300D] text-white p-6 rounded-[2.5rem] shadow-xl flex items-center justify-between border border-white/10 relative overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-full h-full bg-[#FDCC4B]/5 pointer-events-none group-hover:bg-[#FDCC4B]/10 transition-colors" />
+                        <div className="relative z-10">
+                          <p className="text-[10px] font-black text-[#FDCC4B] uppercase tracking-[0.3em] opacity-60 mb-1">Game Performance</p>
+                          <h3 className="text-5xl font-black tracking-tighter tabular-nums">{selectedBooking.booking_scores[0].score} <span className="text-sm font-bold opacity-30 tracking-normal ml-1">pts</span></h3>
                         </div>
                         {selectedBooking.booking_scores[0].is_winner && (
-                          <div className="bg-[#FDCC4B] p-3 rounded-2xl">
-                            <Trophy className="w-8 h-8 text-[#26300D]" />
+                          <div className="bg-[#FDCC4B] p-4 rounded-2xl shadow-lg rotate-12 group-hover:rotate-0 transition-transform">
+                            <Trophy className="w-10 h-10 text-[#26300D]" />
                           </div>
                         )}
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <DetailTile icon={<Calendar className="w-4 h-4" />} label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM") : "—"} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <DetailTile icon={<Calendar className="w-4 h-4" />} label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM yyyy") : "—"} />
                       <DetailTile icon={<Users className="w-4 h-4" />} label="Team Size" value={`${selectedBooking.group_size} Guests`} />
-                      <DetailTile icon={<LayoutDashboard className="w-4 h-4" />} label="Table" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
-                      <DetailTile icon={<Hash className="w-4 h-4" />} label="Reference" value={`#${selectedBooking.id}`} />
+                      <DetailTile icon={<LayoutDashboard className="w-4 h-4" />} label="Seating" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
+                      <DetailTile icon={<Clock3 className="w-4 h-4" />} label="Booked On" value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "HH:mm, do MMM") : "—"} />
                     </div>
 
-                    <div className="space-y-2">
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1">Lead Contact</h3>
-                      <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl p-4 shadow-sm flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-[#26300D] border border-[#E6DFC8]">
+                    <div className="space-y-3">
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1">Primary Contact</h3>
+                      <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl p-5 shadow-sm flex items-center gap-4 transition-all hover:border-[#26300D]/30 group/contact">
+                        <div className="w-14 h-14 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#26300D] border border-[#E6DFC8] group-hover/contact:bg-[#FDCC4B] group-hover/contact:border-[#FDCC4B] transition-colors">
                           {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-black text-[#1F1F1A] uppercase truncate">{selectedBooking.contacts?.full_name}</p>
-                          <p className="text-xs font-bold text-[#5F624F] opacity-60 truncate">{selectedBooking.contacts?.email}</p>
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="text-base font-black text-[#1F1F1A] uppercase tracking-tight truncate">{selectedBooking.contacts?.full_name}</p>
+                          <p className="text-xs font-bold text-[#5F624F] opacity-60 truncate mt-0.5">{selectedBooking.contacts?.email}</p>
                         </div>
-                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-3 bg-[#26300D]/5 rounded-xl text-[#26300D] hover:bg-[#26300D]/10">
-                          <ExternalLink className="w-4 h-4" />
+                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-4 bg-[#26300D]/5 rounded-2xl text-[#26300D] hover:bg-[#26300D] hover:text-white transition-all active:scale-95 shadow-xs">
+                          <ExternalLink className="w-5 h-5" />
                         </Link>
                       </div>
                     </div>
 
                     {selectedBooking.special_requests && (
-                      <div className="bg-amber-500/5 p-5 rounded-2xl border-2 border-amber-500/10 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3">
-                          <AlertCircle className="w-4 h-4 text-amber-600" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Special Request</span>
+                      <div className="bg-[#FDCC4B]/5 p-6 rounded-3xl border-2 border-[#FDCC4B]/20 shadow-sm relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-[#FDCC4B]/5 blur-2xl pointer-events-none rounded-full" />
+                        <div className="flex items-center gap-2 mb-4 relative z-10">
+                          <MessageSquareQuote className="w-5 h-5 text-[#26300D] opacity-40" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-[#26300D]">Staff Instructions</span>
                         </div>
-                        <p className="text-sm text-[#1F1F1A] italic leading-relaxed font-bold">
+                        <p className="text-[15px] text-[#1F1F1A] italic leading-relaxed font-bold relative z-10 text-left">
                           &quot;{selectedBooking.special_requests}&quot;
                         </p>
                       </div>
                     )}
                   </div>
                 )}
-                <div className="h-20" />
+                <div className="h-32" />
               </div>
 
-              {/* STICKY FOOTER ACTIONS */}
-              <div className="shrink-0 p-6 pt-4 border-t-2 border-[#E6DFC8] bg-white pb-12 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-40">
+              {/* STICKY FOOTER ACTIONS - Consistent spacing and shadow */}
+              <div className="shrink-0 p-6 pt-4 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.05)] z-40">
                 {isEditing ? (
                   <div className="flex flex-col gap-3">
                     <Button 
                       onClick={handleSaveDetails} 
                       disabled={isPending}
-                      className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-xs shadow-lg w-full"
+                      className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-xs shadow-lg w-full active:scale-95 transition-transform"
                     >
                       {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save Changes</>}
                     </Button>
                     <Button 
                       variant="ghost" 
                       onClick={() => setIsEditing(false)}
-                      className="text-[#5F624F] font-black uppercase tracking-widest text-[10px]"
+                      className="text-[#5F624F] font-black uppercase tracking-widest text-[10px] h-10"
                     >
                       Discard Changes
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-4">
                     <div className="grid grid-cols-2 gap-3">
-                      <Button asChild className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg">
+                      <Button asChild className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95 transition-transform">
                         <Link href={`/manage-booking/${selectedBooking.id}`}>
-                          <ExternalLink className="w-4 h-4 mr-2" /> Public Link
+                          <ExternalLink className="w-4 h-4 mr-2" /> Open Link
                         </Link>
                       </Button>
                       <Button 
                         variant="outline" 
                         onClick={handleEnterEditMode}
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px]"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white hover:bg-[#26300D]/5 active:scale-95 transition-transform"
                       >
-                        Modify Booking
+                        Modify Details
                       </Button>
                     </div>
                     <Button 
@@ -528,9 +536,9 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                           handleDeleteBooking(selectedBooking.id)
                         }
                       }}
-                      className="text-red-600 font-black uppercase tracking-widest text-[9px] h-auto p-2"
+                      className="text-red-600 font-black uppercase tracking-widest text-[9px] h-auto p-2 opacity-60 hover:opacity-100 transition-opacity"
                     >
-                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Permanent Record
+                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Remove Permanent Record
                     </Button>
                   </div>
                 )}
@@ -542,8 +550,8 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
       {/* Global Transition Overlay */}
       {isPending && (
-        <div className="fixed bottom-6 right-6 z-100 bg-[#26300D] text-[#FDCC4B] px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Syncing...
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#26300D] text-[#FDCC4B] px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <Loader2 className="w-4 h-4 animate-spin" /> Syncing with DB...
         </div>
       )}
     </div>
@@ -595,7 +603,7 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
           )}
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 text-left">
           <div className="flex items-center justify-between min-w-0">
             <h4 className="text-sm font-black text-[#1F1F1A] truncate uppercase tracking-tight">{booking.group_name || "Guest Team"}</h4>
             <span className="text-[11px] font-black text-blue-700 uppercase bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 ml-2">T: {tableName}</span>
@@ -616,7 +624,7 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
 
 function DetailTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="bg-white border-2 border-[#E6DFC8] p-4 rounded-2xl flex flex-col gap-1 text-left shadow-sm">
+    <div className="bg-white border-2 border-[#E6DFC8] p-4 rounded-2xl flex flex-col gap-1 text-left shadow-sm transition-all hover:border-[#26300D]/30">
       <div className="flex items-center gap-1.5 text-[#5F624F] opacity-60">
         <div className="scale-75 origin-left">{icon}</div>
         <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
