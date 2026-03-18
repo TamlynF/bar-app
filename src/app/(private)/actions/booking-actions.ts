@@ -122,6 +122,33 @@ export async function getQuizEvents(type: string, subType: string) {
     throw new Error("Failed to fetch quiz events");
   }
 }
+/**
+ * Updates comprehensive booking details from the dashboard
+ */
+export async function updateBookingDetails(
+  id: string, 
+  updates: { 
+    group_name?: string; 
+    group_size?: number; 
+    special_requests?: string;
+    status?: string;
+  }
+) {
+  const supabase = await createClient()
+
+  const { error } = await supabase
+    .from("bookings")
+    .update(updates)
+    .eq("id", id)
+
+  if (error) {
+    console.error("Error updating booking details:", error)
+    throw new Error("Failed to update booking")
+  }
+
+  revalidatePath("/dashboard")
+  revalidatePath("/events/quiz-bookings")
+}
 
 export async function updateBookingStatus(id: string, status: string) {
   const supabase = await createClient()
@@ -137,6 +164,7 @@ export async function updateBookingStatus(id: string, status: string) {
   }
 
   revalidatePath("/dashboard")
+  revalidatePath("/events/quiz-bookings")
 }
 
 export async function deleteBooking(id: string) {
@@ -148,4 +176,5 @@ export async function deleteBooking(id: string) {
 
   if (error) throw new Error("Failed to delete")
   revalidatePath("/dashboard")
+  revalidatePath("/events/quiz-bookings")
 }
