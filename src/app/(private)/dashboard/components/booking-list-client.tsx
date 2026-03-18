@@ -222,7 +222,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
         {/* Status Filters Bar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 flex items-center justify-between shadow-sm relative z-10 overflow-visible">
-          <div className="flex items-center justify-start gap-4 sm:gap-5 w-full px-2 min-w-max py-4 overflow-visible">
+          <div className="flex items-center justify-start gap-3 sm:gap-5 w-full px-2 min-w-max py-4 overflow-visible">
             <StatusCircle
               count={stats.totalTeams}
               status="all"

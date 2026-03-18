@@ -116,7 +116,8 @@ export default async function QuizBookingsPage({
       <div className="fixed top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-0 left-0 w-80 h-80 bg-blue-500/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      <div className="p-3 md:p-8 max-w-5xl mx-auto space-y-4 md:space-y-6">
+      {/* Increased max-width to 7xl to allow components to utilize more horizontal space */}
+      <div className="p-1 md:p-8 max-w-7xl mx-auto space-y-4 md:space-y-6">
         {/* Calendar Filter - Compact padding on mobile */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-1.5 sm:p-2">
           <BookingCalendarFilter selectedDate={selectedDate} />
