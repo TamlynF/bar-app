@@ -119,8 +119,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set())
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const searchParams = useSearchParams()
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const topFocusRef = useRef<HTMLDivElement>(null)
+  
+  // Refs for scroll and focus control
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const titleRef = useRef<HTMLHeadingElement>(null)
 
   const isDateFiltered = !!(selectedDate || searchParams.get('date'));
 
@@ -130,6 +132,13 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     else next.add(status)
     setActiveStatusFilters(next)
   }
+
+  // Ensure scroll state resets when opening a new team
+  useEffect(() => {
+    if (selectedBooking && scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTop = 0
+    }
+  }, [selectedBooking])
 
   const filteredBookings = useMemo(() => {
     return initialBookings
@@ -225,23 +234,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     <div className="space-y-3 animate-in fade-in duration-500">
       {/* KPI Grid & Interactive Status Filter */}
       <div className="flex flex-col gap-2 sm:gap-2">
-        {/* <div className="flex w-full justify-between gap-2 overflow-x-auto pb-1">
-          <div className="flex-1 min-w-0">
-            <KPIBox label="Guests" value={stats.totalGuests} icon={<Users className="w-4 h-4" />} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <KPIBox
-              label="Revenue"
-              value={`£${stats.revenue}`}
-              icon={<BadgePoundSterling className="w-4 h-4" />}
-            />
-          </div>
-          <div className="flex-1 min-w-0">
-            <KPIBox label="Teams" value={stats.totalTeams} icon={<TableIcon className="w-4 h-4" />} />
-          </div>
-        </div> */}
-
-        {/* Status Filters Bar */}
         <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-2 flex items-center justify-between shadow-sm relative z-10 overflow-visible">
           <div className="flex items-center justify-start gap-3 sm:gap-5 w-full px-2 min-w-max py-4 overflow-visible">
             <StatusCircle
@@ -329,19 +321,17 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
           // We override the default focus behavior to stop the jump to the bottom buttons
           onOpenAutoFocus={(e) => {
             e.preventDefault();
-            topFocusRef.current?.focus();
+            // Focusing the Title ensures we start at the top
+            titleRef.current?.focus()
           }}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[90vh] sm:h-[85vh] flex flex-col outline-none shadow-2xl overflow-hidden"
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[92vh] sm:h-[85vh] flex flex-col outline-none shadow-2xl overflow-hidden"
           style={{ backgroundColor: "#F7F4EA" }}
 	>
           {selectedBooking && (
             <>
-              {/* Invisible focus target at the very top of the content */}
-              <div ref={topFocusRef} tabIndex={-1} className="outline-none" />
-              
-              {/* Top Drag Handle */}
+              {/* Drag handle */}
               <div className="flex justify-center pt-3 shrink-0 pb-1">
-                <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
+                <div className="w-12 h-1.5 bg-slate-300 rounded-full" />
               </div>
 
               {/* Sticky Header */}
@@ -356,7 +346,12 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                       )}>
                       {normStatus(selectedBooking.status) || "pending"}
                     </div>
-                    <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-none truncate">
+                    {/* tabIndex={-1} makes the title focusable via JS without being part of tab order */}
+                    <SheetTitle 
+                      ref={titleRef}
+                      tabIndex={-1}
+                      className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-none truncate outline-none"
+                    >
                       {selectedBooking.group_name || "Guest Team"}
                     </SheetTitle>
                     <p className="text-[10px] font-bold text-[#5F624F] uppercase tracking-widest mt-1.5 opacity-60">
@@ -373,9 +368,9 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                 </div>
               </SheetHeader>
 
-              {/* MAIN SCROLLABLE AREA */}
+              {/* SCROLLABLE BODY - Must have flex-1 and min-h-0 to scroll inside flex column */}
               <div 
-                ref={scrollRef}
+                ref={scrollContainerRef}
                 className="flex-1 overflow-y-auto px-6 py-6 space-y-8 text-left overscroll-contain touch-pan-y relative min-h-0 pointer-events-auto"
                 style={{ WebkitOverflowScrolling: 'touch' }}
               >
@@ -440,7 +435,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               </div>
 
               {/* FOOTER ACTIONS - Fixed at bottom */}
-              <div className="p-6 pt-4 border-t border-[#E6DFC8] bg-white/95 backdrop-blur-md pb-12 space-y-4 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
+              <div className="p-6 pt-4 border-t border-[#E6DFC8] bg-white/95 backdrop-blur-md pb-12 space-y-4 shrink-0 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-30">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <DropdownMenu modal={false}>
                     <DropdownMenuTrigger asChild>
@@ -488,7 +483,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
       {/* Syncing Overlay */}
       {isPending && (
-        <div className="fixed bottom-6 right-6 z-[100] bg-[#26300D] text-[#FDCC4B] px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2">
+        <div className="fixed bottom-6 right-6 z-100 bg-[#26300D] text-[#FDCC4B] px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2">
           <Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating...
         </div>
       )}
