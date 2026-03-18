@@ -501,13 +501,11 @@ function BookingCard({
   onClick: () => void
   showDate?: boolean
 }) {
-  console.log("showDate prop:", showDate);
   const status = normStatus(booking.status) || "pending"
   const theme = statusTheme[status] || statusTheme.pending
   const hasRequest = booking.special_requests && booking.special_requests.trim() !== ""
   const score = booking.booking_scores?.[0]?.score;
-  //const isWinner = booking.booking_scores?.[0]?.is_winner;
-  const isWinner = true;
+  const isWinner = booking.booking_scores?.[0]?.is_winner;
   const tableName = booking.booking_table_mappings?.[0]?.tables?.tables_name || "--";
   const tableCapacity = booking.booking_table_mappings?.[0]?.tables?.tables_capacity || 0;
 
