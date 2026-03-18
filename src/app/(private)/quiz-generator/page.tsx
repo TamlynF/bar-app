@@ -212,7 +212,9 @@ export default function QuizGeneratorPage() {
     }
     setIsSaving(true)
     try {
-      await saveQuizToDatabase(selectedData, parseInt(selectedEventId))
+      // Pass the 'topic' state value to the save action
+      await saveQuizToDatabase(selectedData, parseInt(selectedEventId), topic)
+      
       const eventName = upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'Event'
       toast.success(`Approved ${selectedData.length} items for ${eventName}!`)
       setQuestions([])

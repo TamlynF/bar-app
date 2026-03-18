@@ -253,8 +253,9 @@ export async function getUpcomingQuizzesAction(): Promise<QuizEventSummary[]> {
 
 /**
  * Saves quiz to database, automatically resolving category config IDs.
+ * Now includes the 'topic' field for better historical tracking.
  */
-export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: number | null) {
+export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: number | null, topic: string) {
   const supabase = await createClient()
 
   const { data: configs } = await supabase.from('quiz_category_configs').select('id, category_name');
@@ -270,6 +271,7 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
     question_text: q.question,
     answer_text: q.answer,
     category: q.category,
+    topic: topic.trim() || null, // Include the new topic field
     asked_on: askedOn,
     events_id: eventId,
     quiz_category_configs_id: configMap.get(q.category.toLowerCase()) || null
