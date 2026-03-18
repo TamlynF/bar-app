@@ -2,15 +2,12 @@
 
 import React, { useMemo, useState, useTransition } from "react"
 import styles from "./booking-list-client.module.css"
-import { Calendar } from "@/components/ui/calendar"
 import { format, isSameDay } from "date-fns"
 import { updateBookingStatus } from "@/app/(private)/actions/booking-actions"
 import {
   BadgePoundSterling,
   CalendarDays,
-  CheckCircle,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
   Clock3,
   HelpCircle,
@@ -34,12 +31,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { Booking } from "../../events/quiz-bookings/page"
+import { useSearchParams } from "next/navigation"
 
 const formatDateStr = (d: Date | string) => {
   if (typeof d === 'string') return d;
@@ -68,7 +65,7 @@ const statusTheme: Record<
     dot: "bg-slate-600",
     ring: "ring-slate-500/40",
     cardBorder: "border-slate-200 dark:border-slate-700",
-    icon: <TableIcon className="w-3 h-3" />,
+    icon: <TableIcon className="w-5 h-5" />,
   },
   confirmed: {
     bg: "bg-green-50 dark:bg-green-500/10",
@@ -77,7 +74,7 @@ const statusTheme: Record<
     dot: "bg-green-500",
     ring: "ring-green-500/40",
     cardBorder: "border-green-500/50 dark:border-green-500/40",
-    icon: <CheckCircle2 className="w-3 h-3" />,
+    icon: <CheckCircle2 className="w-5 h-5" />,
   },
   waitlisted: {
     bg: "bg-orange-50 dark:bg-orange-500/10",
@@ -86,7 +83,7 @@ const statusTheme: Record<
     dot: "bg-orange-500",
     ring: "ring-orange-500/40",
     cardBorder: "border-orange-500/50 dark:border-orange-500/40",
-    icon: <Clock3 className="w-3 h-3" />,
+    icon: <Clock3 className="w-5 h-5" />,
   },
   pending: {
     bg: "bg-yellow-50 dark:bg-yellow-500/10",
@@ -95,7 +92,7 @@ const statusTheme: Record<
     dot: "bg-yellow-500",
     ring: "ring-yellow-500/40",
     cardBorder: "border-yellow-500/50 dark:border-yellow-500/40",
-    icon: <HelpCircle className="w-3 h-3" />,
+    icon: <HelpCircle className="w-5 h-5" />,
   },
   cancelled: {
     bg: "bg-red-50 dark:bg-red-500/10",
@@ -104,7 +101,7 @@ const statusTheme: Record<
     dot: "bg-red-500",
     ring: "ring-red-500/40",
     cardBorder: "border-red-500/50 dark:border-red-500/40",
-    icon: <XCircle className="w-3 h-3" />,
+    icon: <XCircle className="w-5 h-5" />,
   },
 }
 
@@ -114,6 +111,11 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   const [searchQuery, setSearchQuery] = useState("")
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set())
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
+  const searchParams = useSearchParams()
+
+  // Determine if a date is effectively filtered (either via prop or URL)
+  // This ensures that "All History" mode is detected correctly.
+  const isDateFiltered = !!(selectedDate || searchParams.get('date'));
 
   const toggleStatusFilter = (status: string) => {
     const next = new Set(activeStatusFilters)
@@ -292,7 +294,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
             <BookingCard
               key={b.id}
               booking={b}
-              showDate={!selectedDate}
+              showDate={!isDateFiltered}
               onClick={() => setSelectedBooking(b)}
             />
           ))
@@ -498,13 +500,14 @@ function BookingCard({
   booking: Booking
   onClick: () => void
   showDate?: boolean
-  }) {
+}) {
   console.log("showDate prop:", showDate);
   const status = normStatus(booking.status) || "pending"
   const theme = statusTheme[status] || statusTheme.pending
   const hasRequest = booking.special_requests && booking.special_requests.trim() !== ""
   const score = booking.booking_scores?.[0]?.score;
-  const isWinner = booking.booking_scores?.[0]?.is_winner;
+  //const isWinner = booking.booking_scores?.[0]?.is_winner;
+  const isWinner = true;
   const tableName = booking.booking_table_mappings?.[0]?.tables?.tables_name || "--";
   const tableCapacity = booking.booking_table_mappings?.[0]?.tables?.tables_capacity || 0;
 

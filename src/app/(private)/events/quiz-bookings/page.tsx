@@ -150,7 +150,7 @@ export default async function QuizBookingsPage({
         </div>
         
         {/* The interactive list component which handles searching and status filtering */}
-        <Suspense fallback={
+          <Suspense fallback={
           <div className="space-y-3">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="h-24 bg-white rounded-2xl animate-pulse border border-[#E6DFC8]" />
@@ -159,6 +159,7 @@ export default async function QuizBookingsPage({
         }>
           <BookingListClient
             initialBookings={quizBookings}
+            selectedDate={selectedDate}
           />
         </Suspense>
 
