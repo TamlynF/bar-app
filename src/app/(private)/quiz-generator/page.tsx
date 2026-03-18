@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
+import styles from './quiz-generator.module.css'
 
 // Using relative paths to resolve build errors and environment pathing issues
 import { 
@@ -120,7 +121,6 @@ export default function QuizGeneratorPage() {
   // Force scroll reset when category details open
   useEffect(() => {
     if (viewingCategory) {
-      // Small delay ensures the Sheet transition has started and auto-focus has triggered
       const timer = setTimeout(() => {
         if (scrollContainerRef.current) {
           scrollContainerRef.current.scrollTop = 0;
@@ -301,46 +301,60 @@ export default function QuizGeneratorPage() {
         </Link>
       </div>
 
-      {/* CATEGORY PROGRESS INDICATORS: Pill style for mobile, Grid for desktop */}
-      <div className="flex overflow-x-auto no-scrollbar gap-2 pb-1 sm:grid sm:grid-cols-4 lg:grid-cols-5 sm:gap-1.5 w-full">
-        {categoryStats.map((stat) => (
-          <button
-            key={stat.id}
-            type="button"
-            onClick={() => setViewingCategory(stat)}
-            className={cn(
-              "flex items-center gap-2 sm:flex-col sm:items-stretch sm:gap-1 px-4 py-2 sm:px-2.5 sm:py-2 rounded-full sm:rounded-xl border-2 transition-all text-left relative overflow-hidden shrink-0 shadow-sm",
-              stat.isFull 
-                ? "bg-emerald-50/50 border-emerald-200" 
-                : "bg-white border-[#E6DFC8] hover:border-[#26300D]",
-              filterCategory === stat.category_name && "ring-2 ring-offset-1 ring-[#26300D] border-[#26300D] z-10"
-            )}
-          >
-            <div className="flex items-center justify-between gap-2 min-w-max sm:min-w-0">
-              <span className={cn(
-                "text-[9px] sm:text-[9px] font-black uppercase tracking-tight truncate",
-                stat.isFull ? "text-emerald-700" : "text-[#5F624F]"
-              )}>
-                {stat.category_name}
-              </span>
-              {stat.isFull ? (
-                <CheckCircle className="w-2.5 h-2.5 text-emerald-500 shrink-0" />
-              ) : (
-                <span className="text-[8px] font-black text-[#26300D]/30 tabular-nums">
-                  {stat.currentCount}/{stat.question_count}
-                </span>
+      {/* CATEGORY PROGRESS INDICATORS: Using CSS Module for all layout & status colors */}
+      <div className={styles.pillsContainer}>
+        {categoryStats.map((stat) => {
+          const isFull = stat.isFull;
+          const hasQuestions = stat.currentCount > 0;
+          
+          return (
+            <button
+              key={stat.id}
+              type="button"
+              onClick={() => setViewingCategory(stat)}
+              className={cn(
+                styles.pill,
+                isFull ? styles.pillFull : hasQuestions ? styles.pillPartial : styles.pillEmpty,
+                filterCategory === stat.category_name && styles.pillActive
               )}
-            </div>
-            
-            {/* Minimal Progress Bar */}
-            <div className="h-1 w-8 sm:w-full bg-slate-100 rounded-full overflow-hidden shrink-0">
-              <div 
-                className={cn("h-full transition-all duration-700", stat.isFull ? "bg-emerald-500" : "bg-[#26300D]")}
-                style={{ width: `${stat.progress}%` }}
-              />
-            </div>
-          </button>
-        ))}
+            >
+              {/* Top Row: Name & Fraction */}
+              <div className={styles.headerRow}>
+                <span className={cn(
+                  styles.catName,
+                  isFull ? styles.textFull : hasQuestions ? styles.textPartial : styles.textEmpty
+                )}>
+                  {stat.category_name}
+                </span>
+                
+                {isFull ? (
+                  <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
+                ) : (
+                  <span className={cn(
+                    styles.statsText,
+                    hasQuestions ? styles.statsTextPartial : styles.statsTextEmpty
+                  )}>
+                    {stat.currentCount}/{stat.question_count}
+                  </span>
+                )}
+              </div>
+              
+              {/* Bottom Row: Full-width Progress Bar */}
+              <div className={cn(
+                styles.barTrack,
+                isFull ? styles.trackFull : hasQuestions ? styles.trackPartial : styles.trackEmpty
+              )}>
+                <div 
+                  className={cn(
+                    styles.barFill,
+                    isFull ? styles.fillFull : hasQuestions ? styles.fillPartial : styles.fillEmpty
+                  )}
+                  style={{ '--progress-width': `${stat.progress}%` } as React.CSSProperties}
+                />
+              </div>
+            </button>
+          )
+        })}
       </div>
 
       {/* POPUP: Category Details Sheet with Edit/Delete */}
@@ -506,7 +520,6 @@ export default function QuizGeneratorPage() {
       {/* GENERATOR FORM */}
       <form onSubmit={handleGenerate} className="bg-white border-2 border-[#E6DFC8] p-3 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm">
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-          
           <div className="grid grid-cols-2 sm:grid-cols-12 gap-2.5 grow">
             {/* Event Selection */}
             <div className="col-span-2 sm:col-span-4 space-y-1">
