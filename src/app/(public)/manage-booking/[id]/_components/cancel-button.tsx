@@ -119,24 +119,24 @@ export default function CancelButton({
     <div className="w-full">
       {/* HEADER: Hidden when editing to focus on the form as requested */}
       {!isEditing && (
-        <div className="text-center mb-8 animate-in fade-in duration-500">
+        <div className="text-center mb-6 animate-in fade-in duration-500">
           {isCancelled ? (
-            <XCircle className="mx-auto h-20 w-20 text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
+            <XCircle className="mx-auto h-16 w-16 sm:h-20 sm:w-20 text-red-500 mb-3 sm:mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
           ) : (
-            <CheckCircle className="mx-auto h-20 w-20 text-[#fdcc4b] mb-4 drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
+            <CheckCircle className="mx-auto h-16 w-16 sm:h-20 sm:w-20 text-[#fdcc4b] mb-3 sm:mb-4 drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
           )}
           
-          <h1 className="text-3xl font-black text-white tracking-wide uppercase leading-tight">
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-wide uppercase leading-tight">
             {isCancelled ? "Booking Cancelled" : "You're Locked In!"}
           </h1>
-          <p className="text-[#fdcc4b]/70 mt-2 font-medium">Booking Reference: #{booking.id}</p>
+          <p className="text-[#fdcc4b]/70 mt-1 sm:mt-2 font-medium text-xs sm:text-base tracking-wide">Ref: #{booking.id}</p>
         </div>
       )}
 
       {(error || nameError) && (
         <div className="flex items-center justify-center gap-2 mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded-xl animate-in slide-in-from-top-2">
-          <AlertCircle className="w-4 h-4 text-red-400" />
-          <p className="text-red-400 text-xs font-bold uppercase tracking-tight">{error || nameError}</p>
+          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+          <p className="text-red-400 text-[10px] font-bold uppercase tracking-tight leading-tight">{error || nameError}</p>
         </div>
       )}
       
@@ -144,16 +144,16 @@ export default function CancelButton({
       
       {isEditing ? (
         /* EDIT MODE: Only the fields to be edited are shown */
-        <div className="bg-black/40 p-6 rounded-2xl border border-[#fdcc4b]/30 space-y-6 text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center justify-between border-b border-[#fdcc4b]/10 pb-4 mb-2">
-            <h3 className="text-[#fdcc4b] font-black uppercase tracking-wider text-base">Modify Your Team</h3>
-            <button title="Close" onClick={() => setIsEditing(false)} className="text-[#fdcc4b]/40 hover:text-[#fdcc4b] transition-colors">
+        <div className="bg-black/40 p-5 sm:p-6 rounded-2xl border border-[#fdcc4b]/30 space-y-5 sm:space-y-6 text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center justify-between border-b border-[#fdcc4b]/10 pb-4 mb-1">
+            <h3 className="text-[#fdcc4b] font-black uppercase tracking-wider text-sm sm:text-base">Modify Your Team</h3>
+            <button title="Close" onClick={() => setIsEditing(false)} className="text-[#fdcc4b]/40 hover:text-[#fdcc4b] transition-colors p-1">
                <ArrowLeft className="w-5 h-5" />
             </button>
           </div>
           
-          <div className="space-y-2">
-            <label htmlFor="teamName" className="block text-[10px] font-black text-[#fdcc4b]/70 uppercase tracking-widest ml-1">Team Name</label>
+          <div className="space-y-1.5">
+            <label htmlFor="teamName" className="block text-[9px] font-black text-[#fdcc4b]/70 uppercase tracking-widest ml-1">Team Name</label>
             <div className="relative">
               <Beer className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fdcc4b]/40" />
               <input
@@ -161,7 +161,7 @@ export default function CancelButton({
                 type="text" 
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
-                className={`w-full bg-black/60 border ${nameError ? 'border-red-500/50' : 'border-[#fdcc4b]/20'} rounded-xl pl-11 pr-12 py-4 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all font-bold`}
+                className={`w-full h-14 bg-black/60 border ${nameError ? 'border-red-500/50' : 'border-[#fdcc4b]/20'} rounded-xl pl-11 pr-12 py-4 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all font-bold text-sm sm:text-base`}
               />
               {isCheckingName && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -171,15 +171,15 @@ export default function CancelButton({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="teamSize" className="block text-[10px] font-black text-[#fdcc4b]/70 uppercase tracking-widest ml-1">Team Size</label>
+          <div className="space-y-1.5">
+            <label htmlFor="teamSize" className="block text-[9px] font-black text-[#fdcc4b]/70 uppercase tracking-widest ml-1">Team Size</label>
             <div className="relative">
               <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fdcc4b]/40" />
               <select 
                 id="teamSize"
                 value={teamSize}
                 onChange={(e) => setTeamSize(Number(e.target.value))}
-                className="w-full bg-black/60 border border-[#fdcc4b]/20 rounded-xl pl-11 pr-4 py-4 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all appearance-none font-bold"
+                className="w-full h-14 bg-black/60 border border-[#fdcc4b]/20 rounded-xl pl-11 pr-4 py-4 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all appearance-none font-bold text-sm sm:text-base"
               >
                 {[4, 5, 6].map(num => (
                   <option key={num} value={num}>{num} People</option>
@@ -188,18 +188,18 @@ export default function CancelButton({
             </div>
           </div>
 
-          <div className="flex gap-3 pt-4">
+          <div className="flex gap-3 pt-2">
             <button
               onClick={handleUpdate}
               disabled={isUpdating || !!nameError || isCheckingName}
-              className="flex-1 bg-[#fdcc4b] text-[#26300D] font-black py-4 rounded-xl uppercase tracking-widest hover:bg-[#e5b843] transition-all disabled:opacity-50 active:scale-95 shadow-lg flex items-center justify-center gap-2"
+              className="flex-1 bg-[#fdcc4b] text-[#26300D] font-black h-14 rounded-xl uppercase tracking-widest hover:bg-[#e5b843] transition-all disabled:opacity-50 active:scale-95 shadow-lg flex items-center justify-center gap-2 text-xs sm:text-sm"
             >
               {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save</>}
             </button>
             <button
               onClick={() => setIsEditing(false)}
               disabled={isUpdating}
-              className="flex-1 border-2 border-[#fdcc4b]/30 text-[#fdcc4b] font-black py-4 rounded-xl uppercase tracking-widest hover:bg-[#fdcc4b]/5 transition-all disabled:opacity-50 active:scale-95"
+              className="flex-1 border-2 border-[#fdcc4b]/30 text-[#fdcc4b] font-black h-14 rounded-xl uppercase tracking-widest hover:bg-[#fdcc4b]/5 transition-all disabled:opacity-50 active:scale-95 text-xs sm:text-sm"
             >
               Discard
             </button>
@@ -207,9 +207,9 @@ export default function CancelButton({
         </div>
       ) : (
         /* VIEW MODE: Details Card + Side-by-side buttons */
-        <div className="space-y-8 animate-in fade-in duration-500">
+        <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
           {/* Booking Details Card - Visible only in View Mode */}
-          <div className="bg-black/40 rounded-2xl p-6 border border-[#fdcc4b]/20 space-y-5">
+          <div className="bg-black/40 rounded-2xl p-5 sm:p-6 border border-[#fdcc4b]/20 space-y-4 sm:space-y-5">
             <DetailRow icon={<CalendarDays />} label="Date" value={eventDate ? format(eventDate, "do MMMM yyyy") : "Unknown Date"} />
             <DetailRow icon={<Beer />} label="Team Name" value={booking.group_name || "N/A"} />
             <DetailRow icon={<Users />} label="Team Size" value={`${booking.group_size} People`} />
@@ -221,7 +221,7 @@ export default function CancelButton({
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={isCancelling}
-                className="w-full py-4 px-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all duration-300 border-2 bg-[#fdcc4b] border-[#fdcc4b] text-[#26300D] hover:bg-[#e5b843] hover:-translate-y-0.5 shadow-lg active:scale-95 disabled:opacity-50"
+                className="w-full h-14 sm:h-16 px-4 rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all duration-300 border-2 bg-[#fdcc4b] border-[#fdcc4b] text-[#26300D] hover:bg-[#e5b843] hover:-translate-y-0.5 shadow-lg active:scale-95 disabled:opacity-50"
               >
                 Edit Booking
               </button>
@@ -229,14 +229,14 @@ export default function CancelButton({
               <button
                 onClick={handleCancel}
                 disabled={isCancelling}
-                className="w-full py-4 px-4 rounded-xl font-black text-sm uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-red-500 text-red-500 hover:bg-red-500 hover:text-white hover:-translate-y-0.5 active:scale-95"
+                className="w-full h-14 sm:h-16 px-4 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-red-500 text-red-500 hover:bg-red-500 hover:text-white hover:-translate-y-0.5 active:scale-95"
               >
                 {isCancelling ? "Wait..." : "Cancel Booking"}
               </button>
             </div>
           )}
           
-          <p className="text-center text-[#fdcc4b]/30 text-[9px] uppercase tracking-[0.25em] font-black pt-2">
+          <p className="text-center text-[#fdcc4b]/30 text-[9px] uppercase tracking-[0.25em] font-black pt-2 opacity-50">
             Account Management
           </p>
         </div>
@@ -248,12 +248,16 @@ export default function CancelButton({
 function DetailRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
     <div className="flex items-center">
-      <div className="bg-black/40 p-3 rounded-xl mr-4 border border-[#fdcc4b]/10 text-[#fdcc4b]/80">
-        {React.cloneElement(icon as React.ReactElement)}
+      <div className="bg-black/40 p-2 sm:p-3 rounded-xl mr-3 sm:mr-4 border border-[#fdcc4b]/10 text-[#fdcc4b]/80 shrink-0">
+        {React.isValidElement(icon) 
+          ? React.cloneElement(icon as React.ReactElement<{ className?: string }>, { 
+              className: "w-4 h-4 sm:w-5 sm:h-5" 
+            }) 
+          : icon}
       </div>
-      <div className="text-left">
-        <p className="text-xs font-bold text-[#fdcc4b]/60 uppercase tracking-wider">{label}</p>
-        <p className="text-white font-medium text-lg leading-tight">{value}</p>
+      <div className="text-left min-w-0">
+        <p className="text-[9px] sm:text-xs font-bold text-[#fdcc4b]/60 uppercase tracking-wider">{label}</p>
+        <p className="text-white font-medium text-sm sm:text-lg leading-tight truncate">{value}</p>
       </div>
     </div>
   );

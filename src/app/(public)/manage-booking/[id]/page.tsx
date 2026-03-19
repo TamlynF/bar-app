@@ -45,14 +45,16 @@ export default async function ManageBookingPage({
           overflow-x: hidden;
         }
         main {
-          padding-top: env(safe-area-inset-top, 20px);
+          padding-top: env(safe-area-inset-top, 0px);
           padding-bottom: env(safe-area-inset-bottom, 20px);
         }
       `}} />
 
-      <div className="flex-1 w-full max-w-xl mx-auto py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
+      {/* Reduced py-12 to py-6 on mobile, and adjusted max-width for tighter feel */}
+      <div className="flex-1 w-full max-w-xl mx-auto py-6 sm:py-12 px-4 sm:px-6 flex flex-col justify-center">
         
-        <div className="bg-linear-to-b from-[#1e260a] to-[#151a07] rounded-3xl p-6 sm:p-10 border border-[#fdcc4b]/30 shadow-2xl relative overflow-hidden">
+        {/* Adjusted padding on the card itself for mobile (p-5 vs p-10) */}
+        <div className="bg-linear-to-b from-[#1e260a] to-[#151a07] rounded-3xl p-5 sm:p-10 border border-[#fdcc4b]/30 shadow-2xl relative overflow-hidden">
           <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-32 blur-3xl pointer-events-none rounded-full ${isCancelled ? 'bg-red-500/5' : 'bg-[#fdcc4b]/5'}`}></div>
           
           {/* The details card and header logic have been moved into CancelButton 
@@ -66,7 +68,8 @@ export default async function ManageBookingPage({
           </div>
         </div>
         
-        <div className="mt-auto pt-10 text-center opacity-40">
+        {/* More compact footer spacing */}
+        <div className="mt-8 sm:mt-auto pt-4 text-center opacity-40">
            <p className="text-[10px] font-black uppercase tracking-[0.4em]">Don Fenticas</p>
         </div>
       </div>
