@@ -6,9 +6,9 @@ import {
   Music, Utensils, GlassWater, Heart, Smile, 
   Sparkles, AlertCircle, Beer, Info
 } from "lucide-react";
-// Using standard img tag to avoid potential next/image resolution issues in this environment
 import { createClient } from "../../../lib/supabase/server";
 import Image from 'next/image';
+import { cn } from '@/lib/utils';
 
 export const metadata = {
   title: 'Book a Quiz | Don Fenticas',
@@ -78,16 +78,16 @@ export default async function QuizBookingPage() {
           overflow-x: hidden;
         }
         main {
-          padding-top: env(safe-area-inset-top, 20px);
+          padding-top: env(safe-area-inset-top, 10px);
           padding-bottom: env(safe-area-inset-bottom, 20px);
         }
       `}} />
       
-      <div className="flex-1 w-full max-w-3xl mx-auto py-8 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
+      <div className="flex-1 w-full max-w-3xl mx-auto py-6 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
 
         {/* Header Section */}
-        <div className="flex flex-col items-center text-center mb-8 sm:mb-12">
-          <div className="w-full max-w-60 sm:max-w-105 transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98]">
+        <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
+          <div className="w-full max-w-[220px] sm:max-w-md transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98]">
             <Image
               src="/DF X PJ Quiz Night.png"
               alt="Don Fenticas x Papa Johns Quiz Night"
@@ -97,39 +97,40 @@ export default async function QuizBookingPage() {
               priority
             />
           </div>
-          <div className="mt-6 space-y-2 px-4">
+          <div className="mt-4 sm:mt-6 space-y-2 px-2">
             {/* <h1 className="text-white text-xs sm:text-sm font-black uppercase tracking-[0.3em] opacity-80">Weekly Pub Trivia</h1> */}
-            <p className="text-stone-400 text-sm sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic">
+            <p className="text-stone-400 text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic opacity-90">
               Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.
             </p>
           </div>
         </div>
 
-        {/* Event Badges - Horizontal Scrollable Row */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-3 mb-8 sm:mb-12">
+        {/* Event Badges - Flexible Width distribution */}
+        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 sm:mb-12">
           {eventBadges.map((badge, index) => (
             <div
               key={index}
-              className={`flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 
-                ${index === eventBadges.length - 1 && eventBadges.length % 2 !== 0 ? "col-span-2 sm:col-span-1" : ""
-                }`}
+              className={cn(
+                "flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 hover:border-white/20",
+                "flex-1 min-w-[calc(50%-0.5rem)] sm:min-w-0 sm:flex-none"
+              )}
             >
               <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />
-              <span className="truncate text-stone-200">{badge.text}</span>
+              <span className="text-stone-200 whitespace-nowrap">{badge.text}</span>
             </div>
           ))}
         </div>
 
-        {/* Booking Form Card - Added margin-bottom and responsive rounding */}
-        <div className="bg-white/3 backdrop-blur-xl rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5 mb-12">
+        {/* Booking Form Card */}
+        <div className="bg-white/3 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5 mb-12">
           <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#fdcc4b]/10 blur-[100px] rounded-full pointer-events-none"></div>
 
-          <div className="mb-8 text-center sm:text-left relative z-10 pl-1">
+          <div className="mb-8 text-center relative z-10">
             {/* <div className="inline-block px-3 py-1 rounded-full bg-[#fdcc4b]/10 border border-[#fdcc4b]/20 text-[#fdcc4b] text-[10px] font-black uppercase tracking-widest mb-3">
               Limited Tables
             </div> */}
-            <h3 className="text-2xl sm:text-3xl font-black text-white tracking-tight uppercase leading-none">Book Your Table</h3>
-            <p className="text-stone-500 text-xs sm:text-sm mt-2 font-medium">Lock in your team before we are fully booked.</p>
+            <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">Book Your Table</h3>
+            <p className="text-stone-500 text-xs sm:text-base mt-2 font-medium">Lock in your team before we are fully booked.</p>
           </div>
 
           <div className="relative z-10">
@@ -137,14 +138,14 @@ export default async function QuizBookingPage() {
           </div>
         </div>
 
-        {/* Footer info - Uses mt-auto to push to bottom of the dvh container */}
-        <div className="mt-auto mb-10 flex flex-col items-center gap-6">
-          <div className="flex items-center gap-4 text-stone-600">
-            <div className="h-px w-8 bg-stone-800"></div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
-            <div className="h-px w-8 bg-stone-800"></div>
+        {/* Footer info */}
+        <div className="mt-auto mb-6 flex flex-col items-center gap-4">
+          <div className="flex items-center gap-4 text-stone-700">
+            <div className="h-px w-6 bg-stone-800/50"></div>
+            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
+            <div className="h-px w-6 bg-stone-800/50"></div>
           </div>
-          <p className="text-[9px] text-stone-500 uppercase tracking-widest opacity-50">
+          <p className="text-[8px] text-stone-600 uppercase tracking-widest opacity-40">
             Licensed Venue • Please Drink Responsibly
           </p>
         </div>
