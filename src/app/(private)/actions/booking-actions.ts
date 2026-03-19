@@ -140,7 +140,7 @@ export async function getAvailableTables() {
 
     const { data: tables, error } = await supabase
       .from("tables")
-      .select("max_capacity")
+      .select("id, name, max_capacity") // Updated to include ID and Name
       .eq("available", true);
     
     if (error) {

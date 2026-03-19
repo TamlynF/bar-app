@@ -3,7 +3,13 @@
 import React, { useMemo, useState, useTransition, useEffect, useRef } from "react"
 import styles from "./booking-list-client.module.css"
 import { format, isSameDay } from "date-fns"
-import { updateBookingStatus, deleteBooking, updateBookingDetails } from "@/app/(private)/actions/booking-actions"
+import { 
+  updateBookingStatus, 
+  deleteBooking, 
+  updateBookingDetails, 
+  getAvailableTablesForEvent,
+  getQuizEvents
+} from "@/app/(private)/actions/booking-actions"
 import {
   CheckCircle2,
   ChevronRight,
@@ -27,15 +33,13 @@ import {
   ExternalLink,
   ChevronDown,
   Save,
-  X
+  X,
+  MessageSquareQuote,
+  RefreshCw,
+  Info,
+  CalendarDays
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -44,7 +48,7 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import { Booking } from "../../events/quiz-bookings/page"
+import { Booking, TableRow } from "@/app/(private)/events/quiz-bookings/page"
 
 const formatDateStr = (d: Date | string) => {
   if (typeof d === 'string') return d;
@@ -113,22 +117,38 @@ const statusTheme: Record<
   },
 }
 
+// Local interface for selection states
+interface SelectableTable {
+  id: number;
+  name: string;
+  max_capacity: number;
+}
+
+interface SelectableEvent {
+  id: string;
+  date: string;
+  title: string;
+}
+
 export default function BookingListClient({ initialBookings, selectedDate }: { initialBookings: Booking[], selectedDate?: string | undefined }) {
   const [isPending, startTransition] = useTransition()
-  //const [bookingActionId, setBookingActionId] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set())
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [isEditing, setIsEditing] = useState(false)
+  const [availableTables, setAvailableTables] = useState<SelectableTable[]>([])
+  const [availableEvents, setAvailableEvents] = useState<SelectableEvent[]>([])
+  
   const [editForm, setEditForm] = useState({
     group_name: "",
     group_size: 0,
-    special_requests: ""
+    special_requests: "",
+    table_id: "",
+    status: "",
+    event_id: ""
   })
   
   const searchParams = useSearchParams()
-  
-  // Refs for scroll and focus control
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const topFocusRef = useRef<HTMLSpanElement>(null)
 
@@ -141,23 +161,105 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     setActiveStatusFilters(next)
   }
 
-  /**
-   * Enter edit mode and initialize the form state
-   */
-  const handleEnterEditMode = () => {
+  const handleEnterEditMode = async () => {
     if (selectedBooking) {
+      const currentTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id;
+      const currentEventId = String(selectedBooking.event_id);
+      
       setEditForm({
         group_name: selectedBooking.group_name || "",
-        group_size: selectedBooking.group_size || 0,
-        special_requests: selectedBooking.special_requests || ""
+        group_size: Number(selectedBooking.group_size) || 0,
+        special_requests: selectedBooking.special_requests || "",
+        table_id: currentTableId || "",
+        status: normStatus(selectedBooking.status) || "pending",
+        event_id: currentEventId
       })
+      
       setIsEditing(true)
+      
+      // Fetch compatible tables
+      if (selectedBooking.event_id) {
+        const tables = await getAvailableTablesForEvent(
+          currentEventId, 
+          Number(selectedBooking.group_size) || 0,
+          currentTableId
+        );
+        setAvailableTables(tables as unknown as SelectableTable[]);
+      }
+
+      // Fetch all upcoming events of same type to allow movement
+      if (selectedBooking.events?.event_types) {
+        const events = await getQuizEvents(
+          selectedBooking.events.event_types.category || "game",
+          selectedBooking.events.event_types.sub_type || "quiz"
+        );
+        setAvailableEvents(events as unknown as SelectableEvent[]);
+      }
     }
   }
 
+  const handleEventChange = async (newEventId: string) => {
+    // When changing event, table assignment is cleared as it's date-specific
+    setEditForm(prev => ({ ...prev, event_id: newEventId, table_id: "" }));
+    
+    // Refresh tables for the new event context
+    const tables = await getAvailableTablesForEvent(
+      newEventId, 
+      editForm.group_size,
+      "" 
+    );
+    setAvailableTables(tables as unknown as SelectableTable[]);
+  }
+
+  const handleTableChange = (newTableId: string) => {
+    const originalTableId = selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
+    const wasUnassigned = originalTableId === "";
+    const isUnassigned = newTableId === "";
+    
+    let newStatus = editForm.status;
+
+    // RULE: If table id was Unassigned and then changed to a table name -> set status to confirmed
+    if (wasUnassigned && !isUnassigned) {
+      newStatus = "confirmed";
+    } 
+    // RULE: If table id was assigned to a table and then changed to unassigned -> set status to cancelled
+    else if (!wasUnassigned && isUnassigned) {
+      newStatus = "cancelled";
+    }
+
+    setEditForm(prev => ({ ...prev, table_id: newTableId, status: newStatus }));
+  }
+
   /**
-   * Selection handler to ensure edit mode resets when switching between items
+   * Logical rule handler for Status changes in edit mode
    */
+  const handleStatusChangeInEdit = (newStatus: string) => {
+    const originalStatus = normStatus(selectedBooking?.status) || "pending";
+    const wasConfirmed = originalStatus === "confirmed";
+    const isNowOther = newStatus !== "confirmed";
+    
+    let newTableId = editForm.table_id;
+
+    // RULE: if the status is changed from confirmed to any other status -> set table id to unassigned
+    if (wasConfirmed && isNowOther) {
+      newTableId = "";
+    }
+
+    setEditForm(prev => ({ ...prev, status: newStatus, table_id: newTableId }));
+  }
+
+  const handleGroupSizeChange = async (size: number) => {
+    setEditForm(prev => ({...prev, group_size: size}));
+    if (editForm.event_id) {
+      const tables = await getAvailableTablesForEvent(
+        editForm.event_id, 
+        size,
+        selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id
+      );
+      setAvailableTables(tables as unknown as SelectableTable[]);
+    }
+  }
+
   const handleSelectBooking = (booking: Booking) => {
     setSelectedBooking(booking)
     setIsEditing(false)
@@ -198,7 +300,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
   const stats = useMemo(() => {
     const dateFilter = selectedDate ? (typeof selectedDate === 'string' ? selectedDate : formatDateStr(selectedDate)) : null;
-
     const contextBookings = dateFilter
       ? initialBookings.filter((b) => b.events?.event_date === dateFilter)
       : initialBookings
@@ -217,27 +318,38 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     }
   }, [initialBookings, selectedDate])
 
-  const handleStatusChange = (id: string, newStatus: string) => {
-    startTransition(async () => {
-      try {
-        await updateBookingStatus(id, newStatus)
-        if (selectedBooking?.id === id) {
-          setSelectedBooking(prev => prev ? { ...prev, status: newStatus } : null)
-        }
-        toast.success(`Status updated to ${newStatus}`)
-      } catch (error) {
-        console.error(error)
-        toast.error("Failed to update status")
-      }
-    })
-  }
-
   const handleSaveDetails = () => {
     if (!selectedBooking) return
     startTransition(async () => {
       try {
         await updateBookingDetails(selectedBooking.id, editForm)
-        setSelectedBooking(prev => prev ? { ...prev, ...editForm } : null)
+        
+        const table = availableTables.find(t => String(t.id) === String(editForm.table_id));
+        const tableMapping = editForm.table_id ? [{ 
+          tables: { 
+            tables_id: editForm.table_id, 
+            tables_name: table?.name || "Assigned" 
+          } 
+        }] : [];
+
+        const targetEvent = availableEvents.find(e => String(e.id) === String(editForm.event_id));
+
+        setSelectedBooking(prev => {
+          if (!prev) return null;
+          return { 
+            ...prev, 
+            ...editForm,
+            // event_id is stored as string in state, matching interface requirement
+            event_id: editForm.event_id, 
+            events: targetEvent ? {
+               ...prev.events,
+               event_date: targetEvent.date,
+               event_title: targetEvent.title
+            } : prev.events,
+            booking_table_mappings: tableMapping as Booking['booking_table_mappings']
+          };
+        });
+        
         setIsEditing(false)
         toast.success("Booking updated successfully")
       } catch (error) {
@@ -260,6 +372,16 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       }
     })
   }
+
+  // Reactive hint flags for UI feedback
+  const originalTableIdFromRec = selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
+  const originalStatusFromRec = normStatus(selectedBooking?.status) || "pending";
+  const originalEventIdFromRec = String(selectedBooking?.event_id || "");
+  
+  const showTableConfirmedHint = originalTableIdFromRec === "" && editForm.table_id !== "" && editForm.status === "confirmed";
+  const showTableCancelledHint = originalTableIdFromRec !== "" && editForm.table_id === "" && editForm.status === "cancelled";
+  const showStatusTableUnassignedHint = originalStatusFromRec === "confirmed" && editForm.status !== "confirmed" && editForm.table_id === "";
+  const showEventMoveHint = originalEventIdFromRec !== editForm.event_id;
 
   return (
     <div className="space-y-3 animate-in fade-in duration-500">
@@ -304,7 +426,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         )}
       </div>
 
-      {/* POPUP DETAIL PAGE (Sheet used as full-screenish popup) */}
+      {/* POPUP DETAIL PAGE */}
       <Sheet 
         open={!!selectedBooking} 
         onOpenChange={(open) => {
@@ -316,80 +438,127 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       >
         <SheetContent
           side="bottom"
-          onOpenAutoFocus={(e: Event) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[92dvh] sm:h-[85vh] flex flex-col outline-none shadow-2xl overflow-hidden"
-          style={{ backgroundColor: "#F7F4EA" }}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh] flex flex-col outline-none shadow-2xl"
         >
           {selectedBooking && (
             <>
               <span ref={topFocusRef} tabIndex={-1} className="sr-only" />
               
-              {/* Header with Sticky Actions */}
-              <div className="shrink-0 p-6 pb-4 border-b border-[#E6DFC8] bg-white/70 backdrop-blur-lg flex items-center justify-between z-30">
-                <div className="min-w-0 flex-1">
-                  <div className={cn(
-                    "inline-flex px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border mb-1",
-                    statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
-                    statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
-                    statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
-                  )}>
-                    {normStatus(selectedBooking.status) || "pending"}
-                  </div>
-                  <SheetTitle className="text-lg font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
-                    {isEditing ? "Editing Booking" : (selectedBooking.group_name || "Guest Team")}
+              {/* HEADER: Reference visible + Edit/Delete buttons top right */}
+              <div className="shrink-0 p-6 pb-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 flex flex-row items-start justify-between gap-4">
+                <div className="flex-1 min-w-0 text-left">
+                  <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+                    {isEditing ? "Modify Record" : (selectedBooking.group_name || "Guest Team")}
                   </SheetTitle>
+                  
+                  {/* REFERENCE ID: Now positioned directly below the title */}
+                  <div className="flex items-center gap-1.5 mt-1.5 opacity-50">
+                    <Hash className="w-3 h-3 text-[#5F624F]" />
+                    <span className="text-[10px] font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                      Ref: {selectedBooking.id}
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex gap-2">
+                {/* TOP RIGHT ACTION GROUP (Positions buttons next to the sheet close 'X') */}
+                <div className="flex items-center gap-2 pt-1 pr-10">
                   {!isEditing && (
-                    <Button 
-                      onClick={handleEnterEditMode} 
-                      variant="outline" 
-                      size="sm" 
-                      className="h-9 px-3 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#26300D] font-black text-[10px] uppercase tracking-widest"
-                    >
-                      <Pencil className="w-3 h-3 mr-1.5" /> Edit
-                    </Button>
+                    <>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-9 w-9 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all active:scale-90 shadow-sm border border-red-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if(window.confirm("Permanently delete this booking?")) handleDeleteBooking(selectedBooking.id)
+                        }}
+                        title="Delete Record"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        onClick={handleEnterEditMode} 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-9 w-9 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#26300D] transition-all active:scale-90 shadow-sm"
+                        title="Edit Details"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </>
                   )}
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="h-9 w-9 rounded-full hover:bg-black/5" 
-                    onClick={() => setSelectedBooking(null)}
-                  >
-                    <X className="w-5 h-5" />
-                  </Button>
                 </div>
               </div>
 
               {/* Scrollable Body */}
-              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-8 min-h-0 touch-pan-y overscroll-contain">
+              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-h-0 touch-pan-y overscroll-contain text-left">
                 
+                {/* STATUS BADGE: Now inside the scrollable body content */}
+                {!isEditing && (
+                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className={cn(
+                      "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border shadow-sm",
+                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
+                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
+                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
+                    )}>
+                      <div className={cn("w-1.5 h-1.5 rounded-full", statusTheme[normStatus(selectedBooking.status) || "pending"]?.dot)} />
+                      {normStatus(selectedBooking.status) || "pending"}
+                    </div>
+                  </div>
+                )}
+
                 {isEditing ? (
-                  // EDIT MODE FORM
+                  // EDIT MODE FORM - Consistent with Quiz Generator inline editor
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Event Date & Session</Label>
+                      <div className="relative group">
+                        <select 
+                          title="Select Event"
+                          value={editForm.event_id}
+                          onChange={(e) => handleEventChange(e.target.value)}
+                          className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold appearance-none outline-none focus:border-[#26300D] transition-all"
+                        >
+                          {availableEvents.map(e => (
+                            <option key={e.id} value={e.id}>
+                              {format(new Date(e.date), "dd MMM yyyy")} - {e.title || "Untitled Event"}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5F624F] opacity-40 pointer-events-none" />
+                      </div>
+                      {showEventMoveHint && (
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
+                          <p className="text-[10px] font-black uppercase text-blue-700 tracking-tight">Moving event. Table assignment has been reset.</p>
+                        </div>
+                      )}
+                    </div>
+
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Team Name</Label>
                       <Input 
                         value={editForm.group_name} 
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm(prev => ({...prev, group_name: e.target.value}))}
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-0 focus:border-[#26300D]"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D]"
                       />
                     </div>
 
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Team Size</Label>
                       <div className="grid grid-cols-5 gap-2">
-                        {[2, 4, 6, 8, 10].map(size => (
+                        {[2, 4, 6].map(size => (
                           <button
                             key={size}
                             type="button"
-                            onClick={() => setEditForm(prev => ({...prev, group_size: size}))}
+                            onClick={() => handleGroupSizeChange(size)}
                             className={cn(
                               "h-12 rounded-xl border-2 font-black text-xs transition-all",
                               editForm.group_size === size 
-                                ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B] scale-105" 
-                                : "bg-white border-[#E6DFC8] text-[#5F624F]"
+                                ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B] scale-105 shadow-md" 
+                                : "bg-white border-[#E6DFC8] text-[#5F624F] hover:border-[#26300D]/30"
                             )}
                           >
                             {size}
@@ -398,140 +567,174 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                       </div>
                     </div>
 
+                    {/* SEATING SELECTION */}
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Special Requests</Label>
-                      <Textarea 
-                        value={editForm.special_requests} 
-                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({...prev, special_requests: e.target.value}))}
-                        placeholder="Dietary requirements, table preference..."
-                        className="min-h-[120px] rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-0 focus:border-[#26300D] resize-none"
-                      />
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Table Assignment</Label>
+                      <div className="relative group">
+                        <select 
+                          title="Select Table"
+                          value={editForm.table_id}
+                          onChange={(e) => handleTableChange(e.target.value)}
+                          className={cn(
+                            "w-full h-14 rounded-2xl border-2 px-4 text-sm font-bold appearance-none outline-none transition-all",
+                            editForm.table_id ? "bg-white border-[#E6DFC8] focus:border-[#26300D]" : "bg-[#F7F4EA] border-dashed border-[#E6DFC8]"
+                          )}
+                        >
+                          <option value="">Unassigned / No Table</option>
+                          {availableTables.map(t => (
+                            <option key={t.id} value={t.id}>{t.name} (Cap: {t.max_capacity})</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5F624F] opacity-40 pointer-events-none" />
+                      </div>
+                      
+                      {/* TABLE TO STATUS INDICATORS */}
+                      {showTableConfirmedHint && (
+                        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                          <p className="text-[10px] font-black uppercase text-emerald-700 tracking-tight">Table selected. Status will update to Confirmed.</p>
+                        </div>
+                      )}
+                      {showTableCancelledHint && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <AlertCircle className="w-3.5 h-3.5 text-red-600" />
+                          <p className="text-[10px] font-black uppercase text-red-700 tracking-tight">Table removed. Status will update to Cancelled.</p>
+                        </div>
+                      )}
                     </div>
                     
-                    <div className="pt-4 border-t border-[#E6DFC8]">
-                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1 mb-2 block">Quick Status Toggle</Label>
+                    <div className="pt-6 border-t border-[#E6DFC8]">
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1 mb-3 block">Quick Status Switch</Label>
                        <div className="flex flex-wrap gap-2">
                          {Object.keys(statusTheme).filter(s => s !== 'all').map(s => (
                            <button
                              key={s}
                              type="button"
-                             onClick={() => handleStatusChange(selectedBooking.id, s)}
+                             onClick={() => handleStatusChangeInEdit(s)}
                              className={cn(
-                               "px-3 py-2 rounded-xl border-2 text-[9px] font-black uppercase tracking-widest transition-all",
-                               normStatus(selectedBooking.status) === s 
-                                ? `${statusTheme[s].bg} ${statusTheme[s].border} ${statusTheme[s].text} ring-2 ring-offset-1 ring-primary/20`
-                                : "bg-white border-[#E6DFC8] text-slate-400"
+                               "px-4 py-2.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
+                               editForm.status === s 
+                                ? `${statusTheme[s].bg} ${statusTheme[s].border} ${statusTheme[s].text} ring-2 ring-offset-2 ring-primary/10 shadow-sm`
+                                : "bg-white border-[#E6DFC8] text-slate-400 hover:border-[#26300D]/30"
                              )}
                            >
                              {s}
                            </button>
                          ))}
                        </div>
+                       
+                       {/* STATUS TO TABLE INDICATOR */}
+                       {showStatusTableUnassignedHint && (
+                        <div className="mt-3 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <RefreshCw className="w-3.5 h-3.5 text-amber-600 animate-spin-slow" />
+                          <p className="text-[10px] font-black uppercase text-amber-700 tracking-tight">Status changed. Table assignment will be cleared.</p>
+                        </div>
+                       )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Special Requests</Label>
+                      <Textarea 
+                        value={editForm.special_requests} 
+                        onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({...prev, special_requests: e.target.value}))}
+                        placeholder="Dietary requirements, table preference..."
+                        className="min-h-[140px] rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] resize-none"
+                      />
                     </div>
                   </div>
                 ) : (
                   // VIEW MODE DETAILS
                   <div className="space-y-8 animate-in fade-in duration-300">
-                    {/* Score Summary */}
+                    {/* Score Summary - High Contrast Theme */}
                     {selectedBooking.booking_scores?.[0] && (
-                      <div className="bg-[#26300D] text-white p-5 rounded-[2rem] shadow-lg flex items-center justify-between border border-white/10">
-                        <div>
-                          <p className="text-[10px] font-black text-[#FDCC4B] uppercase tracking-[0.2em] opacity-60">Game Score</p>
-                          <h3 className="text-4xl font-black tracking-tighter">{selectedBooking.booking_scores[0].score} <span className="text-sm opacity-40">pts</span></h3>
+                      <div className="bg-[#26300D] text-white p-6 rounded-[2.5rem] shadow-xl flex items-center justify-between border border-white/10 relative overflow-hidden group">
+                        <div className="absolute top-0 left-0 w-full h-full bg-[#FDCC4B]/5 pointer-events-none group-hover:bg-[#FDCC4B]/10 transition-colors" />
+                        <div className="relative z-10">
+                          <p className="text-[10px] font-black text-[#FDCC4B] uppercase tracking-[0.3em] opacity-60 mb-1">Game Performance</p>
+                          <h3 className="text-5xl font-black tracking-tighter tabular-nums">{selectedBooking.booking_scores[0].score} <span className="text-sm font-bold opacity-30 tracking-normal ml-1">pts</span></h3>
                         </div>
                         {selectedBooking.booking_scores[0].is_winner && (
-                          <div className="bg-[#FDCC4B] p-3 rounded-2xl">
-                            <Trophy className="w-8 h-8 text-[#26300D]" />
+                          <div className="bg-[#FDCC4B] p-4 rounded-2xl shadow-lg rotate-12 group-hover:rotate-0 transition-transform">
+                            <Trophy className="w-10 h-10 text-[#26300D]" />
                           </div>
                         )}
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-2">
-                      <DetailTile icon={<Calendar className="w-4 h-4" />} label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM") : "—"} />
+                    <div className="grid grid-cols-2 gap-3">
+                      <DetailTile icon={<Calendar className="w-4 h-4" />} label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM yyyy") : "—"} />
                       <DetailTile icon={<Users className="w-4 h-4" />} label="Team Size" value={`${selectedBooking.group_size} Guests`} />
-                      <DetailTile icon={<LayoutDashboard className="w-4 h-4" />} label="Table" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
-                      <DetailTile icon={<Hash className="w-4 h-4" />} label="Reference" value={`#${selectedBooking.id}`} />
+                      <DetailTile icon={<LayoutDashboard className="w-4 h-4" />} label="Seating" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
+                      <DetailTile icon={<Clock3 className="w-4 h-4" />} label="Booked On" value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "HH:mm, do MMM") : "—"} />
                     </div>
 
-                    <div className="space-y-2">
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1">Lead Contact</h3>
-                      <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl p-4 shadow-sm flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-[#26300D] border border-[#E6DFC8]">
+                    <div className="space-y-3">
+                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1">Primary Contact</h3>
+                      <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl p-5 shadow-sm flex items-center gap-4 transition-all hover:border-[#26300D]/30 group/contact">
+                        <div className="w-14 h-14 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#26300D] border border-[#E6DFC8]">
                           {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
                         </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-black text-[#1F1F1A] uppercase truncate">{selectedBooking.contacts?.full_name}</p>
-                          <p className="text-xs font-bold text-[#5F624F] opacity-60 truncate">{selectedBooking.contacts?.email}</p>
+                        <div className="min-w-0 flex-1 text-left">
+                          <p className="text-base font-black text-[#1F1F1A] uppercase tracking-tight truncate">{selectedBooking.contacts?.full_name}</p>
+                          <p className="text-xs font-bold text-[#5F624F] opacity-60 truncate mt-0.5">{selectedBooking.contacts?.email}</p>
                         </div>
-                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-3 bg-[#26300D]/5 rounded-xl text-[#26300D] hover:bg-[#26300D]/10">
-                          <ExternalLink className="w-4 h-4" />
+                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-4 bg-[#26300D]/5 rounded-2xl text-[#26300D] hover:bg-[#26300D] hover:text-white transition-all active:scale-95 shadow-xs">
+                          <ExternalLink className="w-5 h-5" />
                         </Link>
                       </div>
                     </div>
 
                     {selectedBooking.special_requests && (
-                      <div className="bg-amber-500/5 p-5 rounded-2xl border-2 border-amber-500/10 shadow-sm">
-                        <div className="flex items-center gap-2 mb-3">
-                          <AlertCircle className="w-4 h-4 text-amber-600" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-amber-600">Special Request</span>
+                      <div className="bg-[#FDCC4B]/5 p-6 rounded-3xl border-2 border-[#FDCC4B]/20 shadow-sm relative overflow-hidden">
+                        <div className="flex items-center gap-2 mb-4 relative z-10">
+                          <MessageSquareQuote className="w-5 h-5 text-[#26300D] opacity-40" />
+                          <span className="text-[10px] font-black uppercase tracking-widest text-[#26300D]">Staff Instructions</span>
                         </div>
-                        <p className="text-sm text-[#1F1F1A] italic leading-relaxed font-bold">
+                        <p className="text-[15px] text-[#1F1F1A] italic leading-relaxed font-bold relative z-10 text-left">
                           &quot;{selectedBooking.special_requests}&quot;
                         </p>
                       </div>
                     )}
                   </div>
                 )}
-                <div className="h-20" />
+                <div className="h-32" />
               </div>
 
-              {/* STICKY FOOTER ACTIONS */}
-              <div className="shrink-0 p-6 pt-4 border-t-2 border-[#E6DFC8] bg-white pb-12 shadow-[0_-10px_40px_rgba(0,0,0,0.03)] z-40">
+              {/* STICKY FOOTER ACTIONS - Consistent spacing and shadow */}
+              <div className="shrink-0 p-6 pt-4 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.05)] z-40">
                 {isEditing ? (
-                  <div className="flex flex-col gap-3">
+                  <div className="grid grid-cols-2 gap-3">
                     <Button 
                       onClick={handleSaveDetails} 
                       disabled={isPending}
-                      className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-xs shadow-lg w-full"
+                      className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-xs shadow-lg active:scale-95 transition-transform"
                     >
-                      {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save Changes</>}
+                      {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save</>}
                     </Button>
                     <Button 
-                      variant="ghost" 
+                      variant="outline" 
                       onClick={() => setIsEditing(false)}
-                      className="text-[#5F624F] font-black uppercase tracking-widest text-[10px]"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px] bg-white shadow-sm"
                     >
-                      Discard Changes
+                      Discard
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-3">
+                  <div className="flex flex-col gap-4">
                     <div className="grid grid-cols-2 gap-3">
-                      <Button asChild className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg">
+                      <Button asChild className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95">
                         <Link href={`/manage-booking/${selectedBooking.id}`}>
-                          <ExternalLink className="w-4 h-4 mr-2" /> Public Link
+                          <ExternalLink className="w-4 h-4 mr-2" /> Open Link
                         </Link>
                       </Button>
                       <Button 
                         variant="outline" 
                         onClick={handleEnterEditMode}
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px]"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
                       >
-                        Modify Booking
+                        Modify Details
                       </Button>
                     </div>
-                    <Button 
-                      variant="ghost"
-                      onClick={() => {
-                        if (window.confirm("Permanently delete this booking? This cannot be undone.")) {
-                          handleDeleteBooking(selectedBooking.id)
-                        }
-                      }}
-                      className="text-red-600 font-black uppercase tracking-widest text-[9px] h-auto p-2"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Permanent Record
-                    </Button>
                   </div>
                 )}
               </div>
@@ -542,8 +745,8 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
       {/* Global Transition Overlay */}
       {isPending && (
-        <div className="fixed bottom-6 right-6 z-100 bg-[#26300D] text-[#FDCC4B] px-5 py-3 rounded-full text-[10px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-2 border border-white/10 animate-in fade-in slide-in-from-bottom-2">
-          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Syncing...
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#26300D] text-[#FDCC4B] px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <Loader2 className="w-4 h-4 animate-spin" /> Syncing with DB...
         </div>
       )}
     </div>
@@ -570,146 +773,53 @@ function StatusCircle({ count, status, label, isActive, onClick }: { count: numb
   )
 }
 
-function BookingCard({
-  booking,
-  onClick,
-  showDate,
-}: {
-  booking: Booking
-  onClick: () => void
-  showDate?: boolean
-}) {
+function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick: () => void, showDate?: boolean }) {
   const status = normStatus(booking.status) || "pending"
   const theme = statusTheme[status] || statusTheme.pending
-  const hasRequest = booking.special_requests && booking.special_requests.trim() !== ""
-  const score = booking.booking_scores?.[0]?.score;
-  const isWinner = booking.booking_scores?.[0]?.is_winner;
   const tableName = booking.booking_table_mappings?.[0]?.tables?.tables_name || "--";
-  const tableCapacity = booking.booking_table_mappings?.[0]?.tables?.tables_capacity || 0;
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "group active:scale-[0.98] active:bg-slate-50 transition-all border-2 rounded-2xl p-4 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3 sm:gap-4",
+        "group active:scale-[0.98] active:bg-slate-50 transition-all border-2 rounded-2xl p-4 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3",
         theme.cardBorder
       )}
     >
-      <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-        {/* Leading Container: Mobile shows Date in All-History mode, otherwise Icon */}
-        <div className={cn(
-          "w-11 h-11 rounded-full flex flex-col items-center justify-center shrink-0 shadow-xs text-center border",
-          theme.bg, theme.text, theme.border
-        )}>
-          {/* Mobile only date block replacement for icon */}
+      <div className="flex items-center gap-3 min-w-0 flex-1 text-left">
+        <div className={cn("w-11 h-11 rounded-full flex flex-col items-center justify-center shrink-0 border", theme.bg, theme.text, theme.border)}>
           {showDate && booking.events?.event_date ? (
-            <>
-              <div className="sm:hidden flex flex-col leading-none items-center justify-center">
-                <span className="text-[10px] font-black uppercase tracking-tighter opacity-80 mb-0.5">
-                  {format(new Date(booking.events.event_date), "MMM")}
-                </span>
-                <span className="text-base font-black tracking-tighter">
-                  {format(new Date(booking.events.event_date), "dd")}
-                </span>
-              </div>
-              {/* Hide date in leading circle on larger screens to keep consistent icons */}
-              <div className="hidden sm:flex items-center justify-center">
-                {isWinner ? <Trophy className="w-5 h-5" /> : theme.icon}
-              </div>
-            </>
+            <div className="flex flex-col leading-none items-center justify-center">
+              <span className="text-[10px] font-black uppercase tracking-tighter opacity-80 mb-0.5">{format(new Date(booking.events.event_date), "MMM")}</span>
+              <span className="text-base font-black tracking-tighter">{format(new Date(booking.events.event_date), "dd")}</span>
+            </div>
           ) : (
-            isWinner ? <Trophy className="w-5 h-5" /> : theme.icon
+            booking.booking_scores?.[0]?.is_winner ? <Trophy className="w-5 h-5" /> : theme.icon
           )}
         </div>
 
-        {/* Info Content - Optimized for One Row on Desktop */}
         <div className="min-w-0 flex-1">
-          {/* Row 1: Team Name + Table Name (Mobile) */}
-          <div className="flex items-center justify-between sm:justify-start min-w-0">
-            <div className="flex items-center gap-2 min-w-0">
-              <h4 className="text-sm sm:text-base font-black text-[#1F1F1A] truncate uppercase tracking-tight leading-none">
-                {booking.group_name || "Guest Team"}
-              </h4>
-              {hasRequest && (
-                <div className="bg-red-500 rounded-full w-5 h-5 flex items-center justify-center shadow-sm ring-2 ring-white animate-pulse shrink-0" title="Special Request">
-                  <AlertCircle className="w-3 h-3 text-white" />
-                </div>
-              )}
-            </div>
-
-            {/* Mobile-only Table Name positioned at end of Team row */}
-            <div className="sm:hidden shrink-0 ml-2">
-              <span className="text-sm font-black text-blue-700 uppercase bg-blue-50 px-2 rounded-md border border-blue-100 leading-none py-1">
-                T: {tableName || "-"}
-              </span>
-            </div>
+          <div className="flex items-center justify-between min-w-0">
+            <h4 className="text-sm font-black text-[#1F1F1A] truncate uppercase tracking-tight">{booking.group_name || "Guest Team"}</h4>
+            <span className="text-[11px] font-black text-blue-700 uppercase bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 ml-2">T: {tableName}</span>
           </div>
-
-          {/* Row 2 (Mobile) / Unified Line (Desktop) */}
-          <div className="flex items-center justify-between sm:justify-start gap-2 min-w-0 mt-1 sm:mt-0 text-slate-500 font-medium overflow-hidden">
-            {/* Left side of Row 2: Contact Name and Date */}
-            <div className="flex items-center gap-2 min-w-0">
-              <span className="hidden sm:inline text-slate-200 font-normal">|</span>
-              {/* Contact Name - Enlarged on mobile (text-sm) */}
-              <p className="text-sm sm:text-xs truncate max-w-[150px] sm:max-w-none font-semibold sm:font-medium">
-                {booking.contacts?.full_name}
-              </p>
-
-              {/* Desktop Only Date (Since mobile has it in the icon circle) */}
-              {showDate && booking.events?.event_date && (
-                <span className="hidden sm:inline text-[10px] sm:text-xs text-slate-400 font-bold uppercase shrink-0 whitespace-nowrap">
-                  • {format(new Date(booking.events.event_date), "dd MMM")}
-                </span>
-              )}
-            </div>
-
-            {/* Right side of Row 2: Mobile Group Size / Desktop Badges */}
-            <div className="flex items-center shrink-0">
-              {/* Mobile-only guest count positioned directly under Table name */}
-              <div className="sm:hidden flex items-center gap-1.5 text-slate-700">
+          <div className="flex items-center justify-between text-slate-500 mt-1">
+             <p className="text-xs truncate font-semibold">{booking.contacts?.full_name}</p>
+             <div className="flex items-center gap-1.5 text-slate-700">
                 <Users className="w-3.5 h-3.5 text-slate-400" />
-                <span className="text-sm font-black leading-none">
-                  {booking.group_size}<span className="opacity-30 text-[9px] mx-0.5">/</span>{tableCapacity || "-"}
-                </span>
-              </div>
-
-              {/* Desktop Inline Badges for Table/Size */}
-              <div className="hidden sm:flex items-center gap-3 ml-2">
-                <span className="text-slate-200 font-normal">|</span>
-                {tableName && (
-                  <div className="flex items-center gap-1.5 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100">
-                    <TableIcon className="w-3 h-3 text-blue-500" />
-                    <span className="text-[10px] font-black text-blue-700 uppercase tracking-tighter">{tableName}</span>
-                  </div>
-                )}
-                <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-0.5 rounded-lg border border-slate-200">
-                  <Users className="w-3 h-3 text-slate-400" />
-                  <span className="text-[10px] font-black text-slate-700">{booking.group_size}</span>
-                </div>
-              </div>
-            </div>
+                <span className="text-sm font-black">{booking.group_size}</span>
+             </div>
           </div>
         </div>
       </div>
-
-      {/* Extreme Right: Score Badge and Chevron Indicator */}
-      <div className="flex items-center gap-2 sm:gap-3 shrink-0 ml-1">
-        {score !== undefined && (
-          <div className="flex items-center gap-1.5 bg-[#1F1F1A] text-white px-2.5 py-1.5 rounded-xl shadow-lg border border-white/10 group-hover:scale-105 transition-transform">
-            <Target className="w-3.5 h-3.5 text-[#FDCC4B]" />
-            <span className="text-xs font-black">{score}</span>
-          </div>
-        )}
-        {/* Disclosure Chevron: Subtle indicator that the card is a link/button */}
-        <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
-      </div>
+      <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
     </div>
   )
 }
 
 function DetailTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="bg-white border-2 border-[#E6DFC8] p-4 rounded-2xl flex flex-col gap-1 text-left shadow-sm">
+    <div className="bg-white border-2 border-[#E6DFC8] p-4 rounded-2xl flex flex-col gap-1 text-left shadow-sm transition-all hover:border-[#26300D]/30">
       <div className="flex items-center gap-1.5 text-[#5F624F] opacity-60">
         <div className="scale-75 origin-left">{icon}</div>
         <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
