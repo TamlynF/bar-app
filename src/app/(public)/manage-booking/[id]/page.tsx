@@ -1,8 +1,6 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
-import { CalendarDays, Users, User, Beer, CheckCircle, XCircle } from "lucide-react";
 import CancelButton from "./_components/cancel-button";
 
 export const metadata = {

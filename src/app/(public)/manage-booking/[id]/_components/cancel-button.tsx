@@ -1,15 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { CalendarDays, Users, User, Beer, CheckCircle, XCircle, Loader2, Save, ArrowLeft } from "lucide-react";
-// Using relative paths to resolve resolution issues in the build environment
+import { CalendarDays, Users, User, Beer, CheckCircle, XCircle, Loader2, Save, ArrowLeft, AlertCircle } from "lucide-react";
 import { cancelBooking } from "../../../_actions/cancel-booking";
 import { updateBooking } from "../../../_actions/update-booking";
+import { checkTeamName } from "../../../_actions/create-booking";
 
-/**
- * Interface representing the booking data required for management
- */
 export interface ManageBooking {
   id: string | number;
   group_name: string | null;
@@ -41,8 +38,43 @@ export default function CancelButton({
 
   const [teamName, setTeamName] = useState(booking.group_name || "");
   const [teamSize, setTeamSize] = useState(booking.group_size || 4);
+  
+  // Real-time validation state
+  const [isCheckingName, setIsCheckingName] = useState(false);
+  const [nameError, setNameError] = useState("");
 
-  const eventDate = booking.events?.event_date ? new Date(booking.events.event_date) : null;
+  const eventDateStr = booking.events?.event_date;
+  const eventDate = eventDateStr ? new Date(eventDateStr) : null;
+
+  // Real-time duplicate check while editing
+  useEffect(() => {
+    if (!isEditing || teamName.trim().toLowerCase() === (booking.group_name || "").toLowerCase()) {
+      setNameError("");
+      return;
+    }
+
+    const validateName = async () => {
+      if (teamName.trim().length < 2) return;
+      if (!eventDateStr) return;
+
+      setIsCheckingName(true);
+      try {
+        const { isAvailable } = await checkTeamName(teamName, eventDateStr, booking.id);
+        if (!isAvailable) {
+          setNameError("Name taken for this event.");
+        } else {
+          setNameError("");
+        }
+      } catch (err) {
+        console.error("Validation error:", err);
+      } finally {
+        setIsCheckingName(false);
+      }
+    };
+
+    const timer = setTimeout(validateName, 500);
+    return () => clearTimeout(timer);
+  }, [teamName, isEditing, eventDateStr, booking.id, booking.group_name]);
 
   const handleCancel = async () => {
     if (!window.confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) {
@@ -62,6 +94,8 @@ export default function CancelButton({
   };
 
   const handleUpdate = async () => {
+    if (nameError) return;
+
     setIsUpdating(true);
     setError("");
     setSuccessMsg("");
@@ -99,7 +133,13 @@ export default function CancelButton({
         </div>
       )}
 
-      {error && <p className="text-red-400 text-sm text-center mb-4 font-bold">{error}</p>}
+      {(error || nameError) && (
+        <div className="flex items-center justify-center gap-2 mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded-xl animate-in slide-in-from-top-2">
+          <AlertCircle className="w-4 h-4 text-red-400" />
+          <p className="text-red-400 text-xs font-bold uppercase tracking-tight">{error || nameError}</p>
+        </div>
+      )}
+      
       {successMsg && <p className="text-green-400 text-sm font-bold text-center mb-4">{successMsg}</p>}
       
       {isEditing ? (
@@ -107,7 +147,7 @@ export default function CancelButton({
         <div className="bg-black/40 p-6 rounded-2xl border border-[#fdcc4b]/30 space-y-6 text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
           <div className="flex items-center justify-between border-b border-[#fdcc4b]/10 pb-4 mb-2">
             <h3 className="text-[#fdcc4b] font-black uppercase tracking-wider text-base">Modify Your Team</h3>
-            <button title="View" onClick={() => setIsEditing(false)} className="text-[#fdcc4b]/40 hover:text-[#fdcc4b] transition-colors">
+            <button title="Close" onClick={() => setIsEditing(false)} className="text-[#fdcc4b]/40 hover:text-[#fdcc4b] transition-colors">
                <ArrowLeft className="w-5 h-5" />
             </button>
           </div>
@@ -121,8 +161,13 @@ export default function CancelButton({
                 type="text" 
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
-                className="w-full bg-black/60 border border-[#fdcc4b]/20 rounded-xl pl-11 pr-4 py-4 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all font-bold"
+                className={`w-full bg-black/60 border ${nameError ? 'border-red-500/50' : 'border-[#fdcc4b]/20'} rounded-xl pl-11 pr-12 py-4 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all font-bold`}
               />
+              {isCheckingName && (
+                <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                  <Loader2 className="w-4 h-4 text-[#fdcc4b] animate-spin" />
+                </div>
+              )}
             </div>
           </div>
 
@@ -146,7 +191,7 @@ export default function CancelButton({
           <div className="flex gap-3 pt-4">
             <button
               onClick={handleUpdate}
-              disabled={isUpdating}
+              disabled={isUpdating || !!nameError || isCheckingName}
               className="flex-1 bg-[#fdcc4b] text-[#26300D] font-black py-4 rounded-xl uppercase tracking-widest hover:bg-[#e5b843] transition-all disabled:opacity-50 active:scale-95 shadow-lg flex items-center justify-center gap-2"
             >
               {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save</>}
