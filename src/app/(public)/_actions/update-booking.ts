@@ -8,12 +8,14 @@ export async function updateBooking(bookingId: string | number, updates: { group
   try {
     const supabase = await createClient();
 
-    // 1. Fetch current booking info to get the event date for validation
+    // 1. Fetch current booking info to get the event context and existing status/size
     const { data: currentBooking, error: fetchError } = await supabase
       .from("bookings")
       .select(`
         id,
         event_id,
+        status,
+        group_size,
         events (date)
       `)
       .eq("id", bookingId)
@@ -29,6 +31,7 @@ export async function updateBooking(bookingId: string | number, updates: { group
     const eventDate = Array.isArray(eventData)
       ? eventData[0]?.date
       : eventData?.date;
+    const eventId = currentBooking.event_id;
 
     // 2. If the team name is being changed, verify it isn't already taken for this event
     if (updates.group_name && eventDate) {
@@ -43,19 +46,82 @@ export async function updateBooking(bookingId: string | number, updates: { group
       }
     }
 
-    // 3. Update the booking
-    const { error } = await supabase
+    // 3. Handle Table Re-allocation if group_size changes
+    let finalStatus = currentBooking.status;
+    const newSize = updates.group_size ?? currentBooking.group_size;
+    const sizeChanged = updates.group_size !== undefined && updates.group_size !== currentBooking.group_size;
+
+    // Only attempt re-allocation if the size actually changed or if the booking is currently waitlisted/pending
+    if (sizeChanged || currentBooking.status !== 'confirmed') {
+      // a. Find what tables are in use for THIS event by other confirmed bookings
+      const { data: eventBookings } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("event_id", eventId)
+        .eq("status", "confirmed")
+        .neq("id", bookingId);
+
+      const otherConfirmedIds = eventBookings?.map(b => b.id) || [];
+      
+      let tablesInUse: number[] = [];
+      if (otherConfirmedIds.length > 0) {
+        const { data: takenMappings } = await supabase
+          .from("booking_table_mappings")
+          .select("table_id")
+          .in("booking_id", otherConfirmedIds);
+        tablesInUse = takenMappings?.map(m => m.table_id) || [];
+      }
+
+      // b. Find best available table that fits the new size
+      const { data: suitableTables } = await supabase
+        .from("tables")
+        .select("id, max_capacity")
+        .eq("available", true)
+        .gte("max_capacity", newSize)
+        .order("max_capacity", { ascending: true });
+
+      const availableTable = suitableTables?.find(t => !tablesInUse.includes(t.id));
+
+      if (availableTable) {
+        // Clear old mapping if exists
+        await supabase.from("booking_table_mappings").delete().eq("booking_id", bookingId);
+        
+        // Insert new mapping
+        const { error: mapError } = await supabase
+          .from("booking_table_mappings")
+          .insert({
+            booking_id: bookingId,
+            table_id: availableTable.id
+          });
+        
+        if (!mapError) {
+          finalStatus = "confirmed";
+        }
+      } else if (sizeChanged) {
+        // If size increased and no table fits, remove old mapping and waitlist
+        await supabase.from("booking_table_mappings").delete().eq("booking_id", bookingId);
+        finalStatus = "waitlisted";
+      }
+    }
+
+    // 4. Update the primary booking record
+    const { error: updateError } = await supabase
       .from("bookings")
-      .update(updates)
+      .update({
+        ...updates,
+        status: finalStatus
+      })
       .eq("id", bookingId);
 
-    if (error) {
-      console.error("Update booking error:", error);
+    if (updateError) {
+      console.error("Update booking error:", updateError);
       return { success: false, error: "Failed to update booking. Please try again." };
     }
 
-    // Revalidate the page so it instantly shows the new team name and size!
+    // Revalidate for both public and admin views
     revalidatePath(`/manage-booking/${bookingId}`);
+    revalidatePath("/dashboard");
+    revalidatePath("/events/quiz-bookings");
     
     return { success: true };
   } catch (err) {

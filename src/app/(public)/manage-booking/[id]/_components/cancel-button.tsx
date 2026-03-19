@@ -12,19 +12,23 @@ import {
   Loader2, 
   Save, 
   AlertCircle,
-  ChevronDown
+  ChevronDown,
+  Info
 } from "lucide-react";
 import { cancelBooking } from "../../../_actions/cancel-booking";
 import { updateBooking } from "../../../_actions/update-booking";
 import { checkTeamName } from "../../../_actions/create-booking";
+import { getAvailableTablesForEvent } from "../../../../(private)/actions/booking-actions";
 import { cn } from "@/lib/utils";
 
 export interface ManageBooking {
   id: string | number;
+  event_id: string | number;
   group_name: string | null;
   group_size: number | null;
   status: string | null;
   events: {
+    id: string | number;
     event_date: string | null;
     event_title: string | null;
   } | null;
@@ -32,6 +36,13 @@ export interface ManageBooking {
     full_name: string | null;
     email: string | null;
   } | null;
+  booking_table_mappings: {
+    tables: {
+      id: number;
+      name: string;
+      max_capacity: number;
+    } | null;
+  }[] | null;
 }
 
 /**
@@ -59,12 +70,59 @@ export default function CancelButton({
   const [teamName, setTeamName] = useState(booking.group_name || "");
   const [teamSize, setTeamSize] = useState(booking.group_size || 4);
   
+  // Seating validation state
+  const [seatingWarning, setSeatingWarning] = useState<string | null>(null);
+  const [isCheckingSeating, setIsCheckingSeating] = useState(false);
+
   // Real-time validation state
   const [isCheckingName, setIsCheckingName] = useState(false);
   const [nameError, setNameError] = useState("");
 
   const eventDateStr = booking.events?.event_date;
   const eventDate = eventDateStr ? new Date(eventDateStr) : null;
+
+  // Logic to handle group size change validation
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const validateSeating = async () => {
+      // Rule: Only check for confirmed bookings when size changes
+      if (booking.status?.toLowerCase() !== 'confirmed' || teamSize === booking.group_size) {
+        setSeatingWarning(null);
+        return;
+      }
+
+      const currentTable = booking.booking_table_mappings?.[0]?.tables;
+      
+      // Check if new size exceeds current table capacity
+      if (currentTable && teamSize > (currentTable.max_capacity || 0)) {
+        setIsCheckingSeating(true);
+        try {
+          // Check if there are other tables that can fit the new size
+          const available = await getAvailableTablesForEvent(
+            String(booking.event_id),
+            teamSize,
+            String(currentTable.id)
+          );
+
+          if (!available || available.length === 0) {
+            setSeatingWarning("This change requires a bigger table, but none are currently available. Your status may be moved to 'Pending' for manual review by the bar.");
+          } else {
+            setSeatingWarning(null);
+          }
+        } catch (err) {
+          console.error("Seating validation error:", err);
+        } finally {
+          setIsCheckingSeating(false);
+        }
+      } else {
+        setSeatingWarning(null);
+      }
+    };
+
+    const timer = setTimeout(validateSeating, 400);
+    return () => clearTimeout(timer);
+  }, [teamSize, isEditing, booking]);
 
   // Real-time duplicate check while editing
   useEffect(() => {
@@ -171,6 +229,13 @@ export default function CancelButton({
           <p className="text-red-400 text-xs font-bold uppercase tracking-tight leading-snug">{error || nameError}</p>
         </div>
       )}
+
+      {seatingWarning && isEditing && (
+        <div className="flex items-start gap-3 mb-6 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
+          <Info className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
+          <p className="text-amber-400 text-xs font-bold uppercase tracking-tight leading-snug">{seatingWarning}</p>
+        </div>
+      )}
       
       {successMsg && !isEditing && (
         <div className="flex items-center justify-center gap-2 mb-6 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl animate-in fade-in">
@@ -183,7 +248,6 @@ export default function CancelButton({
       {isEditing ? (
         /* EDIT MODE FORM */
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          
           <div className="space-y-1.5">
             <label htmlFor="teamName" className={labelClasses}>Team Name</label>
             <div className="relative group">
@@ -224,7 +288,7 @@ export default function CancelButton({
                 ))}
               </select>
               <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-[#fdcc4b]/40">
-                <ChevronDown className="h-5 w-5" />
+                {isCheckingSeating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-5 w-5" />}
               </div>
             </div>
           </div>
@@ -233,7 +297,7 @@ export default function CancelButton({
           <div className="flex flex-col gap-3 pt-4">
             <button
               onClick={handleUpdate}
-              disabled={isUpdating || !!nameError || isCheckingName}
+              disabled={isUpdating || !!nameError || isCheckingName || isCheckingSeating}
               className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
             >
               {isUpdating ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6 mr-2" /> Update Record</>}
@@ -244,6 +308,7 @@ export default function CancelButton({
                 setTeamName(booking.group_name || "");
                 setTeamSize(booking.group_size || 4);
                 setNameError("");
+                setSeatingWarning(null);
               }}
               disabled={isUpdating}
               className="w-full h-14 rounded-2xl border-2 border-white/10 text-stone-400 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all"
