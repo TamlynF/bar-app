@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent,SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import BookingForm from "./(public)/_components/booking-form";
@@ -8,7 +9,7 @@ import BookingForm from "./(public)/_components/booking-form";
 
 export default function HomePage() {
   const [openAuthSheet, setOpenAuthSheet] = React.useState(false);
-
+  redirect("/book");
     
   return (
     <div className="flex flex-col">

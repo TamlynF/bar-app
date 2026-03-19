@@ -250,7 +250,6 @@ export async function createBooking(formData: BookingFormData) {
 
 /**
  * Helper function to handle sending emails.
- * Replace the console.logs with your actual email logic (e.g. Resend, Nodemailer).
  */
 async function sendBookingEmail(
   booking_id:number,
@@ -261,7 +260,16 @@ async function sendBookingEmail(
   team_size: number,
   status: "confirmed" | "waitlisted"
 ) {
-  const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+  // Logic to determine the correct base URL
+  // 1. Explicit variable (Best for custom domains)
+  // 2. Vercel deployment URL (Automatic backup)
+  // 3. Localhost (Development fallback)
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL 
+    ? process.env.NEXT_PUBLIC_SITE_URL 
+    : process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : 'http://localhost:3000';
+
   const manageUrl = `${appUrl}/manage-booking/${booking_id}`;
   
   let subject;
