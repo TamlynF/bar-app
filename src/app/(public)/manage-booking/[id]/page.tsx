@@ -50,16 +50,13 @@ export default async function ManageBookingPage({
         }
       `}} />
 
-      {/* Reduced py-12 to py-6 on mobile, and adjusted max-width for tighter feel */}
-      <div className="flex-1 w-full max-w-xl mx-auto py-6 sm:py-12 px-4 sm:px-6 flex flex-col justify-center">
+      {/* Reduced py-12 to py-4 on mobile to ensure it fits vertically on smaller screens */}
+      <div className="flex-1 w-full max-w-xl mx-auto py-4 sm:py-12 px-3 sm:px-6 flex flex-col justify-center">
         
-        {/* Adjusted padding on the card itself for mobile (p-5 vs p-10) */}
-        <div className="bg-linear-to-b from-[#1e260a] to-[#151a07] rounded-3xl p-5 sm:p-10 border border-[#fdcc4b]/30 shadow-2xl relative overflow-hidden">
-          <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-32 blur-3xl pointer-events-none rounded-full ${isCancelled ? 'bg-red-500/5' : 'bg-[#fdcc4b]/5'}`}></div>
+        {/* Adjusted padding on the card itself for mobile (p-4 vs p-10) and rounded corner reduction */}
+        <div className="bg-linear-to-b from-[#1e260a] to-[#151a07] rounded-2xl sm:rounded-3xl p-4 sm:p-10 border border-[#fdcc4b]/20 shadow-2xl relative overflow-hidden">
+          <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-24 blur-3xl pointer-events-none rounded-full ${isCancelled ? 'bg-red-500/5' : 'bg-[#fdcc4b]/5'}`}></div>
           
-          {/* The details card and header logic have been moved into CancelButton 
-            so that the component can hide them when 'isEditing' is true.
-          */}
           <div className="relative z-10">
             <CancelButton 
               booking={booking} 
@@ -69,8 +66,8 @@ export default async function ManageBookingPage({
         </div>
         
         {/* More compact footer spacing */}
-        <div className="mt-8 sm:mt-auto pt-4 text-center opacity-40">
-           <p className="text-[10px] font-black uppercase tracking-[0.4em]">Don Fenticas</p>
+        <div className="mt-6 sm:mt-auto pt-4 text-center opacity-30">
+           <p className="text-[9px] font-black uppercase tracking-[0.4em]">Don Fenticas</p>
         </div>
       </div>
     </main>

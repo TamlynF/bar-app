@@ -11,10 +11,8 @@ import {
   XCircle, 
   Loader2, 
   Save, 
-  ArrowLeft, 
   AlertCircle,
-  ChevronDown,
-  X
+  ChevronDown
 } from "lucide-react";
 import { cancelBooking } from "../../../_actions/cancel-booking";
 import { updateBooking } from "../../../_actions/update-booking";
