@@ -49,85 +49,53 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
   };
 
   return (
-    <div className="flex items-center justify-between bg-white dark:bg-slate-900 p-2 sm:p-3 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all hover:border-primary/30 w-full">
-      <div className="flex items-center gap-2">
-        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 px-3 rounded-lg bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors shadow-sm"
-            >
-              <CalendarDays className="w-4 h-4 text-slate-600 dark:text-slate-300" />
-              <div className="flex flex-col text-left">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white uppercase truncate max-w-[120px] sm:max-w-40">
-                    {dateValue ? format(dateValue, "dd MMMM yyyy") : "All Dates"}
-                  </span>
-                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                </div>
+    <div className="flex items-center gap-2 w-full">
+      <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className="h-12 w-full px-4 rounded-xl bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100 transition-all shadow-sm flex items-center justify-between group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-white rounded-lg shadow-xs group-hover:scale-110 transition-transform">
+                <CalendarDays className="w-4 h-4 text-[#26300D]" />
               </div>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="border-amber-500/20 p-0 w-auto shadow-xl rounded-xl overflow-hidden isolate z-9999"
-            style={{ backgroundColor: "#c8cfb8" }}
-            align="start"
-          >
-            <Calendar
-              mode="single"
-              selected={dateValue}
-              onSelect={handleSelect}
-              className="text-white bg-[#1a2109] isolate z-9999"
-              style={{ backgroundColor: "#9aa67e" }}
-              defaultMonth={dateValue || new Date()}
-            />
-            <div className="p-2 border-t border-white/10 bg-black/20 flex flex-col gap-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full text-xs font-semibold text-slate-100 hover:text-white hover:bg-white/10"
-                onClick={clearFilter}
-              >
-                <RotateCcw className="w-3 h-3 mr-2" />
-                Show All History
-              </Button>
+              <div className="flex flex-col text-left">
+                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Active Date</span>
+                <span className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                  {dateValue ? format(dateValue, "eeee, do MMMM") : "All History"}
+                </span>
+              </div>
             </div>
-          </PopoverContent>
-        </Popover>
-
-        {selectedDate && (
-           <Button 
-            variant="ghost" 
-            size="sm" 
-            onClick={clearFilter}
-            className="h-9 px-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-500 transition-colors hidden sm:flex"
-           >
-             Clear
-           </Button>
-        )}
-      </div>
-
-      {/* Action Area - AI Generator shortcut */}
-      {/* <div className="flex items-center gap-2">
-        <Link href="/quiz-generator" className="hidden sm:block">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            className="h-9 rounded-lg border-[#26300D]/10 bg-[#FDCC4B]/10 text-[#26300D] font-black text-[10px] uppercase tracking-wider hover:bg-[#FDCC4B]/20"
-          >
-            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-            AI Generator
+            <ChevronDown className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition-colors" />
           </Button>
-        </Link> */}
-        
-        {/* Compact version for mobile */}
-        {/* <Link href="/quiz-generator" className="sm:hidden">
-           <Button size="icon" variant="outline" className="h-9 w-9 rounded-lg bg-[#FDCC4B] text-[#26300D] border-none shadow-sm">
-             <Sparkles className="w-4 h-4" />
-           </Button>
-        </Link> */}
-      {/* </div> */}
+        </PopoverTrigger>
+        <PopoverContent
+          className="p-0 w-screen max-w-[320px] shadow-2xl rounded-2xl overflow-hidden z-9999"
+          style={{ backgroundColor: "#E2EDBF" }}
+          align="start"
+          sideOffset={8}
+        >
+          <Calendar
+            mode="single"
+            selected={dateValue}
+            onSelect={handleSelect}
+            className="bg-transparent isolate z-9999"
+            defaultMonth={dateValue || new Date()}
+          />
+          <div className="p-3 border-t border-black/5 bg-black/5 flex flex-col gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full h-10 text-[10px] font-black uppercase tracking-widest text-[#26300D] hover:bg-white/50 rounded-xl"
+              onClick={clearFilter}
+            >
+              <RotateCcw className="w-3.5 h-3.5 mr-2" />
+              Reset to All History
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }

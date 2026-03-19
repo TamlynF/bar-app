@@ -4,13 +4,8 @@ import BookingListClient from "../../dashboard/components/booking-list-client";
 import BookingCalendarFilter from "@/components/booking-calendar-filter";
 import {
   Users,
-  Trophy,
-  CalendarDays,
-  ChevronRight,
-  Plus,
   ArrowRightLeft,
   LayoutDashboard,
-  History,
   Timer
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -92,18 +87,6 @@ export default async function QuizBookingsPage({
   const totalTablesCount = tables?.length || 0;
   const totalMaxCapacity = tables?.reduce((acc, t) => acc + (t.max_capacity || 0), 0) || 0;
 
-  const quizEvents = await getQuizEvents(type, subType);
-  let pastQuizzesCount = 0;
-  let upcomingQuizzesCount = 0;
-  if (quizEvents) {
-    const today = startOfDay(new Date())
-    quizEvents.forEach(e => {
-      const eventDate = startOfDay(new Date(e.date))
-      if (isBefore(eventDate, today)) pastQuizzesCount++
-      else upcomingQuizzesCount++
-    })
-  }
-
   const currentTotalGuests = quizBookings.reduce((sum, b) => sum + (b.group_size || 0), 0)
   const confirmedBookings = quizBookings.filter(b => b.status?.toLowerCase() === 'confirmed')
   const tablesOccupied = confirmedBookings.length
@@ -115,69 +98,35 @@ export default async function QuizBookingsPage({
       <div className="fixed top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-0 left-0 w-80 h-80 bg-blue-500/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      <div className="p-1 md:p-8 max-w-7xl mx-auto space-y-4 md:space-y-6">
-        {/* Calendar Filter */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-1.5 sm:p-2">
+      <div className="p-3 md:p-8 max-w-7xl mx-auto space-y-4 md:space-y-6">
+        {/* Date Selection - Full Width on Mobile */}
+        <div className="w-full bg-white rounded-2xl border border-[#E6DFC8] shadow-sm p-1 sm:p-2">
           <BookingCalendarFilter selectedDate={selectedDate} />
         </div>
 
-        {/* Statistics Grid - Balanced for mobile screens */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <StatCard
-            label="Total Teams"
-            value={`${quizBookings.length}`}
-            icon={<Users className="w-3 h-3" />}
-            subValue={selectedDate ? format(new Date(selectedDate), "MMM do") : "Lifetime"}
-            color="info"
-          />
-
-          {/* Daily Stat: Guests */}
+        {/* Statistics Bar - Single Row on Mobile */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Guest Count Card */}
           <StatCard
             label="Guest Count"
             value={currentTotalGuests}
-            icon={<ArrowRightLeft className="w-3.5 h-3.5" />}
-            subValue={`Max ${totalMaxCapacity}`}
+            icon={<Users className="w-3.5 h-3.5" />}
+            subValue={`of ${totalMaxCapacity} Max`}
             color="info"
           />
 
-          {/* Conditional Stat: Tables (Only if date is selected) */}
-          {selectedDate ? (
-            <StatCard
-              label="Free Tables"
-              value={availableTables}
-              icon={<LayoutDashboard className="w-3.5 h-3.5" />}
-              subValue={`${tablesOccupied} used`}
-              color="success"
-            />
-          ) : (
-            <StatCard
-              label="Tables"
-              value={totalTablesCount}
-              icon={<LayoutDashboard className="w-3.5 h-3.5" />}
-              subValue="Total assets"
-              color="info"
-            />
-          )}
-
-          {/* Global Stat: Quiz History */}
+          {/* Available Tables Card */}
           <StatCard
-            label="Past Quizzes"
-            value={pastQuizzesCount}
-            icon={<History className="w-3.5 h-3.5" />}
-            subValue={`${upcomingQuizzesCount} soon`}
-            color="amber"
+            label="Free Tables"
+            value={`${availableTables}/${totalTablesCount}`}
+            icon={<LayoutDashboard className="w-3.5 h-3.5" />}
+            subValue={selectedDate ? format(new Date(selectedDate), "do MMM") : "Live Floor"}
+            color="success"
           />
         </div>
 
         {/* Main List Section */}
         <div className="space-y-3">
-          {/* <div className="flex items-center justify-between px-1">
-            <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 flex items-center gap-2">
-              <Timer className="w-3 h-3" />
-              Bookings Stream
-            </h2>
-          </div> */}
-
           <Suspense fallback={
             <div className="space-y-2.5">
               {[...Array(3)].map((_, i) => (
@@ -226,25 +175,25 @@ function StatCard({
 
   return (
     <div className={cn(
-      "border rounded-xl sm:rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-sm min-h-[90px] transition-colors",
+      "border rounded-2xl p-3 sm:p-4 flex flex-col justify-between shadow-sm min-h-[85px] transition-colors text-left",
       themeClasses[color]
     )}>
       {/* Top Section: Icon & Label */}
       <div className="flex items-start justify-between gap-1">
-        <span className="text-[9px] font-bold text-slate-500/80 uppercase tracking-tight leading-[1.1] max-w-[75%] wrap-break-word">
+        <span className="text-[9px] font-black text-slate-500 uppercase tracking-wider leading-none">
           {label}
         </span>
-        <div className={cn("shrink-0 p-1 rounded-md bg-white/50 border border-white/20 shadow-xs", iconClasses[color])}>
+        <div className={cn("shrink-0 p-1 rounded-lg bg-white/80 border border-white/50 shadow-xs", iconClasses[color])}>
           {icon}
         </div>
       </div>
       
       {/* Bottom Section: Value & Subtext */}
       <div className="mt-2">
-        <div className="text-xl sm:text-2xl font-black text-slate-900 leading-none tracking-tight">
+        <div className="text-xl sm:text-2xl font-black text-slate-900 leading-none tracking-tighter">
           {value}
         </div>
-        <div className="text-[8px] sm:text-[9px] font-bold text-slate-400/90 mt-1 uppercase tracking-wider leading-none truncate">
+        <div className="text-[8px] font-bold text-slate-400/90 mt-1 uppercase tracking-widest leading-none truncate">
           {subValue}
         </div>
       </div>
