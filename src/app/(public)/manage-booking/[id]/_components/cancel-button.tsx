@@ -2,10 +2,24 @@
 
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { CalendarDays, Users, User, Beer, CheckCircle, XCircle, Loader2, Save, ArrowLeft, AlertCircle } from "lucide-react";
+import { 
+  CalendarDays, 
+  Users, 
+  User, 
+  Beer, 
+  CheckCircle, 
+  XCircle, 
+  Loader2, 
+  Save, 
+  ArrowLeft, 
+  AlertCircle,
+  ChevronDown,
+  X
+} from "lucide-react";
 import { cancelBooking } from "../../../_actions/cancel-booking";
 import { updateBooking } from "../../../_actions/update-booking";
 import { checkTeamName } from "../../../_actions/create-booking";
+import { cn } from "@/lib/utils";
 
 export interface ManageBooking {
   id: string | number;
@@ -21,6 +35,14 @@ export interface ManageBooking {
     email: string | null;
   } | null;
 }
+
+/**
+ * Shared styling constants to match the BookingForm component
+ */
+const inputBaseClasses = "w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white placeholder-stone-700 focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-300 text-sm font-bold appearance-none";
+const labelClasses = "block text-[10px] font-black text-[#fdcc4b]/70 mb-2 uppercase tracking-[0.15em] ml-1";
+const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
+const iconClasses = "w-4 h-4 text-[#fdcc4b]/40 transition-colors duration-200";
 
 export default function CancelButton({ 
   booking,
@@ -61,7 +83,7 @@ export default function CancelButton({
       try {
         const { isAvailable } = await checkTeamName(teamName, eventDateStr, booking.id);
         if (!isAvailable) {
-          setNameError("Name taken for this event.");
+          setNameError("This team name is already taken for this night.");
         } else {
           setNameError("");
         }
@@ -106,8 +128,9 @@ export default function CancelButton({
     });
 
     if (response.success) {
-      setSuccessMsg("Booking updated successfully!");
+      setSuccessMsg("Changes saved successfully.");
       setIsEditing(false);
+      // Success message will be cleared if they open edit mode again
     } else {
       setError(response.error || "Failed to update booking.");
     }
@@ -117,51 +140,66 @@ export default function CancelButton({
 
   return (
     <div className="w-full">
-      {/* HEADER: Hidden when editing to focus on the form as requested */}
-      {!isEditing && (
-        <div className="text-center mb-6 animate-in fade-in duration-500">
-          {isCancelled ? (
-            <XCircle className="mx-auto h-16 w-16 sm:h-20 sm:w-20 text-red-500 mb-3 sm:mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
-          ) : (
-            <CheckCircle className="mx-auto h-16 w-16 sm:h-20 sm:w-20 text-[#fdcc4b] mb-3 sm:mb-4 drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
-          )}
-          
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-wide uppercase leading-tight">
-            {isCancelled ? "Booking Cancelled" : "You're Locked In!"}
-          </h1>
-          <p className="text-[#fdcc4b]/70 mt-1 sm:mt-2 font-medium text-xs sm:text-base tracking-wide">Ref: #{booking.id}</p>
-        </div>
-      )}
+      {/* 1. STATUS HEADER */}
+      <div className="text-center mb-8 animate-in fade-in duration-500">
+        {isEditing ? (
+           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#fdcc4b]/10 border border-[#fdcc4b]/20 mb-3">
+              <div className="w-1.5 h-1.5 rounded-full bg-[#fdcc4b] animate-pulse" />
+              <span className="text-[10px] font-black text-[#fdcc4b] uppercase tracking-widest">Editing Mode</span>
+           </div>
+        ) : (
+          <>
+            {isCancelled ? (
+              <XCircle className="mx-auto h-16 w-16 text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
+            ) : (
+              <CheckCircle className="mx-auto h-16 w-16 text-[#fdcc4b] mb-4 drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
+            )}
+          </>
+        )}
+        
+        <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">
+          {isEditing ? "Modify Team" : isCancelled ? "Booking Cancelled" : "Your Booking"}
+        </h1>
+        
+        {!isEditing && (
+          <p className="text-stone-500 mt-2 font-bold text-xs sm:text-sm uppercase tracking-widest">Ref: #{booking.id}</p>
+        )}
+      </div>
 
+      {/* 2. ERROR & FEEDBACK MESSAGES */}
       {(error || nameError) && (
-        <div className="flex items-center justify-center gap-2 mb-4 bg-red-500/10 border border-red-500/20 p-3 rounded-xl animate-in slide-in-from-top-2">
-          <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
-          <p className="text-red-400 text-[10px] font-bold uppercase tracking-tight leading-tight">{error || nameError}</p>
+        <div className="flex items-center gap-3 mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
+          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
+          <p className="text-red-400 text-xs font-bold uppercase tracking-tight leading-snug">{error || nameError}</p>
         </div>
       )}
       
-      {successMsg && <p className="text-green-400 text-sm font-bold text-center mb-4">{successMsg}</p>}
+      {successMsg && !isEditing && (
+        <div className="flex items-center justify-center gap-2 mb-6 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl animate-in fade-in">
+           <CheckCircle className="w-4 h-4 text-emerald-400" />
+           <p className="text-emerald-400 text-xs font-black uppercase tracking-widest">{successMsg}</p>
+        </div>
+      )}
       
+      {/* 3. MAIN CONTENT: VIEW OR EDIT */}
       {isEditing ? (
-        /* EDIT MODE: Only the fields to be edited are shown */
-        <div className="bg-black/40 p-5 sm:p-6 rounded-2xl border border-[#fdcc4b]/30 space-y-5 sm:space-y-6 text-left animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <div className="flex items-center justify-between border-b border-[#fdcc4b]/10 pb-4 mb-1">
-            <h3 className="text-[#fdcc4b] font-black uppercase tracking-wider text-sm sm:text-base">Modify Your Team</h3>
-            <button title="Close" onClick={() => setIsEditing(false)} className="text-[#fdcc4b]/40 hover:text-[#fdcc4b] transition-colors p-1">
-               <ArrowLeft className="w-5 h-5" />
-            </button>
-          </div>
+        /* EDIT MODE FORM */
+        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
           
           <div className="space-y-1.5">
-            <label htmlFor="teamName" className="block text-[9px] font-black text-[#fdcc4b]/70 uppercase tracking-widest ml-1">Team Name</label>
-            <div className="relative">
-              <Beer className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fdcc4b]/40" />
+            <label htmlFor="teamName" className={labelClasses}>Team Name</label>
+            <div className="relative group">
+              <div className={iconContainerClasses}>
+                <Beer className={iconClasses} />
+              </div>
               <input
                 id="teamName"
                 type="text" 
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
-                className={`w-full h-14 bg-black/60 border ${nameError ? 'border-red-500/50' : 'border-[#fdcc4b]/20'} rounded-xl pl-11 pr-12 py-4 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all font-bold text-sm sm:text-base`}
+                className={cn(inputBaseClasses, nameError && "border-red-500/50")}
+                placeholder="e.g. Quizzy McQuizface"
+                autoFocus
               />
               {isCheckingName && (
                 <div className="absolute right-4 top-1/2 -translate-y-1/2">
@@ -172,92 +210,109 @@ export default function CancelButton({
           </div>
 
           <div className="space-y-1.5">
-            <label htmlFor="teamSize" className="block text-[9px] font-black text-[#fdcc4b]/70 uppercase tracking-widest ml-1">Team Size</label>
-            <div className="relative">
-              <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#fdcc4b]/40" />
+            <label htmlFor="teamSize" className={labelClasses}>Team Size</label>
+            <div className="relative group">
+              <div className={iconContainerClasses}>
+                <Users className={iconClasses} />
+              </div>
               <select 
                 id="teamSize"
                 value={teamSize}
                 onChange={(e) => setTeamSize(Number(e.target.value))}
-                className="w-full h-14 bg-black/60 border border-[#fdcc4b]/20 rounded-xl pl-11 pr-4 py-4 text-white focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all appearance-none font-bold text-sm sm:text-base"
+                className={inputBaseClasses}
               >
                 {[4, 5, 6].map(num => (
                   <option key={num} value={num}>{num} People</option>
                 ))}
               </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-[#fdcc4b]/40">
+                <ChevronDown className="h-5 w-5" />
+              </div>
             </div>
           </div>
 
-          <div className="flex gap-3 pt-2">
+          {/* Action Buttons in Edit Mode */}
+          <div className="flex flex-col gap-3 pt-4">
             <button
               onClick={handleUpdate}
               disabled={isUpdating || !!nameError || isCheckingName}
-              className="flex-1 bg-[#fdcc4b] text-[#26300D] font-black h-14 rounded-xl uppercase tracking-widest hover:bg-[#e5b843] transition-all disabled:opacity-50 active:scale-95 shadow-lg flex items-center justify-center gap-2 text-xs sm:text-sm"
+              className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
             >
-              {isUpdating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4" /> Save</>}
+              {isUpdating ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6 mr-2" /> Update Record</>}
             </button>
             <button
-              onClick={() => setIsEditing(false)}
+              onClick={() => {
+                setIsEditing(false);
+                setTeamName(booking.group_name || "");
+                setTeamSize(booking.group_size || 4);
+                setNameError("");
+              }}
               disabled={isUpdating}
-              className="flex-1 border-2 border-[#fdcc4b]/30 text-[#fdcc4b] font-black h-14 rounded-xl uppercase tracking-widest hover:bg-[#fdcc4b]/5 transition-all disabled:opacity-50 active:scale-95 text-xs sm:text-sm"
+              className="w-full h-14 rounded-2xl border-2 border-white/10 text-stone-400 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all"
             >
-              Discard
+              Discard Changes
             </button>
           </div>
         </div>
       ) : (
-        /* VIEW MODE: Details Card + Side-by-side buttons */
-        <div className="space-y-6 sm:space-y-8 animate-in fade-in duration-500">
-          {/* Booking Details Card - Visible only in View Mode */}
-          <div className="bg-black/40 rounded-2xl p-5 sm:p-6 border border-[#fdcc4b]/20 space-y-4 sm:space-y-5">
-            <DetailRow icon={<CalendarDays />} label="Date" value={eventDate ? format(eventDate, "do MMMM yyyy") : "Unknown Date"} />
-            <DetailRow icon={<Beer />} label="Team Name" value={booking.group_name || "N/A"} />
+        /* VIEW MODE DETAILS CARD */
+        <div className="space-y-8 animate-in fade-in duration-500">
+          <div className="bg-white/5 rounded-3xl p-6 sm:p-8 border border-white/10 space-y-6 shadow-inner relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-[#fdcc4b]/5 blur-3xl pointer-events-none group-hover:bg-[#fdcc4b]/10 transition-colors" />
+            
+            <DetailRow icon={<CalendarDays />} label="Quiz Night" value={eventDate ? format(eventDate, "do MMMM yyyy") : "TBD"} />
+            <DetailRow icon={<Beer />} label="Team Name" value={booking.group_name || "Guest Team"} />
             <DetailRow icon={<Users />} label="Team Size" value={`${booking.group_size} People`} />
-            <DetailRow icon={<User />} label="Booked By" value={booking.contacts?.full_name || "N/A"} />
+            <DetailRow icon={<User />} label="Lead Booker" value={booking.contacts?.full_name || "N/A"} />
           </div>
 
           {!isCancelled && (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={() => setIsEditing(true)}
                 disabled={isCancelling}
-                className="w-full h-14 sm:h-16 px-4 rounded-xl font-black text-xs sm:text-sm uppercase tracking-widest transition-all duration-300 border-2 bg-[#fdcc4b] border-[#fdcc4b] text-[#26300D] hover:bg-[#e5b843] hover:-translate-y-0.5 shadow-lg active:scale-95 disabled:opacity-50"
+                className="flex items-center justify-center w-full h-16 rounded-2xl bg-[#fdcc4b] text-[#26300D] font-black text-sm uppercase tracking-widest transition-all hover:bg-[#e5b843] hover:-translate-y-0.5 shadow-lg active:scale-95 disabled:opacity-50"
               >
-                Edit Booking
+                Modify Team
               </button>
 
               <button
                 onClick={handleCancel}
                 disabled={isCancelling}
-                className="w-full h-14 sm:h-16 px-4 rounded-xl font-black text-[10px] sm:text-xs uppercase tracking-widest transition-all duration-300 border-2 bg-transparent border-red-500 text-red-500 hover:bg-red-500 hover:text-white hover:-translate-y-0.5 active:scale-95"
+                className="flex items-center justify-center w-full h-16 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-xs uppercase tracking-widest transition-all hover:bg-red-500 hover:text-white hover:-translate-y-0.5 active:scale-95 disabled:opacity-50"
               >
-                {isCancelling ? "Wait..." : "Cancel Booking"}
+                {isCancelling ? <Loader2 className="w-5 h-5 animate-spin" /> : "Cancel Booking"}
               </button>
             </div>
           )}
           
-          <p className="text-center text-[#fdcc4b]/30 text-[9px] uppercase tracking-[0.25em] font-black pt-2 opacity-50">
-            Account Management
-          </p>
+          <div className="text-center">
+            <p className="text-[9px] font-black text-stone-600 uppercase tracking-[0.4em] opacity-40">
+              Booking Management Portal
+            </p>
+          </div>
         </div>
       )}
     </div>
   );
 }
 
+/**
+ * Enhanced row for displaying booking data with high contrast and icons
+ */
 function DetailRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
-    <div className="flex items-center">
-      <div className="bg-black/40 p-2 sm:p-3 rounded-xl mr-3 sm:mr-4 border border-[#fdcc4b]/10 text-[#fdcc4b]/80 shrink-0">
+    <div className="flex items-start">
+      <div className="bg-[#26300D] p-3 rounded-2xl mr-4 border border-[#fdcc4b]/20 text-[#fdcc4b] shrink-0 shadow-lg">
         {React.isValidElement(icon) 
           ? React.cloneElement(icon as React.ReactElement<{ className?: string }>, { 
-              className: "w-4 h-4 sm:w-5 sm:h-5" 
+              className: "w-5 h-5" 
             }) 
           : icon}
       </div>
-      <div className="text-left min-w-0">
-        <p className="text-[9px] sm:text-xs font-bold text-[#fdcc4b]/60 uppercase tracking-wider">{label}</p>
-        <p className="text-white font-medium text-sm sm:text-lg leading-tight truncate">{value}</p>
+      <div className="text-left min-w-0 pt-1">
+        <p className="text-[10px] font-black text-[#fdcc4b]/50 uppercase tracking-[0.15em] mb-0.5 leading-none">{label}</p>
+        <p className="text-white font-black text-lg sm:text-xl tracking-tight leading-tight truncate">{value}</p>
       </div>
     </div>
   );
