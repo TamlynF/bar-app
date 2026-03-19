@@ -211,20 +211,27 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     setAvailableTables(tables as unknown as SelectableTable[]);
   }
 
-  const handleTableChange = (newTableId: string) => {
-    const originalTableId = selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
-    const wasUnassigned = originalTableId === "";
+  /**
+   * Logical rule handler for Table selection. 
+   * Includes forcedStatus parameter to allow other automated processes (like size changes)
+   * to bypass default status rules if necessary.
+   */
+  const handleTableChange = (newTableId: string, forcedStatus?: string) => {
+    const originalTableIdFromBooking = selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
+    const wasUnassigned = originalTableIdFromBooking === "";
     const isUnassigned = newTableId === "";
     
-    let newStatus = editForm.status;
+    let newStatus = forcedStatus || editForm.status;
 
-    // RULE: If table id was Unassigned and then changed to a table name -> set status to confirmed
-    if (wasUnassigned && !isUnassigned) {
-      newStatus = "confirmed";
-    } 
-    // RULE: If table id was assigned to a table and then changed to unassigned -> set status to cancelled
-    else if (!wasUnassigned && isUnassigned) {
-      newStatus = "cancelled";
+    if (!forcedStatus) {
+      // RULE: If table id was Unassigned and then changed to a table name -> set status to confirmed
+      if (wasUnassigned && !isUnassigned) {
+        newStatus = "confirmed";
+      } 
+      // RULE: If table id was assigned to a table and then changed to unassigned -> set status to cancelled
+      else if (!wasUnassigned && isUnassigned) {
+        newStatus = "cancelled";
+      }
     }
 
     setEditForm(prev => ({ ...prev, table_id: newTableId, status: newStatus }));
@@ -234,8 +241,8 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
    * Logical rule handler for Status changes in edit mode
    */
   const handleStatusChangeInEdit = (newStatus: string) => {
-    const originalStatus = normStatus(selectedBooking?.status) || "pending";
-    const wasConfirmed = originalStatus === "confirmed";
+    const originalStatusFromBooking = normStatus(selectedBooking?.status) || "pending";
+    const wasConfirmed = originalStatusFromBooking === "confirmed";
     const isNowOther = newStatus !== "confirmed";
     
     let newTableId = editForm.table_id;
@@ -248,15 +255,41 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     setEditForm(prev => ({ ...prev, status: newStatus, table_id: newTableId }));
   }
 
+  /**
+   * Refined group size handler.
+   * Automatically updates available tables and attempts to keep the current assignment 
+   * or auto-reassign to the smallest suitable table.
+   */
   const handleGroupSizeChange = async (size: number) => {
+    // 1. Update the size in the form state immediately
     setEditForm(prev => ({...prev, group_size: size}));
+    
     if (editForm.event_id) {
+      // 2. Fetch tables that fit the NEW size for THIS event
       const tables = await getAvailableTablesForEvent(
         editForm.event_id, 
         size,
         selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id
       );
-      setAvailableTables(tables as unknown as SelectableTable[]);
+      
+      const newAvailableTables = tables as unknown as SelectableTable[];
+      setAvailableTables(newAvailableTables);
+
+      // 3. Automation: Check if the current selected table is still valid
+      const currentTableId = editForm.table_id;
+      const isCurrentTableValid = newAvailableTables.some(t => String(t.id) === String(currentTableId));
+
+      if (!isCurrentTableValid) {
+        if (newAvailableTables.length > 0) {
+          // Current table too small or taken; auto-pick the smallest suitable table
+          handleTableChange(String(newAvailableTables[0].id));
+          toast.info(`Team size updated. Table auto-reassigned to ${newAvailableTables[0].name}.`);
+        } else {
+          // No suitable tables exist for this group size at this event
+          handleTableChange("", "waitlisted");
+          toast.warning("No suitable tables available for this group size. Booking moved to waitlist.");
+        }
+      }
     }
   }
 
@@ -587,7 +620,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Team Size</Label>
                       <div className="grid grid-cols-5 gap-2">
-                        {[2, 4, 6].map(size => (
+                        {[2, 3, 4, 5, 6].map(size => (
                           <button
                             key={size}
                             type="button"
