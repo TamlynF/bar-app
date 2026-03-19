@@ -14,7 +14,8 @@ import {
   Mail,
   Beer,
   Clock,
-  Loader2
+  Loader2,
+  MessageSquareQuote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -33,7 +34,6 @@ const getNextThursday = () => {
   const daysUntilThursday = (4 - dayOfWeek + 7) % 7;
   const nextThursday = new Date(today);
   nextThursday.setDate(today.getDate() + (daysUntilThursday === 0 ? 0 : daysUntilThursday));
-
   return nextThursday.toISOString().split("T")[0];
 };
 
@@ -53,6 +53,7 @@ export default function BookingForm() {
     teamSize: "4",
     email: "",
     phone: "",
+    specialRequests: "", // New state field
   });
 
   useEffect(() => {
@@ -81,9 +82,7 @@ export default function BookingForm() {
     return () => clearTimeout(timer);
   }, [formData.teamName, formData.quizDate]);
 
-
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
@@ -109,6 +108,7 @@ export default function BookingForm() {
         team_size: parseInt(formData.teamSize, 10),
         email: formData.email,
         phone: formData.phone,
+        special_requests: formData.specialRequests, // Passed to server
       });
 
       if (response.success) {
@@ -148,7 +148,7 @@ export default function BookingForm() {
           onClick={() => {
             setIsSuccess(false);
             setIsWaitlisted(false);
-            setFormData({ quizDate: getNextThursday(), name: "", teamName: "", teamSize: "4", email: "", phone: "" });
+            setFormData({ quizDate: getNextThursday(), name: "", teamName: "", teamSize: "4", email: "", phone: "", specialRequests: "" });
           }}
           className="w-full bg-white text-[#26300D] font-bold py-4 rounded-xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
         >
@@ -301,6 +301,26 @@ export default function BookingForm() {
             />
           </div>
         </div>
+
+      {/* Special Requests Field */}
+      <div className="space-y-1">
+        <label htmlFor="specialRequests" className={labelClasses}>
+          Special Requests
+        </label>
+        <div className="relative group">
+          <div className={iconContainerClasses}>
+            <MessageSquareQuote className={iconClasses} />
+          </div>
+          <textarea
+            id="specialRequests"
+            name="specialRequests"
+            value={formData.specialRequests}
+            onChange={handleInputChange}
+            className={`${inputBaseClasses} min-h-[100px] py-3 text-sm resize-none`}
+            placeholder="e.g. Dietary requirements, table preference..."
+          />
+        </div>
+      </div>
 
       <div className="pt-4">
         <button

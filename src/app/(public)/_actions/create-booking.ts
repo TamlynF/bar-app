@@ -11,13 +11,13 @@ interface BookingFormData {
   team_size: number;
   email: string;
   phone?: string;
+  special_requests?: string; // Added field
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 /**
  * Validates if a team name is available for a specific event date.
- * Allows excluding a specific booking ID, which is essential for name updates.
  */
 export async function checkTeamName(teamName: string, quizDate: string, excludeBookingId?: string | number) {
   if (!teamName || !quizDate) return { isAvailable: true };
@@ -52,13 +52,11 @@ export async function checkTeamName(teamName: string, quizDate: string, excludeB
   return { isAvailable: !duplicateTeam };
 }
 
-
 export async function createBooking(formData: BookingFormData) {
   console.log(formData);
   const supabase = await createClient();
 
   try {
-    // SECURITY GUARD: Final server-side validation to prevent race conditions
     const { isAvailable } = await checkTeamName(formData.team_name, formData.quiz_date);
     if (!isAvailable) throw new Error('This team name was just reserved by another user. Please choose a different name.');    
 
@@ -203,6 +201,7 @@ export async function createBooking(formData: BookingFormData) {
           group_name: formData.team_name,
           group_size: formData.team_size,
           status: status,
+          special_requests: formData.special_requests || null, // Map to DB column
           paid_amount: 0,
           // Note: Omitting team_id as it appears to be optional or handled elsewhere.
           // If Supabase complains about team_id being required, you will need a 4th step for 'teams'.
@@ -248,7 +247,7 @@ export async function createBooking(formData: BookingFormData) {
     };
   } catch (error) {
     console.error("Server action error:", error);
-    throw new Error("An unexpected error occurred. Please try again.");
+    throw new Error(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.");
     //return { success: false, error: error.message || "An unexpected error occurred. Please try again." };
   }
 }
@@ -290,8 +289,8 @@ async function sendBookingEmail(
         <p>${content}</p>
         <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
           <p><strong>📅 Date:</strong> ${quiz_date}</p>
-          <p><strong>👥 Team:</strong> ${team_name}</p>
-          <p><strong>🎟️ Size:</strong> ${team_size} people</p>
+          <p><strong>🍺 Team:</strong> ${team_name}</p>
+          <p><strong>👥 Size:</strong> ${team_size} people</p>
         </div>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${manageUrl}" style="background-color: #fdcc4b; color: #26300d; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; text-transform: uppercase;">Manage Booking</a>
