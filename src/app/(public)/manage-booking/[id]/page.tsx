@@ -13,15 +13,15 @@ export default async function ManageBookingPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  // Await the params for Next.js 15 compatibility
   const { id } = await params;
   const supabase = await createClient();
 
-  // Updated query to include event_id and table mapping details for validation
+  // Fetched special_requests in the select query
   const { data: booking, error } = await supabase
     .from("bookings")
     .select(`
       *,
+      special_requests,
       events (id, event_date: date, event_title: title),
       contacts (full_name, email),
       booking_table_mappings (
@@ -60,7 +60,6 @@ export default async function ManageBookingPage({
           <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-24 blur-3xl pointer-events-none rounded-full ${isCancelled ? 'bg-red-500/5' : 'bg-[#fdcc4b]/5'}`}></div>
           
           <div className="relative z-10">
-            {/* Cast as unknown then to ManageBooking to handle the deep nested join typing */}
             <CancelButton 
               booking={booking as unknown as ManageBooking} 
               isCancelled={isCancelled}

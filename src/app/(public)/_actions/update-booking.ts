@@ -4,7 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { checkTeamName } from "./create-booking";
 
-export async function updateBooking(bookingId: string | number, updates: { group_name?: string, group_size?: number }) {
+export async function updateBooking(
+  bookingId: string | number, 
+  updates: { 
+    group_name?: string, 
+    group_size?: number,
+    special_requests?: string // Added special_requests
+  }
+) {
   try {
     const supabase = await createClient();
 
@@ -83,22 +90,16 @@ export async function updateBooking(bookingId: string | number, updates: { group
       const availableTable = suitableTables?.find(t => !tablesInUse.includes(t.id));
 
       if (availableTable) {
-        // Clear old mapping if exists
         await supabase.from("booking_table_mappings").delete().eq("booking_id", bookingId);
-        
-        // Insert new mapping
-        const { error: mapError } = await supabase
+        await supabase
           .from("booking_table_mappings")
           .insert({
             booking_id: bookingId,
             table_id: availableTable.id
           });
         
-        if (!mapError) {
-          finalStatus = "confirmed";
-        }
+        finalStatus = "confirmed";
       } else if (sizeChanged) {
-        // If size increased and no table fits, remove old mapping and waitlist
         await supabase.from("booking_table_mappings").delete().eq("booking_id", bookingId);
         finalStatus = "waitlisted";
       }

@@ -13,7 +13,8 @@ import {
   Save, 
   AlertCircle,
   ChevronDown,
-  Info
+  Info,
+  MessageSquareQuote
 } from "lucide-react";
 import { cancelBooking } from "../../../_actions/cancel-booking";
 import { updateBooking } from "../../../_actions/update-booking";
@@ -27,6 +28,7 @@ export interface ManageBooking {
   group_name: string | null;
   group_size: number | null;
   status: string | null;
+  special_requests: string | null; // Added field to interface
   events: {
     id: string | number;
     event_date: string | null;
@@ -45,9 +47,6 @@ export interface ManageBooking {
   }[] | null;
 }
 
-/**
- * Shared styling constants to match the BookingForm component
- */
 const inputBaseClasses = "w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white placeholder-stone-700 focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-300 text-sm font-bold appearance-none";
 const labelClasses = "block text-[10px] font-black text-[#fdcc4b]/70 mb-2 uppercase tracking-[0.15em] ml-1";
 const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
@@ -69,6 +68,7 @@ export default function CancelButton({
 
   const [teamName, setTeamName] = useState(booking.group_name || "");
   const [teamSize, setTeamSize] = useState(booking.group_size || 4);
+  const [specialRequests, setSpecialRequests] = useState(booking.special_requests || ""); // State for special requests
   
   // Seating validation state
   const [seatingWarning, setSeatingWarning] = useState<string | null>(null);
@@ -181,6 +181,7 @@ export default function CancelButton({
     const response = await updateBooking(booking.id, {
       group_name: teamName,
       group_size: teamSize,
+      special_requests: specialRequests // Save special requests
     });
 
     if (response.success) {
@@ -293,7 +294,23 @@ export default function CancelButton({
             </div>
           </div>
 
-          {/* Action Buttons in Edit Mode */}
+          {/* Added Special Requests Input in Edit Mode */}
+          <div className="space-y-1.5">
+            <label htmlFor="specialRequests" className={labelClasses}>Additional Requests</label>
+            <div className="relative group">
+              <div className={iconContainerClasses}>
+                <MessageSquareQuote className={iconClasses} />
+              </div>
+              <textarea
+                id="specialRequests"
+                value={specialRequests}
+                onChange={(e) => setSpecialRequests(e.target.value)}
+                className={`${inputBaseClasses} min-h-[100px] py-3 text-sm resize-none`}
+                placeholder="Dietary requirements, table preference..."
+              />
+            </div>
+          </div>
+
           <div className="flex flex-col gap-3 pt-4">
             <button
               onClick={handleUpdate}
@@ -307,6 +324,7 @@ export default function CancelButton({
                 setIsEditing(false);
                 setTeamName(booking.group_name || "");
                 setTeamSize(booking.group_size || 4);
+                setSpecialRequests(booking.special_requests || "");
                 setNameError("");
                 setSeatingWarning(null);
               }}
@@ -327,6 +345,15 @@ export default function CancelButton({
             <DetailRow icon={<Beer />} label="Team Name" value={booking.group_name || "Guest Team"} />
             <DetailRow icon={<Users />} label="Team Size" value={`${booking.group_size} People`} />
             <DetailRow icon={<User />} label="Lead Booker" value={booking.contacts?.full_name || "N/A"} />
+            
+            {/* Displaying Special Requests in View Mode */}
+            {booking.special_requests && (
+              <DetailRow 
+                icon={<MessageSquareQuote />} 
+                label="Special Requests" 
+                value={booking.special_requests} 
+              />
+            )}
           </div>
 
           {!isCancelled && (
@@ -375,7 +402,7 @@ function DetailRow({ icon, label, value }: { icon: React.ReactNode, label: strin
       </div>
       <div className="text-left min-w-0 pt-1">
         <p className="text-[10px] font-black text-[#fdcc4b]/50 uppercase tracking-[0.15em] mb-0.5 leading-none">{label}</p>
-        <p className="text-white font-black text-lg sm:text-xl tracking-tight leading-tight truncate">{value}</p>
+        <p className="text-white font-black text-lg sm:text-xl tracking-tight leading-tight whitespace-pre-wrap wrap-break-word">{value}</p>
       </div>
     </div>
   );
