@@ -6,9 +6,9 @@ import {
   Music, Utensils, GlassWater, Heart, Smile, 
   Sparkles, AlertCircle, Beer, Info
 } from "lucide-react";
-import { createClient } from "../../../lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import Image from 'next/image';
-import { cn } from '@/lib/utils';
+import { cn } from "@/lib/utils";
 
 export const metadata = {
   title: 'Book a Quiz | Don Fenticas',
@@ -62,11 +62,6 @@ export default async function QuizBookingPage() {
   // ];
 
   return (
-    /* MOBILE LAYOUT FIXES:
-      1. html/body style: Forces the background color to the very edges (notch/home bar).
-      2. overflow-x-hidden: Prevents the horizontal "white sliver" on the right.
-      3. padding-top/bottom: Uses env(safe-area-inset-...) to handle the status bar and home indicator areas properly.
-    */
     <main className="min-h-dvh w-full overflow-x-hidden bg-[#26300D] text-stone-300 flex flex-col selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
       <style dangerouslySetInnerHTML={{ __html: `
         html, body { 
@@ -80,6 +75,14 @@ export default async function QuizBookingPage() {
         main {
           padding-top: env(safe-area-inset-top, 10px);
           padding-bottom: env(safe-area-inset-bottom, 20px);
+        }
+        /* Custom scrollbar hiding utility */
+        .no-scrollbar::-webkit-scrollbar {
+          display: none;
+        }
+        .no-scrollbar {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}} />
       
@@ -99,20 +102,20 @@ export default async function QuizBookingPage() {
           </div>
           <div className="mt-4 sm:mt-6 space-y-2 px-2">
             {/* <h1 className="text-white text-xs sm:text-sm font-black uppercase tracking-[0.3em] opacity-80">Weekly Pub Trivia</h1> */}
-            <p className="text-stone-400 text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic opacity-90">
+            <p className="text-stone-400 text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic opacity-90 text-center">
               Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.
             </p>
           </div>
         </div>
 
-        {/* Event Badges - Flexible Width distribution */}
-        <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mb-8 sm:mb-12">
+        {/* Event Badges - Horizontal Scroll on Mobile, Full Width Grid on Desktop */}
+        <div className="flex flex-row overflow-x-auto no-scrollbar gap-2 pb-4 -mx-4 px-4 mb-6 sm:mb-12 sm:flex-wrap sm:overflow-visible sm:mx-0 sm:px-0 sm:justify-center sm:gap-3">
           {eventBadges.map((badge, index) => (
             <div
               key={index}
               className={cn(
-                "flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 hover:border-white/20",
-                "flex-1 min-w-[calc(50%-0.5rem)] sm:min-w-0 sm:flex-none"
+                "flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 hover:border-white/20",
+                "flex-none sm:flex-1 sm:min-w-[160px]"
               )}
             >
               <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />
