@@ -21,7 +21,8 @@ import {
     LogOut,
     PartyPopper,
     Brain,
-    ChevronDown
+    ChevronDown,
+    ChevronUp
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
@@ -159,10 +160,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                                     >
                                         <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-[#FDCC4B]" : "text-[#5F624F]")} />
                                         <span className="flex-1 text-left">{item.label}</span>
-                                        <ChevronDown className={cn(
-                                            "w-3.5 h-3.5 shrink-0 transition-transform duration-200",
-                                            isOpen ? "rotate-0" : "-rotate-90"
-                                        )} />
+                                        {isOpen ? <ChevronUp className="w-3.5 h-3.5 shrink-0 transition-transform duration-200" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0 transition-transform duration-200" />}
                                     </button>
                                 ) : (
                                     <Link
