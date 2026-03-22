@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { format } from "date-fns";
+import React, { useState, useEffect, useMemo } from "react";
+import { format, isSameDay } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -56,6 +56,13 @@ export default function BookingForm() {
     phone: "",
     specialRequests: "",
   });
+
+  // Calculate the specific date object for the next Thursday to use as a modifier
+  const nextThursdayDate = useMemo(() => {
+    const date = new Date(getNextThursday());
+    date.setHours(0, 0, 0, 0);
+    return date;
+  }, []);
 
   useEffect(() => {
     const validateTeam = async () => {
@@ -190,7 +197,11 @@ export default function BookingForm() {
               </button>
             </PopoverTrigger>
 
-            <PopoverContent className="w-auto p-0 bg-[#1e260a] border-white/10 shadow-2xl rounded-2xl overflow-hidden z-100" align="start">
+            <PopoverContent 
+              className="w-auto p-0 border-white/10 shadow-2xl rounded-2xl overflow-hidden z-100" 
+              style={{ backgroundColor: "#E2EDBF" }}
+              align="start"
+            >
               <Calendar
                 mode="single"
                 selected={formData.quizDate ? new Date(formData.quizDate) : undefined}
@@ -206,7 +217,24 @@ export default function BookingForm() {
                   date.getDay() !== 4 || date < new Date(new Date().setHours(0, 0, 0, 0))
                 }
                 autoFocus
-                className="text-white bg-[#1e260a]"
+                className="bg-transparent"
+                classNames={{
+                  // Month/Year header and navigation arrows in dark green
+                  caption_label: "text-[#26300D] font-black uppercase tracking-widest text-[11px]",
+                  button_previous: "text-[#26300D] hover:bg-[#26300D]/10",
+                  button_next: "text-[#26300D] hover:bg-[#26300D]/10",
+                  // Use flex-1 on weekdays to ensure they fill the header width correctly
+                  weekday: "text-[#26300D]/50 font-black uppercase text-[10px] tracking-tighter flex-1 text-center",
+                  // Available dates in dark green, centered using flexbox
+                  day: "text-[#26300D] font-bold text-sm h-9 w-9 p-0 aria-selected:opacity-100 flex items-center justify-center aspect-square mx-auto",
+                }}
+                modifiers={{
+                  nextThursday: nextThursdayDate
+                }}
+                modifiersClassNames={{
+                  // Next Thursday: Yellow background with dark green border
+                  nextThursday: "bg-[#FDCC4B]! text-[#26300D]! border-2! border-[#26300D]! font-black shadow-sm"
+                }}
               />
             </PopoverContent>
           </Popover>
