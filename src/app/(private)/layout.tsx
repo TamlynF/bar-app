@@ -22,7 +22,18 @@ import {
     PartyPopper,
     Brain,
     ChevronDown,
-    ChevronUp
+    ChevronUp,
+    Tickets,
+    Grid2X2,
+    Grid2X2X,
+    CalendarCog,
+    CalendarCogIcon,
+    Component,
+    Dices,
+    BookUser,
+    Medal,
+    UserCog,
+    UserCog2
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
@@ -41,7 +52,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
 
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Bookings", href: "/events", icon: CalendarRange },
+        { label: "Bookings", href: "/events", icon: Tickets },
         { label: "Quiz", href: "/quiz-generator", icon: Brain },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
@@ -53,13 +64,13 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
     ]
 
     const settingsSubItems = [
-        { label: "Table Setups", href: "/settings/tables", icon: LayoutDashboard },
-        { label: "Event Types", href: "/settings/event-types", icon: Tags },
-        { label: "Events", href: "/settings/events", icon: CalendarDays },
-        { label: "Quiz Rules", href: "/settings/quiz-categories", icon: BrainCircuit },
-        { label: "Customers", href: "/settings/customers", icon: UserCircle },
-        { label: "Teams", href: "/settings/teams", icon: Users },
-        { label: "System Users", href: "/settings/users", icon: Shield },
+        { label: "Events", href: "/settings/events", icon: CalendarCogIcon },
+        { label: "Event Categories", href: "/settings/event-types", icon: Component },
+        { label: "Quiz Rules", href: "/settings/quiz-categories", icon: Dices },
+        { label: "Guests", href: "/settings/customers", icon: BookUser },
+        { label: "Teams", href: "/settings/teams", icon: Medal },
+        { label: "Floor Plan", href: "/settings/tables", icon: Grid2X2 },
+        { label: "System Users", href: "/settings/users", icon: UserCog2 },
     ]
 
     const getPageInfo = () => {
@@ -93,11 +104,11 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
         if (normalizedPath.startsWith("/settings")) {
             if (normalizedPath === "/settings") return { title: "Settings", subtitle: null, backHref: null }
             const settingsMap: Record<string, string> = {
-                "tables": "Table Setups",
+                "tables": "Floor Plan",
                 "events": "Events",
-                "event-types": "Event Types",
+                "event-types": "Event Categories",
                 "quiz-categories": "Quiz Rules",
-                "customers": "Customers",
+                "customers": "Guests",
                 "teams": "Teams",
                 "users": "System Users",
             }
