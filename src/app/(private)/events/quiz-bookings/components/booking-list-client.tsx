@@ -9,7 +9,7 @@ import {
   updateBookingDetails, 
   getAvailableTablesForEvent,
   getQuizEvents
-} from "@/app/(private)/actions/booking-actions"
+} from "@/app/(private)/events/quiz-bookings/actions"
 import {
   CheckCircle2,
   ChevronRight,

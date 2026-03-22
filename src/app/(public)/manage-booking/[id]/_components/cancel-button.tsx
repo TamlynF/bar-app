@@ -19,7 +19,7 @@ import {
 import { cancelBooking } from "../../../_actions/cancel-booking";
 import { updateBooking } from "../../../_actions/update-booking";
 import { checkTeamName } from "../../../_actions/create-booking";
-import { getAvailableTablesForEvent } from "../../../../(private)/actions/booking-actions";
+import { getAvailableTablesForEvent } from "../actions";
 import { cn } from "@/lib/utils";
 
 export interface ManageBooking {

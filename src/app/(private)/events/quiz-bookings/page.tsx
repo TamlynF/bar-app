@@ -1,6 +1,6 @@
 import React, { Suspense } from "react";
-import { getBookings, getAvailableTables, getQuizEvents } from "../../actions/booking-actions";
-import BookingListClient from "../../dashboard/components/booking-list-client";
+import { getBookings, getAvailableTables, getQuizEvents } from "./actions";
+import BookingListClient from "./components/booking-list-client";
 import BookingCalendarFilter from "@/components/booking-calendar-filter";
 import {
   Users,

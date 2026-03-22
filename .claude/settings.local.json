@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth:*)",
+      "Bash(find \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\settings\" -name \"*.tsx\")",
+      "Bash(wc:*)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__apply_migration",
+      "mcp__claude_ai_Supabase__execute_sql",
+      "Bash(npm run:*)"
+    ]
+  }
+}

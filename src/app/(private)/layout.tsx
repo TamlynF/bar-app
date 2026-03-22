@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useState, useTransition } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
@@ -17,24 +17,38 @@ import {
     Trophy,
     Music,
     Lock,
-    BrainCircuit
+    BrainCircuit,
+    LogOut,
+    PartyPopper,
+    Brain,
+    ChevronDown
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { signOut } from "@/app/login/actions"
 
 export default function PrivateLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname()
+    const [isPending, startTransition] = useTransition()
+    const [eventsOpen, setEventsOpen] = useState(() => !!pathname?.startsWith("/events"))
+    const [settingsOpen, setSettingsOpen] = useState(() => !!pathname?.startsWith("/settings"))
+
+    function handleSignOut() {
+        startTransition(async () => {
+            await signOut()
+        })
+    }
 
     const navItems = [
-        { label: "Home", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Events", href: "/events", icon: CalendarRange },
-        { label: "Quiz", href: "/quiz-generator", icon: Sparkles },
+        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { label: "Bookings", href: "/events", icon: CalendarRange },
+        { label: "Quiz", href: "/quiz-generator", icon: Brain },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
     const eventSubItems = [
-        { label: "Quiz Bookings", href: "/events/quiz-bookings", icon: Trophy },
-        { label: "Music Bookings", href: "/events/music-bookings", icon: Music },
-        { label: "Private Hire", href: "/events/private-bookings", icon: Lock },
+        { label: "Thursday Night Quiz", href: "/events/quiz-bookings", icon: Trophy },
+        { label: "Live Music", href: "/events/music-bookings", icon: Music },
+        { label: "Private Events", href: "/events/private-bookings", icon: PartyPopper },
     ]
 
     const settingsSubItems = [
@@ -64,15 +78,15 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
         }        
         
         if (normalizedPath.startsWith("/events")) {
-            if (normalizedPath === "/events") return { title: "Events", subtitle: null, backHref: null }
+            if (normalizedPath === "/events") return { title: "Bookings", subtitle: null, backHref: null }
             const eventsMap: Record<string, string> = {
-                "music-bookings": "Music Bookings",
-                "private-bookings": "Private Hire Bookings",
-                "quiz-bookings": "Quiz Bookings",
+                "music-bookings": "Music",
+                "private-bookings": "Private Events",
+                "quiz-bookings": "Quiz",
             }
             const segment = normalizedPath.split("/")[2]
             const subtitle = eventsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
-            return { title: "Events", subtitle, backHref: "/events" }
+            return { title: "Bookings", subtitle, backHref: "/events" }
         }
         
         if (normalizedPath.startsWith("/settings")) {
@@ -119,25 +133,52 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                         const isActive = normalizedPathname === normalizedHref || (item.href !== "/dashboard" && normalizedPathname.startsWith(`${normalizedHref}/`))
                         
                         const isSettings = item.label === "Settings"
-                        const isEvents = item.label === "Events"
+                        const isEvents = item.label === "Bookings"
+
+                        const hasSubItems = isEvents || isSettings
+                        const isOpen = isEvents ? eventsOpen : isSettings ? settingsOpen : false
+                        const toggle = isEvents
+                            ? () => setEventsOpen((p) => !p)
+                            : isSettings
+                            ? () => setSettingsOpen((p) => !p)
+                            : undefined
 
                         return (
                             <React.Fragment key={item.href}>
-                                <Link
-                                    href={item.href}
-                                    className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
-                                        isActive
-                                            ? "bg-[#26300D] text-white shadow-lg shadow-[#26300D]/10"
-                                            : "text-[#5F624F] hover:bg-[#26300D]/5"
+                                {/* Parent row */}
+                                <div className="flex items-center gap-1">
+                                    <Link
+                                        href={item.href}
+                                        className={cn(
+                                            "flex-1 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
+                                            isActive
+                                                ? "bg-[#26300D] text-white shadow-lg shadow-[#26300D]/10"
+                                                : "text-[#5F624F] hover:bg-[#26300D]/5"
+                                        )}
+                                    >
+                                        <item.icon className={cn("w-5 h-5", isActive ? "text-[#FDCC4B]" : "text-[#5F624F]")} />
+                                        {item.label}
+                                    </Link>
+
+                                    {hasSubItems && toggle && (
+                                        <button
+                                            onClick={toggle}
+                                            className={cn(
+                                                "shrink-0 p-2 rounded-lg transition-all duration-200",
+                                                isActive ? "text-white/60 hover:text-white hover:bg-white/10" : "text-[#5F624F] hover:bg-[#26300D]/5"
+                                            )}
+                                            aria-label={isOpen ? "Collapse" : "Expand"}
+                                        >
+                                            <ChevronDown className={cn(
+                                                "w-3.5 h-3.5 transition-transform duration-200",
+                                                isOpen ? "rotate-0" : "-rotate-90"
+                                            )} />
+                                        </button>
                                     )}
-                                >
-                                    <item.icon className={cn("w-5 h-5", isActive ? "text-[#FDCC4B]" : "text-[#5F624F]")} />
-                                    {item.label}
-                                </Link>
+                                </div>
 
                                 {/* Sub-items for Events */}
-                                {isEvents && (
+                                {isEvents && eventsOpen && (
                                     <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
                                         {eventSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href
@@ -161,7 +202,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                                 )}
 
                                 {/* Sub-items for Settings */}
-                                {isSettings && (
+                                {isSettings && settingsOpen && (
                                     <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
                                         {settingsSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href
@@ -189,7 +230,15 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                 </nav>
 
                 {/* Sidebar Footer */}
-                <div className="p-4 border-t border-[#E6DFC8]">
+                <div className="p-4 border-t border-[#E6DFC8] space-y-2">
+                    <button
+                        onClick={handleSignOut}
+                        disabled={isPending}
+                        className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-[#5F624F] hover:bg-red-50 hover:text-red-600 transition-all duration-200 font-bold text-xs uppercase tracking-wider disabled:opacity-50"
+                    >
+                        <LogOut className="w-4 h-4" />
+                        {isPending ? "Signing out…" : "Sign Out"}
+                    </button>
                     <p className="text-[8px] text-[#5F624F] font-bold uppercase tracking-widest opacity-40 px-4">
                         v0.1.0 Alpha
                     </p>

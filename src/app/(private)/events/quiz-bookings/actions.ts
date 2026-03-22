@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
 export async function getBookings(type: string, subType: string, selectedDate: string | null) {
-  //console.log("Fetching bookings with filters:", { type, subType, selectedDate })
   try {
     const supabase = await createClient()
 
