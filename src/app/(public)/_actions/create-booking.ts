@@ -235,7 +235,7 @@ export async function createBooking(formData: BookingFormData) {
 
     // 10. Revalidate paths so the UI updates with the new booking
     revalidatePath("/dashboard");
-    revalidatePath("/manage-booking");
+    revalidatePath("/book/quiz/manage-booking");
 
     return {
       success: true,
@@ -275,7 +275,7 @@ async function sendBookingEmail(
       ? `https://${process.env.VERCEL_URL}` 
       : 'http://localhost:3000';
 
-  const manageUrl = `${appUrl}/manage-booking/${booking_id}`;
+  const manageUrl = `${appUrl}/book/quiz/manage-booking/${booking_id}`;
   
   const subject = status === "confirmed" ? "Quiz Night Table Confirmed! 🎉" : "You are on the Waitlist";
   const content = status === "confirmed" 

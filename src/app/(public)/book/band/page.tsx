@@ -34,7 +34,7 @@ export default function BandBookingPage() {
             Book the Stage
           </h1>
           <p className="text-stone-500 text-sm max-w-sm leading-relaxed">
-            Apply to perform live at Don Fenticas. Fill in your details and we'll review your application.
+            Apply to perform live at Don Fenticas. Fill in your details and we&apos;ll review your application.
           </p>
         </div>
 

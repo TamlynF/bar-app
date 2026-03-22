@@ -1,10 +1,8 @@
 "use client"
 
 import React, { useMemo, useState, useTransition, useEffect, useRef } from "react"
-import styles from "./booking-list-client.module.css"
 import { format, isSameDay } from "date-fns"
 import { 
-  updateBookingStatus, 
   deleteBooking, 
   updateBookingDetails, 
   getAvailableTablesForEvent,
@@ -22,10 +20,8 @@ import {
   Table as TableIcon,
   Users,
   XCircle,
-  MessageSquare,
   LayoutDashboard,
   Trophy,
-  Target,
   AlertCircle,
   Trash2,
   Calendar,
@@ -33,14 +29,12 @@ import {
   ExternalLink,
   ChevronDown,
   Save,
-  X,
   MessageSquareQuote,
   RefreshCw,
-  Info,
   CalendarDays
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -48,7 +42,7 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import { Booking, TableRow } from "@/app/(private)/events/quiz-bookings/page"
+import { Booking } from "@/app/(private)/events/quiz-bookings/page"
 
 const formatDateStr = (d: Date | string) => {
   if (typeof d === 'string') return d;

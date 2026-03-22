@@ -154,7 +154,7 @@ export default function BandBookingForm() {
         <CheckCircle2 className="w-12 h-12 text-[#FDCC4B]" />
         <h3 className="text-white font-black text-xl uppercase tracking-tight">Application Received!</h3>
         <p className="text-stone-400 text-sm max-w-xs leading-relaxed">
-          Thanks! We'll review your application and get back to you via email shortly.
+          Thanks! We&apos;ll review your application and get back to you via email shortly.
         </p>
       </div>
     );
@@ -232,7 +232,7 @@ export default function BandBookingForm() {
                     </p>
                   )}
                 </div>
-                <button type="button" onClick={() => removeVideo(i)}
+                <button title="Close" type="button" onClick={() => removeVideo(i)}
                   className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-400/10 transition-all">
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -245,6 +245,7 @@ export default function BandBookingForm() {
         {videoFiles.length < 3 && (
           <>
             <input
+              title="Upload Videos"
               ref={fileInputRef}
               type="file"
               accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/mpeg"
@@ -271,11 +272,11 @@ export default function BandBookingForm() {
           <div key={i} className="flex gap-2">
             <div className="relative flex-1">
               <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600" />
-              <input type="date" value={date} onChange={(e) => handleDate(i, e.target.value)}
+              <input title="Select Date" type="date" value={date} onChange={(e) => handleDate(i, e.target.value)}
                 className={`${inputClass} pl-10`} style={{ colorScheme: "dark" }} />
             </div>
             {preferredDates.length > 1 && (
-              <button type="button" onClick={() => removeDate(i)}
+              <button title="Remove Date" type="button" onClick={() => removeDate(i)}
                 className="shrink-0 w-10 h-10 mt-[2px] rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-stone-500 hover:text-red-400 hover:border-red-400/30 transition-all">
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -283,7 +284,7 @@ export default function BandBookingForm() {
           </div>
         ))}
         {preferredDates.length < 4 && (
-          <button type="button" onClick={addDate}
+          <button title="Add Date" type="button" onClick={addDate}
             className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-stone-500 hover:text-[#FDCC4B] transition-colors">
             <Plus className="w-3.5 h-3.5" /> Add another date
           </button>

@@ -14,24 +14,30 @@ const bookingOptions = [
     icon: Trophy,
     label: "Quiz Night",
     description: "Book a table for our weekly quiz night. Eight rounds, great prizes, and happy hour vibes.",
-    accent: "#FDCC4B",
     badge: "Every Thursday",
+    iconClass: "icon-quiz",
+    iconColor: "icon-color-quiz",
+    badgeClass: "badge-quiz",
   },
   {
     href: "/book/band",
     icon: Music,
     label: "Book the Stage",
     description: "Apply to perform live at Don Fenticas. Submit your details and we'll be in touch.",
-    accent: "#7DD3FC",
     badge: "Open Applications",
+    iconClass: "icon-band",
+    iconColor: "icon-color-band",
+    badgeClass: "badge-band",
   },
   {
     href: "/book/private",
     icon: Building2,
     label: "Private Hire",
     description: "Host your birthday, corporate event, or special occasion at our venue.",
-    accent: "#86EFAC",
     badge: "Enquire Now",
+    iconClass: "icon-hire",
+    iconColor: "icon-color-hire",
+    badgeClass: "badge-hire",
   },
 ];
 
@@ -75,21 +81,15 @@ export default function BookingHubPage() {
             className="group flex items-center gap-5 bg-white/4 hover:bg-white/7 border border-white/8 hover:border-white/15 rounded-2xl p-5 sm:p-6 transition-all duration-300 active:scale-[0.99]"
           >
             {/* Icon */}
-            <div
-              className="shrink-0 w-12 h-12 rounded-xl flex items-center justify-center"
-              style={{ backgroundColor: `${opt.accent}18`, border: `1px solid ${opt.accent}30` }}
-            >
-              <opt.icon className="w-5 h-5" style={{ color: opt.accent }} />
+            <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${opt.iconClass}`}>
+              <opt.icon className={`w-5 h-5 ${opt.iconColor}`} />
             </div>
 
             {/* Text */}
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <span className="text-white font-black text-base uppercase tracking-tight">{opt.label}</span>
-                <span
-                  className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                  style={{ backgroundColor: `${opt.accent}20`, color: opt.accent }}
-                >
+                <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${opt.badgeClass}`}>
                   {opt.badge}
                 </span>
               </div>

@@ -21,7 +21,7 @@ export async function getAvailableTablesForEvent(eventId: string, groupSize: num
 
     console.log("Event bookings for table availability check:", { eventBookings })
     const bookingIds = eventBookings?.map(b => b.id) || [];
-    console.log("Booking IDs for event:", { bookingIds }) 
+    console.log("Booking IDs for event:", { bookingIds })
 
     // 2. Find which tables are already assigned
     const { data: takenMappings } = await supabase
@@ -31,7 +31,7 @@ export async function getAvailableTablesForEvent(eventId: string, groupSize: num
 
     const takenTableIds = takenMappings?.map(m => m.table_id) || [];
 
-    // 3. Get all available tables. 
+    // 3. Get all available tables.
     // We allow tables that might require 'add_seat' (e.g. table for 4 for a group of 5)
     // but typically we want to prioritize tables that fit.
     let query = supabase
@@ -40,7 +40,7 @@ export async function getAvailableTablesForEvent(eventId: string, groupSize: num
       .eq("available", true);
 
     // 4. Filter out taken tables, but keep the current one if provided
-    const filteredTakenIds = currentTableId 
+    const filteredTakenIds = currentTableId
       ? takenTableIds.filter(id => String(id) !== String(currentTableId))
       : takenTableIds;
 
@@ -49,7 +49,7 @@ export async function getAvailableTablesForEvent(eventId: string, groupSize: num
     }
 
     const { data: tables, error } = await query.order('max_capacity', { ascending: true });
-    
+
     if (error) throw error;
 
     // Filter in-memory to ensure capacity is at least groupSize OR within a reasonable squeeze limit (e.g. 1-2 people)
@@ -60,9 +60,3 @@ export async function getAvailableTablesForEvent(eventId: string, groupSize: num
     return [];
   }
 }
-
-
-
-
-
-

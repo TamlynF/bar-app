@@ -1,6 +1,7 @@
 /*! tailwindcss v4.2.1 | MIT License | https://tailwindcss.com */
 @layer properties;
 @layer theme, base, components, utilities;
+ @source "../app/(public)/book/page.tsx";
 @layer theme {
   :root, :host {
     --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
@@ -537,6 +538,7 @@
     display: -webkit-box;
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 1;
+    line-clamp: 1;
   }
   .no-scrollbar {
     -ms-overflow-style: none;
@@ -4899,4 +4901,17 @@
       --tw-exit-translate-y: 0;
     }
   }
+}
+
+/* Booking hub card accent colours */
+@layer utilities {
+  .icon-quiz  { background-color: rgb(253 204 75 / 0.1); border: 1px solid rgb(253 204 75 / 0.2); }
+  .icon-band  { background-color: rgb(125 211 252 / 0.1); border: 1px solid rgb(125 211 252 / 0.2); }
+  .icon-hire  { background-color: rgb(134 239 172 / 0.1); border: 1px solid rgb(134 239 172 / 0.2); }
+  .icon-color-quiz  { color: #FDCC4B; }
+  .icon-color-band  { color: #7DD3FC; }
+  .icon-color-hire  { color: #86EFAC; }
+  .badge-quiz { background-color: rgb(253 204 75 / 0.15); color: #FDCC4B; }
+  .badge-band { background-color: rgb(125 211 252 / 0.15); color: #7DD3FC; }
+  .badge-hire { background-color: rgb(134 239 172 / 0.15); color: #86EFAC; }
 }

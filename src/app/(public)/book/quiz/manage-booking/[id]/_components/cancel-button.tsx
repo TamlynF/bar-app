@@ -2,23 +2,23 @@
 
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { 
-  CalendarDays, 
-  Users, 
-  User, 
-  Beer, 
-  CheckCircle, 
-  XCircle, 
-  Loader2, 
-  Save, 
+import {
+  CalendarDays,
+  Users,
+  User,
+  Beer,
+  CheckCircle,
+  XCircle,
+  Loader2,
+  Save,
   AlertCircle,
   ChevronDown,
   Info,
   MessageSquareQuote
 } from "lucide-react";
-import { cancelBooking } from "../../../_actions/cancel-booking";
-import { updateBooking } from "../../../_actions/update-booking";
-import { checkTeamName } from "../../../_actions/create-booking";
+import { cancelBooking } from "../../../../../_actions/cancel-booking";
+import { updateBooking } from "../../../../../_actions/update-booking";
+import { checkTeamName } from "../../../../../_actions/create-booking";
 import { getAvailableTablesForEvent } from "../actions";
 import { cn } from "@/lib/utils";
 
@@ -52,24 +52,24 @@ const labelClasses = "block text-[10px] font-black text-[#fdcc4b]/70 mb-2 upperc
 const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
 const iconClasses = "w-4 h-4 text-[#fdcc4b]/40 transition-colors duration-200";
 
-export default function CancelButton({ 
+export default function CancelButton({
   booking,
   isCancelled
-}: { 
+}: {
   booking: ManageBooking;
   isCancelled: boolean;
 }) {
   const [isCancelling, setIsCancelling] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  
+
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
   const [teamName, setTeamName] = useState(booking.group_name || "");
   const [teamSize, setTeamSize] = useState(booking.group_size || 4);
   const [specialRequests, setSpecialRequests] = useState(booking.special_requests || ""); // State for special requests
-  
+
   // Seating validation state
   const [seatingWarning, setSeatingWarning] = useState<string | null>(null);
   const [isCheckingSeating, setIsCheckingSeating] = useState(false);
@@ -93,7 +93,7 @@ export default function CancelButton({
       }
 
       const currentTable = booking.booking_table_mappings?.[0]?.tables;
-      
+
       // Check if new size exceeds current table capacity
       if (currentTable && teamSize > (currentTable.max_capacity || 0)) {
         setIsCheckingSeating(true);
@@ -191,7 +191,7 @@ export default function CancelButton({
     } else {
       setError(response.error || "Failed to update booking.");
     }
-    
+
     setIsUpdating(false);
   };
 
@@ -213,11 +213,11 @@ export default function CancelButton({
             )}
           </>
         )}
-        
+
         <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">
           {isEditing ? "Modify Team" : isCancelled ? "Booking Cancelled" : "Your Booking"}
         </h1>
-        
+
         {!isEditing && (
           <p className="text-stone-500 mt-2 font-bold text-xs sm:text-sm uppercase tracking-widest">Ref: #{booking.id}</p>
         )}
@@ -237,14 +237,14 @@ export default function CancelButton({
           <p className="text-amber-400 text-xs font-bold uppercase tracking-tight leading-snug">{seatingWarning}</p>
         </div>
       )}
-      
+
       {successMsg && !isEditing && (
         <div className="flex items-center justify-center gap-2 mb-6 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl animate-in fade-in">
            <CheckCircle className="w-4 h-4 text-emerald-400" />
            <p className="text-emerald-400 text-xs font-black uppercase tracking-widest">{successMsg}</p>
         </div>
       )}
-      
+
       {/* 3. MAIN CONTENT: VIEW OR EDIT */}
       {isEditing ? (
         /* EDIT MODE FORM */
@@ -257,7 +257,7 @@ export default function CancelButton({
               </div>
               <input
                 id="teamName"
-                type="text" 
+                type="text"
                 value={teamName}
                 onChange={(e) => setTeamName(e.target.value)}
                 className={cn(inputBaseClasses, nameError && "border-red-500/50")}
@@ -278,7 +278,7 @@ export default function CancelButton({
               <div className={iconContainerClasses}>
                 <Users className={iconClasses} />
               </div>
-              <select 
+              <select
                 id="teamSize"
                 value={teamSize}
                 onChange={(e) => setTeamSize(Number(e.target.value))}
@@ -340,18 +340,18 @@ export default function CancelButton({
         <div className="space-y-8 animate-in fade-in duration-500">
           <div className="bg-white/5 rounded-3xl p-6 sm:p-8 border border-white/10 space-y-6 shadow-inner relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#fdcc4b]/5 blur-3xl pointer-events-none group-hover:bg-[#fdcc4b]/10 transition-colors" />
-            
+
             <DetailRow icon={<CalendarDays />} label="Quiz Night" value={eventDate ? format(eventDate, "do MMMM yyyy") : "TBD"} />
             <DetailRow icon={<Beer />} label="Team Name" value={booking.group_name || "Guest Team"} />
             <DetailRow icon={<Users />} label="Team Size" value={`${booking.group_size} People`} />
             <DetailRow icon={<User />} label="Lead Booker" value={booking.contacts?.full_name || "N/A"} />
-            
+
             {/* Displaying Special Requests in View Mode */}
             {booking.special_requests && (
-              <DetailRow 
-                icon={<MessageSquareQuote />} 
-                label="Special Requests" 
-                value={booking.special_requests} 
+              <DetailRow
+                icon={<MessageSquareQuote />}
+                label="Special Requests"
+                value={booking.special_requests}
               />
             )}
           </div>
@@ -375,7 +375,7 @@ export default function CancelButton({
               </button>
             </div>
           )}
-          
+
           <div className="text-center">
             <p className="text-[9px] font-black text-stone-600 uppercase tracking-[0.4em] opacity-40">
               Booking Management Portal
@@ -394,10 +394,10 @@ function DetailRow({ icon, label, value }: { icon: React.ReactNode, label: strin
   return (
     <div className="flex items-start">
       <div className="bg-[#26300D] p-3 rounded-2xl mr-4 border border-[#fdcc4b]/20 text-[#fdcc4b] shrink-0 shadow-lg">
-        {React.isValidElement(icon) 
-          ? React.cloneElement(icon as React.ReactElement<{ className?: string }>, { 
-              className: "w-5 h-5" 
-            }) 
+        {React.isValidElement(icon)
+          ? React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
+              className: "w-5 h-5"
+            })
           : icon}
       </div>
       <div className="text-left min-w-0 pt-1">

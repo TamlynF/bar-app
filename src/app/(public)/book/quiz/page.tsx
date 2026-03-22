@@ -1,5 +1,5 @@
 import React from 'react'
-import BookingForm from "@/app/(public)/_components/booking-form";
+import BookingForm from "@/app/(public)/book/quiz/_components/quiz-booking-form";
 import { 
   Calendar, Banknote, Users, Trophy, Wine, 
   MapPin, Clock, DollarSign, Star, CheckCircle, 
