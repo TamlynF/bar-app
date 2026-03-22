@@ -145,12 +145,30 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
 
                         return (
                             <React.Fragment key={item.href}>
-                                {/* Parent row */}
-                                <div className="flex items-center gap-1">
+                                {/* Parent row — button for collapsible items, Link for plain items */}
+                                {hasSubItems && toggle ? (
+                                    <button
+                                        type="button"
+                                        onClick={toggle}
+                                        className={cn(
+                                            "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
+                                            isActive
+                                                ? "bg-[#26300D] text-white shadow-lg shadow-[#26300D]/10"
+                                                : "text-[#5F624F] hover:bg-[#26300D]/5"
+                                        )}
+                                    >
+                                        <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-[#FDCC4B]" : "text-[#5F624F]")} />
+                                        <span className="flex-1 text-left">{item.label}</span>
+                                        <ChevronDown className={cn(
+                                            "w-3.5 h-3.5 shrink-0 transition-transform duration-200",
+                                            isOpen ? "rotate-0" : "-rotate-90"
+                                        )} />
+                                    </button>
+                                ) : (
                                     <Link
                                         href={item.href}
                                         className={cn(
-                                            "flex-1 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
+                                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
                                             isActive
                                                 ? "bg-[#26300D] text-white shadow-lg shadow-[#26300D]/10"
                                                 : "text-[#5F624F] hover:bg-[#26300D]/5"
@@ -159,23 +177,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                                         <item.icon className={cn("w-5 h-5", isActive ? "text-[#FDCC4B]" : "text-[#5F624F]")} />
                                         {item.label}
                                     </Link>
-
-                                    {hasSubItems && toggle && (
-                                        <button
-                                            onClick={toggle}
-                                            className={cn(
-                                                "shrink-0 p-2 rounded-lg transition-all duration-200",
-                                                isActive ? "text-white/60 hover:text-white hover:bg-white/10" : "text-[#5F624F] hover:bg-[#26300D]/5"
-                                            )}
-                                            aria-label={isOpen ? "Collapse" : "Expand"}
-                                        >
-                                            <ChevronDown className={cn(
-                                                "w-3.5 h-3.5 transition-transform duration-200",
-                                                isOpen ? "rotate-0" : "-rotate-90"
-                                            )} />
-                                        </button>
-                                    )}
-                                </div>
+                                )}
 
                                 {/* Sub-items for Events */}
                                 {isEvents && eventsOpen && (

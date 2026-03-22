@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Trophy, Music, Building2, ArrowRight } from "lucide-react";
+import Image from "next/image";
 
 export const metadata = {
   title: "Book | Don Fenticas",
@@ -43,12 +44,23 @@ export default function BookingHubPage() {
 
       {/* Header */}
       <div className="text-center mb-10 max-w-md">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#FDCC4B] mb-5 shadow-lg">
+        {/* <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#FDCC4B] mb-5 shadow-lg">
           <span className="text-[#26300D] font-black text-xl">DF</span>
         </div>
         <h1 className="text-white font-black text-3xl sm:text-4xl uppercase tracking-tight leading-none mb-3">
           Don Fenticas
-        </h1>
+        </h1> */}
+        <Image
+          src="/CompanyName.png"
+          alt="Don Fenticas Logo"
+          width={400}
+          height={120}
+          className="w-full h-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
+          priority
+        />
+        <h2 className="text-white font-black text-2xl sm:text-3xl uppercase tracking-tight leading-none mb-3">
+          Book Your Experience
+        </h2>
         <p className="text-stone-500 text-sm font-medium leading-relaxed">
           Choose how you&apos;d like to book with us.
         </p>
