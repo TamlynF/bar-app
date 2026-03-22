@@ -1,11 +1,12 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, parseISO } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { createBooking, checkTeamName } from "../_actions/create-booking";
+// Using absolute aliases which are defined in tsconfig.json and verified to work for other imports
+import { createBooking, checkTeamName } from "@/app/(public)/_actions/create-booking";
 import {
   CheckCircle,
   ChevronRight,
@@ -18,7 +19,7 @@ import {
   MessageSquareQuote
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "../../../lib/utils";
+import { cn } from "@/lib/utils";
 
 interface BookingResponse {
   success: boolean;
@@ -28,14 +29,19 @@ interface BookingResponse {
   data?: unknown;
 }
 
-const getNextThursday = () => {
+/**
+ * Helper to get the next upcoming Thursday as a Date object at local midnight.
+ */
+const getNextThursdayDate = () => {
   const today = new Date();
   const dayOfWeek = today.getDay();
   // 4 represents Thursday (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)
   const daysUntilThursday = (4 - dayOfWeek + 7) % 7;
   const nextThursday = new Date(today);
+  // Ensure we get the local day correctly
   nextThursday.setDate(today.getDate() + (daysUntilThursday === 0 ? 0 : daysUntilThursday));
-  return nextThursday.toISOString().split("T")[0];
+  nextThursday.setHours(0, 0, 0, 0);
+  return nextThursday;
 };
 
 export default function BookingForm() {
@@ -48,7 +54,8 @@ export default function BookingForm() {
   const [teamNameError, setTeamNameError] = useState("");
 
   const [formData, setFormData] = useState({
-    quizDate: getNextThursday(),
+    // Initialize with local-formatted string
+    quizDate: format(getNextThursdayDate(), "yyyy-MM-dd"),
     name: "",
     teamName: "",
     teamSize: "4",
@@ -58,11 +65,14 @@ export default function BookingForm() {
   });
 
   // Calculate the specific date object for the next Thursday to use as a modifier
-  const nextThursdayDate = useMemo(() => {
-    const date = new Date(getNextThursday());
-    date.setHours(0, 0, 0, 0);
-    return date;
-  }, []);
+  const nextThursdayDate = useMemo(() => getNextThursdayDate(), []);
+
+  // Helper to convert "yyyy-MM-dd" back to a local Date object without UTC shifting
+  const getSelectedDateObj = (dateStr: string) => {
+    if (!dateStr) return undefined;
+    // Appending time ensures the Date constructor treats it as local time
+    return new Date(dateStr + "T00:00:00");
+  };
 
   useEffect(() => {
     const validateTeam = async () => {
@@ -136,6 +146,7 @@ export default function BookingForm() {
   };
 
   if (isSuccess) {
+    const displayDate = getSelectedDateObj(formData.quizDate);
     return (
       <div className="text-center py-4 animate-in fade-in zoom-in duration-300">
         <div className="flex justify-center mb-6">
@@ -148,15 +159,23 @@ export default function BookingForm() {
         </h2>
         <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
           {isWaitlisted 
-            ? `We're full for ${format(new Date(formData.quizDate), "do MMMM")}, but you're next in line. Check your email for details.`
-            : `Great news! Team "${formData.teamName}" is booked for ${format(new Date(formData.quizDate), "do MMMM")}. Check your email for your unique link.`
+            ? `We're full for ${displayDate ? format(displayDate, "do MMMM") : "that date"}, but you're next in line. Check your email for details.`
+            : `Great news! Team "${formData.teamName}" is booked for ${displayDate ? format(displayDate, "do MMMM") : "that date"}. Check your email for your unique link.`
           }
         </p>        
         <Button
           onClick={() => {
             setIsSuccess(false);
             setIsWaitlisted(false);
-            setFormData({ quizDate: getNextThursday(), name: "", teamName: "", teamSize: "4", email: "", phone: "", specialRequests: "" });
+            setFormData({ 
+              quizDate: format(getNextThursdayDate(), "yyyy-MM-dd"), 
+              name: "", 
+              teamName: "", 
+              teamSize: "4", 
+              email: "", 
+              phone: "", 
+              specialRequests: "" 
+            });
           }}
           className="w-full bg-white text-[#26300D] font-black h-14 rounded-2xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
         >
@@ -190,7 +209,7 @@ export default function BookingForm() {
                   <CalendarDays className={iconClasses} />
                 </div>
                 {formData.quizDate ? (
-                  format(new Date(formData.quizDate), "dd MMMM yyyy")
+                  format(getSelectedDateObj(formData.quizDate)!, "dd MMMM yyyy")
                 ) : (
                   <span>Select a Thursday</span>
                 )}
@@ -204,10 +223,12 @@ export default function BookingForm() {
             >
               <Calendar
                 mode="single"
-                selected={formData.quizDate ? new Date(formData.quizDate) : undefined}
+                selected={getSelectedDateObj(formData.quizDate)}
+                defaultMonth={getSelectedDateObj(formData.quizDate)}
                 onSelect={(date) => {
                   if (date) {
-                    const dateString = date.toISOString().split("T")[0];
+                    // Use local format to prevent UTC day-shifting
+                    const dateString = format(date, "yyyy-MM-dd");
                     setFormData((prev) => ({ ...prev, quizDate: dateString }));
                     setDateError("");
                     setIsCalendarOpen(false);
@@ -219,20 +240,21 @@ export default function BookingForm() {
                 autoFocus
                 className="bg-transparent"
                 classNames={{
-                  // Month/Year header and navigation arrows in dark green
+                  // Brand styles for month header and arrows
                   caption_label: "text-[#26300D] font-black uppercase tracking-widest text-[11px]",
                   button_previous: "text-[#26300D] hover:bg-[#26300D]/10",
                   button_next: "text-[#26300D] hover:bg-[#26300D]/10",
-                  // Use flex-1 on weekdays to ensure they fill the header width correctly
+                  // Weekday alignment fix: ensure they span full width
                   weekday: "text-[#26300D]/50 font-black uppercase text-[10px] tracking-tighter flex-1 text-center",
-                  // Available dates in dark green, centered using flexbox
-                  day: "text-[#26300D] font-bold text-sm h-9 w-9 p-0 aria-selected:opacity-100 flex items-center justify-center aspect-square mx-auto",
+                  week: "flex w-full mt-2",
+                  // Date cell alignment and styling
+                  day: "text-[#26300D] font-bold text-sm h-9 w-9 p-0 aria-selected:opacity-100 flex items-center justify-center aspect-square mx-auto rounded-xl transition-colors",
                 }}
                 modifiers={{
                   nextThursday: nextThursdayDate
                 }}
                 modifiersClassNames={{
-                  // Next Thursday: Yellow background with dark green border
+                  // Next Thursday: Yellow bg + dark green border
                   nextThursday: "bg-[#FDCC4B]! text-[#26300D]! border-2! border-[#26300D]! font-black shadow-sm"
                 }}
               />
