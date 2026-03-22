@@ -107,13 +107,13 @@ export async function getAvailableTablesForEvent(eventId: string, groupSize: num
 
     const takenTableIds = takenMappings?.map(m => m.table_id) || [];
 
-    // 3. Get all available tables that fit the group
-    // Note: We use >= groupSize because a table must be large enough.
+    // 3. Get all available tables. 
+    // We allow tables that might require 'add_seat' (e.g. table for 4 for a group of 5)
+    // but typically we want to prioritize tables that fit.
     let query = supabase
       .from("tables")
       .select("id, name, max_capacity")
-      .eq("available", true)
-      .gte("max_capacity", groupSize);
+      .eq("available", true);
 
     // 4. Filter out taken tables, but keep the current one if provided
     const filteredTakenIds = currentTableId 
@@ -124,10 +124,13 @@ export async function getAvailableTablesForEvent(eventId: string, groupSize: num
       query = query.not("id", "in", `(${filteredTakenIds.join(',')})`);
     }
 
-    const { data: tables, error } = await query.order('name', { ascending: true });
+    const { data: tables, error } = await query.order('max_capacity', { ascending: true });
     
     if (error) throw error;
-    return tables;
+
+    // Filter in-memory to ensure capacity is at least groupSize OR within a reasonable squeeze limit (e.g. 1-2 people)
+    // For now, we strict match capacity >= groupSize to ensure the UI doesn't over-book.
+    return tables?.filter(t => t.max_capacity >= groupSize) || [];
   } catch (error) {
     console.error("Error fetching event-specific tables:", error);
     return [];
@@ -177,8 +180,10 @@ export async function getQuizEvents(type: string, subType: string) {
     throw new Error("Failed to fetch quiz events");
   }
 }
+
 /**
- * Updates comprehensive booking details including table assignment
+ * Updates comprehensive booking details including table assignment.
+ * Calculates 'add_seat' count if the group size exceeds table capacity.
  */
 export async function updateBookingDetails(
   id: string, 
@@ -204,22 +209,39 @@ export async function updateBookingDetails(
     throw new Error("Failed to update booking")
   }
 
-  // 2. Update table mapping if table_id is provided
-  if (table_id) {
-    // Delete existing mapping first to handle re-assignment cleanly
+  // 2. Update table mapping
+  // If table_id is explicitly provided (even if empty string), we update the mapping
+  if (updates.hasOwnProperty('table_id')) {
+    // Delete existing mapping first to handle re-assignment or removal cleanly
     await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
     
-    // Insert new mapping
-    const { error: mappingError } = await supabase
-      .from("booking_table_mappings")
-      .insert({
-        booking_id: id,
-        table_id: parseInt(table_id)
-      });
+    // If a non-empty table_id is provided, create the new mapping
+    if (table_id && table_id !== "") {
+      // Fetch table capacity to calculate add_seat if necessary
+      const { data: tableData } = await supabase
+        .from("tables")
+        .select("max_capacity")
+        .eq("id", table_id)
+        .single();
 
-    if (mappingError) {
-      console.error("Error updating table mapping:", mappingError);
-      throw new Error("Failed to update table assignment");
+      const groupSize = updates.group_size || 0;
+      const maxCap = tableData?.max_capacity || 0;
+      
+      // Calculate how many extra seats are needed beyond standard capacity
+      const addSeatCount = groupSize > maxCap ? groupSize - maxCap : 0;
+
+      const { error: mappingError } = await supabase
+        .from("booking_table_mappings")
+        .insert({
+          booking_id: id,
+          table_id: parseInt(table_id),
+          add_seat: addSeatCount
+        });
+
+      if (mappingError) {
+        console.error("Error updating table mapping:", mappingError);
+        throw new Error("Failed to update table assignment");
+      }
     }
   }
 

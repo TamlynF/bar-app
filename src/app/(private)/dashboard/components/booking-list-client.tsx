@@ -277,6 +277,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
       // 3. Automation: Check if the current selected table is still valid
       const currentTableId = editForm.table_id;
+      
+      // If the booking was previously unassigned, don't auto-assign just because size changed
+      if (currentTableId === "") return;
+
       const isCurrentTableValid = newAvailableTables.some(t => String(t.id) === String(currentTableId));
 
       if (!isCurrentTableValid) {
