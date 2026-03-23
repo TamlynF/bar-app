@@ -244,7 +244,7 @@ export default function TablesClient({
               <form
                 id="table-form"
                 action={handleSubmit}
-                className="space-y-4 animate-in fade-in duration-200"
+                className="space-y-5 animate-in fade-in duration-200"
               >
                 {formDefault && (
                   <input type="hidden" name="id" value={formDefault.id} />
@@ -267,17 +267,19 @@ export default function TablesClient({
                   <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
                     Max Capacity <span className="text-red-500">*</span>
                   </Label>
-                  <div className="relative">
-                    <Input
+                  <div className="flex items-center h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white focus-within:border-[#26300D] transition-all overflow-hidden">
+                    <div className="flex items-center justify-center px-4 h-full border-r-2 border-[#E6DFC8] shrink-0">
+                      <Users className="w-4 h-4 text-[#5F624F]" />
+                    </div>
+                    <input
                       name="capacity"
                       type="number"
                       min={1}
                       placeholder="4"
                       required
                       defaultValue={formDefault?.max_capacity ?? ""}
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white pl-12 pr-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="flex-1 h-full px-4 text-sm font-bold bg-transparent outline-none text-[#1F1F1A] placeholder:text-[#5F624F]/40"
                     />
-                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F]" />
                   </div>
                 </div>
 
@@ -301,6 +303,7 @@ export default function TablesClient({
                     </p>
                   </div>
                   <input
+                    title="Available for booking"
                     type="checkbox"
                     name="available"
                     className="h-5 w-5 rounded accent-[#26300D] shrink-0 cursor-pointer"
