@@ -63,6 +63,9 @@ export interface Booking {
     tables?: TableRow;
   }[];
   booking_scores?: ScoreRow[];
+  updated_at?: string | null;
+  updated_by?: number | null;
+  updated_by_employee?: { full_name: string; role: string | null } | null;
 }
 
 export const dynamic = 'force-dynamic';

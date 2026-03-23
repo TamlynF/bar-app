@@ -19,7 +19,7 @@ import {
   AlertCircle,
   Hash,
 } from "lucide-react";
-import { saveTableAction, deleteTableAction } from "./actions";
+import { saveTableAction, deleteTableAction } from "../actions";
 import { cn } from "@/lib/utils";
 
 export type Table = {

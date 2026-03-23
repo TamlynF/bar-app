@@ -51,7 +51,10 @@ export async function getBookings(type: string, subType: string, selectedDate: s
           booking_scores(
             score,
             is_winner
-          )
+          ),
+          updated_at,
+          updated_by,
+          updated_by_employee:employees!updated_by(full_name, role)
         `)
       .ilike("events.event_types.type", type)
       .ilike("events.event_types.sub_type", subType)
@@ -196,11 +199,27 @@ export async function updateBookingDetails(
 ) {
   const supabase = await createClient()
 
+  // Resolve which employee is making this change
+  let updatedById: number | null = null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.email) {
+    const { data: emp } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("email", user.email)
+      .single();
+    if (emp) updatedById = emp.id;
+  }
+
   // 1. Update primary booking record
   const { table_id, ...bookingUpdates } = updates;
   const { error: bookingError } = await supabase
     .from("bookings")
-    .update(bookingUpdates)
+    .update({
+      ...bookingUpdates,
+      updated_at: new Date().toISOString(),
+      updated_by: updatedById,
+    })
     .eq("id", id)
 
   if (bookingError) {

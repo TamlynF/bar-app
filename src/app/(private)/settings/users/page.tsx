@@ -6,7 +6,11 @@ export default async function TablesPage() {
 
   const { data: employees, error } = await supabase
     .from("employees")
-    .select("*")
+    .select(`
+      *,
+      created_by_employee:employees!created_by(full_name, role),
+      updated_by_employee:employees!updated_by(full_name, role)
+    `)
     .order("full_name", { ascending: true });
 
   if (error) {

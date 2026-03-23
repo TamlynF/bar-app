@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import TablesClient from "./tables-client";
+import TablesClient from "./_components/tables-client";
 
 export default async function TablesPage() {
   const supabase = await createClient();

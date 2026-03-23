@@ -31,7 +31,9 @@ import {
   Save,
   MessageSquareQuote,
   RefreshCw,
-  CalendarDays
+  CalendarDays,
+  History,
+  UserCheck
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
@@ -529,35 +531,6 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </span>
                   </div>
                 </div>
-
-                {/* TOP RIGHT ACTION GROUP (Positions buttons next to the sheet close 'X') */}
-{/*                 <div className="flex items-center gap-2 pt-1 pr-10">
-                  {!isEditing && (
-                    <>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="h-9 w-9 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 transition-all active:scale-90 shadow-sm border border-red-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if(window.confirm("Permanently delete this booking?")) handleDeleteBooking(selectedBooking.id)
-                        }}
-                        title="Delete Record"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                      <Button 
-                        onClick={handleEnterEditMode} 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-9 w-9 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#26300D] transition-all active:scale-90 shadow-sm"
-                        title="Edit Details"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </>
-                  )}
-                </div> */}
               </div>
 
               {/* Scrollable Body */}
@@ -679,23 +652,29 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </div>
                     
                     <div className="pt-6 border-t border-[#E6DFC8]">
-                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1 mb-3 block">Quick Status Switch</Label>
-                       <div className="flex flex-wrap gap-2">
-                         {Object.keys(statusTheme).filter(s => s !== 'all').map(s => (
-                           <button
-                             key={s}
-                             type="button"
-                             onClick={() => handleStatusChangeInEdit(s)}
-                             className={cn(
-                               "px-4 py-2.5 rounded-xl border-2 text-[10px] font-black uppercase tracking-widest transition-all",
-                               editForm.status === s 
-                                ? `${statusTheme[s].bg} ${statusTheme[s].border} ${statusTheme[s].text} ring-2 ring-offset-2 ring-primary/10 shadow-sm`
-                                : "bg-white border-[#E6DFC8] text-slate-400 hover:border-[#26300D]/30"
-                             )}
-                           >
-                             {s}
-                           </button>
-                         ))}
+                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1 mb-3 block">Status</Label>
+                       <div className={cn(
+                         "flex items-center h-14 rounded-2xl border-2 overflow-hidden transition-all",
+                         statusTheme[editForm.status]?.border || "border-[#E6DFC8]",
+                         statusTheme[editForm.status]?.bg || "bg-white",
+                       )}>
+                         <div className={cn("w-2.5 h-2.5 rounded-full shrink-0 ml-4", statusTheme[editForm.status]?.dot)} />
+                        <select
+                          title="Status"
+                           value={editForm.status}
+                           onChange={(e) => handleStatusChangeInEdit(e.target.value)}
+                           className={cn(
+                             "flex-1 h-full px-3 bg-transparent outline-none text-sm font-black uppercase tracking-widest cursor-pointer appearance-none",
+                             statusTheme[editForm.status]?.text || "text-[#1F1F1A]",
+                           )}
+                         >
+                           {Object.keys(statusTheme).filter(s => s !== 'all').map(s => (
+                             <option key={s} value={s} className="text-[#1F1F1A] bg-white normal-case font-bold">
+                               {s.charAt(0).toUpperCase() + s.slice(1)}
+                             </option>
+                           ))}
+                         </select>
+                         <svg className={cn("w-4 h-4 mr-4 shrink-0 opacity-60", statusTheme[editForm.status]?.text)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                        </div>
                        
                        {/* STATUS TO TABLE INDICATOR */}
@@ -738,8 +717,16 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
                     <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden shadow-sm">
                       <InfoRow icon={<Calendar className="w-4 h-4" />}      label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMMM yyyy") : "—"} />
-                      <InfoRow icon={<TableIcon className="w-4 h-4" />}     label="Table"      value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
-                      <InfoRow icon={<Clock3 className="w-4 h-4" />}        label="Booked On"  value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "HH:mm · do MMM yyyy") : "—"} />
+                      <InfoRow icon={<Users className="w-4 h-4" />}      label="Group Size" value={`${selectedBooking.group_size} Guests`} />
+                      
+                        <InfoRow icon={<TableIcon className="w-4 h-4" />} label="Table" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
+                      <InfoRow icon={<Clock3 className="w-4 h-4" />}        label="Booked On"  value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "—"} />
+                      {selectedBooking.updated_at && (
+                        <InfoRow icon={<History className="w-4 h-4" />} label="Last Modified" value={format(new Date(selectedBooking.updated_at), "dd MMM yyyy · HH:mm")} />
+                      )}
+                      {selectedBooking.updated_by_employee && (
+                        <InfoRow icon={<UserCheck className="w-4 h-4" />} label="Modified By" value={selectedBooking.updated_by_employee.full_name} />
+                      )}
                     </div>
 
                     <div className="space-y-3">
@@ -883,16 +870,17 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
   const status = normStatus(booking.status) || "pending"
   const theme = statusTheme[status] || statusTheme.pending
   const tableName = booking.booking_table_mappings?.[0]?.tables?.tables_name || "--";
+  const group_max_capacity = booking.booking_table_mappings?.[0]?.tables?.tables_capacity || "-";
 
   return (
     <div
       onClick={onClick}
       className={cn(
-        "group active:scale-[0.98] active:bg-slate-50 transition-all border-2 rounded-2xl p-4 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3",
+        "group active:scale-[0.98] active:bg-slate-50 transition-all border-2 rounded-2xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3",
         theme.cardBorder
       )}
     >
-      <div className="flex items-center gap-3 min-w-0 flex-1 text-left">
+      <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
         <div className={cn("w-11 h-11 rounded-full flex flex-col items-center justify-center shrink-0 border", theme.bg, theme.text, theme.border)}>
           {showDate && booking.events?.event_date ? (
             <div className="flex flex-col leading-none items-center justify-center">
@@ -906,31 +894,25 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
 
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between min-w-0">
-            <h4 className="text-sm font-black text-[#1F1F1A] truncate uppercase tracking-tight">{booking.group_name || "Guest Team"}</h4>
-            <span className="text-[11px] font-black text-blue-700 uppercase bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 ml-2">T: {tableName}</span>
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <h4 className="text-sm font-black text-[#1F1F1A] truncate uppercase tracking-tight">{booking.group_name || "Guest Team"}</h4>
+              {booking.special_requests && (
+                <span className="shrink-0 text-[10px] font-black text-red-700 uppercase bg-red-50 px-1.5 py-0.5 rounded border border-red-200">★</span>
+              )}
+            </div>
+            <span className="shrink-0 text-[11px] font-black text-blue-700 uppercase bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 ml-2">T: {tableName}</span>
           </div>
           <div className="flex items-center justify-between text-slate-500 mt-1">
              <p className="text-xs truncate font-semibold">{booking.contacts?.full_name}</p>
              <div className="flex items-center gap-1.5 text-slate-700">
                 <Users className="w-3.5 h-3.5 text-slate-400" />
                 <span className="text-sm font-black">{booking.group_size}</span>
+                <span className="text-sm font-black">/ {group_max_capacity}</span>
              </div>
           </div>
         </div>
       </div>
       <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
-    </div>
-  )
-}
-
-function DetailTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="bg-white border-2 border-[#E6DFC8] p-4 rounded-2xl flex flex-col gap-1 text-left shadow-sm transition-all hover:border-[#26300D]/30">
-      <div className="flex items-center gap-1.5 text-[#5F624F] opacity-60">
-        <div className="scale-75 origin-left">{icon}</div>
-        <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
-      </div>
-      <span className="text-[#1F1F1A] font-black text-sm uppercase truncate">{value}</span>
     </div>
   )
 }
@@ -942,7 +924,11 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
         {icon}
         <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{label}</span>
       </div>
-      <span className="text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">{value}</span>
-    </div>
+      {label === "Booked On" || label === "Last Modified" || label === "Modified By" ? (
+        <span className="text-sm font-black text-[#5F624F] text-right flex-1 leading-snug">{value}</span>
+      ) : (
+        <span className="text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">{value}</span>
+      )}
+      </div>
   )
 }

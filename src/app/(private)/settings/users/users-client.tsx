@@ -27,6 +27,11 @@ export type EmployeeRecord = {
   status: string | null;
   is_skeleton_staff: boolean | null;
   created_at?: string;
+  updated_at?: string | null;
+  created_by?: number | null;
+  updated_by?: number | null;
+  created_by_employee?: { full_name: string; role: string | null } | null;
+  updated_by_employee?: { full_name: string; role: string | null } | null;
 };
 
 export default function EmployeesClient({ initialEmployees = [] }: { initialEmployees: EmployeeRecord[] }) {
@@ -228,6 +233,24 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                 </p>
               </div>
               
+              {editingEmployee && (editingEmployee.created_at || editingEmployee.updated_at) && (
+                <div className="pt-4 border-t mt-2 space-y-1.5">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Record Activity</p>
+                  {editingEmployee.created_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Created {formatDate(editingEmployee.created_at)}
+                      {editingEmployee.created_by_employee && ` by ${editingEmployee.created_by_employee.full_name}`}
+                    </p>
+                  )}
+                  {editingEmployee.updated_at && (
+                    <p className="text-xs text-muted-foreground">
+                      Last updated {formatDate(editingEmployee.updated_at)}
+                      {editingEmployee.updated_by_employee && ` by ${editingEmployee.updated_by_employee.full_name}`}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div className="flex justify-end gap-3 pt-4 border-t mt-4">
                 <Button 
                   type="button" 

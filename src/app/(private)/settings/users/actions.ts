@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 
 export async function saveEmployeeAction(formData: FormData) {
@@ -26,13 +27,25 @@ export async function saveEmployeeAction(formData: FormData) {
     return { error: "Full Name, Email, and Start Date are required." };
   }
 
+  // Resolve current logged-in user to an employee id
+  let currentEmployeeId: number | null = null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.email) {
+    const { data: emp } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("email", user.email)
+      .single();
+    if (emp) currentEmployeeId = emp.id;
+  }
+
   try {
     if (id) {
       // Update existing employee
       const { error } = await supabase.from("employees").update({
         ...payload,
-        modified_at: new Date().toISOString(),
-        // Note: You can add `modified_by_employee_id` here if you have the auth session context
+        updated_at: new Date().toISOString(),
+        updated_by: currentEmployeeId,
       }).eq("id", id);
       
       // Catch unique email violations nicely
@@ -42,9 +55,31 @@ export async function saveEmployeeAction(formData: FormData) {
         throw error;
       }
     } else {
-      // Insert new employee
-      const { error } = await supabase.from("employees").insert(payload);
+      // Invite the employee as a Supabase auth user so they can log in
+      const adminSupabase = createAdminClient();
+        const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL 
+    ? process.env.NEXT_PUBLIC_SITE_URL 
+    : process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+          : 'http://localhost:3000';
       
+      const { data: inviteData, error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(
+        payload.email,
+        { redirectTo: `${redirectUrl}/dashboard` }
+      );
+
+      if (inviteError && inviteError.message !== "User already registered") {
+        throw new Error(`Failed to send login invite: ${inviteError.message}`);
+      }
+
+      // Insert new employee, storing the auth user id and audit fields
+      const { error } = await supabase.from("employees").insert({
+        ...payload,
+        auth_user_id: inviteData?.user?.id ?? null,
+        created_by: currentEmployeeId,
+        updated_by: currentEmployeeId,
+      });
+
       // Catch unique email violations nicely
       if (error?.code === '23505') {
         throw new Error("An employee with this email address already exists.");
