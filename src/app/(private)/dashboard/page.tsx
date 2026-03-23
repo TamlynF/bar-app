@@ -349,6 +349,23 @@ export default async function DashboardPage() {
       : "in-progress"
 
   const incompleteCategories = categoryReadiness.filter((c) => !c.complete)
+  const categoriesComplete = categoryReadiness.filter((c) => c.complete).length
+
+  // ─── Team status counts for next event ────────────────────────────────────
+
+  const cancelledNextEvent = (nextEvent?.bookings ?? []).filter(
+    (b) => b.status === "cancelled"
+  )
+  const waitlistedGuests = waitlistedNextEvent.reduce(
+    (sum, b) => sum + (b.group_size ?? 0), 0
+  )
+  const cancelledGuests = cancelledNextEvent.reduce(
+    (sum, b) => sum + (b.group_size ?? 0), 0
+  )
+  const totalNextEventTeams = (nextEvent?.bookings ?? []).length
+  const totalNextEventGuests = (nextEvent?.bookings ?? []).reduce(
+    (sum, b) => sum + (b.group_size ?? 0), 0
+  )
 
   // ─── Band calendar calculations ────────────────────────────────────────────
 
@@ -442,55 +459,65 @@ export default async function DashboardPage() {
           />
 
           {nextEvent ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* ── Left: compact next quiz card ── */}
-              <div className="bg-[#26300D] text-white rounded-2xl p-4 space-y-3">
+            <div className="space-y-3">
+              {/* ── Full-width next quiz card ── */}
+              <div className="bg-white border border-[#E6DFC8] rounded-2xl p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#FDCC4B] opacity-80">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
                       Next Quiz Night
                     </p>
-                    <p className="text-lg font-black tracking-tight mt-0.5 leading-tight">
+                    <p className="text-lg font-black tracking-tight text-[#1F1F1A] mt-0.5 leading-tight">
                       {format(parseISO(nextEvent.date), "EEEE do MMMM")}
                     </p>
                     {daysLabel && (
-                      <p className="text-[10px] text-white/50 font-bold mt-0.5">
+                      <p className="text-[10px] text-[#5F624F] font-bold mt-0.5">
                         {daysLabel}
                       </p>
                     )}
                   </div>
-                  <CalendarDays className="w-4 h-4 text-[#FDCC4B] opacity-40 shrink-0 mt-1" />
+                  <CalendarDays className="w-4 h-4 text-[#26300D] opacity-40 shrink-0 mt-1" />
                 </div>
 
-                <div className="grid grid-cols-3 gap-1.5">
-                  <div className="bg-white/10 rounded-xl p-2.5">
-                    <p className="text-xl font-black tabular-nums">
+                <div className="grid grid-cols-4 gap-2">
+                  <div className="bg-[#F7F4EA] rounded-xl p-2.5">
+                    <p className="text-xl font-black tabular-nums text-[#1F1F1A]">
                       {confirmedBookings.length}
                     </p>
-                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mt-0.5">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-[#5F624F] mt-0.5">
                       Teams
                     </p>
                   </div>
-                  <div className="bg-white/10 rounded-xl p-2.5">
-                    <p className="text-xl font-black tabular-nums">{totalGuests}</p>
-                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mt-0.5">
+                  <div className="bg-[#F7F4EA] rounded-xl p-2.5">
+                    <p className="text-xl font-black tabular-nums text-[#1F1F1A]">{totalGuests}</p>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-[#5F624F] mt-0.5">
                       Guests
                     </p>
                   </div>
-                  <div className="bg-white/10 rounded-xl p-2.5">
-                    <p className="text-xl font-black tabular-nums">
+                  <div className="bg-[#F7F4EA] rounded-xl p-2.5">
+                    <p className="text-xl font-black tabular-nums text-[#1F1F1A]">
                       {assignedTableIds.size}
                     </p>
-                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mt-0.5">
+                    <p className="text-[8px] font-black uppercase tracking-widest text-[#5F624F] mt-0.5">
                       Tables
+                    </p>
+                  </div>
+                  <div className="bg-[#F7F4EA] rounded-xl p-2.5">
+                    <p className="text-xl font-black tabular-nums text-[#1F1F1A]">
+                      {quizCategories.length > 0
+                        ? `${categoriesComplete}/${quizCategories.length}`
+                        : "—"}
+                    </p>
+                    <p className="text-[8px] font-black uppercase tracking-widest text-[#5F624F] mt-0.5">
+                      Categories
                     </p>
                   </div>
                 </div>
 
                 {waitlistedNextEvent.length > 0 && (
-                  <div className="flex items-center gap-2 bg-orange-500/20 rounded-xl px-3 py-2">
-                    <Clock3 className="w-3 h-3 text-orange-300 shrink-0" />
-                    <span className="text-[10px] font-black text-orange-200">
+                  <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+                    <Clock3 className="w-3 h-3 text-orange-600 shrink-0" />
+                    <span className="text-[10px] font-black text-orange-700">
                       {waitlistedNextEvent.length} team
                       {waitlistedNextEvent.length !== 1 ? "s" : ""} on waitlist
                     </span>
@@ -498,122 +525,99 @@ export default async function DashboardPage() {
                 )}
               </div>
 
-              {/* ── Right: quiz readiness + waitlisted ── */}
-              <div className="bg-white border border-[#E6DFC8] rounded-2xl p-4 space-y-3 flex flex-col">
+              {/* ── 2-col panel: quiz status + team circles ── */}
+              <div className="bg-white border border-[#E6DFC8] rounded-2xl p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-                {/* Quiz readiness */}
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
-                      Quiz Status
-                    </p>
-                    <Link
-                      href="/quiz-generator"
-                      className="text-[9px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#26300D] transition-colors flex items-center gap-0.5"
-                    >
-                      Generator <ChevronRight className="w-2.5 h-2.5" />
-                    </Link>
-                  </div>
-
-                  {quizStatus === "ready" && (
-                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
-                      <Sparkles className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                      <span className="text-[11px] font-black text-green-700">
-                        Quiz Ready — all categories complete
-                      </span>
+                  {/* Col 1 — Quiz Status */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
+                        Quiz Status
+                      </p>
+                      <Link
+                        href="/quiz-generator"
+                        className="text-[9px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#26300D] transition-colors flex items-center gap-0.5"
+                      >
+                        Generator <ChevronRight className="w-2.5 h-2.5" />
+                      </Link>
                     </div>
-                  )}
 
-                  {quizStatus === "not-started" && (
-                    <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
-                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
-                      <span className="text-[11px] font-black text-rose-700">
-                        Quiz not started — no questions generated
-                      </span>
-                    </div>
-                  )}
-
-                  {quizStatus === "in-progress" && (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
-                        <Clock3 className="w-3 h-3 text-amber-600 shrink-0" />
-                        <span className="text-[10px] font-black text-amber-700">
-                          {incompleteCategories.length} categor{incompleteCategories.length !== 1 ? "ies" : "y"} incomplete
+                    {quizStatus === "ready" && (
+                      <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+                        <Sparkles className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                        <span className="text-[11px] font-black text-green-700">
+                          Quiz Ready — all categories complete
                         </span>
                       </div>
-                      <div className="space-y-1 pl-1">
-                        {incompleteCategories.slice(0, 4).map((cat) => (
-                          <div key={cat.id} className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-[#5F624F] truncate">
-                              {cat.category_name}
-                            </span>
-                            <span className="text-[10px] font-black tabular-nums text-[#1F1F1A] ml-2 shrink-0">
-                              {cat.current}/{cat.target}
-                            </span>
-                          </div>
-                        ))}
-                        {incompleteCategories.length > 4 && (
-                          <p className="text-[9px] text-[#5F624F] font-bold opacity-60">
-                            +{incompleteCategories.length - 4} more
-                          </p>
-                        )}
+                    )}
+
+                    {quizStatus === "not-started" && (
+                      <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                        <span className="text-[11px] font-black text-rose-700">
+                          Quiz not started — no questions generated
+                        </span>
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  {quizStatus === "no-categories" && (
-                    <div className="flex items-center gap-2 bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-2.5">
-                      <span className="text-[11px] font-bold text-[#5F624F]">
-                        No categories configured
-                      </span>
-                    </div>
-                  )}
-                </div>
+                    {quizStatus === "in-progress" && (
+                      <div className="space-y-1.5">
+                        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                          <Clock3 className="w-3 h-3 text-amber-600 shrink-0" />
+                          <span className="text-[10px] font-black text-amber-700">
+                            {incompleteCategories.length} categor{incompleteCategories.length !== 1 ? "ies" : "y"} incomplete
+                          </span>
+                        </div>
+                        <div className="space-y-1 pl-1">
+                          {incompleteCategories.slice(0, 5).map((cat) => (
+                            <div key={cat.id} className="flex items-center justify-between">
+                              <span className="text-[10px] font-bold text-[#5F624F] truncate">
+                                {cat.category_name}
+                              </span>
+                              <span className="text-[10px] font-black tabular-nums text-[#1F1F1A] ml-2 shrink-0">
+                                {cat.current}/{cat.target}
+                              </span>
+                            </div>
+                          ))}
+                          {incompleteCategories.length > 5 && (
+                            <p className="text-[9px] text-[#5F624F] font-bold opacity-60">
+                              +{incompleteCategories.length - 5} more
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
-                <div className="h-px bg-[#E6DFC8]" />
-
-                {/* Waitlisted for next event */}
-                <div className="space-y-2 flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
-                      Waitlisted
-                    </p>
-                    {waitlistedNextEvent.length > 0 && (
-                      <span className="text-[9px] font-black bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">
-                        {waitlistedNextEvent.length}
-                      </span>
+                    {quizStatus === "no-categories" && (
+                      <div className="flex items-center gap-2 bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-2.5">
+                        <span className="text-[11px] font-bold text-[#5F624F]">
+                          No categories configured
+                        </span>
+                      </div>
                     )}
                   </div>
 
-                  {waitlistedNextEvent.length === 0 ? (
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
-                      <span className="text-[11px] font-bold text-[#5F624F]">
-                        No waitlisted teams
-                      </span>
+                  {/* Col 2 — Teams by status */}
+                  <div className="space-y-2 sm:border-l sm:border-[#E6DFC8] sm:pl-4">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
+                        Teams
+                      </p>
+                      <Link
+                        href="/events/quiz-bookings"
+                        className="text-[9px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#26300D] transition-colors flex items-center gap-0.5"
+                      >
+                        View <ChevronRight className="w-2.5 h-2.5" />
+                      </Link>
                     </div>
-                  ) : (
-                    <div className="space-y-1">
-                      {waitlistedNextEvent.slice(0, 3).map((booking) => (
-                        <div key={booking.id} className="flex items-center justify-between">
-                          <span className="text-[11px] font-black text-[#1F1F1A] truncate">
-                            {booking.group_name || booking.contacts?.full_name || "Unknown"}
-                          </span>
-                          <span className="text-[10px] font-bold text-[#5F624F] ml-2 shrink-0">
-                            {booking.group_size} guests
-                          </span>
-                        </div>
-                      ))}
-                      {waitlistedNextEvent.length > 3 && (
-                        <Link
-                          href="/events/quiz-bookings"
-                          className="text-[9px] font-black text-[#5F624F] uppercase tracking-widest hover:text-[#26300D] transition-colors"
-                        >
-                          +{waitlistedNextEvent.length - 3} more →
-                        </Link>
-                      )}
+                    <div className="flex items-start gap-4 flex-wrap">
+                      <QuizStatusCircle teamCount={totalNextEventTeams} guestCount={totalNextEventGuests} label="Total" colorClass="bg-slate-100 border-slate-300 text-slate-700" />
+                      <QuizStatusCircle teamCount={confirmedBookings.length} guestCount={totalGuests} label="Joining" colorClass="bg-green-50 border-green-200 text-green-700" />
+                      <QuizStatusCircle teamCount={waitlistedNextEvent.length} guestCount={waitlistedGuests} label="Waiting" colorClass="bg-orange-50 border-orange-200 text-orange-700" />
+                      <QuizStatusCircle teamCount={cancelledNextEvent.length} guestCount={cancelledGuests} label="Dropped" colorClass="bg-red-50 border-red-200 text-red-700" />
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -915,6 +919,36 @@ export default async function DashboardPage() {
               </div>
             )}
         </section>
+      </div>
+    </div>
+  )
+}
+
+// ─── Quiz Status Circle (static display, no interactivity) ────────────────
+
+function QuizStatusCircle({
+  teamCount,
+  guestCount,
+  label,
+  colorClass,
+}: {
+  teamCount: number
+  guestCount: number
+  label: string
+  colorClass: string
+}) {
+  return (
+    <div className="flex flex-col items-center gap-1.5 min-w-[3rem] shrink-0">
+      <div className={cn("w-11 h-11 rounded-full border-2 flex items-center justify-center", colorClass)}>
+        <span className="text-sm font-black">{teamCount}</span>
+      </div>
+      <div className="flex flex-col items-center leading-none">
+        <span className="text-[9px] font-black uppercase tracking-tight text-[#5F624F]">
+          {label}
+        </span>
+        <span className="text-[8px] font-bold text-[#5F624F] uppercase mt-0.5">
+          {guestCount} Guests
+        </span>
       </div>
     </div>
   )
