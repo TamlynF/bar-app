@@ -13,6 +13,8 @@ import {
   CalendarDays,
   ArrowRight,
   ChevronRight,
+  UserPlus,
+  Sparkles,
 } from "lucide-react"
 import { StatCard } from "./components/stat-card"
 import { PendingReviews } from "./components/pending-reviews"
@@ -80,6 +82,16 @@ type PrivateHireItem = {
   created_at: string
 }
 
+type QuizCategory = {
+  id: number
+  category_name: string
+  question_count: number
+}
+
+type QuizQuestionStat = {
+  quiz_category_configs_id: number | null
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
@@ -91,6 +103,11 @@ export default async function DashboardPage() {
   let pendingPrivateItems: { id: string; name: string; email: string; created_at: string }[] = []
   let bandDateData: BandDateData[] = []
   let privateHireItems: PrivateHireItem[] = []
+  let allBandRequests: { id: string; created_at: string }[] = []
+  let allPrivateRequests: { id: string; created_at: string }[] = []
+  let newContactsCount = 0
+  let quizCategories: QuizCategory[] = []
+  let quizQuestionsForEvent: QuizQuestionStat[] = []
 
   try {
     const supabase = await createClient()
@@ -106,6 +123,9 @@ export default async function DashboardPage() {
       { data: pendingPrivateData },
       { data: bandDatesData },
       { data: privateHireData },
+      { data: bandAllData },
+      { data: privateAllData },
+      { data: contactsData },
     ] = await Promise.all([
       // Stat cards — all quiz bookings (lightweight)
       supabase.from("bookings").select("id, status, created_at"),
@@ -181,6 +201,21 @@ export default async function DashboardPage() {
         .in("status", ["pending_review", "confirmed"])
         .order("created_at", { ascending: false })
         .limit(6),
+
+      // All band requests (for total bookings this month stat)
+      supabase
+        .from("band_booking_requests")
+        .select("id, created_at")
+        .neq("status", "rejected"),
+
+      // All private hire requests (for total bookings this month stat)
+      supabase
+        .from("private_hire_requests")
+        .select("id, created_at")
+        .neq("status", "rejected"),
+
+      // New contacts this month
+      supabase.from("contacts").select("id, created_at"),
     ])
 
     allBookings = (bookingsData as unknown as BookingStat[]) ?? []
@@ -201,16 +236,43 @@ export default async function DashboardPage() {
     }))
     bandDateData = (bandDatesData as unknown as BandDateData[]) ?? []
     privateHireItems = (privateHireData as unknown as PrivateHireItem[]) ?? []
+    allBandRequests = (bandAllData ?? []) as { id: string; created_at: string }[]
+    allPrivateRequests = (privateAllData ?? []) as { id: string; created_at: string }[]
+
+    const contacts = (contactsData ?? []) as { id: string; created_at: string }[]
+    newContactsCount = contacts.filter((c) => {
+      try { return isThisMonth(parseISO(c.created_at)) } catch { return false }
+    }).length
+
+    // Phase 2: quiz readiness (only if next event exists)
+    if (nextEvent) {
+      const [{ data: catsData }, { data: qqData }] = await Promise.all([
+        supabase
+          .from("quiz_category_configs")
+          .select("id, category_name, question_count")
+          .order("category_name", { ascending: true }),
+        supabase
+          .from("past_quiz_questions")
+          .select("quiz_category_configs_id")
+          .eq("events_id", nextEvent.id),
+      ])
+      quizCategories = (catsData as unknown as QuizCategory[]) ?? []
+      quizQuestionsForEvent = (qqData as unknown as QuizQuestionStat[]) ?? []
+    }
   } catch (err) {
     console.error("Dashboard data unavailable:", err)
   }
 
   // ─── Stat card calculations ────────────────────────────────────────────────
 
-  const confirmedThisMonth = allBookings.filter((b) => {
-    if (b.status !== "confirmed") return false
-    try { return isThisMonth(parseISO(b.created_at)) } catch { return false }
-  }).length
+  const thisMonthFilter = (item: { created_at: string }) => {
+    try { return isThisMonth(parseISO(item.created_at)) } catch { return false }
+  }
+
+  const totalBookingsThisMonth =
+    allBookings.filter((b) => b.status !== "cancelled" && thisMonthFilter(b)).length +
+    allBandRequests.filter(thisMonthFilter).length +
+    allPrivateRequests.filter(thisMonthFilter).length
 
   const totalPending = pendingBandItems.length + pendingPrivateItems.length
   const totalActive = allBookings.filter((b) => b.status !== "cancelled").length
@@ -233,7 +295,6 @@ export default async function DashboardPage() {
     0
   )
 
-  // Count unique assigned tables
   const assignedTableIds = new Set(
     confirmedBookings
       .flatMap((b) => b.booking_table_mappings?.map((m) => m.tables?.id))
@@ -252,6 +313,42 @@ export default async function DashboardPage() {
       : daysUntilQuiz === 1
       ? "Tomorrow"
       : `In ${daysUntilQuiz} days`
+
+  // ─── Quiz readiness ────────────────────────────────────────────────────────
+
+  type CategoryReadiness = {
+    id: number
+    category_name: string
+    target: number
+    current: number
+    complete: boolean
+  }
+
+  const categoryReadiness: CategoryReadiness[] = quizCategories.map((cat) => {
+    const current = quizQuestionsForEvent.filter(
+      (q) => q.quiz_category_configs_id === cat.id
+    ).length
+    return {
+      id: cat.id,
+      category_name: cat.category_name,
+      target: cat.question_count,
+      current,
+      complete: current >= cat.question_count,
+    }
+  })
+
+  const quizStatus: "ready" | "in-progress" | "not-started" | "no-event" | "no-categories" =
+    !nextEvent
+      ? "no-event"
+      : quizCategories.length === 0
+      ? "no-categories"
+      : quizQuestionsForEvent.length === 0
+      ? "not-started"
+      : categoryReadiness.every((c) => c.complete)
+      ? "ready"
+      : "in-progress"
+
+  const incompleteCategories = categoryReadiness.filter((c) => !c.complete)
 
   // ─── Band calendar calculations ────────────────────────────────────────────
 
@@ -304,10 +401,16 @@ export default async function DashboardPage() {
         {/* ── Stat Cards ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard
-            label="Confirmed This Month"
-            value={confirmedThisMonth}
+            label="Bookings This Month"
+            value={totalBookingsThisMonth}
             icon={CheckCircle2}
             accent="#16a34a"
+          />
+          <StatCard
+            label="New Contacts"
+            value={newContactsCount}
+            icon={UserPlus}
+            accent="#0284c7"
           />
           <StatCard
             label="Needs Review"
@@ -321,12 +424,6 @@ export default async function DashboardPage() {
             value={waitlistedBookings.length}
             icon={AlertTriangle}
             accent="#7c3aed"
-          />
-          <StatCard
-            label="Total Active"
-            value={totalActive}
-            icon={Users}
-            accent="#26300D"
           />
         </div>
 
@@ -346,54 +443,54 @@ export default async function DashboardPage() {
 
           {nextEvent ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Next Quiz card */}
-              <div className="bg-[#26300D] text-white rounded-2xl p-5 space-y-4">
+              {/* ── Left: compact next quiz card ── */}
+              <div className="bg-[#26300D] text-white rounded-2xl p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div>
-                    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[#FDCC4B] opacity-80">
+                    <p className="text-[9px] font-black uppercase tracking-[0.3em] text-[#FDCC4B] opacity-80">
                       Next Quiz Night
                     </p>
-                    <p className="text-xl font-black tracking-tight mt-1 leading-tight">
+                    <p className="text-lg font-black tracking-tight mt-0.5 leading-tight">
                       {format(parseISO(nextEvent.date), "EEEE do MMMM")}
                     </p>
                     {daysLabel && (
-                      <p className="text-[11px] text-white/50 font-bold mt-0.5">
+                      <p className="text-[10px] text-white/50 font-bold mt-0.5">
                         {daysLabel}
                       </p>
                     )}
                   </div>
-                  <CalendarDays className="w-5 h-5 text-[#FDCC4B] opacity-50 shrink-0 mt-1" />
+                  <CalendarDays className="w-4 h-4 text-[#FDCC4B] opacity-40 shrink-0 mt-1" />
                 </div>
 
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-2xl font-black tabular-nums">
+                <div className="grid grid-cols-3 gap-1.5">
+                  <div className="bg-white/10 rounded-xl p-2.5">
+                    <p className="text-xl font-black tabular-nums">
                       {confirmedBookings.length}
                     </p>
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-50 mt-0.5">
+                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mt-0.5">
                       Teams
                     </p>
                   </div>
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-2xl font-black tabular-nums">{totalGuests}</p>
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-50 mt-0.5">
+                  <div className="bg-white/10 rounded-xl p-2.5">
+                    <p className="text-xl font-black tabular-nums">{totalGuests}</p>
+                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mt-0.5">
                       Guests
                     </p>
                   </div>
-                  <div className="bg-white/10 rounded-xl p-3">
-                    <p className="text-2xl font-black tabular-nums">
+                  <div className="bg-white/10 rounded-xl p-2.5">
+                    <p className="text-xl font-black tabular-nums">
                       {assignedTableIds.size}
                     </p>
-                    <p className="text-[9px] font-black uppercase tracking-widest opacity-50 mt-0.5">
+                    <p className="text-[8px] font-black uppercase tracking-widest opacity-50 mt-0.5">
                       Tables
                     </p>
                   </div>
                 </div>
 
                 {waitlistedNextEvent.length > 0 && (
-                  <div className="flex items-center gap-2 bg-orange-500/20 rounded-xl px-3 py-2.5">
-                    <Clock3 className="w-3.5 h-3.5 text-orange-300 shrink-0" />
-                    <span className="text-[11px] font-black text-orange-200">
+                  <div className="flex items-center gap-2 bg-orange-500/20 rounded-xl px-3 py-2">
+                    <Clock3 className="w-3 h-3 text-orange-300 shrink-0" />
+                    <span className="text-[10px] font-black text-orange-200">
                       {waitlistedNextEvent.length} team
                       {waitlistedNextEvent.length !== 1 ? "s" : ""} on waitlist
                     </span>
@@ -401,60 +498,124 @@ export default async function DashboardPage() {
                 )}
               </div>
 
-              {/* Waitlisted teams card */}
-              {waitlistedBookings.length > 0 ? (
-                <div className="bg-white border border-[#E6DFC8] rounded-2xl p-5 space-y-3">
+              {/* ── Right: quiz readiness + waitlisted ── */}
+              <div className="bg-white border border-[#E6DFC8] rounded-2xl p-4 space-y-3 flex flex-col">
+
+                {/* Quiz readiness */}
+                <div className="space-y-2">
                   <div className="flex items-center justify-between">
-                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
-                      Waitlisted Teams
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
+                      Quiz Status
                     </p>
-                    <span className="text-[10px] font-black bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full">
-                      {waitlistedBookings.length} total
-                    </span>
+                    <Link
+                      href="/quiz-generator"
+                      className="text-[9px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#26300D] transition-colors flex items-center gap-0.5"
+                    >
+                      Generator <ChevronRight className="w-2.5 h-2.5" />
+                    </Link>
                   </div>
-                  <div className="divide-y divide-[#E6DFC8]">
-                    {waitlistedBookings.slice(0, 4).map((booking) => (
-                      <div
-                        key={booking.id}
-                        className="flex items-center justify-between py-2.5"
-                      >
-                        <div className="min-w-0">
-                          <p className="text-sm font-black text-[#1F1F1A] truncate">
-                            {booking.group_name ||
-                              booking.contacts?.full_name ||
-                              "Unknown"}
-                          </p>
-                          <p className="text-[10px] text-[#5F624F] font-bold">
-                            {booking.group_size} guests
-                            {booking.events?.date
-                              ? ` · ${format(parseISO(booking.events.date), "d MMM")}`
-                              : ""}
-                          </p>
-                        </div>
-                        <span className="ml-2 text-[9px] font-black uppercase tracking-widest bg-orange-50 text-orange-600 border border-orange-200 px-2 py-1 rounded-full shrink-0">
-                          Waiting
+
+                  {quizStatus === "ready" && (
+                    <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2.5">
+                      <Sparkles className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                      <span className="text-[11px] font-black text-green-700">
+                        Quiz Ready — all categories complete
+                      </span>
+                    </div>
+                  )}
+
+                  {quizStatus === "not-started" && (
+                    <div className="flex items-center gap-2 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                      <span className="text-[11px] font-black text-rose-700">
+                        Quiz not started — no questions generated
+                      </span>
+                    </div>
+                  )}
+
+                  {quizStatus === "in-progress" && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+                        <Clock3 className="w-3 h-3 text-amber-600 shrink-0" />
+                        <span className="text-[10px] font-black text-amber-700">
+                          {incompleteCategories.length} categor{incompleteCategories.length !== 1 ? "ies" : "y"} incomplete
                         </span>
                       </div>
-                    ))}
-                  </div>
-                  {waitlistedBookings.length > 4 && (
-                    <Link
-                      href="/events/quiz-bookings"
-                      className="text-[10px] font-black text-[#5F624F] uppercase tracking-widest hover:text-[#26300D] transition-colors"
-                    >
-                      +{waitlistedBookings.length - 4} more →
-                    </Link>
+                      <div className="space-y-1 pl-1">
+                        {incompleteCategories.slice(0, 4).map((cat) => (
+                          <div key={cat.id} className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-[#5F624F] truncate">
+                              {cat.category_name}
+                            </span>
+                            <span className="text-[10px] font-black tabular-nums text-[#1F1F1A] ml-2 shrink-0">
+                              {cat.current}/{cat.target}
+                            </span>
+                          </div>
+                        ))}
+                        {incompleteCategories.length > 4 && (
+                          <p className="text-[9px] text-[#5F624F] font-bold opacity-60">
+                            +{incompleteCategories.length - 4} more
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {quizStatus === "no-categories" && (
+                    <div className="flex items-center gap-2 bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-2.5">
+                      <span className="text-[11px] font-bold text-[#5F624F]">
+                        No categories configured
+                      </span>
+                    </div>
                   )}
                 </div>
-              ) : (
-                <div className="bg-white border border-[#E6DFC8] rounded-2xl p-5 flex flex-col items-center justify-center text-center gap-2 min-h-[140px]">
-                  <CheckCircle2 className="w-7 h-7 text-green-500 opacity-60" />
-                  <p className="text-sm font-black text-[#1F1F1A]">No waitlisted teams</p>
-                  <p className="text-[11px] text-[#5F624F] font-bold">
-                    All upcoming bookings confirmed
-                  </p>
+
+                <div className="h-px bg-[#E6DFC8]" />
+
+                {/* Waitlisted for next event */}
+                <div className="space-y-2 flex-1">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
+                      Waitlisted
+                    </p>
+                    {waitlistedNextEvent.length > 0 && (
+                      <span className="text-[9px] font-black bg-orange-100 text-orange-700 px-1.5 py-0.5 rounded-full">
+                        {waitlistedNextEvent.length}
+                      </span>
+                    )}
+                  </div>
+
+                  {waitlistedNextEvent.length === 0 ? (
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-green-500 shrink-0" />
+                      <span className="text-[11px] font-bold text-[#5F624F]">
+                        No waitlisted teams
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      {waitlistedNextEvent.slice(0, 3).map((booking) => (
+                        <div key={booking.id} className="flex items-center justify-between">
+                          <span className="text-[11px] font-black text-[#1F1F1A] truncate">
+                            {booking.group_name || booking.contacts?.full_name || "Unknown"}
+                          </span>
+                          <span className="text-[10px] font-bold text-[#5F624F] ml-2 shrink-0">
+                            {booking.group_size} guests
+                          </span>
+                        </div>
+                      ))}
+                      {waitlistedNextEvent.length > 3 && (
+                        <Link
+                          href="/events/quiz-bookings"
+                          className="text-[9px] font-black text-[#5F624F] uppercase tracking-widest hover:text-[#26300D] transition-colors"
+                        >
+                          +{waitlistedNextEvent.length - 3} more →
+                        </Link>
+                      )}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           ) : (
             <div className="bg-white border border-[#E6DFC8] rounded-2xl p-8 text-center">
