@@ -180,10 +180,14 @@ export default function TablesClient({
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85dvh] flex flex-col outline-none shadow-2xl"
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85dvh]
+            flex flex-col outline-none shadow-2xl
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[520px]
+            sm:h-auto sm:max-h-[80dvh] sm:rounded-[2rem] sm:bottom-6
+            sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sticky header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30">
+          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-[2rem]">
             <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
               {isAdding ? "New Table" : isEditing ? "Edit Table" : (selected?.name ?? "")}
             </SheetTitle>
@@ -202,40 +206,41 @@ export default function TablesClient({
 
             {/* ── VIEW MODE ── */}
             {!showForm && selected && (
-              <div className="space-y-5 animate-in fade-in duration-200">
-
-                <div className={cn(
-                  "flex items-center gap-3 px-5 py-4 rounded-2xl border-2",
-                  selected.available
-                    ? "bg-green-50 border-green-200"
-                    : "bg-red-50 border-red-200"
-                )}>
-                  {selected.available ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-                  ) : (
-                    <XCircle className="w-5 h-5 text-red-500 shrink-0" />
-                  )}
-                  <span className={cn(
-                    "text-sm font-black uppercase tracking-widest",
-                    selected.available ? "text-green-700" : "text-red-600"
+              <div className="space-y-5 animate-in fade-in duration-200 sm:flex sm:flex-col sm:items-center">
+                <div className="w-full sm:max-w-sm space-y-5">
+                  <div className={cn(
+                    "flex items-center gap-3 px-5 py-4 rounded-2xl border-2",
+                    selected.available
+                      ? "bg-green-50 border-green-200"
+                      : "bg-red-50 border-red-200"
                   )}>
-                    {selected.available ? "Available for booking" : "Not available"}
-                  </span>
-                </div>
+                    {selected.available ? (
+                      <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+                    )}
+                    <span className={cn(
+                      "text-sm font-black uppercase tracking-widest",
+                      selected.available ? "text-green-700" : "text-red-600"
+                    )}>
+                      {selected.available ? "Available for booking" : "Not available"}
+                    </span>
+                  </div>
 
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                  <DetailRow label="Table Name" value={selected.name} />
-                  <DetailRow
-                    label="Max Capacity"
-                    value={`${selected.max_capacity} guests`}
-                    icon={<Users className="w-4 h-4" />}
-                  />
-                  {selected.description && (
-                    <DetailRow label="Location / Notes" value={selected.description} />
-                  )}
-                </div>
+                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+                    <DetailRow label="Table Name" value={selected.name} />
+                    <DetailRow
+                      label="Max Capacity"
+                      value={`${selected.max_capacity} guests`}
+                      icon={<Users className="w-4 h-4" />}
+                    />
+                    {selected.description && (
+                      <DetailRow label="Location / Notes" value={selected.description} />
+                    )}
+                  </div>
 
-                {formError && <ErrorBox message={formError} />}
+                  {formError && <ErrorBox message={formError} />}
+                </div>
               </div>
             )}
 
@@ -244,74 +249,86 @@ export default function TablesClient({
               <form
                 id="table-form"
                 action={handleSubmit}
-                className="space-y-5 animate-in fade-in duration-200"
+                className="animate-in fade-in duration-200"
               >
                 {formDefault && (
                   <input type="hidden" name="id" value={formDefault.id} />
                 )}
 
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
-                    Table Name <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    name="name"
-                    placeholder="e.g. Window Booth 1"
-                    defaultValue={formDefault?.name ?? ""}
-                    required
-                    className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
-                  />
-                </div>
+                {/* Mobile: stacked · Desktop: 2-column grid */}
+                <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-4">
 
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
-                    Max Capacity <span className="text-red-500">*</span>
-                  </Label>
-                  <div className="flex items-center h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white focus-within:border-[#26300D] transition-all overflow-hidden">
-                    <div className="flex items-center justify-center px-4 h-full border-r-2 border-[#E6DFC8] shrink-0">
-                      <Users className="w-4 h-4 text-[#5F624F]" />
-                    </div>
-                    <input
-                      name="capacity"
-                      type="number"
-                      min={1}
-                      placeholder="4"
+                  {/* Table Name — full width */}
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                      Table Name <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      name="name"
+                      placeholder="e.g. Window Booth 1"
+                      defaultValue={formDefault?.name ?? ""}
                       required
-                      defaultValue={formDefault?.max_capacity ?? ""}
-                      className="flex-1 h-full px-4 text-sm font-bold bg-transparent outline-none text-[#1F1F1A] placeholder:text-[#5F624F]/40"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
                     />
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
-                    Location / Notes
-                  </Label>
-                  <Input
-                    name="description"
-                    placeholder="e.g. Near the fireplace, quiet corner..."
-                    defaultValue={formDefault?.description ?? ""}
-                    className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
-                  />
-                </div>
-
-                <div className="flex items-center justify-between bg-white border-2 border-[#E6DFC8] rounded-2xl px-5 py-4">
-                  <div>
-                    <p className="text-sm font-black text-[#1F1F1A]">Available for booking</p>
-                    <p className="text-[11px] text-[#5F624F] font-medium mt-0.5">
-                      Allow this table to be assigned to bookings
-                    </p>
+                  {/* Max Capacity */}
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                      Max Capacity <span className="text-red-500">*</span>
+                    </Label>
+                    <div className="flex items-center h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white focus-within:border-[#26300D] transition-all overflow-hidden">
+                      <div className="flex items-center justify-center px-4 h-full border-r-2 border-[#E6DFC8] shrink-0">
+                        <Users className="w-4 h-4 text-[#5F624F]" />
+                      </div>
+                      <input
+                        name="capacity"
+                        type="number"
+                        min={1}
+                        placeholder="4"
+                        required
+                        defaultValue={formDefault?.max_capacity ?? ""}
+                        className="flex-1 h-full px-3 text-sm font-bold bg-transparent outline-none text-[#1F1F1A] placeholder:text-[#5F624F]/40"
+                      />
+                    </div>
                   </div>
-                  <input
-                    title="Available for booking"
-                    type="checkbox"
-                    name="available"
-                    className="h-5 w-5 rounded accent-[#26300D] shrink-0 cursor-pointer"
-                    defaultChecked={formDefault ? formDefault.available : true}
-                  />
-                </div>
 
-                {formError && <ErrorBox message={formError} />}
+                  {/* Available checkbox — beside capacity on desktop */}
+                  <div className="flex items-center justify-between bg-white border-2 border-[#E6DFC8] rounded-2xl px-5 py-4">
+                    <div>
+                      <p className="text-sm font-black text-[#1F1F1A]">Available for booking</p>
+                      <p className="text-[11px] text-[#5F624F] font-medium mt-0.5">
+                        Allow this table to be assigned to bookings
+                      </p>
+                    </div>
+                    <input
+                      title="Available for booking"
+                      type="checkbox"
+                      name="available"
+                      className="h-5 w-5 rounded accent-[#26300D] shrink-0 cursor-pointer"
+                      defaultChecked={formDefault ? formDefault.available : true}
+                    />
+                  </div>
+
+                  {/* Location / Notes — full width */}
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                      Location / Notes
+                    </Label>
+                    <Input
+                      name="description"
+                      placeholder="e.g. Near the fireplace, quiet corner..."
+                      defaultValue={formDefault?.description ?? ""}
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                    />
+                  </div>
+
+                  {formError && (
+                    <div className="sm:col-span-2">
+                      <ErrorBox message={formError} />
+                    </div>
+                  )}
+                </div>
               </form>
             )}
 
@@ -319,11 +336,11 @@ export default function TablesClient({
           </div>
 
           {/* Sticky footer */}
-          <div className="shrink-0 p-5 pb-10 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40">
+          <div className="shrink-0 p-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-[2rem]">
 
             {/* View mode */}
             {!showForm && selected && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:max-w-sm sm:mx-auto">
                 <Button
                   variant="ghost"
                   onClick={handleDelete}
@@ -347,7 +364,7 @@ export default function TablesClient({
 
             {/* Edit / Add mode */}
             {showForm && (
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 sm:max-w-sm sm:mx-auto">
                 <Button
                   type="button"
                   variant="outline"

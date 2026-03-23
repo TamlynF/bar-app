@@ -1633,6 +1633,33 @@
       background-color: color-mix(in oklab, var(--color-purple-500) 10%, transparent);
     }
   }
+  .bg-purple-500\/20 {
+    background-color: color-mix(in srgb, oklch(62.7% 0.265 303.9) 20%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-purple-500) 20%, transparent);
+    }
+  }
+  .bg-pink-500 {
+    background-color: var(--color-pink-500);
+  }
+  .bg-rose-500 {
+    background-color: var(--color-rose-500);
+  }
+  .bg-rose-500\/10 {
+    background-color: color-mix(in srgb, oklch(63.7% 0.17 25.331) 10%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-rose-500) 10%, transparent);
+    }
+  }
+  .bg-rose-500\/20 {
+    background-color: color-mix(in srgb, oklch(63.7% 0.17 25.331) 20%, transparent);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-rose-500) 20%, transparent);
+    }
+  }
+  .bg-rose-600 {
+    background-color: var(--color-rose-600);
+  }
   .bg-red-50 {
     background-color: var(--color-red-50);
   }
@@ -2192,6 +2219,9 @@
   }
   .text-pink-500 {
     color: var(--color-pink-500);
+  }
+  .text-rose-600 {
+    color: var(--color-rose-600);
   }
   .text-popover-foreground {
     color: var(--popover-foreground);

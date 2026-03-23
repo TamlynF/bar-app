@@ -515,23 +515,23 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               <span ref={topFocusRef} tabIndex={-1} className="sr-only" />
               
               {/* HEADER: Reference visible + Edit/Delete buttons top right */}
-              <div className="shrink-0 p-6 pb-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 flex flex-row items-start justify-between gap-4">
+              <div className="shrink-0 p-2 pb-2 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 flex flex-row items-start justify-between gap-2">
                 <div className="flex-1 min-w-0 text-left">
-                  <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+                  <SheetTitle className="text-xl sm:text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
                     {isEditing ? "Modify Record" : (selectedBooking.group_name || "Guest Team")}
                   </SheetTitle>
                   
-                  {/* REFERENCE ID: Now positioned directly below the title */}
-                  <div className="flex items-center gap-1.5 mt-1.5 opacity-50">
+                  {/* REFERENCE ID */}
+                  <div className="flex items-center gap-1.5 mt-1">
                     <Hash className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-[10px] font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
                       Ref: {selectedBooking.id}
                     </span>
                   </div>
                 </div>
 
                 {/* TOP RIGHT ACTION GROUP (Positions buttons next to the sheet close 'X') */}
-                <div className="flex items-center gap-2 pt-1 pr-10">
+{/*                 <div className="flex items-center gap-2 pt-1 pr-10">
                   {!isEditing && (
                     <>
                       <Button 
@@ -557,23 +557,29 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                       </Button>
                     </>
                   )}
-                </div>
+                </div> */}
               </div>
 
               {/* Scrollable Body */}
-              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-8 space-y-8 min-h-0 touch-pan-y overscroll-contain text-left">
+              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-6 min-h-0 touch-pan-y overscroll-contain text-left">
                 
-                {/* STATUS BADGE: Now inside the scrollable body content */}
+                {/* STATUS + GROUP SIZE BANNER */}
                 {!isEditing && (
-                  <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <div className={cn(
-                      "inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border shadow-sm",
-                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
-                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.text,
-                      statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
-                    )}>
-                      <div className={cn("w-1.5 h-1.5 rounded-full", statusTheme[normStatus(selectedBooking.status) || "pending"]?.dot)} />
-                      {normStatus(selectedBooking.status) || "pending"}
+                  <div className={cn(
+                    "flex items-center justify-between w-full px-5 py-4 rounded-2xl border-2 animate-in fade-in slide-in-from-top-2 duration-300",
+                    statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
+                    statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
+                  )}>
+                    <div className="flex items-center gap-2.5">
+                      <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", statusTheme[normStatus(selectedBooking.status) || "pending"]?.dot)} />
+                      <span className={cn("text-sm font-black uppercase tracking-widest", statusTheme[normStatus(selectedBooking.status) || "pending"]?.text)}>
+                        {normStatus(selectedBooking.status) || "pending"}
+                      </span>
+                    </div>
+                    <div className={cn("flex items-center gap-1.5", statusTheme[normStatus(selectedBooking.status) || "pending"]?.text)}>
+                      <Users className="w-4 h-4 opacity-50" />
+                      <span className="text-2xl font-black tabular-nums leading-none">{selectedBooking.group_size}</span>
+                      <span className="text-[10px] font-bold opacity-50 uppercase self-end mb-0.5">guests</span>
                     </div>
                   </div>
                 )}
@@ -618,7 +624,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     <div className="space-y-2">
                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Team Size</Label>
                       <div className="grid grid-cols-5 gap-2">
-                        {[2, 3, 4, 5, 6].map(size => (
+                        {[4, 5, 6].map(size => (
                           <button
                             key={size}
                             type="button"
@@ -730,11 +736,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                       </div>
                     )}
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <DetailTile icon={<Calendar className="w-4 h-4" />} label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMM yyyy") : "—"} />
-                      <DetailTile icon={<Users className="w-4 h-4" />} label="Team Size" value={`${selectedBooking.group_size} Guests`} />
-                      <DetailTile icon={<LayoutDashboard className="w-4 h-4" />} label="Seating" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
-                      <DetailTile icon={<Clock3 className="w-4 h-4" />} label="Booked On" value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "HH:mm, do MMM") : "—"} />
+                    <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden shadow-sm">
+                      <InfoRow icon={<Calendar className="w-4 h-4" />}      label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMMM yyyy") : "—"} />
+                      <InfoRow icon={<TableIcon className="w-4 h-4" />}     label="Table"      value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
+                      <InfoRow icon={<Clock3 className="w-4 h-4" />}        label="Booked On"  value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "HH:mm · do MMM yyyy") : "—"} />
                     </div>
 
                     <div className="space-y-3">
@@ -745,7 +750,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                         </div>
                         <div className="min-w-0 flex-1 text-left">
                           <p className="text-base font-black text-[#1F1F1A] uppercase tracking-tight truncate">{selectedBooking.contacts?.full_name}</p>
-                          <p className="text-xs font-bold text-[#5F624F] opacity-60 truncate mt-0.5">{selectedBooking.contacts?.email}</p>
+                          <p className="text-xs font-bold text-[#5F624F] opacity-60 break-all mt-0.5">{selectedBooking.contacts?.email}</p>
                         </div>
                         <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-4 bg-[#26300D]/5 rounded-2xl text-[#26300D] hover:bg-[#26300D] hover:text-white transition-all active:scale-95 shadow-xs">
                           <ExternalLink className="w-5 h-5" />
@@ -789,19 +794,28 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </Button>
                   </div>
                 ) : (
-                  <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-1">
                     <div className="grid grid-cols-2 gap-3">
-                      <Button asChild className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95">
-                        <Link href={`/manage-booking/${selectedBooking.id}`}>
-                          <ExternalLink className="w-4 h-4 mr-2" /> Open Link
-                        </Link>
+                        <Button
+                          variant="ghost"
+                          className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
+                           onClick={(e) => {
+                          e.stopPropagation();
+                          if(window.confirm("Permanently delete this booking?")) handleDeleteBooking(selectedBooking.id)
+                          }}
+                          title="Delete Record"
+                        >
+                          <><Trash2 className="w-4 h-4 mr-2" />Delete</>
+                            
                       </Button>
                       <Button 
-                        variant="outline" 
-                        onClick={handleEnterEditMode}
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
+                          variant="outline" 
+                          title="Edit Details"
+                          onClick={handleEnterEditMode}
+                          className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                        
                       >
-                        Modify Details
+                        <><Pencil className="w-4 h-4 mr-2" />Edit</>
                       </Button>
                     </div>
                   </div>
@@ -917,6 +931,18 @@ function DetailTile({ icon, label, value }: { icon: React.ReactNode; label: stri
         <span className="text-[9px] font-black uppercase tracking-widest">{label}</span>
       </div>
       <span className="text-[#1F1F1A] font-black text-sm uppercase truncate">{value}</span>
+    </div>
+  )
+}
+
+function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E6DFC8] last:border-0">
+      <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
+        {icon}
+        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{label}</span>
+      </div>
+      <span className="text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">{value}</span>
     </div>
   )
 }
