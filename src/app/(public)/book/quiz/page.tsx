@@ -90,8 +90,8 @@ export default async function QuizBookingPage() {
             <Image
               src="/DF X PJ Quiz Night.png"
               alt="Don Fenticas x Papa Johns Quiz Night"
-              width={400}
-              height={180}
+              width={300}
+              height={150}
               className="w-full h-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
               priority
             />

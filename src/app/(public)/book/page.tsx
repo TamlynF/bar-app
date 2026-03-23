@@ -56,21 +56,25 @@ export default function BookingHubPage() {
         <h1 className="text-white font-black text-3xl sm:text-4xl uppercase tracking-tight leading-none mb-3">
           Don Fenticas
         </h1> */}
+        
         <Image
           src="/CompanyName.png"
           alt="Don Fenticas Logo"
-          width={400}
-          height={120}
+          width={300}
+          height={80}
           className="w-full h-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
           priority
-        />
-        <h2 className="pt-5 text-white font-black text-2xl sm:text-3xl uppercase tracking-tight leading-none mb-3">
+          />
+      
+      <div className="w-full max-w-sm mx-auto mt-15">
+        <h2 className="text-white font-black text-xl sm:text-3xl uppercase tracking-tight leading-none mb-3">
           Book Your Experience
         </h2>
         <p className="text-stone-400 text-sm font-medium leading-relaxed">
           Choose how you&apos;d like to book with us.
         </p>
       </div>
+        </div>
 
       {/* Booking Cards */}
       <div className="w-full max-w-2xl space-y-4">
@@ -78,7 +82,7 @@ export default function BookingHubPage() {
           <Link
             key={opt.href}
             href={opt.href}
-            className="group flex items-center gap-4 bg-white/10 hover:bg-white/[0.15] border border-white/20 hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
+            className="group flex items-center gap-4 bg-white/5 hover:bg-white/[0.15] border border-white/20 hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
           >
             {/* Icon */}
             <div className={`shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center ${opt.iconClass}`}>

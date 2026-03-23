@@ -9,7 +9,8 @@
       "mcp__claude_ai_Supabase__execute_sql",
       "Bash(npm run:*)",
       "Bash(find \"C:/RN/bar-app/src/app/\\(private\\)\" -type f -name \"*.tsx\")",
-      "Bash(find \"C:/RN/bar-app/src/app/\\(public\\)\" -type f -name \"*.tsx\")"
+      "Bash(find \"C:/RN/bar-app/src/app/\\(public\\)\" -type f -name \"*.tsx\")",
+      "Bash(cd:*)"
     ]
   }
 }
