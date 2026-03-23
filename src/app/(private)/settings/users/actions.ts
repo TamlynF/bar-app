@@ -8,7 +8,13 @@ export async function saveEmployeeAction(formData: FormData) {
   const supabase = await createClient();
   
   const id = formData.get("id")?.toString();
-  
+  console.log("Received form data for employee:", {
+    id,
+    full_name: formData.get("full_name")?.toString(),
+    email: formData.get("email")?.toString(),
+    role: formData.get("role")?.toString(),
+  });
+
   // Extracting data matching the schema
   const payload = {
     full_name: formData.get("full_name")?.toString() || "",
@@ -30,6 +36,8 @@ export async function saveEmployeeAction(formData: FormData) {
   // Resolve current logged-in user to an employee id
   let currentEmployeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
+  console.log("Current logged-in user:", user);
+
   if (user?.email) {
     const { data: emp } = await supabase
       .from("employees")
@@ -63,10 +71,18 @@ export async function saveEmployeeAction(formData: FormData) {
       ? `https://${process.env.VERCEL_URL}` 
           : 'http://localhost:3000';
       
+      console.log("Invite Email:", payload.email);
+      console.log("Environment variables:", {
+        NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+        VERCEL_URL: process.env.VERCEL_URL,
+      });
+      console.log("Redirect URL for invite:", redirectUrl);
       const { data: inviteData, error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(
         payload.email,
-        { redirectTo: `${redirectUrl}/dashboard` }
+        { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard` }
       );
+
+      console.log("Invite result:", { inviteError });
 
       if (inviteError && inviteError.message !== "User already registered") {
         throw new Error(`Failed to send login invite: ${inviteError.message}`);

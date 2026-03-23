@@ -12,7 +12,8 @@
       "Bash(find \"C:/RN/bar-app/src/app/\\(public\\)\" -type f -name \"*.tsx\")",
       "Bash(cd:*)",
       "Bash(find:*)",
-      "Bash(grep -E '\\\\.tsx$|\\\\.ts$')"
+      "Bash(grep -E '\\\\.tsx$|\\\\.ts$')",
+      "mcp__claude_ai_Supabase__get_logs"
     ]
   }
 }
