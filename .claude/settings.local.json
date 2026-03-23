@@ -13,7 +13,8 @@
       "Bash(cd:*)",
       "Bash(find:*)",
       "Bash(grep -E '\\\\.tsx$|\\\\.ts$')",
-      "mcp__claude_ai_Supabase__get_logs"
+      "mcp__claude_ai_Supabase__get_logs",
+      "Bash(wait:*)"
     ]
   }
 }

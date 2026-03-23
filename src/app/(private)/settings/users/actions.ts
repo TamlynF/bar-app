@@ -79,7 +79,7 @@ export async function saveEmployeeAction(formData: FormData) {
       console.log("Redirect URL for invite:", redirectUrl);
       const { data: inviteData, error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(
         payload.email,
-        { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard` }
+        { redirectTo: `${redirectUrl}/accept-invite` }
       );
 
       console.log("Invite result:", { inviteError });
