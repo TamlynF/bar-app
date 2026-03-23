@@ -4,32 +4,23 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { 
-  Plus, 
-  Edit2, 
-  Trash2, 
-  Loader2, 
-  CheckCircle2, 
-  XCircle, 
-  MoreVertical, 
+  Plus,
+  Loader2,
+  CheckCircle2,
+  XCircle,
   Users,
+  ChevronRight,
+  Pencil,
+  Trash2,
+  Save,
   LayoutDashboard,
-  AlertCircle
+  AlertCircle,
+  Hash,
 } from "lucide-react";
 import { saveTableAction, deleteTableAction } from "./actions";
+import { cn } from "@/lib/utils";
 
 export type Table = {
   id: number;
@@ -39,35 +30,42 @@ export type Table = {
   description: string | null;
 };
 
-export default function TablesClient({ initialTables = [] }: { initialTables: Table[] }) {
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
-  const [editingTable, setEditingTable] = useState<Table | null>(null); 
+export default function TablesClient({
+  initialTables = [],
+}: {
+  initialTables: Table[];
+}) {
+  const [selected, setSelected] = useState<Table | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
 
-  const handleOpenEdit = (table: Table) => {
+  // ── Sheet helpers ─────────────────────────────────────────────────────────
+  const isSheetOpen = !!selected || isAdding;
+
+  const openView = (table: Table) => {
     setFormError(null);
-    setEditingTable(table);
-    setIsSheetOpen(true);
+    setIsEditing(false);
+    setIsAdding(false);
+    setSelected(table);
   };
 
-  const handleOpenAdd = () => {
+  const openAdd = () => {
     setFormError(null);
-    setEditingTable(null);
-    setIsSheetOpen(true);
+    setIsEditing(false);
+    setSelected(null);
+    setIsAdding(true);
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("Are you sure you want to delete this table? This cannot be undone if the table has no associated history.")) {
-      startTransition(async () => {
-        const result = await deleteTableAction(id);
-        if (result?.error) {
-          alert(result.error);
-        }
-      });
-    }
+  const closeSheet = () => {
+    setSelected(null);
+    setIsAdding(false);
+    setIsEditing(false);
+    setFormError(null);
   };
 
+  // ── Actions ───────────────────────────────────────────────────────────────
   const handleSubmit = (formData: FormData) => {
     setFormError(null);
     startTransition(async () => {
@@ -75,252 +73,343 @@ export default function TablesClient({ initialTables = [] }: { initialTables: Ta
       if (result?.error) {
         setFormError(result.error);
       } else {
-        setIsSheetOpen(false);
+        closeSheet();
       }
     });
   };
 
+  const handleDelete = () => {
+    if (!selected) return;
+    if (
+      window.confirm(
+        "Delete this table? This cannot be undone if it has booking history."
+      )
+    ) {
+      startTransition(async () => {
+        const result = await deleteTableAction(selected.id);
+        if (result?.error) {
+          setFormError(result.error);
+        } else {
+          closeSheet();
+        }
+      });
+    }
+  };
+
+  const showForm = isAdding || isEditing;
+  const formDefault = isEditing ? selected : null;
+
   return (
-    <div className="p-6 sm:p-6">
-      {/* Page Header */}
-      <div className="flex items-center justify-between pb-4 border-b">
-        <div className="pr-4">
-          <p className="text-xs text-muted-foreground line-clamp-1">
-            Manage floor plan and seat capacities.
+    <div className="p-4 md:p-6 space-y-4 max-w-2xl">
+
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between">
+        <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+          {initialTables.length} table{initialTables.length !== 1 ? "s" : ""}
+        </p>
+        <Button
+          onClick={openAdd}
+          size="sm"
+          className="h-9 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/90"
+        >
+          <Plus className="w-3.5 h-3.5 mr-1.5" />
+          Add Table
+        </Button>
+      </div>
+
+      {/* ── Card List ── */}
+      {initialTables.length === 0 ? (
+        <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
+          <LayoutDashboard className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
+          <p className="text-sm font-black text-[#1F1F1A]">No tables yet</p>
+          <p className="text-[11px] text-[#5F624F] mt-1">
+            Add your first table to get started
           </p>
         </div>
-      </div>
+      ) : (
+        <div className="space-y-2">
+          {initialTables.map((table) => (
+            <div
+              key={table.id}
+              onClick={() => openView(table)}
+              className="bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:border-[#26300D]/30 hover:shadow-sm transition-all active:scale-[0.99]"
+            >
+              {/* Icon */}
+              <div className="w-10 h-10 rounded-xl bg-[#F7F4EA] flex items-center justify-center shrink-0">
+                <LayoutDashboard className="w-4 h-4 text-[#26300D]" />
+              </div>
 
-      {/* Sheet Modal */}
-      <Sheet open={isSheetOpen} onOpenChange={(open) => {
-        setIsSheetOpen(open);
-        if (!open) setFormError(null);
-      }}>
-        <SheetContent side="right" className="w-full sm:max-w-md h-full flex flex-col p-0 gap-0 border-l border-border/50">
-          <SheetHeader className="px-6 pt-6 pb-4 text-left border-b border-border/40 shrink-0">
-            <SheetTitle className="text-xl font-bold">
-              {editingTable ? "Edit Table" : "Add New Table"}
+              {/* Text */}
+              <div className="flex-1 min-w-0">
+                <p className="font-black text-[#1F1F1A] truncate">{table.name}</p>
+                {table.description && (
+                  <p className="text-[11px] text-[#5F624F] font-medium truncate mt-0.5">
+                    {table.description}
+                  </p>
+                )}
+              </div>
+
+              {/* Badges */}
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="flex items-center gap-1 text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-1 rounded-lg">
+                  <Users className="w-3 h-3" />
+                  {table.max_capacity}
+                </span>
+                {table.available ? (
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                ) : (
+                  <XCircle className="w-4 h-4 text-red-400" />
+                )}
+              </div>
+
+              <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ══════════════════════════════
+          BOTTOM SHEET
+      ══════════════════════════════ */}
+      <Sheet
+        open={isSheetOpen}
+        onOpenChange={(open) => {
+          if (!open) closeSheet();
+        }}
+      >
+        <SheetContent
+          side="bottom"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85dvh] flex flex-col outline-none shadow-2xl"
+        >
+          {/* Sticky header */}
+          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30">
+            <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+              {isAdding ? "New Table" : isEditing ? "Edit Table" : (selected?.name ?? "")}
             </SheetTitle>
-            <SheetDescription className="text-sm text-muted-foreground">
-              {editingTable 
-                ? "Update the configuration for this physical table." 
-                : "Define a new table for your reservation system."}
-            </SheetDescription>
-          </SheetHeader>
-          
-          <form action={handleSubmit} className="flex flex-col flex-1 min-h-0 overflow-hidden bg-background/50">
-            {editingTable && <input type="hidden" name="id" value={editingTable.id} />}
-            
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
-              {/* Table Number */}
-              <div className="space-y-3">
-                <Label htmlFor="name" className="text-sm font-semibold">Table No. <span className="text-destructive">*</span></Label>
-                <Input 
-                  id="name" 
-                  name="name" 
-                  placeholder="e.g. Window Booth 1" 
-                  defaultValue={editingTable?.name || ""} 
-                  required
-                  className="h-11 rounded-xl shadow-sm bg-white dark:bg-slate-900"
-                />
+            {selected && !isEditing && (
+              <div className="flex items-center gap-1.5 mt-1">
+                <Hash className="w-3 h-3 text-[#5F624F]" />
+                <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                  ID: {selected.id}
+                </span>
               </div>
+            )}
+          </div>
 
-              {/* Max Capacity */}
-              <div className="space-y-3">
-                <Label htmlFor="capacity" className="text-sm font-semibold">Max Capacity <span className="text-destructive">*</span></Label>
-                <div className="relative group">
-                  <Input 
-                    id="capacity" 
-                    name="capacity" 
-                    type="number" 
-                    min={1} 
-                    placeholder="e.g. 4" 
-                    required
-                    defaultValue={editingTable?.max_capacity || ""} 
-                    className="h-11 rounded-xl pl-10 shadow-sm bg-white dark:bg-slate-900"
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0 touch-pan-y space-y-5">
+
+            {/* ── VIEW MODE ── */}
+            {!showForm && selected && (
+              <div className="space-y-5 animate-in fade-in duration-200">
+
+                <div className={cn(
+                  "flex items-center gap-3 px-5 py-4 rounded-2xl border-2",
+                  selected.available
+                    ? "bg-green-50 border-green-200"
+                    : "bg-red-50 border-red-200"
+                )}>
+                  {selected.available ? (
+                    <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-red-500 shrink-0" />
+                  )}
+                  <span className={cn(
+                    "text-sm font-black uppercase tracking-widest",
+                    selected.available ? "text-green-700" : "text-red-600"
+                  )}>
+                    {selected.available ? "Available for booking" : "Not available"}
+                  </span>
+                </div>
+
+                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+                  <DetailRow label="Table Name" value={selected.name} />
+                  <DetailRow
+                    label="Max Capacity"
+                    value={`${selected.max_capacity} guests`}
+                    icon={<Users className="w-4 h-4" />}
                   />
-                  <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  {selected.description && (
+                    <DetailRow label="Location / Notes" value={selected.description} />
+                  )}
                 </div>
-                <p className="text-[11px] text-muted-foreground italic px-1">
-                  The maximum number of guests this table can accommodate.
-                </p>
-              </div>
 
-              {/* Description */}
-              <div className="space-y-3">
-                <Label htmlFor="description" className="text-sm font-semibold">Location / Description</Label>
-                <Input 
-                  id="description" 
-                  name="description" 
-                  placeholder="e.g. Near the fireplace, quiet corner..." 
-                  defaultValue={editingTable?.description || ""} 
-                  className="h-11 rounded-xl shadow-sm bg-white dark:bg-slate-900"
-                />
+                {formError && <ErrorBox message={formError} />}
               </div>
+            )}
 
-              {/* Availability Toggle */}
-              <div className="p-4 rounded-2xl border bg-muted/20 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="available" className="text-sm font-bold">Currently Available</Label>
-                    <p className="text-xs text-muted-foreground">Allow this table to be booked.</p>
-                  </div>
-                  <Input 
-                    type="checkbox" 
-                    id="available" 
-                    name="available"
-                    className="h-6 w-6 rounded-lg border-primary/20 accent-[#26300D]"
-                    defaultChecked={editingTable ? editingTable.available : true}
-                  />
-                </div>
-              </div>
-
-              {/* Error Display */}
-              {formError && (
-                <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
-                  <p className="text-sm text-destructive font-medium leading-snug">{formError}</p>
-                </div>
-              )}
-            </div>
-            
-            {/* Fixed Footer */}
-            <div className="shrink-0 border-t border-border/40 bg-card/95 backdrop-blur p-4 pb-10 sm:pb-4 sm:px-6 flex flex-row justify-end gap-3 z-10">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setIsSheetOpen(false)}
-                disabled={isPending}
-                className="flex-1 sm:flex-none h-11 rounded-xl font-bold uppercase tracking-wider text-[10px]"
+            {/* ── EDIT / ADD FORM ── */}
+            {showForm && (
+              <form
+                id="table-form"
+                action={handleSubmit}
+                className="space-y-4 animate-in fade-in duration-200"
               >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isPending} className="flex-1 sm:flex-none h-11 rounded-xl font-black uppercase tracking-widest text-[10px] shadow-md">
-                {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {editingTable ? "Update" : "Save"}
-              </Button>
-            </div>
-          </form>
+                {formDefault && (
+                  <input type="hidden" name="id" value={formDefault.id} />
+                )}
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                    Table Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    name="name"
+                    placeholder="e.g. Window Booth 1"
+                    defaultValue={formDefault?.name ?? ""}
+                    required
+                    className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                    Max Capacity <span className="text-red-500">*</span>
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      name="capacity"
+                      type="number"
+                      min={1}
+                      placeholder="4"
+                      required
+                      defaultValue={formDefault?.max_capacity ?? ""}
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white pl-12 pr-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                    />
+                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F]" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                    Location / Notes
+                  </Label>
+                  <Input
+                    name="description"
+                    placeholder="e.g. Near the fireplace, quiet corner..."
+                    defaultValue={formDefault?.description ?? ""}
+                    className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between bg-white border-2 border-[#E6DFC8] rounded-2xl px-5 py-4">
+                  <div>
+                    <p className="text-sm font-black text-[#1F1F1A]">Available for booking</p>
+                    <p className="text-[11px] text-[#5F624F] font-medium mt-0.5">
+                      Allow this table to be assigned to bookings
+                    </p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    name="available"
+                    className="h-5 w-5 rounded accent-[#26300D] shrink-0 cursor-pointer"
+                    defaultChecked={formDefault ? formDefault.available : true}
+                  />
+                </div>
+
+                {formError && <ErrorBox message={formError} />}
+              </form>
+            )}
+
+            <div className="h-4" />
+          </div>
+
+          {/* Sticky footer */}
+          <div className="shrink-0 p-5 pb-10 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40">
+
+            {/* View mode */}
+            {!showForm && selected && (
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="ghost"
+                  onClick={handleDelete}
+                  disabled={isPending}
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
+                >
+                  {isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <><Trash2 className="w-4 h-4 mr-2" />Delete</>
+                  )}
+                </Button>
+                <Button
+                  onClick={() => { setFormError(null); setIsEditing(true); }}
+                  className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                >
+                  <Pencil className="w-4 h-4 mr-2" />Edit
+                </Button>
+              </div>
+            )}
+
+            {/* Edit / Add mode */}
+            {showForm && (
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setFormError(null);
+                    if (isAdding) closeSheet();
+                    else setIsEditing(false);
+                  }}
+                  disabled={isPending}
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px] bg-white"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form="table-form"
+                  disabled={isPending}
+                  className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                >
+                  {isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <><Save className="w-4 h-4 mr-2" />Save</>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
 
-      {/* Data Table */}
-      <div className="mt-6 border rounded-2xl overflow-hidden bg-card shadow-sm transition-all border-[#E6DFC8]">
-        {/* Table Toolbar */}
-        <div className="p-3 border-b border-[#E6DFC8] bg-muted/5 flex items-center justify-between">
-           <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground ml-1"></span>
-           <Button onClick={handleOpenAdd} size="sm" className="font-bold uppercase tracking-wider text-[10px] h-8 px-3 rounded-xl">
-             <Plus className="w-3.5 h-3.5 mr-1.5" />
-             Add
-           </Button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse min-w-[320px]">
-            <thead className="bg-muted/30 border-b border-[#E6DFC8]">
-              <tr>
-                <th className="px-2 sm:px-4 py-4 font-black uppercase tracking-widest text-[9px] sm:text-[10px] text-muted-foreground">No.</th>
-                <th className="px-2 sm:px-4 py-4 font-black uppercase tracking-widest text-[9px] sm:text-[10px] text-muted-foreground text-center">Capacity</th>
-                <th className="px-2 sm:px-4 py-4 font-black uppercase tracking-widest text-[9px] sm:text-[10px] text-muted-foreground">Available</th>
-                <th className="px-2 sm:px-4 py-4 font-black uppercase tracking-widest text-[9px] sm:text-[10px] text-muted-foreground text-right">Edit</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/40">
-              {initialTables.map((table) => (
-                <tr key={table.id} className="hover:bg-muted/20 transition-colors group">
-                  <td className="px-2 sm:px-4 py-4">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="font-bold text-foreground truncate max-w-[100px] sm:max-w-none">
-                        {table.name || `Table ${table.id}`}
-                      </span>
-                      {table.description && (
-                        <span className="text-[11px] text-muted-foreground line-clamp-1 italic font-medium hidden sm:block">
-                          {table.description}
-                        </span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-2 sm:px-4 py-4 text-center">
-                   <span className="inline-flex items-center gap-1.5 px-1.5 sm:px-2.5 py-1 rounded-lg text-[10px] sm:text-xs font-bold bg-secondary text-secondary-foreground border border-secondary-foreground/10">
-                      <Users className="w-3 h-3 opacity-70 hidden xs:block" />
-                      {table.max_capacity}
-                    </span>
-                  </td>
-                  <td className="px-2 sm:px-4 py-4">
-                    {table.available !== false ? (
-                      <span className="inline-flex items-center gap-1.5 text-emerald-600 font-bold text-[9px] sm:text-[10px] uppercase tracking-wider">
-                        <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                        Yes
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-destructive font-bold text-[9px] sm:text-[10px] uppercase tracking-wider">
-                        <XCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
-                        No
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-2 sm:px-4 py-4 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      {/* Desktop Actions */}
-                      <div className="hidden sm:flex items-center gap-1">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
-                          onClick={() => handleOpenEdit(table)}
-                          disabled={isPending}
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 text-destructive hover:bg-destructive/10"
-                          onClick={() => handleDelete(table.id)}
-                          disabled={isPending}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-                      {/* Mobile Actions: 3-dot menu for smaller screens */}
-                      <div className="sm:hidden">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground rounded-full">
-                              <MoreVertical className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="z-9999 w-32" style={{ backgroundColor: "#E2EDBF" }}>
-                            <DropdownMenuItem onClick={() => handleOpenEdit(table)} className="font-bold text-xs uppercase">
-                              <Edit2 className="mr-2 h-3.5 w-3.5" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              className="text-destructive focus:text-destructive font-bold text-xs uppercase" 
-                              onClick={() => handleDelete(table.id)}
-                            >
-                              <Trash2 className="mr-2 h-3.5 w-3.5" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {initialTables.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="px-4 py-16 text-center">
-                    <LayoutDashboard className="w-10 h-10 text-muted-foreground/20 mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground italic">No tables configured yet.</p>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+function DetailRow({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E6DFC8] last:border-0">
+      <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
+        {icon}
+        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+          {label}
+        </span>
       </div>
+      <span className="text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function ErrorBox({ message }: { message: string }) {
+  return (
+    <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
+      <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+      <p className="text-sm text-red-700 font-bold leading-snug">{message}</p>
     </div>
   );
 }
