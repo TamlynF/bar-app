@@ -64,25 +64,25 @@ export default function BookingHubPage() {
           className="w-full h-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
           priority
         />
-        <h2 className="text-white font-black text-2xl sm:text-3xl uppercase tracking-tight leading-none mb-3">
+        <h2 className="pt-5 text-white font-black text-2xl sm:text-3xl uppercase tracking-tight leading-none mb-3">
           Book Your Experience
         </h2>
-        <p className="text-stone-500 text-sm font-medium leading-relaxed">
+        <p className="text-stone-400 text-sm font-medium leading-relaxed">
           Choose how you&apos;d like to book with us.
         </p>
       </div>
 
       {/* Booking Cards */}
-      <div className="w-full max-w-2xl space-y-3">
+      <div className="w-full max-w-2xl space-y-4">
         {bookingOptions.map((opt) => (
           <Link
             key={opt.href}
             href={opt.href}
-            className="group flex items-center gap-5 bg-white/4 hover:bg-white/7 border border-white/8 hover:border-white/15 rounded-2xl p-5 sm:p-6 transition-all duration-300 active:scale-[0.99]"
+            className="group flex items-center gap-4 bg-white/10 hover:bg-white/[0.15] border border-white/20 hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
           >
             {/* Icon */}
-            <div className={`shrink-0 w-12 h-12 rounded-xl flex items-center justify-center ${opt.iconClass}`}>
-              <opt.icon className={`w-5 h-5 ${opt.iconColor}`} />
+            <div className={`shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center ${opt.iconClass}`}>
+              <opt.icon className={`w-6 h-6 ${opt.iconColor}`} />
             </div>
 
             {/* Text */}
@@ -93,11 +93,11 @@ export default function BookingHubPage() {
                   {opt.badge}
                 </span>
               </div>
-              <p className="text-stone-500 text-xs leading-relaxed line-clamp-2">{opt.description}</p>
+              <p className="text-stone-400 text-xs leading-relaxed line-clamp-2">{opt.description}</p>
             </div>
 
             {/* Arrow */}
-            <ArrowRight className="shrink-0 w-4 h-4 text-stone-600 group-hover:text-stone-400 group-hover:translate-x-0.5 transition-all duration-200" />
+            <ArrowRight className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-stone-400 group-hover:translate-x-0.5 transition-all duration-200" />
           </Link>
         ))}
       </div>
