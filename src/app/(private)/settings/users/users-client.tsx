@@ -229,17 +229,36 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
         >
           {/* Header */}
           <div className="shrink-0 px-6 py-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md z-30 sm:rounded-t-[2rem]">
-            <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight">
-              {isAdding ? "New Employee" : isEditing ? "Edit Employee" : (selected?.full_name ?? "")}
-            </SheetTitle>
-            {selected && !isEditing && (
-              <div className="flex items-center gap-1.5 mt-1">
-                <Hash className="w-3 h-3 text-[#5F624F]" />
-                <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
-                  ID: {selected.id}
-                </span>
+            <div className="flex items-start justify-between gap-3">
+              {/* Left: title + ID */}
+              <div className="min-w-0">
+                <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+                  {isAdding ? "New Employee" : isEditing ? "Edit Employee" : (selected?.full_name ?? "")}
+                </SheetTitle>
+                {selected && !isEditing && (
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <Hash className="w-3 h-3 text-[#5F624F]" />
+                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                      ID: {selected.id}
+                    </span>
+                  </div>
+                )}
               </div>
-            )}
+
+              {/* Right: reset password — view mode only */}
+              {!showForm && selected && (
+                <Button
+                  variant="ghost"
+                  onClick={() => handlePasswordReset(selected.email)}
+                  disabled={isPending}
+                  title="Send password reset email"
+                  className="shrink-0 h-10 px-3 rounded-xl border-2 border-[#E6DFC8] text-[#5F624F] font-black bg-white hover:bg-[#F7F4EA] text-[10px] uppercase tracking-widest flex items-center gap-2"
+                >
+                  <KeyRound className="w-4 h-4" />
+                  <span className="hidden sm:inline">Reset Password</span>
+                </Button>
+              )}
+            </div>
           </div>
 
           {/* Scrollable body */}
@@ -281,7 +300,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                       <DetailCell label="Phone" value={phone || "—"} />
                     </div>
                     {/* Row 3: Start + End */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 divide-y-2 sm:divide-y-0 sm:divide-x-2 divide-[#E6DFC8]">
+                    <div className="grid grid-cols-2 sm:grid-cols-2 divide-y-2 sm:divide-y-0 sm:divide-x-2 divide-[#E6DFC8]">
                       <DetailCell label="Started" value={formatDate(selected.start_date)} />
                       <DetailCell label="Left" value={formatDate(selected.end_date)} />
                     </div>
@@ -474,23 +493,15 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
 
             {/* View mode: send reset + delete + edit */}
             {!showForm && selected && (
-              <div className="flex gap-3">
-                <Button
-                  variant="ghost"
-                  onClick={() => handlePasswordReset(selected.email)}
-                  disabled={isPending}
-                  title="Send password reset email"
-                  className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black bg-white hover:bg-[#F7F4EA]"
-                >
-                  <KeyRound className="w-4 h-4" />
-                </Button>
+              <div className="grid grid-cols-2 gap-3">
+               
                 <Button
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black bg-white hover:bg-red-50 hover:border-red-200"
+                  className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-widest text-[10px] bg-white hover:bg-red-50 hover:border-red-200"
                 >
-                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}Delete
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setIsEditing(true); }}
