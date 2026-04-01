@@ -215,6 +215,7 @@ export async function createBingoBooking(formData: FormData) {
     };
   }
 }
+
 async function sendBookingEmail(
   booking_id: number,
   email: string,
@@ -222,39 +223,99 @@ async function sendBookingEmail(
   booking_date: string,
   team_name: string,
   team_size: number,
-  status: "confirmed" | "waitlisted"
+  status: "confirmed" | "waitlisted",
+  total_amount: number | string,
+  paid_amount: number | string,
+  created_at: string
 ) {
-
   const manageUrl = `${appUrl}/book/quiz/manage-booking/${booking_id}`;
   
-  const subject = status === "confirmed" ? "Music Bingo Booking Confirmed! 🎉" : "You are on the Waitlist";
+  const subject = status === "confirmed" 
+    ? "🎫 Booking Confirmed: Music Bingo @ Don Fenticas 🎵" 
+    : "📋 You're on the Waitlist: Music Bingo @ Don Fenticas";
+    
   const content = status === "confirmed" 
-    ? `Great news! Your team "${team_name}" is locked in.` 
-    : `We're currently full, so "${team_name}" has been added to our waitlist.`;
+    ? `Get ready to mark off those cards and sing along! Your spot for <strong>Music Bingo</strong> is officially secured for ${team_size} ${team_size === 1 ? 'person' : 'people'}.` 
+    : `We're currently fully booked for this date, so you've been added to our waitlist. We'll notify you immediately if a spot opens up!`;
 
   const html = `
-    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
-      <div style="background-color: #ffffff; padding: 40px; border-radius: 8px; border: 1px solid #e5e7eb;">
-        <h2 style="margin-top: 0; color: #111827;">Hey ${name}!</h2>
-        <p>${content}</p>
-        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
-          <p><strong>📅 Date:</strong> ${booking_date}</p>
-          <p><strong>🍺 Team:</strong> ${team_name}</p>
-          <p><strong>👥 Size:</strong> ${team_size} people</p>
+    <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F7F4EA; margin: 0; padding: 40px 20px;">
+      <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #E6DFC8;">
+
+        <!-- Header -->
+        <div style="background-color: #26300D; padding: 40px 20px; text-align: center;">
+          <div style="display: inline-block; background-color: #FDCC4B; color: #26300D; font-weight: 900; font-size: 24px; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px;">
+            DF
+          </div>
+          <h1 style="color: #ffffff; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">Music Bingo</h1>
+          <p style="color: #FDCC4B; margin: 8px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">Don Fenticas</p>
         </div>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${manageUrl}" style="background-color: #fdcc4b; color: #26300d; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; text-transform: uppercase;">Manage Booking</a>
+
+        <!-- Body -->
+        <div style="padding: 40px 30px; color: #1F1F1A;">
+          <h2 style="margin-top: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;">Hey ${name}!</h2>
+          <p style="font-size: 16px; line-height: 1.6; color: #5F624F; font-weight: 500;">
+            ${content}
+          </p>
+
+          <!-- Details Card -->
+          <div style="background-color: #F7F4EA; border: 2px solid #E6DFC8; border-radius: 16px; padding: 24px; margin: 32px 0;">
+            <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 15px;">
+              <tr>
+                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">📅 Date</td>
+                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${booking_date}</td>
+              </tr>
+              <tr>
+                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">🏷️ Name</td>
+                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${name}</td>
+              </tr>
+              <tr>
+                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">👥 Tickets</td>
+                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${team_size} ${team_size === 1 ? 'Person' : 'People'}</td>
+              </tr>
+              <tr>
+                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">ℹ️ Status</td>
+                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A; text-transform: capitalize;">${status}</td>
+              </tr>
+              <tr>
+                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">💷 Total Amount</td>
+                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">£${Number(total_amount).toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">💳 Paid Amount</td>
+                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">£${Number(paid_amount).toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td style="color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">🕒 Booked On</td>
+                <td style="text-align: right; font-weight: 900; color: #1F1F1A;">${created_at}</td>
+              </tr>
+            </table>
+          </div>
+
+          <!-- Action -->
+          <div style="text-align: center; margin: 40px 0 20px 0;">
+            <a href="${manageUrl}" style="background-color: #FDCC4B; color: #26300D; padding: 18px 36px; text-decoration: none; border-radius: 16px; font-weight: 900; display: inline-block; text-transform: uppercase; letter-spacing: 1.5px;">Manage Booking</a>
+          </div>
+          <p style="font-size: 12px; color: #5F624F; text-align: center; margin-top: 24px; font-weight: 500;">
+            Button not working? Copy and paste this link:<br>
+            <a href="${manageUrl}" style="color: #26300D; text-decoration: underline; margin-top: 8px; display: inline-block;">${manageUrl}</a>
+          </p>
         </div>
-        <p style="font-size: 12px; color: #6b7280; text-align: center;">
-          If the button doesn't work, copy this link: ${manageUrl}
-        </p>
+
+        <!-- Footer -->
+        <div style="background-color: #1F1F1A; padding: 30px; text-align: center;">
+          <p style="margin: 0; font-size: 10px; color: #E6DFC8; text-transform: uppercase; letter-spacing: 2px; font-weight: 900; opacity: 0.6;">
+            Don Fenticas • Licensed Venue
+          </p>
+        </div>
+
       </div>
     </div>
   `;
 
   try {
       const { error: resendError } = await resend.emails.send({
-      from: 'Don Fenticas <admin@bookingsdonfenticas.co.uk>',
+        from: 'Don Fenticas <admin@bookingsdonfenticas.co.uk>',
         to: email,
         subject: subject,
         html: html
@@ -263,11 +324,10 @@ async function sendBookingEmail(
       if (resendError) {
         console.error("Resend API Error:", resendError);
         throw new Error(`Booking saved, but email failed: ${resendError.message}`)
-        //return { success: false, error: `Booking saved, but email failed: ${resendError.message}` };
       }
 
     } catch (emailError) {
-    console.error("Email failed:", emailError);
+      console.error("Email failed:", emailError);
       const errorMessage = emailError instanceof Error 
         ? emailError.message 
         : typeof emailError === "string" 
@@ -275,6 +335,5 @@ async function sendBookingEmail(
           : JSON.stringify(emailError);
       
       throw new Error(`Booking saved, but email failed: ${errorMessage}`);
-      //return { success: false, error: `Booking saved, but email failed: ${emailError.message || JSON.stringify(emailError)}` };
     }
 }

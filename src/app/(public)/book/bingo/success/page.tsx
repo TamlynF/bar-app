@@ -6,6 +6,12 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const appUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ? process.env.NEXT_PUBLIC_SITE_URL
+  : process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : "http://localhost:3000";
+
 async function confirmAndNotify(bookingId: string) {
   const supabase = await createClient();
 
@@ -59,6 +65,7 @@ async function confirmAndNotify(bookingId: string) {
           })
         : "TBC";
 
+      const manageUrl = `${appUrl}/book/bingo/manage-booking/${booking.id}`;
       await resend.emails.send({
         from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
         to: contact.email,
@@ -74,8 +81,14 @@ async function confirmAndNotify(bookingId: string) {
                 <p><strong>👥 People:</strong> ${booking.group_size}</p>
                 <p><strong>💳 Paid:</strong> £${(booking.total_amount ?? 0).toFixed(2)}</p>
               </div>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${manageUrl}" style="background-color: #fdcc4b; color: #26300d; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; text-transform: uppercase;">Manage Booking</a>
+              </div>
+              <p style="font-size: 12px; color: #6b7280; text-align: center;">
+                If the button doesn't work, copy this link: ${manageUrl}
+              </p>
               <p style="font-size: 13px; color: #6b7280;">
-                If you have any questions, contact us at admin@bookingsdonfenticas.co.uk
+                Questions? Contact us at admin@bookingsdonfenticas.co.uk
               </p>
             </div>
           </div>
