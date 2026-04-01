@@ -113,6 +113,26 @@ export async function saveEmployeeAction(formData: FormData) {
   }
 }
 
+export async function sendPasswordResetAction(email: string) {
+  const adminSupabase = createAdminClient();
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL
+    ? process.env.NEXT_PUBLIC_SITE_URL
+    : process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
+
+  const { error } = await adminSupabase.auth.resetPasswordForEmail(email, {
+    redirectTo: `${siteUrl}/dashboard`,
+  });
+
+  if (error) {
+    return { error: error.message };
+  }
+
+  return { success: true };
+}
+
 export async function deleteEmployeeAction(id: number) {
   const supabase = await createClient();
   
