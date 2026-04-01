@@ -12,7 +12,7 @@ const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
-async function confirmAndNotify(bookingId: string) {
+async function confirmAndNotify(bookingId: string, transactionId?: string) {
   const supabase = await createClient();
 
   const { data: booking } = await supabase
@@ -28,27 +28,51 @@ async function confirmAndNotify(bookingId: string) {
   if (!booking) return { status: "not_found" as const };
   if (booking.payment_status === "paid") return { status: "already_paid" as const, booking };
 
-  if (!booking.square_order_id) return { status: "pending" as const, booking };
-
-  // Verify payment via Square Orders API
   try {
-    const { order } = await squareClient.orders.get(booking.square_order_id);
-    const orderState = order?.state;
+    let paidAmount: number;
 
-    if (orderState !== "COMPLETED") {
-      return { status: "pending" as const, booking };
+    if (transactionId) {
+      // Primary path — verify via Square Payments API
+      const { payment } = await squareClient.payments.get({ paymentId: transactionId });
+      if (payment?.status !== "COMPLETED") {
+        return { status: "pending" as const, booking };
+      }
+      paidAmount = payment.amountMoney?.amount
+        ? Number(payment.amountMoney.amount) / 100
+        : (booking.total_amount ?? 0);
+
+      // Payment confirmed — update booking
+      await supabase
+        .from("bookings")
+        .update({
+          payment_status: "paid",
+          status: booking.status === "pending" ? "confirmed" : booking.status,
+          paid_amount: paidAmount,
+          square_payment_id: transactionId,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", bookingId);
+    } else {
+      // Fallback path — verify via Square Orders API (webhook/manual)
+      if (!booking.square_order_id) return { status: "pending" as const, booking };
+
+      const { order } = await squareClient.orders.get(booking.square_order_id);
+      if (order?.state !== "COMPLETED") {
+        return { status: "pending" as const, booking };
+      }
+      paidAmount = booking.total_amount ?? 0;
+
+      // Payment confirmed — update booking
+      await supabase
+        .from("bookings")
+        .update({
+          payment_status: "paid",
+          status: booking.status === "pending" ? "confirmed" : booking.status,
+          paid_amount: paidAmount,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", bookingId);
     }
-
-    // Payment confirmed — update booking
-    await supabase
-      .from("bookings")
-      .update({
-        payment_status: "paid",
-        status: booking.status === "pending" ? "confirmed" : booking.status,
-        paid_amount: booking.total_amount ?? 0,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", bookingId);
 
     // Send confirmation email
     const contactRaw = booking.contacts;
@@ -106,15 +130,15 @@ async function confirmAndNotify(bookingId: string) {
 export default async function BingoSuccessPage({
   searchParams,
 }: {
-  searchParams: Promise<{ bookingId?: string }>;
+  searchParams: Promise<{ bookingId?: string; transactionId?: string }>;
 }) {
-  const { bookingId } = await searchParams;
+  const { bookingId, transactionId } = await searchParams;
 
   if (!bookingId) {
     return <ErrorPage message="No booking reference found." />;
   }
 
-  const result = await confirmAndNotify(bookingId);
+  const result = await confirmAndNotify(bookingId, transactionId);
 
   if (result.status === "not_found") {
     return <ErrorPage message="Booking not found. Please contact us." />;
