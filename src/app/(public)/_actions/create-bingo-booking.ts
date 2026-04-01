@@ -3,12 +3,15 @@
 import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { randomUUID } from "crypto";
+import { Resend } from "resend";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
   : process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Price per person in pence (e.g. 500 = £5.00)
 const PRICE_PER_PERSON_PENCE = parseInt(
@@ -211,4 +214,67 @@ export async function createBingoBooking(formData: FormData) {
           : "An unexpected error occurred. Please try again.",
     };
   }
+}
+async function sendBookingEmail(
+  booking_id: number,
+  email: string,
+  name: string,
+  booking_date: string,
+  team_name: string,
+  team_size: number,
+  status: "confirmed" | "waitlisted"
+) {
+
+  const manageUrl = `${appUrl}/book/quiz/manage-booking/${booking_id}`;
+  
+  const subject = status === "confirmed" ? "Music Bingo Booking Confirmed! 🎉" : "You are on the Waitlist";
+  const content = status === "confirmed" 
+    ? `Great news! Your team "${team_name}" is locked in.` 
+    : `We're currently full, so "${team_name}" has been added to our waitlist.`;
+
+  const html = `
+    <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1f2937;">
+      <div style="background-color: #ffffff; padding: 40px; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <h2 style="margin-top: 0; color: #111827;">Hey ${name}!</h2>
+        <p>${content}</p>
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p><strong>📅 Date:</strong> ${booking_date}</p>
+          <p><strong>🍺 Team:</strong> ${team_name}</p>
+          <p><strong>👥 Size:</strong> ${team_size} people</p>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${manageUrl}" style="background-color: #fdcc4b; color: #26300d; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; text-transform: uppercase;">Manage Booking</a>
+        </div>
+        <p style="font-size: 12px; color: #6b7280; text-align: center;">
+          If the button doesn't work, copy this link: ${manageUrl}
+        </p>
+      </div>
+    </div>
+  `;
+
+  try {
+      const { error: resendError } = await resend.emails.send({
+      from: 'Don Fenticas <admin@bookingsdonfenticas.co.uk>',
+        to: email,
+        subject: subject,
+        html: html
+      });
+
+      if (resendError) {
+        console.error("Resend API Error:", resendError);
+        throw new Error(`Booking saved, but email failed: ${resendError.message}`)
+        //return { success: false, error: `Booking saved, but email failed: ${resendError.message}` };
+      }
+
+    } catch (emailError) {
+    console.error("Email failed:", emailError);
+      const errorMessage = emailError instanceof Error 
+        ? emailError.message 
+        : typeof emailError === "string" 
+          ? emailError 
+          : JSON.stringify(emailError);
+      
+      throw new Error(`Booking saved, but email failed: ${errorMessage}`);
+      //return { success: false, error: `Booking saved, but email failed: ${emailError.message || JSON.stringify(emailError)}` };
+    }
 }

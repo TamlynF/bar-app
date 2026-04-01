@@ -4,16 +4,17 @@ import {
   Trophy, 
   Music, 
   Lock, 
-  ChevronRight 
+  ChevronRight, 
+  Speaker
 } from "lucide-react";
 
 const eventBookingItems = [
   {
-    title: "Quiz Bookings",
-    description: "Manage quiz teams, seating and scores",
-    href: "/events/quiz-bookings",
-    icon: Trophy,
-    color: "bg-blue-500/10 text-blue-600",
+    title: "Bingo Bookings",
+    description: "Manage bingo teams, seating and scores",
+    href: "/events/bingo-bookings",
+    icon: Speaker,
+    color: "bg-green-500/10 text-green-600",
   },
   {
     title: "Music Bookings",
@@ -28,6 +29,13 @@ const eventBookingItems = [
     href: "/events/private-bookings",
     icon: Lock,
     color: "bg-purple-500/10 text-purple-600",
+  },
+   {
+    title: "Quiz Bookings",
+    description: "Manage quiz teams, seating and scores",
+    href: "/events/quiz-bookings",
+    icon: Trophy,
+    color: "bg-blue-500/10 text-blue-600",
   },
 ];
 

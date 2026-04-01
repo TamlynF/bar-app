@@ -70,6 +70,7 @@ export default function BingoBookingForm({ pricePerPersonPence }: Props) {
           Event Date <span className="text-red-500">*</span>
         </label>
         <input
+          title="Event Date"
           name="event_date"
           type="date"
           required
@@ -140,6 +141,7 @@ export default function BingoBookingForm({ pricePerPersonPence }: Props) {
           Number of People <span className="text-red-500">*</span>
         </label>
         <input
+          title="Group Sizeeeeeeeeeeeeeeeeeeeeeeeeeee"
           name="group_size"
           type="number"
           min={1}

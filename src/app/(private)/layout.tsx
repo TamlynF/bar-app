@@ -33,7 +33,8 @@ import {
     BookUser,
     Medal,
     UserCog,
-    UserCog2
+    UserCog2,
+    Speaker
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
@@ -58,8 +59,9 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
     ]
 
     const eventSubItems = [
-        { label: "Thursday Night Quiz", href: "/events/quiz-bookings", icon: Trophy },
+        { label: "Music Bingo", href: "/events/bingo-bookings", icon: Speaker },
         { label: "Live Music", href: "/events/music-bookings", icon: Music },
+        { label: "Thursday Night Quiz", href: "/events/quiz-bookings", icon: Trophy },
         { label: "Private Events", href: "/events/private-bookings", icon: PartyPopper },
     ]
 
@@ -95,6 +97,7 @@ export default function PrivateLayout({ children }: { children: React.ReactNode 
                 "music-bookings": "Music",
                 "private-bookings": "Private Events",
                 "quiz-bookings": "Quiz",
+                "bingo-bookings": "Bingo",
             }
             const segment = normalizedPath.split("/")[2]
             const subtitle = eventsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")

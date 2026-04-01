@@ -52,7 +52,7 @@ export async function checkTeamName(teamName: string, quizDate: string, excludeB
   return { isAvailable: !duplicateTeam };
 }
 
-export async function createBooking(formData: BookingFormData) {
+export async function createBooking(formData: BookingFormData, type: string, subType: string) {
   console.log(formData);
   const supabase = await createClient();
 
@@ -75,8 +75,8 @@ export async function createBooking(formData: BookingFormData) {
       const { data: existingEventType } = await supabase
         .from("event_types")
         .select("id")
-        .eq("type", "game")
-        .eq("sub_type", "quiz")
+        .eq("type", type)
+        .eq("sub_type", subType)
         .maybeSingle();
 
       if (existingEventType) {
@@ -84,7 +84,7 @@ export async function createBooking(formData: BookingFormData) {
       } else {
         const { data: newEventType, error: typeError } = await supabase
           .from("event_types")
-          .insert([{ type: "game", sub_type: "quiz" }])
+          .insert([{ type: type, sub_type: subType }])
           .select("id")
           .single();
 
@@ -142,7 +142,7 @@ export async function createBooking(formData: BookingFormData) {
       tablesInUse = mappings?.map((m) => m.table_id) || [];
     }
 
-    console.log(tablesInUse);
+    //console.log(tablesInUse);
 
     // 4. Find all tables with enough capacity, ordering by smallest suitable table first 
     const { data: suitableTables, error: tablesError } = await supabase
@@ -155,7 +155,7 @@ export async function createBooking(formData: BookingFormData) {
 
     // 5. Pick the first suitable table that isn't already in use
     const availableTable = suitableTables?.find((table) => !tablesInUse.includes(table.id));
-    console.log(availableTable);
+    //console.log(availableTable);
 
     // 6. Set the booking status based on table availability
     const status = availableTable ? "confirmed" : "waitlisted";

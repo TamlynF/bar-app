@@ -127,7 +127,7 @@ export default function BookingForm() {
         email: formData.email,
         phone: formData.phone,
         special_requests: formData.specialRequests,
-      });
+      }, "game", "quiz");
 
       if (response.success) {
         setIsSuccess(true);
