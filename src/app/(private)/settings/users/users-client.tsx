@@ -591,7 +591,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                 </div>
 
                 {/* Status + Role */}
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Status</Label>
                     <div className="relative">
@@ -692,7 +692,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     Phone Number
                   </Label>
                   <div className="flex gap-3">
-                    <div className="relative shrink-0 w-24">
+                    <div className="relative shrink-0 w-30">
                       <select
                         title="Country Code"
                         name="country_code"

@@ -8,18 +8,19 @@ export async function saveEmployeeAction(formData: FormData) {
   const supabase = await createClient();
   
   const id = formData.get("id")?.toString();
-  console.log("Received form data for employee:", {
-    id,
-    full_name: formData.get("full_name")?.toString(),
-    email: formData.get("email")?.toString(),
-    role: formData.get("role")?.toString(),
-  });
+  // console.log("Received form data for employee:", {
+  //   id,
+  //   full_name: formData.get("full_name")?.toString(),
+  //   email: formData.get("email")?.toString(),
+  //   role: formData.get("role")?.toString(),
+  // });
 
   // Extracting data matching the schema
   const payload = {
     full_name: formData.get("full_name")?.toString() || "",
     email: formData.get("email")?.toString() || "",
     role: formData.get("role")?.toString() || null,
+    employment_type: formData.get("employment_type")?.toString() || null,
     status: formData.get("status")?.toString() || "",
     start_date: formData.get("start_date")?.toString() || new Date().toISOString().split('T')[0],
     end_date: formData.get("end_date")?.toString() || null,
@@ -36,14 +37,14 @@ export async function saveEmployeeAction(formData: FormData) {
   // Resolve current logged-in user to an employee id
   let currentEmployeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
-  console.log("Current logged-in user:", user);
+  //console.log("Current logged-in user:", user);
 
   if (user?.email) {
     const { data: emp } = await supabase
       .from("employees")
       .select("id")
       .eq("email", user.email)
-      .single();
+      .maybeSingle();
     if (emp) currentEmployeeId = emp.id;
   }
 
@@ -71,18 +72,13 @@ export async function saveEmployeeAction(formData: FormData) {
       ? `https://${process.env.VERCEL_URL}` 
           : 'http://localhost:3000';
       
-      console.log("Invite Email:", payload.email);
-      console.log("Environment variables:", {
-        NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
-        VERCEL_URL: process.env.VERCEL_URL,
-      });
-      console.log("Redirect URL for invite:", redirectUrl);
+
       const { data: inviteData, error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(
         payload.email,
         { redirectTo: `${redirectUrl}/accept-invite` }
       );
 
-      console.log("Invite result:", { inviteError });
+      //console.log("Invite result:", { inviteError });
 
       if (inviteError && inviteError.message !== "User already registered") {
         throw new Error(`Failed to send login invite: ${inviteError.message}`);
@@ -97,14 +93,11 @@ export async function saveEmployeeAction(formData: FormData) {
       });
 
       // Catch unique email violations nicely
-      if (error?.code === '23505') {
-        throw new Error("An employee with this email address already exists.");
-      } else if (error) {
-        throw error;
-      }
+      if (error?.code === '23505') throw new Error("An employee with this email address already exists.");
+      if (error) throw error;      
     }
 
-    revalidatePath("/settings/system-users"); // Adjust to your actual route
+    revalidatePath("/settings/users"); // Adjust to your actual route
     return { success: true };
   } catch (error) {
     console.error("Error saving employee:", error);
