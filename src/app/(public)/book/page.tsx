@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Trophy, Music, Building2, ArrowRight } from "lucide-react";
+import { Trophy, Music, Building2, ArrowRight, Disc3 } from "lucide-react";
 import Image from "next/image";
 
 export const metadata = {
@@ -18,6 +18,16 @@ const bookingOptions = [
     iconClass: "icon-quiz",
     iconColor: "icon-color-quiz",
     badgeClass: "badge-quiz",
+  },
+  {
+    href: "/book/bingo",
+    icon: Disc3,
+    label: "Music Bingo",
+    description: "Book your spot for Music Bingo night. Tickets paid upfront — don't miss out!",
+    badge: "Pay & Book",
+    iconClass: "icon-band",
+    iconColor: "icon-color-band",
+    badgeClass: "badge-band",
   },
   {
     href: "/book/band",
