@@ -634,8 +634,8 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                 </div>
 
                 {/* Start Date + End Date */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2 min-w-0">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
                       Started <span className="text-red-500">*</span>
                     </Label>
@@ -648,10 +648,10 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                           ? new Date(formDefault.start_date).toISOString().split("T")[0]
                           : new Date().toISOString().split("T")[0]
                       }
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#26300D] transition-all"
                     />
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-2 min-w-0">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Left</Label>
                     <Input
                       name="end_date"
@@ -661,7 +661,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                           ? new Date(formDefault.end_date).toISOString().split("T")[0]
                           : ""
                       }
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#26300D] transition-all"
                     />
                   </div>
                 </div>
@@ -692,18 +692,18 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     Phone Number
                   </Label>
                   <div className="flex gap-3">
-                    <div className="relative shrink-0 w-44">
+                    <div className="relative shrink-0 w-24">
                       <select
                         title="Country Code"
                         name="country_code"
                         defaultValue={formDefault?.country_code ?? "+44"}
-                        className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white pl-4 pr-8 text-sm font-bold outline-none focus:border-[#26300D] appearance-none text-[#1F1F1A]"
+                        className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white pl-3 pr-7 text-sm font-bold outline-none focus:border-[#26300D] appearance-none text-[#1F1F1A]"
                       >
                         {COUNTRY_CODES.map((c, i) => (
-                          <option key={i} value={c.code}>{c.code} {c.country}</option>
+                          <option key={i} value={c.code}>{c.code}</option>
                         ))}
                       </select>
-                      <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F]/30 rotate-90 pointer-events-none" />
+                      <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F]/30 rotate-90 pointer-events-none" />
                     </div>
                     <input
                       name="phone_no"
