@@ -14,7 +14,10 @@
       "Bash(find:*)",
       "Bash(grep -E '\\\\.tsx$|\\\\.ts$')",
       "mcp__claude_ai_Supabase__get_logs",
-      "Bash(wait:*)"
+      "Bash(wait:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

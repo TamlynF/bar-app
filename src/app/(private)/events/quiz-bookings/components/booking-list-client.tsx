@@ -468,7 +468,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       </div>
 
       {/* Search */}
-      <div className="relative group">
+      <div className="relative group bg-white">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <Input
           placeholder="Search team names or guests..."

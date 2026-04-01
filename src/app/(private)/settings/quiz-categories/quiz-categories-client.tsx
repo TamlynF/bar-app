@@ -164,7 +164,7 @@ export default function QuizCategoriesClient({
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-5">
+              
                 <div className="space-y-2 text-left">
                   <Label htmlFor="question_count" className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Questions per Round</Label>
                   <div className="relative">
@@ -196,7 +196,7 @@ export default function QuizCategoriesClient({
                   </div>
                 </div>
               </div>
-            </div>
+            
             
             <SheetFooter className="px-6 py-6 border-t border-border/40 bg-card/80 backdrop-blur pb-10 sm:pb-6">
               <div className="flex gap-3 w-full">
@@ -205,7 +205,7 @@ export default function QuizCategoriesClient({
                 </Button>
                 <Button type="submit" disabled={isPending} className="flex-1 h-12 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg">
                   {isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                  {editingConfig ? "Update Config" : "Save Config"}
+                  {editingConfig ? "Edit" : "Save"}
                 </Button>
               </div>
             </SheetFooter>
