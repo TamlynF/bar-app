@@ -14,11 +14,6 @@ const appUrl = process.env.NEXT_PUBLIC_SITE_URL
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Price per person in pence (e.g. 500 = £5.00)
-const PRICE_PER_PERSON_PENCE = parseInt(
-  process.env.BINGO_PRICE_PER_PERSON_PENCE ?? "500",
-  10
-);
 
 export async function createBingoBooking(formData: FormData) {
   const supabase = await createClient();
@@ -142,8 +137,9 @@ export async function createBingoBooking(formData: FormData) {
     }
 
     const totalPence = paymentAmount * groupSize;
+    const isFree = paymentAmount === 0;
 
-    // 5. Create pending booking
+    // 5. Create booking
     const { data: newBooking, error: bookingError } = await supabase
       .from("bookings")
       .insert([{
@@ -151,8 +147,8 @@ export async function createBingoBooking(formData: FormData) {
         contact_id: contactId,
         group_name: fullName,
         group_size: groupSize,
-        status: "pending",
-        payment_status: "unpaid",
+        status: isFree ? status : "pending",
+        payment_status: isFree ? "free" : "unpaid",
         special_requests: specialRequests,
         paid_amount: 0,
         total_amount: totalPence / 100,
@@ -164,12 +160,22 @@ export async function createBingoBooking(formData: FormData) {
       throw new Error("Failed to create booking.");
     }
 
-    // 6. Table mapping (tentative — confirmed on payment)
+    // 6. Table mapping
     if (availableTable) {
       await supabase.from("booking_table_mappings").insert({
         booking_id: newBooking.id,
         table_id: availableTable.id,
       });
+    }
+
+    // 6b. Free booking — no payment required, confirm immediately
+    if (isFree) {
+      await sendBookingEmail(
+        newBooking.id, email, fullName, eventDate, groupSize, status, 0, 0, new Date().toISOString()
+      );
+      revalidatePath("/dashboard");
+      revalidatePath(`/book/bingo/manage-booking/${newBooking.id}`);
+      return { success: true };
     }
 
     // 7. Create Square Payment Link

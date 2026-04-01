@@ -1,4 +1,5 @@
-import BingoBookingForm from "./_components/bingo-booking-form";
+import { createClient } from "@/lib/supabase/server";
+import BingoBookingForm, { type BingoEvent } from "./_components/bingo-booking-form";
 import Image from "next/image";
 
 export const metadata = {
@@ -6,11 +7,23 @@ export const metadata = {
   description: "Book your spot for Music Bingo night at Don Fenticas.",
 };
 
-export default function BingoBookingPage() {
-  const pricePerPersonPence = parseInt(
-    process.env.BINGO_PRICE_PER_PERSON_PENCE ?? "500",
-    10
-  );
+export default async function BingoBookingPage() {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data: rawEvents } = await supabase
+    .from("events")
+    .select("id, date, payment_amount, event_types!inner(type, sub_type)")
+    .eq("event_types.type", "game")
+    .eq("event_types.sub_type", "bingo")
+    .gte("date", today)
+    .order("date", { ascending: true });
+
+  const events: BingoEvent[] = (rawEvents ?? []).map((e) => ({
+    id: e.id as number,
+    date: e.date as string,
+    payment_amount: e.payment_amount as number | null,
+  }));
 
   return (
     <main className="min-h-dvh w-full bg-[#26300D] flex flex-col items-center px-4 py-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
@@ -37,13 +50,26 @@ export default function BingoBookingPage() {
           Book Your Spot
         </h1>
         <p className="text-stone-400 text-sm font-medium leading-relaxed">
-          Fill in your details below. Payment is required to confirm your booking.
+          {events.length > 0
+            ? "Select an event below and fill in your details."
+            : "Check back soon for upcoming events."}
         </p>
       </div>
 
       {/* Form Card */}
       <div className="w-full max-w-md bg-[#F7F4EA] rounded-3xl p-6 shadow-2xl shadow-black/40">
-        <BingoBookingForm pricePerPersonPence={pricePerPersonPence} />
+        {events.length > 0 ? (
+          <BingoBookingForm events={events} />
+        ) : (
+          <div className="text-center py-10">
+            <p className="text-[#1F1F1A] font-black text-lg uppercase tracking-tight mb-2">
+              No Upcoming Events
+            </p>
+            <p className="text-[#5F624F] text-sm font-medium">
+              There are no bingo nights scheduled yet. Please check back soon!
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Footer */}

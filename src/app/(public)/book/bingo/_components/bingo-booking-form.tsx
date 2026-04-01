@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { createBingoBooking } from "@/app/(public)/_actions/create-bingo-booking";
-import { AlertCircle, Loader2, ChevronRight } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const COUNTRY_CODES = [
@@ -28,16 +28,35 @@ const COUNTRY_CODES = [
   { code: "+971", country: "UAE" },
 ];
 
-interface Props {
-  pricePerPersonPence: number;
+export interface BingoEvent {
+  id: number;
+  date: string;
+  payment_amount: number | null;
 }
 
-export default function BingoBookingForm({ pricePerPersonPence }: Props) {
+interface Props {
+  events: BingoEvent[];
+}
+
+function formatEventDate(dateStr: string) {
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export default function BingoBookingForm({ events }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [booked, setBooked] = useState(false);
   const [groupSize, setGroupSize] = useState(1);
+  const [selectedDate, setSelectedDate] = useState(events[0]?.date ?? "");
 
-  const pricePerPerson = pricePerPersonPence / 100;
+  const selectedEvent = events.find((e) => e.date === selectedDate) ?? events[0];
+  const hasPricing = !!selectedEvent?.payment_amount && selectedEvent.payment_amount > 0;
+  const pricePerPerson = hasPricing ? selectedEvent!.payment_amount! : 0;
   const total = pricePerPerson * groupSize;
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -50,6 +69,8 @@ export default function BingoBookingForm({ pricePerPersonPence }: Props) {
         setError(result.error);
       } else if (result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
+      } else if (result.success) {
+        setBooked(true);
       }
     });
   };
@@ -59,7 +80,23 @@ export default function BingoBookingForm({ pricePerPersonPence }: Props) {
   const inputClass =
     "w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold text-[#1F1F1A] placeholder:text-[#5F624F]/40 focus:border-[#26300D] outline-none transition-all";
 
-  const today = new Date().toISOString().split("T")[0];
+  if (booked) {
+    return (
+      <div className="text-center py-6 space-y-4">
+        <CheckCircle2 className="mx-auto w-14 h-14 text-emerald-500" />
+        <h2 className="text-xl font-black text-[#1F1F1A] uppercase tracking-tight">
+          You&apos;re Booked!
+        </h2>
+        <p className="text-sm text-[#5F624F] font-medium leading-relaxed">
+          Your spot has been reserved for{" "}
+          <span className="font-black text-[#1F1F1A]">
+            {formatEventDate(selectedDate)}
+          </span>
+          . A confirmation email is on its way.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -69,14 +106,23 @@ export default function BingoBookingForm({ pricePerPersonPence }: Props) {
         <label className={labelClass}>
           Event Date <span className="text-red-500">*</span>
         </label>
-        <input
-          title="Event Date"
-          name="event_date"
-          type="date"
-          required
-          min={today}
-          className={inputClass}
-        />
+        <div className="relative">
+          <select
+            title="Event Date"
+            name="event_date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            required
+            className={cn(inputClass, "appearance-none pr-10 cursor-pointer")}
+          >
+            {events.map((ev) => (
+              <option key={ev.date} value={ev.date}>
+                {formatEventDate(ev.date)}
+              </option>
+            ))}
+          </select>
+          <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F]/40 rotate-90 pointer-events-none" />
+        </div>
       </div>
 
       {/* Full Name */}
@@ -141,7 +187,7 @@ export default function BingoBookingForm({ pricePerPersonPence }: Props) {
           Number of People <span className="text-red-500">*</span>
         </label>
         <input
-          title="Group Sizeeeeeeeeeeeeeeeeeeeeeeeeeee"
+          title="Group Size"
           name="group_size"
           type="number"
           min={1}
@@ -152,21 +198,23 @@ export default function BingoBookingForm({ pricePerPersonPence }: Props) {
         />
       </div>
 
-      {/* Price Preview */}
-      <div className="bg-[#26300D] rounded-2xl px-5 py-4 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]/70">
-            Total to Pay
-          </p>
-          <p className="text-2xl font-black text-white tabular-nums">
-            £{total.toFixed(2)}
+      {/* Price Preview — only when event has a price */}
+      {hasPricing && (
+        <div className="bg-[#26300D] rounded-2xl px-5 py-4 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]/70">
+              Total to Pay
+            </p>
+            <p className="text-2xl font-black text-white tabular-nums">
+              £{total.toFixed(2)}
+            </p>
+          </div>
+          <p className="text-[11px] font-bold text-[#FDCC4B]/60 text-right leading-snug">
+            £{pricePerPerson.toFixed(2)} per person
+            <br />× {groupSize} {groupSize === 1 ? "person" : "people"}
           </p>
         </div>
-        <p className="text-[11px] font-bold text-[#FDCC4B]/60 text-right leading-snug">
-          £{pricePerPerson.toFixed(2)} per person
-          <br />× {groupSize} {groupSize === 1 ? "person" : "people"}
-        </p>
-      </div>
+      )}
 
       {/* Special Requests */}
       <div>
@@ -194,16 +242,20 @@ export default function BingoBookingForm({ pricePerPersonPence }: Props) {
         {isPending ? (
           <>
             <Loader2 className="w-5 h-5 animate-spin" />
-            Setting up payment…
+            {hasPricing ? "Setting up payment…" : "Confirming booking…"}
           </>
+        ) : hasPricing ? (
+          <>Pay &amp; Book — £{total.toFixed(2)}</>
         ) : (
-          <>Pay & Book — £{total.toFixed(2)}</>
+          <>Confirm Booking</>
         )}
       </button>
 
-      <p className="text-center text-[11px] text-[#5F624F] font-medium">
-        You&apos;ll be taken to a secure Square checkout to complete payment.
-      </p>
+      {hasPricing && (
+        <p className="text-center text-[11px] text-[#5F624F] font-medium">
+          You&apos;ll be taken to a secure Square checkout to complete payment.
+        </p>
+      )}
     </form>
   );
 }
