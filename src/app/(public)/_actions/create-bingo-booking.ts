@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { randomUUID } from "crypto";
 import { Resend } from "resend";
+import { revalidatePath } from "next/cache";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -58,6 +59,7 @@ export async function createBingoBooking(formData: FormData) {
 
     // 2. Resolve event for this date
     let eventId: number;
+    let paymentAmount: number;
     const { data: existingEvent } = await supabase
       .from("events")
       .select("id, payment_amount")
@@ -67,6 +69,7 @@ export async function createBingoBooking(formData: FormData) {
 
     if (existingEvent) {
       eventId = existingEvent.id;
+      paymentAmount = Math.round(existingEvent.payment_amount * 100);
     } else {
       const { data: newEvent, error: eventError } = await supabase
         .from("events")
@@ -75,12 +78,13 @@ export async function createBingoBooking(formData: FormData) {
           title: "Music Bingo",
           description: "Live Music Bingo Night",
           event_types_id: eventTypeId,
-          payment_amount: PRICE_PER_PERSON_PENCE / 100,
+          payment_amount: 0,
         }])
         .select("id")
         .single();
       if (eventError || !newEvent) throw new Error("Failed to setup event.");
       eventId = newEvent.id;
+      paymentAmount = 0;
     }
 
     // 3. Table allocation — same logic as quiz booking
@@ -137,7 +141,7 @@ export async function createBingoBooking(formData: FormData) {
       contactId = newContact.id;
     }
 
-    const totalPence = PRICE_PER_PERSON_PENCE * groupSize;
+    const totalPence = paymentAmount * groupSize;
 
     // 5. Create pending booking
     const { data: newBooking, error: bookingError } = await supabase
@@ -177,7 +181,7 @@ export async function createBingoBooking(formData: FormData) {
           name: `Music Bingo — ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`,
           quantity: String(groupSize),
           basePriceMoney: {
-            amount: BigInt(PRICE_PER_PERSON_PENCE),
+            amount: BigInt(paymentAmount),
             currency: "GBP",
           },
         }],
@@ -188,6 +192,7 @@ export async function createBingoBooking(formData: FormData) {
       },
     });
 
+    console.log("Square Payment Link created:", paymentLink); 
     const checkoutUrl = paymentLink?.url;
     const orderId = paymentLink?.orderId;
 
@@ -203,6 +208,22 @@ export async function createBingoBooking(formData: FormData) {
       .from("bookings")
       .update({ square_order_id: orderId, status })
       .eq("id", newBooking.id);
+
+    await sendBookingEmail(
+      newBooking.id,
+      email,
+      fullName,
+      eventDate,
+      groupSize,
+      status,
+      totalPence / 100,
+      0,
+      new Date().toISOString()
+    );
+
+    revalidatePath("/dashboard");
+    revalidatePath("/book/bingo/success");
+    revalidatePath(`/book/bingo/manage-booking/${newBooking.id}`);
 
     return { checkoutUrl };
   } catch (err) {
@@ -221,21 +242,20 @@ async function sendBookingEmail(
   email: string,
   name: string,
   booking_date: string,
-  team_name: string,
-  team_size: number,
+  group_size: number,
   status: "confirmed" | "waitlisted",
   total_amount: number | string,
   paid_amount: number | string,
   created_at: string
 ) {
-  const manageUrl = `${appUrl}/book/quiz/manage-booking/${booking_id}`;
+  const manageUrl = `${appUrl}/book/bingo/manage-booking/${booking_id}`;
   
   const subject = status === "confirmed" 
     ? "🎫 Booking Confirmed: Music Bingo @ Don Fenticas 🎵" 
     : "📋 You're on the Waitlist: Music Bingo @ Don Fenticas";
     
   const content = status === "confirmed" 
-    ? `Get ready to mark off those cards and sing along! Your spot for <strong>Music Bingo</strong> is officially secured for ${team_size} ${team_size === 1 ? 'person' : 'people'}.` 
+    ? `Get ready to mark off those cards and sing along! Your spot for <strong>Music Bingo</strong> is officially secured for ${group_size} ${group_size === 1 ? 'person' : 'people'}.` 
     : `We're currently fully booked for this date, so you've been added to our waitlist. We'll notify you immediately if a spot opens up!`;
 
   const html = `
@@ -244,9 +264,7 @@ async function sendBookingEmail(
 
         <!-- Header -->
         <div style="background-color: #26300D; padding: 40px 20px; text-align: center;">
-          <div style="display: inline-block; background-color: #FDCC4B; color: #26300D; font-weight: 900; font-size: 24px; padding: 12px 16px; border-radius: 12px; margin-bottom: 16px;">
-            DF
-          </div>
+          <img src="./CompanyLogo.png" alt="Company Logo" style="display: inline-block; margin-bottom: 16px; max-height: 60px;" />
           <h1 style="color: #ffffff; margin: 0; font-size: 24px; text-transform: uppercase; letter-spacing: 2px;">Music Bingo</h1>
           <p style="color: #FDCC4B; margin: 8px 0 0 0; font-size: 12px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">Don Fenticas</p>
         </div>
@@ -271,7 +289,7 @@ async function sendBookingEmail(
               </tr>
               <tr>
                 <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">👥 Tickets</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${team_size} ${team_size === 1 ? 'Person' : 'People'}</td>
+                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${group_size} ${group_size === 1 ? 'Person' : 'People'}</td>
               </tr>
               <tr>
                 <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">ℹ️ Status</td>
