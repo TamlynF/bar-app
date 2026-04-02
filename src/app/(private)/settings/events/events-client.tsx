@@ -69,12 +69,16 @@ function eventTypeLabel(et: EventType) {
   return [toTitleCase(et.type), toTitleCase(et.sub_type)].filter(Boolean).join(" — ");
 }
 
+export type Employee = { id: number; full_name: string };
+
 export default function EventsClient({
   initialEvents = [],
   eventTypes = [],
+  employees = [],
 }: {
   initialEvents: EventRecord[];
   eventTypes: EventType[];
+  employees: Employee[];
 }) {
   const [selected, setSelected] = useState<EventRecord | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -312,6 +316,7 @@ export default function EventsClient({
             {!showForm && selected && (() => {
               const et = eventTypes.find((e) => e.id === selected.event_types_id);
               const hasPricing = !!selected.payment_amount && selected.payment_amount > 0;
+              const host = employees.find((e) => e.id === selected.host_employee_id);
               return (
                 <div className="space-y-4 animate-in fade-in duration-200">
                   <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y-2 divide-[#E6DFC8]">
@@ -323,6 +328,7 @@ export default function EventsClient({
                       <DetailCell label="Start Time" value={formatTime(selected.start_time)} />
                       <DetailCell label="End Time" value={formatTime(selected.end_time)} />
                     </div>
+                    <DetailCell label="Host" value={host?.full_name ?? "—"} />
                     <div className="grid grid-cols-2 divide-x-2 divide-[#E6DFC8]">
                       <DetailCell
                         label="Payment"
@@ -387,29 +393,48 @@ export default function EventsClient({
                     type="date"
                     required
                     defaultValue={formDefault?.date ?? ""}
-                    className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                    className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
                   />
                 </div>
 
                 {/* Start + End time */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2 min-w-0">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Start Time</Label>
+                <div className="flex gap-3">
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Start</Label>
                     <Input
                       name="start_time"
                       type="time"
                       defaultValue={formDefault?.start_time ? formatTime(formDefault.start_time) : ""}
-                      className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="h-14 w-36 rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#26300D] transition-all"
                     />
                   </div>
-                  <div className="space-y-2 min-w-0">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">End Time</Label>
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">End</Label>
                     <Input
                       name="end_time"
                       type="time"
                       defaultValue={formDefault?.end_time ? formatTime(formDefault.end_time) : ""}
-                      className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="h-14 w-36 rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#26300D] transition-all"
                     />
+                  </div>
+                </div>
+
+                {/* Host */}
+                <div className="space-y-1.5">
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Host</Label>
+                  <div className="relative">
+                    <select
+                      title="Host"
+                      name="host_employee_id"
+                      defaultValue={formDefault?.host_employee_id ?? ""}
+                      className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-black tracking-widest outline-none focus:border-[#26300D] appearance-none"
+                    >
+                      <option value="">No host</option>
+                      {employees.map((e) => (
+                        <option key={e.id} value={e.id}>{e.full_name}</option>
+                      ))}
+                    </select>
+                    <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F]/30 rotate-90 pointer-events-none" />
                   </div>
                 </div>
 
@@ -443,6 +468,7 @@ export default function EventsClient({
                     </Label>
                   </div>
                   <input
+                    title="Seating Required"
                     id="seating_required"
                     name="seating_required"
                     type="checkbox"

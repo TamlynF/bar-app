@@ -5,10 +5,9 @@ import { revalidatePath } from "next/cache";
 
 export async function saveEventAction(formData: FormData) {
   const supabase = await createClient();
-  
+
   const id = formData.get("id")?.toString();
-  
-  // Extracting data matching the schema
+
   const payload = {
     title: formData.get("title")?.toString() || "",
     description: formData.get("description")?.toString() || "",
@@ -17,16 +16,32 @@ export async function saveEventAction(formData: FormData) {
     end_time: formData.get("end_time")?.toString() || null,
     payment_amount: parseFloat(formData.get("payment_amount")?.toString() || "0"),
     event_types_id: parseInt(formData.get("event_types_id")?.toString() || "0", 10),
-    host_employee_id: formData.get("host_employee_id") ? parseInt(formData.get("host_employee_id")?.toString() as string, 10) : null,
-    seating_required: formData.get("seating_required") === "on", // checkbox returns "on" if checked
+    host_employee_id: formData.get("host_employee_id") ? parseInt(formData.get("host_employee_id") as string, 10) : null,
+    seating_required: formData.get("seating_required") === "on",
   };
+
+  // Resolve current logged-in user to an employee id
+  let currentEmployeeId: number | null = null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.email) {
+    const { data: emp } = await supabase.from("employees").select("id").eq("email", user.email).maybeSingle();
+    if (emp) currentEmployeeId = emp.id;
+  }
 
   try {
     if (id) {
-      const { error } = await supabase.from("events").update(payload).eq("id", id);
+      const { error } = await supabase.from("events").update({
+        ...payload,
+        updated_by: currentEmployeeId,
+        updated_at: new Date().toISOString(),
+      }).eq("id", id);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from("events").insert(payload);
+      const { error } = await supabase.from("events").insert({
+        ...payload,
+        created_by: currentEmployeeId,
+        updated_by: currentEmployeeId,
+      });
       if (error) throw error;
     }
 
