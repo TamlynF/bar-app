@@ -6,14 +6,42 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Instagram, Facebook, Youtube, Music2,
   Plus, X, CheckCircle2, Calendar, Upload, Video, Loader2, AlertCircle,
-  ChevronDown, ChevronRight, ArrowLeft,
+  ChevronDown, ChevronRight, ArrowLeft, ExternalLink,
 } from "lucide-react";
 
 const SOCIAL_FIELDS = [
-  { key: "instagram" as const, label: "Instagram", icon: Instagram, placeholder: "https://instagram.com/yourband" },
-  { key: "facebook" as const, label: "Facebook", icon: Facebook, placeholder: "https://facebook.com/yourband" },
-  { key: "youtube" as const, label: "YouTube", icon: Youtube, placeholder: "https://youtube.com/@yourband" },
-  { key: "tiktok" as const, label: "TikTok", icon: Music2, placeholder: "https://tiktok.com/@yourband" },
+  {
+    key: "instagram" as const,
+    label: "Instagram",
+    icon: Instagram,
+    prefix: "instagram.com/",
+    placeholder: "yourhandle",
+    urlBuilder: (h: string) => `https://instagram.com/${h}`,
+  },
+  {
+    key: "facebook" as const,
+    label: "Facebook",
+    icon: Facebook,
+    prefix: "facebook.com/",
+    placeholder: "yourpage",
+    urlBuilder: (h: string) => `https://facebook.com/${h}`,
+  },
+  {
+    key: "youtube" as const,
+    label: "YouTube",
+    icon: Youtube,
+    prefix: "youtube.com/@",
+    placeholder: "yourchannel",
+    urlBuilder: (h: string) => `https://youtube.com/@${h}`,
+  },
+  {
+    key: "tiktok" as const,
+    label: "TikTok",
+    icon: Music2,
+    prefix: "tiktok.com/@",
+    placeholder: "yourhandle",
+    urlBuilder: (h: string) => `https://tiktok.com/@${h}`,
+  },
 ];
 
 interface VideoFile {
@@ -156,6 +184,12 @@ export default function BandBookingForm() {
       .filter((v) => v.uploadedUrl)
       .map((v) => v.uploadedUrl as string);
 
+    const builtSocialLinks: Record<string, string> = {};
+    SOCIAL_FIELDS.forEach(({ key, urlBuilder }) => {
+      const handle = socialLinks[key]?.trim();
+      if (handle) builtSocialLinks[key] = urlBuilder(handle);
+    });
+
     startTransition(async () => {
       try {
         await createBandBooking({
@@ -166,7 +200,7 @@ export default function BandBookingForm() {
           booker_name: name,
           email,
           phone_no: phone || undefined,
-          social_links: socialLinks,
+          social_links: builtSocialLinks,
           video_urls: uploadedUrls,
           preferred_dates: preferredDates.filter(Boolean),
           notes: notes || undefined,
@@ -323,18 +357,30 @@ export default function BandBookingForm() {
           <>
             <div className="space-y-3">
               <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Social Media</p>
-              {SOCIAL_FIELDS.map(({ key, label, icon: Icon, placeholder }) => (
+              {SOCIAL_FIELDS.map(({ key, label, icon: Icon, prefix, placeholder, urlBuilder }) => (
                 <div key={key}>
                   <label className={labelClass}>{label}</label>
-                  <div className="relative">
-                    <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600" />
+                  <div className="flex items-center bg-white/5 border border-white/10 rounded-xl overflow-hidden focus-within:border-[#FDCC4B]/40 focus-within:ring-1 focus-within:ring-[#FDCC4B]/20 transition-all">
+                    <Icon className="w-4 h-4 text-stone-600 shrink-0 ml-3.5" />
+                    <span className="text-stone-600 text-sm pl-2 pr-0.5 whitespace-nowrap select-none">{prefix}</span>
                     <input
-                      type="url"
+                      type="text"
                       value={socialLinks[key] || ""}
-                      onChange={(e) => handleSocial(key, e.target.value)}
+                      onChange={(e) => handleSocial(key, e.target.value.replace(/^@/, ""))}
                       placeholder={placeholder}
-                      className={`${inputClass} pl-10`}
+                      className="flex-1 bg-transparent py-3 pr-3 text-sm text-white placeholder:text-stone-600 focus:outline-none"
                     />
+                    {socialLinks[key] && (
+                      <a
+                        href={urlBuilder(socialLinks[key])}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 w-10 self-stretch flex items-center justify-center text-stone-500 hover:text-[#FDCC4B] transition-colors border-l border-white/10"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}
