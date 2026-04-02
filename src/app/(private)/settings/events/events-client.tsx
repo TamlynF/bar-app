@@ -19,6 +19,7 @@ import {
   Trash2,
   Hash,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
   XCircle,
 } from "lucide-react";
@@ -71,14 +72,34 @@ function eventTypeLabel(et: EventType) {
 
 export type Employee = { id: number; full_name: string };
 
+type QuizCategory = { id: number; category_name: string; question_count: number };
+type QuizQuestion = { id: string; events_id: number; quiz_category_configs_id: number | null };
+
+function getQuizStatus(eventId: number, quizCategories: QuizCategory[], quizQuestions: QuizQuestion[]) {
+  const eventQs = quizQuestions.filter(q => q.events_id === eventId);
+  const categoryCounts = quizCategories.map(cat => ({
+    ...cat,
+    count: eventQs.filter(q => q.quiz_category_configs_id === cat.id).length,
+  }));
+  const total = categoryCounts.reduce((s, c) => s + c.count, 0);
+  const target = categoryCounts.reduce((s, c) => s + c.question_count, 0);
+  const allComplete = categoryCounts.every(c => c.count >= c.question_count);
+  const someExist = total > 0;
+  return { categoryCounts, total, target, allComplete, someExist };
+}
+
 export default function EventsClient({
   initialEvents = [],
   eventTypes = [],
   employees = [],
+  quizCategories = [],
+  quizQuestions = [],
 }: {
   initialEvents: EventRecord[];
   eventTypes: EventType[];
   employees: Employee[];
+  quizCategories: QuizCategory[];
+  quizQuestions: QuizQuestion[];
 }) {
   const [selected, setSelected] = useState<EventRecord | null>(null);
   const [isAdding, setIsAdding] = useState(false);
@@ -346,6 +367,7 @@ export default function EventsClient({
               const et = eventTypes.find((e) => e.id === selected.event_types_id);
               const hasPricing = !!selected.payment_amount && selected.payment_amount > 0;
               const host = employees.find((e) => e.id === selected.host_employee_id);
+              const isQuiz = !!et?.sub_type?.toLowerCase().includes("quiz");
               return (
                 <div className="space-y-4 animate-in fade-in duration-200">
                   <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y-2 divide-[#E6DFC8]">
@@ -365,6 +387,43 @@ export default function EventsClient({
                       />
                       <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
                     </div>
+                    {isQuiz && (() => {
+                      const { categoryCounts, total, target, allComplete, someExist } = getQuizStatus(selected.id, quizCategories, quizQuestions);
+                      return (
+                        <>
+                          {/* Mobile: single status icon + total */}
+                          <div className="sm:hidden px-5 py-3.5 flex items-center gap-2.5">
+                            {allComplete
+                              ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                              : someExist
+                              ? <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                              : <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />}
+                            <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest">
+                              {total} / {target} Questions
+                            </span>
+                          </div>
+                          {/* Desktop: per-category breakdown */}
+                          <div className="hidden sm:block px-5 py-4 space-y-2">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">Quiz Questions</p>
+                            {categoryCounts.map(cat => (
+                              <div key={cat.id} className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-bold text-[#1F1F1A]">{cat.category_name}</span>
+                                <div className="flex items-center gap-1.5">
+                                  {cat.count >= cat.question_count
+                                    ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                                    : cat.count > 0
+                                    ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                                    : <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
+                                  <span className="text-xs font-black tabular-nums text-[#5F624F]">
+                                    {cat.count} / {cat.question_count}
+                                  </span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      );
+                    })()}
                     {selected.description && (
                       <DetailCell label="Description" value={selected.description} />
                     )}
