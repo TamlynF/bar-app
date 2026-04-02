@@ -181,22 +181,22 @@ export default function PrivateHireForm() {
               </div>
             </div>
 
-            <div className="w-full min-w-0">
+            <div>
               <label className={labelClass}>Date <span className="text-red-400">*</span></label>
-              <div className="relative overflow-hidden">
+              <div className="relative">
                 <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
                 <input
                   title="Select a date"
                   type="date"
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  className={`${inputClass} pl-10 w-full`}
+                  className={`${inputClass} pl-10`}
                   style={{ colorScheme: "dark" }}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className={labelClass}>Start Time <span className="text-red-400">*</span></label>
                 <div className="relative">
@@ -207,7 +207,7 @@ export default function PrivateHireForm() {
                     value={preferredStartTime}
                     onChange={(e) => setPreferredStartTime(e.target.value)}
                     className={`${inputClass} pl-10`}
-                    // style={{ colorScheme: "dark" }}
+                    style={{ colorScheme: "dark" }}
                   />
                 </div>
               </div>
@@ -221,7 +221,7 @@ export default function PrivateHireForm() {
                     value={preferredEndTime}
                     onChange={(e) => setPreferredEndTime(e.target.value)}
                     className={`${inputClass} pl-10`}
-                    //style={{ colorScheme: "dark" }}
+                    style={{ colorScheme: "dark" }}
                   />
                 </div>
               </div>
