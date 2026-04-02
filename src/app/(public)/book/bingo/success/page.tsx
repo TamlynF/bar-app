@@ -24,19 +24,30 @@ async function confirmAndNotify(bookingId: string) {
     `)
     .eq("id", bookingId)
     .maybeSingle();
+console.log("Booking fetcheddd:", booking);
+  if (!booking) {
+    console.log("Booking not found for ID:", bookingId);
+    return { status: "not_found" as const };
+  }
+  if (booking.payment_status === "paid") {
+    console.log("Booking already paid for ID:", bookingId);
+    return { status: "already_paid" as const, booking };
+  }
 
-  if (!booking) return { status: "not_found" as const };
-  if (booking.payment_status === "paid") return { status: "already_paid" as const, booking };
-
-  if (!booking.square_order_id) return { status: "pending" as const, booking };
-
+  if (!booking.square_order_id) {
+    console.log("Booking has no Square order ID:", bookingId);
+    return { status: "pending" as const, booking };
+  }
   try {
     // Verify order is completed
-    const { order } = await squareClient.orders.get(booking.square_order_id);
+    const { order } = await squareClient.orders.get({ orderId: booking.square_order_id });
+    console.log("order fetched from Square:", order);
     if (order?.state !== "COMPLETED") {
+      console.log("Order not completed for booking ID:", bookingId);
       return { status: "pending" as const, booking };
     }
-
+    
+    
     // Extract payment ID from the order's tenders (tender.id === payment ID)
     const tender = order?.tenders?.[0];
     const squarePaymentId = tender?.id ?? null;
@@ -45,7 +56,7 @@ async function confirmAndNotify(bookingId: string) {
       : (booking.total_amount ?? 0);
 
     // Update booking
-    await supabase
+    const { data: updatedBooking } =await supabase
       .from("bookings")
       .update({
         payment_status: "paid",
@@ -56,7 +67,7 @@ async function confirmAndNotify(bookingId: string) {
       })
       .eq("id", bookingId);
 
-
+      console.log("Booking updated in database:", updatedBooking);
 
     // Send confirmation email
     const contactRaw = booking.contacts;
