@@ -9,6 +9,10 @@ const ADMIN_EMAIL = "admin@bookingsdonfenticas.co.uk";
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
 export interface BandBookingData {
+  group_name: string;
+  type: string;
+  genre?: string;
+  payment_amount?: number;
   booker_name: string;
   email: string;
   phone_no?: string;
@@ -30,6 +34,10 @@ export async function createBandBooking(data: BandBookingData) {
     .from("band_booking_requests")
     .insert([
       {
+        group_name: data.group_name,
+        type: data.type,
+        genre: data.genre || null,
+        payment_amount: data.payment_amount ?? null,
         booker_name: data.booker_name,
         email: data.email,
         phone_no: data.phone_no || null,
@@ -93,7 +101,11 @@ async function sendAdminEmail(data: BandBookingData, id: string) {
         <h2 style="margin-top:0;color:#111827;">New Band Application</h2>
         <p>A new band/artist has applied to perform at Don Fenticas.</p>
         <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
-          <p><strong>Name:</strong> ${data.booker_name}</p>
+          <p><strong>Act / Group Name:</strong> ${data.group_name}</p>
+          <p><strong>Type:</strong> ${data.type}</p>
+          ${data.genre ? `<p><strong>Genre:</strong> ${data.genre}</p>` : ""}
+          ${data.payment_amount != null ? `<p><strong>Expected Payment:</strong> £${data.payment_amount}</p>` : ""}
+          <p><strong>Booker Name:</strong> ${data.booker_name}</p>
           <p><strong>Email:</strong> ${data.email}</p>
           <p><strong>Phone:</strong> ${data.phone_no || "—"}</p>
           <p><strong>Preferred Dates:</strong> ${dates}</p>

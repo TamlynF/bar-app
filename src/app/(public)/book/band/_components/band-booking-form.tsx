@@ -5,7 +5,8 @@ import { createBandBooking } from "@/app/(public)/_actions/create-band-booking";
 import { createClient } from "@/lib/supabase/client";
 import {
   Instagram, Facebook, Youtube, Music2,
-  Plus, X, CheckCircle2, Calendar, Upload, Video, Loader2, AlertCircle
+  Plus, X, CheckCircle2, Calendar, Upload, Video, Loader2, AlertCircle, ChevronDown,
+  BadgePoundSterling,
 } from "lucide-react";
 
 const SOCIAL_FIELDS = [
@@ -32,6 +33,10 @@ export default function BandBookingForm() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [groupName, setGroupName] = useState("");
+  const [actType, setActType] = useState("band");
+  const [genre, setGenre] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState("");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -133,6 +138,10 @@ export default function BandBookingForm() {
     startTransition(async () => {
       try {
         await createBandBooking({
+          group_name: groupName,
+          type: actType,
+          genre: genre || undefined,
+          payment_amount: paymentAmount ? Number(paymentAmount) : undefined,
           booker_name: name,
           email,
           phone_no: phone || undefined,
@@ -163,13 +172,61 @@ export default function BandBookingForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-7">
 
+      {/* Act Details */}
+      <div className="space-y-4">
+        <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Act Details</p>
+        <div>
+          <label className={labelClass}>Act / Group Name *</label>
+          <input required value={groupName} onChange={(e) => setGroupName(e.target.value)}
+            placeholder="e.g. The Midnight Echo" className={inputClass} />
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className={labelClass}>Type *</label>
+            <div className="relative">
+              <select
+                required
+                value={actType}
+                onChange={(e) => setActType(e.target.value)}
+                className={`${inputClass} appearance-none pr-9`}
+              >
+                <option value="band">Band</option>
+                <option value="singer">Singer / Solo Artist</option>
+                <option value="dj">DJ</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
+            </div>
+          </div>
+          <div>
+            <label className={labelClass}>Genre</label>
+            <input value={genre} onChange={(e) => setGenre(e.target.value)}
+              placeholder="e.g. Rock, Jazz, Pop" className={inputClass} />
+          </div>
+        </div>
+        <div>
+          <label className={labelClass}>Expected Payment (£)</label>
+          <div className="relative">
+            <BadgePoundSterling className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={paymentAmount}
+              onChange={(e) => setPaymentAmount(e.target.value)}
+              placeholder="0.00"
+              className={`${inputClass} pl-10`}
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Contact Details */}
       <div className="space-y-4">
         <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Contact Details</p>
         <div>
           <label className={labelClass}>Your Name *</label>
           <input required value={name} onChange={(e) => setName(e.target.value)}
-            placeholder="Band/artist or booker name" className={inputClass} />
+            placeholder="Booker or contact name" className={inputClass} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
