@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Brain, BookOpen } from "lucide-react";
+import CategorySection from "./category-section";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "—";
@@ -116,63 +117,14 @@ export default async function EventQuizQuestionsPage({
 
       {/* Categories */}
       <div className="space-y-4">
-        {byCategory.map((cat) => {
-          const count = cat.questions.length;
-          const isComplete = count >= cat.question_count;
-          const hasAny = count > 0;
-          return (
-            <section
-              key={cat.id}
-              className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden"
-            >
-              {/* Category header */}
-              <div className="flex items-center justify-between px-5 py-3.5 border-b border-[#E6DFC8] bg-[#F7F4EA]">
-                <p className="text-[11px] font-black uppercase tracking-widest text-[#26300D]">
-                  {cat.category_name}
-                </p>
-                <span
-                  className={`text-[10px] font-black tabular-nums px-2.5 py-1 rounded-lg border ${
-                    isComplete
-                      ? "bg-emerald-50 border-emerald-200 text-emerald-700"
-                      : hasAny
-                      ? "bg-amber-50 border-amber-200 text-amber-700"
-                      : "bg-[#F7F4EA] border-[#E6DFC8] text-[#5F624F]"
-                  }`}
-                >
-                  {count} / {cat.question_count}
-                </span>
-              </div>
-
-              {/* Questions */}
-              <div className="divide-y divide-[#E6DFC8]">
-                {count === 0 ? (
-                  <div className="px-5 py-8 text-center">
-                    <BookOpen className="w-6 h-6 text-[#5F624F] opacity-20 mx-auto mb-2" />
-                    <p className="text-xs font-black text-[#5F624F] opacity-40 uppercase tracking-widest">
-                      No questions yet
-                    </p>
-                  </div>
-                ) : (
-                  cat.questions.map((q, idx) => (
-                    <div key={q.id} className="px-5 py-4 flex items-start gap-3">
-                      <span className="text-[10px] font-black text-[#26300D]/20 mt-0.5 shrink-0 tabular-nums w-5 text-right">
-                        {idx + 1}
-                      </span>
-                      <div className="flex-1 min-w-0 space-y-1.5">
-                        <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
-                          {q.question_text}
-                        </p>
-                        <p className="text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-1.5 w-fit">
-                          {q.answer_text}
-                        </p>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </section>
-          );
-        })}
+        {byCategory.map((cat) => (
+          <CategorySection
+            key={cat.id}
+            category_name={cat.category_name}
+            question_count={cat.question_count}
+            questions={cat.questions}
+          />
+        ))}
 
         {/* No categories configured at all */}
         {byCategory.length === 0 && (
