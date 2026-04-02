@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { updateBingoBookingStatus, refundBingoBooking } from "./actions";
 import type { BingoBooking } from "./page";
 import {
@@ -16,6 +17,7 @@ import {
   RefreshCw,
   Loader2,
   AlertCircle,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -31,14 +33,27 @@ const statusTheme = (status?: string, paymentStatus?: string) => {
 export default function BingoBookingListClient({
   bookings,
   selectedDate,
+  filterStatus,
+  filterPaymentStatus,
 }: {
   bookings: BingoBooking[];
   selectedDate?: string;
+  filterStatus?: string;
+  filterPaymentStatus?: string;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const isFiltered = !!(filterStatus || filterPaymentStatus);
+  const displayedBookings = isFiltered
+    ? bookings.filter(b => {
+        if (filterStatus && b.status !== filterStatus) return false;
+        if (filterPaymentStatus && b.payment_status !== filterPaymentStatus) return false;
+        return true;
+      })
+    : bookings;
 
   const confirmed = bookings.filter(b => b.status === "confirmed" && b.payment_status === "paid").length;
   const pendingPayment = bookings.filter(b => b.payment_status === "unpaid").length;
@@ -76,7 +91,7 @@ export default function BingoBookingListClient({
     });
   };
 
-  if (bookings.length === 0) {
+  if (bookings.length === 0 && !isFiltered) {
     return (
       <div className="border-2 border-dashed border-[#E6DFC8] rounded-3xl py-16 text-center">
         <Calendar className="w-8 h-8 text-[#5F624F] opacity-20 mx-auto mb-3" />
@@ -88,6 +103,22 @@ export default function BingoBookingListClient({
 
   return (
     <div className="space-y-3">
+      {/* Active filter banner */}
+      {isFiltered && (
+        <div className="flex items-center justify-between px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-2xl">
+          <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">
+            Filtered: {[filterStatus, filterPaymentStatus].filter(Boolean).join(" · ")}
+            {" "}— {displayedBookings.length} result{displayedBookings.length !== 1 ? "s" : ""}
+          </p>
+          <Link
+            href={`/events/bingo-bookings${selectedDate ? `?date=${selectedDate}` : ""}`}
+            className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-amber-700 hover:text-amber-900"
+          >
+            <X className="w-3 h-3" /> Clear
+          </Link>
+        </div>
+      )}
+
       {/* Summary pills */}
       <div className="flex items-center gap-2 flex-wrap px-1">
         <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
@@ -115,7 +146,14 @@ export default function BingoBookingListClient({
         </div>
       )}
 
-      {bookings.map((b) => {
+      {displayedBookings.length === 0 && (
+        <div className="border-2 border-dashed border-[#E6DFC8] rounded-3xl py-12 text-center">
+          <Calendar className="w-8 h-8 text-[#5F624F] opacity-20 mx-auto mb-3" />
+          <p className="text-sm font-black text-[#1F1F1A]">No bookings match this filter</p>
+        </div>
+      )}
+
+      {displayedBookings.map((b) => {
         const theme = statusTheme(b.status, b.payment_status);
         const isExpanded = expandedId === b.id;
         const isLoading = isPending && activeId === b.id;

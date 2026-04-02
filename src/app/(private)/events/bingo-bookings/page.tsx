@@ -8,9 +8,9 @@ export const dynamic = "force-dynamic";
 export default async function BingoBookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; status?: string; payment_status?: string }>;
 }) {
-  const { date: selectedDate } = await searchParams;
+  const { date: selectedDate, status: filterStatus, payment_status: filterPaymentStatus } = await searchParams;
   const bookings = await getBingoBookings(selectedDate ?? null);
 
   return (
@@ -39,7 +39,7 @@ export default async function BingoBookingsPage({
 
         {/* Booking list */}
         <div className="space-y-3 pt-2">
-          <BingoBookingListClient bookings={bookings as BingoBooking[]} selectedDate={selectedDate} />
+          <BingoBookingListClient bookings={bookings as BingoBooking[]} selectedDate={selectedDate} filterStatus={filterStatus} filterPaymentStatus={filterPaymentStatus} />
         </div>
       </div>
     </div>
