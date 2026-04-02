@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  let event: { type: string; data?: { object?: { payment?: { order_id?: string; amount_money?: { amount?: number } } } } };
+  let event: { type: string; data?: { object?: { payment?: { id?: string; order_id?: string; amount_money?: { amount?: number } } } } };
   try {
     event = JSON.parse(body);
   } catch {
@@ -68,6 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     const amountPaid = event.data?.object?.payment?.amount_money?.amount;
+    const paymentId = event.data?.object?.payment?.id ?? null;
 
     await supabase
       .from("bookings")
@@ -75,6 +76,7 @@ export async function POST(req: NextRequest) {
         payment_status: "paid",
         status: booking.status === "pending" ? "confirmed" : booking.status,
         paid_amount: amountPaid ? amountPaid / 100 : (booking.total_amount ?? 0),
+        square_payment_id: paymentId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", booking.id);
