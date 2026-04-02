@@ -86,10 +86,11 @@ export default async function DashboardPage() {
       .eq("status", "pending_review"),
     supabase
       .from("bookings")
-      .select("id")
+      .select("id, events!inner(date)")
       .eq("payment_status", "unpaid")
       .gt("total_amount", 0)
-      .in("status", ["confirmed", "pending"]),
+      .in("status", ["confirmed", "pending"])
+      .gte("events.date", todayStr),
     supabase
       .from("events")
       .select("id, event_types(sub_type, type), past_quiz_questions(id)")
