@@ -33,6 +33,13 @@ type PrivateHireRow = {
   full_name: string;
   guest_count: number;
 };
+type BandBookingRow = {
+  id: string;
+  booker_name: string;
+  selected_date: string;
+  selected_start_time: string | null;
+  selected_end_time: string | null;
+};
 type ListItem = {
   key: string;
   date: string;
@@ -146,7 +153,7 @@ export default async function DashboardPage() {
   const { data: rawUpcoming } = await supabase
     .from("events")
     .select(
-      "id, date, start_time, title, host_employee_id, event_types (type, sub_type), bookings (id, group_size, status, team_id)"
+      "id, date, start_time, end_time, title, host_employee_id, event_types (type, sub_type), bookings (id, group_size, status, team_id)"
     )
     .gte("date", todayStr)
     .order("date", { ascending: true })
@@ -154,12 +161,18 @@ export default async function DashboardPage() {
 
   const upcomingEvents = (rawUpcoming ?? []) as unknown as UpcomingEvent[];
 
-  const [{ data: employees }, { data: tablesData }, { data: confirmedPrivateHires }] = await Promise.all([
+  const [{ data: employees }, { data: tablesData }, { data: confirmedPrivateHires }, { data: confirmedBandBookings }] = await Promise.all([
     supabase.from("employees").select("id, full_name"),
     supabase.from("tables").select("id, max_capacity").eq("available", true),
     supabase
       .from("private_hire_requests")
       .select("id, selected_date, selected_start_time, reason_for_hire, full_name, guest_count")
+      .eq("status", "confirmed")
+      .gte("selected_date", todayStr)
+      .order("selected_date", { ascending: true }),
+    supabase
+      .from("band_booking_requests")
+      .select("id, booker_name, selected_date, selected_start_time, selected_end_time")
       .eq("status", "confirmed")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
@@ -240,7 +253,19 @@ export default async function DashboardPage() {
       href: "/events/private-bookings",
     }));
 
-  const allListItems = [...eventListItems, ...privateHireListItems]
+  const bandListItems: ListItem[] = ((confirmedBandBookings ?? []) as BandBookingRow[]).map((b) => ({
+    key: `band-${b.id}`,
+    date: b.selected_date,
+    title: b.booker_name,
+    startTime: b.selected_start_time,
+    endTime: b.selected_end_time,
+    eventType: { type: "Live Music", sub_type: "band" } as EventTypeRow,
+    hostName: null,
+    guests: 0,
+    href: "/events/music-bookings",
+  }));
+
+  const allListItems = [...eventListItems, ...privateHireListItems, ...bandListItems]
     .sort((a, b) => a.date.localeCompare(b.date));
 
   const tonightConfirmed = (tonightEvent?.bookings ?? []).filter(
@@ -579,7 +604,7 @@ function EventRow({
 }) {
   const parsed = parseISO(date);
   const today = isToday(parsed);
-
+console.log("endtime: ", endTime, "startTime: ", startTime, "date: ", date, "title: ", title);
   return (
     <Link
       href={href}
