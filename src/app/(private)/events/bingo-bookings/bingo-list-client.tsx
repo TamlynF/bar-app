@@ -35,6 +35,7 @@ export default function BingoBookingListClient({
   selectedDate,
   filterStatus,
   filterPaymentStatus,
+  filterFromDate
 }: {
   bookings: BingoBooking[];
   selectedDate?: string;
@@ -50,7 +51,7 @@ export default function BingoBookingListClient({
   const isFiltered = !!(filterStatus || filterPaymentStatus || filterFromDate);
   const displayedBookings = isFiltered
     ? bookings.filter(b => {
-        if (filterStatus && b.status !== filterStatus) return false;
+        if (filterStatus && !filterStatus.split(",").includes(b.status ?? "")) return false;
         if (filterPaymentStatus && b.payment_status !== filterPaymentStatus) return false;
         if (filterFromDate && b.events?.event_date && b.events.event_date < filterFromDate) return false;
         return true;
