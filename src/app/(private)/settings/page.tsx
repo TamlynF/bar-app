@@ -19,27 +19,7 @@ import {
 } from "lucide-react";
 
 const settingsItems = [
-  {
-    title: "Events",
-    description: "Schedule and manage dates",
-    href: "/event-setups",
-    icon: CalendarCogIcon,
-    color: "bg-amber-500/10 text-amber-600",
-  },
-  {
-    title: "Event Categories",
-    description: "Categories and requirements",
-    href: "/settings/event-types",
-    icon: Component,
-    color: "bg-purple-500/10 text-purple-600",
-  },
-    {
-    title: "Quiz Rules",
-    description: "Category round configurations",
-    href: "/settings/quiz-categories",
-    icon: Dices,
-    color: "bg-rose-500/10 text-rose-600",
-  },
+
   {
     title: "Guests",
     description: "Database and contact info",

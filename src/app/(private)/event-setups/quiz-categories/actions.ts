@@ -42,7 +42,7 @@ export async function saveQuizCategoryAction(formData: FormData) {
       if (error) throw error;
     }
 
-    revalidatePath("/settings/quiz-categories");
+    revalidatePath("/event-setups/quiz-categories");
     return { success: true };
   } catch (error) {
     console.error("Error saving quiz category:", error);
@@ -62,7 +62,7 @@ export async function deleteQuizCategoryAction(id: number) {
       .eq("id", id);
     if (error) throw error;
     
-    revalidatePath("/settings/quiz-categories");
+    revalidatePath("/event-setups/quiz-categories");
     return { success: true };
   } catch (error) {
     console.error("Error deleting quiz category:", error);

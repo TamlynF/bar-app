@@ -134,7 +134,7 @@ export default async function EventQuizQuestionsPage({
             <p className="text-sm font-black text-[#1F1F1A]">No quiz categories configured</p>
             <p className="text-[11px] text-[#5F624F] mt-1">
               Add categories in{" "}
-              <Link href="/settings/quiz-categories" className="underline">
+              <Link href="/event-setups/quiz-categories" className="underline">
                 Quiz Rules
               </Link>
             </p>

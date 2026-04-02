@@ -40,7 +40,8 @@
       "Bash(cp -r \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\settings\\\\events\" \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\events\")",
       "Bash(cp -r \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\quiz-generator\" \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\events\\\\quiz-generator\")",
       "Bash(xargs sed:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(sed:*)"
     ]
   }
 }

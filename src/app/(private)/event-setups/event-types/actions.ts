@@ -32,7 +32,7 @@ export async function saveEventTypeAction(formData: FormData) {
       if (error) throw error;
     }
 
-    revalidatePath("/settings/event-types");
+    revalidatePath("/event-setups/event-types");
     return { success: true };
   } catch (error) {
     console.error("Error saving event type:", error);
@@ -51,7 +51,7 @@ export async function renameEventTypeGroupAction(oldType: string, newType: strin
 
     if (error) throw error;
 
-    revalidatePath("/settings/event-types");
+    revalidatePath("/event-setups/event-types");
     return { success: true };
   } catch (error) {
     console.error("Error renaming group:", error);
@@ -104,7 +104,7 @@ export async function deleteEventTypeGroupAction(type: string) {
 
     if (error) throw error;
     
-    revalidatePath("/settings/event-types");
+    revalidatePath("/event-setups/event-types");
     return { success: true };
   } catch (error) {
     console.error("Error deleting event type group:", error);
@@ -144,7 +144,7 @@ export async function deleteEventTypeAction(id: number) {
 
     if (error) throw error;
     
-    revalidatePath("/settings/event-types");
+    revalidatePath("/event-setups/event-types");
     return { success: true };
   } catch (error) {
     console.error("Error deleting event type:", error);
@@ -183,7 +183,7 @@ export async function saveEventInfoAction(formData: FormData) {
       if (error) throw error;
     }
 
-    revalidatePath("/settings/event-types");
+    revalidatePath("/event-setups/event-types");
     return { success: true };
   } catch (error) {
     console.error("Error saving event info:", error);
@@ -198,7 +198,7 @@ export async function deleteEventInfoAction(id: number) {
     const { error } = await supabase.from("event_information").delete().eq("id", id);
     if (error) throw error;
     
-    revalidatePath("/settings/event-types");
+    revalidatePath("/event-setups/event-types");
     return { success: true };
   } catch (error) {
     console.error("Error deleting event information:", error);

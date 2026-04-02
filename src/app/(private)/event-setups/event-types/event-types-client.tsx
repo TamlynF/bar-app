@@ -31,7 +31,7 @@ import {
   saveEventInfoAction,
   deleteEventInfoAction,
   deleteEventTypeGroupAction
-} from "@/app/(private)/settings/event-types/actions";
+} from "@/app/(private)/event-setups/event-types/actions";
 import { cn } from "@/lib/utils";
 
 const ICON_OPTIONS = {

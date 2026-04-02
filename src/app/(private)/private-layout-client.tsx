@@ -73,8 +73,11 @@ export default function PrivateLayoutClient({
     ]
 
     const eventsNavSubItems = [
-        { label: "Event List", href: "/event-setups", icon: CalendarDays },
+        { label: "Event List", href: "/event-setups/events", icon: CalendarDays },
+        { label: "Event Categories", href: "/event-setups/event-types", icon: Component },
         { label: "Quiz Generator", href: "/event-setups/quiz-generator", icon: Brain },
+        { label: "Quiz History", href: "/event-setups/quiz-history", icon: Grid2X2 },
+        { label: "Quiz Rules", href: "/event-setups/quiz-categories", icon: Dices },
     ]
 
     const eventSubItems = [
@@ -84,9 +87,7 @@ export default function PrivateLayoutClient({
         { label: "Private Events", href: "/event-bookings/private-bookings", icon: PartyPopper },
     ]
 
-    const settingsSubItems = [
-        { label: "Event Categories", href: "/settings/event-types", icon: Component },
-        { label: "Quiz Rules", href: "/settings/quiz-categories", icon: Dices },
+    const settingsSubItems = [        
         { label: "Guests", href: "/settings/customers", icon: BookUser },
         { label: "Teams", href: "/settings/teams", icon: Medal },
         { label: "Floor Plan", href: "/settings/tables", icon: Grid2X2 },
@@ -101,12 +102,16 @@ export default function PrivateLayoutClient({
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null }
         if (normalizedPath.startsWith("/event-setups")) {
             if (normalizedPath === "/event-setups") return { title: "Events", subtitle: null, backHref: null }
-            if (normalizedPath.startsWith("/event-setups/quiz-generator")) {
-                if (normalizedPath === "/event-setups/quiz-generator") return { title: "Events", subtitle: "Quiz Generator", backHref: "/event-setups" }
-                return { title: "Events", subtitle: "Question Archive", backHref: "/event-setups/quiz-generator" }
+
+            const eventSetupsMap: Record<string, string> = {
+                "events": "Event List",
+                "event-types": "Event Categories",
+                "quiz-generator": "Quiz Generator",
+                "quiz-history": "Quiz History",
+                "quiz-categories": "Quiz Rules",
             }
             const segment = normalizedPath.split("/")[2]
-            const subtitle = segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ") : ""
+            const subtitle = eventSetupsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
             return { title: "Events", subtitle, backHref: "/event-setups" }
         }
 
@@ -127,8 +132,6 @@ export default function PrivateLayoutClient({
             if (normalizedPath === "/settings") return { title: "Settings", subtitle: null, backHref: null }
             const settingsMap: Record<string, string> = {
                 "tables": "Floor Plan",
-                "event-types": "Event Categories",
-                "quiz-categories": "Quiz Rules",
                 "customers": "Guests",
                 "teams": "Teams",
                 "users": "System Users",
