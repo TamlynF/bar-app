@@ -219,6 +219,8 @@ export default function EventsClient({
                     .join("")
                     .toUpperCase()
                     .slice(0, 2) ?? null;
+                  const isQuiz = !!eventType.sub_type?.toLowerCase().includes("quiz");
+                  const quizStat = isQuiz ? getQuizStatus(event.id, quizCategories, quizQuestions) : null;
                   return (
                     <div
                       key={event.id}
@@ -247,6 +249,13 @@ export default function EventsClient({
                               <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
                                 £{event.payment_amount!.toFixed(2)}
                               </span>
+                            )}
+                            {quizStat && (
+                              quizStat.allComplete
+                                ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                                : quizStat.someExist
+                                ? <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                                : <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
                             )}
                           </div>
                         </div>
@@ -292,6 +301,16 @@ export default function EventsClient({
                             ? <CheckCircle2 className="w-3.5 h-3.5 text-[#26300D]" />
                             : <XCircle className="w-3.5 h-3.5 text-[#5F624F]/30" />}
                         </span>
+                        {quizStat && (
+                          <span className="flex items-center gap-1.5 text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-1 rounded-lg">
+                            {quizStat.allComplete
+                              ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                              : quizStat.someExist
+                              ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              : <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                            {quizStat.total} / {quizStat.target}
+                          </span>
+                        )}
                       </div>
 
                       <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
