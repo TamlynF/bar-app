@@ -324,7 +324,7 @@ export default async function DashboardPage() {
               icon={CreditCard}
               label="Unpaid Bookings"
               count={unpaidBookingsData?.length ?? 0}
-              href={`/events/bingo-bookings?status=confirmed,pending&payment_status=unpaid&from_date=${todayStr}`}
+              href={`/events/bingo-bookings?status=confirmed,pending&payment_status=unpaid&from_date=${todayStr}&min_total=0`}
               activeColor="text-amber-600"
               activeBg="bg-amber-50"
               activeDot="bg-amber-500"

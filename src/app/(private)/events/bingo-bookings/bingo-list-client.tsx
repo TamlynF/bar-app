@@ -42,18 +42,20 @@ export default function BingoBookingListClient({
   filterStatus?: string;
   filterPaymentStatus?: string;
   filterFromDate?: string;
+  filterMinTotal?: string;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isFiltered = !!(filterStatus || filterPaymentStatus || filterFromDate);
+  const isFiltered = !!(filterStatus || filterPaymentStatus || filterFromDate || filterMinTotal !== undefined);
   const displayedBookings = isFiltered
     ? bookings.filter(b => {
         if (filterStatus && !filterStatus.split(",").includes(b.status ?? "")) return false;
         if (filterPaymentStatus && b.payment_status !== filterPaymentStatus) return false;
         if (filterFromDate && b.events?.event_date && b.events.event_date < filterFromDate) return false;
+        if (filterMinTotal !== undefined && (b.total_amount ?? 0) <= Number(filterMinTotal)) return false;
         return true;
       })
     : bookings;
