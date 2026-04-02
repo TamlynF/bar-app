@@ -249,7 +249,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">
                   Performance Videos
                 </p>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {videos.map((url, i) => {
                     const isStorage =
                       url.includes("supabase.co/storage") || url.includes(".supabase.co");
@@ -258,7 +258,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         key={i}
                         type="button"
                         onClick={() => setActiveVideo(url)}
-                        className="relative aspect-video rounded-2xl overflow-hidden bg-black group"
+                        className="relative h-24 rounded-xl overflow-hidden bg-black group"
                       >
                         <video
                           src={url}
@@ -281,7 +281,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="aspect-video rounded-2xl flex flex-col items-center justify-center gap-2 bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA] transition-colors p-3"
+                        className="h-24 rounded-xl flex flex-col items-center justify-center gap-2 bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA] transition-colors p-3"
                       >
                         <Link2 className="w-5 h-5" />
                         <span className="text-[10px] font-black uppercase tracking-widest text-center line-clamp-2 break-all">
@@ -379,6 +379,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       <Dialog open={!!activeVideo} onOpenChange={(v) => !v && setActiveVideo(null)}>
         <DialogContent className="bg-black border-0 p-0 max-w-2xl w-full rounded-2xl overflow-hidden">
           <button
+            title="Close"
             type="button"
             onClick={() => setActiveVideo(null)}
             className="absolute top-3 right-3 z-50 w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"

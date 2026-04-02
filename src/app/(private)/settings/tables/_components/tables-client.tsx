@@ -180,10 +180,10 @@ export default function TablesClient({
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85dvh]
+          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[520px]
-            sm:h-auto sm:max-h-[80dvh] sm:rounded-[2rem] sm:bottom-6
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px]
+            sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sticky header */}
