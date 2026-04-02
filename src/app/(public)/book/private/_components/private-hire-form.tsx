@@ -172,7 +172,7 @@ export default function PrivateHireForm() {
                 <input
                   type="number"
                   min="1"
-                  max="500"
+                  max="200"
                   value={guestCount}
                   onChange={(e) => setGuestCount(e.target.value)}
                   placeholder="e.g. 50"
@@ -181,16 +181,16 @@ export default function PrivateHireForm() {
               </div>
             </div>
 
-            <div>
-              <label className={labelClass}>Preferred Date</label>
-              <div className="relative">
+            <div className="w-full min-w-0">
+              <label className={labelClass}>Date <span className="text-red-400">*</span></label>
+              <div className="relative overflow-hidden">
                 <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
                 <input
                   title="Select a date"
                   type="date"
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  className={`${inputClass} pl-10`}
+                  className={`${inputClass} pl-10 w-full`}
                   style={{ colorScheme: "dark" }}
                 />
               </div>
@@ -198,7 +198,7 @@ export default function PrivateHireForm() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className={labelClass}>Start Time</label>
+                <label className={labelClass}>Start Time <span className="text-red-400">*</span></label>
                 <div className="relative">
                   <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
                   <input
@@ -207,12 +207,12 @@ export default function PrivateHireForm() {
                     value={preferredStartTime}
                     onChange={(e) => setPreferredStartTime(e.target.value)}
                     className={`${inputClass} pl-10`}
-                    style={{ colorScheme: "dark" }}
+                    // style={{ colorScheme: "dark" }}
                   />
                 </div>
               </div>
               <div>
-                <label className={labelClass}>End Time</label>
+                <label className={labelClass}>End Time <span className="text-red-400">*</span></label>
                 <div className="relative">
                   <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
                   <input
@@ -221,7 +221,7 @@ export default function PrivateHireForm() {
                     value={preferredEndTime}
                     onChange={(e) => setPreferredEndTime(e.target.value)}
                     className={`${inputClass} pl-10`}
-                    style={{ colorScheme: "dark" }}
+                    //style={{ colorScheme: "dark" }}
                   />
                 </div>
               </div>
