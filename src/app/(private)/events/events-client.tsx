@@ -15,6 +15,7 @@ import {
   BadgePoundSterling,
   Users,
   ChevronRight,
+  ChevronDown,
   Save,
   Pencil,
   Trash2,
@@ -109,6 +110,14 @@ export default function EventsClient({
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
+
+  const toggleGroup = (id: number) =>
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const isSheetOpen = !!selected || isAdding;
 
@@ -199,20 +208,31 @@ export default function EventsClient({
           <p className="text-[11px] text-[#5F624F] mt-1">Add your first event to get started</p>
         </div>
       ) : (
-        <div className="space-y-6">
-          {grouped.map(({ eventType, events }) => (
-            <section key={eventType.id}>
-              <div className="flex items-center gap-3 mb-2 px-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
+        <div className="space-y-4">
+          {grouped.map(({ eventType, events }) => {
+            const isOpen = !collapsedGroups.has(eventType.id);
+            return (
+            <section key={eventType.id} className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => toggleGroup(eventType.id)}
+                className="w-full flex items-center justify-between px-5 py-3.5 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+              >
+                <p className="text-[11px] font-black uppercase tracking-widest text-[#26300D]">
                   {eventTypeLabel(eventType)}
                 </p>
-                <div className="flex-1 h-px bg-[#E6DFC8]" />
-                <span className="text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-0.5 rounded-lg">
-                  {events.length}
-                </span>
-              </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-[10px] font-black text-[#5F624F] bg-white border border-[#E6DFC8] px-2.5 py-1 rounded-lg tabular-nums">
+                    {events.length}
+                  </span>
+                  <ChevronDown className={cn(
+                    "w-4 h-4 text-[#5F624F] transition-transform duration-200",
+                    isOpen && "rotate-180"
+                  )} />
+                </div>
+              </button>
 
-              <div className="space-y-2">
+              {isOpen && <div className="divide-y divide-[#E6DFC8]">
                 {events.map((event) => {
                   const hasPricing = !!event.payment_amount && event.payment_amount > 0;
                   const host = employees.find((e) => e.id === event.host_employee_id);
@@ -228,7 +248,7 @@ export default function EventsClient({
                     <div
                       key={event.id}
                       onClick={() => openView(event)}
-                      className="bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:border-[#26300D]/30 hover:shadow-sm transition-all active:scale-[0.99]"
+                      className="px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
                     >
                       <div className="flex-1 min-w-0">
                         <p className="font-black text-[#1F1F1A] leading-snug sm:truncate">
@@ -325,22 +345,24 @@ export default function EventsClient({
                     </div>
                   );
                 })}
-              </div>
+              </div>}
             </section>
-          ))}
+          )})}
 
           {ungrouped.length > 0 && (
-            <section>
-              <div className="flex items-center gap-3 mb-2 px-1">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F]">Other</p>
-                <div className="flex-1 h-px bg-[#E6DFC8]" />
+            <section className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-3.5 bg-[#F7F4EA]">
+                <p className="text-[11px] font-black uppercase tracking-widest text-[#26300D]">Other</p>
+                <span className="text-[10px] font-black text-[#5F624F] bg-white border border-[#E6DFC8] px-2.5 py-1 rounded-lg tabular-nums">
+                  {ungrouped.length}
+                </span>
               </div>
-              <div className="space-y-2">
+              <div className="divide-y divide-[#E6DFC8]">
                 {ungrouped.map((event) => (
                   <div
                     key={event.id}
                     onClick={() => openView(event)}
-                    className="bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:border-[#26300D]/30 hover:shadow-sm transition-all active:scale-[0.99]"
+                    className="px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
                   >
                     <div className="flex-1 min-w-0">
                       <p className="font-black text-[#1F1F1A] leading-snug">{event.title || "Untitled Event"}</p>
@@ -388,7 +410,7 @@ export default function EventsClient({
                 const isQuiz = !!et?.sub_type?.toLowerCase().includes("quiz");
                 return isQuiz ? (
                   <Link
-                    href={`/settings/events/${selected.id}`}
+                    href={`/events/${selected.id}`}
                     className="shrink-0 w-10 h-10 rounded-2xl bg-[#FDCC4B]/15 border border-[#FDCC4B]/30 flex items-center justify-center text-[#FDCC4B] hover:bg-[#FDCC4B]/25 transition-colors"
                     title="View quiz questions"
                   >
