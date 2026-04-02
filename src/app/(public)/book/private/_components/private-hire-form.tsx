@@ -190,38 +190,35 @@ export default function PrivateHireForm() {
                   type="date"
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  className={`${inputClass} pl-10`}
-                  style={{ colorScheme: "dark" }}
+                  className={`${inputClass} pl-10 input-scheme-dark max-w-full`}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={labelClass}>Start Time <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600 pointer-events-none" />
                   <input
                     title="Start time"
                     type="time"
                     value={preferredStartTime}
                     onChange={(e) => setPreferredStartTime(e.target.value)}
-                    className={`${inputClass} pl-10`}
-                    style={{ colorScheme: "dark" }}
+                    className={`${inputClass} !px-2 pl-8 input-scheme-dark max-w-full`}
                   />
                 </div>
               </div>
               <div>
                 <label className={labelClass}>End Time <span className="text-red-400">*</span></label>
                 <div className="relative">
-                  <Clock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600 pointer-events-none" />
                   <input
                     title="End time"
                     type="time"
                     value={preferredEndTime}
                     onChange={(e) => setPreferredEndTime(e.target.value)}
-                    className={`${inputClass} pl-10`}
-                    style={{ colorScheme: "dark" }}
+                    className={`${inputClass} !px-2 pl-8 input-scheme-dark max-w-full`}
                   />
                 </div>
               </div>

@@ -4973,4 +4973,5 @@
   .badge-bingo { background-color: rgb(165 180 252 / 0.2); color: #A5B4FC; }
   .badge-band  { background-color: rgb(125 211 252 / 0.2); color: #7DD3FC; }
   .badge-hire  { background-color: rgb(134 239 172 / 0.2); color: #86EFAC; }
+  .input-scheme-dark { color-scheme: dark; box-sizing: border-box; max-width: 100%; }
 }
