@@ -51,7 +51,7 @@ export async function updateBingoBookingStatus(id: string, status: string) {
     .update({ status: status.toLowerCase(), updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw new Error("Failed to update status");
-  revalidatePath("/events/bingo-bookings");
+  revalidatePath("/event-bookings/bingo-bookings");
   revalidatePath("/dashboard");
 }
 
@@ -94,6 +94,6 @@ export async function refundBingoBooking(id: string) {
     })
     .eq("id", id);
 
-  revalidatePath("/events/bingo-bookings");
+  revalidatePath("/event-bookings/bingo-bookings");
   revalidatePath("/dashboard");
 }

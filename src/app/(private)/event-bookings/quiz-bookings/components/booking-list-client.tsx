@@ -7,7 +7,7 @@ import {
   updateBookingDetails, 
   getAvailableTablesForEvent,
   getQuizEvents
-} from "@/app/(private)/events/quiz-bookings/actions"
+} from "@/app/(private)/event-bookings/quiz-bookings/actions"
 import {
   CheckCircle2,
   ChevronRight,
@@ -44,7 +44,7 @@ import { cn } from "@/lib/utils"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
-import { Booking } from "@/app/(private)/events/quiz-bookings/page"
+import { Booking } from "@/app/(private)/event-bookings/quiz-bookings/page"
 
 const formatDateStr = (d: Date | string) => {
   if (typeof d === 'string') return d;

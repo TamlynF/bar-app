@@ -24,7 +24,7 @@ export function PendingReviews({ items }: { items: PendingItem[] }) {
 
       <div className="space-y-2">
         {items.map((item) => {
-          const href = item.type === "band" ? "/events/music-bookings" : "/events/private-bookings";
+          const href = item.type === "band" ? "/event-bookings/music-bookings" : "/event-bookings/private-bookings";
           const Icon = item.type === "band" ? Music : Building2;
           const typeLabel = item.type === "band" ? "Band Application" : "Private Hire";
 
@@ -50,13 +50,13 @@ export function PendingReviews({ items }: { items: PendingItem[] }) {
 
       <div className="flex gap-2 pt-1">
         <Link
-          href="/events/music-bookings?status=pending_review"
+          href="/event-bookings/music-bookings?status=pending_review"
           className="flex-1 text-center text-[10px] font-black uppercase tracking-widest py-2 rounded-xl bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
         >
           View Band Applications
         </Link>
         <Link
-          href="/events/private-bookings?status=pending_review"
+          href="/event-bookings/private-bookings?status=pending_review"
           className="flex-1 text-center text-[10px] font-black uppercase tracking-widest py-2 rounded-xl bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
         >
           View Private Hire

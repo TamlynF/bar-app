@@ -10,7 +10,7 @@ export default function EventsHubLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isEventsRoot = pathname === "/events";
+  const isEventsRoot = pathname === "/event-bookings";
 
   return (
     <div className="flex flex-col min-h-screen bg-background lg:flex-row lg:space-x-12 p-4 md:p-8 max-w-7xl mx-auto w-full transition-all duration-500">  

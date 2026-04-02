@@ -51,7 +51,7 @@ export async function proxy(request: NextRequest) {
   // Define route protections
   const isPrivateRoute =
     pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/events") ||
+    pathname.startsWith("/event-bookings") ||
     pathname.startsWith("/quiz-generator") ||
     pathname.startsWith("/settings");
 
@@ -79,7 +79,7 @@ export async function proxy(request: NextRequest) {
 export const config = {
   matcher: [
     "/dashboard/:path*",
-    "/events/:path*",
+    "/event-bookings/:path*",
     "/quiz-generator/:path*",
     "/settings/:path*",
     "/login",

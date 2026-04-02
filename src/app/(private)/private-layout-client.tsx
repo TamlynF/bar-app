@@ -50,7 +50,7 @@ export default function PrivateLayoutClient({
 }) {
     const pathname = usePathname()
     const [isPending, startTransition] = useTransition()
-    const [eventsOpen, setEventsOpen] = useState(() => !!pathname?.startsWith("/events"))
+    const [eventsOpen, setEventsOpen] = useState(() => !!pathname?.startsWith("/event-bookings"))
     const [settingsOpen, setSettingsOpen] = useState(() => !!pathname?.startsWith("/settings"))
 
     const initials = employeeName
@@ -66,16 +66,16 @@ export default function PrivateLayoutClient({
 
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Bookings", href: "/events", icon: Tickets },
+        { label: "Bookings", href: "/event-bookings", icon: Tickets },
         { label: "Quiz", href: "/quiz-generator", icon: Brain },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
     const eventSubItems = [
-        { label: "Music Bingo", href: "/events/bingo-bookings", icon: Speaker },
-        { label: "Live Music", href: "/events/music-bookings", icon: Music },
-        { label: "Thursday Quiz", href: "/events/quiz-bookings", icon: Trophy },
-        { label: "Private Events", href: "/events/private-bookings", icon: PartyPopper },
+        { label: "Music Bingo", href: "/event-bookings/bingo-bookings", icon: Speaker },
+        { label: "Live Music", href: "/event-bookings/music-bookings", icon: Music },
+        { label: "Thursday Quiz", href: "/event-bookings/quiz-bookings", icon: Trophy },
+        { label: "Private Events", href: "/event-bookings/private-bookings", icon: PartyPopper },
     ]
 
     const settingsSubItems = [
@@ -104,8 +104,8 @@ export default function PrivateLayoutClient({
             return { title: "Quiz", subtitle, backHref: "/quiz-generator" }
         }
 
-        if (normalizedPath.startsWith("/events")) {
-            if (normalizedPath === "/events") return { title: "Bookings", subtitle: null, backHref: null }
+        if (normalizedPath.startsWith("/event-bookings")) {
+            if (normalizedPath === "/event-bookings") return { title: "Bookings", subtitle: null, backHref: null }
             const eventsMap: Record<string, string> = {
                 "music-bookings": "Music",
                 "private-bookings": "Private Events",
@@ -114,7 +114,7 @@ export default function PrivateLayoutClient({
             }
             const segment = normalizedPath.split("/")[2]
             const subtitle = eventsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
-            return { title: "Bookings", subtitle, backHref: "/events" }
+            return { title: "Bookings", subtitle, backHref: "/event-bookings" }
         }
 
         if (normalizedPath.startsWith("/settings")) {

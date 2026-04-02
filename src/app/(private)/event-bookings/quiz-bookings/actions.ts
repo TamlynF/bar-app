@@ -264,7 +264,7 @@ export async function updateBookingDetails(
   }
 
   revalidatePath("/dashboard")
-  revalidatePath("/events/quiz-bookings")
+  revalidatePath("/event-bookings/quiz-bookings")
 }
 
 export async function updateBookingStatus(id: string, status: string) {
@@ -280,7 +280,7 @@ export async function updateBookingStatus(id: string, status: string) {
   }
 
   revalidatePath("/dashboard")
-  revalidatePath("/events/quiz-bookings")
+  revalidatePath("/event-bookings/quiz-bookings")
 }
 
 export async function deleteBooking(id: string) {
@@ -296,5 +296,5 @@ export async function deleteBooking(id: string) {
 
   if (error) throw new Error("Failed to delete")
   revalidatePath("/dashboard")
-  revalidatePath("/events/quiz-bookings")
+  revalidatePath("/event-bookings/quiz-bookings")
 }

@@ -77,14 +77,14 @@ function getSaturdaysInMonth(year: number, month: number): string[] {
 }
 
 function getBookingsHref(et: EventTypeRow): string {
-  if (!et) return "/events";
+  if (!et) return "/event-bookings";
   const s = et.sub_type?.toLowerCase() ?? "";
   const t = et.type?.toLowerCase() ?? "";
-  if (s.includes("bingo") || t.includes("bingo")) return "/events/bingo-bookings";
-  if (s.includes("quiz") || t.includes("quiz")) return "/events/quiz-bookings";
-  if (t.includes("music") || t.includes("band") || t.includes("live")) return "/events/music-bookings";
-  if (t.includes("private")) return "/events/private-bookings";
-  return "/events";
+  if (s.includes("bingo") || t.includes("bingo")) return "/event-bookings/bingo-bookings";
+  if (s.includes("quiz") || t.includes("quiz")) return "/event-bookings/quiz-bookings";
+  if (t.includes("music") || t.includes("band") || t.includes("live")) return "/event-bookings/music-bookings";
+  if (t.includes("private")) return "/event-bookings/private-bookings";
+  return "/event-bookings";
 }
 
 export default async function DashboardPage() {
@@ -250,7 +250,7 @@ export default async function DashboardPage() {
       eventType: { type: "Private Hire", sub_type: "private" } as EventTypeRow,
       hostName: ph.full_name,
       guests: ph.guest_count,
-      href: "/events/private-bookings",
+      href: "/event-bookings/private-bookings",
     }));
 
   const bandListItems: ListItem[] = ((confirmedBandBookings ?? []) as BandBookingRow[]).map((b) => ({
@@ -262,7 +262,7 @@ export default async function DashboardPage() {
     eventType: { type: "Live Music", sub_type: "band" } as EventTypeRow,
     hostName: null,
     guests: 0,
-    href: "/events/music-bookings",
+    href: "/event-bookings/music-bookings",
   }));
 
   const allListItems = [...eventListItems, ...privateHireListItems, ...bandListItems]
@@ -306,7 +306,7 @@ export default async function DashboardPage() {
               icon={Building2}
               label="Private Hires"
               count={pendingPrivate ?? 0}
-              href="/events/private-bookings?status=pending_review"
+              href="/event-bookings/private-bookings?status=pending_review"
               activeColor="text-blue-600"
               activeBg="bg-blue-50"
               activeDot="bg-blue-500"
@@ -315,7 +315,7 @@ export default async function DashboardPage() {
               icon={Music}
               label="Band Submissions"
               count={pendingBands ?? 0}
-              href="/events/music-bookings?status=pending_review"
+              href="/event-bookings/music-bookings?status=pending_review"
               activeColor="text-purple-600"
               activeBg="bg-purple-50"
               activeDot="bg-purple-500"
@@ -342,7 +342,7 @@ export default async function DashboardPage() {
               icon={Music}
               label="Open Saturdays This Month"
               count={openSaturdays}
-              href="/events/music-bookings"
+              href="/event-bookings/music-bookings"
               activeColor="text-rose-600"
               activeBg="bg-rose-50"
               activeDot="bg-rose-500"

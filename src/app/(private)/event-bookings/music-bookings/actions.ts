@@ -25,7 +25,7 @@ export async function updateBandStatus(
 
   await sendOutcomeEmail(record.booker_name, record.email, status, adminNotes);
 
-  revalidatePath("/events/music-bookings");
+  revalidatePath("/event-bookings/music-bookings");
   revalidatePath("/dashboard");
 }
 

@@ -117,7 +117,7 @@ export default function BingoBookingListClient({
             {" "}— {displayedBookings.length} result{displayedBookings.length !== 1 ? "s" : ""}
           </p>
           <Link
-            href={`/events/bingo-bookings${selectedDate ? `?date=${selectedDate}` : ""}`}
+            href={`/event-bookings/bingo-bookings${selectedDate ? `?date=${selectedDate}` : ""}`}
             className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-amber-700 hover:text-amber-900"
             prefetch={false}
           >

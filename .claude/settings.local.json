@@ -32,7 +32,11 @@
       "mcp__claude_ai_Vercel__list_teams",
       "mcp__claude_ai_Vercel__list_projects",
       "mcp__claude_ai_Vercel__list_deployments",
-      "mcp__claude_ai_Vercel__get_deployment_build_logs"
+      "mcp__claude_ai_Vercel__get_deployment_build_logs",
+      "Bash(cp:*)",
+      "Bash(sed -i 's|/events/quiz-bookings/actions|/event-bookings/quiz-bookings/actions|g' \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\event-bookings\\\\quiz-bookings\\\\components\\\\booking-list-client.tsx\")",
+      "Bash(sed -i 's|/events/quiz-bookings/page|/event-bookings/quiz-bookings/page|g' \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\event-bookings\\\\quiz-bookings\\\\components\\\\booking-list-client.tsx\")",
+      "Bash(sed -i 's|/events/bingo-bookings|/event-bookings/bingo-bookings|g' \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\event-bookings\\\\bingo-bookings\\\\bingo-list-client.tsx\")"
     ]
   }
 }

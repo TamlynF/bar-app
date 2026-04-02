@@ -122,7 +122,7 @@ export async function updateBooking(
     // Revalidate for both public and admin views
     revalidatePath(`/manage-booking/${bookingId}`);
     revalidatePath("/dashboard");
-    revalidatePath("/events/quiz-bookings");
+    revalidatePath("/event-bookings/quiz-bookings");
     
     return { success: true };
   } catch (err) {
