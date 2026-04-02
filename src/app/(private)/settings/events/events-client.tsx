@@ -308,7 +308,7 @@ export default function EventsClient({
                               : quizStat.someExist
                               ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                               : <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
-                            {quizStat.total} / {quizStat.target}
+                            {quizStat.total} / {quizStat.target} Questions
                           </span>
                         )}
                       </div>
@@ -410,19 +410,7 @@ export default function EventsClient({
                       const { categoryCounts, total, target, allComplete, someExist } = getQuizStatus(selected.id, quizCategories, quizQuestions);
                       return (
                         <>
-                          {/* Mobile: single status icon + total */}
-                          <div className="sm:hidden px-5 py-3.5 flex items-center gap-2.5">
-                            {allComplete
-                              ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                              : someExist
-                              ? <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                              : <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />}
-                            <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest">
-                              {total} / {target} Questions
-                            </span>
-                          </div>
-                          {/* Desktop: per-category breakdown */}
-                          <div className="hidden sm:block px-5 py-4 space-y-2">
+                          <div className="px-5 py-4 space-y-2">
                             <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">Quiz Questions</p>
                             {categoryCounts.map(cat => (
                               <div key={cat.id} className="flex items-center justify-between gap-2">
