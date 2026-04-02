@@ -51,7 +51,7 @@ export default function PrivateLayoutClient({
     const pathname = usePathname()
     const [isPending, startTransition] = useTransition()
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname?.startsWith("/event-bookings"))
-    const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname?.startsWith("/events"))
+    const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname?.startsWith("/event-setups"))
     const [settingsOpen, setSettingsOpen] = useState(() => !!pathname?.startsWith("/settings"))
 
     const initials = employeeName
@@ -68,13 +68,13 @@ export default function PrivateLayoutClient({
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Bookings", href: "/event-bookings", icon: Tickets },
-        { label: "Events", href: "/events", icon: CalendarCogIcon },
+        { label: "Events", href: "/event-setups", icon: CalendarCogIcon },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
     const eventsNavSubItems = [
-        { label: "Event List", href: "/events", icon: CalendarDays },
-        { label: "Quiz Generator", href: "/events/quiz-generator", icon: Brain },
+        { label: "Event List", href: "/event-setups", icon: CalendarDays },
+        { label: "Quiz Generator", href: "/event-setups/quiz-generator", icon: Brain },
     ]
 
     const eventSubItems = [
@@ -99,15 +99,15 @@ export default function PrivateLayoutClient({
 
         const normalizedPath = pathname.replace(/\/$/, "")
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null }
-        if (normalizedPath.startsWith("/events")) {
-            if (normalizedPath === "/events") return { title: "Events", subtitle: null, backHref: null }
-            if (normalizedPath.startsWith("/events/quiz-generator")) {
-                if (normalizedPath === "/events/quiz-generator") return { title: "Events", subtitle: "Quiz Generator", backHref: "/events" }
-                return { title: "Events", subtitle: "Question Archive", backHref: "/events/quiz-generator" }
+        if (normalizedPath.startsWith("/event-setups")) {
+            if (normalizedPath === "/event-setups") return { title: "Events", subtitle: null, backHref: null }
+            if (normalizedPath.startsWith("/event-setups/quiz-generator")) {
+                if (normalizedPath === "/event-setups/quiz-generator") return { title: "Events", subtitle: "Quiz Generator", backHref: "/event-setups" }
+                return { title: "Events", subtitle: "Question Archive", backHref: "/event-setups/quiz-generator" }
             }
             const segment = normalizedPath.split("/")[2]
             const subtitle = segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ") : ""
-            return { title: "Events", subtitle, backHref: "/events" }
+            return { title: "Events", subtitle, backHref: "/event-setups" }
         }
 
         if (normalizedPath.startsWith("/event-bookings")) {

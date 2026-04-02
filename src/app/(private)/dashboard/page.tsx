@@ -333,7 +333,7 @@ export default async function DashboardPage() {
               icon={Trophy}
               label="Quizzes Without Questions"
               count={quizzesMissingQuestions}
-              href="/events/quiz-generator"
+              href="/event-setups/quiz-generator"
               activeColor="text-green-700"
               activeBg="bg-green-50"
               activeDot="bg-green-500"
@@ -433,8 +433,8 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <QuickLink href="/book/bingo" label="Walk-in" icon={Plus} />
             <QuickLink href="/settings/tables" label="Floor Plan" icon={Grid2X2} />
-            <QuickLink href="/events/quiz-generator" label="Quiz" icon={Trophy} />
-            <QuickLink href="/events" label="Events" icon={CalendarDays} />
+            <QuickLink href="/event-setups/quiz-generator" label="Quiz" icon={Trophy} />
+            <QuickLink href="/event-setups" label="Events" icon={CalendarDays} />
           </div>
         </section>
 
@@ -563,7 +563,7 @@ function TonightCard({
           </Link>
           {isQuiz && (
             <Link
-              href="/events/quiz-generator"
+              href="/event-setups/quiz-generator"
               className="col-span-2 flex items-center justify-between px-5 h-12 bg-[#FDCC4B] hover:bg-[#e5b843] rounded-xl transition-colors"
             >
               <div className="flex items-center gap-3">

@@ -22,7 +22,7 @@ const settingsItems = [
   {
     title: "Events",
     description: "Schedule and manage dates",
-    href: "/events",
+    href: "/event-setups",
     icon: CalendarCogIcon,
     color: "bg-amber-500/10 text-amber-600",
   },
