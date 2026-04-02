@@ -25,7 +25,8 @@
       "Bash(node -e \"const { SquareClient } = require\\('square'\\); const c = new SquareClient\\({ token: 'x' }\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(c.checkout\\)\\).filter\\(k=>k!=='constructor'\\).join\\('\\\\n'\\)\\)\")",
       "Bash(node -e \"const { SquareClient } = require\\('square'\\); const c = new SquareClient\\({ token: 'x' }\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(c.checkout.paymentLinks\\)\\).filter\\(k=>k!=='constructor'\\).join\\('\\\\n'\\)\\)\")",
       "Bash(node -e \"const { SquareClient } = require\\('square'\\); const c = new SquareClient\\({ token: 'x' }\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(c.orders\\)\\).filter\\(k=>k!=='constructor'\\).join\\('\\\\n'\\)\\)\")",
-      "Bash(node -e \"const { SquareClient } = require\\('square'\\); const c = new SquareClient\\({ token: 'x' }\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(c.refunds\\)\\).filter\\(k=>k!=='constructor'\\).join\\('\\\\n'\\)\\)\")"
+      "Bash(node -e \"const { SquareClient } = require\\('square'\\); const c = new SquareClient\\({ token: 'x' }\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(c.refunds\\)\\).filter\\(k=>k!=='constructor'\\).join\\('\\\\n'\\)\\)\")",
+      "Bash(xargs grep:*)"
     ]
   }
 }

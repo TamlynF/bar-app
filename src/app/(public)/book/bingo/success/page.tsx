@@ -58,7 +58,7 @@ console.log("Booking fetcheddd:", booking);
       : (booking.total_amount ?? 0);
 
     // Update booking
-    const { data: updatedBooking } =await supabase
+    await supabase
       .from("bookings")
       .update({
         payment_status: "paid",
@@ -69,7 +69,6 @@ console.log("Booking fetcheddd:", booking);
       })
       .eq("id", bookingId);
 
-      console.log("Booking updated in database:", updatedBooking);
 
     // Send confirmation email
     const contactRaw = booking.contacts;
