@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +23,7 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
+  Sparkles,
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
 import { cn } from "@/lib/utils";
@@ -376,6 +378,19 @@ export default function EventsClient({
                   </div>
                 )}
               </div>
+              {selected && !isEditing && !isAdding && (() => {
+                const et = eventTypes.find((e) => e.id === selected.event_types_id);
+                const isQuiz = !!et?.sub_type?.toLowerCase().includes("quiz");
+                return isQuiz ? (
+                  <Link
+                    href="/quiz-generator"
+                    className="shrink-0 w-10 h-10 rounded-2xl bg-[#FDCC4B]/15 border border-[#FDCC4B]/30 flex items-center justify-center text-[#FDCC4B] hover:bg-[#FDCC4B]/25 transition-colors"
+                    title="Generate quiz"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                  </Link>
+                ) : null;
+              })()}
             </div>
           </div>
 
