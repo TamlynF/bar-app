@@ -13,8 +13,11 @@ import {
   XCircle,
   Clock,
   Loader2,
+  Play,
+  X,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 
 interface SocialLinks {
@@ -85,6 +88,7 @@ function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
 
 export function BandBookingCard({ request }: { request: BandRequest }) {
   const [open, setOpen] = useState(false);
+  const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -156,10 +160,15 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
-          className="rounded-t-3xl max-h-[90dvh] overflow-y-auto p-0 border-t border-[#E6DFC8]"
+          onOpenAutoFocus={(e) => e.preventDefault()}
+           className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
+            flex flex-col outline-none shadow-2xl
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px]
+            sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6
+            sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sheet header */}
-          <div className="sticky top-0 bg-white z-10 px-5 pt-5 pb-4 border-b border-[#E6DFC8]">
+          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-[2rem]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="text-lg font-black text-[#1F1F1A] uppercase tracking-tight leading-tight truncate">
@@ -181,6 +190,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             </div>
           </div>
 
+          {/* Scrollable body */}
+          <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0 touch-pan-y space-y-5">
           <div className="px-5 py-4 space-y-6">
             {/* Booker info */}
             <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
@@ -238,28 +249,44 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">
                   Performance Videos
                 </p>
-                <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-2">
                   {videos.map((url, i) => {
                     const isStorage =
                       url.includes("supabase.co/storage") || url.includes(".supabase.co");
                     return isStorage ? (
-                      <video
+                      <button
                         key={i}
-                        src={url}
-                        controls
-                        className="w-full rounded-2xl bg-black max-h-56 object-contain"
-                        preload="metadata"
-                      />
+                        type="button"
+                        onClick={() => setActiveVideo(url)}
+                        className="relative aspect-video rounded-2xl overflow-hidden bg-black group"
+                      >
+                        <video
+                          src={url}
+                          preload="metadata"
+                          className="w-full h-full object-cover"
+                          muted
+                        />
+                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/55 transition-colors flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-full bg-white/20 border border-white/40 flex items-center justify-center backdrop-blur-sm">
+                            <Play className="w-4 h-4 text-white fill-white translate-x-0.5" />
+                          </div>
+                        </div>
+                        <span className="absolute bottom-2 left-2 text-[10px] font-black text-white/80 uppercase tracking-widest">
+                          Video {i + 1}
+                        </span>
+                      </button>
                     ) : (
                       <a
                         key={i}
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-3 bg-white border border-[#E6DFC8] rounded-xl text-xs font-bold text-[#26300D] hover:bg-[#F7F4EA] transition-colors truncate"
+                        className="aspect-video rounded-2xl flex flex-col items-center justify-center gap-2 bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA] transition-colors p-3"
                       >
-                        <Link2 className="w-3.5 h-3.5 shrink-0" />
-                        {url}
+                        <Link2 className="w-5 h-5" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-center line-clamp-2 break-all">
+                          {url}
+                        </span>
                       </a>
                     );
                   })}
@@ -290,7 +317,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 </p>
               </div>
             )}
-
+            </div>
+                   {/* Footer */}
+          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-[2rem]">
             {/* Action area — pending only */}
             {request.status === "pending_review" && (
               <div className="space-y-3 pt-2 border-t border-[#E6DFC8]">
@@ -309,6 +338,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
                 {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
 
+          
                 <div className="flex gap-2 pb-2">
                   <button
                     type="button"
@@ -338,10 +368,34 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   </button>
                 </div>
               </div>
-            )}
+              
+              )}
+              </div>
           </div>
         </SheetContent>
       </Sheet>
+
+      {/* Video modal */}
+      <Dialog open={!!activeVideo} onOpenChange={(v) => !v && setActiveVideo(null)}>
+        <DialogContent className="bg-black border-0 p-0 max-w-2xl w-full rounded-2xl overflow-hidden">
+          <button
+            type="button"
+            onClick={() => setActiveVideo(null)}
+            className="absolute top-3 right-3 z-50 w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+          {activeVideo && (
+            <video
+              key={activeVideo}
+              src={activeVideo}
+              autoPlay
+              controls
+              className="w-full max-h-[80vh] object-contain"
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
