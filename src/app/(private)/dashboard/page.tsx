@@ -64,6 +64,7 @@ export default async function DashboardPage() {
     { count: pendingPrivate },
     { count: pendingBands },
     { data: unpaidBookingsData },
+    { data: upcomingQuizData },
   ] = await Promise.all([
     supabase
       .from("private_hire_requests")
@@ -77,7 +78,12 @@ export default async function DashboardPage() {
       .from("bookings")
       .select("id")
       .eq("payment_status", "unpaid")
+      .gte("total_amount", 0)
       .in("status", ["confirmed", "pending"]),
+    supabase
+      .from("events")
+      .select("id, event_types(sub_type, type), past_quiz_questions(id)")
+      .gte("date", todayStr),
   ]);
 
   const [
@@ -119,8 +125,20 @@ export default async function DashboardPage() {
 
   // ─── Calculations ─────────────────────────────────────────────────────────
 
+  const quizzesMissingQuestions = (upcomingQuizData ?? []).filter((ev) => {
+    const et = (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) as { sub_type?: string; type?: string } | null;
+    const isQuiz =
+      et?.sub_type?.toLowerCase().includes("quiz") ||
+      et?.type?.toLowerCase().includes("quiz");
+    const questions = Array.isArray(ev.past_quiz_questions) ? ev.past_quiz_questions : [];
+    return isQuiz && questions.length === 0;
+  }).length;
+
   const totalActions =
-    (pendingPrivate ?? 0) + (pendingBands ?? 0) + (unpaidBookingsData?.length ?? 0);
+    (pendingPrivate ?? 0) +
+    (pendingBands ?? 0) +
+    (unpaidBookingsData?.length ?? 0) +
+    quizzesMissingQuestions;
 
   const collectedRevenue =
     monthBookings?.reduce((s, b) => s + (b.paid_amount ?? 0), 0) ?? 0;
@@ -175,30 +193,42 @@ export default async function DashboardPage() {
             highlight={totalActions > 0}
             badge={totalActions > 0 ? `${totalActions} Pending` : undefined}
           />
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <ActionCard
-              title="Private Hires"
-              count={pendingPrivate ?? 0}
+          <div className="bg-white border border-[#E6DFC8] rounded-2xl divide-y divide-[#F0EBE0] overflow-hidden">
+            <ActionRow
               icon={Building2}
+              label="Private Hires"
+              count={pendingPrivate ?? 0}
               href="/events/private-bookings"
-              colorClass="bg-blue-50 border-blue-200 text-blue-700"
-              iconClass="bg-blue-100 text-blue-600"
+              activeColor="text-blue-600"
+              activeBg="bg-blue-50"
+              activeDot="bg-blue-500"
             />
-            <ActionCard
-              title="Band Submissions"
-              count={pendingBands ?? 0}
+            <ActionRow
               icon={Music}
+              label="Band Submissions"
+              count={pendingBands ?? 0}
               href="/events/music-bookings"
-              colorClass="bg-purple-50 border-purple-200 text-purple-700"
-              iconClass="bg-purple-100 text-purple-600"
+              activeColor="text-purple-600"
+              activeBg="bg-purple-50"
+              activeDot="bg-purple-500"
             />
-            <ActionCard
-              title="Unpaid Bookings"
-              count={unpaidBookingsData?.length ?? 0}
+            <ActionRow
               icon={CreditCard}
+              label="Unpaid Bookings"
+              count={unpaidBookingsData?.length ?? 0}
               href="/events"
-              colorClass="bg-amber-50 border-amber-200 text-amber-700"
-              iconClass="bg-amber-100 text-amber-600"
+              activeColor="text-amber-600"
+              activeBg="bg-amber-50"
+              activeDot="bg-amber-500"
+            />
+            <ActionRow
+              icon={Trophy}
+              label="Quizzes Without Questions"
+              count={quizzesMissingQuestions}
+              href="/quiz-generator"
+              activeColor="text-green-700"
+              activeBg="bg-green-50"
+              activeDot="bg-green-500"
             />
           </div>
         </section>
@@ -579,49 +609,53 @@ function StatCard({
   );
 }
 
-function ActionCard({
-  title,
+function ActionRow({
+  label,
   count,
   icon: Icon,
   href,
-  colorClass,
-  iconClass,
+  activeColor,
+  activeBg,
+  activeDot,
 }: {
-  title: string;
+  label: string;
   count: number;
   icon: React.ElementType;
   href: string;
-  colorClass: string;
-  iconClass: string;
+  activeColor: string;
+  activeBg: string;
+  activeDot: string;
 }) {
   const hasItems = count > 0;
   return (
     <Link
       href={href}
-      className={cn(
-        "flex items-center justify-between p-4 rounded-2xl border transition-all active:scale-[0.98]",
-        hasItems
-          ? colorClass
-          : "bg-white border-[#E6DFC8] text-[#1F1F1A] opacity-70 hover:opacity-100"
-      )}
+      className="flex items-center gap-3 px-4 py-3 hover:bg-[#F7F4EA] transition-colors active:bg-[#E6DFC8]"
     >
-      <div className="flex items-center gap-3">
-        <div
+      <div
+        className={cn(
+          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+          hasItems ? activeBg : "bg-[#F7F4EA]"
+        )}
+      >
+        <Icon className={cn("w-4 h-4", hasItems ? activeColor : "text-[#5F624F]")} />
+      </div>
+      <span className="flex-1 text-[11px] font-black uppercase tracking-widest text-[#1F1F1A]">
+        {label}
+      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        <span
           className={cn(
-            "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-            hasItems ? iconClass : "bg-[#F7F4EA] text-[#5F624F]"
+            "text-sm font-black tabular-nums px-2.5 py-0.5 rounded-full",
+            hasItems
+              ? `${activeBg} ${activeColor}`
+              : "bg-[#F7F4EA] text-[#5F624F]"
           )}
         >
-          <Icon className="w-5 h-5" />
-        </div>
-        <div className="text-left">
-          <p className="text-2xl font-black tabular-nums leading-none mb-1">{count}</p>
-          <p className="text-[10px] font-black uppercase tracking-widest opacity-80">
-            {title}
-          </p>
-        </div>
+          {count}
+        </span>
+        <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40" />
       </div>
-      <ChevronRight className="w-5 h-5 opacity-40" />
     </Link>
   );
 }
