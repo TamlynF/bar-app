@@ -24,6 +24,7 @@ import {
   CheckCircle2,
   XCircle,
   Sparkles,
+  Brain,
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
 import { cn } from "@/lib/utils";
@@ -69,7 +70,7 @@ function formatTime(timeStr: string | null) {
 }
 
 function eventTypeLabel(et: EventType) {
-  return [toTitleCase(et.type), toTitleCase(et.sub_type)].filter(Boolean).join(" — ");
+  return [toTitleCase(et.type), toTitleCase(et.sub_type)].filter(Boolean).join(" > ");
 }
 
 export type Employee = { id: number; full_name: string };
@@ -253,12 +254,16 @@ export default function EventsClient({
                               </span>
                             )}
                             {quizStat && (
-                              quizStat.allComplete
-                                ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                                : quizStat.someExist
-                                ? <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                                : <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
-                            )}
+                            <span className="flex items-center gap-1.5 text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-0.5 rounded-lg">                            
+                                {quizStat.allComplete
+                                  ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
+                                  : quizStat.someExist
+                                    ? <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                                    : <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />}
+                              
+                              {quizStat.total} / {quizStat.target}
+                              </span>
+                              )}
                           </div>
                         </div>
 
@@ -383,11 +388,11 @@ export default function EventsClient({
                 const isQuiz = !!et?.sub_type?.toLowerCase().includes("quiz");
                 return isQuiz ? (
                   <Link
-                    href="/quiz-generator"
+                    href={`/settings/events/${selected.id}`}
                     className="shrink-0 w-10 h-10 rounded-2xl bg-[#FDCC4B]/15 border border-[#FDCC4B]/30 flex items-center justify-center text-[#FDCC4B] hover:bg-[#FDCC4B]/25 transition-colors"
-                    title="Generate quiz"
+                    title="View quiz questions"
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Brain className="w-4 h-4" />
                   </Link>
                 ) : null;
               })()}
