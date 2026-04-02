@@ -26,7 +26,13 @@
       "Bash(node -e \"const { SquareClient } = require\\('square'\\); const c = new SquareClient\\({ token: 'x' }\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(c.checkout.paymentLinks\\)\\).filter\\(k=>k!=='constructor'\\).join\\('\\\\n'\\)\\)\")",
       "Bash(node -e \"const { SquareClient } = require\\('square'\\); const c = new SquareClient\\({ token: 'x' }\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(c.orders\\)\\).filter\\(k=>k!=='constructor'\\).join\\('\\\\n'\\)\\)\")",
       "Bash(node -e \"const { SquareClient } = require\\('square'\\); const c = new SquareClient\\({ token: 'x' }\\); console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(c.refunds\\)\\).filter\\(k=>k!=='constructor'\\).join\\('\\\\n'\\)\\)\")",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(pkill -f \"next build\")",
+      "Bash(ls:*)",
+      "mcp__claude_ai_Vercel__list_teams",
+      "mcp__claude_ai_Vercel__list_projects",
+      "mcp__claude_ai_Vercel__list_deployments",
+      "mcp__claude_ai_Vercel__get_deployment_build_logs"
     ]
   }
 }

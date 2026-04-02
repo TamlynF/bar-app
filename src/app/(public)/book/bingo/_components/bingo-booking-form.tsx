@@ -237,7 +237,7 @@ export default function BingoBookingForm({ events }: Props) {
       <button
         type="submit"
         disabled={isPending}
-        className="w-full h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-sm shadow-lg active:scale-95 disabled:opacity-60 flex items-center justify-center gap-2 transition-all"
+        className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
       >
         {isPending ? (
           <>

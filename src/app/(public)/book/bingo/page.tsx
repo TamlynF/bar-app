@@ -6,7 +6,7 @@ import {
   Banknote, Calendar, Users, Trophy, Wine,
   MapPin, Clock, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile,
-  Sparkles, AlertCircle, Beer, Info,
+  Sparkles, AlertCircle, Beer, Info, Speaker, User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,7 +19,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Banknote, Calendar, Users, Trophy, Wine,
   MapPin, Clock, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile,
-  Sparkles, AlertCircle, Beer, Info,
+  Sparkles, AlertCircle, Beer, Info, Speaker, User
 };
 
 export default async function BingoBookingPage() {

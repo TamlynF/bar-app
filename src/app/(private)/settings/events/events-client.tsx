@@ -280,6 +280,16 @@ export default function EventsClient({
                       </div>
 
                       <div className="hidden sm:flex items-center gap-2 shrink-0">
+                          {quizStat && (
+                          <span className="flex items-center gap-1.5 text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-1 rounded-lg">
+                            {quizStat.allComplete
+                              ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                              : quizStat.someExist
+                              ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                              : <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
+                            {quizStat.total} / {quizStat.target} Questions
+                          </span>
+                        )}
                         {hasPricing ? (
                           <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg flex items-center gap-1">
                             <BadgePoundSterling className="w-3 h-3" />
@@ -301,16 +311,7 @@ export default function EventsClient({
                             ? <CheckCircle2 className="w-3.5 h-3.5 text-[#26300D]" />
                             : <XCircle className="w-3.5 h-3.5 text-[#5F624F]/30" />}
                         </span>
-                        {quizStat && (
-                          <span className="flex items-center gap-1.5 text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-1 rounded-lg">
-                            {quizStat.allComplete
-                              ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                              : quizStat.someExist
-                              ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                              : <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
-                            {quizStat.total} / {quizStat.target} Questions
-                          </span>
-                        )}
+                      
                       </div>
 
                       <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />

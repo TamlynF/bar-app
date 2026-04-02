@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { create } from 'domain';
 import { revalidatePath } from 'next/cache'
 
 export type QuizQuestion = {
@@ -178,11 +179,25 @@ export async function getFullQuestionHistoryAction(eventIdFilter?: string): Prom
  */
 export async function updatePastQuestionAction(id: string, question: string, answer: string) {
   const supabase = await createClient()
+    let currentEmployeeId: number | null = null;
+  const { data: { user } } = await supabase.auth.getUser();
+
+    if (user?.email) {
+    const { data: emp } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("email", user.email)
+      .maybeSingle();
+    if (emp) currentEmployeeId = emp.id;
+  }
+  
   const { error } = await supabase
     .from('past_quiz_questions')
     .update({ 
       question_text: question, 
-      answer_text: answer 
+      answer_text: answer,
+      updated_by: currentEmployeeId,
+      updated_at: new Date().toISOString()
     })
     .eq('id', id);
 
@@ -258,6 +273,19 @@ export async function getUpcomingQuizzesAction(): Promise<QuizEventSummary[]> {
 export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: number | null, topic: string) {
   const supabase = await createClient()
 
+  let currentEmployeeId: number | null = null;
+  const { data: { user } } = await supabase.auth.getUser();
+
+    if (user?.email) {
+    const { data: emp } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("email", user.email)
+      .maybeSingle();
+    if (emp) currentEmployeeId = emp.id;
+  }
+
+
   const { data: configs } = await supabase.from('quiz_category_configs').select('id, category_name');
   const configMap = new Map(configs?.map(c => [c.category_name.toLowerCase(), c.id]));
 
@@ -271,10 +299,14 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
     question_text: q.question,
     answer_text: q.answer,
     category: q.category,
-    topic: topic.trim() || null, // Include the new topic field
+    topic: topic.trim() || null,
     asked_on: askedOn,
     events_id: eventId,
-    quiz_category_configs_id: configMap.get(q.category.toLowerCase()) || null
+    quiz_category_configs_id: configMap.get(q.category.toLowerCase()) || null,
+    created_by: currentEmployeeId,
+    created_at: new Date().toISOString(),
+    updated_by: currentEmployeeId,
+    updated_at: new Date().toISOString(),
   }));
 
   const { error } = await supabase

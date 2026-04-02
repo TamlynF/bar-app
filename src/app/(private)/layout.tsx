@@ -5,13 +5,17 @@ export default async function PrivateLayout({ children }: { children: React.Reac
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     let employeeName = "";
+    let employeeRole = "";
     if (user?.email) {
         const { data: emp } = await supabase
             .from("employees")
-            .select("full_name")
+            .select("full_name, role")
             .eq("email", user.email)
             .maybeSingle();
-        if (emp) employeeName = emp.full_name;
+        if (emp) {
+            employeeName = emp.full_name;
+            employeeRole = emp.role;
+        }
     }
-    return <PrivateLayoutClient employeeName={employeeName}>{children}</PrivateLayoutClient>;
+    return <PrivateLayoutClient employeeName={employeeName} employeeRole={employeeRole}>{children}</PrivateLayoutClient>;
 }

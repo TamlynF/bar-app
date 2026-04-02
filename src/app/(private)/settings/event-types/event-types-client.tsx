@@ -22,7 +22,7 @@ import {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Beer,
   ChevronDown, ChevronRight, Banknote, Trophy, Wine,
-  MoreVertical, RotateCcw
+  MoreVertical, RotateCcw, Speaker, User
 } from "lucide-react";
 import {
   saveEventTypeAction,
@@ -37,7 +37,7 @@ import { cn } from "@/lib/utils";
 const ICON_OPTIONS = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Info,
-  Beer, Banknote, Trophy, Wine
+  Beer, Banknote, Trophy, Wine, Speaker, User
 };
 
 export type EventInfo = {
@@ -319,7 +319,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         {toTitleCase(typeKey)}
                       </h4>
                       <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shrink-0">
-                        {items.length} {items.length === 1 ? 'Sub-type' : 'Sub-types'}
+                        {items.length} {items.length === 1 ? 'Category' : 'Categories'}
                       </span>
                     </div>
                   </button>
@@ -344,7 +344,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           setIsTypeSheetOpen(true);
                         }}
                       >
-                        <Plus className="w-3 h-3 mr-1" /> Sub-type
+                        <Plus className="w-3 h-3 mr-1" /> Category
                       </Button>
 
                       {items.length > 0 && (
@@ -409,7 +409,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             setSubTypeInput(defaultSubType);
                             setIsTypeSheetOpen(true);
                           }}>
-                            <Plus className="w-4 h-4 mr-2" /> Sub-type
+                            <Plus className="w-4 h-4 mr-2" /> Category
                           </DropdownMenuItem>
 
                           {items.length > 0 && (
@@ -467,7 +467,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             <span className="font-bold text-sm text-foreground">
                               {toTitleCase(item.sub_type)}
                             </span>
-                            <span className="text-[10px] text-muted-foreground font-medium ml-1">({item.event_information?.length || 0} items)</span>
+                            <span className="text-[10px] text-muted-foreground font-medium ml-1">({item.event_information?.length || 0} badges)</span>
                           </button>
 
                           <div className="flex items-center gap-1 pr-1">
@@ -547,7 +547,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         {expandedSubtype === item.id && (
                           <div className="px-3 pb-3 pt-1 border-t bg-muted/5 animate-in fade-in slide-in-from-top-1">
                             <div className="flex items-center justify-between mb-3 mt-2">
-                              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Linked Info</span>
+                              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground px-1">Display Badges</span>
                               <Button
                                 variant="outline"
                                 size="xs"
@@ -559,12 +559,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                   setIsInfoSheetOpen(true);
                                 }}
                               >
-                                <Plus className="w-3 h-3 mr-1" /> Info
+                                <Plus className="w-3 h-3 mr-1" /> Badge
                               </Button>
                             </div>
 
                             {item.event_information.length === 0 ? (
-                              <p className="text-xs text-muted-foreground italic p-4 text-center">No additional details added.</p>
+                              <p className="text-xs text-muted-foreground italic p-4 text-center">No additional badges added.</p>
                             ) : (
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {item.event_information.map((info) => (
@@ -659,13 +659,13 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             <SheetTitle className="text-xl font-bold">
               {sheetMode === 'type'
                 ? (editingType?.type ? `Rename Type: ${toTitleCase(typeInput)}` : "Add Event Type")
-                : (editingType?.id ? "Edit Sub-type" : "Add Sub-type")
+                : (editingType?.id ? "Edit Category" : "Add Category")
               }
             </SheetTitle>
             <SheetDescription className="text-sm text-muted-foreground">
               {sheetMode === 'type'
                 ? "Manage the primary type for these events."
-                : `Defining a specific sub-type within the ${typeInput || 'selected'} type.`
+                : `Defining a specific category within the ${typeInput || 'selected'} type.`
               }
             </SheetDescription>
           </SheetHeader>

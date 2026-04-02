@@ -196,6 +196,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => handleAction("confirmed")}
                   disabled={isPending}
                   className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase tracking-wider rounded-xl py-2.5 transition-all disabled:opacity-50"
@@ -203,6 +204,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   <CheckCircle className="w-3.5 h-3.5" /> Confirm
                 </button>
                 <button
+                  type="button"
                   onClick={() => handleAction("rejected")}
                   disabled={isPending}
                   className="flex-1 flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 font-black text-xs uppercase tracking-wider rounded-xl py-2.5 transition-all disabled:opacity-50"

@@ -42,9 +42,11 @@ import { signOut } from "@/app/login/actions"
 export default function PrivateLayoutClient({
     children,
     employeeName,
+    employeeRole,
 }: {
     children: React.ReactNode
-    employeeName: string
+        employeeName: string
+        employeeRole: string
 }) {
     const pathname = usePathname()
     const [isPending, startTransition] = useTransition()
@@ -72,7 +74,7 @@ export default function PrivateLayoutClient({
     const eventSubItems = [
         { label: "Music Bingo", href: "/events/bingo-bookings", icon: Speaker },
         { label: "Live Music", href: "/events/music-bookings", icon: Music },
-        { label: "Thursday Night Quiz", href: "/events/quiz-bookings", icon: Trophy },
+        { label: "Thursday Quiz", href: "/events/quiz-bookings", icon: Trophy },
         { label: "Private Events", href: "/events/private-bookings", icon: PartyPopper },
     ]
 
@@ -147,7 +149,7 @@ export default function PrivateLayoutClient({
                     </div>
                     <div className="flex flex-col min-w-0">
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A] truncate">{displayName}</span>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A]/50">Venue Manager</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A]/50">{employeeRole}</span>
                     </div>
                 </div>
 
