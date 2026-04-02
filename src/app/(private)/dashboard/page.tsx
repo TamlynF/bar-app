@@ -28,6 +28,7 @@ type PrivateHireRow = {
   id: string;
   selected_date: string;
   selected_start_time: string | null;
+  selected_end_time: string | null;
   reason_for_hire: string;
   full_name: string;
   guest_count: number;
@@ -37,6 +38,7 @@ type ListItem = {
   date: string;
   title: string;
   startTime: string | null;
+  endTime: string | null;
   eventType: EventTypeRow;
   hostName: string | null;
   guests: number;
@@ -216,6 +218,7 @@ export default async function DashboardPage() {
       date: ev.date,
       title: ev.title ?? "Untitled Event",
       startTime: ev.start_time,
+      endTime: ev.end_time,
       eventType: et,
       hostName: ev.host_employee_id ? (employeeMap.get(ev.host_employee_id) ?? null) : null,
       guests: ev.bookings.filter((b) => b.status === "confirmed").reduce((s, b) => s + (b.group_size ?? 0), 0),
@@ -230,6 +233,7 @@ export default async function DashboardPage() {
       date: ph.selected_date,
       title: ph.reason_for_hire,
       startTime: ph.selected_start_time,
+      endTime: ph.selected_end_time,
       eventType: { type: "Private Hire", sub_type: "private" } as EventTypeRow,
       hostName: ph.full_name,
       guests: ph.guest_count,
@@ -242,7 +246,7 @@ export default async function DashboardPage() {
   const tonightConfirmed = (tonightEvent?.bookings ?? []).filter(
     (b) => b.status === "confirmed"
   );
-  const tonightTeams = tonightConfirmed.length;
+
   const tonightGuests = tonightConfirmed.reduce(
     (s, b) => s + (b.group_size ?? 0),
     0
@@ -379,6 +383,7 @@ export default async function DashboardPage() {
                   date={item.date}
                   title={item.title}
                   startTime={item.startTime}
+                  endTime={item.endTime}
                   eventType={item.eventType}
                   hostName={item.hostName}
                   guests={item.guests}
@@ -557,6 +562,7 @@ function EventRow({
   date,
   title,
   startTime,
+  endTime,
   eventType,
   hostName,
   guests,
@@ -564,7 +570,8 @@ function EventRow({
 }: {
   date: string;
   title: string;
-  startTime: string | null;
+    startTime: string | null;
+  endTime: string | null;
   eventType: EventTypeRow;
   hostName: string | null;
   guests: number;
@@ -622,7 +629,12 @@ function EventRow({
           )}
         </div>
         <p className="text-[11px] text-[#5F624F] font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
-          {startTime && <span>{startTime.substring(0, 5)}</span>}
+          {startTime && (
+            <span>
+              {startTime.substring(0, 5)}
+              {endTime && ` - ${endTime.substring(0, 5)}`}
+            </span>
+          )}
           {startTime && hostName && <span className="opacity-30">·</span>}
           {hostName && <span>{hostName}</span>}
         </p>
