@@ -191,6 +191,13 @@ export default function EventsClient({
               <div className="space-y-2">
                 {events.map((event) => {
                   const hasPricing = !!event.payment_amount && event.payment_amount > 0;
+                  const host = employees.find((e) => e.id === event.host_employee_id);
+                  const hostInitials = host?.full_name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2) ?? null;
                   return (
                     <div
                       key={event.id}
@@ -213,17 +220,28 @@ export default function EventsClient({
                               £{event.payment_amount!.toFixed(2)}
                             </span>
                           )}
+                          {hostInitials && (
+                            <span className="text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] w-6 h-6 rounded-full flex items-center justify-center shrink-0">
+                              {hostInitials}
+                            </span>
+                          )}
                         </div>
 
                         {/* Desktop */}
-                        <p className="hidden sm:flex items-center gap-1 text-[11px] text-[#5F624F] font-medium mt-0.5">
+                        <p className="hidden sm:flex items-center gap-1 text-[11px] text-[#5F624F] font-medium mt-0.5 flex-wrap">
                           <Calendar className="w-3 h-3" />
                           {formatDate(event.date)}
-                          {event.start_time && (
+                          {(event.start_time || event.end_time) && (
                             <span className="ml-2 flex items-center gap-1">
                               <Clock className="w-3 h-3" />
                               {formatTime(event.start_time)}
+                              {event.end_time && (
+                                <span className="text-[#5F624F]/50">→ {formatTime(event.end_time)}</span>
+                              )}
                             </span>
+                          )}
+                          {host && (
+                            <span className="ml-2 font-black text-[#1F1F1A]/60">{host.full_name}</span>
                           )}
                         </p>
                       </div>
@@ -239,9 +257,17 @@ export default function EventsClient({
                             Free
                           </span>
                         )}
-                        {event.seating_required
-                          ? <CheckCircle2 className="w-4 h-4 text-[#26300D]/40" />
-                          : <XCircle className="w-4 h-4 text-[#5F624F]/20" />}
+                        <span className={cn(
+                          "text-[11px] font-black px-2 py-1 rounded-lg border flex items-center gap-1",
+                          event.seating_required
+                            ? "text-[#26300D] bg-[#26300D]/10 border-[#26300D]/20"
+                            : "text-[#5F624F]/40 bg-[#F7F4EA] border-[#E6DFC8]"
+                        )}>
+                          Seating
+                          {event.seating_required
+                            ? <CheckCircle2 className="w-3.5 h-3.5 text-[#26300D]" />
+                            : <XCircle className="w-3.5 h-3.5 text-[#5F624F]/30" />}
+                        </span>
                       </div>
 
                       <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
