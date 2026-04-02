@@ -38,9 +38,6 @@ export default async function BandBookingPage() {
 
   const eventBadges = dbBadges.length > 0 ? dbBadges : [
     { icon: Music, text: "Live Music" },
-    { icon: Banknote, text: "Pay on the Night" },
-    { icon: Users, text: "All Acts Welcome" },
-    { icon: Star, text: "Showcase Venue" },
     { icon: Calendar, text: "Apply Now" },
   ];
 
