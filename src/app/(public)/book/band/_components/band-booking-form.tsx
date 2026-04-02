@@ -527,6 +527,7 @@ export default function BandBookingForm() {
         )}
         {step < 4 ? (
           <button
+            key="next"
             type="button"
             onClick={handleNext}
             className="flex-1 flex items-center justify-center gap-2 h-14 bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] shadow-lg shadow-[#FDCC4B]/20"
@@ -536,6 +537,7 @@ export default function BandBookingForm() {
           </button>
         ) : (
           <button
+            key="submit"
             type="submit"
             disabled={isPending || videoFiles.some((v) => v.uploading)}
             className="flex-1 h-14 bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#FDCC4B]/20"
