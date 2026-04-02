@@ -210,22 +210,24 @@ export default function EventsClient({
                         </p>
 
                         {/* Mobile */}
-                        <div className="flex items-center gap-1.5 mt-1 sm:hidden flex-wrap">
-                          <span className="text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-0.5 rounded-lg flex items-center gap-1">
-                            <Calendar className="w-3 h-3" />
-                            {formatDate(event.date)}
-                          </span>                          
-                          <span className={cn(
-                            "text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] w-6 h-6 rounded-full flex items-center justify-center shrink-0",
-                            !hostInitials && "opacity-0"
-                          )}>
-                            {hostInitials ?? ""}
+                        <div className="flex items-center gap-2 mt-1 sm:hidden">
+                          <span className="text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-0.5 rounded-lg flex items-center gap-1 flex-1 min-w-0">
+                            <Calendar className="w-3 h-3 shrink-0" />
+                            <span className="truncate">{formatDate(event.date)}</span>
                           </span>
-                          {hasPricing && (
-                            <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
-                              £{event.payment_amount!.toFixed(2)}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <span className={cn(
+                              "text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] w-6 h-6 rounded-full flex items-center justify-center",
+                              !hostInitials && "opacity-0"
+                            )}>
+                              {hostInitials ?? ""}
                             </span>
-                          )}
+                            {hasPricing && (
+                              <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
+                                £{event.payment_amount!.toFixed(2)}
+                              </span>
+                            )}
+                          </div>
                         </div>
 
                         {/* Desktop */}
