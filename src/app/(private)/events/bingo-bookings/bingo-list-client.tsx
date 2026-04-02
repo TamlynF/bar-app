@@ -40,17 +40,19 @@ export default function BingoBookingListClient({
   selectedDate?: string;
   filterStatus?: string;
   filterPaymentStatus?: string;
+  filterFromDate?: string;
 }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isFiltered = !!(filterStatus || filterPaymentStatus);
+  const isFiltered = !!(filterStatus || filterPaymentStatus || filterFromDate);
   const displayedBookings = isFiltered
     ? bookings.filter(b => {
         if (filterStatus && b.status !== filterStatus) return false;
         if (filterPaymentStatus && b.payment_status !== filterPaymentStatus) return false;
+        if (filterFromDate && b.events?.event_date && b.events.event_date < filterFromDate) return false;
         return true;
       })
     : bookings;
@@ -113,6 +115,7 @@ export default function BingoBookingListClient({
           <Link
             href={`/events/bingo-bookings${selectedDate ? `?date=${selectedDate}` : ""}`}
             className="flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-amber-700 hover:text-amber-900"
+            prefetch={false}
           >
             <X className="w-3 h-3" /> Clear
           </Link>

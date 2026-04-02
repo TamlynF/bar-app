@@ -166,14 +166,14 @@ export default async function DashboardPage() {
     supabase.from("tables").select("id, max_capacity").eq("available", true),
     supabase
       .from("private_hire_requests")
-      .select("id, selected_date, selected_start_time, reason_for_hire, full_name, guest_count")
+      .select("id, selected_date, selected_start_time, selected_end_time, reason_for_hire, full_name, guest_count")
       .eq("status", "confirmed")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
     supabase
       .from("band_booking_requests")
       .select("id, booker_name, selected_date, selected_start_time, selected_end_time")
-      .eq("status", "confirmed")
+      .eq("status", "approved")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
   ]);
@@ -306,7 +306,7 @@ export default async function DashboardPage() {
               icon={Building2}
               label="Private Hires"
               count={pendingPrivate ?? 0}
-              href="/events/private-bookings"
+              href="/events/private-bookings?status=pending_review"
               activeColor="text-blue-600"
               activeBg="bg-blue-50"
               activeDot="bg-blue-500"
@@ -315,7 +315,7 @@ export default async function DashboardPage() {
               icon={Music}
               label="Band Submissions"
               count={pendingBands ?? 0}
-              href="/events/music-bookings"
+              href="/events/music-bookings?status=pending_review"
               activeColor="text-purple-600"
               activeBg="bg-purple-50"
               activeDot="bg-purple-500"
@@ -324,7 +324,7 @@ export default async function DashboardPage() {
               icon={CreditCard}
               label="Unpaid Bookings"
               count={unpaidBookingsData?.length ?? 0}
-              href="/events"
+              href={`/events/bingo-bookings?status=confirmed&payment_status=unpaid&from_date=${todayStr}`}
               activeColor="text-amber-600"
               activeBg="bg-amber-50"
               activeDot="bg-amber-500"
