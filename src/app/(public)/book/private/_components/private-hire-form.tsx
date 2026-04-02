@@ -205,7 +205,7 @@ export default function PrivateHireForm() {
                     type="time"
                     value={preferredStartTime}
                     onChange={(e) => setPreferredStartTime(e.target.value)}
-                    className={`${inputClass} !px-2 pl-8 input-scheme-dark max-w-full`}
+                    className={`${inputClass} px-2! pl-8 input-scheme-dark max-w-full`}
                   />
                 </div>
               </div>
@@ -218,7 +218,7 @@ export default function PrivateHireForm() {
                     type="time"
                     value={preferredEndTime}
                     onChange={(e) => setPreferredEndTime(e.target.value)}
-                    className={`${inputClass} !px-2 pl-8 input-scheme-dark max-w-full`}
+                    className={`${inputClass} px-2! pl-8 input-scheme-dark max-w-full`}
                   />
                 </div>
               </div>
