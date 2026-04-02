@@ -23,11 +23,30 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 type EventTypeRow = { type: string; sub_type: string } | null;
-type BookingRow = { id: number; group_size: number; status: string; team_id: number | null };
+type BookingRow = { id: number; group_size: number; status: string; group_name: string | null };
+type PrivateHireRow = {
+  id: string;
+  selected_date: string;
+  selected_start_time: string | null;
+  reason_for_hire: string;
+  full_name: string;
+  guest_count: number;
+};
+type ListItem = {
+  key: string;
+  date: string;
+  title: string;
+  startTime: string | null;
+  eventType: EventTypeRow;
+  hostName: string | null;
+  guests: number;
+  href: string;
+};
 type UpcomingEvent = {
   id: number;
   date: string;
   start_time: string | null;
+  end_time: string | null;
   title: string | null;
   host_employee_id: number | null;
   event_types: EventTypeRow | EventTypeRow[];
@@ -133,9 +152,15 @@ export default async function DashboardPage() {
 
   const upcomingEvents = (rawUpcoming ?? []) as unknown as UpcomingEvent[];
 
-  const [{ data: employees }, { data: tablesData }] = await Promise.all([
+  const [{ data: employees }, { data: tablesData }, { data: confirmedPrivateHires }] = await Promise.all([
     supabase.from("employees").select("id, full_name"),
     supabase.from("tables").select("id, max_capacity").eq("available", true),
+    supabase
+      .from("private_hire_requests")
+      .select("id, selected_date, selected_start_time, reason_for_hire, full_name, guest_count")
+      .eq("status", "confirmed")
+      .gte("selected_date", todayStr)
+      .order("selected_date", { ascending: true }),
   ]);
 
   // ─── Calculations ─────────────────────────────────────────────────────────
@@ -184,9 +209,40 @@ export default async function DashboardPage() {
     upcomingEvents[0]?.date === todayStr ? upcomingEvents[0] : null;
   const futureEvents = tonightEvent ? upcomingEvents.slice(1) : upcomingEvents;
 
+  const eventListItems: ListItem[] = futureEvents.map((ev) => {
+    const et = getEventType(ev);
+    return {
+      key: `event-${ev.id}`,
+      date: ev.date,
+      title: ev.title ?? "Untitled Event",
+      startTime: ev.start_time,
+      eventType: et,
+      hostName: ev.host_employee_id ? (employeeMap.get(ev.host_employee_id) ?? null) : null,
+      guests: ev.bookings.filter((b) => b.status === "confirmed").reduce((s, b) => s + (b.group_size ?? 0), 0),
+      href: getBookingsHref(et),
+    };
+  });
+
+  const privateHireListItems: ListItem[] = ((confirmedPrivateHires ?? []) as PrivateHireRow[])
+    .filter((ph) => ph.selected_date !== todayStr || !tonightEvent)
+    .map((ph) => ({
+      key: `ph-${ph.id}`,
+      date: ph.selected_date,
+      title: ph.reason_for_hire,
+      startTime: ph.selected_start_time,
+      eventType: { type: "Private Hire", sub_type: "private" } as EventTypeRow,
+      hostName: ph.full_name,
+      guests: ph.guest_count,
+      href: "/events/private-bookings",
+    }));
+
+  const allListItems = [...eventListItems, ...privateHireListItems]
+    .sort((a, b) => a.date.localeCompare(b.date));
+
   const tonightConfirmed = (tonightEvent?.bookings ?? []).filter(
     (b) => b.status === "confirmed"
   );
+  const tonightTeams = tonightConfirmed.length;
   const tonightGuests = tonightConfirmed.reduce(
     (s, b) => s + (b.group_size ?? 0),
     0
@@ -315,30 +371,20 @@ export default async function DashboardPage() {
             />
           )}
 
-          {futureEvents.length > 0 ? (
+          {allListItems.length > 0 ? (
             <div className="bg-white border border-[#E6DFC8] rounded-2xl divide-y divide-[#F0EBE0] overflow-hidden">
-              {futureEvents.map((ev) => {
-                const et = getEventType(ev);
-                const confirmedGuests = ev.bookings
-                  .filter((b) => b.status === "confirmed")
-                  .reduce((s, b) => s + (b.group_size ?? 0), 0);
-                return (
-                  <EventRow
-                    key={ev.id}
-                    date={ev.date}
-                    title={ev.title ?? "Untitled Event"}
-                    startTime={ev.start_time}
-                    eventType={et}
-                    hostName={
-                      ev.host_employee_id
-                        ? (employeeMap.get(ev.host_employee_id) ?? null)
-                        : null
-                    }
-                    guests={confirmedGuests}
-                    href={getBookingsHref(et)}
-                  />
-                );
-              })}
+              {allListItems.map((item) => (
+                <EventRow
+                  key={item.key}
+                  date={item.date}
+                  title={item.title}
+                  startTime={item.startTime}
+                  eventType={item.eventType}
+                  hostName={item.hostName}
+                  guests={item.guests}
+                  href={item.href}
+                />
+              ))}
             </div>
           ) : !tonightEvent ? (
             <div className="bg-white border border-[#E6DFC8] rounded-2xl p-10 text-center">
@@ -388,8 +434,8 @@ function TonightCard({
   const confirmedTeams = isQuiz
     ? new Set(
         event.bookings
-          .filter((b) => b.status === "confirmed" && b.team_id != null)
-          .map((b) => b.team_id)
+          .filter((b) => b.status === "confirmed")
+          .map((b) => b.group_name)
       ).size
     : 0;
 
