@@ -4,14 +4,10 @@ import EventsClient from "./events-client";
 export default async function EventsPage() {
   const supabase = await createClient();
 
-  const { data: events, error } = await supabase
-    .from("events")
-    .select("*")
-    .order("id", { ascending: true });
+  const [{ data: events }, { data: eventTypes }] = await Promise.all([
+    supabase.from("events").select("*").order("date", { ascending: true }),
+    supabase.from("event_types").select("id, type, sub_type").order("id", { ascending: true }),
+  ]);
 
-  if (error) {
-    console.error("Error fetching events:", error);
-  }
-
-  return <EventsClient initialEvents={events || []} />;
+  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} />;
 }
