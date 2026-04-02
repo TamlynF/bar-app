@@ -120,6 +120,7 @@ export default async function EventQuizQuestionsPage({
         {byCategory.map((cat) => (
           <CategorySection
             key={cat.id}
+            eventId={event.id}
             category_name={cat.category_name}
             question_count={cat.question_count}
             questions={cat.questions}

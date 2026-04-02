@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import styles from './quiz-generator.module.css'
 
 // Using relative paths to resolve build errors and environment pathing issues
@@ -64,6 +65,10 @@ interface CategoryStat extends QuizCategoryConfig {
 }
 
 export default function QuizGeneratorPage() {
+  const searchParams = useSearchParams()
+  const presetEventId = searchParams.get('event_id')
+  const presetCategory = searchParams.get('category')
+
   const [topic, setTopic] = useState('')
   const [category, setCategory] = useState('')
   const [numQuestions, setNumQuestions] = useState(10)
@@ -96,19 +101,27 @@ export default function QuizGeneratorPage() {
           getUpcomingQuizzesAction(),
           getQuizCategoryConfigsAction()
         ]);
-        
+
         setUpcomingEvents(events);
         setCategories(categoryConfigs);
 
-        if (events.length > 0) {
-          const firstEventId = String(events[0].id);
-          setSelectedEventId(firstEventId);
-          loadEventHistory(firstEventId);
+        // Event: prefer URL param, fallback to first
+        const targetEventId = presetEventId && events.some(e => String(e.id) === presetEventId)
+          ? presetEventId
+          : events.length > 0 ? String(events[0].id) : '';
+        if (targetEventId) {
+          setSelectedEventId(targetEventId);
+          loadEventHistory(targetEventId);
         }
 
-        if (categoryConfigs.length > 0) {
-          setCategory(categoryConfigs[0].category_name);
-          setNumQuestions(categoryConfigs[0].question_count);
+        // Category: prefer URL param, fallback to first
+        const targetCategory = presetCategory && categoryConfigs.some(c => c.category_name === presetCategory)
+          ? presetCategory
+          : categoryConfigs.length > 0 ? categoryConfigs[0].category_name : '';
+        if (targetCategory) {
+          setCategory(targetCategory);
+          const config = categoryConfigs.find(c => c.category_name === targetCategory);
+          if (config) setNumQuestions(config.question_count);
         }
       } catch (err) {
         console.error("Failed to load setup data:", err);
@@ -116,6 +129,7 @@ export default function QuizGeneratorPage() {
       }
     }
     loadInitialData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Force scroll reset when category details open
