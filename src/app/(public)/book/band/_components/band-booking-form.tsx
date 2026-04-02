@@ -5,8 +5,8 @@ import { createBandBooking } from "@/app/(public)/_actions/create-band-booking";
 import { createClient } from "@/lib/supabase/client";
 import {
   Instagram, Facebook, Youtube, Music2,
-  Plus, X, CheckCircle2, Calendar, Upload, Video, Loader2, AlertCircle, ChevronDown,
-  BadgePoundSterling,
+  Plus, X, CheckCircle2, Calendar, Upload, Video, Loader2, AlertCircle,
+  ChevronDown, ChevronRight, ArrowLeft,
 } from "lucide-react";
 
 const SOCIAL_FIELDS = [
@@ -28,10 +28,19 @@ const inputClass =
   "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-600 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
 const labelClass = "block text-[11px] font-black uppercase tracking-widest text-stone-400 mb-1.5";
 
+const STEPS = [
+  { number: 1, title: "Your Act", subtitle: "Tell us about your act." },
+  { number: 2, title: "Contact", subtitle: "How do we reach you?" },
+  { number: 3, title: "Online & Media", subtitle: "Links and performance videos." },
+  { number: 4, title: "Availability", subtitle: "When can you play?" },
+];
+
 export default function BandBookingForm() {
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [step, setStep] = useState(1);
+  const [stepError, setStepError] = useState<string | null>(null);
 
   const [groupName, setGroupName] = useState("");
   const [actType, setActType] = useState("band");
@@ -64,11 +73,28 @@ export default function BandBookingForm() {
     setPreferredDates((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function handleNext() {
+    setStepError(null);
+    if (step === 1) {
+      if (!groupName.trim()) { setStepError("Please enter your act or group name."); return; }
+      if (!genre.trim()) { setStepError("Please enter your genre."); return; }
+    }
+    if (step === 2) {
+      if (!name.trim()) { setStepError("Please enter your name."); return; }
+      if (!email.trim() || !email.includes("@")) { setStepError("Please enter a valid email address."); return; }
+    }
+    setStep((s) => s + 1);
+  }
+
+  function handleBack() {
+    setStepError(null);
+    setStep((s) => s - 1);
+  }
+
   async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
 
-    // Max 3 videos total
     const remaining = 3 - videoFiles.length;
     const toAdd = files.slice(0, remaining);
 
@@ -82,7 +108,6 @@ export default function BandBookingForm() {
 
     setVideoFiles((prev) => [...prev, ...newEntries]);
 
-    // Upload each file to Supabase Storage
     for (let i = 0; i < toAdd.length; i++) {
       const file = toAdd[i];
       const ext = file.name.split(".").pop();
@@ -97,9 +122,6 @@ export default function BandBookingForm() {
         : null;
 
       setVideoFiles((prev) => {
-        // find the matching entry by preview URL to update it
-        const previewUrl = URL.createObjectURL(file);
-        // Since we can't re-create the same URL, match by index offset
         const globalIndex = prev.length - toAdd.length + i;
         return prev.map((v, idx) =>
           idx === globalIndex
@@ -109,7 +131,6 @@ export default function BandBookingForm() {
       });
     }
 
-    // Reset file input so the same file can be re-selected if needed
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
@@ -169,203 +190,315 @@ export default function BandBookingForm() {
     );
   }
 
+  const currentStep = STEPS[step - 1];
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-7">
+    <form onSubmit={handleSubmit} className="space-y-0">
 
-      {/* Act Details */}
-      <div className="space-y-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Act Details</p>
-        <div>
-          <label className={labelClass}>Act / Group Name *</label>
-          <input required value={groupName} onChange={(e) => setGroupName(e.target.value)}
-            placeholder="e.g. The Midnight Echo" className={inputClass} />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Type *</label>
-            <div className="relative">
-              <select
-                required
-                value={actType}
-                onChange={(e) => setActType(e.target.value)}
-                className={`${inputClass} appearance-none pr-9`}
-              >
-                <option value="band">Band</option>
-                <option value="singer">Singer / Solo Artist</option>
-                <option value="dj">DJ</option>
-              </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
-            </div>
-          </div>
-          <div>
-            <label className={labelClass}>Genre</label>
-            <input value={genre} onChange={(e) => setGenre(e.target.value)}
-              placeholder="e.g. Rock, Jazz, Pop" className={inputClass} />
-          </div>
-        </div>
-        <div>
-          <label className={labelClass}>Expected Payment (£)</label>
-          <div className="relative">
-            <BadgePoundSterling className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={paymentAmount}
-              onChange={(e) => setPaymentAmount(e.target.value)}
-              placeholder="0.00"
-              className={`${inputClass} pl-10`}
+      {/* Step indicator */}
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center gap-2">
+          {STEPS.map((s) => (
+            <div
+              key={s.number}
+              className={`h-1.5 rounded-full transition-all duration-300 ${
+                s.number < step
+                  ? "w-6 bg-[#FDCC4B]"
+                  : s.number === step
+                  ? "w-8 bg-[#FDCC4B]"
+                  : "w-4 bg-white/10"
+              }`}
             />
-          </div>
+          ))}
         </div>
+        <span className="text-[10px] font-black uppercase tracking-widest text-stone-600">
+          {step} of {STEPS.length}
+        </span>
       </div>
 
-      {/* Contact Details */}
-      <div className="space-y-4">
-        <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Contact Details</p>
-        <div>
-          <label className={labelClass}>Your Name *</label>
-          <input required value={name} onChange={(e) => setName(e.target.value)}
-            placeholder="Booker or contact name" className={inputClass} />
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className={labelClass}>Email *</label>
-            <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-              placeholder="your@email.com" className={inputClass} />
-          </div>
-          <div>
-            <label className={labelClass}>Phone</label>
-            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-              placeholder="+44 7700 000000" className={inputClass} />
-          </div>
-        </div>
+      {/* Step heading */}
+      <div className="mb-7">
+        <h4 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">
+          {currentStep.title}
+        </h4>
+        <p className="text-stone-500 text-xs font-medium">{currentStep.subtitle}</p>
       </div>
 
-      {/* Social Media */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Social Media</p>
-        {SOCIAL_FIELDS.map(({ key, label, icon: Icon, placeholder }) => (
-          <div key={key}>
-            <label className={labelClass}>{label}</label>
-            <div className="relative">
-              <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600" />
-              <input type="url" value={socialLinks[key] || ""} onChange={(e) => handleSocial(key, e.target.value)}
-                placeholder={placeholder} className={`${inputClass} pl-10`} />
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Step content */}
+      <div key={step} className="space-y-4 animate-in fade-in duration-200">
 
-      {/* Video Upload */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Performance Videos</p>
-          <span className="text-[10px] text-stone-600 font-bold">{videoFiles.length}/3</span>
-        </div>
-        <p className="text-[11px] text-stone-600 -mt-1">
-          Upload videos of your act so we can see you perform (MP4, WebM, MOV — max 50 MB each).
-        </p>
-
-        {/* Uploaded file previews */}
-        {videoFiles.length > 0 && (
-          <div className="space-y-2">
-            {videoFiles.map((vf, i) => (
-              <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-                <Video className="w-4 h-4 text-stone-500 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs text-white font-medium truncate">{vf.file.name}</p>
-                  {vf.uploading && (
-                    <p className="text-[10px] text-stone-500 flex items-center gap-1 mt-0.5">
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" /> Uploading…
-                    </p>
-                  )}
-                  {!vf.uploading && vf.uploadedUrl && (
-                    <p className="text-[10px] text-green-400 mt-0.5">Uploaded ✓</p>
-                  )}
-                  {!vf.uploading && vf.error && (
-                    <p className="text-[10px] text-red-400 flex items-center gap-1 mt-0.5">
-                      <AlertCircle className="w-2.5 h-2.5" /> {vf.error}
-                    </p>
-                  )}
-                </div>
-                <button title="Close" type="button" onClick={() => removeVideo(i)}
-                  className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-400/10 transition-all">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Upload button */}
-        {videoFiles.length < 3 && (
+        {/* Step 1: Act Details */}
+        {step === 1 && (
           <>
-            <input
-              title="Upload Videos"
-              ref={fileInputRef}
-              type="file"
-              accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/mpeg"
-              multiple
-              className="hidden"
-              onChange={handleFileSelect}
-            />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full flex items-center justify-center gap-2 border border-dashed border-white/20 rounded-xl py-4 text-stone-500 hover:border-[#FDCC4B]/30 hover:text-stone-400 hover:bg-white/3 transition-all text-xs font-bold uppercase tracking-wider"
-            >
-              <Upload className="w-4 h-4" />
-              {videoFiles.length === 0 ? "Upload Videos" : "Add Another Video"}
-            </button>
+            <div>
+              <label className={labelClass}>Act / Group Name <span className="text-red-400">*</span></label>
+              <input
+                value={groupName}
+                onChange={(e) => setGroupName(e.target.value)}
+                placeholder="e.g. The Midnight Echo"
+                className={inputClass}
+              />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Type <span className="text-red-400">*</span></label>
+                <div className="relative">
+                  <select
+                    title="Type of Act"
+                    value={actType}
+                    onChange={(e) => setActType(e.target.value)}
+                    className={`${inputClass} appearance-none pr-9`}
+                  >
+                    <option value="band">Band</option>
+                    <option value="singer">Singer / Solo Artist</option>
+                    <option value="dj">DJ</option>
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
+                </div>
+              </div>
+              <div>
+                <label className={labelClass}>Genre <span className="text-red-400">*</span></label>
+                <input
+                  value={genre}
+                  onChange={(e) => setGenre(e.target.value)}
+                  placeholder="e.g. Rock, Jazz, Pop"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Expected Payment (£)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="0.00"
+                className={inputClass}
+              />
+            </div>
           </>
         )}
-      </div>
 
-      {/* Preferred Dates */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Preferred Dates</p>
-        {preferredDates.map((date, i) => (
-          <div key={i} className="flex gap-2">
-            <div className="relative flex-1">
-              <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600" />
-              <input title="Select Date" type="date" value={date} onChange={(e) => handleDate(i, e.target.value)}
-                className={`${inputClass} pl-10`} style={{ colorScheme: "dark" }} />
+        {/* Step 2: Contact Details */}
+        {step === 2 && (
+          <>
+            <div>
+              <label className={labelClass}>Your Name <span className="text-red-400">*</span></label>
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Booker or contact name"
+                className={inputClass}
+              />
             </div>
-            {preferredDates.length > 1 && (
-              <button title="Remove Date" type="button" onClick={() => removeDate(i)}
-                className="shrink-0 w-10 h-10 mt-[2px] rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-stone-500 hover:text-red-400 hover:border-red-400/30 transition-all">
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        ))}
-        {preferredDates.length < 4 && (
-          <button title="Add Date" type="button" onClick={addDate}
-            className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-stone-500 hover:text-[#FDCC4B] transition-colors">
-            <Plus className="w-3.5 h-3.5" /> Add another date
-          </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className={labelClass}>Email <span className="text-red-400">*</span></label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Phone</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+44 7700 000000"
+                  className={inputClass}
+                />
+              </div>
+            </div>
+          </>
         )}
+
+        {/* Step 3: Online & Media */}
+        {step === 3 && (
+          <>
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Social Media</p>
+              {SOCIAL_FIELDS.map(({ key, label, icon: Icon, placeholder }) => (
+                <div key={key}>
+                  <label className={labelClass}>{label}</label>
+                  <div className="relative">
+                    <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600" />
+                    <input
+                      type="url"
+                      value={socialLinks[key] || ""}
+                      onChange={(e) => handleSocial(key, e.target.value)}
+                      placeholder={placeholder}
+                      className={`${inputClass} pl-10`}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Performance Videos</p>
+                <span className="text-[10px] text-stone-600 font-bold">{videoFiles.length}/3</span>
+              </div>
+              <p className="text-[11px] text-stone-600 -mt-1">
+                Upload videos of your act (MP4, WebM, MOV — max 50 MB each).
+              </p>
+
+              {videoFiles.length > 0 && (
+                <div className="space-y-2">
+                  {videoFiles.map((vf, i) => (
+                    <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+                      <Video className="w-4 h-4 text-stone-500 shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-white font-medium truncate">{vf.file.name}</p>
+                        {vf.uploading && (
+                          <p className="text-[10px] text-stone-500 flex items-center gap-1 mt-0.5">
+                            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Uploading…
+                          </p>
+                        )}
+                        {!vf.uploading && vf.uploadedUrl && (
+                          <p className="text-[10px] text-green-400 mt-0.5">Uploaded ✓</p>
+                        )}
+                        {!vf.uploading && vf.error && (
+                          <p className="text-[10px] text-red-400 flex items-center gap-1 mt-0.5">
+                            <AlertCircle className="w-2.5 h-2.5" /> {vf.error}
+                          </p>
+                        )}
+                      </div>
+                      <button title="Remove" type="button" onClick={() => removeVideo(i)}
+                        className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-400/10 transition-all">
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {videoFiles.length < 3 && (
+                <>
+                  <input
+                    title="Upload Videos"
+                    ref={fileInputRef}
+                    type="file"
+                    accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/mpeg"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 border border-dashed border-white/20 rounded-xl py-4 text-stone-500 hover:border-[#FDCC4B]/30 hover:text-stone-400 hover:bg-white/3 transition-all text-xs font-bold uppercase tracking-wider"
+                  >
+                    <Upload className="w-4 h-4" />
+                    {videoFiles.length === 0 ? "Upload Videos" : "Add Another Video"}
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        )}
+
+        {/* Step 4: Availability */}
+        {step === 4 && (
+          <>
+            <div className="space-y-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Preferred Dates</p>
+              {preferredDates.map((date, i) => (
+                <div key={i} className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600" />
+                    <input
+                      title="Select Date"
+                      type="date"
+                      value={date}
+                      onChange={(e) => handleDate(i, e.target.value)}
+                      className={`${inputClass} pl-10`}
+                      style={{ colorScheme: "dark" }}
+                    />
+                  </div>
+                  {preferredDates.length > 1 && (
+                    <button title="Remove Date" type="button" onClick={() => removeDate(i)}
+                      className="shrink-0 w-10 h-10 mt-[2px] rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-stone-500 hover:text-red-400 hover:border-red-400/30 transition-all">
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {preferredDates.length < 4 && (
+                <button title="Add Date" type="button" onClick={addDate}
+                  className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-stone-500 hover:text-[#FDCC4B] transition-colors">
+                  <Plus className="w-3.5 h-3.5" /> Add another date
+                </button>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <label className={labelClass}>Additional Notes</label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Set length, equipment needs, anything else we should know…"
+                rows={4}
+                className={`${inputClass} resize-none`}
+              />
+            </div>
+          </>
+        )}
+
       </div>
 
-      {/* Additional Notes */}
-      <div>
-        <label className={labelClass}>Additional Notes</label>
-        <textarea value={notes} onChange={(e) => setNotes(e.target.value)}
-          placeholder="Tell us about your act, genre, set length, equipment needs…"
-          rows={4} className={`${inputClass} resize-none`} />
-      </div>
+      {/* Step error */}
+      {stepError && (
+        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+          {stepError}
+        </p>
+      )}
 
-      {error && (
-        <p className="text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+      {/* Submit error */}
+      {error && step === 4 && (
+        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
           {error}
         </p>
       )}
 
-      <button type="submit" disabled={isPending || videoFiles.some((v) => v.uploading)}
-        className="w-full bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl py-4 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#FDCC4B]/20">
-        {isPending ? "Submitting…" : "Submit Application"}
-      </button>
+      {/* Navigation buttons */}
+      <div className={`flex gap-3 mt-8 ${step === 1 ? "" : ""}`}>
+        {step > 1 && (
+          <button
+            type="button"
+            onClick={handleBack}
+            className="flex items-center gap-2 h-14 px-5 rounded-xl border border-white/10 text-stone-400 font-black text-xs uppercase tracking-wider hover:bg-white/5 transition-all"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </button>
+        )}
+        {step < 4 ? (
+          <button
+            type="button"
+            onClick={handleNext}
+            className="flex-1 flex items-center justify-center gap-2 h-14 bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] shadow-lg shadow-[#FDCC4B]/20"
+          >
+            Next
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={isPending || videoFiles.some((v) => v.uploading)}
+            className="flex-1 h-14 bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#FDCC4B]/20"
+          >
+            {isPending ? "Submitting…" : "Submit Application"}
+          </button>
+        )}
+      </div>
+
     </form>
   );
 }
