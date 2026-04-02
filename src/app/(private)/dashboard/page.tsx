@@ -38,6 +38,16 @@ function getEventType(ev: UpcomingEvent): EventTypeRow {
   return (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) ?? null;
 }
 
+function getSaturdaysInMonth(year: number, month: number): string[] {
+  const saturdays: string[] = [];
+  const d = new Date(year, month, 1);
+  while (d.getMonth() === month) {
+    if (d.getDay() === 6) saturdays.push(d.toISOString().split("T")[0]);
+    d.setDate(d.getDate() + 1);
+  }
+  return saturdays;
+}
+
 function getBookingsHref(et: EventTypeRow): string {
   if (!et) return "/events";
   const s = et.sub_type?.toLowerCase() ?? "";
@@ -78,7 +88,7 @@ export default async function DashboardPage() {
       .from("bookings")
       .select("id")
       .eq("payment_status", "unpaid")
-      .gte("total_amount", 0)
+      .gt("total_amount", 0)
       .in("status", ["confirmed", "pending"]),
     supabase
       .from("events")
@@ -90,6 +100,7 @@ export default async function DashboardPage() {
     { data: monthBookings },
     { count: newContactsCount },
     { count: confirmedBookingsCount },
+    { data: bandPreferredDates },
   ] = await Promise.all([
     supabase
       .from("bookings")
@@ -105,6 +116,9 @@ export default async function DashboardPage() {
       .select("*", { count: "exact", head: true })
       .eq("status", "confirmed")
       .gte("created_at", firstDayOfMonth),
+    supabase
+      .from("band_booking_requests")
+      .select("preferred_dates"),
   ]);
 
   const { data: rawUpcoming } = await supabase
@@ -134,11 +148,22 @@ export default async function DashboardPage() {
     return isQuiz && questions.length === 0;
   }).length;
 
+  const now = new Date();
+  const currentMonthSaturdays = getSaturdaysInMonth(now.getFullYear(), now.getMonth());
+  const saturdaysBooked = new Set<string>();
+  (bandPreferredDates ?? []).forEach((req) => {
+    ((req.preferred_dates ?? []) as string[]).forEach((d) => {
+      if (currentMonthSaturdays.includes(d)) saturdaysBooked.add(d);
+    });
+  });
+  const openSaturdays = currentMonthSaturdays.length - saturdaysBooked.size;
+
   const totalActions =
     (pendingPrivate ?? 0) +
     (pendingBands ?? 0) +
     (unpaidBookingsData?.length ?? 0) +
-    quizzesMissingQuestions;
+    quizzesMissingQuestions +
+    openSaturdays;
 
   const collectedRevenue =
     monthBookings?.reduce((s, b) => s + (b.paid_amount ?? 0), 0) ?? 0;
@@ -177,10 +202,7 @@ export default async function DashboardPage() {
       <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-8">
 
         <header>
-          <h1 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-[#1F1F1A]">
-            Dashboard
-          </h1>
-          <p className="text-sm font-bold text-[#5F624F] uppercase tracking-widest mt-1">
+          <p className="text-sm font-bold text-[#5F624F] uppercase tracking-widest">
             {format(new Date(), "EEEE, do MMMM yyyy")}
           </p>
         </header>
@@ -229,6 +251,15 @@ export default async function DashboardPage() {
               activeColor="text-green-700"
               activeBg="bg-green-50"
               activeDot="bg-green-500"
+            />
+            <ActionRow
+              icon={Music}
+              label="Open Saturdays This Month"
+              count={openSaturdays}
+              href="/events/music-bookings"
+              activeColor="text-rose-600"
+              activeBg="bg-rose-50"
+              activeDot="bg-rose-500"
             />
           </div>
         </section>
