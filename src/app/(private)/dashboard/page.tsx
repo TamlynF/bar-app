@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 export const dynamic = "force-dynamic";
 
 type EventTypeRow = { type: string; sub_type: string } | null;
-type BookingRow = { id: number; group_size: number; status: string };
+type BookingRow = { id: number; group_size: number; status: string; team_id: number | null };
 type UpcomingEvent = {
   id: number;
   date: string;
@@ -125,7 +125,7 @@ export default async function DashboardPage() {
   const { data: rawUpcoming } = await supabase
     .from("events")
     .select(
-      "id, date, start_time, title, host_employee_id, event_types (type, sub_type), bookings (id, group_size, status)"
+      "id, date, start_time, title, host_employee_id, event_types (type, sub_type), bookings (id, group_size, status, team_id)"
     )
     .gte("date", todayStr)
     .order("date", { ascending: true })
@@ -385,6 +385,13 @@ function TonightCard({
   const et = getEventType(event);
   const isQuiz = et?.sub_type?.toLowerCase().includes("quiz") || et?.type?.toLowerCase().includes("quiz");
   const bookingsHref = getBookingsHref(et);
+  const confirmedTeams = isQuiz
+    ? new Set(
+        event.bookings
+          .filter((b) => b.status === "confirmed" && b.team_id != null)
+          .map((b) => b.team_id)
+      ).size
+    : 0;
 
   return (
     <div className="bg-white border-2 border-[#E6DFC8] rounded-[2rem] overflow-hidden shadow-sm">
@@ -413,13 +420,28 @@ function TonightCard({
               )}
             </p>
           </div>
-          <div className="text-right shrink-0">
-            <p className="text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
-              {guests}
-            </p>
-            <p className="text-[9px] font-black uppercase tracking-widest text-white/50 mt-1">
-              Guests
-            </p>
+          <div className="flex items-start gap-4 shrink-0">
+            {isQuiz && (
+              <>
+                <div className="text-right">
+                  <p className="text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
+                    {confirmedTeams}
+                  </p>
+                  <p className="text-[9px] font-black uppercase tracking-widest text-white/50 mt-1">
+                    Teams
+                  </p>
+                </div>
+                <div className="w-px self-stretch bg-white/10" />
+              </>
+            )}
+            <div className="text-right">
+              <p className="text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
+                {guests}
+              </p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-white/50 mt-1">
+                Guests
+              </p>
+            </div>
           </div>
         </div>
       </Link>
