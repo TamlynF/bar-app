@@ -48,7 +48,7 @@ src/app/
 │   └── _actions/           # Server actions for all public forms
 ├── (private)/              # Protected by proxy.ts
 │   ├── dashboard/          # Stat cards + pending reviews + booking list
-│   ├── events/
+│   ├── event-bookings/
 │   │   ├── quiz-bookings/  # Manage quiz night bookings (edit, cancel)
 │   │   ├── music-bookings/ # Review band applications (confirm/reject)
 │   │   └── private-bookings/ # Review private hire enquiries
@@ -97,7 +97,7 @@ Admin inbox: `admin@bookingsdonfenticas.co.uk`
 
 Emails fire from server actions — never from client code. The app URL is resolved as `NEXT_PUBLIC_SITE_URL` → `VERCEL_URL` → `http://localhost:3000`.
 
-Three triggers: quiz booking confirmation/waitlist, band application receipt + admin alert, private hire receipt + admin alert. Outcome emails (confirm/reject) fire from the admin review server actions in `src/app/(private)/events/*/actions.ts`.
+Three triggers: quiz booking confirmation/waitlist, band application receipt + admin alert, private hire receipt + admin alert. Outcome emails (confirm/reject) fire from the admin review server actions in `src/app/(private)/event-bookings/*/actions.ts`.
 
 ### Quiz Generator
 

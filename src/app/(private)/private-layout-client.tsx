@@ -51,6 +51,7 @@ export default function PrivateLayoutClient({
     const pathname = usePathname()
     const [isPending, startTransition] = useTransition()
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname?.startsWith("/event-bookings"))
+    const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname?.startsWith("/events"))
     const [settingsOpen, setSettingsOpen] = useState(() => !!pathname?.startsWith("/settings"))
 
     const initials = employeeName
@@ -67,8 +68,13 @@ export default function PrivateLayoutClient({
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Bookings", href: "/event-bookings", icon: Tickets },
-        { label: "Quiz", href: "/quiz-generator", icon: Brain },
+        { label: "Events", href: "/events", icon: CalendarCogIcon },
         { label: "Settings", href: "/settings", icon: Settings },
+    ]
+
+    const eventsNavSubItems = [
+        { label: "Event List", href: "/events", icon: CalendarDays },
+        { label: "Quiz Generator", href: "/events/quiz-generator", icon: Brain },
     ]
 
     const eventSubItems = [
@@ -79,7 +85,6 @@ export default function PrivateLayoutClient({
     ]
 
     const settingsSubItems = [
-        { label: "Events", href: "/settings/events", icon: CalendarCogIcon },
         { label: "Event Categories", href: "/settings/event-types", icon: Component },
         { label: "Quiz Rules", href: "/settings/quiz-categories", icon: Dices },
         { label: "Guests", href: "/settings/customers", icon: BookUser },
@@ -94,14 +99,15 @@ export default function PrivateLayoutClient({
 
         const normalizedPath = pathname.replace(/\/$/, "")
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null }
-        if (normalizedPath.startsWith("/quiz-generator")) {
-            if (normalizedPath === "/quiz-generator") return { title: "Quiz", subtitle: "AI Generator", backHref: null }
-            const quizMap: Record<string, string> = {
-                "history": "Question Archive",
+        if (normalizedPath.startsWith("/events")) {
+            if (normalizedPath === "/events") return { title: "Events", subtitle: null, backHref: null }
+            if (normalizedPath.startsWith("/events/quiz-generator")) {
+                if (normalizedPath === "/events/quiz-generator") return { title: "Events", subtitle: "Quiz Generator", backHref: "/events" }
+                return { title: "Events", subtitle: "Question Archive", backHref: "/events/quiz-generator" }
             }
             const segment = normalizedPath.split("/")[2]
-            const subtitle = quizMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
-            return { title: "Quiz", subtitle, backHref: "/quiz-generator" }
+            const subtitle = segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace(/-/g, " ") : ""
+            return { title: "Events", subtitle, backHref: "/events" }
         }
 
         if (normalizedPath.startsWith("/event-bookings")) {
@@ -121,7 +127,6 @@ export default function PrivateLayoutClient({
             if (normalizedPath === "/settings") return { title: "Settings", subtitle: null, backHref: null }
             const settingsMap: Record<string, string> = {
                 "tables": "Floor Plan",
-                "events": "Events",
                 "event-types": "Event Categories",
                 "quiz-categories": "Quiz Rules",
                 "customers": "Guests",
@@ -162,13 +167,16 @@ export default function PrivateLayoutClient({
 
                         const isSettings = item.label === "Settings"
                         const isEvents = item.label === "Bookings"
+                        const isEventsNav = item.label === "Events"
 
-                        const hasSubItems = isEvents || isSettings
-                        const isOpen = isEvents ? eventsOpen : isSettings ? settingsOpen : false
+                        const hasSubItems = isEvents || isSettings || isEventsNav
+                        const isOpen = isEvents ? eventsOpen : isSettings ? settingsOpen : isEventsNav ? eventsNavOpen : false
                         const toggle = isEvents
                             ? () => setEventsOpen((p) => !p)
                             : isSettings
                             ? () => setSettingsOpen((p) => !p)
+                            : isEventsNav
+                            ? () => setEventsNavOpen((p) => !p)
                             : undefined
 
                         return (
@@ -208,6 +216,30 @@ export default function PrivateLayoutClient({
                                 {isEvents && eventsOpen && (
                                     <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
                                         {eventSubItems.map((sub) => {
+                                            const isSubActive = normalizedPathname === sub.href
+                                            return (
+                                                <Link
+                                                    key={sub.href}
+                                                    href={sub.href}
+                                                    className={cn(
+                                                        "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[11px] uppercase tracking-wider",
+                                                        isSubActive
+                                                            ? "text-[#26300D] bg-[#FDCC4B]/20"
+                                                            : "text-[#5F624F] hover:text-[#26300D] hover:bg-[#26300D]/5"
+                                                    )}
+                                                >
+                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#26300D]" : "text-[#5F624F]/50")} />
+                                                    {sub.label}
+                                                </Link>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+
+                                {/* Sub-items for Events Nav */}
+                                {isEventsNav && eventsNavOpen && (
+                                    <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
+                                        {eventsNavSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href
                                             return (
                                                 <Link

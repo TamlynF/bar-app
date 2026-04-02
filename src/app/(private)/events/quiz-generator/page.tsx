@@ -14,13 +14,13 @@ import {
   getFullQuestionHistoryAction,
   updatePastQuestionAction,
   deletePastQuestionAction
-} from '@/app/(private)/quiz-generator/actions'
+} from '@/app/(private)/events/quiz-generator/actions'
 
 import type { 
   QuizEventSummary, 
   QuizCategoryConfig, 
   PastQuestionRecord 
-} from '@/app/(private)/quiz-generator/actions'
+} from '@/app/(private)/events/quiz-generator/actions'
 
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -312,7 +312,7 @@ export default function QuizGeneratorPage() {
       {/* HEADER: Archive Shortcut */}
       <div className="flex items-center justify-end">
         <Link 
-          href="/quiz-generator/history" 
+          href="/events/quiz-generator/history" 
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[9px] uppercase tracking-wider hover:bg-[#26300D]/5 transition-all shadow-xs"
         >
           <History className="w-3.5 h-3.5" />

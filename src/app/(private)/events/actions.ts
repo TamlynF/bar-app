@@ -47,7 +47,7 @@ export async function saveEventAction(formData: FormData) {
       if (error) throw error;
     }
 
-    revalidatePath("/settings/events");
+    revalidatePath("/events");
     return { success: true };
   } catch (error) {
     console.error("Error saving event:", error);
@@ -60,7 +60,7 @@ export async function deleteEventAction(id: number) {
   try {
     const { error } = await supabase.from("events").delete().eq("id", id);
     if (error) throw error;
-    revalidatePath("/settings/events");
+    revalidatePath("/events");
     return { success: true };
   } catch (error) {
     console.error("Error deleting event:", error);

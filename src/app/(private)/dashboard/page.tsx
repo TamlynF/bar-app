@@ -324,7 +324,7 @@ export default async function DashboardPage() {
               icon={CreditCard}
               label="Unpaid Bookings"
               count={unpaidBookingsData?.length ?? 0}
-              href={`/events/bingo-bookings?status=confirmed,pending&payment_status=unpaid&from_date=${todayStr}&min_total=0`}
+              href={`/event-bookings/bingo-bookings?status=confirmed,pending&payment_status=unpaid&from_date=${todayStr}&min_total=0`}
               activeColor="text-amber-600"
               activeBg="bg-amber-50"
               activeDot="bg-amber-500"
@@ -333,7 +333,7 @@ export default async function DashboardPage() {
               icon={Trophy}
               label="Quizzes Without Questions"
               count={quizzesMissingQuestions}
-              href="/quiz-generator"
+              href="/events/quiz-generator"
               activeColor="text-green-700"
               activeBg="bg-green-50"
               activeDot="bg-green-500"
@@ -433,8 +433,8 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <QuickLink href="/book/bingo" label="Walk-in" icon={Plus} />
             <QuickLink href="/settings/tables" label="Floor Plan" icon={Grid2X2} />
-            <QuickLink href="/quiz-generator" label="Quiz" icon={Trophy} />
-            <QuickLink href="/settings/events" label="Events" icon={CalendarDays} />
+            <QuickLink href="/events/quiz-generator" label="Quiz" icon={Trophy} />
+            <QuickLink href="/events" label="Events" icon={CalendarDays} />
           </div>
         </section>
 
@@ -563,7 +563,7 @@ function TonightCard({
           </Link>
           {isQuiz && (
             <Link
-              href="/quiz-generator"
+              href="/events/quiz-generator"
               className="col-span-2 flex items-center justify-between px-5 h-12 bg-[#FDCC4B] hover:bg-[#e5b843] rounded-xl transition-colors"
             >
               <div className="flex items-center gap-3">

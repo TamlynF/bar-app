@@ -1,6 +1,6 @@
 import React from 'react'
 // Using absolute aliases to ensure the build environment correctly locates the modules
-import { getFullQuestionHistoryAction, getQuizEventsAction } from '@/app/(private)/quiz-generator/actions'
+import { getFullQuestionHistoryAction, getQuizEventsAction } from '@/app/(private)/events/quiz-generator/actions'
 import {
   LayoutGrid,
   BookOpen,
@@ -8,7 +8,7 @@ import {
   MessageSquareQuote,
   Target
 } from 'lucide-react'
-import QuizHistoryFilter from '@/app/(private)/quiz-generator/history/_components/quiz-history-filter'
+import QuizHistoryFilter from '@/app/(private)/events/quiz-generator/history/_components/quiz-history-filter'
 import { cn } from '@/lib/utils'
 
 export type PastQuestionRecord = {

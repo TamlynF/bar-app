@@ -34,9 +34,13 @@
       "mcp__claude_ai_Vercel__list_deployments",
       "mcp__claude_ai_Vercel__get_deployment_build_logs",
       "Bash(cp:*)",
-      "Bash(sed -i 's|/events/quiz-bookings/actions|/event-bookings/quiz-bookings/actions|g' \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\event-bookings\\\\quiz-bookings\\\\components\\\\booking-list-client.tsx\")",
-      "Bash(sed -i 's|/events/quiz-bookings/page|/event-bookings/quiz-bookings/page|g' \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\event-bookings\\\\quiz-bookings\\\\components\\\\booking-list-client.tsx\")",
-      "Bash(sed -i 's|/events/bingo-bookings|/event-bookings/bingo-bookings|g' \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\event-bookings\\\\bingo-bookings\\\\bingo-list-client.tsx\")"
+      "Bash(sed -i 's|/event-bookings/quiz-bookings/actions|/event-bookings/quiz-bookings/actions|g' \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\event-bookings\\\\quiz-bookings\\\\components\\\\booking-list-client.tsx\")",
+      "Bash(sed -i 's|/event-bookings/quiz-bookings/page|/event-bookings/quiz-bookings/page|g' \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\event-bookings\\\\quiz-bookings\\\\components\\\\booking-list-client.tsx\")",
+      "Bash(sed -i 's|/event-bookings/bingo-bookings|/event-bookings/bingo-bookings|g' \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\event-bookings\\\\bingo-bookings\\\\bingo-list-client.tsx\")",
+      "Bash(cp -r \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\settings\\\\events\" \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\events\")",
+      "Bash(cp -r \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\quiz-generator\" \"C:\\\\RN\\\\bar-app\\\\src\\\\app\\\\\\(private\\)\\\\events\\\\quiz-generator\")",
+      "Bash(xargs sed:*)",
+      "Bash(npx tsc:*)"
     ]
   }
 }
