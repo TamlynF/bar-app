@@ -1,7 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
 import EventsClient from "./event-setups-client";
 
-export default async function EventsPage() {
+export default async function EventsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ filter?: string }>;
+}) {
+  const { filter } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: events }, { data: eventTypes }, { data: employees }, { data: quizCategories }, { data: quizQuestions }] = await Promise.all([
@@ -12,5 +17,5 @@ export default async function EventsPage() {
     supabase.from("past_quiz_questions").select("id, events_id, quiz_category_configs_id").not("events_id", "is", null),
   ]);
 
-  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} />;
+  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} filter={filter} />;
 }

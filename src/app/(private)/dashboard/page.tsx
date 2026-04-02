@@ -333,7 +333,7 @@ export default async function DashboardPage() {
               icon={Trophy}
               label="Quizzes Without Questions"
               count={quizzesMissingQuestions}
-              href="/event-setups/quiz-generator"
+              href="/event-setups/events?filter=quiz-incomplete"
               activeColor="text-green-700"
               activeBg="bg-green-50"
               activeDot="bg-green-500"

@@ -99,12 +99,14 @@ export default function EventsClient({
   employees = [],
   quizCategories = [],
   quizQuestions = [],
+  filter,
 }: {
   initialEvents: EventRecord[];
   eventTypes: EventType[];
   employees: Employee[];
   quizCategories: QuizCategory[];
   quizQuestions: QuizQuestion[];
+  filter?: string;
 }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -185,16 +187,28 @@ export default function EventsClient({
     }
   };
 
+  // Apply filter if present
+  const todayStr = new Date().toISOString().split("T")[0];
+  const visibleEvents = filter === "quiz-incomplete"
+    ? initialEvents.filter((e) => {
+        const et = eventTypes.find((t) => t.id === e.event_types_id);
+        if (!et?.sub_type?.toLowerCase().includes("quiz")) return false;
+        if (!e.date || e.date < todayStr) return false;
+        const { total, target } = getQuizStatus(e.id, quizCategories, quizQuestions);
+        return total < target;
+      })
+    : initialEvents;
+
   // Group events by event type
   const grouped = eventTypes
     .map((et) => ({
       eventType: et,
-      events: initialEvents.filter((e) => e.event_types_id === et.id),
+      events: visibleEvents.filter((e) => e.event_types_id === et.id),
     }))
     .filter((g) => g.events.length > 0);
 
   const knownTypeIds = new Set(eventTypes.map((et) => et.id));
-  const ungrouped = initialEvents.filter((e) => !knownTypeIds.has(e.event_types_id));
+  const ungrouped = visibleEvents.filter((e) => !knownTypeIds.has(e.event_types_id));
 
   const showForm = isAdding || isEditing;
   const formDefault = isEditing ? selected : null;
@@ -205,7 +219,7 @@ export default function EventsClient({
       {/* Header */}
       <div className="flex items-center justify-between">
         <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
-          {initialEvents.length} event{initialEvents.length !== 1 ? "s" : ""}
+          {visibleEvents.length} event{visibleEvents.length !== 1 ? "s" : ""}
         </p>
         <Button
           onClick={openAdd}
@@ -217,15 +231,34 @@ export default function EventsClient({
         </Button>
       </div>
 
+      {/* Filter notice */}
+      {filter === "quiz-incomplete" && (
+        <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-2xl">
+          <p className="text-[11px] font-black uppercase tracking-widest text-amber-700">
+            Upcoming quizzes with incomplete questions
+          </p>
+          <Link
+            href="/event-setups/events"
+            className="text-[11px] font-black uppercase tracking-widest text-amber-700 underline shrink-0"
+          >
+            Clear
+          </Link>
+        </div>
+      )}
+
       {/* Event List */}
-      {initialEvents.length === 0 ? (
+      {visibleEvents.length === 0 ? (
         <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
           <CalendarDays className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
-          <p className="text-sm font-black text-[#1F1F1A]">No events yet</p>
-          <p className="text-[11px] text-[#5F624F] mt-1">Add your first event to get started</p>
+          <p className="text-sm font-black text-[#1F1F1A]">
+            {filter === "quiz-incomplete" ? "No upcoming quizzes with incomplete questions" : "No events yet"}
+          </p>
+          <p className="text-[11px] text-[#5F624F] mt-1">
+            {filter === "quiz-incomplete" ? "All quiz questions are complete" : "Add your first event to get started"}
+          </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {grouped.map(({ eventType, events }) => {
             const isOpen = !collapsedGroups.has(eventType.id);
             return (
@@ -400,18 +433,18 @@ export default function EventsClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
+           className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
             sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px]
             sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sheet header */}
-          <div className="shrink-0 px-6 py-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md z-30 sm:rounded-t-[2rem]">
+          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-[2rem]">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
-                  {isAdding ? "New Event" : isEditing ? "Edit Event" : (selected?.title || "Untitled Event")}
+                  {isAdding ? "New Event" : isEditing ? "Edit Event" : "View Event"}
                 </SheetTitle>
                 {selected && !isEditing && (
                   <div className="flex items-center gap-1.5 mt-1">
@@ -428,10 +461,11 @@ export default function EventsClient({
                 return isQuiz ? (
                   <Link
                     href={`/event-setups/${selected.id}`}
-                    className="shrink-0 w-10 h-10 rounded-2xl bg-[#FDCC4B]/15 border border-[#FDCC4B]/30 flex items-center justify-center text-[#FDCC4B] hover:bg-[#FDCC4B]/25 transition-colors"
-                    title="View quiz questions"
+                    className="shrink-0 h-10 rounded-2xl bg-[#26300D] flex items-center justify-center text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors px-3 gap-2"
+                    title="Manage Quiz"
                   >
-                    <Brain className="w-4 h-4" />
+                    <Brain className="w-4 h-4 shrink-0" />
+                    <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Manage Quiz</span>
                   </Link>
                 ) : null;
               })()}
@@ -439,7 +473,7 @@ export default function EventsClient({
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0 touch-pan-y overscroll-contain space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0 touch-pan-y space-y-5">
 
             {/* View mode */}
             {!showForm && selected && (() => {
@@ -448,66 +482,66 @@ export default function EventsClient({
               const host = employees.find((e) => e.id === selected.host_employee_id);
               const isQuiz = !!et?.sub_type?.toLowerCase().includes("quiz");
               return (
-                <div className="space-y-4 animate-in fade-in duration-200">
-                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y-2 divide-[#E6DFC8]">
-                    <div className="grid grid-cols-2 divide-x-2 divide-[#E6DFC8]">
-                      <DetailCell label="Date" value={formatDate(selected.date)} />
+                <div className="animate-in fade-in duration-200 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 space-y-5 sm:space-y-0">
+                  {/* Left — detail cells */}
+                  <div className="space-y-5">
+                    <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+                      <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
                       <DetailCell label="Event Type" value={et ? eventTypeLabel(et) : `Type #${selected.event_types_id}`} />
-                    </div>
-                    <div className="grid grid-cols-2 divide-x-2 divide-[#E6DFC8]">
+                      <DetailCell label="Date" value={formatDate(selected.date)} />
                       <DetailCell label="Start Time" value={formatTime(selected.start_time)} />
                       <DetailCell label="End Time" value={formatTime(selected.end_time)} />
-                    </div>
-                    <DetailCell label="Host" value={host?.full_name ?? "—"} />
-                    <div className="grid grid-cols-2 divide-x-2 divide-[#E6DFC8]">
+                      <DetailCell label="Host" value={host?.full_name ?? "—"} />
                       <DetailCell
                         label="Payment"
                         value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"}
                       />
                       <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
+                      {selected.description && (
+                        <DetailCell label="Description" value={selected.description} />
+                      )}
                     </div>
-                    {isQuiz && (() => {
-                      const { categoryCounts, total, target, allComplete, someExist } = getQuizStatus(selected.id, quizCategories, quizQuestions);
-                      return (
-                        <>
-                          <div className="px-5 py-4 space-y-2">
-                            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">Quiz Questions</p>
-                            {categoryCounts.map(cat => (
-                              <div key={cat.id} className="flex items-center justify-between gap-2">
-                                <span className="text-xs font-bold text-[#1F1F1A]">{cat.category_name}</span>
-                                <div className="flex items-center gap-1.5">
-                                  {cat.count >= cat.question_count
-                                    ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                                    : cat.count > 0
-                                    ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                                    : <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
-                                  <span className="text-xs font-black tabular-nums text-[#5F624F]">
-                                    {cat.count} / {cat.question_count}
-                                  </span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </>
-                      );
-                    })()}
-                    {selected.description && (
-                      <DetailCell label="Description" value={selected.description} />
-                    )}
+                    {formError && <ErrorBox message={formError} />}
                   </div>
 
-                  {formError && <ErrorBox message={formError} />}
+                  {/* Right — quiz section (only rendered for quiz events) */}
+                  {isQuiz && (() => {
+                    const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
+                    return (
+                      <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+                        <div className="px-5 py-4 space-y-2">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">Quiz Questions</p>
+                          {categoryCounts.map(cat => (
+                            <div key={cat.id} className="flex items-center justify-between gap-2">
+                              <span className="text-xs font-bold text-[#1F1F1A]">{cat.category_name}</span>
+                              <div className="flex items-center gap-1.5">
+                                {cat.count >= cat.question_count
+                                  ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                                  : cat.count > 0
+                                  ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                                  : <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
+                                <span className="text-xs font-black tabular-nums text-[#5F624F]">
+                                  {cat.count} / {cat.question_count}
+                                </span>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               );
             })()}
 
             {/* Edit / Add form */}
             {showForm && (
-              <form id="event-form" action={handleSubmit} className="space-y-4 animate-in fade-in duration-200">
+              <form id="event-form" action={handleSubmit} className="animate-in fade-in duration-200">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
 
+                <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2">
                 {/* Title */}
-                <div className="space-y-2">
+                <div className="space-y-2 sm:col-span-2">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
                     Title <span className="text-red-500">*</span>
                   </Label>
@@ -521,7 +555,7 @@ export default function EventsClient({
                 </div>
 
                 {/* Event Type */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
                     Event Type <span className="text-red-500">*</span>
                   </Label>
@@ -531,17 +565,19 @@ export default function EventsClient({
                       name="event_types_id"
                       required
                       defaultValue={formDefault?.event_types_id ?? eventTypes[0]?.id ?? ""}
-                      className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-black tracking-widest outline-none focus:border-[#26300D] appearance-none"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-black tracking-widest outline-none focus:border-[#26300D] appearance-none"
                     >
                       {eventTypes.map((et) => (
                         <option key={et.id} value={et.id}>{eventTypeLabel(et)}</option>
                       ))}
                     </select>
-                    <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F]/30 rotate-90 pointer-events-none" />
+                    
                   </div>
-                </div>
-
-                {/* Date */}
+                  </div>
+                  
+                {/* Start + End time */}
+                  <div className="flex gap-2">
+                     {/* Date */}
                 <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
                     Date <span className="text-red-500">*</span>
@@ -551,19 +587,16 @@ export default function EventsClient({
                     type="date"
                     required
                     defaultValue={formDefault?.date ?? ""}
-                    className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                    className="h-14 w-2/3 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-black focus:border-[#26300D] transition-all"
                   />
                 </div>
-
-                {/* Start + End time */}
-                <div className="flex gap-3">
                   <div className="space-y-2">
                     <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Start</Label>
                     <Input
                       name="start_time"
                       type="time"
                       defaultValue={formDefault?.start_time ? formatTime(formDefault.start_time) : ""}
-                      className="h-14 w-36 rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="h-14 w-36 rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-black focus:border-[#26300D] transition-all"
                     />
                   </div>
                   <div className="space-y-2">
@@ -572,13 +605,13 @@ export default function EventsClient({
                       name="end_time"
                       type="time"
                       defaultValue={formDefault?.end_time ? formatTime(formDefault.end_time) : ""}
-                      className="h-14 w-36 rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="h-14 w-36 rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-black focus:border-[#26300D] transition-all"
                     />
                   </div>
                 </div>
 
                 {/* Host */}
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Host</Label>
                   <div className="relative">
                     <select
@@ -647,11 +680,12 @@ export default function EventsClient({
                   />
                 </div>
 
-                {formError && <ErrorBox message={formError} />}
+                  {formError && <ErrorBox message={formError} />}
+                  </div>
               </form>
             )}
 
-            <div className="h-2" />
+            <div className="h-4" />
           </div>
 
           {/* Footer */}
@@ -710,11 +744,26 @@ export default function EventsClient({
   );
 }
 
-function DetailCell({ label, value }: { label: string; value: string }) {
+function DetailCell({
+  label,
+  value,
+  icon,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+}) {
   return (
-    <div className="px-5 py-4">
-      <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">{label}</p>
-      <p className="text-sm font-black text-[#1F1F1A] leading-snug wrap-break-word">{value}</p>
+    <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E6DFC8] last:border-0">
+      <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
+        {icon}
+        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+          {label}
+        </span>
+      </div>
+      <span className="text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">
+        {value}
+      </span>
     </div>
   );
 }
