@@ -318,7 +318,7 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
     throw new Error("Failed to record questions in history.");
   }
 
-  revalidatePath('/quiz-generator');
-  revalidatePath('/quiz-generator/history');
+  revalidatePath('/event-setups/quiz-generator');
+  revalidatePath('/event-setups/quiz-history');
   return { success: true };
 }
