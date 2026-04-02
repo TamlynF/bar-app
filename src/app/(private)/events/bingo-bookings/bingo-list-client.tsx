@@ -35,7 +35,8 @@ export default function BingoBookingListClient({
   selectedDate,
   filterStatus,
   filterPaymentStatus,
-  filterFromDate
+  filterFromDate,
+  filterMinTotal
 }: {
   bookings: BingoBooking[];
   selectedDate?: string;
