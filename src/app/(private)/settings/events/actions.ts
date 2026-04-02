@@ -23,8 +23,10 @@ export async function saveEventAction(formData: FormData) {
   // Resolve current logged-in user to an employee id
   let currentEmployeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
+  console.log("Current user:", user);
   if (user?.email) {
     const { data: emp } = await supabase.from("employees").select("id").eq("email", user.email).maybeSingle();
+    console.log("Resolved employee:", emp);
     if (emp) currentEmployeeId = emp.id;
   }
 

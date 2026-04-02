@@ -382,9 +382,12 @@ export default function EventsClient({
 
                 {/* Title */}
                 <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Title</Label>
+                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                    Title <span className="text-red-500">*</span>
+                  </Label>
                   <Input
                     name="title"
+                    required
                     placeholder="e.g. Music Bingo"
                     defaultValue={formDefault?.title ?? ""}
                     className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
@@ -422,7 +425,7 @@ export default function EventsClient({
                     type="date"
                     required
                     defaultValue={formDefault?.date ?? ""}
-                    className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                    className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
                   />
                 </div>
 
