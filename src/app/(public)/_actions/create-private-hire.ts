@@ -14,7 +14,8 @@ export interface PrivateHireData {
   phone_no?: string;
   guest_count: number;
   preferred_date?: string;
-  preferred_time?: string;
+  preferred_start_time?: string;
+  preferred_end_time?: string;
   reason_for_hire: string;
   additional_requirements?: string;
 }
@@ -31,7 +32,8 @@ export async function createPrivateHire(data: PrivateHireData) {
         phone_no: data.phone_no || null,
         guest_count: data.guest_count,
         preferred_date: data.preferred_date || null,
-        preferred_time: data.preferred_time || null,
+        preferred_start_time: data.preferred_start_time || null,
+        preferred_end_time: data.preferred_end_time || null,
         reason_for_hire: data.reason_for_hire,
         additional_requirements: data.additional_requirements || null,
         status: "pending_review",
@@ -85,7 +87,8 @@ async function sendAdminEmail(data: PrivateHireData, id: string) {
           <p><strong>Phone:</strong> ${data.phone_no || "—"}</p>
           <p><strong>Guests:</strong> ${data.guest_count}</p>
           <p><strong>Preferred Date:</strong> ${data.preferred_date || "Not specified"}</p>
-          <p><strong>Preferred Time:</strong> ${data.preferred_time || "Not specified"}</p>
+          <p><strong>Start Time:</strong> ${data.preferred_start_time || "Not specified"}</p>
+          <p><strong>End Time:</strong> ${data.preferred_end_time || "Not specified"}</p>
           <p><strong>Reason for Hire:</strong> ${data.reason_for_hire}</p>
           ${data.additional_requirements ? `<p><strong>Additional Requirements:</strong> ${data.additional_requirements}</p>` : ""}
         </div>
