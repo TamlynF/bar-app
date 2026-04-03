@@ -19,6 +19,8 @@ import {
   Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import SectionLabel from "./components/section-label";
+import { EventRowListClient } from "./components/event-row-list-client";
 
 export const dynamic = "force-dynamic";
 
@@ -399,23 +401,9 @@ export default async function DashboardPage() {
               capacityPercent={capacityPercent}
             />
           )}
-
-          {allListItems.length > 0 ? (
-            <div className="bg-white border border-[#E6DFC8] rounded-2xl divide-y divide-[#F0EBE0] overflow-hidden">
-              {allListItems.map((item) => (
-                <EventRow
-                  key={item.key}
-                  date={item.date}
-                  title={item.title}
-                  startTime={item.startTime}
-                  endTime={item.endTime}
-                  eventType={item.eventType}
-                  hostName={item.hostName}
-                  guests={item.guests}
-                  href={item.href}
-                />
-              ))}
-            </div>
+         
+           {allListItems.length > 0 ? (
+            <EventRowListClient items={allListItems} />
           ) : !tonightEvent ? (
             <div className="bg-white border border-[#E6DFC8] rounded-2xl p-10 text-center">
               <CalendarDays className="w-10 h-10 text-[#5F624F] opacity-20 mx-auto mb-3" />
@@ -581,138 +569,11 @@ function TonightCard({
   );
 }
 
-// ─── Event Row ─────────────────────────────────────────────────────────────
 
-function EventRow({
-  key,
-  date,
-  title,
-  startTime,
-  endTime,
-  eventType,
-  hostName,
-  guests,
-  href,
-}: {
-  key: string;
-  date: string;
-  title: string;
-    startTime: string | null;
-  endTime: string | null;
-  eventType: EventTypeRow;
-  hostName: string | null;
-  guests: number;
-  href: string;
-}) {
-  const parsed = parseISO(date);
-  const today = isToday(parsed);
-  console.log("key:", key, "endtime: ", endTime, "startTime: ", startTime, "date: ", date, "title: ", title, "href", href);
-  
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-4 px-5 py-4 hover:bg-[#F7F4EA] transition-colors active:bg-[#E6DFC8]"
-    >
-      {/* Date pill */}
-      <div
-        className={cn(
-          "shrink-0 w-14 text-center rounded-xl py-2",
-          today ? "bg-[#FDCC4B]" : "bg-[#F7F4EA]"
-        )}
-      >
-        <p
-          className={cn(
-            "text-[9px] font-black uppercase tracking-widest",
-            today ? "text-[#26300D]" : "text-[#5F624F]"
-          )}
-        >
-          {format(parsed, "EEE")}
-        </p>
-        <p
-          className={cn(
-            "text-xl font-black leading-tight",
-            today ? "text-[#26300D]" : "text-[#1F1F1A]"
-          )}
-        >
-          {format(parsed, "d")}
-        </p>
-        <p
-          className={cn(
-            "text-[9px] font-black uppercase tracking-widest",
-            today ? "text-[#26300D]" : "text-[#5F624F]"
-          )}
-        >
-          {format(parsed, "MMM")}
-        </p>
-      </div>
-
-      {/* Event info */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <p className="text-sm font-black text-[#1F1F1A] truncate">{title}</p>
-          {eventType && (
-            <span className="shrink-0 text-[9px] font-black uppercase tracking-widest bg-[#F7F4EA] text-[#5F624F] px-2 py-0.5 rounded-md">
-              {eventType.sub_type || eventType.type}
-            </span>
-          )}
-        </div>
-        <p className="text-[11px] text-[#5F624F] font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
-          {startTime && (
-            <span>
-              {startTime.substring(0, 5)}
-              {endTime && ` - ${endTime.substring(0, 5)}`}
-            </span>
-          )}
-          {startTime && hostName && <span className="opacity-30">·</span>}
-          {hostName && <span>{hostName}</span>}
-        </p>
-      </div>
-
-      {/* Guests + arrow */}
-      <div className="shrink-0 flex items-center gap-3">
-        {guests > 0 && (
-          <div className="text-right">
-            <p className="text-sm font-black text-[#1F1F1A] tabular-nums">{guests}</p>
-            <p className="text-[9px] font-bold text-[#5F624F] uppercase tracking-wider">
-              guests
-            </p>
-          </div>
-        )}
-        <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40" />
-      </div>
-    </Link>
-  );
-}
 
 // ─── Shared Components ─────────────────────────────────────────────────────
 
-function SectionLabel({
-  icon: Icon,
-  label,
-  highlight,
-  badge,
-}: {
-  icon: React.ElementType;
-  label: string;
-  highlight?: boolean;
-  badge?: string;
-}) {
-  return (
-    <div className="flex items-center gap-2 px-1">
-      <Icon
-        className={cn("w-4 h-4", highlight ? "text-amber-600" : "text-[#5F624F]")}
-      />
-      <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
-        {label}
-      </h2>
-      {badge && (
-        <span className="bg-amber-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full ml-1 animate-pulse">
-          {badge}
-        </span>
-      )}
-    </div>
-  );
-}
+
 
 function StatCard({
   label,
