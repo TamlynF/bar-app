@@ -127,14 +127,14 @@ export async function deleteEmployeeAction(id: number) {
     const { error } = await supabase.from("employees").delete().eq("id", id);
     if (error) throw error;
     
-    revalidatePath("/settings/system-users");
+    revalidatePath("/settings/users");
     return { success: true };
   } catch (error) {
     console.error("Error deleting employee:", error);
     // If a foreign key restriction occurs (e.g., they hosted an event or modified a record)
-    //if (error?.code === '23503') {
-    //  return { error: "Cannot delete this employee because they are linked to existing events or records." };
-    //}
+    if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "23503") {
+      return { error: "Cannot delete this employee because they are linked to existing events or records. Mark as inactive instead." };
+    }
       return { error: error instanceof Error ? error.message : "Failed to delete employee." };
   }
 }

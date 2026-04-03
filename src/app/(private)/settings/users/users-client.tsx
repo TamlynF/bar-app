@@ -304,6 +304,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
   };
 
   const handleDelete = () => {
+    console.log("Attempting to delete employee with ID:", selected?.id);
     if (!selected) return;
     if (window.confirm("Are you sure you want to remove this system user?")) {
       startTransition(async () => {
@@ -472,7 +473,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                   className="shrink-0 h-10 px-3 rounded-xl border-2 border-[#E6DFC8] text-[#5F624F] font-black bg-white hover:bg-[#F7F4EA] text-[10px] uppercase tracking-widest flex items-center gap-2"
                 >
                   <KeyRound className="w-4 h-4" />
-                  <span className="hidden sm:inline">Reset Password</span>
+                  <span className="sm:inline">Reset Password</span>
                 </Button>
               )}
             </div>
