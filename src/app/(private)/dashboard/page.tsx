@@ -584,6 +584,7 @@ function TonightCard({
 // ─── Event Row ─────────────────────────────────────────────────────────────
 
 function EventRow({
+  key,
   date,
   title,
   startTime,
@@ -593,6 +594,7 @@ function EventRow({
   guests,
   href,
 }: {
+  key: string;
   date: string;
   title: string;
     startTime: string | null;
@@ -604,7 +606,8 @@ function EventRow({
 }) {
   const parsed = parseISO(date);
   const today = isToday(parsed);
-console.log("endtime: ", endTime, "startTime: ", startTime, "date: ", date, "title: ", title);
+  console.log("key:", key, "endtime: ", endTime, "startTime: ", startTime, "date: ", date, "title: ", title, "href", href);
+  
   return (
     <Link
       href={href}

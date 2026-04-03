@@ -42,6 +42,16 @@ export interface BandRequest {
   status: string;
   admin_notes: string | null;
   created_at: string;
+  payment_amount: number | null;
+  paid_amount: number | null;
+  payment_status: string | null;
+  selected_date: string;
+  selected_start_time: string | null;
+  selected_end_time: string | null;
+  bank_account_no: string | null;
+  bank_account_name: string | null;
+  bank_sort_code: string | null;
+  bank_payment_ref: string | null;
 }
 
 const STATUS_CONFIG: Record<
@@ -192,30 +202,58 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0 touch-pan-y space-y-5">
-          <div className="px-5 py-4 space-y-6">
-            {/* Booker info */}
-            <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
-              <SheetRow label="Email" value={request.email} />
-              <SheetRow label="Phone" value={request.phone_no} />
-              <SheetRow
-                label="Submitted"
-                value={new Date(request.created_at).toLocaleDateString("en-GB", {
-                  day: "numeric",
-                  month: "long",
-                  year: "numeric",
-                })}
-              />
-            </div>
+            <div className="px-5 py-4 space-y-6">
+              {/* Event details + Contact side by side on sm+ */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-4 space-y-6 sm:space-y-0">
+                {/* Event details */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+                    Event Details
+                  </p>
+                  <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
+                    <SheetRow label="Act Name" value={request.group_name} />
+                    <SheetRow label="Type" value={toTitleCase(request.type)} />
+                    <SheetRow label="Genre" value={toTitleCase(request.genre)} />
+                    <SheetRow label="Payment Amount" value={request.payment_amount} />
+                    {dates.length > 0 ? (
+                      <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
+                        <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5">
+                          Preferred Dates
+                        </span>
+                        <ul className="text-right space-y-1">
+                          {dates.map((d, i) => (
+                            <li key={i} className="text-sm font-bold text-[#1F1F1A]">
+                              {new Date(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      <SheetRow label="Preferred Dates" value={null} />
+                    )}
+                  </div>
+                </div>
 
-            {/* Event details */}
-            <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
-              <SheetRow label="Type" value={request.type} />
-              <SheetRow label="Genre" value={request.genre} />
-              <SheetRow
-                label="Preferred Dates"
-                value={dates.length > 0 ? dates.join(", ") : null}
-              />
-            </div>
+                {/* Contact info */}
+                <div className="space-y-2">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+                    Contact Information
+                  </p>
+                  <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
+                    <SheetRow label="Name" value={request.booker_name} />
+                    <SheetRow label="Email" value={request.email} />
+                    <SheetRow label="Phone" value={request.phone_no} />
+                    <SheetRow
+                      label="Submitted"
+                      value={new Date(request.created_at).toLocaleDateString("en-GB", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
 
             {/* Social links */}
             {socials.length > 0 && (
@@ -249,7 +287,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">
                   Performance Videos
                 </p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-row flex-wrap gap-1.5">
                   {videos.map((url, i) => {
                     const isStorage =
                       url.includes("supabase.co/storage") || url.includes(".supabase.co");
@@ -258,20 +296,12 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         key={i}
                         type="button"
                         onClick={() => setActiveVideo(url)}
-                        className="relative h-24 rounded-xl overflow-hidden bg-black group"
+                        className="relative h-16 w-24 shrink-0 rounded-xl overflow-hidden bg-[#26300D] flex flex-col items-center justify-center gap-1 group active:scale-95 transition-transform"
                       >
-                        <video
-                          src={url}
-                          preload="metadata"
-                          className="w-full h-full object-cover"
-                          muted
-                        />
-                        <div className="absolute inset-0 bg-black/40 group-hover:bg-black/55 transition-colors flex items-center justify-center">
-                          <div className="w-10 h-10 rounded-full bg-white/20 border border-white/40 flex items-center justify-center backdrop-blur-sm">
-                            <Play className="w-4 h-4 text-white fill-white translate-x-0.5" />
-                          </div>
+                        <div className="w-8 h-8 rounded-full bg-[#FDCC4B]/20 border border-[#FDCC4B]/40 flex items-center justify-center group-hover:bg-[#FDCC4B]/30 transition-colors">
+                          <Play className="w-3.5 h-3.5 text-[#FDCC4B] fill-[#FDCC4B] translate-x-px" />
                         </div>
-                        <span className="absolute bottom-2 left-2 text-[10px] font-black text-white/80 uppercase tracking-widest">
+                        <span className="text-[9px] font-black text-[#FDCC4B]/70 uppercase tracking-widest">
                           Video {i + 1}
                         </span>
                       </button>
@@ -281,11 +311,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="h-24 rounded-xl flex flex-col items-center justify-center gap-2 bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA] transition-colors p-3"
+                        className="h-16 w-24 shrink-0 rounded-xl flex flex-col items-center justify-center gap-1 bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA] transition-colors"
                       >
-                        <Link2 className="w-5 h-5" />
-                        <span className="text-[10px] font-black uppercase tracking-widest text-center line-clamp-2 break-all">
-                          {url}
+                        <Link2 className="w-4 h-4" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">
+                          Link {i + 1}
                         </span>
                       </a>
                     );
@@ -399,4 +429,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       </Dialog>
     </>
   );
+}
+function toTitleCase(str?: string | null) {
+  if (!str) return "";
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
