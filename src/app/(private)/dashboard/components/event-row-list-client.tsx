@@ -98,7 +98,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             type="button"
                             title="Event"
                             onClick={() => setExpandedId(isExpanded ? null : item.key)}
-                            className="w-full text-left flex items-center gap-3 p-4 hover:bg-[#F9F8F4] transition-colors cursor-pointer sm:grid sm:event-row-grid sm:gap-4 sm:items-center"
+                            className="event-row-grid w-full text-left p-4 hover:bg-[#F9F8F4] transition-colors cursor-pointer"
                         >
                             {/* Date pill */}
                             <div className={cn(
