@@ -84,7 +84,7 @@ export default async function EventQuizQuestionsPage({
 
       {/* Back nav */}
       <Link
-        href={`/event-setups?open=${id}`}
+        href={`/event-setups/events?open=${id}`}
         className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#26300D] transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" />

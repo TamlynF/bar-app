@@ -460,7 +460,7 @@ export default function EventsClient({
                 const isQuiz = !!et?.sub_type?.toLowerCase().includes("quiz");
                 return isQuiz ? (
                   <Link
-                    href={`/event-setups/${selected.id}`}
+                    href={`/event-setups/events/${selected.id}`}
                     className="shrink-0 h-10 rounded-2xl bg-[#26300D] flex items-center justify-center text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors px-3 gap-2"
                     title="Manage Quiz"
                   >
