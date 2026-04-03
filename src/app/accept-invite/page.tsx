@@ -15,6 +15,7 @@ export default function AcceptInvitePage() {
   // Wait for Supabase to exchange the invite hash tokens into a session
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      console.log("Auth event:", event);
       if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
         setReady(true);
       }
@@ -33,8 +34,8 @@ export default function AcceptInvitePage() {
       setError("Passwords do not match.");
       return;
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
+    if (password.length < 7) {
+      setError("Password must be at least 7 characters.");
       return;
     }
 

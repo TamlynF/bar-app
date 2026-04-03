@@ -8,12 +8,6 @@ export async function saveEmployeeAction(formData: FormData) {
   const supabase = await createClient();
   
   const id = formData.get("id")?.toString();
-  // console.log("Received form data for employee:", {
-  //   id,
-  //   full_name: formData.get("full_name")?.toString(),
-  //   email: formData.get("email")?.toString(),
-  //   role: formData.get("role")?.toString(),
-  // });
 
   // Extracting data matching the schema
   const payload = {
@@ -116,7 +110,7 @@ export async function sendPasswordResetAction(email: string) {
     : "http://localhost:3000";
 
   const { error } = await adminSupabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${siteUrl}/dashboard`,
+    redirectTo: `${siteUrl}/accept-invite`,
   });
 
   if (error) {
