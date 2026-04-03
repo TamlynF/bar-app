@@ -93,12 +93,20 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                     : "--:--" + (item.endTime ? ` - ${item.endTime.substring(0, 5)}` : "--:--");
 
                 return (
-                    <div key={item.key} className="border-b border-[#E6DFC8] last:border-0 bg-white transition-colors">
+                    <div key={item.key} className={cn(
+                        "transition-colors",
+                        isExpanded
+                            ? "mx-1 my-0.5 rounded-xl border-2 border-[#FDCC4B] overflow-hidden"
+                            : "border-b border-[#E6DFC8] last:border-0 bg-white"
+                    )}>
                         <button
                             type="button"
                             title="Event"
                             onClick={() => setExpandedId(isExpanded ? null : item.key)}
-                            className="event-row-grid w-full text-left flex items-center gap-3 p-4 hover:bg-[#F9F8F4] transition-colors cursor-pointer sm:grid sm:items-center sm:gap-4"
+                            className={cn(
+                                "event-row-grid w-full text-left flex items-center gap-3 p-4 transition-colors cursor-pointer sm:grid sm:items-center sm:gap-4",
+                                isExpanded ? "bg-[#FEF3C7]" : "hover:bg-[#F9F8F4]"
+                            )}
                         >
                             {/* Date pill */}
                             <div className={cn(
