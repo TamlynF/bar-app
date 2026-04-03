@@ -12,20 +12,31 @@ export default function AcceptInvitePage() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Wait for Supabase to exchange the invite hash tokens into a session
+  // Explicitly exchange the hash token into a cookie-based session.
+  // onAuthStateChange alone isn't enough — @supabase/ssr stores sessions in
+  // cookies, so we must call setSession() to persist it before updateUser().
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log("Auth event:", event, "Session:", session);
-      if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && session?.user) {
-       setReady(true);
-     } else if (event === "INITIAL_SESSION" && !session?.user) {
-        setError("This link has expired or already been used. Please request a new one from your admin.");
-        setReady(true);
-     }
-    });
-    console.log("Listening for auth state changes with subscription:", subscription);
-    return () => subscription.unsubscribe();
-  }, [supabase.auth]);
+    const hash = window.location.hash.substring(1);
+    const params = new URLSearchParams(hash);
+    const accessToken = params.get("access_token");
+    const refreshToken = params.get("refresh_token");
+
+    if (!accessToken || !refreshToken) {
+      setError("No valid invite link found. Please request a new one from your admin.");
+      return;
+    }
+
+    supabase.auth
+      .setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(({ data, error }) => {
+        if (error || !data.session?.user) {
+          setError("This link has expired or already been used. Please request a new one from your admin.");
+        } else {
+          setReady(true);
+          window.history.replaceState(null, "", window.location.pathname);
+        }
+      });
+  }, [supabase]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -69,8 +80,12 @@ export default function AcceptInvitePage() {
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl">
-          {!ready ? (
+          {!ready && !error ? (
             <p className="text-stone-400 text-sm text-center py-4">Verifying your invite…</p>
+          ) : error ? (
+            <p className="text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-center">
+              {error}
+            </p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1.5">
