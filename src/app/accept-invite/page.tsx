@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { markInviteAcceptedAction } from "@/app/(private)/settings/users/actions";
 
 export default function AcceptInvitePage() {
   const router = useRouter();
@@ -59,6 +60,7 @@ export default function AcceptInvitePage() {
       if (error) {
         setError(error.message);
       } else {
+        await markInviteAcceptedAction();
         router.replace("/dashboard");
       }
     });

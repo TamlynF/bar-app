@@ -43,6 +43,9 @@ export type EmployeeRecord = {
   updated_by?: number | null;
   created_by_employee?: { full_name: string; role: string | null } | null;
   updated_by_employee?: { full_name: string; role: string | null } | null;
+  invite_sent_at?: string | null;
+  invite_accepted_at?: string | null;
+  password_reset_sent_at?: string | null;
 };
 
 const EMPLOYMENT_TYPES = [
@@ -533,6 +536,30 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                       <DetailCell label="Phone" value={phone || "—"} />
                     </div>
                     <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
+                  </div>
+
+                  {/* Account Access */}
+                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y-2 divide-[#E6DFC8]">
+                    <div className="px-4 py-2.5 bg-[#F7F4EA]">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] flex items-center gap-1.5">
+                        <Mail className="w-3 h-3" />
+                        Account Access
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-2 divide-x-2 divide-[#E6DFC8]">
+                      <DetailCell
+                        label="Invite Sent"
+                        value={selected.invite_sent_at ? formatDate(selected.invite_sent_at) : "Not sent"}
+                      />
+                      <DetailCell
+                        label="Invite Accepted"
+                        value={selected.invite_accepted_at ? formatDate(selected.invite_accepted_at) : selected.invite_sent_at ? "Pending" : "—"}
+                      />
+                    </div>
+                    <DetailCell
+                      label="Password Reset Sent"
+                      value={selected.password_reset_sent_at ? formatDate(selected.password_reset_sent_at) : "—"}
+                    />
                   </div>
 
                   {/* Skeleton Staff */}

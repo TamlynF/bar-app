@@ -6,10 +6,9 @@ import { revalidatePath } from "next/cache";
 
 export async function saveEmployeeAction(formData: FormData) {
   const supabase = await createClient();
-  
+
   const id = formData.get("id")?.toString();
 
-  // Extracting data matching the schema
   const payload = {
     full_name: formData.get("full_name")?.toString() || "",
     email: formData.get("email")?.toString() || "",
@@ -31,7 +30,6 @@ export async function saveEmployeeAction(formData: FormData) {
   // Resolve current logged-in user to an employee id
   let currentEmployeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
-  //console.log("Current logged-in user:", user);
 
   if (user?.email) {
     const { data: emp } = await supabase
@@ -50,8 +48,7 @@ export async function saveEmployeeAction(formData: FormData) {
         updated_at: new Date().toISOString(),
         updated_by: currentEmployeeId,
       }).eq("id", id);
-      
-      // Catch unique email violations nicely
+
       if (error?.code === '23505') {
         throw new Error("An employee with this email address already exists.");
       } else if (error) {
@@ -60,43 +57,39 @@ export async function saveEmployeeAction(formData: FormData) {
     } else {
       // Invite the employee as a Supabase auth user so they can log in
       const adminSupabase = createAdminClient();
-        const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL 
-    ? process.env.NEXT_PUBLIC_SITE_URL 
-    : process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-          : 'http://localhost:3000';
-      
+      const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL
+        ? process.env.NEXT_PUBLIC_SITE_URL
+        : process.env.VERCEL_URL
+        ? `https://${process.env.VERCEL_URL}`
+        : 'http://localhost:3000';
 
       const { data: inviteData, error: inviteError } = await adminSupabase.auth.admin.inviteUserByEmail(
         payload.email,
         { redirectTo: `${redirectUrl}/accept-invite` }
       );
 
-      //console.log("Invite result:", { inviteError });
-
       if (inviteError && inviteError.message !== "User already registered") {
         throw new Error(`Failed to send login invite: ${inviteError.message}`);
       }
 
-      // Insert new employee, storing the auth user id and audit fields
+      // Insert employee — record invite_sent_at only when the email was actually sent
       const { error } = await supabase.from("employees").insert({
         ...payload,
         auth_user_id: inviteData?.user?.id ?? null,
+        invite_sent_at: !inviteError ? new Date().toISOString() : null,
         created_by: currentEmployeeId,
         updated_by: currentEmployeeId,
       });
 
-      // Catch unique email violations nicely
       if (error?.code === '23505') throw new Error("An employee with this email address already exists.");
-      if (error) throw error;      
+      if (error) throw error;
     }
 
-    revalidatePath("/settings/users"); // Adjust to your actual route
+    revalidatePath("/settings/users");
     return { success: true };
   } catch (error) {
     console.error("Error saving employee:", error);
-      return { error: error instanceof Error ? error.message : "Failed to save employee." };
-      
+    return { error: error instanceof Error ? error.message : "Failed to save employee." };
   }
 }
 
@@ -117,24 +110,52 @@ export async function sendPasswordResetAction(email: string) {
     return { error: error.message };
   }
 
+  // Stamp the employee record with when the reset email was sent
+  const supabase = await createClient();
+  await supabase
+    .from("employees")
+    .update({ password_reset_sent_at: new Date().toISOString() })
+    .eq("email", email);
+
   return { success: true };
+}
+
+export async function markInviteAcceptedAction() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return;
+  await supabase
+    .from("employees")
+    .update({ invite_accepted_at: new Date().toISOString() })
+    .eq("email", user.email);
 }
 
 export async function deleteEmployeeAction(id: number) {
   const supabase = await createClient();
-  
+
+  // Prevent deleting your own employee record
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data: target } = await supabase
+    .from("employees")
+    .select("email")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (target?.email && user?.email && target.email === user.email) {
+    return { error: "You cannot delete your own account." };
+  }
+
   try {
     const { error } = await supabase.from("employees").delete().eq("id", id);
     if (error) throw error;
-    
+
     revalidatePath("/settings/users");
     return { success: true };
   } catch (error) {
     console.error("Error deleting employee:", error);
-    // If a foreign key restriction occurs (e.g., they hosted an event or modified a record)
     if (typeof error === "object" && error !== null && "code" in error && (error as { code: string }).code === "23503") {
       return { error: "Cannot delete this employee because they are linked to existing events or records. Mark as inactive instead." };
     }
-      return { error: error instanceof Error ? error.message : "Failed to delete employee." };
+    return { error: error instanceof Error ? error.message : "Failed to delete employee." };
   }
 }
