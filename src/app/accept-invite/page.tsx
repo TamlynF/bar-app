@@ -14,12 +14,15 @@ export default function AcceptInvitePage() {
 
   // Wait for Supabase to exchange the invite hash tokens into a session
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      console.log("Auth event:", event);
-      if (event === "INITIAL_SESSION" || event === "SIGNED_IN") {
-        setReady(true);
-      }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth event:", event, "Session:", session);
+      if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && session?.user) {
+       setReady(true);
+     } else if (event === "INITIAL_SESSION" && !session?.user) {
+       setError("This link has expired or already been used. Please request a new one from your admin.");
+     }
     });
+    console.log("Listening for auth state changes with subscription:", subscription);
     return () => subscription.unsubscribe();
   }, []);
 
