@@ -36,6 +36,16 @@ export type PrivateDetails = {
     reasonForHire: string;
 };
 
+export type BandDetails = {
+    bookerName: string;
+    email: string;
+    phone: string | null;
+    actType: string | null;
+    genre: string | null;
+    paymentRequired: boolean;
+    paymentAmount: number | null;
+};
+
 export type ListItem = {
     key: string;
     date: string;
@@ -49,6 +59,7 @@ export type ListItem = {
     quizDetails?: QuizDetails;
     bingoDetails?: BingoDetails;
     privateDetails?: PrivateDetails;
+    bandDetails?: BandDetails;
 };
 
 function badgeClass(eventType: EventTypeRow): string {
@@ -332,6 +343,66 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                             className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest hover:bg-[#26300D]/90 transition-colors shrink-0"
                                         >
                                             Manage Bookings <ChevronRight className="w-3.5 h-3.5" />
+                                        </Link>
+                                    </div>
+                                ) : item.bandDetails ? (
+                                    /* ── Band-specific expanded view ── */
+                                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                        <div className="space-y-3 flex-1">
+                                            {/* Contact */}
+                                            <div className="grid grid-cols-2 gap-3 text-[11px]">
+                                                <div>
+                                                    <p className="text-[#5F624F] font-medium">Booker</p>
+                                                    <p className="font-black text-[#1F1F1A] truncate">{item.bandDetails.bookerName}</p>
+                                                </div>
+                                                <div>
+                                                    <p className="text-[#5F624F] font-medium">Phone</p>
+                                                    <p className="font-black text-[#1F1F1A]">{item.bandDetails.phone || "–"}</p>
+                                                </div>
+                                                <div className="col-span-2">
+                                                    <p className="text-[#5F624F] font-medium">Email</p>
+                                                    <p className="font-black text-[#1F1F1A] truncate">{item.bandDetails.email}</p>
+                                                </div>
+                                            </div>
+
+                                            {/* Act details */}
+                                            <div className="grid grid-cols-2 gap-3 text-[11px]">
+                                                {item.bandDetails.actType && (
+                                                    <div>
+                                                        <p className="text-[#5F624F] font-medium">Type</p>
+                                                        <p className="font-black text-[#1F1F1A] capitalize">{item.bandDetails.actType}</p>
+                                                    </div>
+                                                )}
+                                                {item.bandDetails.genre && (
+                                                    <div>
+                                                        <p className="text-[#5F624F] font-medium">Genre</p>
+                                                        <p className="font-black text-[#1F1F1A] capitalize">{item.bandDetails.genre}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Payment */}
+                                            <div className="grid grid-cols-2 gap-3 text-[11px]">
+                                                <div>
+                                                    <p className="text-[#5F624F] font-medium">Payment required</p>
+                                                    <p className={cn("font-black", item.bandDetails.paymentRequired ? "text-amber-600" : "text-green-700")}>
+                                                        {item.bandDetails.paymentRequired ? "Yes" : "No"}
+                                                    </p>
+                                                </div>
+                                                {item.bandDetails.paymentAmount !== null && (
+                                                    <div>
+                                                        <p className="text-[#5F624F] font-medium">Amount</p>
+                                                        <p className="font-black text-[#1F1F1A]">£{item.bandDetails.paymentAmount.toFixed(2)}</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        <Link
+                                            href={item.href}
+                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest hover:bg-[#26300D]/90 transition-colors shrink-0"
+                                        >
+                                            View Booking <ChevronRight className="w-3.5 h-3.5" />
                                         </Link>
                                     </div>
                                 ) : (

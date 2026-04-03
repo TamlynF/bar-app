@@ -50,10 +50,26 @@ type PrivateDetails = {
 };
 type BandBookingRow = {
   id: string;
+  group_name: string | null;
   booker_name: string;
+  email: string;
+  phone_no: string | null;
+  type: string | null;
+  genre: string | null;
+  payment_amount: number | null;
+  payment_status: string | null;
   selected_date: string;
   selected_start_time: string | null;
   selected_end_time: string | null;
+};
+type BandDetails = {
+  bookerName: string;
+  email: string;
+  phone: string | null;
+  actType: string | null;
+  genre: string | null;
+  paymentRequired: boolean;
+  paymentAmount: number | null;
 };
 type QuizDetails = {
   confirmedTeams: number;
@@ -84,6 +100,7 @@ type ListItem = {
   quizDetails?: QuizDetails;
   bingoDetails?: BingoDetails;
   privateDetails?: PrivateDetails;
+  bandDetails?: BandDetails;
 };
 type UpcomingEvent = {
   id: number;
@@ -209,7 +226,7 @@ export default async function DashboardPage() {
       .order("selected_date", { ascending: true }),
     supabase
       .from("band_booking_requests")
-      .select("id, booker_name, selected_date, selected_start_time, selected_end_time")
+      .select("id, group_name, booker_name, email, phone_no, type, genre, payment_amount, payment_status, selected_date, selected_start_time, selected_end_time")
       .eq("status", "approved")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
@@ -364,13 +381,22 @@ export default async function DashboardPage() {
   const bandListItems: ListItem[] = ((confirmedBandBookings ?? []) as BandBookingRow[]).map((b) => ({
     key: `band-${b.id}`,
     date: b.selected_date,
-    title: b.booker_name,
+    title: b.group_name || b.booker_name,
     startTime: b.selected_start_time,
     endTime: b.selected_end_time,
     eventType: { type: "Live Music", sub_type: "band" } as EventTypeRow,
     hostName: null,
     guests: 0,
     href: "/event-bookings/music-bookings",
+    bandDetails: {
+      bookerName: b.booker_name,
+      email: b.email,
+      phone: b.phone_no,
+      actType: b.type,
+      genre: b.genre,
+      paymentRequired: b.payment_status !== "not_required" && b.payment_amount !== null && b.payment_amount > 0,
+      paymentAmount: b.payment_amount,
+    } satisfies BandDetails,
   }));
 
   const allListItems = [...eventListItems, ...privateHireListItems, ...bandListItems]
