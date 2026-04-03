@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { format, isToday, parseISO } from "date-fns";
-import { ChevronRight, Clock, User, UserCheck } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Clock, User, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export type EventTypeRow = { type: string; sub_type: string } | null;
@@ -190,7 +190,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             </div>
 
                             {/* Col 5 — chevron (desktop only) */}
-                            <ChevronRight className={cn("hidden sm:block w-4 h-4 text-[#5F624F]/40 justify-self-end transition-transform", isExpanded && "rotate-90")} />
+                            {isExpanded ? <ChevronUp className="w-4 h-4 shrink-0 transition-transform duration-200" /> : <ChevronRight className="w-4 h-4 shrink-0 transition-transform duration-200" />}
                         </button>
 
                         {/* Expanded details */}

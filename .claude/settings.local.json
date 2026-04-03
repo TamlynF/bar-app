@@ -42,7 +42,8 @@
       "Bash(xargs sed:*)",
       "Bash(npx tsc:*)",
       "Bash(sed:*)",
-      "Bash(npx shadcn@latest add dialog --yes)"
+      "Bash(npx shadcn@latest add dialog --yes)",
+      "Bash(node:*)"
     ]
   }
 }
