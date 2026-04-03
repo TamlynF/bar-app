@@ -25,7 +25,7 @@ import { EventRowListClient } from "./components/event-row-list-client";
 export const dynamic = "force-dynamic";
 
 type EventTypeRow = { type: string; sub_type: string } | null;
-type BookingRow = { id: number; group_size: number; status: string; group_name: string | null };
+type BookingRow = { id: number; group_size: number; status: string; group_name: string | null; total_amount: number | null; paid_amount: number | null };
 type PrivateHireRow = {
   id: string;
   selected_date: string;
@@ -33,7 +33,20 @@ type PrivateHireRow = {
   selected_end_time: string | null;
   reason_for_hire: string;
   full_name: string;
+  email: string;
+  phone_no: string | null;
   guest_count: number;
+  deposit_amount: number | null;
+  paid_amount: number | null;
+};
+type PrivateDetails = {
+  email: string;
+  phone: string | null;
+  guestCount: number;
+  capacityPct: number;
+  depositAmount: number | null;
+  outstanding: number | null;
+  reasonForHire: string;
 };
 type BandBookingRow = {
   id: string;
@@ -41,6 +54,22 @@ type BandBookingRow = {
   selected_date: string;
   selected_start_time: string | null;
   selected_end_time: string | null;
+};
+type QuizDetails = {
+  confirmedTeams: number;
+  waitlistedTeams: number;
+  pendingTeams: number;
+  questionsGenerated: number;
+  questionsTarget: number;
+  tablesAssigned: boolean;
+  capacityPct: number;
+};
+type BingoDetails = {
+  capacityPct: number;
+  pricePerPerson: number | null;
+  totalPaid: number;
+  totalOutstanding: number;
+  tablesAssigned: boolean;
 };
 type ListItem = {
   key: string;
@@ -52,6 +81,9 @@ type ListItem = {
   hostName: string | null;
   guests: number;
   href: string;
+  quizDetails?: QuizDetails;
+  bingoDetails?: BingoDetails;
+  privateDetails?: PrivateDetails;
 };
 type UpcomingEvent = {
   id: number;
@@ -62,6 +94,7 @@ type UpcomingEvent = {
   host_employee_id: number | null;
   event_types: EventTypeRow | EventTypeRow[];
   bookings: BookingRow[];
+  past_quiz_questions: { id: number }[];
 };
 
 function getEventType(ev: UpcomingEvent): EventTypeRow {
@@ -155,7 +188,7 @@ export default async function DashboardPage() {
   const { data: rawUpcoming } = await supabase
     .from("events")
     .select(
-      "id, date, start_time, end_time, title, host_employee_id, event_types (type, sub_type), bookings (id, group_size, status, team_id)"
+      "id, date, start_time, end_time, title, host_employee_id, event_types (type, sub_type), bookings (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
     )
     .gte("date", todayStr)
     .order("date", { ascending: true })
@@ -163,12 +196,14 @@ export default async function DashboardPage() {
 
   const upcomingEvents = (rawUpcoming ?? []) as unknown as UpcomingEvent[];
 
-  const [{ data: employees }, { data: tablesData }, { data: confirmedPrivateHires }, { data: confirmedBandBookings }] = await Promise.all([
+  const allUpcomingBookingIds = upcomingEvents.flatMap((ev) => ev.bookings.map((b) => b.id));
+
+  const [{ data: employees }, { data: tablesData }, { data: confirmedPrivateHires }, { data: confirmedBandBookings }, { data: categoryConfigs }, { data: tableMappings }] = await Promise.all([
     supabase.from("employees").select("id, full_name"),
     supabase.from("tables").select("id, max_capacity").eq("available", true),
     supabase
       .from("private_hire_requests")
-      .select("id, selected_date, selected_start_time, selected_end_time, reason_for_hire, full_name, guest_count")
+      .select("id, selected_date, selected_start_time, selected_end_time, reason_for_hire, full_name, email, phone_no, guest_count, deposit_amount, paid_amount")
       .eq("status", "confirmed")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
@@ -178,6 +213,10 @@ export default async function DashboardPage() {
       .eq("status", "approved")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
+    supabase.from("quiz_category_configs").select("question_count"),
+    allUpcomingBookingIds.length > 0
+      ? supabase.from("booking_table_mappings").select("booking_id").in("booking_id", allUpcomingBookingIds)
+      : Promise.resolve({ data: [] as { booking_id: number }[] }),
   ]);
 
   // ─── Calculations ─────────────────────────────────────────────────────────
@@ -218,6 +257,13 @@ export default async function DashboardPage() {
   const totalVenueCapacity =
     tablesData?.reduce((acc, t) => acc + t.max_capacity, 0) ?? 0;
 
+  const totalQuestionTarget =
+    (categoryConfigs ?? []).reduce((s, c) => s + (c.question_count ?? 0), 0);
+
+  const mappedBookingIds = new Set(
+    (tableMappings ?? []).map((m) => m.booking_id)
+  );
+
   const employeeMap = new Map(
     (employees ?? []).map((e) => [e.id, e.full_name])
   );
@@ -228,6 +274,51 @@ export default async function DashboardPage() {
 
   const eventListItems: ListItem[] = futureEvents.map((ev) => {
     const et = getEventType(ev);
+    const confirmedBookings = ev.bookings.filter((b) => b.status === "confirmed");
+    const confirmedGuests = confirmedBookings.reduce((s, b) => s + (b.group_size ?? 0), 0);
+
+    const isQuiz =
+      et?.sub_type?.toLowerCase().includes("quiz") ||
+      et?.type?.toLowerCase().includes("quiz");
+
+    const isBingo =
+      et?.sub_type?.toLowerCase().includes("bingo") ||
+      et?.type?.toLowerCase().includes("bingo");
+
+    const bingoDetails: BingoDetails | undefined = isBingo ? (() => {
+      const totalPaid = confirmedBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);
+      const totalAmount = confirmedBookings.reduce((s, b) => s + (b.total_amount ?? 0), 0);
+      const firstWithPrice = confirmedBookings.find((b) => b.total_amount && b.group_size);
+      const pricePerPerson = firstWithPrice
+        ? Math.round((firstWithPrice.total_amount! / firstWithPrice.group_size) * 100) / 100
+        : null;
+      return {
+        capacityPct: totalVenueCapacity > 0
+          ? Math.round((confirmedGuests / totalVenueCapacity) * 100)
+          : 0,
+        pricePerPerson,
+        totalPaid,
+        totalOutstanding: Math.max(0, totalAmount - totalPaid),
+        tablesAssigned:
+          confirmedBookings.length > 0 &&
+          confirmedBookings.every((b) => mappedBookingIds.has(b.id)),
+      };
+    })() : undefined;
+
+    const quizDetails: QuizDetails | undefined = isQuiz ? {
+      confirmedTeams: confirmedBookings.length,
+      waitlistedTeams: ev.bookings.filter((b) => b.status === "waitlisted").length,
+      pendingTeams: ev.bookings.filter((b) => b.status === "pending").length,
+      questionsGenerated: (ev.past_quiz_questions ?? []).length,
+      questionsTarget: totalQuestionTarget,
+      tablesAssigned:
+        confirmedBookings.length > 0 &&
+        confirmedBookings.every((b) => mappedBookingIds.has(b.id)),
+      capacityPct: totalVenueCapacity > 0
+        ? Math.round((confirmedGuests / totalVenueCapacity) * 100)
+        : 0,
+    } : undefined;
+
     return {
       key: `event-${ev.id}`,
       date: ev.date,
@@ -236,8 +327,10 @@ export default async function DashboardPage() {
       endTime: ev.end_time,
       eventType: et,
       hostName: ev.host_employee_id ? (employeeMap.get(ev.host_employee_id) ?? null) : null,
-      guests: ev.bookings.filter((b) => b.status === "confirmed").reduce((s, b) => s + (b.group_size ?? 0), 0),
+      guests: confirmedGuests,
       href: getBookingsHref(et),
+      quizDetails,
+      bingoDetails,
     };
   });
 
@@ -253,6 +346,19 @@ export default async function DashboardPage() {
       hostName: ph.full_name,
       guests: ph.guest_count,
       href: "/event-bookings/private-bookings",
+      privateDetails: {
+        email: ph.email,
+        phone: ph.phone_no,
+        guestCount: ph.guest_count,
+        capacityPct: totalVenueCapacity > 0
+          ? Math.round((ph.guest_count / totalVenueCapacity) * 100)
+          : 0,
+        depositAmount: ph.deposit_amount,
+        outstanding: ph.deposit_amount !== null && ph.paid_amount !== null
+          ? Math.max(0, ph.deposit_amount - ph.paid_amount)
+          : null,
+        reasonForHire: ph.reason_for_hire,
+      } satisfies PrivateDetails,
     }));
 
   const bandListItems: ListItem[] = ((confirmedBandBookings ?? []) as BandBookingRow[]).map((b) => ({
