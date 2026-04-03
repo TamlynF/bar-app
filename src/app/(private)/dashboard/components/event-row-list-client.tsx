@@ -98,11 +98,11 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             type="button"
                             title="Event"
                             onClick={() => setExpandedId(isExpanded ? null : item.key)}
-                            className="event-row-grid w-full text-left grid gap-4 items-center p-4 hover:bg-[#F9F8F4] transition-colors cursor-pointer"
+                            className="w-full text-left flex items-center gap-3 p-4 hover:bg-[#F9F8F4] transition-colors cursor-pointer sm:grid sm:event-row-grid sm:gap-4 sm:items-center"
                         >
                             {/* Date pill */}
                             <div className={cn(
-                                "w-10 sm:w-14 text-center rounded-xl py-1.5 sm:py-2 mr-px",
+                                "w-10 sm:w-14 text-center rounded-xl py-1.5 sm:py-2 shrink-0 self-center",
                                 today ? "bg-[#FDCC4B]" : "bg-[#F7F4EA]"
                             )}>
                                 <p className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-widest", today ? "text-[#26300D]" : "text-[#5F624F]")}>
@@ -116,51 +116,73 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                 </p>
                             </div>
 
-                                {/* Col 2 — title + time (+ host on mobile) */}
-                                <div className="min-w-0 flex flex-col gap-1 items-start">
-                                    <p className="text-sm font-black text-[#1F1F1A] truncate w-full">{item.title}</p>
-                                    <div className="flex items-center gap-1 text-[11px] text-[#5F624F] font-medium">
-                                        <Clock className="w-3 h-3 opacity-50 shrink-0" />
-                                        {startEndTime}
-                                    </div>
-                                    {/* Host — visible on mobile only */}
-                                    <div className="flex items-center gap-1 text-[11px] text-[#5F624F] font-medium sm:hidden">
-                                        <User className="w-3 h-3 opacity-50 shrink-0" />
-                                        <span className="truncate">{item.hostName || "–"}</span>
-                                    </div>
-                                </div>
-
-                                {/* Col 3 — badge (mobile) / badge + host (desktop) */}
-                                <div className="min-w-0 flex flex-col gap-1 items-start">
+                            {/* ── Mobile layout (hidden sm+) ── */}
+                            <div className="flex-1 min-w-0 flex flex-col gap-0.5 sm:hidden">
+                                {/* Row 1: title only — constrained by the flex-col width */}
+                                <p className="text-sm font-black text-[#1F1F1A] truncate">{item.title}</p>
+                                {/* Row 2: time · host — spacer — badge — chevron */}
+                                <div className="flex items-center gap-1.5">
+                                    <Clock className="w-3 h-3 text-[#5F624F] opacity-50 shrink-0" />
+                                    <span className="text-[11px] text-[#5F624F] font-medium shrink-0">{startEndTime}</span>
+                                    {item.hostName && (
+                                        <>
+                                            <span className="text-[#5F624F]/30 shrink-0">·</span>
+                                            <span className="text-[11px] text-[#5F624F] font-medium truncate min-w-0">{item.hostName}</span>
+                                        </>
+                                    )}
+                                    <div className="flex-1" />
                                     {item.eventType && (
                                         <span className={cn(
-                                            "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md whitespace-nowrap",
+                                            "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md whitespace-nowrap shrink-0",
                                             badgeClass(item.eventType)
                                         )}>
                                             {badgeLabel(item.eventType)}
                                         </span>
                                     )}
-                                    {/* Host — desktop only */}
-                                    <div className="hidden sm:flex items-center gap-1 text-[11px] text-[#5F624F] font-medium">
-                                        <User className="w-3 h-3 opacity-50 shrink-0" />
-                                        <span className="truncate">{item.hostName || "–"}</span>
-                                    </div>
+                                    <ChevronRight className={cn("w-4 h-4 text-[#5F624F]/40 shrink-0 transition-transform", isExpanded && "rotate-90")} />
                                 </div>
+                            </div>
 
-                                {/* Col 4 — guests (desktop only) */}
-                                <div className="hidden sm:flex flex-col gap-1 items-start">
-                                    {item.guests > 0 ? (
-                                        <>
-                                            <p className="text-sm font-black text-[#1F1F1A] tabular-nums">{item.guests}</p>
-                                            <p className="text-[9px] font-bold text-[#5F624F] uppercase tracking-wider">guests</p>
-                                        </>
-                                    ) : (
-                                        <p className="text-[9px] text-[#5F624F]/30">–</p>
-                                    )}
+                            {/* ── Desktop cols 2–5 (hidden on mobile) ── */}
+                            {/* Col 2 — title + time */}
+                            <div className="hidden sm:flex min-w-0 flex-col gap-1 items-start">
+                                <p className="text-sm font-black text-[#1F1F1A] truncate w-full">{item.title}</p>
+                                <div className="flex items-center gap-1 text-[11px] text-[#5F624F] font-medium">
+                                    <Clock className="w-3 h-3 opacity-50 shrink-0" />
+                                    {startEndTime}
                                 </div>
+                            </div>
 
-                            {/* Chevron */}
-                            <ChevronRight className={cn("w-4 h-4 text-[#5F624F]/40 justify-self-end transition-transform", isExpanded && "rotate-90")} />
+                            {/* Col 3 — badge + host */}
+                            <div className="hidden sm:flex min-w-0 flex-col gap-1 items-start">
+                                {item.eventType && (
+                                    <span className={cn(
+                                        "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md whitespace-nowrap",
+                                        badgeClass(item.eventType)
+                                    )}>
+                                        {badgeLabel(item.eventType)}
+                                    </span>
+                                )}
+                                <div className="flex items-center gap-1 text-[11px] text-[#5F624F] font-medium">
+                                    <User className="w-3 h-3 opacity-50 shrink-0" />
+                                    <span className="truncate">{item.hostName || "–"}</span>
+                                </div>
+                            </div>
+
+                            {/* Col 4 — guests */}
+                            <div className="hidden sm:flex flex-col gap-1 items-start">
+                                {item.guests > 0 ? (
+                                    <>
+                                        <p className="text-sm font-black text-[#1F1F1A] tabular-nums">{item.guests}</p>
+                                        <p className="text-[9px] font-bold text-[#5F624F] uppercase tracking-wider">guests</p>
+                                    </>
+                                ) : (
+                                    <p className="text-[9px] text-[#5F624F]/30">–</p>
+                                )}
+                            </div>
+
+                            {/* Col 5 — chevron (desktop only) */}
+                            <ChevronRight className={cn("hidden sm:block w-4 h-4 text-[#5F624F]/40 justify-self-end transition-transform", isExpanded && "rotate-90")} />
                         </button>
 
                         {/* Expanded details */}
