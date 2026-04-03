@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 
 export default function AcceptInvitePage() {
   const router = useRouter();
-  const supabase = createClient();
+  const [supabase] = useState(() => createClient());
 
   const [ready, setReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,12 +19,13 @@ export default function AcceptInvitePage() {
       if ((event === "INITIAL_SESSION" || event === "SIGNED_IN") && session?.user) {
        setReady(true);
      } else if (event === "INITIAL_SESSION" && !session?.user) {
-       setError("This link has expired or already been used. Please request a new one from your admin.");
+        setError("This link has expired or already been used. Please request a new one from your admin.");
+        setReady(true);
      }
     });
     console.log("Listening for auth state changes with subscription:", subscription);
     return () => subscription.unsubscribe();
-  }, []);
+  }, [supabase.auth]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
