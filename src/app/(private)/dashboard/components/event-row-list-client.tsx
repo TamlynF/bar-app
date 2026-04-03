@@ -104,7 +104,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             title="Event"
                             onClick={() => setExpandedId(isExpanded ? null : item.key)}
                             className={cn(
-                                "event-row-grid w-full text-left flex items-center gap-3 p-4 transition-colors cursor-pointer sm:grid sm:items-center sm:gap-4",
+                                "w-full text-left flex items-center gap-3 p-4 transition-colors cursor-pointer sm:event-row-desktop",
                                 isExpanded ? "bg-[#FEF3C7]" : "hover:bg-[#F9F8F4]"
                             )}
                         >
