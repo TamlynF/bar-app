@@ -169,34 +169,75 @@ export default async function QuizBookingsPage({
             {/* Main summary */}
             <div className="p-4 space-y-3">
 
-              {/* Time + Host grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="flex flex-col gap-0.5">
+              {/* Time · Host · Quiz Status
+                  Mobile:  Time + Host on one row (no labels), Quiz Status below (no label)
+                  sm+:     All three evenly spaced in one row with labels above each
+              */}
+
+              {/* sm+: single evenly-spaced row */}
+              <div className="hidden sm:flex items-start justify-evenly gap-4">
+                {/* Time */}
+                <div className="flex flex-col gap-1 items-center">
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Time</span>
-                  <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
-                    <span className="text-xs font-bold text-[#1F1F1A]">
+                    <span className="text-xs font-bold text-[#1F1F1A] whitespace-nowrap">
                       {formatTime(eventDetails?.start_time)} – {formatTime(eventDetails?.end_time)}
                     </span>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-0.5">
+                {/* Host */}
+                <div className="flex flex-col gap-1 items-center">
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Host</span>
-                  <div className="flex items-center gap-1.5 mt-1">
+                  <div className="flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
+                    <span className="text-xs font-bold text-[#1F1F1A]">
+                      {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "—"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Quiz Status */}
+                <div className="flex flex-col gap-1 items-center">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Quiz Status</span>
+                  <div className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest",
+                    quizStatus === "Complete"    && "bg-green-100 text-green-700",
+                    quizStatus === "Incomplete"  && "bg-orange-100 text-orange-700",
+                    quizStatus === "Not Started" && "bg-slate-100 text-slate-500",
+                  )}>
+                    {quizStatus === "Complete"    && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {quizStatus === "Incomplete"  && <AlertCircle  className="w-3.5 h-3.5" />}
+                    {quizStatus === "Not Started" && <Info         className="w-3.5 h-3.5" />}
+                    <span>{quizStatus}</span>
+                    {quizStats && quizStats.categoryTotal > 0 && (
+                      <span className="opacity-60 font-bold normal-case tracking-normal">
+                        ({quizStats.questionCount}/{quizStats.categoryTotal})
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Mobile: Time + Host row, then Quiz Status row — no labels */}
+              <div className="sm:hidden space-y-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
+                    <span className="text-xs font-bold text-[#1F1F1A] whitespace-nowrap">
+                      {formatTime(eventDetails?.start_time)} – {formatTime(eventDetails?.end_time)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 min-w-0">
                     <User className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
                     <span className="text-xs font-bold text-[#1F1F1A] truncate">
                       {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "—"}
                     </span>
                   </div>
                 </div>
-              </div>
-
-              {/* Quiz Status */}
-              <div className="flex flex-col gap-1">
-                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Quiz Status</span>
                 <div className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest w-fit",
+                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest",
                   quizStatus === "Complete"    && "bg-green-100 text-green-700",
                   quizStatus === "Incomplete"  && "bg-orange-100 text-orange-700",
                   quizStatus === "Not Started" && "bg-slate-100 text-slate-500",
@@ -207,7 +248,7 @@ export default async function QuizBookingsPage({
                   <span>{quizStatus}</span>
                   {quizStats && quizStats.categoryTotal > 0 && (
                     <span className="opacity-60 font-bold normal-case tracking-normal">
-                      ({quizStats.questionCount}/{quizStats.categoryTotal} questions)
+                      ({quizStats.questionCount}/{quizStats.categoryTotal})
                     </span>
                   )}
                 </div>

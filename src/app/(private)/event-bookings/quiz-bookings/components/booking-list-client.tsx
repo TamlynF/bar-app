@@ -427,76 +427,84 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     <div className="space-y-3 animate-in fade-in duration-500">
       {/* Stats + Search grouped card */}
       <div className="bg-white dark:bg-slate-900 border border-[#E6DFC8] rounded-2xl shadow-sm">
-        {/* Stats Bar - scrollable on mobile */}
-        <div className="overflow-x-auto no-scrollbar px-2 pt-2">
-          <div className="flex items-stretch gap-3 w-full px-2 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
-            <StatusCircle
-              guestCount={stats.total.guests}
-              teamCount={stats.total.teams}
-              status="all"
-              label="Total"
-              isActive={activeStatusFilters.size === 0}
-              onClick={() => setActiveStatusFilters(new Set())}
-            />
-            <StatusCircle
-              guestCount={stats.confirmed.guests}
-              teamCount={stats.confirmed.teams}
-              status="confirmed"
-              label="Joining"
-              isActive={activeStatusFilters.has("confirmed")}
-              onClick={() => toggleStatusFilter("confirmed")}
-            />
-            <StatusCircle
-              guestCount={stats.waitlisted.guests}
-              teamCount={stats.waitlisted.teams}
-              status="waitlisted"
-              label="Waiting"
-              isActive={activeStatusFilters.has("waitlisted")}
-              onClick={() => toggleStatusFilter("waitlisted")}
-            />
-            <StatusCircle
-              guestCount={stats.pending.guests}
-              teamCount={stats.pending.teams}
-              status="pending"
-              label="Pending"
-              isActive={activeStatusFilters.has("pending")}
-              onClick={() => toggleStatusFilter("pending")}
-            />
-            <StatusCircle
-              guestCount={stats.cancelled.guests}
-              teamCount={stats.cancelled.teams}
-              status="cancelled"
-              label="Dropped"
-              isActive={activeStatusFilters.has("cancelled")}
-              onClick={() => toggleStatusFilter("cancelled")}
-            />
-          </div>
-        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center">
 
-        {/* Search row */}
-        <div className="flex justify-center sm:justify-end px-4 mb-3">
-        <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm rounded-xl border border-slate-200 focus-within:border-slate-400 transition-colors">
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Search className="w-4 h-4 text-slate-400 shrink-0" />
-            <input
-              type="text"
-              placeholder="Search team names or guests..."
-              value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              className="flex-1 min-w-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
-            />
+          {/* Stats Bar — scrolls on mobile, evenly spaced on sm+ */}
+          <div className="overflow-x-auto no-scrollbar px-2 pt-2 sm:flex-1 sm:pt-0">
+            <div className="flex items-stretch gap-3 w-full px-2 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
+              <StatusCircle
+                guestCount={stats.total.guests}
+                teamCount={stats.total.teams}
+                status="all"
+                label="Total"
+                isActive={activeStatusFilters.size === 0}
+                onClick={() => setActiveStatusFilters(new Set())}
+              />
+              <StatusCircle
+                guestCount={stats.confirmed.guests}
+                teamCount={stats.confirmed.teams}
+                status="confirmed"
+                label="Joining"
+                isActive={activeStatusFilters.has("confirmed")}
+                onClick={() => toggleStatusFilter("confirmed")}
+              />
+              <StatusCircle
+                guestCount={stats.waitlisted.guests}
+                teamCount={stats.waitlisted.teams}
+                status="waitlisted"
+                label="Waiting"
+                isActive={activeStatusFilters.has("waitlisted")}
+                onClick={() => toggleStatusFilter("waitlisted")}
+              />
+              <StatusCircle
+                guestCount={stats.pending.guests}
+                teamCount={stats.pending.teams}
+                status="pending"
+                label="Pending"
+                isActive={activeStatusFilters.has("pending")}
+                onClick={() => toggleStatusFilter("pending")}
+              />
+              <StatusCircle
+                guestCount={stats.cancelled.guests}
+                teamCount={stats.cancelled.teams}
+                status="cancelled"
+                label="Dropped"
+                isActive={activeStatusFilters.has("cancelled")}
+                onClick={() => toggleStatusFilter("cancelled")}
+              />
+            </div>
           </div>
-          {(activeStatusFilters.size > 0 || searchQuery.length > 0) && (
-            <button
-              type="button"
-              title="Cancel"
-              onClick={() => { setActiveStatusFilters(new Set()); setSearchQuery(""); }}
-              className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors"
-            >
-              <X className="w-3.5 h-3.5 text-slate-400" />
-            </button>
-          )}
-        </div>
+
+          {/* Divider: horizontal on mobile, vertical on sm+ */}
+          <div className="border-t border-[#E6DFC8] mx-3 sm:hidden" />
+          <div className="hidden sm:block w-px bg-[#E6DFC8] sm:self-stretch sm:my-2" />
+
+          {/* Search */}
+          <div className="flex justify-center px-4 mb-3 sm:mb-0 sm:py-2 sm:px-3 sm:shrink-0">
+            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-slate-200 focus-within:border-slate-400 transition-colors">
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Search team names or guests..."
+                  value={searchQuery}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+                  className="flex-1 min-w-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
+                />
+              </div>
+              {(activeStatusFilters.size > 0 || searchQuery.length > 0) && (
+                <button
+                  type="button"
+                  title="Cancel"
+                  onClick={() => { setActiveStatusFilters(new Set()); setSearchQuery(""); }}
+                  className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors"
+                >
+                  <X className="w-3.5 h-3.5 text-slate-400" />
+                </button>
+              )}
+            </div>
+          </div>
+
         </div>
       </div>
 
