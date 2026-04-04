@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 interface ConfirmOptions {
@@ -14,10 +14,7 @@ interface ConfirmOptions {
 export function useConfirm() {
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmOptions>({ title: "" });
-  const [mounted, setMounted] = useState(false);
   const resolveRef = useRef<((value: boolean) => void) | undefined>(undefined);
-
-  useEffect(() => { setMounted(true); }, []);
 
   const confirm = useCallback((opts: ConfirmOptions): Promise<boolean> => {
     setOptions(opts);
@@ -40,7 +37,7 @@ export function useConfirm() {
   const isDestructive = options.variant === "destructive";
 
   const ConfirmDialogUI =
-    mounted && open
+    open
       ? createPortal(
           <>
             {/* Backdrop */}
