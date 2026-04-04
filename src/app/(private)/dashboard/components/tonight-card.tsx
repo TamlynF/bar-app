@@ -95,10 +95,10 @@ export default function TonightCard({
             <div className="h-2.5 w-full bg-[#F7F4EA] rounded-full overflow-hidden border border-[#E6DFC8]">
               <div
                 className={cn(
-                  "h-full transition-all duration-700",
+                  "h-full transition-all duration-700 capacity-fill",
                   capacityPercent > 90 ? "bg-red-500" : "bg-[#26300D]"
                 )}
-                style={{ width: `${capacityPercent}%` }}
+                style={{ '--bar-width': `${capacityPercent}%` } as React.CSSProperties}
               />
             </div>
           </div>

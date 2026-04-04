@@ -72,7 +72,6 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
         </PopoverTrigger>
         <PopoverContent
           className="p-0 w-screen max-w-[320px] shadow-2xl rounded-2xl overflow-hidden z-9999"
-          style={{ backgroundColor: "#E2EDBF" }}
           align="start"
           sideOffset={8}
         >

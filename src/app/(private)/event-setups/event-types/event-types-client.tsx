@@ -413,7 +413,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             <MoreVertical className="w-5 h-5" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }} className="z-9999">
+                        <DropdownMenuContent align="end" className="z-9999">
                           <DropdownMenuItem onClick={() => {
                             const val = toTitleCase(typeKey);
                             const defaultSubType = "";
@@ -529,7 +529,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                     <MoreVertical className="w-4 h-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }}>
+                                <DropdownMenuContent align="end">
                                   <DropdownMenuItem onClick={() => {
                                     const val = toTitleCase(item.type);
                                     const subVal = toTitleCase(item.sub_type);
@@ -603,7 +603,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                             <MoreVertical className="w-3.5 h-3.5" />
                                           </Button>
                                         </DropdownMenuTrigger>
-                                        <DropdownMenuContent align="end" style={{ backgroundColor: "#E2EDBF" }}>
+                                        <DropdownMenuContent align="end">
                                           <DropdownMenuItem onClick={() => {
                                             setEditingInfo(info);
                                             setActiveTypeId(item.id);

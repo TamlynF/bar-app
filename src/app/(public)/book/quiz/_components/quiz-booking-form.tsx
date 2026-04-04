@@ -217,8 +217,7 @@ export default function BookingForm() {
             </PopoverTrigger>
 
             <PopoverContent 
-              className="w-auto p-0 border-white/10 shadow-2xl rounded-2xl overflow-hidden z-100" 
-              style={{ backgroundColor: "#E2EDBF" }}
+              className="w-auto p-0 border-white/10 shadow-2xl rounded-2xl overflow-hidden z-100"
               align="start"
             >
               <Calendar

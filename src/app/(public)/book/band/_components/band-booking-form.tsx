@@ -464,8 +464,7 @@ export default function BandBookingForm() {
                       type="date"
                       value={date}
                       onChange={(e) => handleDate(i, e.target.value)}
-                      className={`${inputClass} pl-10`}
-                      style={{ colorScheme: "dark" }}
+                      className={`${inputClass} pl-10 input-scheme-dark`}
                     />
                   </div>
                   {preferredDates.length > 1 && (

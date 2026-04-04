@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import styles from "./confirm-dialog.module.css";
 
 interface ConfirmOptions {
   title: string;
@@ -42,21 +43,12 @@ export function useConfirm() {
           <>
             {/* Backdrop */}
             <div
-              style={{ position: "fixed", inset: 0, zIndex: 10000, backgroundColor: "rgba(0,0,0,0.5)" }}
+              className={styles.backdrop}
               onClick={handleCancel}
             />
             {/* Dialog box */}
             <div
-              style={{
-                position: "fixed",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                zIndex: 10001,
-                width: "calc(100% - 2rem)",
-                maxWidth: "384px",
-              }}
-              className="rounded-3xl border-2 border-[#E6DFC8] bg-[#F7F4EA] overflow-hidden shadow-2xl"
+              className={`${styles.dialog} rounded-3xl border-2 border-[#E6DFC8] bg-[#F7F4EA] overflow-hidden shadow-2xl`}
             >
               <div className="px-6 pt-6 pb-4 flex flex-col gap-1.5">
                 <h2 className="text-base font-black uppercase tracking-tight text-[#1F1F1A]">

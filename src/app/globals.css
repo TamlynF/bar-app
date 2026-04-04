@@ -4995,6 +4995,7 @@
   .badge-band  { background-color: rgb(125 211 252 / 0.2); color: #7DD3FC; }
   .badge-hire  { background-color: rgb(134 239 172 / 0.2); color: #86EFAC; }
   .input-scheme-dark { color-scheme: dark; box-sizing: border-box; max-width: 100%; }
+  .capacity-fill { width: var(--bar-width, 0%); }
   .event-row-desktop {
     display: grid;
     align-items: center;

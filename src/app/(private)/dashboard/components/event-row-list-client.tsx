@@ -231,8 +231,8 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                 </div>
                                                 <div className="h-1.5 bg-[#E6DFC8] rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-[#FDCC4B] rounded-full transition-all"
-                                                        style={{ width: `${Math.min(item.quizDetails.capacityPct, 100)}%` }}
+                                                        className="h-full bg-[#FDCC4B] rounded-full transition-all capacity-fill"
+                                                        style={{ '--bar-width': `${Math.min(item.quizDetails.capacityPct, 100)}%` } as React.CSSProperties}
                                                     />
                                                 </div>
                                             </div>
@@ -280,8 +280,8 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                 </div>
                                                 <div className="h-1.5 bg-[#E6DFC8] rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-[#FDCC4B] rounded-full transition-all"
-                                                        style={{ width: `${Math.min(item.bingoDetails.capacityPct, 100)}%` }}
+                                                        className="h-full bg-[#FDCC4B] rounded-full transition-all capacity-fill"
+                                                        style={{ '--bar-width': `${Math.min(item.bingoDetails.capacityPct, 100)}%` } as React.CSSProperties}
                                                     />
                                                 </div>
                                             </div>
@@ -348,8 +348,8 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                 </div>
                                                 <div className="h-1.5 bg-[#E6DFC8] rounded-full overflow-hidden">
                                                     <div
-                                                        className="h-full bg-[#FDCC4B] rounded-full transition-all"
-                                                        style={{ width: `${Math.min(item.privateDetails.capacityPct, 100)}%` }}
+                                                        className="h-full bg-[#FDCC4B] rounded-full transition-all capacity-fill"
+                                                        style={{ '--bar-width': `${Math.min(item.privateDetails.capacityPct, 100)}%` } as React.CSSProperties}
                                                     />
                                                 </div>
                                             </div>
