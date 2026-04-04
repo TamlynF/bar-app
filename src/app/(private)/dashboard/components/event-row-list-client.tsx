@@ -1,6 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+
+function CapacityBar({ pct }: { pct: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    ref.current?.style.setProperty("--bar-width", `${Math.min(pct, 100)}%`);
+  }, [pct]);
+  return <div ref={ref} className="h-full bg-[#FDCC4B] rounded-full transition-all capacity-fill" />;
+}
 import Link from "next/link";
 import { format, isToday, parseISO } from "date-fns";
 import { ChevronDown, ChevronRight, ChevronUp, Clock, User, UserCheck } from "lucide-react";
@@ -229,10 +237,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                     <span className="font-black text-[#1F1F1A]">{item.quizDetails.capacityPct}%</span>
                                                 </div>
                                                 <div className="h-1.5 bg-[#E6DFC8] rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-[#FDCC4B] rounded-full transition-all capacity-fill"
-                                                        style={{ '--bar-width': `${Math.min(item.quizDetails.capacityPct, 100)}%` } as React.CSSProperties}
-                                                    />
+                                                    <CapacityBar pct={item.quizDetails.capacityPct} />
                                                 </div>
                                             </div>
 
@@ -278,10 +283,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                     <span className="font-black text-[#1F1F1A]">{item.bingoDetails.capacityPct}%</span>
                                                 </div>
                                                 <div className="h-1.5 bg-[#E6DFC8] rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-[#FDCC4B] rounded-full transition-all capacity-fill"
-                                                        style={{ '--bar-width': `${Math.min(item.bingoDetails.capacityPct, 100)}%` } as React.CSSProperties}
-                                                    />
+                                                    <CapacityBar pct={item.bingoDetails.capacityPct} />
                                                 </div>
                                             </div>
 
@@ -346,10 +348,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                     <span className="font-black text-[#1F1F1A]">{item.privateDetails.capacityPct}%</span>
                                                 </div>
                                                 <div className="h-1.5 bg-[#E6DFC8] rounded-full overflow-hidden">
-                                                    <div
-                                                        className="h-full bg-[#FDCC4B] rounded-full transition-all capacity-fill"
-                                                        style={{ '--bar-width': `${Math.min(item.privateDetails.capacityPct, 100)}%` } as React.CSSProperties}
-                                                    />
+                                                    <CapacityBar pct={item.privateDetails.capacityPct} />
                                                 </div>
                                             </div>
 
