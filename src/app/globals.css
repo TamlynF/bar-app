@@ -5016,6 +5016,7 @@
   .capacity-fill { width: var(--bar-width, 0%); }
   .border-slate-400 { border-color: var(--color-slate-400); }
   .focus-within\:border-slate-400:focus-within { border-color: var(--color-slate-400); }
+  .group-open\:rotate-180:is(:where(.group)[open] *) { rotate: 180deg; }
   .divide-gray-300 > :not(:last-child) { border-color: var(--color-gray-300); }
   .bg-dropdown { background-color: #E2EDBF; }
   .bg-red-600 { background-color: var(--color-red-600); }

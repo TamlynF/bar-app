@@ -160,6 +160,47 @@ export async function getAvailableTables() {
   }
 }
 
+export async function getEventDetails(date: string, type: string, subType: string) {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase
+      .from("events")
+      .select(`
+        id,
+        start_time,
+        end_time,
+        title,
+        description,
+        payment_amount,
+        host:employees!events_host_employee_id_fkey(full_name),
+        event_types!inner(category: type, sub_type)
+      `)
+      .eq("date", date)
+      .ilike("event_types.type", type)
+      .ilike("event_types.sub_type", subType)
+      .maybeSingle();
+    if (error) return null;
+    return data;
+  } catch { return null; }
+}
+
+export async function getQuizStatusStats(eventId: number) {
+  try {
+    const supabase = await createClient();
+    const [{ count: questionCount }, { data: categories }] = await Promise.all([
+      supabase
+        .from("past_quiz_questions")
+        .select("*", { count: "exact", head: true })
+        .eq("events_id", eventId),
+      supabase.from("quiz_category_configs").select("question_count"),
+    ]);
+    const categoryTotal = (categories ?? []).reduce(
+      (sum, r) => sum + (r.question_count ?? 0), 0
+    );
+    return { questionCount: questionCount ?? 0, categoryTotal };
+  } catch { return { questionCount: 0, categoryTotal: 0 }; }
+}
+
 export async function getQuizEvents(type: string, subType: string) {
   try {
     const supabase = await createClient();

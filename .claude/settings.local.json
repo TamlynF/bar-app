@@ -45,7 +45,11 @@
       "Bash(npx shadcn@latest add dialog --yes)",
       "Bash(node:*)",
       "Bash(grep -n \"^  return\\\\|^    return\\\\|</div>$\" \"/c/RN/bar-app/src/app/\\(private\\)/event-bookings/quiz-bookings/components/booking-list-client.tsx\")",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(taskkill /F /IM node.exe)",
+      "Bash(Remove-Item -Force \"C:/RN/bar-app/.next/lock\")",
+      "Bash(del \"C:\\\\RN\\\\bar-app\\\\.next\\\\lock\")",
+      "Read(//d C:/RN/**)"
     ]
   }
 }

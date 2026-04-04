@@ -474,7 +474,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         </div>
 
         {/* Search row */}
-        <div className="flex justify-center px-4 mb-3">
+        <div className="flex justify-center sm:justify-end px-4 mb-3">
         <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm rounded-xl border border-slate-200 focus-within:border-slate-400 transition-colors">
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <Search className="w-4 h-4 text-slate-400 shrink-0" />
