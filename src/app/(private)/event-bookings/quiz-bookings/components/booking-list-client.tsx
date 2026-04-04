@@ -425,7 +425,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     <div className="space-y-3 animate-in fade-in duration-500">
       {/* Stats Bar - Redesigned for Guest/Team Visibility */}
       <div className="bg-white dark:bg-slate-900 border border-[#E6DFC8] rounded-2xl p-2 shadow-sm overflow-x-auto no-scrollbar">
-        <div className="flex items-stretch justify-evenly gap-3 sm:gap-8 w-full px-2 min-w-max py-3">
+        <div className="flex items-stretch gap-3 w-full px-2 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
           <StatusCircle 
             guestCount={stats.total.guests} 
             teamCount={stats.total.teams} 
