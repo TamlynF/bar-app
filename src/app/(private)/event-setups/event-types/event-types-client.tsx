@@ -284,9 +284,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     <div className="p-6">
       <div className="flex items-center justify-between pb-4 border-b">
         <div>
-          <h3 className="text-lg font-medium">Event Types & Information</h3>
           <p className="text-sm text-muted-foreground">
-            Manage your event types and specific requirements.
+            Manage your event categories and specific requirements.
           </p>
         </div>
         <Button
@@ -312,7 +311,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         {groupedEventTypes.length === 0 ? (
           <div className="text-center py-12 border rounded-xl bg-muted/10 border-dashed">
             <Layers className="w-8 h-8 text-muted-foreground mx-auto mb-3 opacity-20" />
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest">No Event Types Configured</h3>
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest">No Event Categories Configured</h3>
           </div>
         ) : (
           groupedEventTypes.map(([typeKey, items]) => {
@@ -327,16 +326,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     onClick={() => toggleGroup(typeKey)}
                     className="flex-1 p-4 flex items-center gap-3 hover:bg-muted/5 transition-colors"
                   >
-                    <div className="hidden sm:flex w-10 h-10 rounded-xl bg-primary/10 items-center justify-center text-primary shrink-0">
-                      <Layers className="w-4 h-4" />
-                    </div>
-
                     <div className="flex items-center gap-2 sm:gap-3">
                       <h4 className="text-base font-black tracking-tight text-foreground truncate">
                         {toTitleCase(typeKey)}
                       </h4>
                       <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shrink-0">
-                        {items.length} {items.length === 1 ? 'Sub-Cat' : 'Sub-Cats'}
+                        {items.length} {items.length === 1 ? 'Sub-Category' : 'Sub-Categories'}
                       </span>
                     </div>
                   </button>
@@ -478,9 +473,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             onClick={() => toggleSubtypeExpand(item.id)}
                             className="flex-1 flex items-center gap-3 p-2 hover:bg-muted/5 transition-colors text-left"
                           >
-                            {/* <div className="shrink-0">
-                              {expandedSubtype === item.id ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-                            </div> */}
                             <span className="font-bold text-sm text-foreground">
                               {toTitleCase(item.sub_type)}
                             </span>
@@ -678,14 +670,14 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           <SheetHeader className="px-6 pt-6 pb-4 text-left border-b border-border/40 shrink-0">
             <SheetTitle className="text-xl font-bold">
               {sheetMode === 'type'
-                ? (editingType?.type ? `Rename Type: ${toTitleCase(typeInput)}` : "Add Event Type")
+                ? (editingType?.type ? `Rename Type: ${toTitleCase(typeInput)}` : "Add Event Category")
                 : (editingType?.id ? "Edit Category" : "Add Category")
               }
             </SheetTitle>
             <SheetDescription className="text-sm text-muted-foreground">
               {sheetMode === 'type'
-                ? "Manage the primary type for these events."
-                : `Defining a specific category within the ${typeInput || 'selected'} type.`
+                ? "Manage the primary category for these events."
+                : `Defining a specific category within the ${typeInput || 'selected'} category.`
               }
             </SheetDescription>
           </SheetHeader>
@@ -698,14 +690,14 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               {/* Event Type Input/Selection */}
               <div className="space-y-3">
                 <Label htmlFor="type-select" className="text-sm font-semibold text-foreground">
-                  Type <span className="text-destructive">*</span>
+                  Category <span className="text-destructive">*</span>
                 </Label>
 
                 <div className="space-y-4">
                   <div className="relative group">
                     <select
                       id="type-select"
-                      title="Type Selection"
+                      title="Category Selection"
                       name="type-select"
                       required={!isCustomType}
                       value={selectedTypeValue}
@@ -722,11 +714,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         }
                       }}
                     >
-                      <option value="" disabled>Select an event type...</option>
+                      <option value="" disabled>Select an event category...</option>
                       {uniqueTypes.map(t => (
                         <option key={t} value={t}>{t}</option>
                       ))}
-                      <option value="custom" className="font-bold text-primary">+ New Type...</option>
+                      <option value="custom" className="font-bold text-primary">+ New Category...</option>
                     </select>
                     <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-muted-foreground">
                       <ChevronDown className="h-5 w-5" />
@@ -740,7 +732,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   {isCustomType && (
                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200 bg-muted/30 p-4 rounded-2xl border border-border/50">
                       <Label htmlFor="custom-type" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                        Enter New Type Name
+                        Enter New Category Name
                       </Label>
                       <div className="flex gap-3">
                         <Input
@@ -779,7 +771,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               {(sheetMode === 'subtype' || !editingType?.id) && (
                 <div className="space-y-3">
                   <Label htmlFor="sub_type" className="text-sm font-semibold text-foreground">
-                    Sub-type <span className="text-destructive">*</span>
+                    Sub-category <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="sub_type"
@@ -792,7 +784,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   />
                   {!editingType?.id && (
                     <p className="text-xs text-muted-foreground italic px-1">
-                      Every type needs at least one sub-type to be created.
+                      Every category needs at least one sub-category to be created.
                     </p>
                   )}
                 </div>
@@ -853,7 +845,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               {editingInfo ? `Edit Detail` : "Add Detail"}
             </SheetTitle>
             <SheetDescription className="text-sm">
-              Provide specific parameters and icons for this event type.
+              Provide specific parameters and icons for this event category.
             </SheetDescription>
           </SheetHeader>
 

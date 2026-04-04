@@ -36,7 +36,7 @@ export default async function QuizBookingPage() {
         sub_type
       )
     `)
-    .eq("event_types.type", "game")
+    .eq("event_types.type", "games")
     .eq("event_types.sub_type", "quiz");
   
   // Map database items to badge format

@@ -31,7 +31,7 @@ export async function getBingoBookings(selectedDate: string | null) {
         tables(tables_id: id, tables_name: name, tables_capacity: max_capacity)
       )
     `)
-    .ilike("events.event_types.type", "game")
+    .ilike("events.event_types.type", "games")
     .ilike("events.event_types.sub_type", "bingo")
     .order("date", { referencedTable: "events", ascending: false });
 

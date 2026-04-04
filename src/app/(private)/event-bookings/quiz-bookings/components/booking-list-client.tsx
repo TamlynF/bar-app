@@ -188,7 +188,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       // Fetch all upcoming events of same type to allow movement
       if (selectedBooking.events?.event_types) {
         const events = await getQuizEvents(
-          selectedBooking.events.event_types.category || "game",
+          selectedBooking.events.event_types.category || "games",
           selectedBooking.events.event_types.sub_type || "quiz"
         );
         setAvailableEvents(events as unknown as SelectableEvent[]);

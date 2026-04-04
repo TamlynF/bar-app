@@ -30,14 +30,14 @@ export default async function BingoBookingPage() {
     supabase
       .from("events")
       .select("id, date, payment_amount, event_types!inner(type, sub_type)")
-      .eq("event_types.type", "game")
+      .eq("event_types.type", "games")
       .eq("event_types.sub_type", "bingo")
       .gte("date", today)
       .order("date", { ascending: true }),
     supabase
       .from("event_information")
       .select(`icon, title, event_types!inner(type, sub_type)`)
-      .eq("event_types.type", "game")
+      .eq("event_types.type", "games")
       .eq("event_types.sub_type", "bingo"),
   ]);
 

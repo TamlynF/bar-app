@@ -488,12 +488,12 @@ export default async function DashboardPage() {
         </section>
 
         {/* SECTION B: THIS MONTH */}
-        <section className="space-y-3">
+        <section className="space-y-2">
           <SectionLabel
             icon={TrendingUp}
             label={`${format(new Date(), "MMMM")} at a Glance`}
           />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-4 sm:grid-cols-4 gap-3">
             <StatCard
               label="Collected"
               value={`£${collectedRevenue.toFixed(2)}`}

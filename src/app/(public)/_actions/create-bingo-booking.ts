@@ -36,7 +36,7 @@ export async function createBingoBooking(formData: FormData) {
     const { data: existingType } = await supabase
       .from("event_types")
       .select("id")
-      .eq("type", "game")
+      .eq("type", "games")
       .eq("sub_type", "bingo")
       .maybeSingle();
 
@@ -45,7 +45,7 @@ export async function createBingoBooking(formData: FormData) {
     } else {
       const { data: newType, error: typeError } = await supabase
         .from("event_types")
-        .insert([{ type: "game", sub_type: "bingo" }])
+        .insert([{ type: "games", sub_type: "bingo" }])
         .select("id")
         .single();
       if (typeError || !newType) throw new Error("Failed to setup event type.");

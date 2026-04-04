@@ -31,9 +31,9 @@ export default function ActionRow({
           hasItems ? activeBg : "bg-[#F7F4EA]"
         )}
       >
-        <Icon className={cn("w-3.5 h-3.5", hasItems ? activeColor : "text-[#5F624F]")} />
+        <Icon className={cn("w-3.5 h-3.5", hasItems ? activeColor : "text-gray-500")} />
       </div>
-      <span className="flex-1 text-[11px] sm:text-[11px] font-black uppercase tracking-widest text-[#1F1F1A]">
+      <span className="flex-1 text-[11px] sm:text-[11px] font-black uppercase tracking-widest text-gray-700">
         {label}
       </span>
       <div className="flex items-center gap-2 shrink-0">
@@ -42,7 +42,7 @@ export default function ActionRow({
             "text-sm font-black tabular-nums px-2.5 py-0.5 rounded-full",
             hasItems
               ? `${activeBg} ${activeColor}`
-              : "bg-[#F7F4EA] text-[#5F624F]"
+              : "bg-[#F7F4EA] text-gray-500"
           )}
         >
           {count}

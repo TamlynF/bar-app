@@ -78,7 +78,7 @@ export default async function QuizBookingsPage({
   const params = await searchParams;
   const selectedDate = params.date;
 
-  const type = "game";
+  const type = "games";
   const subType = "quiz";
 
   // 1. Fetch current bookings
