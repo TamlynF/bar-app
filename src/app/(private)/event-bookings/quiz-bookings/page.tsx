@@ -169,14 +169,8 @@ export default async function QuizBookingsPage({
             {/* Main summary */}
             <div className="p-4 space-y-3">
 
-              {/* Time · Host · Quiz Status
-                  Mobile:  Time + Host on one row (no labels), Quiz Status below (no label)
-                  sm+:     All three evenly spaced in one row with labels above each
-              */}
-
-              {/* sm+: single evenly-spaced row */}
+              {/* sm+: Time · Host · Quiz Status — evenly spaced with labels */}
               <div className="hidden sm:flex items-start justify-evenly gap-4">
-                {/* Time */}
                 <div className="flex flex-col gap-1 items-center">
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Time</span>
                   <div className="flex items-center gap-1.5">
@@ -186,8 +180,6 @@ export default async function QuizBookingsPage({
                     </span>
                   </div>
                 </div>
-
-                {/* Host */}
                 <div className="flex flex-col gap-1 items-center">
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Host</span>
                   <div className="flex items-center gap-1.5">
@@ -197,8 +189,6 @@ export default async function QuizBookingsPage({
                     </span>
                   </div>
                 </div>
-
-                {/* Quiz Status */}
                 <div className="flex flex-col gap-1 items-center">
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Quiz Status</span>
                   <div className={cn(
@@ -220,42 +210,8 @@ export default async function QuizBookingsPage({
                 </div>
               </div>
 
-              {/* Mobile: Time + Host row, then Quiz Status row — no labels */}
-              <div className="sm:hidden space-y-2.5">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <Clock className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
-                    <span className="text-xs font-bold text-[#1F1F1A] whitespace-nowrap">
-                      {formatTime(eventDetails?.start_time)} – {formatTime(eventDetails?.end_time)}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <User className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
-                    <span className="text-xs font-bold text-[#1F1F1A] truncate">
-                      {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "—"}
-                    </span>
-                  </div>
-                </div>
-                <div className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest",
-                  quizStatus === "Complete"    && "bg-green-100 text-green-700",
-                  quizStatus === "Incomplete"  && "bg-orange-100 text-orange-700",
-                  quizStatus === "Not Started" && "bg-slate-100 text-slate-500",
-                )}>
-                  {quizStatus === "Complete"    && <CheckCircle2 className="w-3.5 h-3.5" />}
-                  {quizStatus === "Incomplete"  && <AlertCircle  className="w-3.5 h-3.5" />}
-                  {quizStatus === "Not Started" && <Info         className="w-3.5 h-3.5" />}
-                  <span>{quizStatus}</span>
-                  {quizStats && quizStats.categoryTotal > 0 && (
-                    <span className="opacity-60 font-bold normal-case tracking-normal">
-                      ({quizStats.questionCount}/{quizStats.categoryTotal})
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Divider */}
-              <div className="border-t border-[#E6DFC8]" />
+              {/* Divider — only needed on sm+ where content sits above Table Status */}
+              <div className="hidden sm:block border-t border-[#E6DFC8]" />
 
               {/* Table Status */}
               <div className="flex flex-col gap-2">
@@ -290,12 +246,47 @@ export default async function QuizBookingsPage({
                 <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] opacity-60 transition-transform group-open:rotate-180" />
               </summary>
               <div className="px-4 pb-4 space-y-2.5 border-t border-[#E6DFC8]/60">
-                {eventDetails?.title && (
-                  <div>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Title</p>
-                    <p className="text-sm font-bold text-[#1F1F1A]">{eventDetails.title}</p>
+
+                {/* Mobile-only: Time, Host, Quiz Status */}
+                <div className="sm:hidden space-y-2.5 pb-2.5 border-b border-[#E6DFC8]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <Clock className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
+                      <span className="text-xs font-bold text-[#1F1F1A] whitespace-nowrap">
+                        {formatTime(eventDetails?.start_time)} – {formatTime(eventDetails?.end_time)}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <User className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
+                      <span className="text-xs font-bold text-[#1F1F1A] truncate">
+                        {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "—"}
+                      </span>
+                    </div>
                   </div>
-                )}
+                  <div className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest",
+                    quizStatus === "Complete"    && "bg-green-100 text-green-700",
+                    quizStatus === "Incomplete"  && "bg-orange-100 text-orange-700",
+                    quizStatus === "Not Started" && "bg-slate-100 text-slate-500",
+                  )}>
+                    {quizStatus === "Complete"    && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {quizStatus === "Incomplete"  && <AlertCircle  className="w-3.5 h-3.5" />}
+                    {quizStatus === "Not Started" && <Info         className="w-3.5 h-3.5" />}
+                    <span>{quizStatus}</span>
+                    {quizStats && quizStats.categoryTotal > 0 && (
+                      <span className="opacity-60 font-bold normal-case tracking-normal">
+                        ({quizStats.questionCount}/{quizStats.categoryTotal})
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Title — all screen sizes */}
+                <div>
+                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Title</p>
+                  <p className="text-sm font-bold text-[#1F1F1A]">{eventDetails?.title || "—"}</p>
+                </div>
+
                 {(eventDetails as { description?: string } | null)?.description && (
                   <div>
                     <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Description</p>
@@ -330,7 +321,7 @@ export default async function QuizBookingsPage({
         )}
 
         {/* Main List Section */}
-        <div className="space-y-3 pt-2">
+        <div className="space-y-3">
           <Suspense fallback={
             <div className="space-y-2.5">
               {[...Array(3)].map((_, i) => (
