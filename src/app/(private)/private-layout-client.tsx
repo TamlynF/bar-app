@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import {
     LayoutDashboard,
     CalendarRange,
@@ -49,6 +49,7 @@ export default function PrivateLayoutClient({
         employeeRole: string
 }) {
     const pathname = usePathname()
+    const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname?.startsWith("/event-bookings"))
     const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname?.startsWith("/event-setups"))
@@ -145,6 +146,8 @@ export default function PrivateLayoutClient({
     }
 
     const { title, subtitle, backHref } = getPageInfo()
+    const normalizedPathForDepth = pathname?.replace(/\/$/, "") ?? ""
+    const isDetailPage = normalizedPathForDepth.split("/").filter(Boolean).length > 2
 
     return (
         <div className="flex min-h-screen bg-[#F7F4EA]">
@@ -315,12 +318,22 @@ export default function PrivateLayoutClient({
 
                         {/* Mobile Back Button */}
                         {backHref && (
-                            <Link
-                                href={backHref}
-                                className="sm:hidden absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
-                            >
-                                <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
-                            </Link>
+                            isDetailPage ? (
+                                <button
+                                    type="button"
+                                    onClick={() => router.back()}
+                                    className="sm:hidden absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
+                                >
+                                    <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
+                                </button>
+                            ) : (
+                                <Link
+                                    href={backHref}
+                                    className="sm:hidden absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
+                                >
+                                    <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
+                                </Link>
+                            )
                         )}
 
                         {/* Title */}

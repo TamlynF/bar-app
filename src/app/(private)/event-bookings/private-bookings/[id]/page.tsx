@@ -1,10 +1,9 @@
 import React from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrivateHireById } from "../actions";
 import PrivateHireDetailClient from "./private-hire-detail-client";
+import BackButton from "@/components/ui/back-button";
 import {
-  ArrowLeft,
   CheckCircle,
   XCircle,
   Clock,
@@ -106,13 +105,7 @@ export default async function PrivateHireDetailPage({
 
         {/* Back link + header */}
         <div className="space-y-3">
-          <Link
-            href="/event-bookings/private-bookings"
-            className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#1F1F1A] transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            All Private Hire Enquiries
-          </Link>
+          <BackButton label="All Private Hire Enquiries" />
 
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
