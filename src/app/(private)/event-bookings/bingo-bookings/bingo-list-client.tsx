@@ -855,11 +855,25 @@ function BingoBookingCard({
               T: {tableName}
             </span>
           </div>
-          <div className="flex items-center justify-between text-slate-500 mt-1">
-            <p className="text-xs truncate font-semibold">{booking.contacts?.full_name}</p>
-            <div className="flex items-center gap-1.5 text-slate-700">
-              <Users className="w-3.5 h-3.5 text-slate-400" />
-              <span className="text-sm font-black">{booking.group_size}</span>
+          <div className="flex items-center justify-between text-slate-500 mt-1 gap-2">
+            <p className="text-xs truncate font-semibold min-w-0">{booking.contacts?.full_name}</p>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {booking.payment_status && (
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-tight px-1.5 py-0.5 rounded border leading-none",
+                  booking.payment_status === "paid"
+                    ? "bg-green-50 border-green-200 text-green-700"
+                    : booking.payment_status === "refunded"
+                    ? "bg-gray-100 border-gray-200 text-gray-500"
+                    : "bg-amber-50 border-amber-200 text-amber-700"
+                )}>
+                  {booking.payment_status}
+                </span>
+              )}
+              <div className="flex items-center gap-1 text-slate-700">
+                <Users className="w-3.5 h-3.5 text-slate-400" />
+                <span className="text-sm font-black">{booking.group_size}</span>
+              </div>
             </div>
           </div>
         </div>
