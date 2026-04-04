@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { saveEmployeeAction, deleteEmployeeAction, sendPasswordResetAction } from "./actions";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export type EmployeeRecord = {
   id: number;
@@ -263,6 +264,7 @@ const COUNTRY_CODES = [
 ];
 
 export default function EmployeesClient({ initialEmployees = [] }: { initialEmployees: EmployeeRecord[] }) {
+  const { confirm, ConfirmDialogUI } = useConfirm();
   const [selected, setSelected] = useState<EmployeeRecord | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -306,32 +308,41 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
     });
   };
 
-  const handleDelete = () => {
-    console.log("Attempting to delete employee with ID:", selected?.id);
+  const handleDelete = async () => {
     if (!selected) return;
-    if (window.confirm("Are you sure you want to remove this system user?")) {
-      startTransition(async () => {
-        const result = await deleteEmployeeAction(selected.id);
-        if (result?.error) {
-          setFormError(result.error);
-        } else {
-          closeSheet();
-        }
-      });
-    }
+    const ok = await confirm({
+      title: "Remove employee",
+      description: "Are you sure you want to remove this system user? This cannot be undone.",
+      confirmLabel: "Remove",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await deleteEmployeeAction(selected.id);
+      if (result?.error) {
+        setFormError(result.error);
+      } else {
+        closeSheet();
+      }
+    });
   };
 
-  const handlePasswordReset = (email: string) => {
-    if (confirm(`Send a password reset email to ${email}?`)) {
-      startTransition(async () => {
-        const result = await sendPasswordResetAction(email);
-        if (result?.error) {
-          alert(result.error);
-        } else {
-          alert(`Password reset email sent to ${email}`);
-        }
-      });
-    }
+  const handlePasswordReset = async (email: string) => {
+    const ok = await confirm({
+      title: "Reset password",
+      description: `Send a password reset email to ${email}?`,
+      confirmLabel: "Send email",
+      variant: "default",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await sendPasswordResetAction(email);
+      if (result?.error) {
+        setFormError(result.error);
+      } else {
+        setFormError(null);
+      }
+    });
   };
 
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -820,6 +831,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
           </div>
         </SheetContent>
       </Sheet>
+      {ConfirmDialogUI}
     </div>
   );
 }

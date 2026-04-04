@@ -49,6 +49,7 @@ import {
   Save
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { useConfirm } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
 
@@ -65,6 +66,7 @@ interface CategoryStat extends QuizCategoryConfig {
 }
 
 export default function QuizGeneratorPage() {
+  const { confirm, ConfirmDialogUI } = useConfirm()
   const searchParams = useSearchParams()
   const presetEventId = searchParams.get('event_id')
   const presetCategory = searchParams.get('category')
@@ -499,8 +501,9 @@ export default function QuizGeneratorPage() {
                                   <Button 
                                     variant="ghost" 
                                     size="icon" 
-                                    onClick={() => {
-                                      if(window.confirm("Delete this question?")) deleteQuestion(record.id)
+                                    onClick={async () => {
+                                      const ok = await confirm({ title: "Delete question", description: "Delete this question? This cannot be undone.", confirmLabel: "Delete", variant: "destructive" })
+                                      if (ok) deleteQuestion(record.id)
                                     }}
                                     className="h-9 w-9 rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
                                   >
@@ -736,6 +739,7 @@ export default function QuizGeneratorPage() {
            <p className="text-[8px] sm:text-[9px] text-[#5F624F] uppercase tracking-[0.25em] font-black opacity-40">Select parameters to draft a round</p>
         </div>
       )}
+      {ConfirmDialogUI}
     </div>
   )
 }

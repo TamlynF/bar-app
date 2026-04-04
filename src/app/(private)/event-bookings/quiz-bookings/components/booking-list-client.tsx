@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { useConfirm } from "@/components/ui/confirm-dialog"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
@@ -127,6 +128,7 @@ interface SelectableEvent {
 }
 
 export default function BookingListClient({ initialBookings, selectedDate }: { initialBookings: Booking[], selectedDate?: string | undefined }) {
+  const { confirm, ConfirmDialogUI } = useConfirm()
   const [isPending, startTransition] = useTransition()
   const [searchQuery, setSearchQuery] = useState("")
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set())
@@ -786,9 +788,10 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                         <Button
                           variant="ghost"
                           className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
-                           onClick={(e) => {
+                           onClick={async (e) => {
                           e.stopPropagation();
-                          if(window.confirm("Permanently delete this booking?")) handleDeleteBooking(selectedBooking.id)
+                          const ok = await confirm({ title: "Delete booking", description: "Permanently delete this booking? This cannot be undone.", confirmLabel: "Delete", variant: "destructive" })
+                          if (ok) handleDeleteBooking(selectedBooking.id)
                           }}
                           title="Delete Record"
                         >
@@ -819,6 +822,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
           <Loader2 className="w-4 h-4 animate-spin" /> Syncing with DB...
         </div>
       )}
+      {ConfirmDialogUI}
     </div>
   )
 }

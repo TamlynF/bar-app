@@ -21,6 +21,7 @@ import { updateBooking } from "../../../../../_actions/update-booking";
 import { checkTeamName } from "../../../../../_actions/create-booking";
 import { getAvailableTablesForEvent } from "../actions";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export interface ManageBooking {
   id: string | number;
@@ -59,6 +60,7 @@ export default function CancelButton({
   booking: ManageBooking;
   isCancelled: boolean;
 }) {
+  const { confirm, ConfirmDialogUI } = useConfirm();
   const [isCancelling, setIsCancelling] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
@@ -155,9 +157,13 @@ export default function CancelButton({
   }, [teamName, isEditing, eventDateStr, booking.id, booking.group_name]);
 
   const handleCancel = async () => {
-    if (!window.confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) {
-      return;
-    }
+    const ok = await confirm({
+      title: "Cancel booking",
+      description: "Are you sure you want to cancel this booking? This action cannot be undone.",
+      confirmLabel: "Cancel booking",
+      variant: "destructive",
+    });
+    if (!ok) return;
 
     setIsCancelling(true);
     setError("");
@@ -383,6 +389,7 @@ export default function CancelButton({
           </div>
         </div>
       )}
+      {ConfirmDialogUI}
     </div>
   );
 }

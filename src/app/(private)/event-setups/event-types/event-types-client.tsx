@@ -33,6 +33,7 @@ import {
   deleteEventTypeGroupAction
 } from "@/app/(private)/event-setups/event-types/actions";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 const ICON_OPTIONS = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
@@ -64,6 +65,7 @@ const toTitleCase = (str: string) => {
 };
 
 export default function EventTypesClient({ initialEventTypes = [] }: { initialEventTypes: EventTypeRecord[] }) {
+  const { confirm, ConfirmDialogUI } = useConfirm();
   const [expandedSubtype, setExpandedSubtype] = useState<number | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [isPending, startTransition] = useTransition();
@@ -214,23 +216,33 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     });
   };
 
-  const handleDeleteGroup = (type: string) => {
+  const handleDeleteGroup = async (type: string) => {
     const formatted = toTitleCase(type);
-    if (window.confirm(`Warning: This will delete the entire "${formatted}" category, including all its sub-types and linked information. Proceed?`)) {
-      startTransition(async () => {
-        const result = await deleteEventTypeGroupAction(type);
-        if (result?.error) alert(result.error);
-      });
-    }
+    const ok = await confirm({
+      title: `Delete "${formatted}"`,
+      description: `This will delete the entire "${formatted}" category, including all its sub-types and linked information.`,
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await deleteEventTypeGroupAction(type);
+      if (result?.error) alert(result.error);
+    });
   };
 
-  const handleDeleteSubType = (id: number) => {
-    if (window.confirm("Are you sure? This will delete this sub-type and all its linked information.")) {
-      startTransition(async () => {
-        const result = await deleteEventTypeAction(id);
-        if (result?.error) alert(result.error);
-      });
-    }
+  const handleDeleteSubType = async (id: number) => {
+    const ok = await confirm({
+      title: "Delete sub-type",
+      description: "This will delete this sub-type and all its linked information.",
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await deleteEventTypeAction(id);
+      if (result?.error) alert(result.error);
+    });
   };
 
   const handleInfoSubmit = (formData: FormData) => {
@@ -246,13 +258,18 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     });
   };
 
-  const handleDeleteInfo = (id: number) => {
-    if (window.confirm("Delete this information item?")) {
-      startTransition(async () => {
-        const result = await deleteEventInfoAction(id);
-        if (result?.error) alert(result.error);
-      });
-    }
+  const handleDeleteInfo = async (id: number) => {
+    const ok = await confirm({
+      title: "Delete information item",
+      description: "Delete this information item? This cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await deleteEventInfoAction(id);
+      if (result?.error) alert(result.error);
+    });
   };
 
   const renderIcon = (iconStr: string | null) => {
@@ -914,6 +931,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
         </SheetContent>
       </Sheet>
+      {ConfirmDialogUI}
     </div>
   );
 }

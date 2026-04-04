@@ -22,12 +22,14 @@ import {
   Target
 } from "lucide-react";
 import { saveQuizCategoryAction, deleteQuizCategoryAction, QuizCategoryConfig } from "./actions";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export default function QuizCategoriesClient({ 
   initialConfigs = [] 
 }: { 
   initialConfigs: QuizCategoryConfig[] 
 }) {
+  const { confirm, ConfirmDialogUI } = useConfirm();
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [editingConfig, setEditingConfig] = useState<QuizCategoryConfig | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -42,13 +44,18 @@ export default function QuizCategoriesClient({
     setIsSheetOpen(true);
   };
 
-  const handleDelete = (id: number) => {
-    if (window.confirm("Delete this quiz category configuration?")) {
-      startTransition(async () => {
-        const result = await deleteQuizCategoryAction(id);
-        if (result?.error) alert(result.error);
-      });
-    }
+  const handleDelete = async (id: number) => {
+    const ok = await confirm({
+      title: "Delete category",
+      description: "Delete this quiz category configuration? This cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await deleteQuizCategoryAction(id);
+      if (result?.error) alert(result.error);
+    });
   };
 
   const handleSubmit = (formData: FormData) => {
@@ -212,6 +219,7 @@ export default function QuizCategoriesClient({
           </form>
         </SheetContent>
       </Sheet>
+      {ConfirmDialogUI}
     </div>
   );
 }

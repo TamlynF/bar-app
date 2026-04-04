@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { saveTableAction, deleteTableAction } from "../actions";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export type Table = {
   id: number;
@@ -35,6 +36,7 @@ export default function TablesClient({
 }: {
   initialTables: Table[];
 }) {
+  const { confirm, ConfirmDialogUI } = useConfirm();
   const [selected, setSelected] = useState<Table | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -78,22 +80,23 @@ export default function TablesClient({
     });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!selected) return;
-    if (
-      window.confirm(
-        "Delete this table? This cannot be undone if it has booking history."
-      )
-    ) {
-      startTransition(async () => {
-        const result = await deleteTableAction(selected.id);
-        if (result?.error) {
-          setFormError(result.error);
-        } else {
-          closeSheet();
-        }
-      });
-    }
+    const ok = await confirm({
+      title: "Delete table",
+      description: "Delete this table? This cannot be undone if it has booking history.",
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await deleteTableAction(selected.id);
+      if (result?.error) {
+        setFormError(result.error);
+      } else {
+        closeSheet();
+      }
+    });
   };
 
   const showForm = isAdding || isEditing;
@@ -395,6 +398,7 @@ export default function TablesClient({
           </div>
         </SheetContent>
       </Sheet>
+      {ConfirmDialogUI}
     </div>
   );
 }

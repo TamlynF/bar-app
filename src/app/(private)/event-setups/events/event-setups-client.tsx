@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export type EventType = {
   id: number;
@@ -108,6 +109,7 @@ export default function EventsClient({
   quizQuestions: QuizQuestion[];
   filter?: string;
 }) {
+  const { confirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [selected, setSelected] = useState<EventRecord | null>(null);
@@ -173,18 +175,23 @@ export default function EventsClient({
     });
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (!selected) return;
-    if (window.confirm("Delete this event? This cannot be undone.")) {
-      startTransition(async () => {
-        const result = await deleteEventAction(selected.id);
-        if (result?.error) {
-          setFormError(result.error);
+    const ok = await confirm({
+      title: "Delete event",
+      description: "Delete this event? This cannot be undone.",
+      confirmLabel: "Delete",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    startTransition(async () => {
+      const result = await deleteEventAction(selected.id);
+      if (result?.error) {
+        setFormError(result.error);
         } else {
           closeSheet();
         }
       });
-    }
   };
 
   // Apply filter if present
@@ -740,6 +747,7 @@ export default function EventsClient({
           </div>
         </SheetContent>
       </Sheet>
+      {ConfirmDialogUI}
     </div>
   );
 }

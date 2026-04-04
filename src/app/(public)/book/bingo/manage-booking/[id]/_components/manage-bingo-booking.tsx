@@ -18,6 +18,7 @@ import {
 import { cancelBooking } from "../../../../../_actions/cancel-booking";
 import { updateBingoSpecialRequests } from "../actions";
 import { cn } from "@/lib/utils";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 
 export interface BingoManageBooking {
   id: string | number;
@@ -104,6 +105,7 @@ function StatusBanner({ status, paymentStatus }: { status: string | null; paymen
 
 export default function ManageBingoBooking({ booking }: { booking: BingoManageBooking }) {
   const [isPending, startTransition] = useTransition();
+  const { confirm, ConfirmDialogUI } = useConfirm();
   const [isEditing, setIsEditing] = useState(false);
   const [specialRequests, setSpecialRequests] = useState(booking.special_requests ?? "");
   const [error, setError] = useState("");
@@ -116,8 +118,14 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
   const table = booking.booking_table_mappings?.[0]?.tables;
   const amountPaid = booking.paid_amount ?? booking.total_amount ?? 0;
 
-  const handleCancel = () => {
-    if (!window.confirm("Are you sure you want to cancel this booking? Refunds are processed by our team — please allow 3–5 business days.")) return;
+  const handleCancel = async () => {
+    const ok = await confirm({
+      title: "Cancel booking",
+      description: "Are you sure you want to cancel this booking? Refunds are processed by our team — please allow 3–5 business days.",
+      confirmLabel: "Cancel booking",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setError("");
     startTransition(async () => {
       const res = await cancelBooking(booking.id);
@@ -282,6 +290,7 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
           </div>
         </div>
       )}
+      {ConfirmDialogUI}
     </div>
   );
 }
