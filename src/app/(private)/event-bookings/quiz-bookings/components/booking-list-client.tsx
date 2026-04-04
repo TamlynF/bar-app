@@ -501,7 +501,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       </div>
 
       {/* Booking Cards */}
-      <div className="space-y-2.5 pb-5">
+      <div className="space-y-2 pb-2">
         {filteredBookings.length === 0 ? (
           <div className="py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300">
             <Inbox className="w-10 h-10 text-slate-300 mx-auto mb-3" />
@@ -854,8 +854,7 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
     <div
       onClick={onClick}
       className={cn(
-        "group active:scale-[0.98] active:bg-slate-50 transition-all border-2 rounded-2xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3",
-        theme.cardBorder
+        "group active:scale-[0.98] active:bg-slate-50 transition-all border-2 border-[#E6DFC8] rounded-2xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3"
       )}
     >
       <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
