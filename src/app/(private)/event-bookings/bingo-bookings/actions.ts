@@ -70,6 +70,57 @@ export async function updateBingoBookingStatus(id: string, status: string) {
   revalidatePath("/dashboard");
 }
 
+export async function updateBingoBookingDetails(
+  id: string,
+  updates: {
+    group_name?: string;
+    group_size?: number;
+    special_requests?: string;
+    status?: string;
+    table_id?: string;
+    event_id?: string;
+  }
+) {
+  const supabase = await createClient();
+  const { table_id, ...bookingUpdates } = updates;
+  const { error } = await supabase
+    .from("bookings")
+    .update({ ...bookingUpdates, updated_at: new Date().toISOString() })
+    .eq("id", id);
+  if (error) throw new Error("Failed to update booking");
+
+  if (Object.prototype.hasOwnProperty.call(updates, "table_id")) {
+    await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
+    if (table_id && table_id !== "") {
+      const { data: tableData } = await supabase
+        .from("tables")
+        .select("max_capacity")
+        .eq("id", table_id)
+        .single();
+      const groupSize = updates.group_size || 0;
+      const maxCap = tableData?.max_capacity || 0;
+      const addSeatCount = groupSize > maxCap ? groupSize - maxCap : 0;
+      await supabase.from("booking_table_mappings").insert({
+        booking_id: id,
+        table_id: parseInt(table_id),
+        add_seat: addSeatCount,
+      });
+    }
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/event-bookings/bingo-bookings");
+}
+
+export async function deleteBingoBooking(id: string) {
+  const supabase = await createClient();
+  await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
+  const { error } = await supabase.from("bookings").delete().eq("id", id);
+  if (error) throw new Error("Failed to delete");
+  revalidatePath("/dashboard");
+  revalidatePath("/event-bookings/bingo-bookings");
+}
+
 export async function refundBingoBooking(id: string) {
   const supabase = await createClient();
 
