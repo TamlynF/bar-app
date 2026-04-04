@@ -7,6 +7,17 @@ import { revalidatePath } from "next/cache";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
+export async function getPrivateHireById(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("private_hire_requests")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error || !data) throw new Error("Private hire request not found");
+  return data;
+}
+
 export async function updatePrivateHireStatus(
   id: string,
   status: "confirmed" | "rejected",

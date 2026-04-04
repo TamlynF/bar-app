@@ -15,7 +15,7 @@ export async function getBingoEventList(type: string, subType: string) {
   return data ?? [];
 }
 
-export async function getBingoBookings(selectedDate: string | null, selectedEventId?: string | null) {
+export async function getBingoBookings(selectedDate: string | null, selectedEventId?: string | null, filterStatus?: string | null, filterPaymentStatus?: string | null, filterFromDate?: string | null, filterMinTotal?: string | null) {
   const supabase = await createClient();
 
   let query = supabase
@@ -53,9 +53,47 @@ export async function getBingoBookings(selectedDate: string | null, selectedEven
   if (selectedEventId) {
     query = query.eq("event_id", selectedEventId);
   }
+  if (filterStatus) {
+    const statuses = filterStatus.split(",").map((s) => s.trim()).filter(Boolean);
+    if (statuses.length === 1) {
+      query = query.eq("status", statuses[0]);
+    } else if (statuses.length > 1) {
+      query = query.in("status", statuses);
+    }
+  }
+  if (filterPaymentStatus) {
+    const paymentStatuses = filterPaymentStatus.split(",").map((s) => s.trim()).filter(Boolean);
+    if (paymentStatuses.length === 1) {
+      query = query.eq("payment_status", paymentStatuses[0]);
+    } else if (paymentStatuses.length > 1) {
+      query = query.in("payment_status", paymentStatuses);
+    }
+  }
+  if (filterFromDate) {
+    query = query.gte("events.date", filterFromDate);
+  }
+  if (filterMinTotal) {
+    query = query.gt("total_amount", parseFloat(filterMinTotal));
+  }
 
   const { data, error } = await query;
-  if (error) throw new Error("Failed to fetch bingo bookings");
+  if (error) {
+    console.error("Failed to fetch bingo bookings", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+      filters: {
+        selectedDate,
+        selectedEventId,
+        filterStatus,
+        filterPaymentStatus,
+        filterFromDate,
+        filterMinTotal,
+      },
+    });
+    throw new Error("Failed to fetch bingo bookings");
+  }
   return data ?? [];
 }
 

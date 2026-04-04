@@ -65,7 +65,7 @@ export default async function BingoBookingsPage({
   }));
 
   // 2. Fetch current bookings
-  const allBookings = await getBingoBookings(selectedDate || null, selectedEventId);
+  const allBookings = await getBingoBookings(selectedDate || null, selectedEventId, filterStatus ?? null, filterPaymentStatus ?? null, filterFromDate ?? null, filterMinTotal ?? null);
   const bingoBookings = allBookings as BingoBooking[];
 
   // 3. Fetch all physical tables

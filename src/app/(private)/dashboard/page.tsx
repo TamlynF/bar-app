@@ -369,7 +369,7 @@ export default async function DashboardPage() {
       eventType: { type: "Private Hire", sub_type: "private" } as EventTypeRow,
       hostName: ph.full_name,
       guests: ph.guest_count,
-      href: "/event-bookings/private-bookings",
+      href: `/event-bookings/private-bookings/${ph.id}`,
       privateDetails: {
         email: ph.email,
         phone: ph.phone_no,
