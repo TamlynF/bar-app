@@ -147,7 +147,6 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                             {badgeLabel(item.eventType)}
                                         </span>
                                     )}
-                                    <ChevronRight className={cn("w-4 h-4 text-[#5F624F]/40 shrink-0 transition-transform", isExpanded && "rotate-90")} />
                                 </div>
                             </div>
 

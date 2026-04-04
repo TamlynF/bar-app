@@ -119,20 +119,6 @@ export default function TonightCard({
             <Grid2X2 className="w-4 h-4" />
             Floorplan
           </Link>
-          {isQuiz && (
-            <Link
-              href="/event-setups/quiz-generator"
-              className="col-span-2 flex items-center justify-between px-5 h-12 bg-[#FDCC4B] hover:bg-[#e5b843] rounded-xl transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Trophy className="w-4 h-4 text-[#26300D]" />
-                <span className="text-[11px] font-black uppercase tracking-widest text-[#26300D]">
-                  Launch Quiz Master
-                </span>
-              </div>
-              <ChevronRight className="w-4 h-4 text-[#26300D]" />
-            </Link>
-          )}
         </div>
       </div>
     </div>
