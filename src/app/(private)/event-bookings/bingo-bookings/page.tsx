@@ -77,7 +77,15 @@ export default async function BingoBookingsPage({
     ? await getEventDetails(selectedDate, type, subType, selectedEventId)
     : null;
 
-  // 5. Table status by capacity
+  // 5. Payment totals for selected event
+  const activeBookings = bingoBookings.filter((b) => b.status !== "cancelled");
+  const totalPaid = activeBookings.reduce((sum, b) => sum + (b.paid_amount ?? 0), 0);
+  const totalOutstanding = activeBookings.reduce(
+    (sum, b) => sum + Math.max(0, (b.total_amount ?? 0) - (b.paid_amount ?? 0)),
+    0
+  );
+
+  // 6. Table status by capacity
   let tableStatusByCapacity: { capacity: number; total: number; assigned: number }[] = [];
 
   if (selectedDate) {
@@ -118,7 +126,7 @@ export default async function BingoBookingsPage({
             {/* Main summary */}
             <div className="p-4 space-y-3">
 
-              {/* sm+: Time · Host evenly spaced with labels */}
+              {/* sm+: Time · Host · Paid · Outstanding evenly spaced with labels */}
               <div className="hidden sm:flex items-start justify-evenly gap-4">
                 <div className="flex flex-col gap-1 items-center">
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Time</span>
@@ -135,6 +143,22 @@ export default async function BingoBookingsPage({
                     <User className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
                     <span className="text-xs font-bold text-[#1F1F1A]">
                       {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "—"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 items-center">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Paid</span>
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="w-3.5 h-3.5 text-green-600 opacity-70 shrink-0" />
+                    <span className="text-xs font-black text-green-700 tabular-nums">£{totalPaid.toFixed(2)}</span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1 items-center">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Outstanding</span>
+                  <div className="flex items-center gap-1">
+                    <DollarSign className="w-3.5 h-3.5 shrink-0 opacity-50" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }} />
+                    <span className="text-xs font-black tabular-nums" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }}>
+                      £{totalOutstanding.toFixed(2)}
                     </span>
                   </div>
                 </div>
@@ -177,7 +201,7 @@ export default async function BingoBookingsPage({
               </summary>
               <div className="px-4 pb-4 space-y-2.5 border-t border-[#E6DFC8]/60">
 
-                {/* Mobile-only: Time + Host */}
+                {/* Mobile-only: Time + Host + Paid + Outstanding */}
                 <div className="sm:hidden space-y-2.5 pb-2.5 border-b border-[#E6DFC8]">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5">
@@ -190,6 +214,20 @@ export default async function BingoBookingsPage({
                       <User className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
                       <span className="text-xs font-bold text-[#1F1F1A] truncate">
                         {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "—"}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="w-3.5 h-3.5 text-green-600 opacity-70 shrink-0" />
+                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Paid</span>
+                      <span className="text-xs font-black text-green-700 tabular-nums">£{totalPaid.toFixed(2)}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="w-3.5 h-3.5 shrink-0 opacity-60" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }} />
+                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Outstanding</span>
+                      <span className="text-xs font-black tabular-nums" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }}>
+                        £{totalOutstanding.toFixed(2)}
                       </span>
                     </div>
                   </div>
