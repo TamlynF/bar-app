@@ -4,13 +4,25 @@ import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { revalidatePath } from "next/cache";
 
-export async function getBingoBookings(selectedDate: string | null) {
+export async function getBingoEventList(type: string, subType: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("events")
+    .select("id, date, title, event_types!inner(category: type, sub_type)")
+    .ilike("event_types.type", type)
+    .ilike("event_types.sub_type", subType);
+  if (error) throw new Error("Failed to fetch bingo events");
+  return data ?? [];
+}
+
+export async function getBingoBookings(selectedDate: string | null, selectedEventId?: string | null) {
   const supabase = await createClient();
 
   let query = supabase
     .from("bookings")
     .select(`
       id,
+      event_id,
       group_name,
       group_size,
       status,
@@ -37,6 +49,9 @@ export async function getBingoBookings(selectedDate: string | null) {
 
   if (selectedDate) {
     query = query.eq("events.date", selectedDate);
+  }
+  if (selectedEventId) {
+    query = query.eq("event_id", selectedEventId);
   }
 
   const { data, error } = await query;

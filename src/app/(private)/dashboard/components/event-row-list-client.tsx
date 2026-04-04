@@ -236,7 +236,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                     <span>Capacity</span>
                                                     <span className="font-black text-[#1F1F1A]">{item.quizDetails.capacityPct}%</span>
                                                 </div>
-                                                <div className="h-1.5 bg-[#E6DFC8] rounded-full overflow-hidden">
+                                                <div className="h-2 bg-white border border-[#E6DFC8] rounded-full overflow-hidden">
                                                     <CapacityBar pct={item.quizDetails.capacityPct} />
                                                 </div>
                                             </div>
@@ -282,7 +282,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                     <span>Capacity</span>
                                                     <span className="font-black text-[#1F1F1A]">{item.bingoDetails.capacityPct}%</span>
                                                 </div>
-                                                <div className="h-1.5 bg-[#E6DFC8] rounded-full overflow-hidden">
+                                                <div className="h-2 bg-white border border-[#E6DFC8] rounded-full overflow-hidden">
                                                     <CapacityBar pct={item.bingoDetails.capacityPct} />
                                                 </div>
                                             </div>
@@ -347,7 +347,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                     <span>Capacity ({item.privateDetails.guestCount} guests)</span>
                                                     <span className="font-black text-[#1F1F1A]">{item.privateDetails.capacityPct}%</span>
                                                 </div>
-                                                <div className="h-1.5 bg-[#E6DFC8] rounded-full overflow-hidden">
+                                                <div className="h-2 bg-white border border-[#E6DFC8] rounded-full overflow-hidden">
                                                     <CapacityBar pct={item.privateDetails.capacityPct} />
                                                 </div>
                                             </div>
