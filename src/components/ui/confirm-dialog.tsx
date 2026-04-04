@@ -45,10 +45,10 @@ export function useConfirm() {
   const ConfirmDialogUI = (
     <Dialog open={open} onOpenChange={(o) => { if (!o) handleCancel(); }}>
       <DialogPortal>
-        {/* z-[9999] ensures it sits above Sheet (z-50), dropdowns (z-9999) and any other overlays */}
-        <DialogOverlay className="z-[9999]" />
+        <DialogOverlay style={{ zIndex: 10000 }} />
         <div
-          className="fixed top-1/2 left-1/2 z-[9999] w-full max-w-sm -translate-x-1/2 -translate-y-1/2
+          style={{ zIndex: 10000 }}
+          className="fixed top-1/2 left-1/2 w-full max-w-sm -translate-x-1/2 -translate-y-1/2
             rounded-3xl border-2 border-[#E6DFC8] bg-[#F7F4EA] overflow-hidden shadow-2xl
             data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95
             data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
