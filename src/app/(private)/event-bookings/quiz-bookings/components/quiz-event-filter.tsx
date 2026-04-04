@@ -61,11 +61,6 @@ export default function QuizEventFilter({
     setOpen(false);
   };
 
-  const handleBlur = () => {
-    // Delay so mousedown on a dropdown item fires first
-    setTimeout(() => setOpen(false), 150);
-  };
-
   // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -105,7 +100,8 @@ export default function QuizEventFilter({
                 setQuery("");
                 setOpen(true);
               }}
-              onBlur={handleBlur}
+              onClick={() => setOpen(true)}
+              onBlur={() => setOpen(false)}
               placeholder={selectedEvent ? displayValue : "All history — type to filter…"}
               className="flex-1 min-w-0 bg-transparent text-sm font-black text-slate-900 uppercase tracking-tight outline-none placeholder:text-slate-400 placeholder:normal-case placeholder:font-medium placeholder:tracking-normal"
             />
@@ -144,7 +140,7 @@ export default function QuizEventFilter({
                   handleSelect(event);
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition-colors border-b border-black/5 last:border-0 ${
-                  event.date === selectedDate ? "bg-black/8" : ""
+                  event.date === selectedDate ? "bg-black/10" : ""
                 }`}
               >
                 <CalendarDays className="w-3.5 h-3.5 text-[#26300D] shrink-0 opacity-60" />
