@@ -438,7 +438,7 @@ export default async function DashboardPage() {
             highlight={totalActions > 0}
             badge={totalActions > 0 ? `${totalActions} Pending` : undefined}
           />
-          <div className="bg-white border border-[#E6DFC8] rounded-2xl divide-y divide-[#F0EBE0] overflow-hidden">
+          <div className="bg-white border border-gray-300 rounded-2xl divide-y divide-gray-300 overflow-hidden">
             <ActionRow
               icon={Building2}
               label="Private Hires"

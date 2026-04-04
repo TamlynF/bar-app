@@ -23,17 +23,17 @@ export default function ActionRow({
   return (
     <Link
       href={href}
-      className="flex items-center gap-3 px-4 py-2 hover:bg-[#F7F4EA] transition-colors active:bg-[#E6DFC8]"
+      className="flex items-center gap-2.5 px-4 py-2 hover:bg-[#F7F4EA] transition-colors active:bg-[#E6DFC8]"
     >
       <div
         className={cn(
-          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+          "w-8 h-6 rounded-lg flex items-center justify-center shrink-0",
           hasItems ? activeBg : "bg-[#F7F4EA]"
         )}
       >
         <Icon className={cn("w-3.5 h-3.5", hasItems ? activeColor : "text-[#5F624F]")} />
       </div>
-      <span className="flex-1 text-[10px] sm:text-[11px] font-black uppercase tracking-widest text-[#1F1F1A]">
+      <span className="flex-1 text-[11px] sm:text-[11px] font-black uppercase tracking-widest text-[#1F1F1A]">
         {label}
       </span>
       <div className="flex items-center gap-2 shrink-0">

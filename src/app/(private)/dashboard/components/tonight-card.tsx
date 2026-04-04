@@ -55,7 +55,7 @@ export default function TonightCard({
             </p>
           </div>
           <div className="flex items-start gap-2 sm:gap-4 shrink-0">
-            {isQuiz && (
+            {isQuiz ? (
               <>
                 <div className="text-right">
                   <p className="text-lg sm:text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
@@ -67,8 +67,8 @@ export default function TonightCard({
                 </div>
                 {/* <div className="w-px self-stretch bg-white/10" /> */}
               </>
-            )}
-            <div className="text-right">
+            ) : (
+                <div className="text-right">
               <p className="text-lg sm:text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
                 {guests}
               </p>
@@ -76,6 +76,8 @@ export default function TonightCard({
                 Guests
               </p>
             </div>
+            )}
+            
           </div>
         </div>
       </Link>
