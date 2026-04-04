@@ -1,7 +1,7 @@
 import React, { Suspense } from "react";
 import { getBookings, getAvailableTables, getQuizEvents } from "./actions";
 import BookingListClient from "./components/booking-list-client";
-import BookingCalendarFilter from "@/components/booking-calendar-filter";
+import QuizEventFilter from "./components/quiz-event-filter";
 import {
   Users,
   LayoutDashboard,
@@ -81,7 +81,15 @@ export default async function QuizBookingsPage({
   const type = "games";
   const subType = "quiz";
 
-  // 1. Fetch current bookings
+  // 1. Fetch quiz events for the filter dropdown
+  const quizEventsRaw = await getQuizEvents(type, subType);
+  const quizEvents = (quizEventsRaw ?? []).map((e) => ({
+    id: String(e.id),
+    date: String(e.date),
+    title: e.title ?? null,
+  }));
+
+  // 2. Fetch current bookings
   const allBookings = await getBookings(type, subType, selectedDate || null);
   const quizBookings = (allBookings as unknown as Booking[]) ?? [];
 
@@ -120,9 +128,9 @@ export default async function QuizBookingsPage({
 
       <div className="p-3 md:p-8 max-w-7xl mx-auto space-y-5 text-left">
         
-        {/* Full-width Date Selection Section */}
+        {/* Full-width Event Selection Section */}
         <div className="w-full bg-white rounded-2xl border border-[#E6DFC8] shadow-sm p-1.5 overflow-hidden">
-          <BookingCalendarFilter selectedDate={selectedDate} />
+          <QuizEventFilter events={quizEvents} selectedDate={selectedDate} />
         </div>
 
         {/* Dynamic Availability Section - Replaces individual StatCards on Mobile */}
