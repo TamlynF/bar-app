@@ -81,10 +81,6 @@ export default function QuizEventFilter({
     <div className="relative w-full">
       {/* Input row */}
       <div className="flex items-center gap-3 h-12 px-4 bg-slate-50 rounded-xl">
-        <div className="p-2 bg-white rounded-lg shadow-xs shrink-0">
-          <CalendarDays className="w-4 h-4 text-[#26300D]" />
-        </div>
-
         <div className="flex flex-col flex-1 min-w-0">
           <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">
             Quiz Event
@@ -143,7 +139,6 @@ export default function QuizEventFilter({
                   event.date === selectedDate ? "bg-black/10" : ""
                 }`}
               >
-                <CalendarDays className="w-3.5 h-3.5 text-[#26300D] shrink-0 opacity-60" />
                 <span className="text-[11px] font-black uppercase tracking-tight text-[#1F1F1A]">
                   {formatEventLabel(event)}
                 </span>

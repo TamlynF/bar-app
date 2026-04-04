@@ -33,7 +33,8 @@ import {
   RefreshCw,
   CalendarDays,
   History,
-  UserCheck
+  UserCheck,
+  X
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
@@ -46,6 +47,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import { Booking } from "@/app/(private)/event-bookings/quiz-bookings/page"
+import StatusCircle from "./status-circle"
 
 const formatDateStr = (d: Date | string) => {
   if (typeof d === 'string') return d;
@@ -55,7 +57,7 @@ const formatDateStr = (d: Date | string) => {
 
 const normStatus = (s?: string) => (s || "").trim().toLowerCase()
 
-const statusTheme: Record<
+export const statusTheme: Record<
   string,
   {
     bg: string
@@ -423,66 +425,71 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
   return (
     <div className="space-y-3 animate-in fade-in duration-500">
-      {/* Stats Bar - Redesigned for Guest/Team Visibility */}
-      <div className="bg-white dark:bg-slate-900 border border-[#E6DFC8] rounded-2xl p-2 shadow-sm overflow-x-auto no-scrollbar">
-        <div className="flex items-stretch gap-3 w-full px-2 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
-          <StatusCircle 
-            guestCount={stats.total.guests} 
-            teamCount={stats.total.teams} 
-            status="all" 
-            label="Total" 
-            isActive={activeStatusFilters.size === 0} 
-            onClick={() => setActiveStatusFilters(new Set())} 
-          />
-          <StatusCircle 
-            guestCount={stats.confirmed.guests} 
-            teamCount={stats.confirmed.teams} 
-            status="confirmed" 
-            label="Joining" 
-            isActive={activeStatusFilters.has("confirmed")} 
-            onClick={() => toggleStatusFilter("confirmed")} 
-          />
-          <StatusCircle 
-            guestCount={stats.waitlisted.guests} 
-            teamCount={stats.waitlisted.teams} 
-            status="waitlisted" 
-            label="Waiting" 
-            isActive={activeStatusFilters.has("waitlisted")} 
-            onClick={() => toggleStatusFilter("waitlisted")} 
-          />
-          <StatusCircle 
-            guestCount={stats.pending.guests} 
-            teamCount={stats.pending.teams} 
-            status="pending" 
-            label="Pending" 
-            isActive={activeStatusFilters.has("pending")} 
-            onClick={() => toggleStatusFilter("pending")} 
-          />
-          <StatusCircle 
-            guestCount={stats.cancelled.guests} 
-            teamCount={stats.cancelled.teams} 
-            status="cancelled" 
-            label="Dropped" 
-            isActive={activeStatusFilters.has("cancelled")} 
-            onClick={() => toggleStatusFilter("cancelled")} 
-          />
+      {/* Stats + Search grouped card */}
+      <div className="bg-white dark:bg-slate-900 border border-[#E6DFC8] rounded-2xl shadow-sm">
+        {/* Stats Bar - scrollable on mobile */}
+        <div className="overflow-x-auto no-scrollbar px-2 pt-2">
+          <div className="flex items-stretch gap-3 w-full px-2 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
+            <StatusCircle
+              guestCount={stats.total.guests}
+              teamCount={stats.total.teams}
+              status="all"
+              label="Total"
+              isActive={activeStatusFilters.size === 0}
+              onClick={() => setActiveStatusFilters(new Set())}
+            />
+            <StatusCircle
+              guestCount={stats.confirmed.guests}
+              teamCount={stats.confirmed.teams}
+              status="confirmed"
+              label="Joining"
+              isActive={activeStatusFilters.has("confirmed")}
+              onClick={() => toggleStatusFilter("confirmed")}
+            />
+            <StatusCircle
+              guestCount={stats.waitlisted.guests}
+              teamCount={stats.waitlisted.teams}
+              status="waitlisted"
+              label="Waiting"
+              isActive={activeStatusFilters.has("waitlisted")}
+              onClick={() => toggleStatusFilter("waitlisted")}
+            />
+            <StatusCircle
+              guestCount={stats.pending.guests}
+              teamCount={stats.pending.teams}
+              status="pending"
+              label="Pending"
+              isActive={activeStatusFilters.has("pending")}
+              onClick={() => toggleStatusFilter("pending")}
+            />
+            <StatusCircle
+              guestCount={stats.cancelled.guests}
+              teamCount={stats.cancelled.teams}
+              status="cancelled"
+              label="Dropped"
+              isActive={activeStatusFilters.has("cancelled")}
+              onClick={() => toggleStatusFilter("cancelled")}
+            />
+          </div>
         </div>
-      </div>
 
-      {/* Search */}
-      <div className="relative group bg-white">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <Input
-          placeholder="Search team names or guests..."
-          value={searchQuery}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-          className="h-11 rounded-xl pl-10 text-sm shadow-sm"
-        />
-        {activeStatusFilters.size > 0 && (
-          <button type="button" onClick={() => setActiveStatusFilters(new Set())} className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-primary uppercase bg-primary/10 px-2 py-1 rounded">
-            Clear
-          </button>
-        )}
+        {/* Search row */}
+        <div className="flex items-center gap-3 h-12 px-4">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            <Search className="w-3 h-3 text-slate-400 shrink-0" />
+            <Input
+              placeholder="Search team names or guests..."
+              value={searchQuery}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
+              className="flex-1 min-w-0 bg-transparent text-sm font-black text-slate-900 uppercase tracking-tight outline-none placeholder:text-slate-400 placeholder:normal-case placeholder:font-medium placeholder:tracking-normal"
+            />
+          </div>
+          {activeStatusFilters.size > 0 && (
+            <button type="button" title="Cancel" onClick={() => setActiveStatusFilters(new Set())} className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors">
+              <X className="w-3.5 h-3.5 text-slate-400" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Booking Cards */}
@@ -827,48 +834,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   )
 }
 
-function StatusCircle({ 
-  guestCount, 
-  teamCount, 
-  status, 
-  label, 
-  isActive, 
-  onClick 
-}: { 
-  guestCount: number, 
-  teamCount: number,
-  status: string, 
-  label: string, 
-  isActive: boolean, 
-  onClick: () => void 
-}) {
-  const theme = statusTheme[status] || statusTheme.pending
 
-  return (
-    <div className="flex flex-col items-center gap-1.5 min-w-14 shrink-0">
-      <button
-        type="button"
-        onClick={onClick}
-        className={cn(
-          "relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all touch-manipulation hover:scale-105 active:scale-95",
-          isActive ? `${theme.dot} ${theme.border} shadow-lg ring-4 ${theme.ring}` : `bg-white dark:bg-slate-800 ${theme.border}`,
-        )}
-      >
-        <span className={cn("text-sm font-black", isActive ? "text-white" : theme.text)}>
-          {teamCount}
-        </span>
-      </button>
-      <div className="flex flex-col items-center leading-none">
-        <span className={cn("text-[9px] font-black uppercase tracking-tight", isActive ? theme.text : "text-slate-500")}>
-          {label}
-        </span>
-        <span className="text-[8px] font-bold text-slate-400 uppercase mt-0.5">
-          {guestCount} Guests
-        </span>
-      </div>
-    </div>
-  )
-}
 
 function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick: () => void, showDate?: boolean }) {
   const status = normStatus(booking.status) || "pending"
