@@ -465,7 +465,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
               {/* Left: title + ID */}
               <div className="min-w-0">
                 <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
-                  {isAdding ? "New Employee" : isEditing ? "Edit Employee" : (selected?.full_name ?? "")}
+                  {isAdding ? "New Employee" : isEditing ? "Edit Employee" : "View Employee"}
                 </SheetTitle>
                 {selected && !isEditing && (
                   <div className="flex items-center gap-1.5 mt-1">
