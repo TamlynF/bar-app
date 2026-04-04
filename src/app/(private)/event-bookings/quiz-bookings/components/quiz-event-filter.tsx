@@ -12,7 +12,7 @@ interface QuizEvent {
 }
 
 function formatEventLabel(event: QuizEvent) {
-  const date = format(parseISO(event.date), "eeee do MMMM yyyy");
+  const date = format(parseISO(event.date), "eeee, do MMMM yyyy");
   return event.title ? `${date} — ${event.title}` : date;
 }
 
@@ -124,7 +124,7 @@ export default function QuizEventFilter({
       {open && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 top-full mt-1.5 bg-[#E2EDBF] rounded-2xl shadow-2xl z-9999 overflow-hidden border border-black/10 max-h-72 overflow-y-auto"
+          className="absolute left-0 right-0 top-full mt-1.5 bg-dropdown rounded-2xl shadow-2xl z-9999 overflow-hidden border border-black/10 max-h-72 overflow-y-auto"
         >
           {filtered.length === 0 ? (
             <p className="px-4 py-3 text-[11px] font-bold text-[#5F624F] uppercase tracking-wider">
