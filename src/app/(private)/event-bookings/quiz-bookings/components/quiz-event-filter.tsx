@@ -101,7 +101,7 @@ export default function QuizEventFilter({
                 setOpen(true);
               }}
               onClick={() => setOpen(true)}
-              onBlur={() => setOpen(false)}
+              onBlur={() => setTimeout(() => setOpen(false), 150)}
               placeholder={selectedEvent ? displayValue : "All history — type to filter…"}
               className="flex-1 min-w-0 bg-transparent text-sm font-black text-slate-900 uppercase tracking-tight outline-none placeholder:text-slate-400 placeholder:normal-case placeholder:font-medium placeholder:tracking-normal"
             />
@@ -124,7 +124,7 @@ export default function QuizEventFilter({
       {open && (
         <div
           ref={dropdownRef}
-          className="absolute left-0 right-0 top-full mt-1.5 bg-[#E2EDBF] rounded-2xl shadow-2xl z-[9999] overflow-hidden border border-black/10 max-h-72 overflow-y-auto"
+          className="absolute left-0 right-0 top-full mt-1.5 bg-[#E2EDBF] rounded-2xl shadow-2xl z-9999 overflow-hidden border border-black/10 max-h-72 overflow-y-auto"
         >
           {filtered.length === 0 ? (
             <p className="px-4 py-3 text-[11px] font-bold text-[#5F624F] uppercase tracking-wider">

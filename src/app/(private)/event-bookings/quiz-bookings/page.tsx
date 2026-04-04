@@ -129,7 +129,7 @@ export default async function QuizBookingsPage({
       <div className="p-3 md:p-8 max-w-7xl mx-auto space-y-5 text-left">
         
         {/* Full-width Event Selection Section */}
-        <div className="w-full bg-white rounded-2xl border border-[#E6DFC8] shadow-sm p-1.5 overflow-hidden">
+        <div className="w-full bg-white rounded-2xl border border-[#E6DFC8] shadow-sm p-1.5">
           <QuizEventFilter events={quizEvents} selectedDate={selectedDate} />
         </div>
 
