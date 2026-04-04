@@ -348,7 +348,9 @@ export default async function DashboardPage() {
       eventType: et,
       hostName: ev.host_employee_id ? (employeeMap.get(ev.host_employee_id) ?? null) : null,
       guests: confirmedGuests,
-      href: `/event-bookings/event/${ev.id}`,
+      href: isQuiz
+        ? `/event-bookings/quiz-bookings?date=${ev.date}&eventId=${ev.id}`
+        : `/event-bookings/event/${ev.id}`,
       quizDetails,
       bingoDetails,
     };

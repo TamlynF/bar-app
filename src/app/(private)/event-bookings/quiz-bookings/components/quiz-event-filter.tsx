@@ -49,6 +49,7 @@ export default function QuizEventFilter({
   const handleSelect = (event: QuizEvent) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set("date", event.date);
+    params.set("eventId", event.id);
     router.push(`?${params.toString()}`);
     setQuery("");
     setOpen(false);

@@ -85,10 +85,11 @@ function formatTime(t?: string | null): string {
 export default async function QuizBookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ date?: string }>;
+  searchParams: Promise<{ date?: string; eventId?: string }>;
 }) {
   const params = await searchParams;
   const selectedDate = params.date;
+  const selectedEventId = params.eventId ?? null;
 
   const type = "games";
   const subType = "quiz";
@@ -102,7 +103,7 @@ export default async function QuizBookingsPage({
   }));
 
   // 2. Fetch current bookings
-  const allBookings = await getBookings(type, subType, selectedDate || null);
+  const allBookings = await getBookings(type, subType, selectedDate || null, selectedEventId);
   const quizBookings = (allBookings as unknown as Booking[]) ?? [];
 
   // 3. Fetch all physical tables
@@ -111,7 +112,7 @@ export default async function QuizBookingsPage({
 
   // 4. Fetch event details + quiz stats for selected date
   const eventDetails = selectedDate
-    ? await getEventDetails(selectedDate, type, subType)
+    ? await getEventDetails(selectedDate, type, subType, selectedEventId)
     : null;
 
   const quizStats = eventDetails

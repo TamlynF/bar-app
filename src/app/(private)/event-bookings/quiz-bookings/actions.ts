@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 
-export async function getBookings(type: string, subType: string, selectedDate: string | null) {
+export async function getBookings(type: string, subType: string, selectedDate: string | null, selectedEventId?: string | null) {
   try {
     const supabase = await createClient()
 
@@ -63,6 +63,9 @@ export async function getBookings(type: string, subType: string, selectedDate: s
 
     if (selectedDate) {
       query = query.eq("events.date", selectedDate);
+    }
+    if (selectedEventId) {
+      query = query.eq("event_id", selectedEventId);
     }
 
     const { data: bookings, error } = await query;
@@ -160,10 +163,10 @@ export async function getAvailableTables() {
   }
 }
 
-export async function getEventDetails(date: string, type: string, subType: string) {
+export async function getEventDetails(date: string, type: string, subType: string, eventId?: string | null) {
   try {
     const supabase = await createClient();
-    const { data, error } = await supabase
+    let query = supabase
       .from("events")
       .select(`
         id,
@@ -174,11 +177,16 @@ export async function getEventDetails(date: string, type: string, subType: strin
         payment_amount,
         host:employees!events_host_employee_id_fkey(full_name),
         event_types!inner(category: type, sub_type)
-      `)
-      .eq("date", date)
-      .ilike("event_types.type", type)
-      .ilike("event_types.sub_type", subType)
-      .maybeSingle();
+      `);
+    if (eventId) {
+      query = query.eq("id", eventId);
+    } else {
+      query = query
+        .eq("date", date)
+        .ilike("event_types.type", type)
+        .ilike("event_types.sub_type", subType);
+    }
+    const { data, error } = await query.maybeSingle();
     if (error) return null;
     return data;
   } catch { return null; }
