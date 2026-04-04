@@ -1375,6 +1375,9 @@
       border-color: color-mix(in oklab, var(--color-yellow-500) 50%, transparent);
     }
   }
+   .border-yellow-500 {
+    border-color: var(--color-yellow-500);
+  }
   .bg-\[\#1a2109\] {
     background-color: #1a2109;
   }
@@ -1404,6 +1407,9 @@
   }
   .bg-\[\#fdcc4b\]\/10 {
     background-color: color-mix(in oklab, #fdcc4b 10%, transparent);
+  }
+  .bg-\[\#efdc9f\] {
+    background-color: #efdc9f;
   }
   .bg-accent {
     background-color: var(--accent);

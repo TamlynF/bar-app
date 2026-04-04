@@ -404,7 +404,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                   {/* Mobile: role + status badges */}
                   <div className="flex items-center gap-1.5 mt-1 sm:hidden flex-wrap">
                     <span className="text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-0.5 rounded-lg">
-                      {employee.role || "No role"}
+                      {toTitleCase(employee.role) || "No role"}
                     </span>
                     <span className={cn(
                       "text-[10px] font-black px-2 py-0.5 rounded-lg border",
@@ -453,7 +453,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
+          className="bg-[#efdc9f] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
             sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px]
             sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6
@@ -484,9 +484,9 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                   onClick={() => handlePasswordReset(selected.email)}
                   disabled={isPending}
                   title="Send password reset email"
-                  className="shrink-0 h-10 px-3 rounded-xl border-2 border-[#E6DFC8] text-[#5F624F] font-black bg-white hover:bg-[#F7F4EA] text-[10px] uppercase tracking-widest flex items-center gap-2"
+                  className="shrink-0 h-10 px-3 rounded-xl border-2 border-yellow-500 text-yellow-700 font-black bg-white hover:bg-[#F7F4EA] text-[10px] uppercase tracking-widest flex items-center gap-2"
                 >
-                  <KeyRound className="w-4 h-4" />
+                  <KeyRound className="w-4 h-4 text-yellow-700" />
                   <span className="sm:inline">Reset Password</span>
                 </Button>
               )}
@@ -494,7 +494,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0 touch-pan-y overscroll-contain space-y-4">
+          <div className="flex-1 overflow-y-auto px-6 py-4 min-h-0 touch-pan-y overscroll-contain space-y-4">
 
             {/* ── VIEW MODE ── */}
             {!showForm && selected && (() => {
@@ -503,25 +503,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
               const isLeave = status === "leave";
               const phone = [selected.country_code, selected.phone_no].filter(Boolean).join(" ");
               return (
-                <div className="space-y-4 animate-in fade-in duration-200">
-
-                  {/* Status banner */}
-                  <div className={cn(
-                    "flex items-center gap-3 px-5 py-4 rounded-2xl border-2",
-                    isActive ? "bg-green-50 border-green-200"
-                      : isLeave ? "bg-amber-50 border-amber-200"
-                      : "bg-red-50 border-red-200"
-                  )}>
-                    {isActive
-                      ? <CheckCircle2 className="w-5 h-5 text-green-600 shrink-0" />
-                      : <XCircle className={cn("w-5 h-5 shrink-0", isLeave ? "text-amber-500" : "text-red-500")} />}
-                    <span className={cn(
-                      "text-sm font-black uppercase tracking-widest",
-                      isActive ? "text-green-700" : isLeave ? "text-amber-700" : "text-red-600"
-                    )}>
-                      {isActive ? "Active" : isLeave ? "On Leave" : "Inactive"}
-                    </span>
-                  </div>
+                <div className="space-y-2 animate-in fade-in duration-200">
 
                   {/* Info grid */}
                   <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y-2 divide-[#E6DFC8]">
@@ -840,7 +822,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
 
 function DetailCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="px-5 py-4">
+    <div className="px-5 py-2.5">
       <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">{label}</p>
       <p className="text-sm font-black text-[#1F1F1A] leading-snug wrap-break-word">{value}</p>
     </div>

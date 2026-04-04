@@ -43,7 +43,8 @@
       "Bash(npx tsc:*)",
       "Bash(sed:*)",
       "Bash(npx shadcn@latest add dialog --yes)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(grep -n \"^  return\\\\|^    return\\\\|</div>$\" \"/c/RN/bar-app/src/app/\\(private\\)/event-bookings/quiz-bookings/components/booking-list-client.tsx\")"
     ]
   }
 }
