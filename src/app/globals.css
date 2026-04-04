@@ -5014,6 +5014,8 @@
   .badge-hire  { background-color: rgb(134 239 172 / 0.2); color: #86EFAC; }
   .input-scheme-dark { color-scheme: dark; box-sizing: border-box; max-width: 100%; }
   .capacity-fill { width: var(--bar-width, 0%); }
+  .border-slate-400 { border-color: var(--color-slate-400); }
+  .focus-within\:border-slate-400:focus-within { border-color: var(--color-slate-400); }
   .divide-gray-300 > :not(:last-child) { border-color: var(--color-gray-300); }
   .bg-dropdown { background-color: #E2EDBF; }
   .bg-red-600 { background-color: var(--color-red-600); }

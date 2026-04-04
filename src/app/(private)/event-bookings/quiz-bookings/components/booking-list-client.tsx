@@ -474,21 +474,29 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         </div>
 
         {/* Search row */}
-        <div className="flex items-center gap-3 h-12 px-4">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            <Search className="w-3 h-3 text-slate-400 shrink-0" />
-            <Input
+        <div className="flex justify-center px-4 mb-3">
+        <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm rounded-xl border border-slate-200 focus-within:border-slate-400 transition-colors">
+          <div className="flex items-center gap-2 flex-1 min-w-0">
+            <Search className="w-4 h-4 text-slate-400 shrink-0" />
+            <input
+              type="text"
               placeholder="Search team names or guests..."
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              className="flex-1 min-w-0 bg-transparent text-sm font-black text-slate-900 uppercase tracking-tight outline-none placeholder:text-slate-400 placeholder:normal-case placeholder:font-medium placeholder:tracking-normal"
+              className="flex-1 min-w-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
             />
           </div>
-          {activeStatusFilters.size > 0 && (
-            <button type="button" title="Cancel" onClick={() => setActiveStatusFilters(new Set())} className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors">
+          {(activeStatusFilters.size > 0 || searchQuery.length > 0) && (
+            <button
+              type="button"
+              title="Cancel"
+              onClick={() => { setActiveStatusFilters(new Set()); setSearchQuery(""); }}
+              className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors"
+            >
               <X className="w-3.5 h-3.5 text-slate-400" />
             </button>
           )}
+        </div>
         </div>
       </div>
 
