@@ -30,12 +30,12 @@ export default function TonightCard({
   return (
     <div className="bg-white border-2 border-[#E6DFC8] rounded-[2rem] overflow-hidden shadow-sm">
       <Link href={bookingsHref} className="block">
-        <div className="bg-[#26300D] px-6 py-5 text-white flex items-start justify-between gap-4">
+        <div className="bg-[#26300D] px-6 py-3 sm:py-5 text-white flex items-start justify-between gap-2 sm:gap-4">
           <div className="min-w-0">
             <span className="bg-[#FDCC4B] text-[#26300D] text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-widest">
               Tonight
             </span>
-            <h3 className="text-xl font-black uppercase tracking-tight mt-2 leading-none truncate">
+            <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight mt-2 leading-none truncate">
               {event.title ?? "Untitled Event"}
             </h3>
             <p className="text-sm text-white/60 mt-1.5 flex items-center gap-2 flex-wrap">
@@ -54,22 +54,22 @@ export default function TonightCard({
               )}
             </p>
           </div>
-          <div className="flex items-start gap-4 shrink-0">
+          <div className="flex items-start gap-2 sm:gap-4 shrink-0">
             {isQuiz && (
               <>
                 <div className="text-right">
-                  <p className="text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
+                  <p className="text-lg sm:text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
                     {confirmedTeams}
                   </p>
                   <p className="text-[9px] font-black uppercase tracking-widest text-white/50 mt-1">
                     Teams
                   </p>
                 </div>
-                <div className="w-px self-stretch bg-white/10" />
+                {/* <div className="w-px self-stretch bg-white/10" /> */}
               </>
             )}
             <div className="text-right">
-              <p className="text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
+              <p className="text-lg sm:text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
                 {guests}
               </p>
               <p className="text-[9px] font-black uppercase tracking-widest text-white/50 mt-1">

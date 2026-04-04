@@ -336,7 +336,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         {toTitleCase(typeKey)}
                       </h4>
                       <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shrink-0">
-                        {items.length} {items.length === 1 ? 'Category' : 'Categories'}
+                        {items.length} {items.length === 1 ? 'Sub-Cat' : 'Sub-Cats'}
                       </span>
                     </div>
                   </button>
@@ -361,7 +361,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           setIsTypeSheetOpen(true);
                         }}
                       >
-                        <Plus className="w-3 h-3 mr-1" /> Category
+                        <Plus className="w-3 h-3 mr-1" /> Sub-Category
                       </Button>
 
                       {items.length > 0 && (
@@ -407,6 +407,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                     {/* MOBILE ACTIONS: 3-Dot Menu */}
                     <div className="sm:hidden">
+
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground" onClick={(e) => e.stopPropagation()}>
@@ -414,21 +415,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="z-9999">
-                          <DropdownMenuItem onClick={() => {
-                            const val = toTitleCase(typeKey);
-                            const defaultSubType = "";
-                            setEditingType({ type: val, sub_type: defaultSubType });
-                            setSelectedTypeValue(val);
-                            setSheetMode('subtype');
-                            setTypeSheetError(null);
-                            setIsCustomType(false);
-                            setTypeInput(val);
-                            setSubTypeInput(defaultSubType);
-                            setIsTypeSheetOpen(true);
-                          }}>
-                            <Plus className="w-4 h-4 mr-2" /> Category
-                          </DropdownMenuItem>
-
                           {items.length > 0 && (
                             <>
                               <DropdownMenuItem onClick={() => {
@@ -457,6 +443,20 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                               </DropdownMenuItem>
                             </>
                           )}
+                          <DropdownMenuItem onClick={() => {
+                            const val = toTitleCase(typeKey);
+                            const defaultSubType = "";
+                            setEditingType({ type: val, sub_type: defaultSubType });
+                            setSelectedTypeValue(val);
+                            setSheetMode('subtype');
+                            setTypeSheetError(null);
+                            setIsCustomType(false);
+                            setTypeInput(val);
+                            setSubTypeInput(defaultSubType);
+                            setIsTypeSheetOpen(true);
+                          }}>
+                            <Plus className="w-4 h-4 mr-2" /> Sub-Category
+                          </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -469,7 +469,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                 {/* Sub-types List */}
                 {isGroupExpanded && (
-                  <div className="p-2 space-y-2 bg-background/50 border-t border-slate-100 dark:border-slate-800">
+                  <div className="py-2 px-4 mr-4 space-y-2 bg-background/50 border-t border-slate-100 dark:border-slate-800">
                     {items.map((item) => (
                       <div key={item.id} className="border rounded-xl bg-card overflow-hidden border-slate-200 dark:border-slate-800">
                         <div className="p-1 flex items-center justify-between">
@@ -478,9 +478,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             onClick={() => toggleSubtypeExpand(item.id)}
                             className="flex-1 flex items-center gap-3 p-2 hover:bg-muted/5 transition-colors text-left"
                           >
-                            <div className="shrink-0">
+                            {/* <div className="shrink-0">
                               {expandedSubtype === item.id ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
-                            </div>
+                            </div> */}
                             <span className="font-bold text-sm text-foreground">
                               {toTitleCase(item.sub_type)}
                             </span>
@@ -556,6 +556,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
+                            </div>
+                            <div className="shrink-0">
+                              {expandedSubtype === item.id ? <ChevronDown className="w-4 h-4 text-primary" /> : <ChevronRight className="w-4 h-4 text-muted-foreground" />}
                             </div>
                           </div>
                         </div>

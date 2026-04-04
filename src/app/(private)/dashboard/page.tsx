@@ -18,11 +18,12 @@ import {
   Clock,
   Zap,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+
 import SectionLabel from "./components/section-label";
 import { EventRowListClient } from "./components/event-row-list-client";
 import TonightCard from "./components/tonight-card";
 import StatCard from "./components/stat-card";
+import ActionRow from "./components/action-row";
 
 export const dynamic = "force-dynamic";
 
@@ -423,14 +424,14 @@ export default async function DashboardPage() {
     <div className="flex-1 bg-background min-h-screen pb-24">
       <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-8">
 
-        <header className="flex justify-end">
+        <header className="flex justify-center">
           <p className="text-sm font-bold text-[#5F624F] uppercase tracking-widest">
             {format(new Date(), "EEEE, do MMMM yyyy")}
           </p>
         </header>
 
         {/* SECTION A: NEEDS ACTION */}
-        <section className="space-y-3">
+        <section className="space-y-2">
           <SectionLabel
             icon={BellRing}
             label="Needs Action"
@@ -575,56 +576,6 @@ export default async function DashboardPage() {
 
 
 
-function ActionRow({
-  label,
-  count,
-  icon: Icon,
-  href,
-  activeColor,
-  activeBg,
-  activeDot,
-}: {
-  label: string;
-  count: number;
-  icon: React.ElementType;
-  href: string;
-  activeColor: string;
-  activeBg: string;
-  activeDot: string;
-}) {
-  const hasItems = count > 0;
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-3 px-4 py-3 hover:bg-[#F7F4EA] transition-colors active:bg-[#E6DFC8]"
-    >
-      <div
-        className={cn(
-          "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
-          hasItems ? activeBg : "bg-[#F7F4EA]"
-        )}
-      >
-        <Icon className={cn("w-4 h-4", hasItems ? activeColor : "text-[#5F624F]")} />
-      </div>
-      <span className="flex-1 text-[11px] font-black uppercase tracking-widest text-[#1F1F1A]">
-        {label}
-      </span>
-      <div className="flex items-center gap-2 shrink-0">
-        <span
-          className={cn(
-            "text-sm font-black tabular-nums px-2.5 py-0.5 rounded-full",
-            hasItems
-              ? `${activeBg} ${activeColor}`
-              : "bg-[#F7F4EA] text-[#5F624F]"
-          )}
-        >
-          {count}
-        </span>
-        <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40" />
-      </div>
-    </Link>
-  );
-}
 
 function QuickLink({
   href,
