@@ -7,6 +7,17 @@ import { revalidatePath } from "next/cache";
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
+export async function getBandBookingById(id: string) {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("band_booking_requests")
+    .select("*")
+    .eq("id", id)
+    .single();
+  if (error || !data) throw new Error("Band booking not found");
+  return data;
+}
+
 export async function updateBandStatus(
   id: string,
   status: "confirmed" | "rejected",
