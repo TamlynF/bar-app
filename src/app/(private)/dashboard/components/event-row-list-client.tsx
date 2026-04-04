@@ -85,6 +85,11 @@ function badgeLabel(eventType: EventTypeRow): string {
     return raw.charAt(0).toUpperCase() + raw.slice(1).replace(/-/g, " ");
 }
 
+function toTitleCase(str?: string | null) {
+  if (!str) return "";
+  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+}
+
 export function EventRowListClient({ items }: { items: ListItem[] }) {
     const [expandedId, setExpandedId] = useState<string | null>(null);
 
@@ -409,13 +414,13 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                 {item.bandDetails.actType && (
                                                     <div>
                                                         <p className="text-[#5F624F] font-medium">Type</p>
-                                                        <p className="font-black text-[#1F1F1A] capitalize">{item.bandDetails.actType}</p>
+                                                        <p className="font-black text-[#1F1F1A] capitalize">{toTitleCase(item.bandDetails.actType)}</p>
                                                     </div>
                                                 )}
                                                 {item.bandDetails.genre && (
                                                     <div>
                                                         <p className="text-[#5F624F] font-medium">Genre</p>
-                                                        <p className="font-black text-[#1F1F1A] capitalize">{item.bandDetails.genre}</p>
+                                                        <p className="font-black text-[#1F1F1A] capitalize">{toTitleCase(item.bandDetails.genre)}</p>
                                                     </div>
                                                 )}
                                             </div>

@@ -391,7 +391,7 @@ export default async function DashboardPage() {
     title: b.group_name || b.booker_name,
     startTime: b.selected_start_time,
     endTime: b.selected_end_time,
-    eventType: { type: "Live Music", sub_type: "band" } as EventTypeRow,
+    eventType: { type: "Live Music", sub_type: b.type } as EventTypeRow,
     hostName: null,
     guests: 0,
     href: `/event-bookings/music-bookings/${b.id}`,
