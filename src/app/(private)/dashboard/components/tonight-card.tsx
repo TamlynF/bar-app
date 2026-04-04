@@ -28,9 +28,9 @@ export default function TonightCard({
     : 0;
 
   return (
-    <div className="bg-white border-2 border-[#E6DFC8] rounded-[2rem] overflow-hidden shadow-sm">
-      <Link href={bookingsHref} className="block">
-        <div className="bg-[#26300D] px-6 py-3 sm:py-5 text-white flex items-start justify-between gap-2 sm:gap-4">
+    <div className="bg-white border-2 border-[#E6DFC8] rounded-[2rem] overflow-hidden shadow-sm rounded-t-[2rem]">
+      <Link href={bookingsHref} className="block rounded-[2rem]">
+        <div className="bg-[#26300D] px-6 py-3 sm:py-5 text-white flex items-start justify-between gap-2 sm:gap-4 rounded-t-[2rem]">
           <div className="min-w-0">
             <span className="bg-[#FDCC4B] text-[#26300D] text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-widest">
               Tonight
