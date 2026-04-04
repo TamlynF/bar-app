@@ -23,7 +23,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
 
   const videos = (request.video_urls ?? []).filter(Boolean);
 
-  function handleAction(status: "confirmed" | "rejected") {
+  function handleAction(status: "approved" | "rejected") {
     setError(null);
     startTransition(async () => {
       try {
@@ -101,7 +101,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => handleAction("confirmed")}
+              onClick={() => handleAction("approved")}
               disabled={isPending}
               className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl py-4 transition-all disabled:opacity-50"
             >
@@ -110,7 +110,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
               ) : (
                 <CheckCircle className="w-4 h-4" />
               )}
-              Confirm
+              Approve
             </button>
             <button
               type="button"

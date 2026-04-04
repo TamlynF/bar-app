@@ -20,11 +20,11 @@ export async function getBandBookingById(id: string) {
 
 export async function updateBandStatus(
   id: string,
-  status: "confirmed" | "rejected",
+  status: "approved" | "rejected",
   adminNotes?: string
 ) {
   const supabase = await createClient();
-
+  console.log("Updating band status:", { id, status, adminNotes });
   const { data: record, error } = await supabase
     .from("band_booking_requests")
     .update({ status, admin_notes: adminNotes || null })
@@ -32,7 +32,10 @@ export async function updateBandStatus(
     .select("booker_name, email")
     .single();
 
-  if (error || !record) throw new Error("Failed to update status.");
+  if (error || !record) {
+    console.log("Supabase error:", error);
+    throw new Error("Failed to update status.");
+  } 
 
   await sendOutcomeEmail(record.booker_name, record.email, status, adminNotes);
 
@@ -43,11 +46,11 @@ export async function updateBandStatus(
 async function sendOutcomeEmail(
   name: string,
   email: string,
-  status: "confirmed" | "rejected",
+  status: "approved" | "rejected",
   notes?: string | null
 ) {
-  const isConfirmed = status === "confirmed";
-  const subject = isConfirmed
+  const isApproved = status === "approved";
+  const subject = isApproved
     ? "Your Band Application Has Been Approved! 🎸"
     : "Update on Your Band Application — Don Fenticas";
 
@@ -55,7 +58,7 @@ async function sendOutcomeEmail(
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
       <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
         <h2 style="margin-top:0;color:#111827;">Hey ${name}!</h2>
-        <p>${isConfirmed
+        <p>${isApproved
           ? "Great news! Your application to perform at Don Fenticas has been <strong>approved</strong>. We'll be in touch with the next steps."
           : "Thank you for applying to perform at Don Fenticas. After reviewing your application, we're unable to proceed at this time."}</p>
         ${notes ? `<div style="background:#f3f4f6;padding:16px;border-radius:8px;margin:20px 0;"><p style="margin:0;"><strong>Note from our team:</strong> ${notes}</p></div>` : ""}

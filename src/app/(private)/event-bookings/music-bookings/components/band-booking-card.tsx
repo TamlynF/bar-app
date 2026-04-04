@@ -64,8 +64,8 @@ const STATUS_CONFIG: Record<
     badge: "bg-amber-50 text-amber-700 border-amber-200",
     icon: Clock,
   },
-  confirmed: {
-    label: "Confirmed",
+  approved: {
+    label: "Approved",
     cardBorder: "border-l-green-500",
     badge: "bg-green-50 text-green-700 border-green-200",
     icon: CheckCircle,
@@ -112,7 +112,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const videos = (request.video_urls ?? []).filter(Boolean);
   const dates = (request.preferred_dates ?? []).filter(Boolean);
 
-  function handleAction(status: "confirmed" | "rejected") {
+  function handleAction(status: "approved" | "rejected") {
     setError(null);
     startTransition(async () => {
       try {
@@ -372,7 +372,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <div className="flex gap-2 pb-2">
                   <button
                     type="button"
-                    onClick={() => handleAction("confirmed")}
+                    onClick={() => handleAction("approved")}
                     disabled={isPending}
                     className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
                   >
@@ -381,7 +381,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     ) : (
                       <CheckCircle className="w-3.5 h-3.5" />
                     )}
-                    Confirm
+                    Approve
                   </button>
                   <button
                     type="button"

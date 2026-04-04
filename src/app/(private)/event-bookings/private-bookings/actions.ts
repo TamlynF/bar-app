@@ -32,8 +32,10 @@ export async function updatePrivateHireStatus(
     .select("full_name, email")
     .single();
 
-  if (error || !record) throw new Error("Failed to update status.");
-
+  if (error || !record) {
+    console.log("Supabase error:", error); 
+    throw new Error("Failed to update status.");
+  }
   await sendOutcomeEmail(record.full_name, record.email, status, adminNotes);
 
   revalidatePath("/event-bookings/private-bookings");
