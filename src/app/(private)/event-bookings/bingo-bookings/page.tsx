@@ -149,14 +149,12 @@ export default async function BingoBookingsPage({
                 <div className="flex flex-col gap-1 items-center">
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Paid</span>
                   <div className="flex items-center gap-1">
-                    <DollarSign className="w-3.5 h-3.5 text-green-600 opacity-70 shrink-0" />
                     <span className="text-xs font-black text-green-700 tabular-nums">£{totalPaid.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 items-center">
                   <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Outstanding</span>
                   <div className="flex items-center gap-1">
-                    <DollarSign className="w-3.5 h-3.5 shrink-0 opacity-50" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }} />
                     <span className="text-xs font-black tabular-nums" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }}>
                       £{totalOutstanding.toFixed(2)}
                     </span>
@@ -219,12 +217,10 @@ export default async function BingoBookingsPage({
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5">
-                      <DollarSign className="w-3.5 h-3.5 text-green-600 opacity-70 shrink-0" />
                       <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Paid</span>
                       <span className="text-xs font-black text-green-700 tabular-nums">£{totalPaid.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <DollarSign className="w-3.5 h-3.5 shrink-0 opacity-60" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }} />
                       <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Outstanding</span>
                       <span className="text-xs font-black tabular-nums" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }}>
                         £{totalOutstanding.toFixed(2)}
