@@ -294,6 +294,7 @@ export default function PrivateLayoutClient({
                 {/* Sidebar Footer */}
                 <div className="p-4 border-t border-[#E6DFC8] space-y-2">
                     <button
+                        type="button"
                         onClick={handleSignOut}
                         disabled={isPending}
                         className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-[#5F624F] hover:bg-red-50 hover:text-red-600 transition-all duration-200 font-bold text-xs uppercase tracking-wider disabled:opacity-50"

@@ -199,6 +199,7 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
           </div>
           <div className="flex flex-col gap-3 pt-2">
             <button
+              type="button"
               onClick={handleSave}
               disabled={isPending}
               className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
@@ -206,6 +207,7 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
               {isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6 mr-2" />Save Changes</>}
             </button>
             <button
+              type="button"
               onClick={() => { setIsEditing(false); setSpecialRequests(booking.special_requests ?? ""); }}
               disabled={isPending}
               className="w-full h-14 rounded-2xl border-2 border-white/10 text-stone-400 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all"
@@ -259,6 +261,7 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
           {!isCancelled && (
             <div className="space-y-3">
               <button
+                type="button"
                 onClick={() => setIsEditing(true)}
                 disabled={isPending}
                 className="flex items-center justify-center w-full h-16 rounded-2xl bg-[#fdcc4b] text-[#26300D] font-black text-sm uppercase tracking-widest transition-all hover:bg-[#e5b843] hover:-translate-y-0.5 shadow-lg active:scale-95 disabled:opacity-50"
@@ -266,6 +269,7 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
                 Edit Special Requests
               </button>
               <button
+                type="button"
                 onClick={handleCancel}
                 disabled={isPending}
                 className="flex items-center justify-center w-full h-16 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-xs uppercase tracking-widest transition-all hover:bg-red-500 hover:text-white hover:-translate-y-0.5 active:scale-95 disabled:opacity-50"

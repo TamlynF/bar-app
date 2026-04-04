@@ -62,12 +62,14 @@ export function useConfirm() {
               </div>
               <div className="px-6 pb-6 flex flex-row gap-2">
                 <button
+                  type="button"
                   onClick={handleCancel}
                   className="flex-1 h-11 rounded-xl border-2 border-[#E6DFC8] bg-white text-[10px] font-black uppercase tracking-widest text-[#5F624F] hover:bg-[#F7F4EA] transition-colors"
                 >
                   {options.cancelLabel ?? "Cancel"}
                 </button>
                 <button
+                  type="button"
                   onClick={handleConfirm}
                   className={
                     isDestructive

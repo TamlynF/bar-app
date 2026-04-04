@@ -174,6 +174,7 @@ export default function BingoBookingListClient({
           >
             {/* Collapsed row */}
             <button
+              type="button"
               onClick={() => setExpandedId(isExpanded ? null : b.id)}
               className="w-full flex items-center gap-3 px-5 py-4 hover:bg-[#F7F4EA]/60 transition-colors text-left"
             >
@@ -241,6 +242,7 @@ export default function BingoBookingListClient({
                 <div className="flex gap-2 flex-wrap pt-1">
                   {b.status !== "confirmed" && b.payment_status === "paid" && (
                     <button
+                      type="button"
                       onClick={() => handleStatus(b.id, "confirmed")}
                       disabled={isLoading}
                       className="flex items-center gap-1.5 h-10 px-4 rounded-xl bg-green-600 text-white text-[10px] font-black uppercase tracking-widest hover:bg-green-700 disabled:opacity-50"
@@ -251,6 +253,7 @@ export default function BingoBookingListClient({
                   )}
                   {b.status !== "cancelled" && (
                     <button
+                      type="button"
                       onClick={() => handleStatus(b.id, "cancelled")}
                       disabled={isLoading}
                       className="flex items-center gap-1.5 h-10 px-4 rounded-xl border-2 border-red-200 text-red-600 bg-red-50 text-[10px] font-black uppercase tracking-widest hover:bg-red-100 disabled:opacity-50"
@@ -261,6 +264,7 @@ export default function BingoBookingListClient({
                   )}
                   {b.payment_status === "paid" && (
                     <button
+                      type="button"
                       onClick={() => handleRefund(b.id)}
                       disabled={isLoading}
                       className="flex items-center gap-1.5 h-10 px-4 rounded-xl border-2 border-[#E6DFC8] text-[#5F624F] bg-white text-[10px] font-black uppercase tracking-widest hover:bg-[#F7F4EA] disabled:opacity-50"

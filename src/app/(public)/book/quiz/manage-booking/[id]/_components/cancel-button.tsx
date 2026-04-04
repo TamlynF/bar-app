@@ -319,6 +319,7 @@ export default function CancelButton({
 
           <div className="flex flex-col gap-3 pt-4">
             <button
+              type="button"
               onClick={handleUpdate}
               disabled={isUpdating || !!nameError || isCheckingName || isCheckingSeating}
               className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
@@ -326,6 +327,7 @@ export default function CancelButton({
               {isUpdating ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6 mr-2" /> Update Record</>}
             </button>
             <button
+              type="button"
               onClick={() => {
                 setIsEditing(false);
                 setTeamName(booking.group_name || "");
@@ -365,6 +367,7 @@ export default function CancelButton({
           {!isCancelled && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
+                type="button"
                 onClick={() => setIsEditing(true)}
                 disabled={isCancelling}
                 className="flex items-center justify-center w-full h-16 rounded-2xl bg-[#fdcc4b] text-[#26300D] font-black text-sm uppercase tracking-widest transition-all hover:bg-[#e5b843] hover:-translate-y-0.5 shadow-lg active:scale-95 disabled:opacity-50"
@@ -373,6 +376,7 @@ export default function CancelButton({
               </button>
 
               <button
+                type="button"
                 onClick={handleCancel}
                 disabled={isCancelling}
                 className="flex items-center justify-center w-full h-16 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-xs uppercase tracking-widest transition-all hover:bg-red-500 hover:text-white hover:-translate-y-0.5 active:scale-95 disabled:opacity-50"

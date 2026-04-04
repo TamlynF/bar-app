@@ -337,7 +337,8 @@ function CollapsibleSection({
   return (
     <div className="space-y-3">
       {/* Header acting as the toggle button */}
-      <button 
+      <button
+        type="button"
         onClick={onToggle}
         className="w-full flex items-center justify-between px-1 group outline-none focus-visible:ring-2 focus-visible:ring-[#26300D] rounded-xl"
       >
