@@ -65,6 +65,10 @@ interface SelectableEvent {
 export default function BingoBookingListClient({
   bookings,
   selectedDate,
+  filterStatus,
+  filterPaymentStatus,
+  filterFromDate,
+  filterMinTotal,
 }: {
   bookings: BingoBooking[];
   selectedDate?: string;
@@ -77,6 +81,7 @@ export default function BingoBookingListClient({
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set());
+  const [activePaymentStatusFilters, setActivePaymentStatusFilters] = useState<Set<string>>(new Set());
   const [selectedBooking, setSelectedBooking] = useState<BingoBooking | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [availableTables, setAvailableTables] = useState<SelectableTable[]>([]);
