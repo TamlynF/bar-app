@@ -323,7 +323,7 @@ export default function PrivateLayoutClient({
                                     title="Go back"
                                     type="button"
                                     onClick={() => router.back()}
-                                    className="sm:hidden absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
+                                    className="absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
                                 >
                                     <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
                                 </button>
@@ -331,7 +331,7 @@ export default function PrivateLayoutClient({
                                 <Link
                                     href={backHref}
                                     title="Go back"
-                                    className="sm:hidden absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
+                                    className="absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
                                 >
                                     <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
                                 </Link>
