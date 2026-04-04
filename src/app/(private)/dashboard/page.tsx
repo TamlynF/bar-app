@@ -350,6 +350,8 @@ export default async function DashboardPage() {
       guests: confirmedGuests,
       href: isQuiz
         ? `/event-bookings/quiz-bookings?date=${ev.date}&eventId=${ev.id}`
+        : isBingo
+        ? `/event-bookings/bingo-bookings?date=${ev.date}&eventId=${ev.id}`
         : `/event-bookings/event/${ev.id}`,
       quizDetails,
       bingoDetails,
