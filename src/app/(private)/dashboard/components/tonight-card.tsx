@@ -1,35 +1,34 @@
 import Link from "next/link";
 import { ChevronRight, Clock, Grid2X2, Plus, Trophy, UserCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { UpcomingEvent, getEventType, getBookingsHref } from "../page";
+import { UpcomingEvent, getEventType, getBookingsHref, ListItem } from "../page";
 
 export default function TonightCard({
   event,
-  hostName,
   guests,
   capacity,
   capacityPercent,
 }: {
-  event: UpcomingEvent;
-  hostName: string;
+  event: ListItem;
   guests: number;
   capacity: number;
   capacityPercent: number;
-}) {
-  const et = getEventType(event);
+  }) {
+  console.log("TonightCard event:", event);
+  const et = event.eventType ?? null;
   const isQuiz = et?.sub_type?.toLowerCase().includes("quiz") || et?.type?.toLowerCase().includes("quiz");
-  const bookingsHref = getBookingsHref(et);
+  const isBingo = et?.sub_type?.toLowerCase().includes("bingo") || et?.type?.toLowerCase().includes("bingo");
   const confirmedTeams = isQuiz
-    ? new Set(
-        event.bookings
-          .filter((b) => b.status === "confirmed")
-          .map((b) => b.group_name)
-      ).size
-    : 0;
+    ? event.quizDetails?.tablesAssigned                                                                                                                                                                                      
+    : isBingo
+    ? event.bingoDetails?.tablesAssigned
+      : undefined;
+  
+
 
   return (
     <div className="bg-white border-2 border-[#E6DFC8] rounded-[2rem] overflow-hidden shadow-sm rounded-t-[2rem]">
-      <Link href={bookingsHref} className="block rounded-[2rem]">
+      <Link href={event.href} className="block rounded-[2rem]">
         <div className="bg-[#26300D] px-6 py-3 sm:py-5 text-white flex items-start justify-between gap-2 sm:gap-4 rounded-t-[2rem]">
           <div className="min-w-0">
             <span className="bg-[#FDCC4B] text-[#26300D] text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-widest">
@@ -41,14 +40,14 @@ export default function TonightCard({
             <p className="text-sm text-white/60 mt-1.5 flex items-center gap-2 flex-wrap">
               <span className="flex items-center gap-1.5">
                 <UserCheck className="w-3.5 h-3.5" />
-                {hostName}
+                {event.hostName}
               </span>
-              {event.start_time && (
+              {event.startTime && (
                 <>
                   <span className="opacity-30">·</span>
                   <span className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5" />
-                    {event.start_time.substring(0, 5)}
+                    {event.startTime.substring(0, 5)}
                   </span>
                 </>
               )}

@@ -90,7 +90,7 @@ type BingoDetails = {
   totalOutstanding: number;
   tablesAssigned: boolean;
 };
-type ListItem = {
+export type ListItem = {
   key: string;
   date: string;
   title: string;
@@ -288,11 +288,10 @@ export default async function DashboardPage() {
     (employees ?? []).map((e) => [e.id, e.full_name])
   );
 
-  const tonightEvent =
-    upcomingEvents[0]?.date === todayStr ? upcomingEvents[0] : null;
-  const futureEvents = tonightEvent ? upcomingEvents.slice(1) : upcomingEvents;
+  //const tonightEvent = upcomingEvents[0]?.date === todayStr ? upcomingEvents[0] : null;
+ // const futureEvents = tonightEvent ? upcomingEvents.slice(1) : upcomingEvents;
 
-  const eventListItems: ListItem[] = futureEvents.map((ev) => {
+  const eventListItems: ListItem[] = upcomingEvents.map((ev) => {
     const et = getEventType(ev);
     const confirmedBookings = ev.bookings.filter((b) => b.status === "confirmed");
     const confirmedGuests = confirmedBookings.reduce((s, b) => s + (b.group_size ?? 0), 0);
@@ -359,7 +358,7 @@ export default async function DashboardPage() {
   });
 
   const privateHireListItems: ListItem[] = ((confirmedPrivateHires ?? []) as PrivateHireRow[])
-    .filter((ph) => ph.selected_date !== todayStr || !tonightEvent)
+    .filter((ph) => ph.selected_date >= todayStr)
     .map((ph) => ({
       key: `ph-${ph.id}`,
       date: ph.selected_date,
@@ -409,14 +408,19 @@ export default async function DashboardPage() {
   const allListItems = [...eventListItems, ...privateHireListItems, ...bandListItems]
     .sort((a, b) => a.date.localeCompare(b.date));
 
-  const tonightConfirmed = (tonightEvent?.bookings ?? []).filter(
-    (b) => b.status === "confirmed"
-  );
+  console.log("All List Items:", allListItems);
+  const tonightGeneralEvent = allListItems[0]?.date === todayStr ? allListItems[0] : null;
+   const tonightGuests = tonightGeneralEvent?.guests ?? 0;
 
-  const tonightGuests = tonightConfirmed.reduce(
-    (s, b) => s + (b.group_size ?? 0),
-    0
-  );
+  // const tonightConfirmed = (tonightGeneralEvent ?? []).filter(
+  //   (b) => b.status === "confirmed" || b.status === "approved"
+  // );
+
+  // const tonightGuests = tonightConfirmed.reduce(
+  //   (s, b) => s + (b.group_size ?? 0),
+  //   0
+  // );
+  console.log("tonightgen", tonightGeneralEvent);
   const capacityPercent =
     totalVenueCapacity > 0
       ? Math.min(100, Math.round((tonightGuests / totalVenueCapacity) * 100))
@@ -527,14 +531,9 @@ export default async function DashboardPage() {
         <section className="space-y-3">
           <SectionLabel icon={CalendarDays} label="Upcoming Events" />
 
-          {tonightEvent && (
+          {tonightGeneralEvent && (
             <TonightCard
-              event={tonightEvent}
-              hostName={
-                tonightEvent.host_employee_id
-                  ? (employeeMap.get(tonightEvent.host_employee_id) ?? "Unassigned")
-                  : "Unassigned"
-              }
+              event={tonightGeneralEvent}
               guests={tonightGuests}
               capacity={totalVenueCapacity}
               capacityPercent={capacityPercent}
@@ -543,7 +542,7 @@ export default async function DashboardPage() {
          
            {allListItems.length > 0 ? (
             <EventRowListClient items={allListItems} />
-          ) : !tonightEvent ? (
+          ) : !tonightGeneralEvent ? (
             <div className="bg-white border border-[#E6DFC8] rounded-2xl p-10 text-center">
               <CalendarDays className="w-10 h-10 text-[#5F624F] opacity-20 mx-auto mb-3" />
               <p className="text-sm font-black text-[#1F1F1A]">No Upcoming Events</p>

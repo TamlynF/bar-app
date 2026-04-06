@@ -105,9 +105,6 @@ export default async function PrivateHireDetailPage({
 
         {/* Back link + header */}
         <div className="space-y-3">
-          <div className="hidden sm:block">
-            <BackButton label="All Private Hire Enquiries" />
-          </div>
 
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>

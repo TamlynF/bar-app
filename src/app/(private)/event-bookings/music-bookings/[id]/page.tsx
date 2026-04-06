@@ -103,9 +103,9 @@ export default async function BandBookingDetailPage({
 
         {/* Back link + header */}
         <div className="space-y-3">
-          <div className="hidden sm:block">
+          {/* <div className="hidden sm:block">
             <BackButton label="All Band Applications" />
-          </div>
+          </div> */}
 
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
