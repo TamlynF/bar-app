@@ -34,6 +34,7 @@ import {
 } from "@/app/(private)/event-setups/event-types/actions";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { EVENT_TYPE_COLORS, badgeClassFromColor } from "@/lib/event-type-colors";
 
 const ICON_OPTIONS = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
@@ -52,6 +53,7 @@ export type EventTypeRecord = {
   id: number;
   type: string;
   sub_type: string;
+  badge_color?: string | null;
   event_information: EventInfo[];
 };
 
@@ -76,11 +78,20 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [sheetMode, setSheetMode] = useState<'type' | 'subtype'>('subtype');
   const [activeTypeId, setActiveTypeId] = useState<number | null>(null);
   const [selectedIcon, setSelectedIcon] = useState<string>("");
+  const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const [typeSheetError, setTypeSheetError] = useState<string | null>(null);
   const [isCustomType, setIsCustomType] = useState(false);
   const [selectedTypeValue, setSelectedTypeValue] = useState<string>("");
   const [typeInput, setTypeInput] = useState("");
   const [subTypeInput, setSubTypeInput] = useState("");
+
+  // Sync selectedColor from editingType when the sheet opens
+  useEffect(() => {
+    if (isTypeSheetOpen) {
+      setSelectedColor(editingType?.badge_color ?? null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isTypeSheetOpen]);
 
   const { groupedEventTypes, uniqueTypes } = useMemo(() => {
     const groups: Record<string, EventTypeRecord[]> = {};
@@ -787,6 +798,48 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       Every category needs at least one sub-category to be created.
                     </p>
                   )}
+                </div>
+              )}
+
+              {/* Badge colour picker — shown for sub-type forms only */}
+              {(sheetMode === 'subtype' || !editingType?.id) && (
+                <div className="space-y-3">
+                  <input type="hidden" name="badge_color" value={selectedColor ?? ""} />
+                  <Label className="text-sm font-semibold text-foreground">Badge Colour</Label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {EVENT_TYPE_COLORS.map(c => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => setSelectedColor(selectedColor === c.key ? null : c.key)}
+                        className={cn(
+                          "w-7 h-7 rounded-full border-2 transition-all",
+                          selectedColor === c.key ? "border-[#1F1F1A] scale-110" : "border-transparent hover:border-[#1F1F1A]/30"
+                        )}
+                        style={{ backgroundColor: c.swatch }}
+                        title={c.key}
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedColor(null)}
+                      className={cn(
+                        "w-7 h-7 rounded-full border-2 bg-[#F7F4EA] transition-all",
+                        !selectedColor ? "border-[#1F1F1A] scale-110" : "border-[#E6DFC8] hover:border-[#1F1F1A]/30"
+                      )}
+                      title="default"
+                    />
+                  </div>
+                  {/* Live preview */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Preview:</span>
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
+                      badgeClassFromColor(selectedColor)
+                    )}>
+                      {subTypeInput || "Sub-type"}
+                    </span>
+                  </div>
                 </div>
               )}
 

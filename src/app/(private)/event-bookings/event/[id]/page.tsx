@@ -5,10 +5,11 @@ import { format, parseISO } from "date-fns";
 import { ArrowLeft, CalendarDays, Clock, User, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
+import { badgeClassFromColor, FALLBACK_BADGE } from "@/lib/event-type-colors";
 
 export const dynamic = "force-dynamic";
 
-type EventTypeRow = { type: string; sub_type: string } | null;
+type EventTypeRow = { type: string; sub_type: string; badge_color?: string | null } | null;
 
 type EventRow = {
   id: number;
@@ -47,13 +48,8 @@ function getEventType(ev: EventRow): EventTypeRow {
 }
 
 function badgeClass(et: EventTypeRow): string {
-  if (!et) return "bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]";
-  const t = `${et.sub_type} ${et.type}`.toLowerCase();
-  if (t.includes("quiz")) return "bg-amber-100 text-amber-700 border border-amber-200";
-  if (t.includes("band") || t.includes("music")) return "bg-purple-100 text-purple-700 border border-purple-200";
-  if (t.includes("private") || t.includes("hire")) return "bg-blue-100 text-blue-700 border border-blue-200";
-  if (t.includes("bingo")) return "bg-green-100 text-green-700 border border-green-200";
-  return "bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]";
+  if (!et) return FALLBACK_BADGE;
+  return badgeClassFromColor(et.badge_color);
 }
 
 function badgeLabel(et: EventTypeRow): string {
@@ -89,7 +85,7 @@ export default async function EventDetailPage({
     supabase
       .from("events")
       .select(
-        "id, date, start_time, end_time, title, host_employee_id, event_types(type, sub_type), employees!host_employee_id(full_name)"
+        "id, date, start_time, end_time, title, host_employee_id, event_types(type, sub_type, badge_color), employees!host_employee_id(full_name)"
       )
       .eq("id", eventId)
       .single(),

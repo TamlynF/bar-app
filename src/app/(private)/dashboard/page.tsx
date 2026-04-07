@@ -28,7 +28,7 @@ import ActionRow from "./components/action-row";
 export const dynamic = "force-dynamic";
 
 type TableCapacityGroup = { capacity: number; assigned: number; total: number };
-export type EventTypeRow = { type: string; sub_type: string } | null;
+export type EventTypeRow = { type: string; sub_type: string; badge_color?: string | null } | null;
 type BookingRow = { id: number; group_size: number; status: string; group_name: string | null; total_amount: number | null; paid_amount: number | null };
 type PrivateHireRow = {
   id: string;
@@ -211,7 +211,7 @@ export default async function DashboardPage() {
   const { data: rawUpcoming } = await supabase
     .from("events")
     .select(
-      "id, date, start_time, end_time, title, host_employee_id, event_types (type, sub_type), bookings (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
+      "id, date, start_time, end_time, title, host_employee_id, event_types (type, sub_type, badge_color), bookings (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
     )
     .gte("date", todayStr)
     .order("date", { ascending: true })

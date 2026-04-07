@@ -50,6 +50,7 @@ export type EventRecord = {
   payment_amount: number | null;
   host_employee_id: number | null;
   event_types_id: number;
+  is_active: boolean | null;
 };
 
 function toTitleCase(str?: string | null) {

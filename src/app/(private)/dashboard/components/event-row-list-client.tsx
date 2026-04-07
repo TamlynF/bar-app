@@ -13,8 +13,9 @@ import Link from "next/link";
 import { format, isToday, parseISO } from "date-fns";
 import { ChevronDown, ChevronRight, ChevronUp, Clock, User, UserCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { badgeClassFromColor, FALLBACK_BADGE } from "@/lib/event-type-colors";
 
-export type EventTypeRow = { type: string; sub_type: string } | null;
+export type EventTypeRow = { type: string; sub_type: string; badge_color?: string | null } | null;
 
 export type TableCapacityGroup = { capacity: number; assigned: number; total: number };
 
@@ -75,13 +76,8 @@ export type ListItem = {
 };
 
 function badgeClass(eventType: EventTypeRow): string {
-    if (!eventType) return "";
-    const t = `${eventType.sub_type} ${eventType.type}`.toLowerCase();
-    if (t.includes("quiz")) return "bg-amber-100 text-amber-700 border border-amber-200";
-    if (t.includes("band") || t.includes("music")) return "bg-purple-100 text-purple-700 border border-purple-200";
-    if (t.includes("private") || t.includes("hire")) return "bg-blue-100 text-blue-700 border border-blue-200";
-    if (t.includes("bingo")) return "bg-green-100 text-green-700 border border-green-200";
-    return "bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]";
+    if (!eventType) return FALLBACK_BADGE;
+    return badgeClassFromColor(eventType.badge_color);
 }
 
 function badgeLabel(eventType: EventTypeRow): string {
