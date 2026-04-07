@@ -73,7 +73,7 @@ function formatTime(timeStr: string | null) {
 }
 
 function eventTypeLabel(et: EventType) {
-  return [toTitleCase(et.type), toTitleCase(et.sub_type)].filter(Boolean).join(" > ");
+  return [toTitleCase(et.type), toTitleCase(et.sub_type)].filter(Boolean).join(" - ");
 }
 
 export type Employee = { id: number; full_name: string };

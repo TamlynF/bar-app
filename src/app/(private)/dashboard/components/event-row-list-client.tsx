@@ -3,11 +3,11 @@
 import React, { useEffect, useRef, useState } from "react";
 
 function CapacityBar({ pct }: { pct: number }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    ref.current?.style.setProperty("--bar-width", `${Math.min(pct, 100)}%`);
-  }, [pct]);
-  return <div ref={ref} className="h-full bg-[#FDCC4B] rounded-full transition-all capacity-fill" />;
+    const ref = useRef<HTMLDivElement>(null);
+    useEffect(() => {
+        ref.current?.style.setProperty("--bar-width", `${Math.min(pct, 100)}%`);
+    }, [pct]);
+    return <div ref={ref} className="h-full bg-[#FDCC4B] rounded-full transition-all capacity-fill" />;
 }
 import Link from "next/link";
 import { format, isToday, parseISO } from "date-fns";
@@ -15,6 +15,8 @@ import { ChevronDown, ChevronRight, ChevronUp, Clock, User, UserCheck } from "lu
 import { cn } from "@/lib/utils";
 
 export type EventTypeRow = { type: string; sub_type: string } | null;
+
+export type TableCapacityGroup = { capacity: number; assigned: number; total: number };
 
 export type QuizDetails = {
     confirmedTeams: number;
@@ -24,6 +26,7 @@ export type QuizDetails = {
     questionsTarget: number;
     tablesAssigned: boolean;
     capacityPct: number;
+    tableGroups: TableCapacityGroup[];
 };
 
 export type BingoDetails = {
@@ -32,6 +35,7 @@ export type BingoDetails = {
     totalPaid: number;
     totalOutstanding: number;
     tablesAssigned: boolean;
+    tableGroups: TableCapacityGroup[];
 };
 
 export type PrivateDetails = {
@@ -86,8 +90,8 @@ function badgeLabel(eventType: EventTypeRow): string {
 }
 
 function toTitleCase(str?: string | null) {
-  if (!str) return "";
-  return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
+    if (!str) return "";
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
 
 export function EventRowListClient({ items }: { items: ListItem[] }) {
@@ -117,8 +121,8 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             title="Event"
                             onClick={() => setExpandedId(isExpanded ? null : item.key)}
                             className={cn(
-                                "w-full text-left flex items-center gap-3 p-4 transition-colors cursor-pointer sm:event-row-desktop",
-                                isExpanded ? "bg-[#FEF3C7]" : "hover:bg-[#F9F8F4]"
+                                "w-full text-left flex  flex-row items-center gap-3 p-4 transition-colors cursor-pointer sm:event-row-desktop",
+                                isExpanded ? "bg-[#FEF3C7]" : "hover:bg-yellow-100"
                             )}
                         >
                             {/* Date pill */}
@@ -165,44 +169,46 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
 
                             {/* ── Desktop cols 2–5 (hidden on mobile) ── */}
                             {/* Col 2 — title + time */}
-                            <div className="hidden sm:flex min-w-0 flex-col gap-1 items-start">
-                                <p className="text-sm font-black text-[#1F1F1A] truncate w-full">{item.title}</p>
-                                <div className="flex items-center gap-1 text-[11px] text-[#5F624F] font-medium">
-                                    <Clock className="w-3 h-3 opacity-50 shrink-0" />
-                                    {startEndTime}
+                            <div className="hidden sm:flex w-full flex-row gap-3 justify-between items-center">
+                                <div className="flex-1 min-w-0 flex-col gap-1 items-start">
+                                    <p className="text-sm font-black text-[#1F1F1A] truncate w-full">{item.title}</p>
+                                    <div className="flex items-center gap-1 text-[11px] text-[#5F624F] font-medium">
+                                        <Clock className="w-3 h-3 opacity-50 shrink-0" />
+                                        {startEndTime}
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Col 3 — badge + host */}
-                            <div className="hidden sm:flex min-w-0 flex-col gap-1 items-start">
-                                {item.eventType && (
-                                    <span className={cn(
-                                        "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md whitespace-nowrap",
-                                        badgeClass(item.eventType)
-                                    )}>
-                                        {badgeLabel(item.eventType)}
-                                    </span>
-                                )}
-                                <div className="flex items-center gap-1 text-[11px] text-[#5F624F] font-medium">
-                                    <User className="w-3 h-3 opacity-50 shrink-0" />
-                                    <span className="truncate">{item.hostName || "–"}</span>
+                                {/* Col 3 — badge + host */}
+                                <div className="flex-1 min-w-0 flex-col gap-1 items-start">
+                                    {item.eventType && (
+                                        <span className={cn(
+                                            "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md whitespace-nowrap",
+                                            badgeClass(item.eventType)
+                                        )}>
+                                            {badgeLabel(item.eventType)}
+                                        </span>
+                                    )}
+                                    <div className="flex items-center gap-1 text-[11px] text-[#5F624F] font-medium">
+                                        <User className="w-3 h-3 opacity-50 shrink-0" />
+                                        <span className="truncate">{item.hostName || "–"}</span>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Col 4 — guests */}
-                            <div className="hidden sm:flex flex-col gap-1 items-start">
-                                {item.guests > 0 ? (
-                                    <>
-                                        <p className="text-sm font-black text-[#1F1F1A] tabular-nums">{item.guests}</p>
-                                        <p className="text-[9px] font-bold text-[#5F624F] uppercase tracking-wider">guests</p>
-                                    </>
-                                ) : (
-                                    <p className="text-[9px] text-[#5F624F]/30">–</p>
-                                )}
+                                {/* Col 4 — guests */}
+                                <div className="flex-1 flex-col gap-1 items-start">
+                                    {item.guests > 0 ? (
+                                        <>
+                                            <p className="text-sm font-black text-[#1F1F1A] tabular-nums">{item.guests}</p>
+                                            <p className="text-[9px] font-bold text-[#5F624F] uppercase tracking-wider">guests</p>
+                                        </>
+                                    ) : (
+                                        <p className="text-[9px] text-[#5F624F]/30">–</p>
+                                    )}
+                                </div>
                             </div>
 
                             {/* Col 5 — chevron (desktop only) */}
-                            {isExpanded ? <ChevronUp className="w-4 h-4 shrink-0 transition-transform duration-200" /> : <ChevronRight className="w-4 h-4 shrink-0 transition-transform duration-200" />}
+                            {isExpanded ? <ChevronUp className="w-4 h-4 shrink-0 transition-transform duration-200" /> : <ChevronDown className="w-4 h-4 shrink-0 transition-transform duration-200" />}
                         </button>
 
                         {/* Expanded details */}
@@ -219,21 +225,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                     /* ── Quiz-specific expanded view ── */
                                     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
                                         <div className="space-y-3 flex-1">
-                                            {/* Quiz completeness badge */}
-                                            {(() => {
-                                                const qd = item.quizDetails;
-                                                const complete = qd.questionsTarget > 0 && qd.questionsGenerated >= qd.questionsTarget;
-                                                return (
-                                                    <span className={cn(
-                                                        "inline-flex items-center text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border",
-                                                        complete
-                                                            ? "bg-green-100 text-green-700 border-green-200"
-                                                            : "bg-red-100 text-red-600 border-red-200"
-                                                    )}>
-                                                        Quiz: {complete ? "Complete" : "Incomplete"}
-                                                    </span>
-                                                );
-                                            })()}
+
 
                                             {/* Capacity bar */}
                                             <div className="space-y-1">
@@ -260,14 +252,49 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                             </div>
 
                                             {/* Tables */}
-                                            <div className={cn(
-                                                "text-[11px] font-medium",
-                                                item.quizDetails.tablesAssigned ? "text-green-700" : "text-amber-600"
-                                            )}>
-                                                {item.quizDetails.tablesAssigned
-                                                    ? "✓ All tables assigned"
-                                                    : "⚠ Tables not fully assigned"}
-                                            </div>
+                                            {item.quizDetails.tableGroups.length > 0 ? (
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] text-[#5F624F] font-medium uppercase tracking-widest">Tables</p>
+                                                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                                        {item.quizDetails.tableGroups.map(g => (
+                                                            <div key={g.capacity} className="flex items-center gap-1.5 text-[11px]">
+                                                                <span className="text-[#5F624F]">{g.capacity}-seat</span>
+                                                                <span className={cn(
+                                                                    "font-black",
+                                                                    g.assigned === g.total ? "text-green-700"
+                                                                    : g.assigned > 0 ? "text-amber-600"
+                                                                    : "text-[#5F624F]/40"
+                                                                )}>
+                                                                    {g.assigned}/{g.total}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className={cn(
+                                                    "text-[11px] font-medium",
+                                                    item.quizDetails.tablesAssigned ? "text-green-700" : "text-amber-600"
+                                                )}>
+                                                    {item.quizDetails.tablesAssigned ? "✓ All tables assigned" : "⚠ Tables not fully assigned"}
+                                                </div>
+                                            )}
+
+                                            {/* Quiz completeness badge */}
+                                            {(() => {
+                                                const qd = item.quizDetails;
+                                                const complete = qd.questionsTarget > 0 && qd.questionsGenerated >= qd.questionsTarget;
+                                                return (
+                                                    <span className={cn(
+                                                        "inline-flex items-center text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border",
+                                                        complete
+                                                            ? "bg-green-100 text-green-700 border-green-200"
+                                                            : "bg-red-100 text-red-600 border-red-200"
+                                                    )}>
+                                                        Quiz: {complete ? "Complete" : "Incomplete"}
+                                                    </span>
+                                                );
+                                            })()}
                                         </div>
 
                                         <Link
@@ -293,34 +320,55 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                             </div>
 
                                             {/* Financials */}
-                                            <div className="grid grid-cols-3 gap-3 text-[11px]">
-                                                {item.bingoDetails.pricePerPerson !== null && (
-                                                    <div>
-                                                        <p className="text-[#5F624F] font-medium">Per person</p>
-                                                        <p className="font-black text-[#1F1F1A]">£{item.bingoDetails.pricePerPerson.toFixed(2)}</p>
-                                                    </div>
-                                                )}
-                                                <div>
-                                                    <p className="text-[#5F624F] font-medium">Paid</p>
-                                                    <p className="font-black text-green-700">£{item.bingoDetails.totalPaid.toFixed(2)}</p>
+                                            <div className="flex flex-row justify-between w-full gap-3 text-[11px]">
+                                                <div className="flex-1">
+                                                    <p className="text-[#5F624F] font-medium">Per person</p>
+                                                    <p className="font-black text-[#1F1F1A]">
+                                                        {item.bingoDetails.pricePerPerson != null ? `£${item.bingoDetails.pricePerPerson.toFixed(2)}` : "£-"}
+                                                    </p>
                                                 </div>
-                                                <div>
+                                                <div className="flex-1">
+                                                    <p className="text-[#5F624F] font-medium">Paid</p>
+                                                    <p className="font-black text-green-700">
+                                                        {item.bingoDetails.totalPaid != null ? `£${item.bingoDetails.totalPaid.toFixed(2)}` : "£-"}
+                                                    </p>
+                                                </div>
+                                                <div className="flex-1">
                                                     <p className="text-[#5F624F] font-medium">Outstanding</p>
                                                     <p className={cn("font-black", item.bingoDetails.totalOutstanding > 0 ? "text-amber-600" : "text-[#1F1F1A]")}>
-                                                        £{item.bingoDetails.totalOutstanding.toFixed(2)}
+                                                        {item.bingoDetails.totalOutstanding != null ? `£${item.bingoDetails.totalOutstanding.toFixed(2)}` : "£-"}
                                                     </p>
                                                 </div>
                                             </div>
 
                                             {/* Tables */}
-                                            <div className={cn(
-                                                "text-[11px] font-medium",
-                                                item.bingoDetails.tablesAssigned ? "text-green-700" : "text-amber-600"
-                                            )}>
-                                                {item.bingoDetails.tablesAssigned
-                                                    ? "✓ All tables assigned"
-                                                    : "⚠ Tables not fully assigned"}
-                                            </div>
+                                            {item.bingoDetails.tableGroups.length > 0 ? (
+                                                <div className="space-y-1">
+                                                    <p className="text-[10px] text-[#5F624F] font-medium uppercase tracking-widest">Tables</p>
+                                                    <div className="flex flex-wrap gap-x-4 gap-y-1">
+                                                        {item.bingoDetails.tableGroups.map(g => (
+                                                            <div key={g.capacity} className="flex items-center gap-1.5 text-[11px]">
+                                                                <span className="text-[#5F624F]">{g.capacity}-seat</span>
+                                                                <span className={cn(
+                                                                    "font-black",
+                                                                    g.assigned === g.total ? "text-green-700"
+                                                                    : g.assigned > 0 ? "text-amber-600"
+                                                                    : "text-[#5F624F]/40"
+                                                                )}>
+                                                                    {g.assigned}/{g.total}
+                                                                </span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <div className={cn(
+                                                    "text-[11px] font-medium",
+                                                    item.bingoDetails.tablesAssigned ? "text-green-700" : "text-amber-600"
+                                                )}>
+                                                    {item.bingoDetails.tablesAssigned ? "✓ All tables assigned" : "⚠ Tables not fully assigned"}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <Link

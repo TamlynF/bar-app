@@ -27,6 +27,7 @@ import ActionRow from "./components/action-row";
 
 export const dynamic = "force-dynamic";
 
+type TableCapacityGroup = { capacity: number; assigned: number; total: number };
 export type EventTypeRow = { type: string; sub_type: string } | null;
 type BookingRow = { id: number; group_size: number; status: string; group_name: string | null; total_amount: number | null; paid_amount: number | null };
 type PrivateHireRow = {
@@ -82,6 +83,7 @@ type QuizDetails = {
   questionsTarget: number;
   tablesAssigned: boolean;
   capacityPct: number;
+  tableGroups: TableCapacityGroup[];
 };
 type BingoDetails = {
   capacityPct: number;
@@ -89,6 +91,7 @@ type BingoDetails = {
   totalPaid: number;
   totalOutstanding: number;
   tablesAssigned: boolean;
+  tableGroups: TableCapacityGroup[];
 };
 export type ListItem = {
   key: string;
@@ -235,12 +238,19 @@ export default async function DashboardPage() {
       .order("selected_date", { ascending: true }),
     supabase.from("quiz_category_configs").select("question_count"),
     allUpcomingBookingIds.length > 0
-      ? supabase.from("booking_table_mappings").select("booking_id").in("booking_id", allUpcomingBookingIds)
-      : Promise.resolve({ data: [] as { booking_id: number }[] }),
+      ? supabase.from("booking_table_mappings").select("booking_id, table_id").in("booking_id", allUpcomingBookingIds)
+      : Promise.resolve({ data: [] as { booking_id: number; table_id: number }[] }),
   ]);
 
   // ─── Calculations ─────────────────────────────────────────────────────────
 
+  const tableCapacityMap = new Map((tablesData ?? []).map(t => [t.id, t.max_capacity]));
+  const bookingTableMap = new Map((tableMappings ?? []).map(m => [m.booking_id, m.table_id]));
+   const totalTablesByCapacity = new Map<number, number>();
+ (tablesData ?? []).forEach(t => {
+   totalTablesByCapacity.set(t.max_capacity, (totalTablesByCapacity.get(t.max_capacity) ?? 0) + 1);
+ });
+  
   const quizzesMissingQuestions = (upcomingQuizData ?? []).filter((ev) => {
     const et = (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) as { sub_type?: string; type?: string } | null;
     const isQuiz =
@@ -288,8 +298,24 @@ export default async function DashboardPage() {
     (employees ?? []).map((e) => [e.id, e.full_name])
   );
 
-  //const tonightEvent = upcomingEvents[0]?.date === todayStr ? upcomingEvents[0] : null;
- // const futureEvents = tonightEvent ? upcomingEvents.slice(1) : upcomingEvents;
+  const computeTableGroups = (confirmedBookings: BookingRow[]): TableCapacityGroup[] => {
+    const assignedByCapacity = new Map<number, number>();
+    confirmedBookings.forEach(b => {
+      const tableId = bookingTableMap.get(b.id);
+      if (tableId !== undefined) {
+        const cap = tableCapacityMap.get(tableId);
+        if (cap !== undefined)
+          assignedByCapacity.set(cap, (assignedByCapacity.get(cap) ?? 0) + 1);
+      }
+    });
+    return Array.from(totalTablesByCapacity.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([capacity, total]) => ({
+        capacity,
+        total,
+        assigned: assignedByCapacity.get(capacity) ?? 0,
+      }));
+  };
 
   const eventListItems: ListItem[] = upcomingEvents.map((ev) => {
     const et = getEventType(ev);
@@ -321,6 +347,7 @@ export default async function DashboardPage() {
         tablesAssigned:
           confirmedBookings.length > 0 &&
           confirmedBookings.every((b) => mappedBookingIds.has(b.id)),
+        tableGroups: computeTableGroups(confirmedBookings),
       };
     })() : undefined;
 
@@ -336,6 +363,7 @@ export default async function DashboardPage() {
       capacityPct: totalVenueCapacity > 0
         ? Math.round((confirmedGuests / totalVenueCapacity) * 100)
         : 0,
+      tableGroups: computeTableGroups(confirmedBookings),
     } : undefined;
 
     return {
@@ -350,8 +378,8 @@ export default async function DashboardPage() {
       href: isQuiz
         ? `/event-bookings/quiz-bookings?date=${ev.date}&eventId=${ev.id}`
         : isBingo
-        ? `/event-bookings/bingo-bookings?date=${ev.date}&eventId=${ev.id}`
-        : `/event-bookings/event/${ev.id}`,
+          ? `/event-bookings/bingo-bookings?date=${ev.date}&eventId=${ev.id}`
+          : `/event-bookings/event/${ev.id}`,
       quizDetails,
       bingoDetails,
     };
@@ -406,21 +434,20 @@ export default async function DashboardPage() {
   }));
 
   const allListItems = [...eventListItems, ...privateHireListItems, ...bandListItems]
-    .sort((a, b) => a.date.localeCompare(b.date));
+    .sort((a, b) => {
+      const dateDiff = a.date.localeCompare(b.date); // ascending date
+      if (dateDiff !== 0) return dateDiff;
+      if (!a.startTime && !b.startTime) return 0;
+      if (!a.startTime) return 1;
+      if (!b.startTime) return -1;
+      return a.startTime.localeCompare(b.startTime); // ascending startTime
+    });
 
-  console.log("All List Items:", allListItems);
+  //console.log("All List Items:", allListItems);
   const tonightGeneralEvent = allListItems[0]?.date === todayStr ? allListItems[0] : null;
-   const tonightGuests = tonightGeneralEvent?.guests ?? 0;
+  const tonightGuests = tonightGeneralEvent?.guests ?? 0;
 
-  // const tonightConfirmed = (tonightGeneralEvent ?? []).filter(
-  //   (b) => b.status === "confirmed" || b.status === "approved"
-  // );
-
-  // const tonightGuests = tonightConfirmed.reduce(
-  //   (s, b) => s + (b.group_size ?? 0),
-  //   0
-  // );
-  console.log("tonightgen", tonightGeneralEvent);
+  //console.log("tonightgen", tonightGeneralEvent);
   const capacityPercent =
     totalVenueCapacity > 0
       ? Math.min(100, Math.round((tonightGuests / totalVenueCapacity) * 100))
@@ -539,8 +566,8 @@ export default async function DashboardPage() {
               capacityPercent={capacityPercent}
             />
           )}
-         
-           {allListItems.length > 0 ? (
+
+          {allListItems.length > 0 ? (
             <EventRowListClient items={allListItems} />
           ) : !tonightGeneralEvent ? (
             <div className="bg-white border border-[#E6DFC8] rounded-2xl p-10 text-center">
