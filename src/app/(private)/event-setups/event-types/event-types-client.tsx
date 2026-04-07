@@ -791,7 +791,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     value={subTypeInput}
                     onChange={(e) => setSubTypeInput(e.target.value)}
                     required
-                    className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm"
+                    className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm bg-white"
                   />
                   {!editingType?.id && (
                     <p className="text-xs text-muted-foreground italic px-1">
