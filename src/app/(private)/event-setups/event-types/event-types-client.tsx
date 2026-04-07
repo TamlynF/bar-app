@@ -813,10 +813,10 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         type="button"
                         onClick={() => setSelectedColor(selectedColor === c.key ? null : c.key)}
                         className={cn(
-                          "w-7 h-7 rounded-full border-2 transition-all",
-                          selectedColor === c.key ? "border-[#1F1F1A] scale-110" : "border-transparent hover:border-[#1F1F1A]/30"
+                          "w-7 h-7 rounded-full transition-all",
+                          c.swatchClass,
+                          selectedColor === c.key ? "swatch-selected scale-110" : "opacity-70 hover:opacity-100"
                         )}
-                        style={{ backgroundColor: c.swatch }}
                         title={c.key}
                       />
                     ))}
@@ -824,8 +824,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       type="button"
                       onClick={() => setSelectedColor(null)}
                       className={cn(
-                        "w-7 h-7 rounded-full border-2 bg-[#F7F4EA] transition-all",
-                        !selectedColor ? "border-[#1F1F1A] scale-110" : "border-[#E6DFC8] hover:border-[#1F1F1A]/30"
+                        "w-7 h-7 rounded-full bg-[#F7F4EA] transition-all",
+                        !selectedColor ? "swatch-selected scale-110" : "opacity-70 hover:opacity-100"
                       )}
                       title="default"
                     />

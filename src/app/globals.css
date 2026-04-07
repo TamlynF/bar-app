@@ -2184,6 +2184,9 @@
   .text-\[\#1F1F1A\] {
     color: #1F1F1A;
   }
+  .border-\[\#1F1F1A\] {
+    border-color: #1F1F1A;
+  }
   .text-\[\#1F1F1A\]\/50 {
     color: color-mix(in oklab, #1F1F1A 50%, transparent);
   }
@@ -5075,6 +5078,17 @@
   .badge-bingo { background-color: rgb(165 180 252 / 0.2); color: #A5B4FC; }
   .badge-band  { background-color: rgb(125 211 252 / 0.2); color: #7DD3FC; }
   .badge-hire  { background-color: rgb(134 239 172 / 0.2); color: #86EFAC; }
+  .swatch-amber  { background-color: #FCD34D; }
+  .swatch-green  { background-color: #6EE7B7; }
+  .swatch-purple { background-color: #C4B5FD; }
+  .swatch-blue   { background-color: #93C5FD; }
+  .swatch-rose   { background-color: #FDA4AF; }
+  .swatch-sky    { background-color: #7DD3FC; }
+  .swatch-orange { background-color: #FDBA74; }
+  .swatch-teal   { background-color: #5EEAD4; }
+  .swatch-indigo { background-color: #A5B4FC; }
+  .swatch-pink   { background-color: #F9A8D4; }
+  .swatch-selected { outline: 2.5px solid #1F1F1A; outline-offset: 2px; }
   .input-scheme-dark { color-scheme: dark; box-sizing: border-box; max-width: 100%; }
   .capacity-fill { width: var(--bar-width, 0%); }
   .border-slate-400 { border-color: var(--color-slate-400); }
