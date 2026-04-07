@@ -190,7 +190,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                     )}
                                     <div className="flex items-center gap-1 text-[11px] text-[#5F624F] font-medium">
                                         <User className="w-3 h-3 opacity-50 shrink-0" />
-                                        <span className="truncate">{item.hostName || "–"}</span>
+                                        <span className="truncate">{item.hostName || "-"}</span>
                                     </div>
                                 </div>
 
@@ -253,14 +253,14 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
 
                                             {/* Tables */}
                                             {item.quizDetails.tableGroups.length > 0 ? (
-                                                <div className="space-y-1">
-                                                    <p className="text-[10px] text-[#5F624F] font-medium uppercase tracking-widest">Tables</p>
+                                                <div className="flex flex-row space-y-1 items-start gap-4">
+                                                    <p className="flex-1 text-[10px] text-[#5F624F] font-medium uppercase tracking-widest">Tables: </p>
                                                     <div className="flex flex-wrap gap-x-4 gap-y-1">
                                                         {item.quizDetails.tableGroups.map(g => (
-                                                            <div key={g.capacity} className="flex items-center gap-1.5 text-[11px]">
-                                                                <span className="text-[#5F624F]">{g.capacity}-seat</span>
+                                                            <div key={g.capacity} className="flex justify-between items-center gap-2 text-[11px]">
+                                                                <span className="text-[#5F624F]">{g.capacity}-seat:</span>
                                                                 <span className={cn(
-                                                                    "font-black",
+                                                                    "font-black pr-2",
                                                                     g.assigned === g.total ? "text-green-700"
                                                                     : g.assigned > 0 ? "text-amber-600"
                                                                     : "text-[#5F624F]/40"
