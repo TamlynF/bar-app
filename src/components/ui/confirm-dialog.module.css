@@ -3,6 +3,7 @@
   inset: 0;
   z-index: 10000;
   background-color: rgba(0, 0, 0, 0.5);
+  pointer-events: auto;
 }
 
 .dialog {
@@ -13,4 +14,5 @@
   z-index: 10001;
   width: calc(100% - 2rem);
   max-width: 384px;
+  pointer-events: auto;
 }

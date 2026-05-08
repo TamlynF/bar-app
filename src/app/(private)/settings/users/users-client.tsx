@@ -811,9 +811,9 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
               </div>
             )}
           </div>
+          {ConfirmDialogUI}
         </SheetContent>
       </Sheet>
-      {ConfirmDialogUI}
     </div>
   );
 }

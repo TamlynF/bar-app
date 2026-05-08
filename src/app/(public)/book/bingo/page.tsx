@@ -29,14 +29,15 @@ export default async function BingoBookingPage() {
   const [{ data: rawEvents }, { data: infoItems }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, date, payment_amount, event_types!inner(type, sub_type)")
+      .select("id, date, payment_amount, event_types!inner(type, sub_type, description)")
       .eq("event_types.type", "games")
       .eq("event_types.sub_type", "bingo")
+      .eq("is_active", true)
       .gte("date", today)
       .order("date", { ascending: true }),
     supabase
       .from("event_information")
-      .select(`icon, title, event_types!inner(type, sub_type)`)
+      .select(`icon, title, event_types!inner(type, sub_type, description)`)
       .eq("event_types.type", "games")
       .eq("event_types.sub_type", "bingo"),
   ]);

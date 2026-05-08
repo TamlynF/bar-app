@@ -977,9 +977,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             </div>
           </form>
 
+          {ConfirmDialogUI}
         </SheetContent>
       </Sheet>
-      {ConfirmDialogUI}
     </div>
   );
 }

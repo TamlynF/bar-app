@@ -217,9 +217,9 @@ export default function QuizCategoriesClient({
               </div>
             </SheetFooter>
           </form>
+          {ConfirmDialogUI}
         </SheetContent>
       </Sheet>
-      {ConfirmDialogUI}
     </div>
   );
 }

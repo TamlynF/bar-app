@@ -33,6 +33,7 @@ export default async function QuizBookingPage() {
       .select("id, date, payment_amount, event_types!inner(type, sub_type)")
       .eq("event_types.type", "games")
       .eq("event_types.sub_type", "quiz")
+      .eq("is_active", true)
       .gte("date", today)
       .order("date", { ascending: true }),
     supabase

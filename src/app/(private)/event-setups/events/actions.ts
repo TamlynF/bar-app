@@ -18,6 +18,7 @@ export async function saveEventAction(formData: FormData) {
     event_types_id: parseInt(formData.get("event_types_id")?.toString() || "0", 10),
     host_employee_id: formData.get("host_employee_id") ? parseInt(formData.get("host_employee_id") as string, 10) : null,
     seating_required: formData.get("seating_required") === "on",
+    is_active: formData.get("is_active") === "on",
   };
 
   // Resolve current logged-in user to an employee id

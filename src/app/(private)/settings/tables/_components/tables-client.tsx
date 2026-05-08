@@ -396,9 +396,9 @@ export default function TablesClient({
               </div>
             )}
           </div>
+          {ConfirmDialogUI}
         </SheetContent>
       </Sheet>
-      {ConfirmDialogUI}
     </div>
   );
 }
