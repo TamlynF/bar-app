@@ -42,10 +42,12 @@ export function useConfirm() {
       <div
         className={styles.backdrop}
         onClick={handleCancel}
+        onPointerDown={(e) => e.stopPropagation()}
       />
       {/* Dialog box */}
       <div
         className={`${styles.dialog} rounded-3xl border-2 border-[#E6DFC8] bg-[#F7F4EA] overflow-hidden shadow-2xl`}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         <div className="px-6 pt-6 pb-4 flex flex-col gap-1.5">
           <h2 className="text-base font-black uppercase tracking-tight text-[#1F1F1A]">
