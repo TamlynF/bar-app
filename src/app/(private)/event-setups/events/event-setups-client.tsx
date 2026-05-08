@@ -4,15 +4,11 @@ import { useState, useTransition, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   Plus,
   Loader2,
-  Calendar,
   CalendarDays,
-  Clock,
   BadgePoundSterling,
   Users,
   ChevronRight,
@@ -25,7 +21,6 @@ import {
   AlertTriangle,
   CheckCircle2,
   XCircle,
-  Sparkles,
   Brain,
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
@@ -81,6 +76,23 @@ export type Employee = { id: number; full_name: string };
 
 type QuizCategory = { id: number; category_name: string; question_count: number };
 type QuizQuestion = { id: string; events_id: number; quiz_category_configs_id: number | null };
+type BookingRecord = { event_id: number; status: string; group_size: number };
+
+function getBookingStats(eventId: number, bookings: BookingRecord[]) {
+  const eventBookings = bookings.filter(b => b.event_id === eventId);
+  const confirmed = eventBookings.filter(b => b.status === "confirmed");
+  const waitlisted = eventBookings.filter(b => b.status === "waitlisted");
+  const cancelled = eventBookings.filter(b => b.status === "cancelled");
+  return {
+    confirmedCount: confirmed.length,
+    confirmedPeople: confirmed.reduce((s, b) => s + (b.group_size ?? 0), 0),
+    waitlistedCount: waitlisted.length,
+    waitlistedPeople: waitlisted.reduce((s, b) => s + (b.group_size ?? 0), 0),
+    cancelledCount: cancelled.length,
+    cancelledPeople: cancelled.reduce((s, b) => s + (b.group_size ?? 0), 0),
+    totalPeople: confirmed.reduce((s, b) => s + (b.group_size ?? 0), 0),
+  };
+}
 
 function getQuizStatus(eventId: number, quizCategories: QuizCategory[], quizQuestions: QuizQuestion[]) {
   const eventQs = quizQuestions.filter(q => q.events_id === eventId);
@@ -101,6 +113,7 @@ export default function EventsClient({
   employees = [],
   quizCategories = [],
   quizQuestions = [],
+  bookings = [],
   filter,
 }: {
   initialEvents: EventRecord[];
@@ -108,6 +121,7 @@ export default function EventsClient({
   employees: Employee[];
   quizCategories: QuizCategory[];
   quizQuestions: QuizQuestion[];
+  bookings: BookingRecord[];
   filter?: string;
 }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
@@ -119,6 +133,8 @@ export default function EventsClient({
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
+  const [addForTypeId, setAddForTypeId] = useState<number | null>(null);
+  const [historyGroups, setHistoryGroups] = useState<Set<number>>(new Set());
 
   // Auto-open sheet when returning from quiz questions page (?open=id)
   useEffect(() => {
@@ -150,10 +166,11 @@ export default function EventsClient({
     setSelected(event);
   };
 
-  const openAdd = () => {
+  const openAdd = (eventTypeId?: number) => {
     setFormError(null);
     setIsEditing(false);
     setSelected(null);
+    setAddForTypeId(eventTypeId ?? null);
     setIsAdding(true);
   };
 
@@ -162,6 +179,7 @@ export default function EventsClient({
     setIsAdding(false);
     setIsEditing(false);
     setFormError(null);
+    setAddForTypeId(null);
   };
 
   const handleSubmit = (formData: FormData) => {
@@ -195,9 +213,15 @@ export default function EventsClient({
       });
   };
 
-  // Apply filter if present
+  // Date filtering: show events from past week onwards by default
   const todayStr = new Date().toISOString().split("T")[0];
-  const visibleEvents = filter === "quiz-incomplete"
+  const oneWeekAgo = new Date();
+  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+  const oneWeekAgoStr = oneWeekAgo.toISOString().split("T")[0];
+
+  const recentEvents = initialEvents.filter((e) => !e.date || e.date >= oneWeekAgoStr);
+
+  const baseEvents = filter === "quiz-incomplete"
     ? initialEvents.filter((e) => {
         const et = eventTypes.find((t) => t.id === e.event_types_id);
         if (!et?.sub_type?.toLowerCase().includes("quiz")) return false;
@@ -205,15 +229,21 @@ export default function EventsClient({
         const { total, target } = getQuizStatus(e.id, quizCategories, quizQuestions);
         return total < target;
       })
-    : initialEvents;
+    : recentEvents;
 
-  // Group events by event type
+  // Group events by event type — history groups show all events for that type
   const grouped = eventTypes
-    .map((et) => ({
-      eventType: et,
-      events: visibleEvents.filter((e) => e.event_types_id === et.id),
-    }))
-    .filter((g) => g.events.length > 0);
+    .map((et) => {
+      const isShowingHistory = historyGroups.has(et.id);
+      const events = isShowingHistory
+        ? initialEvents.filter((e) => e.event_types_id === et.id)
+        : baseEvents.filter((e) => e.event_types_id === et.id);
+      const totalCount = initialEvents.filter((e) => e.event_types_id === et.id).length;
+      return { eventType: et, events, totalCount, hasHidden: totalCount > events.length, isShowingHistory };
+    })
+    .filter((g) => g.events.length > 0 || g.totalCount > 0);
+
+  const visibleEvents = grouped.flatMap((g) => g.events);
 
   const knownTypeIds = new Set(eventTypes.map((et) => et.id));
   const ungrouped = visibleEvents.filter((e) => !knownTypeIds.has(e.event_types_id));
@@ -222,22 +252,7 @@ export default function EventsClient({
   const formDefault = isEditing ? selected : null;
 
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-2xl">
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
-          {visibleEvents.length} event{visibleEvents.length !== 1 ? "s" : ""}
-        </p>
-        <Button
-          onClick={openAdd}
-          size="sm"
-          className="h-9 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/90"
-        >
-          <Plus className="w-3.5 h-3.5 mr-1.5" />
-          Add Event
-        </Button>
-      </div>
+    <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl">
 
       {/* Filter notice */}
       {filter === "quiz-incomplete" && (
@@ -267,30 +282,52 @@ export default function EventsClient({
         </div>
       ) : (
         <div className="space-y-2">
-          {grouped.map(({ eventType, events }) => {
+          {grouped.map(({ eventType, events, hasHidden, isShowingHistory }) => {
             const isOpen = !collapsedGroups.has(eventType.id);
             return (
             <section key={eventType.id} className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
-              <button
-                type="button"
-                onClick={() => toggleGroup(eventType.id)}
-                className="w-full flex items-center justify-between px-5 py-3.5 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
-              >
-                <p className="text-[11px] font-black uppercase tracking-widest text-[#26300D]">
-                  {eventTypeLabel(eventType)}
-                </p>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[10px] font-black text-[#5F624F] bg-white border border-[#E6DFC8] px-2.5 py-1 rounded-lg tabular-nums">
-                    {events.length}
-                  </span>
+              <div className="flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(eventType.id)}
+                  className="flex-1 min-w-0 text-left"
+                >
+                  <p className="text-[11px] font-black uppercase tracking-widest text-[#26300D] truncate">
+                    {eventTypeLabel(eventType)} <span className="text-[#5F624F]">({events.length})</span>
+                  </p>
+                </button>
+                {isShowingHistory && (
+                  <button
+                    type="button"
+                    onClick={() => setHistoryGroups((prev) => { const next = new Set(prev); next.delete(eventType.id); return next; })}
+                    className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] underline hover:text-[#26300D] shrink-0"
+                  >
+                    Recent
+                  </button>
+                )}
+                <button
+                  type="button"
+                  onClick={() => openAdd(eventType.id)}
+                  className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+                  title={`Create ${eventTypeLabel(eventType)} event`}
+                >
+                  <Plus className="w-3.5 h-3.5 shrink-0" />
+                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Create</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleGroup(eventType.id)}
+                  className="shrink-0"
+                  title="Toggle group"
+                >
                   <ChevronDown className={cn(
                     "w-4 h-4 text-[#5F624F] transition-transform duration-200",
                     isOpen && "rotate-180"
                   )} />
-                </div>
-              </button>
+                </button>
+              </div>
 
-              {isOpen && <div className="divide-y divide-[#E6DFC8]">
+              {isOpen && <div className="divide-y divide-[#E6DFC8]/50">
                 {events.map((event) => {
                   const hasPricing = !!event.payment_amount && event.payment_amount > 0;
                   const host = employees.find((e) => e.id === event.host_employee_id);
@@ -302,72 +339,83 @@ export default function EventsClient({
                     .slice(0, 2) ?? null;
                   const isQuiz = !!eventType.sub_type?.toLowerCase().includes("quiz");
                   const quizStat = isQuiz ? getQuizStatus(event.id, quizCategories, quizQuestions) : null;
+                  const bStats = getBookingStats(event.id, bookings);
+                  const inactive = event.is_active === false;
+                  const muted = "text-[#5F624F]";
                   return (
                     <div
                       key={event.id}
                       onClick={() => openView(event)}
-                      className="px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
+                      className="px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="font-black text-[#1F1F1A] leading-snug sm:truncate">
-                          {event.title || "Untitled Event"}
-                        </p>
-
-                        {/* Mobile */}
-                        <div className="flex items-center gap-2 mt-1 sm:hidden">
-                          <span className="text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-0.5 rounded-lg flex items-center gap-1 flex-1 min-w-0">
-                            <Calendar className="w-3 h-3 shrink-0" />
-                            <span className="truncate">{formatDate(event.date)}</span>
+                      {/* Mobile layout */}
+                      <div className="flex-1 min-w-0 sm:hidden">
+                        {/* Row 1: date + active */}
+                        <div className="flex items-center gap-2">
+                          <p className={cn("text-xs font-black leading-snug truncate flex-1 min-w-0", inactive ? muted : "text-[#1F1F1A]")}>
+                            {formatDate(event.date)}
+                          </p>
+                          <span className={cn(
+                            "text-[10px] font-black shrink-0 w-14 text-right",
+                            !inactive ? "text-green-600" : "text-red-500"
+                          )}>
+                            {!inactive ? "Active" : "Inactive"}
                           </span>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className={cn(
-                              "text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] w-6 h-6 rounded-full flex items-center justify-center",
-                              !hostInitials && "opacity-0"
-                            )}>
-                              {hostInitials ?? ""}
-                            </span>
-                            {hasPricing && (
-                              <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">
-                                £{event.payment_amount!.toFixed(2)}
+                        </div>
+                        {/* Row 2: title | people | quiz/price | host */}
+                        <div className="flex items-center mt-0.5 gap-1">
+                          <p className={cn("text-[10px] font-medium truncate flex-1 min-w-0", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
+                            {event.title || "Untitled Event"}
+                          </p>
+                          <span className={cn("text-[10px] font-black flex items-center gap-0.5 w-8 justify-end shrink-0 tabular-nums", muted)}>
+                            <Users className="w-3 h-3 shrink-0" />
+                            {bStats.confirmedPeople}
+                          </span>
+                          <span className="w-8 flex items-center justify-end shrink-0">
+                            {quizStat ? (
+                              inactive
+                                ? <span className={cn("w-4 h-4", muted)}>{quizStat.allComplete ? <CheckCircle2 className="w-4 h-4" /> : quizStat.someExist ? <AlertTriangle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}</span>
+                                : quizStat.allComplete
+                                  ? <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                  : quizStat.someExist
+                                    ? <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                    : <AlertCircle className="w-4 h-4 text-red-500" />
+                            ) : (
+                              <span className={cn(
+                                "text-[10px] font-black",
+                                inactive ? muted : hasPricing ? "text-emerald-700" : "text-[#5F624F]/40"
+                              )}>
+                                £{hasPricing ? event.payment_amount!.toFixed(2) : "0"}
                               </span>
                             )}
-                            {quizStat && (
-                            <span className="flex items-center gap-1.5 text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-0.5 rounded-lg">
-                                {quizStat.allComplete
-                                  ? <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                                  : quizStat.someExist
-                                    ? <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
-                                    : <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />}
-
-                              {quizStat.total} / {quizStat.target}
+                          </span>
+                          <span className="w-6 flex items-center justify-center shrink-0">
+                            {hostInitials ? (
+                              <span className={cn("text-[10px] font-black bg-[#F7F4EA] border border-[#E6DFC8] w-6 h-6 rounded-full flex items-center justify-center", muted)}>
+                                {hostInitials}
                               </span>
-                              )}
-                            <span className={cn(
-                              "text-[10px] font-black px-2 py-0.5 rounded-lg border",
-                              event.is_active !== false
-                                ? "text-emerald-700 bg-emerald-50 border-emerald-200"
-                                : "text-red-500 bg-red-50 border-red-200"
-                            )}>
-                              {event.is_active !== false ? "Active" : "Inactive"}
-                            </span>
-                          </div>
+                            ) : <span className="w-6" />}
+                          </span>
                         </div>
+                      </div>
 
-                        {/* Desktop */}
-                        <p className="hidden sm:flex items-center gap-1 text-[11px] text-[#5F624F] font-medium mt-0.5 flex-wrap">
-                          <Calendar className="w-3 h-3" />
+                      {/* Desktop layout */}
+                      <div className="hidden sm:block flex-1 min-w-0">
+                        <p className={cn("text-sm font-black leading-snug truncate", inactive ? muted : "text-[#1F1F1A]")}>
                           {formatDate(event.date)}
                           {(event.start_time || event.end_time) && (
-                            <span className="ml-2 flex items-center gap-1">
-                              <Clock className="w-3 h-3" />
+                            <span className={cn("text-[11px] font-medium ml-2", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
                               {formatTime(event.start_time)}
                               {event.end_time && (
-                                <span className="text-[#5F624F]/50">→ {formatTime(event.end_time)}</span>
+                                <span className={inactive ? "text-[#5F624F]/30" : "text-[#5F624F]/50"}> {"\u2192"} {formatTime(event.end_time)}</span>
                               )}
                             </span>
                           )}
+                        </p>
+                        <p className={cn("flex items-center gap-1 text-[11px] font-medium mt-0.5 flex-wrap", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
+                          {event.title || "Untitled Event"}
                           {host && (
-                            <span className="ml-2 font-black text-[#1F1F1A]/60">{host.full_name}</span>
+                            <span className={cn("ml-2 font-black", inactive ? "text-[#5F624F]/40" : "text-[#1F1F1A]/60")}>{host.full_name}</span>
                           )}
                         </p>
                       </div>
@@ -419,6 +467,16 @@ export default function EventsClient({
                     </div>
                   );
                 })}
+                {!isShowingHistory && hasHidden && (
+                  <button
+                    type="button"
+                    onClick={() => setHistoryGroups((prev) => new Set(prev).add(eventType.id))}
+                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#26300D] hover:bg-[#F7F4EA]/50 transition-colors"
+                  >
+                    View All History
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                )}
               </div>}
             </section>
           )})}
@@ -431,7 +489,7 @@ export default function EventsClient({
                   {ungrouped.length}
                 </span>
               </div>
-              <div className="divide-y divide-[#E6DFC8]">
+              <div className="divide-y divide-[#E6DFC8]/50">
                 {ungrouped.map((event) => (
                   <div
                     key={event.id}
@@ -439,7 +497,7 @@ export default function EventsClient({
                     className="px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="font-black text-[#1F1F1A] leading-snug">{event.title || "Untitled Event"}</p>
+                      <p className="text-sm font-black text-[#1F1F1A] leading-snug">{event.title || "Untitled Event"}</p>
                       <p className="text-[11px] text-[#5F624F] font-medium mt-0.5">{formatDate(event.date)}</p>
                     </div>
                     <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
@@ -470,7 +528,7 @@ export default function EventsClient({
                 <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
                   {isAdding ? "New Event" : isEditing ? "Edit Event" : "View Event"}
                 </SheetTitle>
-                {selected && !isEditing && (
+                {selected && (
                   <div className="flex items-center gap-1.5 mt-1">
                     <Hash className="w-3 h-3 text-[#5F624F]" />
                     <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
@@ -479,25 +537,21 @@ export default function EventsClient({
                   </div>
                 )}
               </div>
-              {selected && !isEditing && !isAdding && (() => {
-                const et = eventTypes.find((e) => e.id === selected.event_types_id);
-                const isQuiz = !!et?.sub_type?.toLowerCase().includes("quiz");
-                return isQuiz ? (
-                  <Link
-                    href={`/event-setups/events/${selected.id}`}
-                    className="shrink-0 h-10 rounded-2xl bg-[#26300D] flex items-center justify-center text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors px-3 gap-2"
-                    title="Manage Quiz"
-                  >
-                    <Brain className="w-4 h-4 shrink-0" />
-                    <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">Manage Quiz</span>
-                  </Link>
-                ) : null;
-              })()}
+              {selected && !isAdding && (
+                <span className={cn(
+                  "shrink-0 text-[10px] font-black px-3 py-1.5 rounded-full border",
+                  selected.is_active !== false
+                    ? "bg-green-100 text-green-700 border-green-300"
+                    : "bg-red-100 text-red-600 border-red-300"
+                )}>
+                  {selected.is_active !== false ? "Active" : "Inactive"}
+                </span>
+              )}
             </div>
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0 touch-pan-y space-y-5">
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y space-y-4 sm:space-y-5">
 
             {/* View mode */}
             {!showForm && selected && (() => {
@@ -505,47 +559,60 @@ export default function EventsClient({
               const hasPricing = !!selected.payment_amount && selected.payment_amount > 0;
               const host = employees.find((e) => e.id === selected.host_employee_id);
               const isQuiz = !!et?.sub_type?.toLowerCase().includes("quiz");
+              const bk = getBookingStats(selected.id, bookings);
               return (
-                <div className="animate-in fade-in duration-200 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 space-y-5 sm:space-y-0">
-                  {/* Left — detail cells */}
-                  <div className="space-y-5">
-                    <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                      <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
-                      <DetailCell label="Event Type" value={et ? eventTypeLabel(et) : `Type #${selected.event_types_id}`} />
-                      <DetailCell label="Date" value={formatDate(selected.date)} />
-                      <DetailCell label="Start Time" value={formatTime(selected.start_time)} />
-                      <DetailCell label="End Time" value={formatTime(selected.end_time)} />
-                      <DetailCell label="Host" value={host?.full_name ?? "—"} />
-                      <DetailCell
-                        label="Payment"
-                        value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"}
-                      />
-                      <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
-                      <DetailCell label="Status" value={selected.is_active !== false ? "Active" : "Inactive"} />
-                      {selected.description && (
-                        <DetailCell label="Description" value={selected.description} />
-                      )}
-                    </div>
-                    {formError && <ErrorBox message={formError} />}
+                <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
+                  {/* Event details */}
+                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+                    <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
+                    <DetailCell label="Date" value={formatDate(selected.date)} />
+                    <DetailCell
+                      label="Time"
+                      value={
+                        selected.start_time || selected.end_time
+                          ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}`
+                          : "—"
+                      }
+                    />
+                    <DetailCell label="Host" value={host?.full_name ?? "—"} />
+                    <DetailCell
+                      label="Payment"
+                      value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"}
+                    />
+                    <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
+                    {selected.description && (
+                      <DetailCell label="Description" value={selected.description} />
+                    )}
                   </div>
 
-                  {/* Right — quiz section (only rendered for quiz events) */}
+                  {/* Quiz questions section */}
                   {isQuiz && (() => {
                     const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
                     return (
                       <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                        <div className="px-5 py-4 space-y-2">
-                          <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">Quiz Questions</p>
+                        <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-3 border-b border-[#E6DFC8]">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-[#26300D]">Quiz Questions</span>
+                          <span className="flex-1" />
+                          <Link
+                            href={`/event-setups/events/${selected.id}`}
+                            className="h-7 rounded-xl bg-[#26300D] flex items-center justify-center text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors px-2.5 gap-1.5"
+                            title="Manage Quiz"
+                          >
+                            <Brain className="w-3.5 h-3.5" />
+                            <span className="text-[9px] font-black uppercase tracking-widest">Manage Quiz</span>
+                          </Link>
+                        </div>
+                        <div className="px-4 sm:px-5 py-2.5 space-y-2">
                           {categoryCounts.map(cat => (
                             <div key={cat.id} className="flex items-center justify-between gap-2">
-                              <span className="text-xs font-bold text-[#1F1F1A]">{cat.category_name}</span>
+                              <span className="text-xs sm:text-sm font-bold text-[#1F1F1A]">{cat.category_name}</span>
                               <div className="flex items-center gap-1.5">
                                 {cat.count >= cat.question_count
                                   ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
                                   : cat.count > 0
                                   ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                                   : <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
-                                <span className="text-xs font-black tabular-nums text-[#5F624F]">
+                                <span className="text-xs sm:text-sm font-black tabular-nums text-[#5F624F]">
                                   {cat.count} / {cat.question_count}
                                 </span>
                               </div>
@@ -555,114 +622,129 @@ export default function EventsClient({
                       </div>
                     );
                   })()}
+
+                  {/* Bookings summary */}
+                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+                    <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 border-b border-[#E6DFC8]">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[#26300D]">Bookings</span>
+                      <span className="flex-1" />
+                      <Link
+                        href={`/event-bookings/event/${selected.id}`}
+                        className="h-7 rounded-xl bg-[#26300D] flex items-center justify-center text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors px-2.5 gap-1.5"
+                      >
+                        <Users className="w-3.5 h-3.5" />
+                        <span className="text-[9px] font-black uppercase tracking-widest">View All</span>
+                      </Link>
+                    </div>
+                    <div className="grid grid-cols-3 divide-x divide-[#E6DFC8]/50">
+                      <div className="px-2 sm:px-3 py-2 text-center">
+                        <p className="text-base sm:text-lg font-black text-green-600 tabular-nums leading-tight">{bk.confirmedPeople}</p>
+                        <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Confirmed</p>
+                      </div>
+                      <div className="px-2 sm:px-3 py-2 text-center">
+                        <p className="text-base sm:text-lg font-black text-amber-500 tabular-nums leading-tight">{bk.waitlistedPeople}</p>
+                        <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Waitlisted</p>
+                      </div>
+                      <div className="px-2 sm:px-3 py-2 text-center">
+                        <p className="text-base sm:text-lg font-black text-red-500 tabular-nums leading-tight">{bk.cancelledPeople}</p>
+                        <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Cancelled</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {formError && <ErrorBox message={formError} />}
                 </div>
               );
             })()}
 
             {/* Edit / Add form */}
             {showForm && (
-              <form id="event-form" action={handleSubmit} className="animate-in fade-in duration-200">
+              <form id="event-form" action={handleSubmit} className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
 
-                <div className="space-y-4 sm:space-y-0 sm:grid sm:grid-cols-2 sm:gap-2">
-                {/* Title */}
-                <div className="space-y-2 sm:col-span-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
-                    Title <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    name="title"
-                    required
-                    placeholder="e.g. Music Bingo"
-                    defaultValue={formDefault?.title ?? ""}
-                    className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
-                  />
-                </div>
+                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                  {/* Title */}
+                  <FormRow label="Title" required>
+                    <input
+                      name="title"
+                      required
+                      placeholder="e.g. Music Bingo"
+                      defaultValue={formDefault?.title ?? (() => {
+                        if (!addForTypeId) return "";
+                        const et = eventTypes.find((t) => t.id === addForTypeId);
+                        const sub = et?.sub_type?.toLowerCase() ?? "";
+                        if (sub.includes("quiz")) return "Quiz Night";
+                        if (sub.includes("bingo")) return "Music Bingo";
+                        return "";
+                      })()}
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                    />
+                  </FormRow>
 
-                {/* Event Type */}
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
-                    Event Type <span className="text-red-500">*</span>
-                  </Label>
-                  <div className="relative">
+                  {/* Event Type */}
+                  <FormRow label="Event Type" required>
                     <select
                       title="Event Type"
                       name="event_types_id"
                       required
-                      defaultValue={formDefault?.event_types_id ?? eventTypes[0]?.id ?? ""}
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-black tracking-widest outline-none focus:border-[#26300D] appearance-none"
+                      defaultValue={formDefault?.event_types_id ?? addForTypeId ?? eventTypes[0]?.id ?? ""}
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer"
+                      style={{ direction: "rtl" }}
                     >
                       {eventTypes.map((et) => (
-                        <option key={et.id} value={et.id}>{eventTypeLabel(et)}</option>
+                        <option key={et.id} value={et.id} style={{ direction: "ltr" }}>{eventTypeLabel(et)}</option>
                       ))}
                     </select>
-                    
-                  </div>
-                  </div>
-                  
-                {/* Start + End time */}
-                  <div className="flex gap-2">
-                     {/* Date */}
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
-                    Date <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    name="date"
-                    type="date"
-                    required
-                    defaultValue={formDefault?.date ?? ""}
-                    className="h-14 w-2/3 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-black focus:border-[#26300D] transition-all"
-                  />
-                </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Start</Label>
-                    <Input
-                      name="start_time"
-                      type="time"
-                      defaultValue={formDefault?.start_time ? formatTime(formDefault.start_time) : ""}
-                      className="h-14 w-36 rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-black focus:border-[#26300D] transition-all"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">End</Label>
-                    <Input
-                      name="end_time"
-                      type="time"
-                      defaultValue={formDefault?.end_time ? formatTime(formDefault.end_time) : ""}
-                      className="h-14 w-36 rounded-2xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-black focus:border-[#26300D] transition-all"
-                    />
-                  </div>
-                </div>
+                  </FormRow>
 
-                {/* Host */}
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Host</Label>
-                  <div className="relative">
+                  {/* Date */}
+                  <FormRow label="Date" required>
+                    <input
+                      name="date"
+                      type="date"
+                      required
+                      defaultValue={formDefault?.date ?? ""}
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none"
+                    />
+                  </FormRow>
+
+                  {/* Time */}
+                  <FormRow label="Time">
+                    <div className="flex items-center gap-2 flex-1 justify-end">
+                      <input
+                        name="start_time"
+                        type="time"
+                        defaultValue={formDefault?.start_time ? formatTime(formDefault.start_time) : ""}
+                        className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-[5.5rem] text-right"
+                      />
+                      <span className="text-[#5F624F]/50 text-xs">-</span>
+                      <input
+                        name="end_time"
+                        type="time"
+                        defaultValue={formDefault?.end_time ? formatTime(formDefault.end_time) : ""}
+                        className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-[5.5rem] text-right"
+                      />
+                    </div>
+                  </FormRow>
+
+                  {/* Host */}
+                  <FormRow label="Host">
                     <select
                       title="Host"
                       name="host_employee_id"
                       defaultValue={formDefault?.host_employee_id ?? ""}
-                      className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-black tracking-widest outline-none focus:border-[#26300D] appearance-none"
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer"
+                      style={{ direction: "rtl" }}
                     >
-                      <option value="">No host</option>
+                      <option value="" style={{ direction: "ltr" }}>No host</option>
                       {employees.map((e) => (
-                        <option key={e.id} value={e.id}>{e.full_name}</option>
+                        <option key={e.id} value={e.id} style={{ direction: "ltr" }}>{e.full_name}</option>
                       ))}
                     </select>
-                    <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F]/30 rotate-90 pointer-events-none" />
-                  </div>
-                </div>
+                  </FormRow>
 
-                {/* Payment Amount */}
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
-                    Payment per Person (£)
-                  </Label>
-                  <div className="flex items-center h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white focus-within:border-[#26300D] transition-all overflow-hidden">
-                    <div className="flex items-center justify-center px-4 h-full border-r-2 border-[#E6DFC8] shrink-0">
-                      <BadgePoundSterling className="w-4 h-4 text-[#5F624F]" />
-                    </div>
+                  {/* Payment */}
+                  <FormRow label="Payment (£)">
                     <input
                       name="payment_amount"
                       type="number"
@@ -670,61 +752,52 @@ export default function EventsClient({
                       step="0.01"
                       placeholder="0.00"
                       defaultValue={formDefault?.payment_amount ?? ""}
-                      className="flex-1 h-full px-3 text-sm font-bold bg-transparent outline-none text-[#1F1F1A] placeholder:text-[#5F624F]/40"
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                    />
+                  </FormRow>
+
+                  {/* Seating */}
+                  <FormRow label="Seating Required">
+                    <span className="flex-1" />
+                    <input
+                      title="Seating Required"
+                      id="seating_required"
+                      name="seating_required"
+                      type="checkbox"
+                      defaultChecked={formDefault?.seating_required ?? true}
+                      className="w-5 h-5 rounded accent-[#26300D] cursor-pointer"
+                    />
+                  </FormRow>
+
+                  {/* Active */}
+                  <FormRow label="Active">
+                    <span className="flex-1" />
+                    <input
+                      title="Active"
+                      id="is_active"
+                      name="is_active"
+                      type="checkbox"
+                      defaultChecked={formDefault?.is_active ?? true}
+                      className="w-5 h-5 rounded accent-[#26300D] cursor-pointer"
+                    />
+                  </FormRow>
+
+                  {/* Description */}
+                  <div className="px-4 sm:px-5 py-2.5 sm:py-4">
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 mb-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest">Description</span>
+                    </div>
+                    <textarea
+                      name="description"
+                      placeholder="Brief description of the event..."
+                      rows={2}
+                      defaultValue={formDefault?.description ?? ""}
+                      className="w-full text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none placeholder:text-[#5F624F]/40 resize-none"
                     />
                   </div>
                 </div>
 
-                {/* Seating Required */}
-                <div className="flex items-center justify-between h-14 bg-white rounded-2xl border-2 border-[#E6DFC8] px-4">
-                  <div className="flex items-center gap-3">
-                    <Users className="w-4 h-4 text-[#5F624F]" />
-                    <Label className="text-sm font-black text-[#1F1F1A] cursor-pointer" htmlFor="seating_required">
-                      Seating Required
-                    </Label>
-                  </div>
-                  <input
-                    title="Seating Required"
-                    id="seating_required"
-                    name="seating_required"
-                    type="checkbox"
-                    defaultChecked={formDefault?.seating_required ?? true}
-                    className="w-5 h-5 rounded accent-[#26300D] cursor-pointer"
-                  />
-                </div>
-
-                {/* Active */}
-                <div className="flex items-center justify-between h-14 bg-white rounded-2xl border-2 border-[#E6DFC8] px-4">
-                  <div className="flex items-center gap-3">
-                    <Sparkles className="w-4 h-4 text-[#5F624F]" />
-                    <Label className="text-sm font-black text-[#1F1F1A] cursor-pointer" htmlFor="is_active">
-                      Active
-                    </Label>
-                  </div>
-                  <input
-                    title="Active"
-                    id="is_active"
-                    name="is_active"
-                    type="checkbox"
-                    defaultChecked={formDefault?.is_active ?? true}
-                    className="w-5 h-5 rounded accent-[#26300D] cursor-pointer"
-                  />
-                </div>
-
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Description</Label>
-                  <textarea
-                    name="description"
-                    placeholder="Brief description of the event..."
-                    rows={3}
-                    defaultValue={formDefault?.description ?? ""}
-                    className="w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 py-3.5 text-sm font-bold text-[#1F1F1A] placeholder:text-[#5F624F]/40 focus:border-[#26300D] outline-none transition-all resize-none"
-                  />
-                </div>
-
-                  {formError && <ErrorBox message={formError} />}
-                  </div>
+                {formError && <ErrorBox message={formError} />}
               </form>
             )}
 
@@ -788,6 +861,28 @@ export default function EventsClient({
   );
 }
 
+function FormRow({
+  label,
+  required,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
+      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
+        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+          {label}
+        </span>
+        {required && <span className="text-red-500 text-[10px] font-black">*</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
 function DetailCell({
   label,
   value,
@@ -798,14 +893,14 @@ function DetailCell({
   icon?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E6DFC8] last:border-0">
-      <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
+    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-b border-[#E6DFC8] last:border-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
         {icon}
         <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
           {label}
         </span>
       </div>
-      <span className="text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">
+      <span className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">
         {value}
       </span>
     </div>
