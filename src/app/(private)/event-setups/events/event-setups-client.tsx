@@ -700,6 +700,7 @@ export default function EventsClient({
                   {/* Date */}
                   <FormRow label="Date" required>
                     <input
+                      title="Date"
                       name="date"
                       type="date"
                       required
@@ -712,6 +713,7 @@ export default function EventsClient({
                   <FormRow label="Time">
                     <div className="flex items-center gap-2 flex-1 justify-end">
                       <input
+                        title="Start time"
                         name="start_time"
                         type="time"
                         defaultValue={formDefault?.start_time ? formatTime(formDefault.start_time) : ""}
@@ -719,6 +721,7 @@ export default function EventsClient({
                       />
                       <span className="text-[#5F624F]/50 text-xs">-</span>
                       <input
+                        title="End time"
                         name="end_time"
                         type="time"
                         defaultValue={formDefault?.end_time ? formatTime(formDefault.end_time) : ""}
