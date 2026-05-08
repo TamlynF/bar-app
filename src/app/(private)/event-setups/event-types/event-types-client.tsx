@@ -54,6 +54,7 @@ export type EventTypeRecord = {
   type: string;
   sub_type: string;
   badge_color?: string | null;
+  information?: string | null;
   event_information: EventInfo[];
 };
 
@@ -475,7 +476,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                 {/* Sub-types List */}
                 {isGroupExpanded && (
-                  <div className="py-2 px-4 mr-4 space-y-2 bg-background/50 border-t border-slate-100 dark:border-slate-800">
+                  <div className="py-2 px-2 sm:px-4 space-y-2 bg-background/50 border-t border-slate-100 dark:border-slate-800">
                     {items.map((item) => (
                       <div key={item.id} className="border rounded-xl bg-card overflow-hidden border-slate-200 dark:border-slate-800">
                         <div className="p-1 flex items-center justify-between">
@@ -840,6 +841,26 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       {subTypeInput || "Sub-type"}
                     </span>
                   </div>
+                </div>
+              )}
+
+              {/* Information — shown for sub-type forms only */}
+              {(sheetMode === 'subtype' || !editingType?.id) && (
+                <div className="space-y-3">
+                  <Label htmlFor="information" className="text-sm font-semibold text-foreground">
+                    Booking Page Description
+                  </Label>
+                  <textarea
+                    id="information"
+                    name="information"
+                    placeholder="e.g. Eight rounds. Countless bragging rights. One winning team."
+                    defaultValue={editingType?.information ?? ""}
+                    rows={3}
+                    className="w-full rounded-xl sm:rounded-lg border border-input bg-white px-4 py-3 text-base sm:text-sm shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all resize-none"
+                  />
+                  <p className="text-xs text-muted-foreground italic px-1">
+                    This text appears on the public booking page under the logo.
+                  </p>
                 </div>
               )}
 

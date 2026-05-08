@@ -26,10 +26,10 @@ export default async function BingoBookingPage() {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  const [{ data: rawEvents }, { data: infoItems }] = await Promise.all([
+  const [{ data: rawEvents }, { data: infoItems }, { data: eventTypeRow }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, date, payment_amount, event_types!inner(type, sub_type, description)")
+      .select("id, date, payment_amount, event_types!inner(type, sub_type)")
       .eq("event_types.type", "games")
       .eq("event_types.sub_type", "bingo")
       .eq("is_active", true)
@@ -37,10 +37,18 @@ export default async function BingoBookingPage() {
       .order("date", { ascending: true }),
     supabase
       .from("event_information")
-      .select(`icon, title, event_types!inner(type, sub_type, description)`)
+      .select(`icon, title, event_types!inner(type, sub_type)`)
       .eq("event_types.type", "games")
       .eq("event_types.sub_type", "bingo"),
+    supabase
+      .from("event_types")
+      .select("information")
+      .eq("type", "games")
+      .eq("sub_type", "bingo")
+      .maybeSingle(),
   ]);
+
+  const tagline = (eventTypeRow?.information as string | null) || "Bingo with a beat. Guess the song, fill your card, win the night.";
 
   const events: BingoEvent[] = (rawEvents ?? []).map((e) => ({
     id: e.id as number,
@@ -99,7 +107,7 @@ export default async function BingoBookingPage() {
               <span className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]">Music Bingo</span>
             </div>
             <p className="text-stone-400 text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic opacity-80 text-center">
-              Bingo with a beat. Guess the song, fill your card, win the night.
+              {tagline}
             </p>
           </div>
         </div>

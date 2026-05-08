@@ -27,7 +27,7 @@ export default async function QuizBookingPage() {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  const [{ data: rawEvents }, { data: infoItems }] = await Promise.all([
+  const [{ data: rawEvents }, { data: infoItems }, { data: eventTypeRow }] = await Promise.all([
     supabase
       .from("events")
       .select("id, date, payment_amount, event_types!inner(type, sub_type)")
@@ -48,7 +48,15 @@ export default async function QuizBookingPage() {
       `)
       .eq("event_types.type", "games")
       .eq("event_types.sub_type", "quiz"),
+    supabase
+      .from("event_types")
+      .select("information")
+      .eq("type", "games")
+      .eq("sub_type", "quiz")
+      .maybeSingle(),
   ]);
+
+  const tagline = (eventTypeRow?.information as string | null) || "Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.";
 
   const events: QuizEvent[] = (rawEvents ?? []).map((e) => ({
     id: e.id as number,
@@ -115,7 +123,7 @@ export default async function QuizBookingPage() {
           </div>
           <div className="mt-4 sm:mt-6 space-y-2 px-2">
             <p className="text-stone-400 text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic opacity-80 text-center">
-              Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.
+              {tagline}
             </p>
           </div>
         </div>
