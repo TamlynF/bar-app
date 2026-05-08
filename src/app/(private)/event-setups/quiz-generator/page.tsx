@@ -6,20 +6,25 @@ import { useSearchParams } from 'next/navigation'
 import styles from './quiz-generator.module.css'
 
 // Using relative paths to resolve build errors and environment pathing issues
-import { 
-  generateQuizAction, 
-  saveQuizToDatabase, 
+import {
+  generateQuizAction,
+  saveQuizToDatabase,
   getUpcomingQuizzesAction,
   getQuizCategoryConfigsAction,
   getFullQuestionHistoryAction,
   updatePastQuestionAction,
-  deletePastQuestionAction
+  deletePastQuestionAction,
+  generateMusicSnippetsAction,
+  saveMusicSnippetsAction,
+  getMusicSnippetsForEventAction,
 } from '@/app/(private)/event-setups/quiz-generator/actions'
 
-import type { 
-  QuizEventSummary, 
-  QuizCategoryConfig, 
-  PastQuestionRecord 
+import type {
+  QuizEventSummary,
+  QuizCategoryConfig,
+  PastQuestionRecord,
+  MusicSnippetCandidate,
+  SavedMusicSnippet,
 } from '@/app/(private)/event-setups/quiz-generator/actions'
 
 import { Button } from '@/components/ui/button'
@@ -31,9 +36,9 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
-import { 
-  Sparkles, 
-  Loader2, 
+import {
+  Sparkles,
+  Loader2,
   AlertCircle,
   MessageSquareQuote,
   BookOpen,
@@ -46,7 +51,10 @@ import {
   Target,
   Edit2,
   Trash2,
-  Save
+  Save,
+  Music,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useConfirm } from '@/components/ui/confirm-dialog'
@@ -91,6 +99,16 @@ export default function QuizGeneratorPage() {
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ question: '', answer: '' })
   const [isActionPending, setIsActionPending] = useState(false)
+
+  // Music Snippets state
+  const [musicSnippets, setMusicSnippets] = useState<MusicSnippetCandidate[]>([])
+  const [selectedSnippetIndices, setSelectedSnippetIndices] = useState<Set<number>>(new Set())
+  const [savedSnippets, setSavedSnippets] = useState<SavedMusicSnippet[]>([])
+  const [spotifyKeys, setSpotifyKeys] = useState<Record<string, number>>({})
+
+  const refreshSpotify = (id: string) => {
+    setSpotifyKeys(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }))
+  }
 
   // Ref to handle scrolling the detail popup to the top
   const scrollContainerRef = useRef<HTMLDivElement>(null)
@@ -179,40 +197,77 @@ export default function QuizGeneratorPage() {
     return stats?.isFull || false;
   }, [category, categoryStats]);
 
+  const selectedCategoryConfig = useMemo(() => {
+    return categories.find(c => c.category_name === category) || null
+  }, [categories, category])
+
+  const isMusicSnippets = selectedCategoryConfig?.include_spotify ?? false
+
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
     setSelectedEventId(id);
     loadEventHistory(id);
+    // Load saved snippets for the new event
+    if (selectedCategoryConfig?.include_spotify) {
+      getMusicSnippetsForEventAction(id, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {});
+    }
   };
 
   const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedName = e.target.value;
-    //console.log("Category selection changed:", selectedName);
     setCategory(selectedName);
     const config = categories.find(c => c.category_name === selectedName);
     if (config) setNumQuestions(config.question_count);
+    // Clear music snippets when switching to a non-spotify category
+    if (!config?.include_spotify) {
+      setMusicSnippets([])
+      setSelectedSnippetIndices(new Set())
+    }
   };
+
+  // Load saved snippets when event or spotify category changes
+  useEffect(() => {
+    if (selectedEventId && selectedCategoryConfig?.include_spotify) {
+      getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {});
+    } else {
+      setSavedSnippets([])
+    }
+  }, [selectedEventId, selectedCategoryConfig])
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return
-    
+
     if (currentCategoryIsFull) {
       toast.error(`${category} is already full for this event.`);
       return;
     }
-    
+
     setIsLoading(true)
     setError('')
     try {
-      const result = await generateQuizAction(topic, category, numQuestions)
-      if (result && 'error' in result && result.error) {
-        setError(result.error)
-        toast.error(result.error)
-      } else if (result && 'questions' in result && result.questions) {
-        setQuestions(result.questions)
-        setSelectedIndices(new Set(result.questions.map((_, i) => i)))
-        toast.success("Draft round generated!")
+      if (isMusicSnippets) {
+        const result = await generateMusicSnippetsAction(numQuestions, category)
+        if (result.error) {
+          setError(result.error)
+          toast.error(result.error)
+        } else if (result.songs) {
+          setMusicSnippets(result.songs)
+          setSelectedSnippetIndices(new Set(result.songs.map((_, i) => i)))
+          setQuestions([])
+          toast.success("Song suggestions generated!")
+        }
+      } else {
+        const result = await generateQuizAction(topic, category, numQuestions)
+        if (result && 'error' in result && result.error) {
+          setError(result.error)
+          toast.error(result.error)
+        } else if (result && 'questions' in result && result.questions) {
+          setQuestions(result.questions)
+          setSelectedIndices(new Set(result.questions.map((_, i) => i)))
+          setMusicSnippets([])
+          toast.success("Draft round generated!")
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Generation failed.'
@@ -224,18 +279,48 @@ export default function QuizGeneratorPage() {
   }
 
   const handleSave = async () => {
-    //console.log("Save button clicked with selected indices:", selectedIndices);
-    const selectedData = questions.filter((_, i) => selectedIndices.has(i))
-    if (selectedData.length === 0 || isSaving) return
+    if (isSaving) return
     if (!selectedEventId) {
       toast.error("Select a Quiz Event first.");
       return
     }
+
+    if (isMusicSnippets) {
+      const selectedData = musicSnippets.filter((_, i) => selectedSnippetIndices.has(i))
+      if (selectedData.length === 0) return
+      setIsSaving(true)
+      try {
+        await saveMusicSnippetsAction(
+          selectedData.map(s => ({
+            artist: s.artist,
+            title: s.title,
+            year: s.year,
+            spotify_track_id: s.spotify_track_id,
+          })),
+          parseInt(selectedEventId),
+          category,
+          selectedCategoryConfig!.id
+        )
+        const eventName = upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'Event'
+        toast.success(`Approved ${selectedData.length} songs for ${eventName}!`)
+        setMusicSnippets([])
+        setSelectedSnippetIndices(new Set())
+        loadEventHistory(selectedEventId)
+        getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig!.id).then(setSavedSnippets).catch(() => {})
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to save to database.'
+        toast.error(message)
+      } finally {
+        setIsSaving(false)
+      }
+      return
+    }
+
+    const selectedData = questions.filter((_, i) => selectedIndices.has(i))
+    if (selectedData.length === 0) return
     setIsSaving(true)
     try {
-      // Pass the 'topic' state value to the save action
       await saveQuizToDatabase(selectedData, parseInt(selectedEventId), topic)
-      
       const eventName = upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'Event'
       toast.success(`Approved ${selectedData.length} items for ${eventName}!`)
       setQuestions([])
@@ -345,7 +430,7 @@ export default function QuizGeneratorPage() {
                   styles.catName,
                   isFull ? styles.textFull : hasQuestions ? styles.textPartial : styles.textEmpty
                 )}>
-                  {stat.category_name}
+                  {stat.short_name || stat.category_name}
                 </span>
                 
                 {isFull ? (
@@ -479,28 +564,37 @@ export default function QuizGeneratorPage() {
                                </div>
                             </div>
                           ) : (
-                            <div className="flex items-start gap-4">
-                               <span className="text-[10px] font-black text-[#26300D]/20 mt-1 shrink-0">Q{i+1}</span>
-                               <div className="space-y-3 flex-1 min-w-0">
-                                  <p className="text-sm font-bold text-[#1F1F1A] leading-snug">{record.question_text}</p>
+                            <div className="space-y-3">
+                              <div className="flex items-start gap-4">
+                                {record.release_year ? (
+                                  <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[10px] font-black px-2 py-1 rounded-lg tracking-wider mt-0.5">
+                                    {record.release_year}
+                                  </span>
+                                ) : (
+                                  <span className="text-[10px] font-black text-[#26300D]/20 mt-1 shrink-0">Q{i+1}</span>
+                                )}
+                                <div className="space-y-3 flex-1 min-w-0">
+                                  {!record.spotify_track_id && (
+                                    <p className="text-sm font-bold text-[#1F1F1A] leading-snug">{record.question_text}</p>
+                                  )}
                                   <div className="flex items-center gap-2 bg-[#26300D] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
-                                     <Target className="w-3 h-3 text-[#FDCC4B]" />
-                                     <span className="text-xs font-black tracking-tight">{record.answer_text}</span>
+                                    <Target className="w-3 h-3 text-[#FDCC4B]" />
+                                    <span className="text-xs font-black tracking-tight">{record.answer_text}</span>
                                   </div>
-                               </div>
-                               
-                               <div className="flex flex-col gap-2 shrink-0">
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
+                                </div>
+
+                                <div className="flex flex-col gap-2 shrink-0">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
                                     onClick={() => startEditing(record)}
                                     className="h-9 w-9 rounded-xl bg-slate-50 text-[#5F624F] hover:bg-[#26300D]/5 hover:text-[#26300D]"
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="icon" 
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
                                     onClick={async () => {
                                       const ok = await confirm({ title: "Delete question", description: "Delete this question? This cannot be undone.", confirmLabel: "Delete", variant: "destructive" })
                                       if (ok) deleteQuestion(record.id)
@@ -509,7 +603,30 @@ export default function QuizGeneratorPage() {
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
-                               </div>
+                                </div>
+                              </div>
+                              {record.spotify_track_id && (
+                                <div className="relative">
+                                  <iframe
+                                    key={`sheet-${record.id}-${spotifyKeys[record.id] || 0}`}
+                                    title={record.answer_text}
+                                    src={`https://open.spotify.com/embed/track/${record.spotify_track_id}?theme=0`}
+                                    width="100%"
+                                    height="80"
+                                    allow="encrypted-media"
+                                    loading="lazy"
+                                    className="rounded-xl"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => refreshSpotify(record.id)}
+                                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+                                    title="Replay"
+                                  >
+                                    <RefreshCw className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
@@ -589,25 +706,35 @@ export default function QuizGeneratorPage() {
               </div>
             </div>
 
-            {/* Topic Input - Full width on mobile underneath selection row */}
+            {/* Topic Input / Generate Button */}
             <div className="col-span-2 sm:col-span-5 space-y-1">
-              <Label className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-[#5F624F] ml-1 text-left">Topic</Label>
+              <Label className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-[#5F624F] ml-1 text-left">
+                {isMusicSnippets ? 'Songs (1960–Present)' : 'Topic'}
+              </Label>
               <div className="flex gap-1.5">
-                <Input 
-                  placeholder="e.g. Disney, 90s..." 
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  disabled={currentCategoryIsFull}
-                  className={cn(
-                    "h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 text-[11px] font-bold focus:ring-0 px-3 min-w-0 grow",
-                    currentCategoryIsFull 
-                      ? "bg-slate-50 border-slate-200 placeholder:text-slate-300" 
-                      : "bg-white border-[#E6DFC8] focus:border-[#26300D]"
-                  )}
-                />
-                <Button 
+                {!isMusicSnippets && (
+                  <Input
+                    placeholder="e.g. Disney, 90s..."
+                    value={topic}
+                    onChange={(e) => setTopic(e.target.value)}
+                    disabled={currentCategoryIsFull}
+                    className={cn(
+                      "h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 text-[11px] font-bold focus:ring-0 px-3 min-w-0 grow",
+                      currentCategoryIsFull
+                        ? "bg-slate-50 border-slate-200 placeholder:text-slate-300"
+                        : "bg-white border-[#E6DFC8] focus:border-[#26300D]"
+                    )}
+                  />
+                )}
+                {isMusicSnippets && (
+                  <div className="flex items-center gap-2 px-3 h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 border-[#E6DFC8] bg-[#F7F4EA]/40 text-[11px] font-bold text-[#5F624F] min-w-0 grow">
+                    <Music className="w-3.5 h-3.5 text-[#26300D] shrink-0" />
+                    <span className="truncate">Instrumental intros with no vocals in first 15s</span>
+                  </div>
+                )}
+                <Button
                   type="submit"
-                  disabled={isLoading || categories.length === 0 || currentCategoryIsFull} 
+                  disabled={isLoading || categories.length === 0 || currentCategoryIsFull}
                   className="h-10 sm:h-9 rounded-xl sm:rounded-lg bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[8px] px-4 shadow-sm active:scale-95 transition-all shrink-0"
                 >
                   {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
@@ -732,11 +859,204 @@ export default function QuizGeneratorPage() {
         </div>
       )}
 
+      {/* MUSIC SNIPPETS DRAFT SECTION */}
+      {musicSnippets.length > 0 && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
+
+          {/* STICKY ACTION BAR */}
+          <div className="flex items-center justify-between bg-[#26300D] p-2.5 rounded-2xl shadow-xl border border-white/5 sticky top-16 z-20">
+            <div className="flex items-center gap-3 px-1">
+              <div className="bg-[#FDCC4B] text-[#26300D] w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs">
+                {selectedSnippetIndices.size}
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[#FDCC4B] text-[8px] font-black uppercase tracking-wider leading-none">Song Suggestions</span>
+                <span className="text-white/40 text-[7px] font-bold uppercase mt-1 flex items-center gap-1">
+                  <Music className="w-2 h-2" /> 1960–Present
+                </span>
+              </div>
+            </div>
+            <Button
+              variant="default"
+              onClick={handleSave}
+              disabled={isSaving || selectedSnippetIndices.size === 0}
+              className="h-8 bg-[#FDCC4B] text-[#26300D] px-4 font-black uppercase text-[8px] tracking-widest rounded-xl hover:bg-[#e5b843] active:scale-95 transition-transform"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Approve Songs"}
+            </Button>
+          </div>
+
+          {/* SONG CARDS */}
+          <div className="grid grid-cols-1 gap-4">
+            {musicSnippets.map((song, idx) => {
+              const isSelected = selectedSnippetIndices.has(idx)
+              return (
+                <div
+                  key={idx}
+                  className={cn(
+                    "group relative bg-white border-2 rounded-2xl transition-all overflow-hidden",
+                    isSelected
+                      ? "border-[#26300D] shadow-md"
+                      : "border-dashed border-[#E6DFC8] opacity-60 hover:opacity-100"
+                  )}
+                >
+                  <div className="px-4 py-4 space-y-3">
+                    {/* Top row: year badge + song info + select toggle */}
+                    <div
+                      className="flex items-start gap-3 cursor-pointer select-none"
+                      onClick={() => {
+                        const next = new Set(selectedSnippetIndices)
+                        if (next.has(idx)) next.delete(idx)
+                        else next.add(idx)
+                        setSelectedSnippetIndices(next)
+                      }}
+                    >
+                      {/* Year badge */}
+                      <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[10px] font-black px-2.5 py-1 rounded-lg tracking-wider">
+                        {song.year}
+                      </span>
+
+                      {/* Song info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-black text-[#1F1F1A] leading-snug tracking-tight truncate">
+                          {song.artist} — {song.title}
+                        </p>
+                        <p className="text-[10px] text-[#5F624F] font-bold mt-0.5 leading-snug">
+                          {song.intro_description}
+                        </p>
+                      </div>
+
+                      {/* Select indicator */}
+                      <div className={cn(
+                        "w-5 h-5 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0 mt-0.5",
+                        isSelected
+                          ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B] scale-110 shadow-sm"
+                          : "bg-white border-[#E6DFC8] text-[#E6DFC8]"
+                      )}>
+                        {isSelected ? <Check className="w-3 h-3 stroke-4" /> : <Plus className="w-3 h-3" />}
+                      </div>
+                    </div>
+
+                    {/* Spotify embed or fallback */}
+                    {song.spotify_track_id ? (
+                      <div className="relative">
+                        <iframe
+                          key={`draft-${idx}-${spotifyKeys[`draft-${idx}`] || 0}`}
+                          title={`${song.artist} - ${song.title}`}
+                          src={`https://open.spotify.com/embed/track/${song.spotify_track_id}?theme=0`}
+                          width="100%"
+                          height="80"
+                          allow="encrypted-media"
+                          loading="lazy"
+                          className="rounded-xl"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); refreshSpotify(`draft-${idx}`) }}
+                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+                          title="Replay"
+                        >
+                          <RefreshCw className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 px-3 py-2 bg-[#F7F4EA] rounded-xl border border-[#E6DFC8]">
+                        <AlertCircle className="w-3.5 h-3.5 text-[#5F624F] shrink-0" />
+                        <span className="text-[10px] font-bold text-[#5F624F] uppercase tracking-wider">Not found on Spotify</span>
+                        <a
+                          href={`https://open.spotify.com/search/${encodeURIComponent(song.artist + ' ' + song.title)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-auto flex items-center gap-1 text-[10px] font-black text-[#26300D] uppercase tracking-wider hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          Search <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* SAVED SNIPPETS FOR EVENT */}
+      {isMusicSnippets && savedSnippets.length > 0 && musicSnippets.length === 0 && questions.length === 0 && (
+        <div className="space-y-3 animate-in fade-in duration-500">
+          <p className="text-[9px] font-black text-[#5F624F] uppercase tracking-widest ml-1">
+            Saved Songs ({savedSnippets.length})
+          </p>
+          <div className="grid grid-cols-1 gap-3">
+            {savedSnippets.map((snippet) => (
+              <div key={snippet.id} className="bg-white border-2 border-[#E6DFC8] rounded-2xl overflow-hidden">
+                <div className="px-4 py-3 flex items-center gap-3">
+                  <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[10px] font-black px-2.5 py-1 rounded-lg tracking-wider">
+                    {snippet.release_year || '—'}
+                  </span>
+                  <p className="text-[12px] font-black text-[#1F1F1A] tracking-tight flex-1 min-w-0 truncate">
+                    {snippet.answer_text}
+                  </p>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={async () => {
+                      const ok = await confirm({ title: "Remove song", description: "Remove this song from the round?", confirmLabel: "Remove", variant: "destructive" })
+                      if (ok) {
+                        await deletePastQuestionAction(snippet.id)
+                        toast.success("Song removed")
+                        loadEventHistory(selectedEventId)
+                        if (selectedCategoryConfig) getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {})
+                      }
+                    }}
+                    className="h-8 w-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 shrink-0"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+                {snippet.spotify_track_id && (
+                  <div className="px-4 pb-3 relative">
+                    <iframe
+                      key={`saved-${snippet.id}-${spotifyKeys[snippet.id] || 0}`}
+                      title={snippet.answer_text}
+                      src={`https://open.spotify.com/embed/track/${snippet.spotify_track_id}?theme=0`}
+                      width="100%"
+                      height="80"
+                      allow="encrypted-media"
+                      loading="lazy"
+                      className="rounded-xl"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => refreshSpotify(snippet.id)}
+                      className="absolute top-1.5 right-5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+                      title="Replay"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* EMPTY STATE */}
-      {!isLoading && questions.length === 0 && (
-        <div className="py-16 text-center border-2 border-dashed border-[#E6DFC8] rounded-[2rem] bg-white/40 flex flex-col items-center">
-           <BookOpen className="w-8 h-8 text-[#26300D]/10 mb-2.5" />
-           <p className="text-[8px] sm:text-[9px] text-[#5F624F] uppercase tracking-[0.25em] font-black opacity-40">Select parameters to draft a round</p>
+      {!isLoading && questions.length === 0 && musicSnippets.length === 0 && (
+        <div className={cn(
+          "py-16 text-center border-2 border-dashed border-[#E6DFC8] rounded-[2rem] bg-white/40 flex flex-col items-center",
+          isMusicSnippets && savedSnippets.length > 0 && "hidden"
+        )}>
+           {isMusicSnippets ? (
+             <Music className="w-8 h-8 text-[#26300D]/10 mb-2.5" />
+           ) : (
+             <BookOpen className="w-8 h-8 text-[#26300D]/10 mb-2.5" />
+           )}
+           <p className="text-[8px] sm:text-[9px] text-[#5F624F] uppercase tracking-[0.25em] font-black opacity-40">
+             {isMusicSnippets ? 'Generate song suggestions for the music snippets round' : 'Select parameters to draft a round'}
+           </p>
         </div>
       )}
       {ConfirmDialogUI}

@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { create } from 'domain';
 import { revalidatePath } from 'next/cache'
 
 export type QuizQuestion = {
@@ -10,17 +9,34 @@ export type QuizQuestion = {
   category: string;
 }
 
+export type MusicSnippetCandidate = {
+  artist: string
+  title: string
+  year: number
+  intro_description: string
+  spotify_track_id: string | null
+}
+
+export type SavedMusicSnippet = {
+  id: string
+  answer_text: string
+  release_year: number | null
+  spotify_track_id: string | null
+}
+
 export type PastQuestionRecord = {
-  id: string; 
+  id: string;
   question_text: string;
   answer_text: string;
   category: string;
   asked_on: string;
-  events_id: number | null; 
+  events_id: number | null;
   quiz_category_configs_id: number | null;
   quiz_category_configs?: {
     category_name: string;
   } | null;
+  release_year?: number | null;
+  spotify_track_id?: string | null;
 }
 
 export type QuizEventSummary = {
@@ -34,6 +50,8 @@ export type QuizCategoryConfig = {
   category_name: string;
   question_count: number;
   points_per_question: number;
+  include_spotify: boolean;
+  short_name: string;
 }
 
 /**
@@ -321,4 +339,231 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
   revalidatePath('/event-setups/quiz-generator');
   revalidatePath('/event-setups/quiz-history');
   return { success: true };
+}
+
+// ─── Music Snippets ─────────────────────────────────────────────────────────
+
+async function getSpotifyAccessToken(): Promise<string | null> {
+  const clientId = process.env.SPOTIFY_CLIENT_ID || ''
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET || ''
+  if (!clientId || !clientSecret) return null
+
+  try {
+    const res = await fetch('https://accounts.spotify.com/api/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString('base64')}`,
+      },
+      body: 'grant_type=client_credentials',
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.access_token || null
+  } catch {
+    return null
+  }
+}
+
+async function searchSpotifyTrack(
+  artist: string,
+  title: string,
+  accessToken: string
+): Promise<string | null> {
+  try {
+    const query = encodeURIComponent(`track:${title} artist:${artist}`)
+    const res = await fetch(
+      `https://api.spotify.com/v1/search?q=${query}&type=track&limit=1`,
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    )
+    if (!res.ok) return null
+    const data = await res.json()
+    return data.tracks?.items?.[0]?.id || null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Generates music snippet suggestions via Gemini, then auto-searches Spotify for each.
+ */
+export async function generateMusicSnippetsAction(
+  numberOfSongs: number = 15,
+  categoryName: string = 'Music Snippets'
+): Promise<{ songs?: MusicSnippetCandidate[]; error?: string }> {
+  const supabase = await createClient()
+
+  try {
+    // Fetch existing songs for this category to avoid duplicates
+    const { data: pastSnippets } = await supabase
+      .from('past_quiz_questions')
+      .select('answer_text')
+      .eq('category', categoryName)
+
+    const existingList = pastSnippets?.length
+      ? pastSnippets.map((q) => q.answer_text).join(' | ')
+      : 'None.'
+
+    const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
+    if (!apiKey) {
+      return { error: 'API Key is missing. Please check your environment variables.' }
+    }
+
+    const model = 'gemini-2.5-flash'
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+
+    const prompt = `You are a music expert for a pub quiz at "Don Fenticas".
+Generate exactly ${numberOfSongs} songs that are famous for having distinctive instrumental intros where NO singing or vocals appear in at least the first 15 seconds.
+
+Requirements:
+- Songs from 1960 to present day, sorted chronologically by release year (ascending).
+- Spread across decades — include songs from the 60s, 70s, 80s, 90s, 2000s, 2010s, and 2020s where possible.
+- Well-known, recognizable songs that a British pub audience would know.
+- The instrumental intro must be iconic and identifiable — think guitar riffs, piano intros, synth openings, drum patterns.
+- Avoid these previously used songs: [${existingList}]
+- Return a JSON array sorted by year ascending.`
+
+    const payload = {
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: {
+        temperature: 0.85,
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'ARRAY',
+          items: {
+            type: 'OBJECT',
+            properties: {
+              artist: { type: 'STRING' },
+              title: { type: 'STRING' },
+              year: { type: 'INTEGER' },
+              intro_description: { type: 'STRING' },
+            },
+            required: ['artist', 'title', 'year', 'intro_description'],
+          },
+        },
+      },
+    }
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      return {
+        error: `AI Error (${response.status}): ${errorData.error?.message || 'The Music Expert is currently unavailable.'}`,
+      }
+    }
+
+    const result = await response.json()
+    const content = result.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!content) {
+      return { error: 'The Music Expert returned an empty response.' }
+    }
+
+    const rawSongs = JSON.parse(content) as { artist: string; title: string; year: number; intro_description: string }[]
+    rawSongs.sort((a, b) => a.year - b.year)
+
+    // Auto-search Spotify for each song
+    const spotifyToken = await getSpotifyAccessToken()
+    const songs: MusicSnippetCandidate[] = await Promise.all(
+      rawSongs.map(async (s) => {
+        let spotifyId: string | null = null
+        if (spotifyToken) {
+          spotifyId = await searchSpotifyTrack(s.artist, s.title, spotifyToken)
+        }
+        return { ...s, spotify_track_id: spotifyId }
+      })
+    )
+
+    return { songs }
+  } catch (error: unknown) {
+    console.error('Music snippet generation failed:', error)
+    return { error: 'Connection lost or request timed out. Please try again.' }
+  }
+}
+
+/**
+ * Saves selected music snippets to the database.
+ */
+export async function saveMusicSnippetsAction(
+  songs: { artist: string; title: string; year: number; spotify_track_id: string | null }[],
+  eventId: number,
+  categoryName: string,
+  categoryConfigId: number
+) {
+  const supabase = await createClient()
+
+  let currentEmployeeId: number | null = null
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user?.email) {
+    const { data: emp } = await supabase
+      .from('employees')
+      .select('id')
+      .eq('email', user.email)
+      .maybeSingle()
+    if (emp) currentEmployeeId = emp.id
+  }
+
+  let askedOn = new Date().toISOString().split('T')[0]
+  if (eventId) {
+    const { data: event } = await supabase.from('events').select('date').eq('id', eventId).single()
+    if (event?.date) askedOn = event.date
+  }
+
+  const now = new Date().toISOString()
+  const insertData = songs.map((s) => ({
+    question_text: `[${s.year}] Name the artist and song`,
+    answer_text: `${s.artist} - ${s.title}`,
+    category: categoryName,
+    topic: categoryName,
+    release_year: s.year,
+    spotify_track_id: s.spotify_track_id,
+    asked_on: askedOn,
+    events_id: eventId,
+    quiz_category_configs_id: categoryConfigId,
+    created_by: currentEmployeeId,
+    created_at: now,
+    updated_by: currentEmployeeId,
+    updated_at: now,
+  }))
+
+  const { error } = await supabase
+    .from('past_quiz_questions')
+    .insert(insertData)
+
+  if (error) {
+    console.error('Database save error:', error)
+    throw new Error('Failed to save music snippets.')
+  }
+
+  revalidatePath('/event-setups/quiz-generator')
+  revalidatePath('/event-setups/quiz-history')
+  return { success: true }
+}
+
+/**
+ * Fetches existing music snippets for an event.
+ */
+export async function getMusicSnippetsForEventAction(
+  eventId: string,
+  categoryConfigId: number
+): Promise<SavedMusicSnippet[]> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('past_quiz_questions')
+    .select('id, answer_text, release_year, spotify_track_id')
+    .eq('events_id', eventId)
+    .eq('quiz_category_configs_id', categoryConfigId)
+    .order('release_year', { ascending: true })
+
+  if (error) {
+    console.error('Error fetching music snippets:', error)
+    return []
+  }
+
+  return (data as SavedMusicSnippet[]) || []
 }

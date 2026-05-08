@@ -74,7 +74,7 @@ function eventTypeLabel(et: EventType) {
 
 export type Employee = { id: number; full_name: string };
 
-type QuizCategory = { id: number; category_name: string; question_count: number };
+type QuizCategory = { id: number; category_name: string; question_count: number; short_name?: string };
 type QuizQuestion = { id: string; events_id: number; quiz_category_configs_id: number | null };
 type BookingRecord = { event_id: number; status: string; group_size: number };
 
@@ -605,7 +605,10 @@ export default function EventsClient({
                         <div className="px-4 sm:px-5 py-2.5 space-y-2">
                           {categoryCounts.map(cat => (
                             <div key={cat.id} className="flex items-center justify-between gap-2">
-                              <span className="text-xs sm:text-sm font-bold text-[#1F1F1A]">{cat.category_name}</span>
+                              <span className="text-xs sm:text-sm font-bold text-[#1F1F1A]">
+                                {cat.short_name && <span className="text-[10px] font-black text-[#5F624F]/60 mr-1.5">{cat.short_name}</span>}
+                                {cat.category_name}
+                              </span>
                               <div className="flex items-center gap-1.5">
                                 {cat.count >= cat.question_count
                                   ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />

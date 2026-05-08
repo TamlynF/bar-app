@@ -8,25 +8,50 @@ export type QuizCategoryConfig = {
   category_name: string;
   question_count: number;
   points_per_question: number;
+  is_active: boolean;
+  order_no: number;
+  include_spotify: boolean;
+  short_name: string;
 };
 
-/**
- * Saves or updates a quiz category configuration.
- * Assumes a table 'quiz_category_configs' exists in Supabase.
- */
 export async function saveQuizCategoryAction(formData: FormData) {
   const supabase = await createClient();
-  
-  const id = formData.get("id")?.toString();
-  const payload = {
-    category_name: formData.get("category_name")?.toString() || "",
-    question_count: parseInt(formData.get("question_count")?.toString() || "10", 10),
-    points_per_question: parseInt(formData.get("points_per_question")?.toString() || "1", 10),
-  };
 
-  if (!payload.category_name) {
+  const id = formData.get("id")?.toString();
+  const is_active = formData.get("is_active") === "on";
+  const include_spotify = formData.get("include_spotify") === "on";
+  const order_no = parseInt(formData.get("order_no")?.toString() || "1", 10);
+  const category_name = formData.get("category_name")?.toString() || "";
+  const short_name_raw = formData.get("short_name")?.toString() || "";
+  const short_name = short_name_raw || category_name.substring(0, 3).toUpperCase();
+
+  if (!category_name) {
     return { error: "Category name is required." };
   }
+
+  // Check for duplicate order_no among active categories
+  if (is_active) {
+    let dupQuery = supabase
+      .from("quiz_category_configs")
+      .select("id")
+      .eq("order_no", order_no)
+      .eq("is_active", true);
+    if (id) dupQuery = dupQuery.neq("id", id);
+    const { data: dup } = await dupQuery.maybeSingle();
+    if (dup) {
+      return { error: `Order number ${order_no} is already used by another active category.` };
+    }
+  }
+
+  const payload = {
+    category_name,
+    question_count: parseInt(formData.get("question_count")?.toString() || "10", 10),
+    points_per_question: parseInt(formData.get("points_per_question")?.toString() || "1", 10),
+    is_active,
+    order_no,
+    include_spotify,
+    short_name,
+  };
 
   try {
     if (id) {
@@ -36,6 +61,15 @@ export async function saveQuizCategoryAction(formData: FormData) {
         .eq("id", id);
       if (error) throw error;
     } else {
+      // Auto-increment order_no for new categories
+      const { data: maxRow } = await supabase
+        .from("quiz_category_configs")
+        .select("order_no")
+        .order("order_no", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      payload.order_no = (maxRow?.order_no ?? 0) + 1;
+
       const { error } = await supabase
         .from("quiz_category_configs")
         .insert(payload);
@@ -50,9 +84,6 @@ export async function saveQuizCategoryAction(formData: FormData) {
   }
 }
 
-/**
- * Deletes a quiz category configuration.
- */
 export async function deleteQuizCategoryAction(id: number) {
   const supabase = await createClient();
   try {
@@ -61,7 +92,7 @@ export async function deleteQuizCategoryAction(id: number) {
       .delete()
       .eq("id", id);
     if (error) throw error;
-    
+
     revalidatePath("/event-setups/quiz-categories");
     return { success: true };
   } catch (error) {
