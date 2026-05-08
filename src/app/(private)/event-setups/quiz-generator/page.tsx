@@ -40,11 +40,9 @@ import {
   Sparkles,
   Loader2,
   AlertCircle,
-  MessageSquareQuote,
   BookOpen,
   ChevronDown,
   History,
-  CalendarCheck,
   Check,
   Plus,
   CheckCircle,
@@ -218,11 +216,12 @@ export default function QuizGeneratorPage() {
     setCategory(selectedName);
     const config = categories.find(c => c.category_name === selectedName);
     if (config) setNumQuestions(config.question_count);
-    // Clear music snippets when switching to a non-spotify category
-    if (!config?.include_spotify) {
-      setMusicSnippets([])
-      setSelectedSnippetIndices(new Set())
-    }
+    // Clear all draft results when switching category
+    setQuestions([])
+    setSelectedIndices(new Set())
+    setMusicSnippets([])
+    setSelectedSnippetIndices(new Set())
+    setError('')
   };
 
   // Load saved snippets when event or spotify category changes
@@ -394,15 +393,15 @@ export default function QuizGeneratorPage() {
   }, [viewingCategory, eventHistory]);
 
   return (
-    <div className="max-w-6xl mx-auto p-3 sm:p-6 space-y-4 sm:space-y-6 animate-in fade-in duration-700 pb-32 text-left">
-      
+    <div className="max-w-6xl mx-auto px-2 sm:px-6 py-2 sm:py-4 space-y-2 sm:space-y-4 animate-in fade-in duration-700 pb-32 text-left">
+
       {/* HEADER: Archive Shortcut */}
       <div className="flex items-center justify-end">
-        <Link 
-          href="/event-setups/quiz-history" 
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[9px] uppercase tracking-wider hover:bg-[#26300D]/5 transition-all shadow-xs"
+        <Link
+          href="/event-setups/quiz-history"
+          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[8px] uppercase tracking-wider hover:bg-[#26300D]/5 transition-all shadow-xs"
         >
-          <History className="w-3.5 h-3.5" />
+          <History className="w-3 h-3" />
           <span>History Archive</span>
         </Link>
       </div>
@@ -412,52 +411,40 @@ export default function QuizGeneratorPage() {
         {categoryStats.map((stat) => {
           const isFull = stat.isFull;
           const hasQuestions = stat.currentCount > 0;
-          
+
           return (
             <button
               key={stat.id}
               type="button"
               onClick={() => setViewingCategory(stat)}
+              style={{ borderColor: isFull ? '#047857' : hasQuestions ? '#b45309' : '#b91c1c' }}
               className={cn(
-                styles.pill,
-                isFull ? styles.pillFull : hasQuestions ? styles.pillPartial : styles.pillEmpty,
-                filterCategory === stat.category_name && styles.pillActive
+                "flex flex-row! items-center gap-1.5 px-3 h-9 rounded-lg border border-solid shrink-0 whitespace-nowrap shadow-md transition-all hover:shadow-lg active:scale-[0.98]",
+                isFull
+                  ? "bg-emerald-50"
+                  : hasQuestions
+                    ? "bg-amber-50"
+                    : "bg-red-50",
+                filterCategory === stat.category_name && "ring-2 ring-[#26300D] ring-offset-1 z-10"
               )}
             >
-              {/* Top Row: Name & Fraction */}
-              <div className={styles.headerRow}>
-                <span className={cn(
-                  styles.catName,
-                  isFull ? styles.textFull : hasQuestions ? styles.textPartial : styles.textEmpty
-                )}>
-                  {stat.short_name || stat.category_name}
-                </span>
-                
-                {isFull ? (
-                  <CheckCircle className="w-3 h-3 text-emerald-500 shrink-0" />
-                ) : (
-                  <span className={cn(
-                    styles.statsText,
-                    hasQuestions ? styles.statsTextPartial : styles.statsTextEmpty
-                  )}>
-                    {stat.currentCount}/{stat.question_count}
-                  </span>
-                )}
-              </div>
-              
-              {/* Bottom Row: Full-width Progress Bar */}
-              <div className={cn(
-                styles.barTrack,
-                isFull ? styles.trackFull : hasQuestions ? styles.trackPartial : styles.trackEmpty
+              <span className={cn(
+                "text-[11px] font-black uppercase tracking-tight leading-none",
+                isFull ? "text-emerald-700" : hasQuestions ? "text-amber-700" : "text-red-700"
               )}>
-                <div 
-                  className={cn(
-                    styles.barFill,
-                    isFull ? styles.fillFull : hasQuestions ? styles.fillPartial : styles.fillEmpty
-                  )}
-                  style={{ '--progress-width': `${stat.progress}%` } as React.CSSProperties}
-                />
-              </div>
+                {stat.short_name || stat.category_name}:
+              </span>
+
+              {isFull ? (
+                <CheckCircle className="w-3 h-3 text-emerald-600 shrink-0" />
+              ) : (
+                <span className={cn(
+                  "text-[11px] font-black tabular-nums leading-none shrink-0",
+                  hasQuestions ? "text-amber-700" : "text-red-700"
+                )}>
+                  {stat.currentCount}/{stat.question_count}
+                </span>
+              )}
             </button>
           )
         })}
@@ -657,98 +644,95 @@ export default function QuizGeneratorPage() {
       </Sheet>
 
       {/* GENERATOR FORM */}
-      <form onSubmit={handleGenerate} className="bg-white border-2 border-[#E6DFC8] p-3 sm:p-4 rounded-[1.5rem] sm:rounded-[2rem] shadow-sm">
-        <div className="flex flex-col gap-3 grow">
-          <div className="grid grid-cols-2 sm:grid-cols-12 gap-2.5">
-            {/* Event Selection - Full width on smallest mobile, half width on grid */}
-            <div className="col-span-1 sm:col-span-4 space-y-1">
-              <Label className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-[#5F624F] ml-1 flex items-center gap-1 text-left">
-                 <CalendarCheck className="w-2.5 h-2.5" /> Event
-              </Label>
-              <div className="relative">
-                <select 
-                  title='Event'
-                  value={selectedEventId}
-                  onChange={handleEventChange}
-                  className="w-full h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 border-[#E6DFC8] bg-[#F7F4EA]/40 px-2.5 text-[11px] font-black text-[#26300D] appearance-none outline-none focus:border-[#26300D] transition-all uppercase truncate"
-                >
-                  {upcomingEvents.map(event => (
-                    <option key={event.id} value={event.id}>{format(new Date(event.date), "dd MMM yyyy")}</option>
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#26300D] opacity-40 pointer-events-none" />
-              </div>
-            </div>
-
-            {/* Category Selection - Half width on mobile grid */}
-            <div className="col-span-1 sm:col-span-3 space-y-1">
-              <Label className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-[#5F624F] ml-1 text-left">Category</Label>
-              <div className="relative">
-                <select 
-                  title='Category'
-                  value={category}
-                  onChange={handleCategoryChange}
-                  className={cn(
-                    "w-full h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 px-2.5 text-[11px] font-bold appearance-none outline-none transition-all uppercase truncate",
-                    currentCategoryIsFull 
-                      ? "border-red-200 bg-red-50 text-red-600" 
-                      : "border-[#E6DFC8] bg-white text-[#26300D] focus:border-[#26300D]"
-                  )}
-                >
-                  {categories.map(opt => (
-                    <option key={opt.id} value={opt.category_name}>{opt.category_name}</option>
-                  ))}
-                </select>
-                <ChevronDown className={cn(
-                  "absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none",
-                  currentCategoryIsFull ? "text-red-400" : "text-[#5F624F] opacity-40"
-                )} />
-              </div>
-            </div>
-
-            {/* Topic Input / Generate Button */}
-            <div className="col-span-2 sm:col-span-5 space-y-1">
-              <Label className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest text-[#5F624F] ml-1 text-left">
-                {isMusicSnippets ? 'Songs (1960–Present)' : 'Topic'}
-              </Label>
-              <div className="flex gap-1.5">
-                {!isMusicSnippets && (
-                  <Input
-                    placeholder="e.g. Disney, 90s..."
-                    value={topic}
-                    onChange={(e) => setTopic(e.target.value)}
-                    disabled={currentCategoryIsFull}
-                    className={cn(
-                      "h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 text-[11px] font-bold focus:ring-0 px-3 min-w-0 grow",
-                      currentCategoryIsFull
-                        ? "bg-slate-50 border-slate-200 placeholder:text-slate-300"
-                        : "bg-white border-[#E6DFC8] focus:border-[#26300D]"
-                    )}
-                  />
-                )}
-                {isMusicSnippets && (
-                  <div className="flex items-center gap-2 px-3 h-10 sm:h-9 rounded-xl sm:rounded-lg border-2 border-[#E6DFC8] bg-[#F7F4EA]/40 text-[11px] font-bold text-[#5F624F] min-w-0 grow">
-                    <Music className="w-3.5 h-3.5 text-[#26300D] shrink-0" />
-                    <span className="truncate">Instrumental intros with no vocals in first 15s</span>
-                  </div>
-                )}
-                <Button
-                  type="submit"
-                  disabled={isLoading || categories.length === 0 || currentCategoryIsFull}
-                  className="h-10 sm:h-9 rounded-xl sm:rounded-lg bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[8px] px-4 shadow-sm active:scale-95 transition-all shrink-0"
-                >
-                  {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                </Button>
-              </div>
-              {currentCategoryIsFull && (
-                <p className="text-[9px] font-black text-red-600 uppercase tracking-widest mt-1.5 ml-1 animate-in fade-in slide-in-from-top-1">
-                  <AlertCircle className="inline w-2.5 h-2.5 mr-1 -mt-0.5" />
-                  {category} is full for this date
-                </p>
-              )}
+      <form onSubmit={handleGenerate} className="bg-white border border-[#E6DFC8] p-2 sm:p-3 rounded-xl shadow-sm">
+        <div className="grid grid-cols-2 gap-x-1.5 gap-y-1.5">
+          {/* Row 1 col 1: Event */}
+          <div>
+            <Label className="text-[6px] font-black uppercase tracking-wider text-[#5F624F]/50 ml-0.5 mb-0.5 block text-left">Event</Label>
+            <div className="relative">
+              <select
+                title='Event'
+                value={selectedEventId}
+                onChange={handleEventChange}
+                className="w-full h-8 rounded-md border border-[#E6DFC8] bg-[#F7F4EA]/40 pl-2 pr-6 text-[10px] font-black text-[#26300D] appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none focus:border-[#26300D] transition-all uppercase"
+              >
+                {upcomingEvents.map(event => (
+                  <option key={event.id} value={event.id}>{format(new Date(event.date), "dd MMM yyyy")}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#26300D] opacity-40 pointer-events-none" />
             </div>
           </div>
+
+          {/* Row 1 col 2: Category */}
+          <div>
+            <Label className="text-[6px] font-black uppercase tracking-wider text-[#5F624F]/50 ml-0.5 mb-0.5 block text-left">Category</Label>
+            <div className="relative">
+              <select
+                title='Category'
+                value={category}
+                onChange={handleCategoryChange}
+                className={cn(
+                  "w-full h-8 rounded-md border pl-2 pr-6 text-[10px] font-bold appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none transition-all uppercase",
+                  currentCategoryIsFull
+                    ? "border-red-200 bg-red-50 text-red-600"
+                    : "border-[#E6DFC8] bg-white text-[#26300D] focus:border-[#26300D]"
+                )}
+              >
+                {categories.map(opt => (
+                  <option key={opt.id} value={opt.category_name}>{opt.category_name}</option>
+                ))}
+              </select>
+              <ChevronDown className={cn(
+                "absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none",
+                currentCategoryIsFull ? "text-red-400" : "text-[#5F624F] opacity-40"
+              )} />
+            </div>
+          </div>
+
+          {/* Row 2 col 1: Topic (or empty for music snippets) */}
+          {!isMusicSnippets ? (
+            <div>
+              <Label className="text-[6px] font-black uppercase tracking-wider text-[#5F624F]/50 ml-0.5 mb-0.5 block text-left">Topic</Label>
+              <Input
+                placeholder="e.g. Disney, 90s..."
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                disabled={currentCategoryIsFull}
+                className={cn(
+                  "h-8 rounded-md border text-[10px] font-bold focus:ring-0 px-2 w-full",
+                  currentCategoryIsFull
+                    ? "bg-slate-50 border-slate-200 placeholder:text-slate-300"
+                    : "bg-white border-[#E6DFC8] focus:border-[#26300D]"
+                )}
+              />
+            </div>
+          ) : (
+            <div />
+          )}
+
+          {/* Row 2 col 2: Generate button */}
+          <div className="flex items-end">
+            <Button
+              type="submit"
+              disabled={isLoading || categories.length === 0 || currentCategoryIsFull}
+              className="h-8 w-full rounded-md bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-wider text-[8px] shadow-sm active:scale-95 transition-all"
+            >
+              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
+                <span className="flex items-center gap-1">
+                  <Sparkles className="w-3 h-3" />
+                  Generate
+                </span>
+              )}
+            </Button>
+          </div>
         </div>
+        {currentCategoryIsFull && (
+          <p className="text-[8px] font-black text-red-600 uppercase tracking-widest mt-1 ml-0.5 animate-in fade-in slide-in-from-top-1">
+            <AlertCircle className="inline w-2.5 h-2.5 mr-0.5 -mt-0.5" />
+            {category} is full for this date
+          </p>
+        )}
       </form>
 
       {error && (
@@ -760,54 +744,34 @@ export default function QuizGeneratorPage() {
 
       {/* DRAFT RESULTS SECTION */}
       {questions.length > 0 && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
-          
-          {/* STICKY ACTION BAR */}
-          <div className="flex items-center justify-between bg-[#26300D] p-2.5 rounded-2xl shadow-xl border border-white/5 sticky top-16 z-20">
-             <div className="flex items-center gap-3 px-1">
-                <div className="bg-[#FDCC4B] text-[#26300D] w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs">
-                   {selectedIndices.size}
-                </div>
-                <div className="flex flex-col">
-                   <span className="text-[#FDCC4B] text-[8px] font-black uppercase tracking-wider leading-none">Draft Items</span>
-                   {filterCategory && (
-                     <span className="text-white/40 text-[7px] font-bold uppercase mt-1 flex items-center gap-1">
-                       <CheckCircle className="w-2 h-2" /> {filterCategory}
-                     </span>
-                   )}
-                </div>
-             </div>
+        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F0EDE0] rounded-xl p-2 sm:p-3 space-y-2">
 
-             <div className="flex items-center gap-2">
-                {filterCategory && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setFilterCategory(null)}
-                    className="h-8 text-white/50 text-[7px] font-black uppercase tracking-widest px-2 hover:text-white"
-                  >
-                    Clear Filter
-                  </Button>
-                )}
-                <Button 
-                  variant="default" 
-                  onClick={handleSave} 
-                  disabled={isSaving || selectedIndices.size === 0} 
-                  className="h-8 bg-[#FDCC4B] text-[#26300D] px-4 font-black uppercase text-[8px] tracking-widest rounded-xl hover:bg-[#e5b843] active:scale-95 transition-transform"
-                >
-                  {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Approve Round"}
-                </Button>
-             </div>
+          {/* STICKY ACTION BAR */}
+          <div className="flex items-center justify-between bg-[#26300D] p-2 rounded-lg shadow-lg sticky top-16 z-20">
+            <div className="flex items-center gap-2 px-0.5">
+              <div className="bg-[#FDCC4B] text-[#26300D] w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
+                {selectedIndices.size}
+              </div>
+              <span className="text-[#FDCC4B] text-[8px] font-black uppercase tracking-wider leading-none">Draft Items</span>
+            </div>
+            <Button
+              variant="default"
+              onClick={handleSave}
+              disabled={isSaving || selectedIndices.size === 0}
+              className="h-7 bg-[#FDCC4B] text-[#26300D] px-3 font-black uppercase text-[7px] tracking-widest rounded-md hover:bg-[#e5b843] active:scale-95 transition-transform"
+            >
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Approve Round"}
+            </Button>
           </div>
 
           {/* DRAFT CARDS GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {filteredQuestions.map((q, idx) => {
               const originalIndex = questions.indexOf(q);
               const isSelected = selectedIndices.has(originalIndex);
               return (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   onClick={() => {
                     const next = new Set(selectedIndices);
                     if (next.has(originalIndex)) next.delete(originalIndex);
@@ -815,39 +779,33 @@ export default function QuizGeneratorPage() {
                     setSelectedIndices(next);
                   }}
                   className={cn(
-                    "group relative flex flex-col bg-white border-2 rounded-2xl transition-all cursor-pointer select-none overflow-hidden",
-                    isSelected 
-                      ? "border-[#26300D] shadow-md -translate-y-px" 
-                      : "border-dashed border-[#E6DFC8] opacity-50 hover:opacity-100"
+                    "group relative flex flex-col bg-white rounded-lg transition-all cursor-pointer select-none overflow-hidden shadow-sm",
+                    isSelected
+                      ? "border border-[#26300D]/60 shadow-md"
+                      : "border border-transparent opacity-60 hover:opacity-100"
                   )}
                 >
-                  <div className="px-5 py-4 space-y-4 relative">
-                    {/* Floating Selection Indicator - Absolute Positioned with Space from Text */}
+                  <div className="px-3 py-2.5 space-y-2 relative">
                     <div className={cn(
-                      "absolute top-4 right-4 w-5 h-5 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10",
-                      isSelected 
-                        ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B] scale-110 shadow-sm" 
-                        : "bg-white border-[#E6DFC8] text-[#E6DFC8]"
+                      "absolute top-2.5 right-2.5 w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10",
+                      isSelected
+                        ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B]"
+                        : "bg-white border-[#D6D0BA] text-[#D6D0BA]"
                     )}>
-                      {isSelected ? <Check className="w-3 h-3 stroke-4" /> : <Plus className="w-3 h-3" />}
+                      {isSelected ? <Check className="w-2.5 h-2.5 stroke-4" /> : <Plus className="w-2.5 h-2.5" />}
                     </div>
 
-                    {/* Question Content - Added right padding to prevent overlap with indicator */}
-                    <div className="flex items-start gap-2.5 pr-10">
-                      <MessageSquareQuote className="w-4 h-4 text-[#26300D] shrink-0 opacity-10 mt-0.5" />                                      
-                       <p className="text-[13px] font-black text-[#1F1F1A] leading-snug tracking-tight">
-                         {q.question}
-                       </p>
-                    </div>
-                    
-                    {/* Answer Content - Center Aligned, Compact Padding, and Updated Backgrounds */}
+                    <p className="text-[11px] font-bold text-[#1F1F1A] leading-snug pr-7">
+                      {q.question}
+                    </p>
+
                     <div className={cn(
-                      "p-2.5 rounded-xl border transition-all duration-500 text-center",
-                      isSelected 
-                        ? "bg-[#FDCC4B]/20 border-[#FDCC4B]/40" 
-                        : "bg-[#F7F4EA] border-[#E6DFC8]/40"
+                      "px-2.5 py-1.5 rounded-md text-center transition-all duration-500",
+                      isSelected
+                        ? "bg-[#FDCC4B]/20"
+                        : "bg-[#F7F4EA]"
                     )}>
-                      <p className="text-[12px] font-black text-[#26300D] leading-tight">
+                      <p className="text-[10px] font-black text-[#26300D] leading-tight">
                         {q.answer}
                       </p>
                     </div>
@@ -861,120 +819,108 @@ export default function QuizGeneratorPage() {
 
       {/* MUSIC SNIPPETS DRAFT SECTION */}
       {musicSnippets.length > 0 && (
-        <div className="space-y-4 animate-in fade-in slide-in-from-bottom-3 duration-500">
+        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F0EDE0] rounded-xl p-2 sm:p-3 space-y-2">
 
           {/* STICKY ACTION BAR */}
-          <div className="flex items-center justify-between bg-[#26300D] p-2.5 rounded-2xl shadow-xl border border-white/5 sticky top-16 z-20">
-            <div className="flex items-center gap-3 px-1">
-              <div className="bg-[#FDCC4B] text-[#26300D] w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs">
+          <div className="flex items-center justify-between bg-[#26300D] p-2 rounded-lg shadow-lg sticky top-16 z-20">
+            <div className="flex items-center gap-2 px-0.5">
+              <div className="bg-[#FDCC4B] text-[#26300D] w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
                 {selectedSnippetIndices.size}
               </div>
-              <div className="flex flex-col">
-                <span className="text-[#FDCC4B] text-[8px] font-black uppercase tracking-wider leading-none">Song Suggestions</span>
-                <span className="text-white/40 text-[7px] font-bold uppercase mt-1 flex items-center gap-1">
-                  <Music className="w-2 h-2" /> 1960–Present
-                </span>
-              </div>
+              <span className="text-[#FDCC4B] text-[8px] font-black uppercase tracking-wider leading-none">Songs</span>
             </div>
             <Button
               variant="default"
               onClick={handleSave}
               disabled={isSaving || selectedSnippetIndices.size === 0}
-              className="h-8 bg-[#FDCC4B] text-[#26300D] px-4 font-black uppercase text-[8px] tracking-widest rounded-xl hover:bg-[#e5b843] active:scale-95 transition-transform"
+              className="h-7 bg-[#FDCC4B] text-[#26300D] px-3 font-black uppercase text-[7px] tracking-widest rounded-md hover:bg-[#e5b843] active:scale-95 transition-transform"
             >
-              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Approve Songs"}
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Approve Songs"}
             </Button>
           </div>
 
           {/* SONG CARDS */}
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 gap-2">
             {musicSnippets.map((song, idx) => {
               const isSelected = selectedSnippetIndices.has(idx)
               return (
                 <div
                   key={idx}
                   className={cn(
-                    "group relative bg-white border-2 rounded-2xl transition-all overflow-hidden",
+                    "group relative bg-white rounded-lg transition-all overflow-hidden shadow-sm",
                     isSelected
-                      ? "border-[#26300D] shadow-md"
-                      : "border-dashed border-[#E6DFC8] opacity-60 hover:opacity-100"
+                      ? "border border-[#26300D]/60 shadow-md"
+                      : "border border-transparent opacity-60 hover:opacity-100"
                   )}
                 >
-                  <div className="px-4 py-4 space-y-3">
-                    {/* Top row: year badge + song info + select toggle */}
-                    <div
-                      className="flex items-start gap-3 cursor-pointer select-none"
-                      onClick={() => {
-                        const next = new Set(selectedSnippetIndices)
-                        if (next.has(idx)) next.delete(idx)
-                        else next.add(idx)
-                        setSelectedSnippetIndices(next)
-                      }}
-                    >
-                      {/* Year badge */}
-                      <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[10px] font-black px-2.5 py-1 rounded-lg tracking-wider">
-                        {song.year}
-                      </span>
-
-                      {/* Song info */}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-black text-[#1F1F1A] leading-snug tracking-tight truncate">
-                          {song.artist} — {song.title}
-                        </p>
-                        <p className="text-[10px] text-[#5F624F] font-bold mt-0.5 leading-snug">
-                          {song.intro_description}
-                        </p>
-                      </div>
-
-                      {/* Select indicator */}
-                      <div className={cn(
-                        "w-5 h-5 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0 mt-0.5",
-                        isSelected
-                          ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B] scale-110 shadow-sm"
-                          : "bg-white border-[#E6DFC8] text-[#E6DFC8]"
-                      )}>
-                        {isSelected ? <Check className="w-3 h-3 stroke-4" /> : <Plus className="w-3 h-3" />}
-                      </div>
+                  {/* Clickable header row */}
+                  <div
+                    className="flex items-center gap-2 px-2.5 py-2 cursor-pointer select-none"
+                    onClick={() => {
+                      const next = new Set(selectedSnippetIndices)
+                      if (next.has(idx)) next.delete(idx)
+                      else next.add(idx)
+                      setSelectedSnippetIndices(next)
+                    }}
+                  >
+                    <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
+                      {song.year}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[11px] font-bold text-[#1F1F1A] leading-tight tracking-tight truncate">
+                        {song.artist} — {song.title}
+                      </p>
+                      <p className="text-[8px] text-[#5F624F] font-medium mt-0.5 leading-tight line-clamp-1">
+                        {song.intro_description}
+                      </p>
                     </div>
-
-                    {/* Spotify embed or fallback */}
-                    {song.spotify_track_id ? (
-                      <div className="relative">
-                        <iframe
-                          key={`draft-${idx}-${spotifyKeys[`draft-${idx}`] || 0}`}
-                          title={`${song.artist} - ${song.title}`}
-                          src={`https://open.spotify.com/embed/track/${song.spotify_track_id}?theme=0`}
-                          width="100%"
-                          height="80"
-                          allow="encrypted-media"
-                          loading="lazy"
-                          className="rounded-xl"
-                        />
-                        <button
-                          type="button"
-                          onClick={(e) => { e.stopPropagation(); refreshSpotify(`draft-${idx}`) }}
-                          className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-                          title="Replay"
-                        >
-                          <RefreshCw className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 px-3 py-2 bg-[#F7F4EA] rounded-xl border border-[#E6DFC8]">
-                        <AlertCircle className="w-3.5 h-3.5 text-[#5F624F] shrink-0" />
-                        <span className="text-[10px] font-bold text-[#5F624F] uppercase tracking-wider">Not found on Spotify</span>
-                        <a
-                          href={`https://open.spotify.com/search/${encodeURIComponent(song.artist + ' ' + song.title)}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="ml-auto flex items-center gap-1 text-[10px] font-black text-[#26300D] uppercase tracking-wider hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          Search <ExternalLink className="w-3 h-3" />
-                        </a>
-                      </div>
-                    )}
+                    <div className={cn(
+                      "w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0",
+                      isSelected
+                        ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B]"
+                        : "bg-white border-[#D6D0BA] text-[#D6D0BA]"
+                    )}>
+                      {isSelected ? <Check className="w-2.5 h-2.5 stroke-4" /> : <Plus className="w-2.5 h-2.5" />}
+                    </div>
                   </div>
+
+                  {/* Spotify embed or fallback */}
+                  {song.spotify_track_id ? (
+                    <div className="relative px-2.5 pb-2">
+                      <iframe
+                        key={`draft-${idx}-${spotifyKeys[`draft-${idx}`] || 0}`}
+                        title={`${song.artist} - ${song.title}`}
+                        src={`https://open.spotify.com/embed/track/${song.spotify_track_id}?theme=0`}
+                        width="100%"
+                        height="80"
+                        allow="encrypted-media"
+                        loading="lazy"
+                        className="rounded-md"
+                      />
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); refreshSpotify(`draft-${idx}`) }}
+                        className="absolute top-1 right-3.5 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+                        title="Replay"
+                      >
+                        <RefreshCw className="w-2.5 h-2.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 mx-2.5 mb-2 px-2 py-1 bg-[#F7F4EA] rounded-md">
+                      <AlertCircle className="w-2.5 h-2.5 text-[#5F624F] shrink-0" />
+                      <span className="text-[8px] font-bold text-[#5F624F] uppercase tracking-wider">Not on Spotify</span>
+                      <a
+                        href={`https://open.spotify.com/search/${encodeURIComponent(song.artist + ' ' + song.title)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="ml-auto flex items-center gap-0.5 text-[8px] font-black text-[#26300D] uppercase tracking-wider hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Search <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -984,18 +930,18 @@ export default function QuizGeneratorPage() {
 
       {/* SAVED SNIPPETS FOR EVENT */}
       {isMusicSnippets && savedSnippets.length > 0 && musicSnippets.length === 0 && questions.length === 0 && (
-        <div className="space-y-3 animate-in fade-in duration-500">
-          <p className="text-[9px] font-black text-[#5F624F] uppercase tracking-widest ml-1">
+        <div className="animate-in fade-in duration-500 bg-[#F0EDE0] rounded-xl p-2 sm:p-3 space-y-2">
+          <p className="text-[7px] font-black text-[#5F624F] uppercase tracking-widest ml-0.5">
             Saved Songs ({savedSnippets.length})
           </p>
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-2">
             {savedSnippets.map((snippet) => (
-              <div key={snippet.id} className="bg-white border-2 border-[#E6DFC8] rounded-2xl overflow-hidden">
-                <div className="px-4 py-3 flex items-center gap-3">
-                  <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[10px] font-black px-2.5 py-1 rounded-lg tracking-wider">
+              <div key={snippet.id} className="bg-white border border-[#26300D]/20 rounded-lg overflow-hidden shadow-sm">
+                <div className="px-2.5 py-2 flex items-center gap-2">
+                  <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
                     {snippet.release_year || '—'}
                   </span>
-                  <p className="text-[12px] font-black text-[#1F1F1A] tracking-tight flex-1 min-w-0 truncate">
+                  <p className="text-[10px] font-bold text-[#1F1F1A] tracking-tight flex-1 min-w-0 truncate">
                     {snippet.answer_text}
                   </p>
                   <Button
@@ -1010,13 +956,13 @@ export default function QuizGeneratorPage() {
                         if (selectedCategoryConfig) getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {})
                       }
                     }}
-                    className="h-8 w-8 rounded-xl bg-red-50 text-red-600 hover:bg-red-100 shrink-0"
+                    className="h-7 w-7 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 shrink-0"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <Trash2 className="w-3 h-3" />
                   </Button>
                 </div>
                 {snippet.spotify_track_id && (
-                  <div className="px-4 pb-3 relative">
+                  <div className="px-3 pb-2 relative">
                     <iframe
                       key={`saved-${snippet.id}-${spotifyKeys[snippet.id] || 0}`}
                       title={snippet.answer_text}
@@ -1025,12 +971,12 @@ export default function QuizGeneratorPage() {
                       height="80"
                       allow="encrypted-media"
                       loading="lazy"
-                      className="rounded-xl"
+                      className="rounded-lg"
                     />
                     <button
                       type="button"
                       onClick={() => refreshSpotify(snippet.id)}
-                      className="absolute top-1.5 right-5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
+                      className="absolute top-1.5 right-4 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
                       title="Replay"
                     >
                       <RefreshCw className="w-3 h-3" />
@@ -1046,16 +992,16 @@ export default function QuizGeneratorPage() {
       {/* EMPTY STATE */}
       {!isLoading && questions.length === 0 && musicSnippets.length === 0 && (
         <div className={cn(
-          "py-16 text-center border-2 border-dashed border-[#E6DFC8] rounded-[2rem] bg-white/40 flex flex-col items-center",
+          "py-10 text-center border border-dashed border-[#E6DFC8] rounded-xl bg-white/40 flex flex-col items-center",
           isMusicSnippets && savedSnippets.length > 0 && "hidden"
         )}>
            {isMusicSnippets ? (
-             <Music className="w-8 h-8 text-[#26300D]/10 mb-2.5" />
+             <Music className="w-6 h-6 text-[#26300D]/10 mb-2" />
            ) : (
-             <BookOpen className="w-8 h-8 text-[#26300D]/10 mb-2.5" />
+             <BookOpen className="w-6 h-6 text-[#26300D]/10 mb-2" />
            )}
-           <p className="text-[8px] sm:text-[9px] text-[#5F624F] uppercase tracking-[0.25em] font-black opacity-40">
-             {isMusicSnippets ? 'Generate song suggestions for the music snippets round' : 'Select parameters to draft a round'}
+           <p className="text-[8px] text-[#5F624F] uppercase tracking-[0.2em] font-black opacity-40">
+             {isMusicSnippets ? 'Generate song suggestions' : 'Select parameters to draft a round'}
            </p>
         </div>
       )}
