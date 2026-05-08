@@ -688,11 +688,10 @@ export default function EventsClient({
                       name="event_types_id"
                       required
                       defaultValue={formDefault?.event_types_id ?? addForTypeId ?? eventTypes[0]?.id ?? ""}
-                      className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer"
-                      style={{ direction: "rtl" }}
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
                     >
                       {eventTypes.map((et) => (
-                        <option key={et.id} value={et.id} style={{ direction: "ltr" }}>{eventTypeLabel(et)}</option>
+                        <option key={et.id} value={et.id} className="dir-ltr">{eventTypeLabel(et)}</option>
                       ))}
                     </select>
                   </FormRow>
@@ -736,12 +735,11 @@ export default function EventsClient({
                       title="Host"
                       name="host_employee_id"
                       defaultValue={formDefault?.host_employee_id ?? ""}
-                      className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer"
-                      style={{ direction: "rtl" }}
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
                     >
-                      <option value="" style={{ direction: "ltr" }}>No host</option>
+                      <option value="" className="dir-ltr">No host</option>
                       {employees.map((e) => (
-                        <option key={e.id} value={e.id} style={{ direction: "ltr" }}>{e.full_name}</option>
+                        <option key={e.id} value={e.id} className="dir-ltr">{e.full_name}</option>
                       ))}
                     </select>
                   </FormRow>

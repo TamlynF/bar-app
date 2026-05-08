@@ -5091,6 +5091,8 @@
   .swatch-selected { outline: 2.5px solid #1F1F1A; outline-offset: 2px; }
   .input-scheme-dark { color-scheme: dark; box-sizing: border-box; max-width: 100%; }
   .capacity-fill { width: var(--bar-width, 0%); }
+  .dir-rtl { direction: rtl; }
+  .dir-ltr { direction: ltr; }
   .border-slate-400 { border-color: var(--color-slate-400); }
   .focus-within\:border-slate-400:focus-within { border-color: var(--color-slate-400); }
   .group-open\:rotate-180:is(:where(.group)[open] *) { rotate: 180deg; }
