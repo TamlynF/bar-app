@@ -50,7 +50,8 @@
       "Bash(Remove-Item -Force \"C:/RN/bar-app/.next/lock\")",
       "Bash(del \"C:\\\\RN\\\\bar-app\\\\.next\\\\lock\")",
       "Read(//d C:/RN/**)",
-      "Bash(node_modules/.bin/next build:*)"
+      "Bash(node_modules/.bin/next build:*)",
+      "Bash(claude mcp:*)"
     ]
   }
 }

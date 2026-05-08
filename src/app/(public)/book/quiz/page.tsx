@@ -1,5 +1,5 @@
 import React from 'react'
-import BookingForm from "@/app/(public)/book/quiz/_components/quiz-booking-form";
+import BookingForm, { type QuizEvent } from "@/app/(public)/book/quiz/_components/quiz-booking-form";
 import { 
   Calendar, Banknote, Users, Trophy, Wine, 
   MapPin, Clock, DollarSign, Star, CheckCircle, 
@@ -25,19 +25,35 @@ const ICON_MAP: Record<string, React.ElementType> = {
 
 export default async function QuizBookingPage() {
   const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
 
-  const { data: infoItems } = await supabase
-    .from("event_information")
-    .select(`
-      icon,
-      title,
-      event_types!inner (
-        type,
-        sub_type
-      )
-    `)
-    .eq("event_types.type", "games")
-    .eq("event_types.sub_type", "quiz");
+  const [{ data: rawEvents }, { data: infoItems }] = await Promise.all([
+    supabase
+      .from("events")
+      .select("id, date, payment_amount, event_types!inner(type, sub_type)")
+      .eq("event_types.type", "games")
+      .eq("event_types.sub_type", "quiz")
+      .gte("date", today)
+      .order("date", { ascending: true }),
+    supabase
+      .from("event_information")
+      .select(`
+        icon,
+        title,
+        event_types!inner (
+          type,
+          sub_type
+        )
+      `)
+      .eq("event_types.type", "games")
+      .eq("event_types.sub_type", "quiz"),
+  ]);
+
+  const events: QuizEvent[] = (rawEvents ?? []).map((e) => ({
+    id: e.id as number,
+    date: e.date as string,
+    payment_amount: e.payment_amount as number | null,
+  }));
   
   // Map database items to badge format
   const dbBadges = (infoItems || []).map(item => ({
@@ -125,11 +141,22 @@ export default async function QuizBookingPage() {
 
           <div className="mb-8 text-center relative z-10">
             <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">Book Your Table</h3>
-            <p className="text-stone-500 text-xs sm:text-base mt-2 font-medium">Lock in your team before we are fully booked.</p>
+            <p className="text-stone-500 text-xs sm:text-base mt-2 font-medium">
+              {events.length > 0
+                ? "Lock in your team before we are fully booked."
+                : "Check back soon for upcoming events."}
+            </p>
           </div>
 
           <div className="relative z-10">
-            <BookingForm />
+            {events.length > 0 ? (
+              <BookingForm events={events} />
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-stone-300 font-black text-lg uppercase tracking-tight mb-2">No Upcoming Events</p>
+                <p className="text-stone-500 text-sm font-medium">There are no quiz nights scheduled yet. Please check back soon!</p>
+              </div>
+            )}
           </div>
         </div>
 

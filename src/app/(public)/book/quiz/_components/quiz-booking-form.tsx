@@ -1,11 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
-import { format, isSameDay, parseISO } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-// Using absolute aliases which are defined in tsconfig.json and verified to work for other imports
+import React, { useState, useEffect } from "react";
 import { createBooking, checkTeamName } from "@/app/(public)/_actions/create-booking";
 import {
   CheckCircle,
@@ -18,6 +13,7 @@ import {
   Loader2,
   MessageSquareQuote
 } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -29,33 +25,35 @@ interface BookingResponse {
   data?: unknown;
 }
 
-/**
- * Helper to get the next upcoming Thursday as a Date object at local midnight.
- */
-const getNextThursdayDate = () => {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  // 4 represents Thursday (0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat)
-  const daysUntilThursday = (4 - dayOfWeek + 7) % 7;
-  const nextThursday = new Date(today);
-  // Ensure we get the local day correctly
-  nextThursday.setDate(today.getDate() + (daysUntilThursday === 0 ? 0 : daysUntilThursday));
-  nextThursday.setHours(0, 0, 0, 0);
-  return nextThursday;
-};
+export interface QuizEvent {
+  id: number;
+  date: string;
+  payment_amount: number | null;
+}
 
-export default function BookingForm() {
+interface Props {
+  events: QuizEvent[];
+}
+
+function formatEventDate(dateStr: string) {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+export default function BookingForm({ events }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isWaitlisted, setIsWaitlisted] = useState(false);
   const [dateError, setDateError] = useState("");
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isCheckingTeam, setIsCheckingTeam] = useState(false);
   const [teamNameError, setTeamNameError] = useState("");
 
   const [formData, setFormData] = useState({
-    // Initialize with local-formatted string
-    quizDate: format(getNextThursdayDate(), "yyyy-MM-dd"),
+    quizDate: events[0]?.date ?? "",
     name: "",
     teamName: "",
     teamSize: "4",
@@ -63,16 +61,6 @@ export default function BookingForm() {
     phone: "",
     specialRequests: "",
   });
-
-  // Calculate the specific date object for the next Thursday to use as a modifier
-  const nextThursdayDate = useMemo(() => getNextThursdayDate(), []);
-
-  // Helper to convert "yyyy-MM-dd" back to a local Date object without UTC shifting
-  const getSelectedDateObj = (dateStr: string) => {
-    if (!dateStr) return undefined;
-    // Appending time ensures the Date constructor treats it as local time
-    return new Date(dateStr + "T00:00:00");
-  };
 
   useEffect(() => {
     const validateTeam = async () => {
@@ -111,7 +99,7 @@ export default function BookingForm() {
     if (teamNameError) return;
 
     if (!formData.quizDate) {
-      setDateError("Please select a valid Thursday.");
+      setDateError("Please select a date.");
       return;
     }
 
@@ -146,35 +134,34 @@ export default function BookingForm() {
   };
 
   if (isSuccess) {
-    const displayDate = getSelectedDateObj(formData.quizDate);
     return (
       <div className="text-center py-4 animate-in fade-in zoom-in duration-300">
         <div className="flex justify-center mb-6">
           <div className={`p-4 rounded-full ${isWaitlisted ? 'bg-amber-500/20' : 'bg-emerald-500/20'}`}>
             {isWaitlisted ? <Clock className="w-10 h-10 text-amber-500" /> : <CheckCircle className="w-10 h-10 text-emerald-500" />}
           </div>
-        </div>        
+        </div>
         <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">
           {isWaitlisted ? "On the Waitlist" : "You're Locked In!"}
         </h2>
         <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
-          {isWaitlisted 
-            ? `We're full for ${displayDate ? format(displayDate, "do MMMM") : "that date"}, but you're next in line. Check your email for details.`
-            : `Great news! Team "${formData.teamName}" is booked for ${displayDate ? format(displayDate, "do MMMM") : "that date"}. Check your email for your unique link.`
+          {isWaitlisted
+            ? `We're full for ${formatEventDate(formData.quizDate)}, but you're next in line. Check your email for details.`
+            : `Great news! Team "${formData.teamName}" is booked for ${formatEventDate(formData.quizDate)}. Check your email for your unique link.`
           }
-        </p>        
+        </p>
         <Button
           onClick={() => {
             setIsSuccess(false);
             setIsWaitlisted(false);
-            setFormData({ 
-              quizDate: format(getNextThursdayDate(), "yyyy-MM-dd"), 
-              name: "", 
-              teamName: "", 
-              teamSize: "4", 
-              email: "", 
-              phone: "", 
-              specialRequests: "" 
+            setFormData({
+              quizDate: events[0]?.date ?? "",
+              name: "",
+              teamName: "",
+              teamSize: "4",
+              email: "",
+              phone: "",
+              specialRequests: ""
             });
           }}
           className="w-full bg-white text-[#26300D] font-black h-14 rounded-2xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
@@ -198,67 +185,26 @@ export default function BookingForm() {
           <label htmlFor="quizDate" className={labelClasses}>
             Select Date <span className="text-red-500">*</span>
           </label>
-
-          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className={`relative ${inputBaseClasses} text-left group ${!formData.quizDate ? "text-stone-600" : ""}`}
-              >
-                <div className={iconContainerClasses}>
-                  <CalendarDays className={iconClasses} />
-                </div>
-                {formData.quizDate ? (
-                  format(getSelectedDateObj(formData.quizDate)!, "dd MMMM yyyy")
-                ) : (
-                  <span>Select a Thursday</span>
-                )}
-              </button>
-            </PopoverTrigger>
-
-            <PopoverContent 
-              className="w-auto p-0 border-white/10 shadow-2xl rounded-2xl overflow-hidden z-100"
-              align="start"
+          <div className="relative group">
+            <div className={iconContainerClasses}>
+              <CalendarDays className={iconClasses} />
+            </div>
+            <select
+              id="quizDate"
+              name="quizDate"
+              value={formData.quizDate}
+              onChange={handleInputChange}
+              required
+              className={cn(inputBaseClasses, "appearance-none pr-10 cursor-pointer")}
             >
-              <Calendar
-                mode="single"
-                selected={getSelectedDateObj(formData.quizDate)}
-                defaultMonth={getSelectedDateObj(formData.quizDate)}
-                onSelect={(date) => {
-                  if (date) {
-                    // Use local format to prevent UTC day-shifting
-                    const dateString = format(date, "yyyy-MM-dd");
-                    setFormData((prev) => ({ ...prev, quizDate: dateString }));
-                    setDateError("");
-                    setIsCalendarOpen(false);
-                  }
-                }}
-                disabled={(date) =>
-                  date.getDay() !== 4 || date < new Date(new Date().setHours(0, 0, 0, 0))
-                }
-                autoFocus
-                className="bg-transparent"
-                classNames={{
-                  // Brand styles for month header and arrows
-                  caption_label: "text-[#26300D] font-black uppercase tracking-widest text-[11px]",
-                  button_previous: "text-[#26300D] hover:bg-[#26300D]/10",
-                  button_next: "text-[#26300D] hover:bg-[#26300D]/10",
-                  // Weekday alignment fix: ensure they span full width
-                  weekday: "text-[#26300D]/50 font-black uppercase text-[10px] tracking-tighter flex-1 text-center",
-                  week: "flex w-full mt-2",
-                  // Date cell alignment and styling
-                  day: "text-[#26300D] font-bold text-sm h-9 w-9 p-0 aria-selected:opacity-100 flex items-center justify-center aspect-square mx-auto rounded-xl transition-colors",
-                }}
-                modifiers={{
-                  nextThursday: nextThursdayDate
-                }}
-                modifiersClassNames={{
-                  // Next Thursday: Yellow bg + dark green border
-                  nextThursday: "bg-[#FDCC4B]! text-[#26300D]! border-2! border-[#26300D]! font-black shadow-sm"
-                }}
-              />
-            </PopoverContent>
-          </Popover>
+              {events.map((ev) => (
+                <option key={ev.date} value={ev.date}>
+                  {formatEventDate(ev.date)}
+                </option>
+              ))}
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 rotate-90 pointer-events-none" />
+          </div>
           {dateError && <p className="text-red-500 text-[10px] font-black uppercase mt-1 ml-1">{dateError}</p>}
         </div>
 
@@ -299,7 +245,7 @@ export default function BookingForm() {
               id="name"
               name="name"
               required
-              value={formData.name}              
+              value={formData.name}
               onChange={handleInputChange}
               className={inputBaseClasses}
               placeholder="e.g. John Doe"
