@@ -278,9 +278,10 @@ export default function PrivateHireForm() {
                   <MessageSquareQuote className={iconClass} />
                 </div>
                 <textarea
+                  title="Additional requests or special requirements"
                   value={additionalReqs}
                   onChange={(e) => setAdditionalReqs(e.target.value)}
-                  placeholder="Catering, AV equipment, decorations, accessibility needs…"
+                  placeholder=""
                   rows={4}
                   className={`${inputClass} min-h-[100px] py-3 resize-none`}
                 />
