@@ -394,7 +394,9 @@ async function searchSpotifyTrack(
  */
 export async function generateMusicSnippetsAction(
   numberOfSongs: number = 15,
-  categoryName: string = 'Music Snippets'
+  categoryName: string = 'Music Snippets',
+  topic: string = '',
+  difficulty: string = 'Medium'
 ): Promise<{ songs?: MusicSnippetCandidate[]; error?: string }> {
   const supabase = await createClient()
 
@@ -419,6 +421,16 @@ export async function generateMusicSnippetsAction(
 
     const isHigherOrLower = categoryName.toLowerCase().includes('higher')
 
+    const topicLine = topic.trim()
+      ? `- Focus on this theme/genre: "${topic.trim()}".`
+      : '- Provide a balanced variety across genres.'
+
+    const difficultyLine = difficulty === 'Easy'
+      ? '- Song difficulty: All songs should be very well-known hits that almost everyone would recognise.'
+      : difficulty === 'Difficult'
+        ? '- Song difficulty: Include obscure or lesser-known tracks that only music enthusiasts would recognise.'
+        : '- Song difficulty: Mix of well-known hits and some lesser-known tracks.'
+
     const prompt = isHigherOrLower
       ? `You are a music expert for a pub quiz "Higher or Lower" round at "Don Fenticas".
 Generate exactly ${numberOfSongs} songs for a "Higher or Lower" game where teams guess if the song's release year is higher or lower than a given hint year.
@@ -428,6 +440,8 @@ Requirements:
 - Well-known, recognizable songs that a British pub audience would know.
 - For each song, provide a hint_year that is within 3 to 5 years of the actual release year. The hint_year should be randomly higher or lower than the actual year to create variety.
 - The songs should have a good mix of decades.
+${topicLine}
+${difficultyLine}
 - Avoid these previously used songs: [${existingList}]
 - Return a JSON array sorted by year ascending.`
       : `You are a music expert for a pub quiz at "Don Fenticas".
@@ -438,6 +452,8 @@ Requirements:
 - Spread across decades — include songs from the 60s, 70s, 80s, 90s, 2000s, 2010s, and 2020s where possible.
 - Well-known, recognizable songs that a British pub audience would know.
 - The instrumental intro must be iconic and identifiable — think guitar riffs, piano intros, synth openings, drum patterns.
+${topicLine}
+${difficultyLine}
 - Avoid these previously used songs: [${existingList}]
 - Return a JSON array sorted by year ascending.`
 

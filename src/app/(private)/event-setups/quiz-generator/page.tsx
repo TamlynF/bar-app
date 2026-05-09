@@ -253,7 +253,7 @@ export default function QuizGeneratorPage() {
     setError('')
     try {
       if (isMusicSnippets) {
-        const result = await generateMusicSnippetsAction(numQuestions, category)
+        const result = await generateMusicSnippetsAction(numQuestions, category, topic, difficulty)
         if (result.error) {
           setError(result.error)
           toast.error(result.error)
@@ -691,32 +691,29 @@ export default function QuizGeneratorPage() {
           </div>
 
           {/* Row 2: Topic full width */}
-          {!isMusicSnippets && (
-            <div className="col-span-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-[#26300D] ml-0.5 mb-0.5 block text-left">Topic</Label>
-              <Input
-                placeholder="e.g. Disney, 90s..."
-                value={topic}
-                onChange={(e) => setTopic(e.target.value)}
-                disabled={currentCategoryIsFull}
-                className={cn(
-                  "h-8 rounded-md border text-[10px] font-bold focus:ring-0 px-2 w-full",
-                  currentCategoryIsFull
-                    ? "bg-slate-50 border-slate-200 placeholder:text-slate-300"
-                    : "bg-white border-[#E6DFC8] focus:border-[#26300D]"
-                )}
-              />
-            </div>
-          )}
+          <div className="col-span-2">
+            <Label className="text-[10px] font-black uppercase tracking-widest text-[#26300D] ml-0.5 mb-0.5 block text-left">
+              {isMusicSnippets ? 'Theme' : 'Topic'}
+            </Label>
+            <Input
+              placeholder={isMusicSnippets ? "e.g. 80s, Rock, Christmas..." : "e.g. Disney, 90s..."}
+              value={topic}
+              onChange={(e) => setTopic(e.target.value)}
+              disabled={currentCategoryIsFull}
+              className={cn(
+                "h-8 rounded-md border text-[10px] font-bold focus:ring-0 px-2 w-full",
+                currentCategoryIsFull
+                  ? "bg-slate-50 border-slate-200 placeholder:text-slate-300"
+                  : "bg-white border-[#E6DFC8] focus:border-[#26300D]"
+              )}
+            />
+          </div>
 
           {/* Row 3: Difficulty + Generate button */}
           <div className="col-span-2">
-            {!isMusicSnippets && (
-              <Label className="text-[10px] font-black uppercase tracking-widest text-[#26300D] ml-0.5 mb-0.5 block text-left">Difficulty</Label>
-            )}
+            <Label className="text-[10px] font-black uppercase tracking-widest text-[#26300D] ml-0.5 mb-0.5 block text-left">Difficulty</Label>
             <div className="flex items-center justify-between gap-1.5">
-              {!isMusicSnippets && (
-                <div className="relative">
+              <div className="relative">
                   <select
                     title="Difficulty"
                     value={difficulty}
@@ -730,7 +727,6 @@ export default function QuizGeneratorPage() {
                   </select>
                   <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#26300D] opacity-40 pointer-events-none" />
                 </div>
-              )}
               <Button
                 type="submit"
                 disabled={isLoading || categories.length === 0 || currentCategoryIsFull}
