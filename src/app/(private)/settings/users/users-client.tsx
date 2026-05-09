@@ -64,7 +64,9 @@ const STATUS_OPTIONS = [
   { value: "leave", label: "On Leave" },
 ];
 
-const COUNTRY_CODES = [
+import { COUNTRY_CODES } from "@/lib/country-codes";
+
+const _LEGACY_CODES = [
   { code: "+93", country: "Afghanistan" },
   { code: "+355", country: "Albania" },
   { code: "+213", country: "Algeria" },
@@ -720,8 +722,8 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                         defaultValue={formDefault?.country_code ?? "+44"}
                         className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white pl-3 pr-7 text-sm font-bold outline-none focus:border-[#26300D] appearance-none text-[#1F1F1A]"
                       >
-                        {COUNTRY_CODES.map((c, i) => (
-                          <option key={i} value={c.code}>{c.code}</option>
+                        {COUNTRY_CODES.map((c) => (
+                          <option key={c.iso + c.code} value={c.code}>{c.iso} {c.code}</option>
                         ))}
                       </select>
                       <ChevronRight className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F]/30 rotate-90 pointer-events-none" />
