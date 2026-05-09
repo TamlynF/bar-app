@@ -52,7 +52,8 @@
       "Read(//d C:/RN/**)",
       "Bash(node_modules/.bin/next build:*)",
       "Bash(claude mcp:*)",
-      "Bash(npx next:*)"
+      "Bash(npx next:*)",
+      "WebFetch(domain:developer.spotify.com)"
     ]
   }
 }
