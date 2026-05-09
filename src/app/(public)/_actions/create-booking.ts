@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
+import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 
 interface BookingFormData {
   quiz_date: string;
@@ -282,7 +283,10 @@ export async function createBooking(formData: BookingFormData, type: string, sub
     // 9. Send the confirmation or waitlist email
     await sendBookingEmail(newBooking.id, formData.email, formData.name, formData.quiz_date, formData.team_name, formData.team_size, status);
 
-    // 10. Revalidate paths so the UI updates with the new booking
+    // 10. Update fully booked status
+    await updateFullyBookedStatus(supabase, eventId);
+
+    // 11. Revalidate paths so the UI updates with the new booking
     revalidatePath("/dashboard");
     revalidatePath("/book/quiz/manage-booking");
 

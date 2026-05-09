@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { revalidatePath } from "next/cache";
+import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 
 export async function getBingoEventList(type: string, subType: string) {
   const supabase = await createClient();
@@ -152,9 +153,11 @@ export async function updateBingoBookingDetails(
 
 export async function deleteBingoBooking(id: string) {
   const supabase = await createClient();
+  const { data: booking } = await supabase.from("bookings").select("event_id").eq("id", id).single();
   await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
   const { error } = await supabase.from("bookings").delete().eq("id", id);
   if (error) throw new Error("Failed to delete");
+  if (booking?.event_id) await updateFullyBookedStatus(supabase, booking.event_id);
   revalidatePath("/dashboard");
   revalidatePath("/event-bookings/bingo-bookings");
 }
@@ -164,7 +167,7 @@ export async function refundBingoBooking(id: string) {
 
   const { data: booking } = await supabase
     .from("bookings")
-    .select("square_order_id, paid_amount, square_payment_id")
+    .select("square_order_id, paid_amount, square_payment_id, event_id")
     .eq("id", id)
     .maybeSingle();
 
@@ -198,6 +201,7 @@ export async function refundBingoBooking(id: string) {
     })
     .eq("id", id);
 
+  if (booking?.event_id) await updateFullyBookedStatus(supabase, booking.event_id);
   revalidatePath("/event-bookings/bingo-bookings");
   revalidatePath("/dashboard");
 }

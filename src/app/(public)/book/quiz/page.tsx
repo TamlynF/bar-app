@@ -30,7 +30,7 @@ export default async function QuizBookingPage() {
   const [{ data: rawEvents }, { data: infoItems }, { data: eventTypeRow }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, date, payment_amount, event_types!inner(type, sub_type)")
+      .select("id, date, payment_amount, is_fully_booked, event_types!inner(type, sub_type)")
       .eq("event_types.type", "games")
       .eq("event_types.sub_type", "quiz")
       .eq("is_active", true)
@@ -62,6 +62,7 @@ export default async function QuizBookingPage() {
     id: e.id as number,
     date: e.date as string,
     payment_amount: e.payment_amount as number | null,
+    is_fully_booked: (e.is_fully_booked as boolean) ?? false,
   }));
   
   // Map database items to badge format

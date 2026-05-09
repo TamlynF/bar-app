@@ -46,6 +46,7 @@ export type EventRecord = {
   host_employee_id: number | null;
   event_types_id: number;
   is_active: boolean | null;
+  is_fully_booked: boolean | null;
 };
 
 function toTitleCase(str?: string | null) {
@@ -355,6 +356,9 @@ export default function EventsClient({
                           <p className={cn("text-xs font-black leading-snug truncate flex-1 min-w-0", inactive ? muted : "text-[#1F1F1A]")}>
                             {formatDate(event.date)}
                           </p>
+                          {event.is_fully_booked && (
+                            <span className="text-[9px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded shrink-0">Full</span>
+                          )}
                           <span className={cn(
                             "text-[10px] font-black shrink-0 w-14 text-right",
                             !inactive ? "text-green-600" : "text-red-500"
@@ -580,6 +584,7 @@ export default function EventsClient({
                       value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"}
                     />
                     <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
+                    <DetailCell label="Fully Booked" value={selected.is_fully_booked ? "Yes" : "No"} />
                     {selected.description && (
                       <DetailCell label="Description" value={selected.description} />
                     )}
@@ -783,6 +788,19 @@ export default function EventsClient({
                       type="checkbox"
                       defaultChecked={formDefault?.is_active ?? true}
                       className="w-5 h-5 rounded accent-[#26300D] cursor-pointer"
+                    />
+                  </FormRow>
+
+                  {/* Fully Booked */}
+                  <FormRow label="Fully Booked">
+                    <span className="flex-1" />
+                    <input
+                      title="Fully Booked"
+                      id="is_fully_booked"
+                      name="is_fully_booked"
+                      type="checkbox"
+                      defaultChecked={formDefault?.is_fully_booked ?? false}
+                      className="w-5 h-5 rounded accent-red-600 cursor-pointer"
                     />
                   </FormRow>
 

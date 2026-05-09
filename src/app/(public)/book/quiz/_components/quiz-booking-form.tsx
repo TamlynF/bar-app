@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createBooking, checkTeamName, checkQuizAvailability } from "@/app/(public)/_actions/create-booking";
+import { createBooking, checkTeamName } from "@/app/(public)/_actions/create-booking";
 import {
   CheckCircle,
   ChevronRight,
@@ -11,7 +11,8 @@ import {
   Beer,
   Clock,
   Loader2,
-  MessageSquareQuote
+  MessageSquareQuote,
+  AlertCircle
 } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ export interface QuizEvent {
   id: number;
   date: string;
   payment_amount: number | null;
+  is_fully_booked: boolean;
 }
 
 interface Props {
@@ -51,8 +53,6 @@ export default function BookingForm({ events }: Props) {
   const [dateError, setDateError] = useState("");
   const [isCheckingTeam, setIsCheckingTeam] = useState(false);
   const [teamNameError, setTeamNameError] = useState("");
-  const [fullyBooked, setFullyBooked] = useState(false);
-  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
 
   const [formData, setFormData] = useState({
     quizDate: events[0]?.date ?? "",
@@ -90,23 +90,9 @@ export default function BookingForm({ events }: Props) {
     return () => clearTimeout(timer);
   }, [formData.teamName, formData.quizDate]);
 
-  // Check availability when date or team size changes
-  useEffect(() => {
-    const checkAvail = async () => {
-      if (!formData.quizDate) return;
-      setIsCheckingAvailability(true);
-      try {
-        const { available } = await checkQuizAvailability(formData.quizDate, parseInt(formData.teamSize, 10));
-        setFullyBooked(!available);
-      } catch {
-        setFullyBooked(false);
-      } finally {
-        setIsCheckingAvailability(false);
-      }
-    };
-    const timer = setTimeout(checkAvail, 300);
-    return () => clearTimeout(timer);
-  }, [formData.quizDate, formData.teamSize]);
+  // Check fully booked from event data
+  const selectedEvent = events.find((e) => e.date === formData.quizDate);
+  const fullyBooked = selectedEvent?.is_fully_booked ?? false;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -188,6 +174,45 @@ export default function BookingForm({ events }: Props) {
         >
           Book Another Table
         </Button>
+      </div>
+    );
+  }
+
+  if (fullyBooked) {
+    return (
+      <div className="text-center py-4 animate-in fade-in zoom-in duration-300">
+        <div className="flex justify-center mb-6">
+          <div className="p-4 rounded-full bg-red-500/20">
+            <AlertCircle className="w-10 h-10 text-red-500" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">
+          Fully Booked
+        </h2>
+        <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
+          Sorry, we are fully booked for {formatEventDate(formData.quizDate)}. Please keep an eye on our Instagram page{' '}
+          <a
+            href="https://www.instagram.com/donfenticas"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { e.preventDefault(); window.open('https://www.instagram.com/donfenticas', '_blank') }}
+            className="text-[#fdcc4b] font-black hover:underline"
+          >
+            @donfenticas
+          </a>
+          {' '}for updates.
+        </p>
+        {events.filter(e => !e.is_fully_booked).length > 0 && (
+          <Button
+            onClick={() => {
+              const available = events.find(e => !e.is_fully_booked);
+              if (available) setFormData(prev => ({ ...prev, quizDate: available.date }));
+            }}
+            className="w-full bg-white text-[#26300D] font-black h-14 rounded-2xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
+          >
+            Try Another Date
+          </Button>
+        )}
       </div>
     );
   }
@@ -339,37 +364,16 @@ export default function BookingForm({ events }: Props) {
       </div>
 
       <div className="pt-2">
-        {fullyBooked ? (
-          <div className="text-center py-6 px-4 bg-black/40 border border-white/10 rounded-2xl">
-            <p className="text-white font-black text-sm uppercase tracking-wider mb-2">
-              Sorry, we are fully booked
-            </p>
-            <p className="text-stone-400 text-xs leading-relaxed">
-              Please keep an eye on our Instagram page{' '}
-              <a
-                href="https://www.instagram.com/donfenticas"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#fdcc4b] font-black hover:underline"
-              >
-                @donfenticas
-              </a>
-            </p>
-          </div>
-        ) : (
-          <>
-            <button
-              type="submit"
-              disabled={isSubmitting || !!teamNameError || isCheckingAvailability}
-              className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
-            >
-              {isSubmitting || isCheckingAvailability ? <Loader2 className="w-6 h-6 animate-spin" /> : <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 w-6 h-6" /></span>}
-            </button>
-            <p className="text-center text-stone-600 text-[9px] mt-6 uppercase tracking-[0.2em] font-bold opacity-60 px-4">
-              By booking, you agree to show up or cancel at least 24 hours in advance.
-            </p>
-          </>
-        )}
+        <button
+          type="submit"
+          disabled={isSubmitting || !!teamNameError}
+          className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
+        >
+          {isSubmitting ? <Loader2 className="w-6 h-6 animate-spin" /> : <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 w-6 h-6" /></span>}
+        </button>
+        <p className="text-center text-stone-600 text-[9px] mt-6 uppercase tracking-[0.2em] font-bold opacity-60 px-4">
+          By booking, you agree to show up or cancel at least 24 hours in advance.
+        </p>
       </div>
     </form>
   );

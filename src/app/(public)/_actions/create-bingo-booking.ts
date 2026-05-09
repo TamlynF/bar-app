@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { randomUUID } from "crypto";
+import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 
@@ -173,6 +174,7 @@ export async function createBingoBooking(formData: FormData) {
       await sendBookingEmail(
         newBooking.id, email, fullName, eventDate, groupSize, status, 0, 0, new Date().toISOString()
       );
+      await updateFullyBookedStatus(supabase, eventId);
       revalidatePath("/dashboard");
       revalidatePath(`/book/bingo/manage-booking/${newBooking.id}`);
       return { success: true };
@@ -227,6 +229,7 @@ export async function createBingoBooking(formData: FormData) {
       new Date().toISOString()
     );
 
+    await updateFullyBookedStatus(supabase, eventId);
     revalidatePath("/dashboard");
     revalidatePath("/book/bingo/success");
     revalidatePath(`/book/bingo/manage-booking/${newBooking.id}`);

@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
+import { updateFullyBookedStatus } from "@/lib/update-fully-booked"
 
 export async function getBookings(type: string, subType: string, selectedDate: string | null, selectedEventId?: string | null) {
   try {
@@ -334,16 +335,29 @@ export async function updateBookingStatus(id: string, status: string) {
 
 export async function deleteBooking(id: string) {
   const supabase = await createClient()
-  
+
+  // Get event_id before deleting
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("event_id")
+    .eq("id", id)
+    .single()
+
   // Cascade delete mappings first (if not handled by DB constraints)
   await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
-  
+
   const { error } = await supabase
     .from("bookings")
     .delete()
     .eq("id", id)
 
   if (error) throw new Error("Failed to delete")
+
+  // Update fully booked status after freeing the table
+  if (booking?.event_id) {
+    await updateFullyBookedStatus(supabase, booking.event_id)
+  }
+
   revalidatePath("/dashboard")
   revalidatePath("/event-bookings/quiz-bookings")
 }

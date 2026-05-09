@@ -24,6 +24,7 @@ export interface BingoEvent {
   id: number;
   date: string;
   payment_amount: number | null;
+  is_fully_booked: boolean;
 }
 
 interface Props {
@@ -56,6 +57,7 @@ export default function BingoBookingForm({ events }: Props) {
   });
 
   const selectedEvent = events.find((e) => e.date === formData.eventDate) ?? events[0];
+  const fullyBooked = selectedEvent?.is_fully_booked ?? false;
   const hasPricing = !!selectedEvent?.payment_amount && selectedEvent.payment_amount > 0;
   const pricePerPerson = hasPricing ? selectedEvent!.payment_amount! : 0;
   const total = pricePerPerson * parseInt(formData.groupSize || "1");
@@ -123,6 +125,45 @@ export default function BingoBookingForm({ events }: Props) {
   const labelClasses = "block text-[10px] font-black text-stone-500 mb-2 uppercase tracking-[0.15em] ml-1";
   const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
   const iconClasses = "w-4 h-4 text-stone-600 transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
+
+  if (fullyBooked) {
+    return (
+      <div className="text-center py-4 animate-in fade-in zoom-in duration-300">
+        <div className="flex justify-center mb-6">
+          <div className="p-4 rounded-full bg-red-500/20">
+            <AlertCircle className="w-10 h-10 text-red-500" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">
+          Fully Booked
+        </h2>
+        <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
+          Sorry, we are fully booked for {formatEventDate(formData.eventDate)}. Please keep an eye on our Instagram page{' '}
+          <a
+            href="https://www.instagram.com/donfenticas"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => { e.preventDefault(); window.open('https://www.instagram.com/donfenticas', '_blank') }}
+            className="text-[#fdcc4b] font-black hover:underline"
+          >
+            @donfenticas
+          </a>
+          {' '}for updates.
+        </p>
+        {events.filter(e => !e.is_fully_booked).length > 0 && (
+          <Button
+            onClick={() => {
+              const available = events.find(e => !e.is_fully_booked);
+              if (available) setFormData(prev => ({ ...prev, eventDate: available.date }));
+            }}
+            className="w-full bg-white text-[#26300D] font-black h-14 rounded-2xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
+          >
+            Try Another Date
+          </Button>
+        )}
+      </div>
+    );
+  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
