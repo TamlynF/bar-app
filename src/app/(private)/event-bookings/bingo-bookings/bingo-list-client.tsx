@@ -28,6 +28,7 @@ import {
   Trash2,
   Calendar,
   Hash,
+  User,
   ExternalLink,
   ChevronDown,
   Save,
@@ -674,6 +675,11 @@ export default function BingoBookingListClient({
                         value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMMM yyyy") : "—"}
                       />
                       <InfoRow
+                        icon={<User className="w-4 h-4" />}
+                        label="Table Name"
+                        value={selectedBooking.group_name || "—"}
+                      />
+                      <InfoRow
                         icon={<Users className="w-4 h-4" />}
                         label="Group Size"
                         value={`${selectedBooking.group_size} Guests`}
@@ -801,7 +807,7 @@ export default function BingoBookingListClient({
 
       {/* Syncing indicator */}
       {isPending && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[100] bg-[#26300D] text-[#FDCC4B] px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#26300D] text-[#FDCC4B] px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <Loader2 className="w-4 h-4 animate-spin" /> Syncing with DB...
         </div>
       )}

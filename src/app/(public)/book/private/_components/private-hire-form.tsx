@@ -4,11 +4,14 @@ import React, { useState, useTransition } from "react";
 import { createPrivateHire } from "@/app/(public)/_actions/create-private-hire";
 import {
   CheckCircle2, ArrowLeft, ChevronRight, Calendar, Clock, Users, Info,
+  User, Mail, Phone, MessageSquareQuote,
 } from "lucide-react";
 
 const inputClass =
-  "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-600 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
-const labelClass = "block text-[11px] font-black uppercase tracking-widest text-stone-400 mb-1.5";
+  "w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white placeholder-stone-700 focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-300 text-sm font-bold";
+const labelClass = "block text-[10px] font-black text-stone-500 mb-2 uppercase tracking-[0.15em] ml-1";
+const iconContainerClass = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
+const iconClass = "w-4 h-4 text-stone-600 transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
 
 const STEPS = [
   { number: 1, title: "Your Details",  subtitle: "Who should we contact?" },
@@ -91,7 +94,7 @@ export default function PrivateHireForm() {
   const currentStep = STEPS[step - 1];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-0">
+    <form onSubmit={handleSubmit} className="space-y-0 overflow-hidden">
 
       {/* Step indicator */}
       <div className="flex items-center justify-between mb-8">
@@ -128,35 +131,50 @@ export default function PrivateHireForm() {
         {/* Step 1: Your Details */}
         {step === 1 && (
           <>
-            <div>
-              <label className={labelClass}>Full Name <span className="text-red-400">*</span></label>
-              <input
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                placeholder="Your full name"
-                className={inputClass}
-              />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>Email <span className="text-red-400">*</span></label>
+            <div className="space-y-1">
+              <label className={labelClass}>Full Name <span className="text-red-500">*</span></label>
+              <div className="relative group">
+                <div className={iconContainerClass}>
+                  <User className={iconClass} />
+                </div>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="your@email.com"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Your full name"
                   className={inputClass}
                 />
               </div>
-              <div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+              <div className="space-y-1">
+                <label className={labelClass}>Email <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <div className={iconContainerClass}>
+                    <Mail className={iconClass} />
+                  </div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
+              <div className="space-y-1">
                 <label className={labelClass}>Phone</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+44 7700 000000"
-                  className={inputClass}
-                />
+                <div className="relative group">
+                  <div className={iconContainerClass}>
+                    <Phone className={iconClass} />
+                  </div>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                    placeholder="+44 7700 000000"
+                    className={inputClass}
+                  />
+                </div>
               </div>
             </div>
           </>
@@ -165,10 +183,12 @@ export default function PrivateHireForm() {
         {/* Step 2: Your Event */}
         {step === 2 && (
           <>
-            <div>
-              <label className={labelClass}>Number of Guests <span className="text-red-400">*</span></label>
-              <div className="relative">
-                <Users className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
+            <div className="space-y-1">
+              <label className={labelClass}>Number of Guests <span className="text-red-500">*</span></label>
+              <div className="relative group">
+                <div className={iconContainerClass}>
+                  <Users className={iconClass} />
+                </div>
                 <input
                   type="number"
                   min="1"
@@ -176,63 +196,74 @@ export default function PrivateHireForm() {
                   value={guestCount}
                   onChange={(e) => setGuestCount(e.target.value)}
                   placeholder="e.g. 50"
-                  className={`${inputClass} pl-10`}
+                  className={inputClass}
                 />
               </div>
             </div>
 
-            <div>
-              <label className={labelClass}>Date <span className="text-red-400">*</span></label>
-              <div className="relative">
-                <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
+            <div className="space-y-1">
+              <label className={labelClass}>Date <span className="text-red-500">*</span></label>
+              <div className="relative group">
+                <div className={iconContainerClass}>
+                  <Calendar className={iconClass} />
+                </div>
                 <input
                   title="Select a date"
                   type="date"
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  className={`${inputClass} pl-10 input-scheme-dark max-w-full`}
+                  className={`${inputClass} min-w-0 input-scheme-dark`}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>Start Time <span className="text-red-400">*</span></label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600 pointer-events-none" />
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 overflow-hidden">
+              <div className="space-y-1 min-w-0">
+                <label className={labelClass}>Start Time <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <div className={iconContainerClass}>
+                    <Clock className={iconClass} />
+                  </div>
                   <input
                     title="Start time"
                     type="time"
                     value={preferredStartTime}
                     onChange={(e) => setPreferredStartTime(e.target.value)}
-                    className={`${inputClass} px-2! pl-8 input-scheme-dark max-w-full`}
+                    className={`${inputClass} min-w-0 pl-9 sm:pl-11 input-scheme-dark`}
                   />
                 </div>
               </div>
-              <div>
-                <label className={labelClass}>End Time <span className="text-red-400">*</span></label>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-600 pointer-events-none" />
+              <div className="space-y-1 min-w-0">
+                <label className={labelClass}>End Time <span className="text-red-500">*</span></label>
+                <div className="relative group">
+                  <div className={iconContainerClass}>
+                    <Clock className={iconClass} />
+                  </div>
                   <input
                     title="End time"
                     type="time"
                     value={preferredEndTime}
                     onChange={(e) => setPreferredEndTime(e.target.value)}
-                    className={`${inputClass} px-2! pl-8 input-scheme-dark max-w-full`}
+                    className={`${inputClass} min-w-0 pl-9 sm:pl-11 input-scheme-dark`}
                   />
                 </div>
               </div>
             </div>
 
-            <div>
-              <label className={labelClass}>Reason for Hire <span className="text-red-400">*</span></label>
-              <textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="e.g. Birthday party, corporate event, anniversary dinner…"
-                rows={3}
-                className={`${inputClass} resize-none`}
-              />
+            <div className="space-y-1">
+              <label className={labelClass}>Reason for Hire <span className="text-red-500">*</span></label>
+              <div className="relative group">
+                <div className={iconContainerClass}>
+                  <MessageSquareQuote className={iconClass} />
+                </div>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="e.g. Birthday party, corporate event, anniversary dinner…"
+                  rows={3}
+                  className={`${inputClass} min-h-[100px] py-3 resize-none`}
+                />
+              </div>
             </div>
           </>
         )}
@@ -240,19 +271,24 @@ export default function PrivateHireForm() {
         {/* Step 3: Final Details */}
         {step === 3 && (
           <>
-            <div>
-              <label className={labelClass}>Additional Requirements</label>
-              <textarea
-                value={additionalReqs}
-                onChange={(e) => setAdditionalReqs(e.target.value)}
-                placeholder="Catering, AV equipment, decorations, accessibility needs…"
-                rows={4}
-                className={`${inputClass} resize-none`}
-              />
+            <div className="space-y-1">
+              <label className={labelClass}>Additional Requests</label>
+              <div className="relative group">
+                <div className={iconContainerClass}>
+                  <MessageSquareQuote className={iconClass} />
+                </div>
+                <textarea
+                  value={additionalReqs}
+                  onChange={(e) => setAdditionalReqs(e.target.value)}
+                  placeholder="Catering, AV equipment, decorations, accessibility needs…"
+                  rows={4}
+                  className={`${inputClass} min-h-[100px] py-3 resize-none`}
+                />
+              </div>
             </div>
 
             {/* Deposit notice */}
-            <div className="flex items-start gap-3 bg-[#FDCC4B]/8 border border-[#FDCC4B]/20 rounded-xl px-4 py-3.5 mt-2">
+            <div className="flex items-start gap-3 bg-[#FDCC4B]/8 border border-[#FDCC4B]/20 rounded-2xl px-4 py-3.5 mt-2">
               <Info className="w-4 h-4 text-[#FDCC4B] shrink-0 mt-0.5" />
               <p className="text-[12px] text-stone-300 font-medium leading-relaxed">
                 <span className="font-black text-[#FDCC4B]">Deposit required.</span> Once we&apos;ve reviewed your enquiry, we&apos;ll be in touch to confirm availability and share deposit payment details to secure your booking.
@@ -265,14 +301,14 @@ export default function PrivateHireForm() {
 
       {/* Step error */}
       {stepError && (
-        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
           {stepError}
         </p>
       )}
 
       {/* Submit error */}
       {error && step === 3 && (
-        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
           {error}
         </p>
       )}
@@ -283,7 +319,7 @@ export default function PrivateHireForm() {
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center gap-2 h-14 px-5 rounded-xl border border-white/10 text-stone-400 font-black text-xs uppercase tracking-wider hover:bg-white/5 transition-all"
+            className="flex items-center gap-2 h-16 px-5 rounded-2xl border border-white/10 text-stone-400 font-black text-xs uppercase tracking-widest hover:bg-white/5 transition-all"
           >
             <ArrowLeft className="w-4 h-4" />
             Back
@@ -294,7 +330,7 @@ export default function PrivateHireForm() {
             key="next"
             type="button"
             onClick={handleNext}
-            className="flex-1 flex items-center justify-center gap-2 h-14 bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] shadow-lg shadow-[#FDCC4B]/20"
+            className="flex-1 flex items-center justify-center gap-2 h-16 bg-[#fdcc4b] text-[#26300D] font-black text-lg uppercase tracking-widest rounded-2xl transition-all hover:bg-[#e5b843] active:scale-95 shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)]"
           >
             Next
             <ChevronRight className="w-4 h-4" />
@@ -304,7 +340,7 @@ export default function PrivateHireForm() {
             key="submit"
             type="submit"
             disabled={isPending}
-            className="flex-1 h-14 bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#FDCC4B]/20"
+            className="flex-1 h-16 bg-[#fdcc4b] text-[#26300D] font-black text-lg uppercase tracking-widest rounded-2xl transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)]"
           >
             {isPending ? "Submitting…" : "Send Enquiry"}
           </button>

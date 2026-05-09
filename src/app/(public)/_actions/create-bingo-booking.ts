@@ -172,7 +172,7 @@ export async function createBingoBooking(formData: FormData) {
     // 6b. Free booking — no payment required, confirm immediately
     if (isFree) {
       await sendBookingEmail(
-        newBooking.id, email, fullName, eventDate, groupSize, status, 0, 0, new Date().toISOString()
+        newBooking.id, email, fullName, eventDate, groupSize, status, 0, 0
       );
       await updateFullyBookedStatus(supabase, eventId);
       revalidatePath("/dashboard");
@@ -225,8 +225,7 @@ export async function createBingoBooking(formData: FormData) {
       groupSize,
       status,
       totalPence / 100,
-      0,
-      new Date().toISOString()
+      0
     );
 
     await updateFullyBookedStatus(supabase, eventId);
@@ -254,8 +253,7 @@ async function sendBookingEmail(
   group_size: number,
   status: "confirmed" | "waitlisted",
   total_amount: number | string,
-  paid_amount: number | string,
-  created_at: string
+  paid_amount: number | string
 ) {
   const manageUrl = `${appUrl}/book/bingo/manage-booking/${booking_id}`;
   
@@ -313,8 +311,8 @@ async function sendBookingEmail(
                 <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">£${Number(paid_amount).toFixed(2)}</td>
               </tr>
               <tr>
-                <td style="color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">🕒 Booked On</td>
-                <td style="text-align: right; font-weight: 900; color: #1F1F1A;">${created_at}</td>
+                <td style="color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">🪑 Table Name</td>
+                <td style="text-align: right; font-weight: 900; color: #1F1F1A;">${name}</td>
               </tr>
             </table>
           </div>

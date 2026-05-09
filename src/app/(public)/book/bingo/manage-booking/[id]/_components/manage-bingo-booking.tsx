@@ -26,6 +26,7 @@ export interface BingoManageBooking {
   payment_status: string | null;
   paid_amount: number | null;
   total_amount: number | null;
+  group_name: string | null;
   group_size: number | null;
   special_requests: string | null;
   square_order_id: string | null;
@@ -226,6 +227,11 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
               icon={<CalendarDays />}
               label="Event Date"
               value={formatEventDate(booking.events?.event_date ?? null)}
+            />
+            <DetailRow
+              icon={<User />}
+              label="Table Name"
+              value={booking.group_name ?? "—"}
             />
             <DetailRow
               icon={<Users />}

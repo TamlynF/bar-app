@@ -23,6 +23,7 @@ export default async function ManageBingoBookingPage({
       payment_status,
       paid_amount,
       total_amount,
+      group_name,
       group_size,
       special_requests,
       square_order_id,

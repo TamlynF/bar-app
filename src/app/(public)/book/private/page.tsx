@@ -104,8 +104,10 @@ export default async function PrivateHirePage() {
         </div>
 
         {/* Enquiry Form Card */}
-        <div className="bg-white/3 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5 mb-12">
-          <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#fdcc4b]/10 blur-[100px] rounded-full pointer-events-none" />
+        <div className="bg-white/3 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative ring-1 ring-white/5 mb-12">
+          <div className="absolute inset-0 overflow-hidden rounded-[2.5rem] pointer-events-none">
+            <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#fdcc4b]/10 blur-[100px] rounded-full" />
+          </div>
 
           <div className="mb-8 text-center relative z-10">
             <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">Private Hire</h3>
