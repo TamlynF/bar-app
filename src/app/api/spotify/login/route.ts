@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   const clientId = process.env.SPOTIFY_CLIENT_ID || ''
-  const redirectUri = 'http://localhost:3000/api/spotify/callback'
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'http://localhost:3000'
+  const redirectUri = `${siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`}/api/spotify/callback`
 
   // Pass the return URL as state so we can redirect back to the right page/category
   const returnUrl = request.nextUrl.searchParams.get('return') || '/event-setups/quiz-generator'

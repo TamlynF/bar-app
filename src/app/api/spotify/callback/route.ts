@@ -5,7 +5,8 @@ export async function GET(request: NextRequest) {
   const error = request.nextUrl.searchParams.get('error')
   const state = request.nextUrl.searchParams.get('state') || '/event-setups/quiz-generator'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'http://localhost:3000'
-  const redirectUri = 'http://localhost:3000/api/spotify/callback'
+  const baseUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`
+  const redirectUri = `${baseUrl}/api/spotify/callback`
 
   if (error || !code) {
     console.error('Spotify auth error:', error)
