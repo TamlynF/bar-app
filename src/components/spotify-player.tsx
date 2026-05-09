@@ -14,22 +14,18 @@ function getCookie(name: string): string | null {
 let globalPlayer: Spotify.Player | null = null
 let globalDeviceId: string | null = null
 let globalInitStarted = false
-let globalReady = false
 let refreshAttempted = false
 let refreshedToken: string | null = null
 const deviceListeners: Set<(id: string | null) => void> = new Set()
-const stateListeners: Map<string, (playing: boolean, position: number) => void> = new Map()
-let currentTrackId: string | null = null
+let currentPlayingTrackId: string | null = null
+const playingListeners: Set<(trackId: string | null, playing: boolean) => void> = new Set()
 let sdkScriptLoaded = false
-let connectPromise: Promise<boolean> | null = null
 
 async function getToken(): Promise<string | null> {
   const token = getCookie('spotify_access_token')
   if (token) return token
-
   if (refreshAttempted) return refreshedToken
   refreshAttempted = true
-
   try {
     const res = await fetch('/api/spotify/refresh', { method: 'POST' })
     if (res.ok) {
@@ -45,7 +41,6 @@ function loadSdkScript(): Promise<void> {
   return new Promise((resolve) => {
     if (window.Spotify) { resolve(); return }
     if (sdkScriptLoaded) {
-      // Script already loading, wait for it
       const check = setInterval(() => {
         if (window.Spotify) { clearInterval(check); resolve() }
       }, 100)
@@ -61,30 +56,18 @@ function loadSdkScript(): Promise<void> {
   })
 }
 
-// Initialize and connect the player — can be called from a user gesture
 async function ensurePlayer(): Promise<string | null> {
-  if (globalReady && globalDeviceId) return globalDeviceId
-
-  if (connectPromise) {
-    await connectPromise
-    return globalDeviceId
-  }
+  if (globalDeviceId) return globalDeviceId
 
   if (globalInitStarted && globalPlayer) {
-    // Player exists but not ready yet — wait
     return new Promise((resolve) => {
-      const onDevice = (id: string | null) => {
-        deviceListeners.delete(onDevice)
-        resolve(id)
-      }
+      const onDevice = (id: string | null) => { deviceListeners.delete(onDevice); resolve(id) }
       deviceListeners.add(onDevice)
-      // Timeout after 10s
       setTimeout(() => { deviceListeners.delete(onDevice); resolve(null) }, 10000)
     })
   }
 
   globalInitStarted = true
-
   await loadSdkScript()
 
   const player = new window.Spotify.Player({
@@ -99,53 +82,46 @@ async function ensurePlayer(): Promise<string | null> {
   player.addListener('ready', (data: unknown) => {
     const { device_id } = data as { device_id: string }
     globalDeviceId = device_id
-    globalReady = true
     deviceListeners.forEach(fn => fn(device_id))
   })
 
   player.addListener('not_ready', () => {
     globalDeviceId = null
-    globalReady = false
     deviceListeners.forEach(fn => fn(null))
   })
 
   player.addListener('player_state_changed', (data: unknown) => {
     const state = data as Spotify.PlaybackState | null
-    if (!state) return
-    const tid = state.track_window?.current_track?.id
-    if (tid && stateListeners.has(tid)) {
-      stateListeners.get(tid)!(!state.paused, state.position)
+    if (!state) {
+      // Playback ended or transferred away
+      currentPlayingTrackId = null
+      playingListeners.forEach(fn => fn(null, false))
+      return
     }
+
+    const tid = state.track_window?.current_track?.id || null
+    const playing = !state.paused
+    currentPlayingTrackId = playing ? tid : null
+
+    playingListeners.forEach(fn => fn(tid, playing))
   })
 
-  player.addListener('initialization_error', (data: unknown) => {
-    console.error('Spotify SDK init error:', data)
-  })
-
-  player.addListener('authentication_error', (data: unknown) => {
-    console.error('Spotify auth error:', data)
-  })
+  player.addListener('initialization_error', (data: unknown) => console.error('Spotify init error:', data))
+  player.addListener('authentication_error', (data: unknown) => console.error('Spotify auth error:', data))
+  player.addListener('account_error', (data: unknown) => console.error('Spotify account error (Premium required):', data))
 
   globalPlayer = player
 
-  // Connect — this returns a promise. On mobile, must be called from user gesture.
-  connectPromise = player.connect()
-  const success = await connectPromise
-  connectPromise = null
-
+  const success = await player.connect()
   if (!success) {
-    console.error('Spotify player connect failed')
+    console.error('Spotify player.connect() returned false')
     return null
   }
 
-  // Wait for device_id
   if (globalDeviceId) return globalDeviceId
 
   return new Promise((resolve) => {
-    const onDevice = (id: string | null) => {
-      deviceListeners.delete(onDevice)
-      resolve(id)
-    }
+    const onDevice = (id: string | null) => { deviceListeners.delete(onDevice); resolve(id) }
     deviceListeners.add(onDevice)
     setTimeout(() => { deviceListeners.delete(onDevice); resolve(null) }, 10000)
   })
@@ -163,34 +139,32 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
   const [connected, setConnected] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const [trackInfo, setTrackInfo] = useState<{ name: string; artist: string; albumArt: string; durationMs: number } | null>(null)
   const [progress, setProgress] = useState(0)
-  const [ready, setReady] = useState(globalReady)
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     setConnected(!!getCookie('spotify_access_token'))
-
-    // If SDK already ready, sync state
-    if (globalReady) setReady(true)
-
-    const onDevice = (id: string | null) => setReady(!!id)
-    deviceListeners.add(onDevice)
-    return () => { deviceListeners.delete(onDevice) }
   }, [])
 
-  // Listen for playback state changes for THIS track
+  // Listen for global playback state changes
   useEffect(() => {
-    const onState = (playing: boolean, position: number) => {
-      setIsPlaying(playing)
-      setProgress(position)
-      setIsLoading(false)
+    const onPlayState = (tid: string | null, playing: boolean) => {
+      if (tid === trackId) {
+        setIsPlaying(playing)
+        setIsLoading(false)
+        if (!playing) setProgress(0)
+      } else {
+        // Another track is playing — this one should show as stopped
+        setIsPlaying(false)
+      }
     }
-    stateListeners.set(trackId, onState)
-    return () => { stateListeners.delete(trackId) }
+    playingListeners.add(onPlayState)
+    return () => { playingListeners.delete(onPlayState) }
   }, [trackId])
 
-  // Fetch track info from Spotify API
+  // Fetch track info
   useEffect(() => {
     if (!connected) return
     async function fetchTrack() {
@@ -225,39 +199,41 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
     return () => { if (progressInterval.current) clearInterval(progressInterval.current) }
   }, [isPlaying, trackInfo])
 
-  // Play/Pause — called directly from user click (important for mobile autoplay policy)
   const handlePlayPause = useCallback(async () => {
-    const token = await getToken()
-    if (!token) return
+    setError(null)
 
     try {
-      if (isPlaying) {
-        await fetch('https://api.spotify.com/v1/me/player/pause', {
-          method: 'PUT',
-          headers: { Authorization: `Bearer ${token}` },
-        })
-        setIsPlaying(false)
+      // 1. If currently playing this track, just toggle via the player directly
+      if (isPlaying && globalPlayer) {
+        await globalPlayer.pause()
         return
       }
 
       setIsLoading(true)
 
-      // Ensure player is connected — on mobile this MUST happen in a user gesture
+      // 2. Ensure SDK is connected (on first tap, this connects — satisfies mobile autoplay)
       const deviceId = await ensurePlayer()
       if (!deviceId) {
+        setError('Player not ready')
         setIsLoading(false)
         return
       }
 
-      setReady(true)
-
-      // Stop old track
-      if (currentTrackId && currentTrackId !== trackId) {
-        const oldListener = stateListeners.get(currentTrackId)
-        if (oldListener) oldListener(false, 0)
+      // 3. Get token
+      const token = await getToken()
+      if (!token) {
+        setError('Auth expired')
+        setIsLoading(false)
+        return
       }
-      currentTrackId = trackId
 
+      // 4. If same track was paused, resume via player
+      if (currentPlayingTrackId === trackId && globalPlayer) {
+        await globalPlayer.resume()
+        return
+      }
+
+      // 5. Play new track via REST API (transfers playback to our device)
       const playRes = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -265,15 +241,28 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
       })
 
       if (!playRes.ok) {
-        const err = await playRes.text()
-        console.error('Spotify play failed:', playRes.status, err)
+        const errText = await playRes.text()
+        console.error('Spotify play error:', playRes.status, errText)
+        if (playRes.status === 403) {
+          setError('Premium required')
+        } else if (playRes.status === 404) {
+          setError('Device lost — tap again')
+          globalDeviceId = null
+          globalInitStarted = false
+          globalPlayer?.disconnect()
+          globalPlayer = null
+        } else {
+          setError('Play failed')
+        }
+        setIsLoading(false)
+        return
       }
 
-      setIsPlaying(true)
       setProgress(0)
-      setIsLoading(false)
+      // Don't manually set isPlaying — let the player_state_changed event handle it
     } catch (err) {
-      console.error('Play error:', err)
+      console.error('Playback error:', err)
+      setError('Play failed')
       setIsLoading(false)
     }
   }, [isPlaying, trackId])
@@ -306,9 +295,13 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
         <p className={cn("font-bold text-white truncate", compact ? "text-[10px]" : "text-[11px]")}>
           {trackInfo?.name || title}
         </p>
-        <p className={cn("text-white/50 truncate", compact ? "text-[8px]" : "text-[9px]")}>
-          {trackInfo?.artist || ''}
-        </p>
+        {error ? (
+          <p className="text-[8px] text-red-400 font-bold">{error}</p>
+        ) : (
+          <p className={cn("text-white/50 truncate", compact ? "text-[8px]" : "text-[9px]")}>
+            {trackInfo?.artist || ''}
+          </p>
+        )}
         <div className="mt-1 h-1 w-full rounded-full bg-white/10 overflow-hidden">
           <div className="h-full bg-[#1DB954] rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
         </div>
