@@ -62,7 +62,8 @@ export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig
   const { data, error } = await supabase
     .from("quiz_category_configs")
     .select("*")
-    .order("category_name", { ascending: true });
+    .eq("is_active", true)
+    .order("order_no", { ascending: true });
 
   if (error) {
     console.error("Error fetching quiz category configs:", error);
