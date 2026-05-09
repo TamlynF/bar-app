@@ -75,9 +75,10 @@ export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig
  * Generates trivia using AI.
  */
 export async function generateQuizAction(
-  topic: string, 
-  category: string, 
-  numberOfQuestions: number = 10
+  topic: string,
+  category: string,
+  numberOfQuestions: number = 10,
+  difficulty: string = 'Medium'
 ): Promise<{ questions?: QuizQuestion[], error?: string }> {
   const supabase = await createClient()
 
@@ -113,7 +114,8 @@ export async function generateQuizAction(
   
   Requirements:
   - Exactly ${numberOfQuestions} unique questions.
-  - Difficulty: Mixture of easy, medium, and "bar-room debate" hard.
+  - Difficulty: ${difficulty === 'Easy' ? 'All questions should be easy — common knowledge that most people would know.' : difficulty === 'Difficult' ? 'All questions should be challenging — obscure facts and "bar-room debate" level difficulty.' : 'Mixture of easy, medium, and "bar-room debate" hard.'}
+
   - Style: Easy to understand, simple, and British pub culture appropriate.
   - Avoid these past questions: [${pastQuestionsList}].
   - Format: JSON array.`;

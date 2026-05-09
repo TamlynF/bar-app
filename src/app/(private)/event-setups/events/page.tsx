@@ -13,7 +13,7 @@ export default async function EventsPage({
     supabase.from("events").select("*").order("date", { ascending: false }),
     supabase.from("event_types").select("id, type, sub_type").order("id", { ascending: true }),
     supabase.from("employees").select("id, full_name").order("full_name", { ascending: true }),
-    supabase.from("quiz_category_configs").select("id, category_name, question_count, short_name").order("id"),
+    supabase.from("quiz_category_configs").select("id, category_name, question_count, short_name, order_no").eq("is_active", true).order("order_no"),
     supabase.from("past_quiz_questions").select("id, events_id, quiz_category_configs_id").not("events_id", "is", null),
     supabase.from("bookings").select("event_id, status, group_size"),
   ]);

@@ -51,7 +51,8 @@
       "Bash(del \"C:\\\\RN\\\\bar-app\\\\.next\\\\lock\")",
       "Read(//d C:/RN/**)",
       "Bash(node_modules/.bin/next build:*)",
-      "Bash(claude mcp:*)"
+      "Bash(claude mcp:*)",
+      "Bash(npx next:*)"
     ]
   }
 }

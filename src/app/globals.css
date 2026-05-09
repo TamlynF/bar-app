@@ -1426,6 +1426,9 @@
    .border-yellow-500 {
     border-color: var(--color-yellow-500);
   }
+  .bg-\[\#3D4A2A\] {
+    background-color: #3D4A2A;
+}
   .bg-\[\#1a2109\] {
     background-color: #1a2109;
   }

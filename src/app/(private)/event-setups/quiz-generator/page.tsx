@@ -52,9 +52,9 @@ import {
   Save,
   Music,
   ExternalLink,
-  RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { SpotifyPlayer } from '@/components/spotify-player'
 import { useConfirm } from '@/components/ui/confirm-dialog'
 import { toast } from 'sonner'
 import { format } from 'date-fns'
@@ -78,6 +78,7 @@ export default function QuizGeneratorPage() {
   const presetCategory = searchParams.get('category')
 
   const [topic, setTopic] = useState('')
+  const [difficulty, setDifficulty] = useState('Medium')
   const [category, setCategory] = useState('')
   const [numQuestions, setNumQuestions] = useState(10)
   const [questions, setQuestions] = useState<QuizQuestion[]>([])
@@ -102,12 +103,6 @@ export default function QuizGeneratorPage() {
   const [musicSnippets, setMusicSnippets] = useState<MusicSnippetCandidate[]>([])
   const [selectedSnippetIndices, setSelectedSnippetIndices] = useState<Set<number>>(new Set())
   const [savedSnippets, setSavedSnippets] = useState<SavedMusicSnippet[]>([])
-  const [spotifyKeys, setSpotifyKeys] = useState<Record<string, number>>({})
-
-  const refreshSpotify = (id: string) => {
-    setSpotifyKeys(prev => ({ ...prev, [id]: (prev[id] || 0) + 1 }))
-  }
-
   // Ref to handle scrolling the detail popup to the top
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -257,7 +252,7 @@ export default function QuizGeneratorPage() {
           toast.success("Song suggestions generated!")
         }
       } else {
-        const result = await generateQuizAction(topic, category, numQuestions)
+        const result = await generateQuizAction(topic, category, numQuestions, difficulty)
         if (result && 'error' in result && result.error) {
           setError(result.error)
           toast.error(result.error)
@@ -536,7 +531,7 @@ export default function QuizGeneratorPage() {
                                   <Button 
                                     onClick={() => saveEdit(record.id)}
                                     disabled={isActionPending}
-                                    className="flex-1 bg-[#26300D] text-[#FDCC4B] font-black uppercase text-[10px] tracking-widest h-10 rounded-xl"
+                                    className="flex-1 bg-[#3D4A2A] text-white font-black uppercase text-[10px] tracking-widest h-10 rounded-xl"
                                   >
                                     {isActionPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-2" /> Save Changes</>}
                                   </Button>
@@ -554,7 +549,7 @@ export default function QuizGeneratorPage() {
                             <div className="space-y-3">
                               <div className="flex items-start gap-4">
                                 {record.release_year ? (
-                                  <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[10px] font-black px-2 py-1 rounded-lg tracking-wider mt-0.5">
+                                  <span className="shrink-0 bg-[#3D4A2A] text-white text-[10px] font-black px-2 py-1 rounded-lg tracking-wider mt-0.5">
                                     {record.release_year}
                                   </span>
                                 ) : (
@@ -564,8 +559,8 @@ export default function QuizGeneratorPage() {
                                   {!record.spotify_track_id && (
                                     <p className="text-sm font-bold text-[#1F1F1A] leading-snug">{record.question_text}</p>
                                   )}
-                                  <div className="flex items-center gap-2 bg-[#26300D] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
-                                    <Target className="w-3 h-3 text-[#FDCC4B]" />
+                                  <div className="flex items-center gap-2 bg-[#3D4A2A] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
+                                    <Target className="w-3 h-3 text-white/50" />
                                     <span className="text-xs font-black tracking-tight">{record.answer_text}</span>
                                   </div>
                                 </div>
@@ -593,26 +588,7 @@ export default function QuizGeneratorPage() {
                                 </div>
                               </div>
                               {record.spotify_track_id && (
-                                <div className="relative">
-                                  <iframe
-                                    key={`sheet-${record.id}-${spotifyKeys[record.id] || 0}`}
-                                    title={record.answer_text}
-                                    src={`https://open.spotify.com/embed/track/${record.spotify_track_id}?theme=0`}
-                                    width="100%"
-                                    height="80"
-                                    allow="encrypted-media"
-                                    loading="lazy"
-                                    className="rounded-xl"
-                                  />
-                                  <button
-                                    type="button"
-                                    onClick={() => refreshSpotify(record.id)}
-                                    className="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-                                    title="Replay"
-                                  >
-                                    <RefreshCw className="w-3 h-3" />
-                                  </button>
-                                </div>
+                                <SpotifyPlayer trackId={record.spotify_track_id} title={record.answer_text} compact />
                               )}
                             </div>
                           )}
@@ -625,7 +601,7 @@ export default function QuizGeneratorPage() {
 
               <div className="p-6 pt-2 border-t border-[#E6DFC8] bg-white/80 backdrop-blur-md pb-10 shrink-0 z-20">
                 <Button 
-                  className="w-full h-12 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
+                  className="w-full h-12 rounded-2xl bg-[#3D4A2A] text-white font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
                   onClick={() => {
                     setFilterCategory(viewingCategory.category_name);
                     setCategory(viewingCategory.category_name);
@@ -648,7 +624,7 @@ export default function QuizGeneratorPage() {
         <div className="grid grid-cols-2 gap-x-1.5 gap-y-1.5">
           {/* Row 1 col 1: Event */}
           <div>
-            <Label className="text-[6px] font-black uppercase tracking-wider text-[#5F624F]/50 ml-0.5 mb-0.5 block text-left">Event</Label>
+            <Label className="text-[4px] font-medium uppercase tracking-wider text-[#5F624F] ml-0.5 mb-0.5 block text-left">Event</Label>
             <div className="relative">
               <select
                 title='Event'
@@ -666,7 +642,7 @@ export default function QuizGeneratorPage() {
 
           {/* Row 1 col 2: Category */}
           <div>
-            <Label className="text-[6px] font-black uppercase tracking-wider text-[#5F624F]/50 ml-0.5 mb-0.5 block text-left">Category</Label>
+            <Label className="text-[4px] font-medium uppercase tracking-wider text-[#5F624F] ml-0.5 mb-0.5 block text-left">Category</Label>
             <div className="relative">
               <select
                 title='Category'
@@ -690,10 +666,10 @@ export default function QuizGeneratorPage() {
             </div>
           </div>
 
-          {/* Row 2 col 1: Topic (or empty for music snippets) */}
-          {!isMusicSnippets ? (
-            <div>
-              <Label className="text-[6px] font-black uppercase tracking-wider text-[#5F624F]/50 ml-0.5 mb-0.5 block text-left">Topic</Label>
+          {/* Row 2: Topic full width */}
+          {!isMusicSnippets && (
+            <div className="col-span-2">
+              <Label className="text-[4px] font-medium uppercase tracking-wider text-[#5F624F] ml-0.5 mb-0.5 block text-left">Topic</Label>
               <Input
                 placeholder="e.g. Disney, 90s..."
                 value={topic}
@@ -707,24 +683,43 @@ export default function QuizGeneratorPage() {
                 )}
               />
             </div>
-          ) : (
-            <div />
           )}
 
-          {/* Row 2 col 2: Generate button */}
-          <div className="flex items-end">
-            <Button
-              type="submit"
-              disabled={isLoading || categories.length === 0 || currentCategoryIsFull}
-              className="h-8 w-full rounded-md bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-wider text-[8px] shadow-sm active:scale-95 transition-all"
-            >
-              {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
-                <span className="flex items-center gap-1">
-                  <Sparkles className="w-3 h-3" />
-                  Generate
-                </span>
+          {/* Row 3: Difficulty + Generate button */}
+          <div className="col-span-2">
+            {!isMusicSnippets && (
+              <Label className="text-[4px] font-medium uppercase tracking-wider text-[#5F624F] ml-0.5 mb-0.5 block text-left">Difficulty</Label>
+            )}
+            <div className="flex items-center justify-between gap-1.5">
+              {!isMusicSnippets && (
+                <div className="relative">
+                  <select
+                    title="Difficulty"
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value)}
+                    style={{ minWidth: '180px' }}
+                    className="h-8 rounded-md border border-[#E6DFC8] bg-white pl-2 pr-6 text-[10px] font-bold text-[#26300D] appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none focus:border-[#26300D] transition-all uppercase"
+                  >
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Difficult">Hard</option>
+                  </select>
+                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#26300D] opacity-40 pointer-events-none" />
+                </div>
               )}
-            </Button>
+              <Button
+                type="submit"
+                disabled={isLoading || categories.length === 0 || currentCategoryIsFull}
+                className="h-8 px-6 rounded-md bg-[#3D4A2A] text-white font-black uppercase tracking-wider text-[8px] shadow-sm active:scale-95 transition-all hover:bg-[#26300D]/90"
+              >
+                {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
+                  <span className="flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" />
+                    Generate
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
         {currentCategoryIsFull && (
@@ -732,6 +727,19 @@ export default function QuizGeneratorPage() {
             <AlertCircle className="inline w-2.5 h-2.5 mr-0.5 -mt-0.5" />
             {category} is full for this date
           </p>
+        )}
+        {isMusicSnippets && (
+          <div className="mt-2 flex items-center gap-2">
+            <a
+              href="/api/spotify/login"
+              style={{ backgroundColor: '#1DB954' }}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-md text-[9px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+            >
+              <Music className="w-3 h-3" />
+              Connect Spotify
+            </a>
+            <span className="text-[8px] text-[#5F624F]">Required to play songs</span>
+          </div>
         )}
       </form>
 
@@ -744,23 +752,28 @@ export default function QuizGeneratorPage() {
 
       {/* DRAFT RESULTS SECTION */}
       {questions.length > 0 && (
-        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F0EDE0] rounded-xl p-2 sm:p-3 space-y-2">
+        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F7F4EA] rounded-xl p-2 sm:p-3 space-y-2">
 
           {/* STICKY ACTION BAR */}
-          <div className="flex items-center justify-between bg-[#26300D] p-2 rounded-lg shadow-lg sticky top-16 z-20">
+          <div className="flex items-center justify-between bg-white border border-[#E6DFC8] p-2 rounded-lg shadow-md sticky top-16 z-20">
             <div className="flex items-center gap-2 px-0.5">
-              <div className="bg-[#FDCC4B] text-[#26300D] w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
+              <div className="bg-[#3D4A2A] text-white w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
                 {selectedIndices.size}
               </div>
-              <span className="text-[#FDCC4B] text-[8px] font-black uppercase tracking-wider leading-none">Draft Items</span>
+              <span className="text-[#26300D] text-[8px] font-black uppercase tracking-wider leading-none">Draft Items</span>
             </div>
             <Button
               variant="default"
               onClick={handleSave}
               disabled={isSaving || selectedIndices.size === 0}
-              className="h-7 bg-[#FDCC4B] text-[#26300D] px-3 font-black uppercase text-[7px] tracking-widest rounded-md hover:bg-[#e5b843] active:scale-95 transition-transform"
+              className="h-8 bg-[#3D4A2A] text-white px-4 font-black uppercase text-[8px] tracking-wider rounded-md active:scale-95 transition-transform"
             >
-              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Approve Round"}
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
+                <span className="flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  Approve
+                </span>
+              )}
             </Button>
           </div>
 
@@ -785,29 +798,24 @@ export default function QuizGeneratorPage() {
                       : "border border-transparent opacity-60 hover:opacity-100"
                   )}
                 >
-                  <div className="px-3 py-2.5 space-y-2 relative">
+                  <div className="flex items-start gap-2.5 px-3 py-2.5">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <p className="text-[11px] font-bold text-[#1F1F1A] leading-snug">
+                        {q.question}
+                      </p>
+                      <div className="px-2.5 py-1.5 rounded-md text-center bg-[#F7F4EA]">
+                        <p className="text-[10px] font-black text-[#26300D] leading-tight">
+                          {q.answer}
+                        </p>
+                      </div>
+                    </div>
                     <div className={cn(
-                      "absolute top-2.5 right-2.5 w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 transition-all duration-300 z-10",
+                      "w-5 h-5 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0 mt-0.5",
                       isSelected
                         ? "bg-[#26300D] border-[#26300D] text-[#FDCC4B]"
                         : "bg-white border-[#D6D0BA] text-[#D6D0BA]"
                     )}>
                       {isSelected ? <Check className="w-2.5 h-2.5 stroke-4" /> : <Plus className="w-2.5 h-2.5" />}
-                    </div>
-
-                    <p className="text-[11px] font-bold text-[#1F1F1A] leading-snug pr-7">
-                      {q.question}
-                    </p>
-
-                    <div className={cn(
-                      "px-2.5 py-1.5 rounded-md text-center transition-all duration-500",
-                      isSelected
-                        ? "bg-[#FDCC4B]/20"
-                        : "bg-[#F7F4EA]"
-                    )}>
-                      <p className="text-[10px] font-black text-[#26300D] leading-tight">
-                        {q.answer}
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -819,23 +827,28 @@ export default function QuizGeneratorPage() {
 
       {/* MUSIC SNIPPETS DRAFT SECTION */}
       {musicSnippets.length > 0 && (
-        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F0EDE0] rounded-xl p-2 sm:p-3 space-y-2">
+        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F7F4EA] rounded-xl p-2 sm:p-3 space-y-2">
 
           {/* STICKY ACTION BAR */}
-          <div className="flex items-center justify-between bg-[#26300D] p-2 rounded-lg shadow-lg sticky top-16 z-20">
+          <div className="flex items-center justify-between bg-white border border-[#E6DFC8] p-2 rounded-lg shadow-md sticky top-16 z-20">
             <div className="flex items-center gap-2 px-0.5">
-              <div className="bg-[#FDCC4B] text-[#26300D] w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
+              <div className="bg-[#3D4A2A] text-white w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
                 {selectedSnippetIndices.size}
               </div>
-              <span className="text-[#FDCC4B] text-[8px] font-black uppercase tracking-wider leading-none">Songs</span>
+              <span className="text-[#26300D] text-[8px] font-black uppercase tracking-wider leading-none">Songs</span>
             </div>
             <Button
               variant="default"
               onClick={handleSave}
               disabled={isSaving || selectedSnippetIndices.size === 0}
-              className="h-7 bg-[#FDCC4B] text-[#26300D] px-3 font-black uppercase text-[7px] tracking-widest rounded-md hover:bg-[#e5b843] active:scale-95 transition-transform"
+              className="h-8 bg-[#3D4A2A] text-white px-4 font-black uppercase text-[8px] tracking-wider rounded-md active:scale-95 transition-transform"
             >
-              {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : "Approve Songs"}
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
+                <span className="flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  Approve
+                </span>
+              )}
             </Button>
           </div>
 
@@ -863,7 +876,7 @@ export default function QuizGeneratorPage() {
                       setSelectedSnippetIndices(next)
                     }}
                   >
-                    <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
+                    <span className="shrink-0 bg-[#3D4A2A] text-white text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
                       {song.year}
                     </span>
                     <div className="flex-1 min-w-0">
@@ -884,43 +897,25 @@ export default function QuizGeneratorPage() {
                     </div>
                   </div>
 
-                  {/* Spotify embed or fallback */}
-                  {song.spotify_track_id ? (
-                    <div className="relative px-2.5 pb-2">
-                      <iframe
-                        key={`draft-${idx}-${spotifyKeys[`draft-${idx}`] || 0}`}
-                        title={`${song.artist} - ${song.title}`}
-                        src={`https://open.spotify.com/embed/track/${song.spotify_track_id}?theme=0`}
-                        width="100%"
-                        height="80"
-                        allow="encrypted-media"
-                        loading="lazy"
-                        className="rounded-md"
-                      />
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); refreshSpotify(`draft-${idx}`) }}
-                        className="absolute top-1 right-3.5 w-5 h-5 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-                        title="Replay"
-                      >
-                        <RefreshCw className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-1.5 mx-2.5 mb-2 px-2 py-1 bg-[#F7F4EA] rounded-md">
-                      <AlertCircle className="w-2.5 h-2.5 text-[#5F624F] shrink-0" />
-                      <span className="text-[8px] font-bold text-[#5F624F] uppercase tracking-wider">Not on Spotify</span>
-                      <a
-                        href={`https://open.spotify.com/search/${encodeURIComponent(song.artist + ' ' + song.title)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="ml-auto flex items-center gap-0.5 text-[8px] font-black text-[#26300D] uppercase tracking-wider hover:underline"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        Search <ExternalLink className="w-2.5 h-2.5" />
-                      </a>
-                    </div>
-                  )}
+                  {/* Spotify player or fallback */}
+                  <div className="px-2.5 pb-2" onClick={(e) => e.stopPropagation()}>
+                    {song.spotify_track_id ? (
+                      <SpotifyPlayer trackId={song.spotify_track_id} title={`${song.artist} - ${song.title}`} compact />
+                    ) : (
+                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[#F7F4EA] rounded-md">
+                        <AlertCircle className="w-2.5 h-2.5 text-[#5F624F] shrink-0" />
+                        <span className="text-[8px] font-bold text-[#5F624F] uppercase tracking-wider">Not on Spotify</span>
+                        <a
+                          href={`https://open.spotify.com/search/${encodeURIComponent(song.artist + ' ' + song.title)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="ml-auto flex items-center gap-0.5 text-[8px] font-black text-[#26300D] uppercase tracking-wider hover:underline"
+                        >
+                          Search <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )
             })}
@@ -930,7 +925,7 @@ export default function QuizGeneratorPage() {
 
       {/* SAVED SNIPPETS FOR EVENT */}
       {isMusicSnippets && savedSnippets.length > 0 && musicSnippets.length === 0 && questions.length === 0 && (
-        <div className="animate-in fade-in duration-500 bg-[#F0EDE0] rounded-xl p-2 sm:p-3 space-y-2">
+        <div className="animate-in fade-in duration-500 bg-[#F7F4EA] rounded-xl p-2 sm:p-3 space-y-2">
           <p className="text-[7px] font-black text-[#5F624F] uppercase tracking-widest ml-0.5">
             Saved Songs ({savedSnippets.length})
           </p>
@@ -938,7 +933,7 @@ export default function QuizGeneratorPage() {
             {savedSnippets.map((snippet) => (
               <div key={snippet.id} className="bg-white border border-[#26300D]/20 rounded-lg overflow-hidden shadow-sm">
                 <div className="px-2.5 py-2 flex items-center gap-2">
-                  <span className="shrink-0 bg-[#26300D] text-[#FDCC4B] text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
+                  <span className="shrink-0 bg-[#3D4A2A] text-white text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
                     {snippet.release_year || '—'}
                   </span>
                   <p className="text-[10px] font-bold text-[#1F1F1A] tracking-tight flex-1 min-w-0 truncate">
@@ -962,25 +957,8 @@ export default function QuizGeneratorPage() {
                   </Button>
                 </div>
                 {snippet.spotify_track_id && (
-                  <div className="px-3 pb-2 relative">
-                    <iframe
-                      key={`saved-${snippet.id}-${spotifyKeys[snippet.id] || 0}`}
-                      title={snippet.answer_text}
-                      src={`https://open.spotify.com/embed/track/${snippet.spotify_track_id}?theme=0`}
-                      width="100%"
-                      height="80"
-                      allow="encrypted-media"
-                      loading="lazy"
-                      className="rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => refreshSpotify(snippet.id)}
-                      className="absolute top-1.5 right-4 w-6 h-6 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80 transition-colors z-10"
-                      title="Replay"
-                    >
-                      <RefreshCw className="w-3 h-3" />
-                    </button>
+                  <div className="px-3 pb-2">
+                    <SpotifyPlayer trackId={snippet.spotify_track_id} title={snippet.answer_text} compact />
                   </div>
                 )}
               </div>

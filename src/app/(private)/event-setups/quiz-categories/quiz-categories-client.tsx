@@ -278,19 +278,17 @@ export default function QuizCategoriesClient({
                     />
                   </FormRow>
 
-                  {formDefault && (
-                    <FormRow label="Round Order" required>
-                      <input
-                        title="Round Order"
-                        name="order_no"
-                        type="number"
-                        min="1"
-                        required
-                        defaultValue={formDefault?.order_no ?? ""}
-                        className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none"
-                      />
-                    </FormRow>
-                  )}
+                  <FormRow label="Round Order" required>
+                    <input
+                      title="Round Order"
+                      name="order_no"
+                      type="number"
+                      min="1"
+                      required
+                      defaultValue={formDefault?.order_no ?? ""}
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none"
+                    />
+                  </FormRow>
 
                   <FormRow label="Questions">
                     <input
