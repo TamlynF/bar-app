@@ -47,6 +47,8 @@ export type EventRecord = {
   event_types_id: number;
   is_active: boolean | null;
   is_fully_booked: boolean | null;
+  group_name: string | null;
+  booking_id: number | null;
 };
 
 function toTitleCase(str?: string | null) {
@@ -77,7 +79,7 @@ export type Employee = { id: number; full_name: string };
 
 type QuizCategory = { id: number; category_name: string; question_count: number; short_name?: string; order_no: number };
 type QuizQuestion = { id: string; events_id: number; quiz_category_configs_id: number | null };
-type BookingRecord = { event_id: number; status: string; group_size: number };
+type BookingRecord = { id: number; event_id: number; status: string; group_size: number; group_name: string | null };
 
 function getBookingStats(eventId: number, bookings: BookingRecord[]) {
   const eventBookings = bookings.filter(b => b.event_id === eventId);
@@ -135,6 +137,8 @@ export default function EventsClient({
   const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
   const [addForTypeId, setAddForTypeId] = useState<number | null>(null);
   const [historyGroups, setHistoryGroups] = useState<Set<number>>(new Set());
+  const [formBookingId, setFormBookingId] = useState<string>("");
+  const [formGroupName, setFormGroupName] = useState<string>("");
 
   // Auto-open sheet when returning from another page (?open=id)
   useEffect(() => {
@@ -172,6 +176,8 @@ export default function EventsClient({
     setIsEditing(false);
     setSelected(null);
     setAddForTypeId(eventTypeId ?? null);
+    setFormBookingId("");
+    setFormGroupName("");
     setIsAdding(true);
   };
 
@@ -585,6 +591,12 @@ export default function EventsClient({
                     />
                     <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
                     <DetailCell label="Fully Booked" value={selected.is_fully_booked ? "Yes" : "No"} />
+                    {et?.type === "games" && (
+                      <>
+                        <DetailCell label="Group Name" value={selected.group_name || "—"} />
+                        <DetailCell label="Linked Booking" value={selected.booking_id ? `#${selected.booking_id}` : "—"} />
+                      </>
+                    )}
                     {selected.description && (
                       <DetailCell label="Description" value={selected.description} />
                     )}
@@ -804,6 +816,52 @@ export default function EventsClient({
                     />
                   </FormRow>
 
+                  {/* Group Name & Booking (games only) */}
+                  {(() => {
+                    const etId = formDefault?.event_types_id ?? addForTypeId;
+                    const et = eventTypes.find(t => t.id === etId);
+                    if (et?.type !== "games") return null;
+                    const eventBookings = formDefault
+                      ? bookings.filter(b => b.event_id === formDefault.id && b.status !== "cancelled")
+                      : [];
+                    return (
+                      <>
+                        <FormRow label="Linked Booking">
+                          <input type="hidden" name="booking_id" value={formBookingId} />
+                          <select
+                            title="Linked Booking"
+                            value={formBookingId}
+                            onChange={(e) => {
+                              const bId = e.target.value;
+                              setFormBookingId(bId);
+                              if (bId) {
+                                const bk = eventBookings.find(b => String(b.id) === bId);
+                                if (bk?.group_name) setFormGroupName(bk.group_name);
+                              }
+                            }}
+                            className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
+                          >
+                            <option value="" className="dir-ltr">No booking</option>
+                            {eventBookings.map(b => (
+                              <option key={b.id} value={b.id} className="dir-ltr">
+                                #{b.id} — {b.group_name || "Unnamed"}
+                              </option>
+                            ))}
+                          </select>
+                        </FormRow>
+                        <FormRow label="Group Name">
+                          <input type="hidden" name="group_name" value={formGroupName} />
+                          <input
+                            value={formGroupName}
+                            onChange={(e) => setFormGroupName(e.target.value)}
+                            placeholder="e.g. The Brainiacs"
+                            className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                          />
+                        </FormRow>
+                      </>
+                    );
+                  })()}
+
                   {/* Description */}
                   <div className="px-4 sm:px-5 py-2.5 sm:py-4">
                     <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 mb-2">
@@ -840,7 +898,7 @@ export default function EventsClient({
                   Delete
                 </Button>
                 <Button
-                  onClick={() => { setFormError(null); setIsEditing(true); }}
+                  onClick={() => { setFormError(null); setFormBookingId(selected?.booking_id ? String(selected.booking_id) : ""); setFormGroupName(selected?.group_name ?? ""); setIsEditing(true); }}
                   className="h-14 flex-1 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit

@@ -20,6 +20,8 @@ export async function saveEventAction(formData: FormData) {
     seating_required: formData.get("seating_required") === "on",
     is_active: formData.get("is_active") === "on",
     is_fully_booked: formData.get("is_fully_booked") === "on",
+    group_name: formData.get("group_name")?.toString() || null,
+    booking_id: formData.get("booking_id") ? parseInt(formData.get("booking_id") as string, 10) : null,
   };
 
   // Resolve current logged-in user to an employee id
