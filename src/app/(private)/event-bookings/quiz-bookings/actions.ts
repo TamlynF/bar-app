@@ -28,7 +28,7 @@ export async function getBookings(type: string, subType: string, selectedDate: s
             country_code,
             phone_no
           ),
-          events!inner(
+          events!bookings_event_id_fkey!inner(
             event_date: date,
             event_start_time: start_time,
             event_end_time: end_time,

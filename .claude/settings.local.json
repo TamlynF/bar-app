@@ -57,7 +57,8 @@
       "Read(//tmp/**)",
       "Bash(cat:*)",
       "mcp__claude_ai_Supabase__list_tables",
-      "Bash(curl -s -b /dev/null http://localhost:3000/login)"
+      "Bash(curl -s -b /dev/null http://localhost:3000/login)",
+      "Bash(source .env.local)"
     ]
   }
 }

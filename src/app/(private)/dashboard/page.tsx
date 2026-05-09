@@ -169,22 +169,25 @@ export default async function DashboardPage() {
     supabase
       .from("private_hire_requests")
       .select("*", { count: "exact", head: true })
-      .eq("status", "pending_review"),
+      .eq("status", "pending_review")
+      .gte("preferred_date", firstDayOfMonth),
     supabase
       .from("band_booking_requests")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending_review"),
     supabase
       .from("bookings")
-      .select("id, events!inner(date)")
+      .select("id, events!bookings_event_id_fkey!inner(date)")
       .eq("payment_status", "unpaid")
       .gt("total_amount", 0)
       .in("status", ["confirmed", "pending"])
       .gte("events.date", todayStr),
     supabase
       .from("events")
-      .select("id, event_types(sub_type, type), past_quiz_questions(id)")
-      .gte("date", todayStr),
+      .select("id, event_types!inner(sub_type, type), past_quiz_questions(id)")
+      .gte("date", todayStr)
+      .eq("is_active", true)
+      .ilike("event_types.sub_type", "%quiz%"),
   ]);
 
   const [
@@ -220,13 +223,13 @@ export default async function DashboardPage() {
   const { data: rawUpcoming, error: upcomingError } = await supabase
     .from("events")
     .select(
-      "id, date, start_time, end_time, title, host_employee_id, event_types (type, sub_type, badge_color), bookings!bookings_event_id_fkey (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
+      "id, date, start_time, end_time, title, host_employee_id, event_types!inner(type, sub_type, badge_color), bookings!bookings_event_id_fkey (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
     )
     .gte("date", todayStr)
     .neq("is_active", false)
     .order("date", { ascending: true })
     .limit(5);
-  console.log("Raw upcoming events data:", JSON.stringify(rawUpcoming, null, 2), "Error:", upcomingError);
+  //console.log("Raw upcoming events data:", JSON.stringify(rawUpcoming, null, 2), "Error:", upcomingError);
   if (upcomingError) console.error("Upcoming events error:", upcomingError);
   
   const upcomingEvents = (rawUpcoming ?? []) as unknown as UpcomingEvent[];
@@ -248,7 +251,7 @@ export default async function DashboardPage() {
       .eq("status", "approved")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
-    supabase.from("quiz_category_configs").select("question_count"),
+    supabase.from("quiz_category_configs").select("question_count").eq("is_active", true),
     allUpcomingBookingIds.length > 0
       ? supabase.from("booking_table_mappings").select("booking_id, table_id").in("booking_id", allUpcomingBookingIds)
       : Promise.resolve({ data: [] as { booking_id: number; table_id: number }[] }),
@@ -273,13 +276,12 @@ export default async function DashboardPage() {
    totalTablesByCapacity.set(t.max_capacity, (totalTablesByCapacity.get(t.max_capacity) ?? 0) + 1);
  });
   
+  const totalRequiredQuestions = (categoryConfigs ?? []).reduce(
+    (sum, c) => sum + (c.question_count ?? 0), 0
+  );
   const quizzesMissingQuestions = (upcomingQuizData ?? []).filter((ev) => {
-    const et = (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) as { sub_type?: string; type?: string } | null;
-    const isQuiz =
-      et?.sub_type?.toLowerCase().includes("quiz") ||
-      et?.type?.toLowerCase().includes("quiz");
     const questions = Array.isArray(ev.past_quiz_questions) ? ev.past_quiz_questions : [];
-    return isQuiz && questions.length === 0;
+    return questions.length < totalRequiredQuestions;
   }).length;
 
   const now = new Date();

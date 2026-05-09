@@ -34,7 +34,7 @@ export async function getBingoBookings(selectedDate: string | null, selectedEven
       square_order_id,
       booking_created_at: created_at,
       contacts(full_name, email, country_code, phone_no),
-      events!inner(
+      events!bookings_event_id_fkey!inner(
         event_date: date,
         event_title: title,
         event_payment_amount: payment_amount,

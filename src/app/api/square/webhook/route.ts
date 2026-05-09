@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       .select(`
         id, status, payment_status, group_size, total_amount,
         contacts(full_name, email),
-        events(date, title)
+        events!bookings_event_id_fkey(date, title)
       `)
       .eq("square_order_id", orderId)
       .maybeSingle();
