@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -126,7 +126,6 @@ export default function EventsClient({
 }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
-  const router = useRouter();
   const [selected, setSelected] = useState<EventRecord | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -136,9 +135,9 @@ export default function EventsClient({
   const [addForTypeId, setAddForTypeId] = useState<number | null>(null);
   const [historyGroups, setHistoryGroups] = useState<Set<number>>(new Set());
 
-  // Auto-open sheet when returning from quiz questions page (?open=id)
+  // Auto-open sheet when returning from another page (?open=id)
   useEffect(() => {
-    const openId = searchParams.get("open");
+    const openId = searchParams.get("open") || new URLSearchParams(window.location.search).get("open");
     if (!openId) return;
     const event = initialEvents.find((e) => String(e.id) === openId);
     if (event) {
@@ -146,9 +145,10 @@ export default function EventsClient({
       setIsEditing(false);
       setIsAdding(false);
     }
-    router.replace("/event-setups");
+    // Clean up the URL without navigating
+    window.history.replaceState(null, "", "/event-setups/events");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [searchParams]);
 
   const toggleGroup = (id: number) =>
     setCollapsedGroups((prev) => {

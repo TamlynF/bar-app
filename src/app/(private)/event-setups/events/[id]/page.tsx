@@ -14,7 +14,7 @@ function formatDate(dateStr: string | null) {
   });
 }
 
-type Category = { id: number; category_name: string; question_count: number };
+type Category = { id: number; category_name: string; question_count: number; order_no: number };
 type Question = {
   id: string;
   question_text: string;
@@ -43,10 +43,13 @@ export async function generateMetadata({
 
 export default async function EventQuizQuestionsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ category?: string }>;
 }) {
   const { id } = await params;
+  const { category: focusCategory } = await searchParams;
   const supabase = await createClient();
 
   const [
@@ -57,8 +60,9 @@ export default async function EventQuizQuestionsPage({
     supabase.from("events").select("id, title, date").eq("id", id).single(),
     supabase
       .from("quiz_category_configs")
-      .select("id, category_name, question_count")
-      .order("category_name"),
+      .select("id, category_name, question_count, order_no")
+      .eq("is_active", true)
+      .order("order_no", { ascending: true }),
     supabase
       .from("past_quiz_questions")
       .select("id, question_text, answer_text, quiz_category_configs_id")
@@ -124,6 +128,8 @@ export default async function EventQuizQuestionsPage({
             category_name={cat.category_name}
             question_count={cat.question_count}
             questions={cat.questions}
+            orderNo={cat.order_no}
+            autoOpen={focusCategory === cat.category_name}
           />
         ))}
 

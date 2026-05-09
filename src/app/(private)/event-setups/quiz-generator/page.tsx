@@ -52,6 +52,7 @@ import {
   Save,
   Music,
   ExternalLink,
+  ArrowLeft,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SpotifyPlayer } from '@/components/spotify-player'
@@ -400,14 +401,25 @@ export default function QuizGeneratorPage() {
   return (
     <div className="max-w-6xl mx-auto px-2 sm:px-6 py-2 sm:py-4 space-y-2 sm:space-y-4 animate-in fade-in duration-700 pb-32 text-left">
 
-      {/* HEADER: Archive Shortcut */}
-      <div className="flex items-center justify-end">
+      {/* HEADER */}
+      <div className="flex items-center justify-between">
+        {presetEventId ? (
+          <Link
+            href={`/event-setups/events/${presetEventId}${presetCategory ? `?category=${encodeURIComponent(presetCategory)}` : ''}`}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[8px] uppercase tracking-wider hover:bg-[#26300D]/5 transition-all shadow-xs"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            <span>Back to Event</span>
+          </Link>
+        ) : (
+          <div />
+        )}
         <Link
           href="/event-setups/quiz-history"
           className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[8px] uppercase tracking-wider hover:bg-[#26300D]/5 transition-all shadow-xs"
         >
           <History className="w-3 h-3" />
-          <span>History Archive</span>
+          <span>History</span>
         </Link>
       </div>
 

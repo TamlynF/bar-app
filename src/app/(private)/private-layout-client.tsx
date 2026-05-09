@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react"
 import Link from "next/link"
-import { usePathname, useRouter } from "next/navigation"
+import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
     LayoutDashboard,
     CalendarRange,
@@ -51,6 +51,7 @@ export default function PrivateLayoutClient({
     const pathname = usePathname()
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
+    const searchParams = useSearchParams()
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname?.startsWith("/event-bookings"))
     const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname?.startsWith("/event-setups"))
     const [settingsOpen, setSettingsOpen] = useState(() => !!pathname?.startsWith("/settings"))
@@ -96,7 +97,6 @@ export default function PrivateLayoutClient({
     ]
 
     const getPageInfo = () => {
-        console.log("Current Pathname:", pathname) // Debugging line
         if (!pathname) return { title: "Venue Manager", subtitle: null, backHref: null }
 
         const normalizedPath = pathname.replace(/\/$/, "")
@@ -113,6 +113,25 @@ export default function PrivateLayoutClient({
             }
             const segment = normalizedPath.split("/")[2]
             const subtitle = eventSetupsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
+
+            // When on quiz generator with event_id, back button goes to event quiz page
+            if (segment === "quiz-generator") {
+                const eventId = searchParams.get("event_id")
+                const category = searchParams.get("category")
+                if (eventId) {
+                    const categoryParam = category ? `?category=${encodeURIComponent(category)}` : ''
+                    return { title: "Events", subtitle, backHref: `/event-setups/events/${eventId}${categoryParam}` }
+                }
+            }
+
+            // When on event detail page /event-setups/events/{id}, back goes to events list with sheet open
+            if (segment === "events") {
+                const eventId = normalizedPath.split("/")[3]
+                if (eventId) {
+                    return { title: "Events", subtitle: "Quiz Questions", backHref: `/event-setups/events?open=${eventId}` }
+                }
+            }
+
             return { title: "Events", subtitle, backHref: "/event-setups" }
         }
 
@@ -318,24 +337,20 @@ export default function PrivateLayoutClient({
 
                         {/* Mobile Back Button */}
                         {backHref && (
-                            isDetailPage ? (
-                                <button
-                                    title="Go back"
-                                    type="button"
-                                    onClick={() => router.back()}
-                                    className="absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
-                                >
-                                    <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
-                                </button>
-                            ) : (
-                                <Link
-                                    href={backHref}
-                                    title="Go back"
-                                    className="absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
-                                >
-                                    <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
-                                </Link>
-                            )
+                            <button
+                                title="Go back"
+                                type="button"
+                                onClick={() => {
+                                    if (isDetailPage) {
+                                        router.back()
+                                    } else {
+                                        router.push(backHref)
+                                    }
+                                }}
+                                className="absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
+                            >
+                                <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
+                            </button>
                         )}
 
                         {/* Title */}
