@@ -7,6 +7,7 @@ declare namespace Spotify {
   interface Player {
     connect(): Promise<boolean>
     disconnect(): void
+    activateElement(): Promise<void>
     addListener(event: string, callback: (data: unknown) => void): void
     removeListener(event: string, callback?: (data: unknown) => void): void
     getCurrentState(): Promise<PlaybackState | null>
