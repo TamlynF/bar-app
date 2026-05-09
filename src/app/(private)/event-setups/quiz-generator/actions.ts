@@ -116,8 +116,8 @@ export async function generateQuizAction(
   Requirements:
   - Exactly ${numberOfQuestions} unique questions.
   - Difficulty: ${difficulty === 'Easy' ? 'All questions should be easy — common knowledge that most people would know.' : difficulty === 'Difficult' ? 'All questions should be challenging — obscure facts and "bar-room debate" level difficulty.' : 'Mixture of easy, medium, and "bar-room debate" hard.'}
-
-  - Style: Easy to understand, simple, and British pub culture appropriate.
+  - Each question must be a direct, concise question only. No conversational filler, no preamble, no phrases like "Right then", "Here's one for you", "A proper head scratcher" etc. Just the question itself.
+  - Answers must be short and factual — just the answer, nothing else.
   - Avoid these past questions: [${pastQuestionsList}].
   - Format: JSON array.`;
 
