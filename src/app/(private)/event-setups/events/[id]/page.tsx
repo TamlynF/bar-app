@@ -14,12 +14,13 @@ function formatDate(dateStr: string | null) {
   });
 }
 
-type Category = { id: number; category_name: string; question_count: number; order_no: number };
+type Category = { id: number; category_name: string; question_count: number; order_no: number; include_spotify: boolean };
 type Question = {
   id: string;
   question_text: string;
   answer_text: string;
   quiz_category_configs_id: number | null;
+  spotify_track_id: string | null;
 };
 
 export async function generateMetadata({
@@ -60,12 +61,12 @@ export default async function EventQuizQuestionsPage({
     supabase.from("events").select("id, title, date").eq("id", id).single(),
     supabase
       .from("quiz_category_configs")
-      .select("id, category_name, question_count, order_no")
+      .select("id, category_name, question_count, order_no, include_spotify")
       .eq("is_active", true)
       .order("order_no", { ascending: true }),
     supabase
       .from("past_quiz_questions")
-      .select("id, question_text, answer_text, quiz_category_configs_id")
+      .select("id, question_text, answer_text, quiz_category_configs_id, spotify_track_id")
       .eq("events_id", id)
       .order("created_at"),
   ]);
@@ -129,6 +130,7 @@ export default async function EventQuizQuestionsPage({
             question_count={cat.question_count}
             questions={cat.questions}
             orderNo={cat.order_no}
+            includeSpotify={cat.include_spotify}
             autoOpen={focusCategory === cat.category_name}
           />
         ))}

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { SpotifyPlayer } from "@/components/spotify-player";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import {
@@ -17,6 +18,7 @@ type Question = {
   question_text: string;
   answer_text: string;
   quiz_category_configs_id: number | null;
+  spotify_track_id?: string | null;
 };
 
 type Props = {
@@ -25,10 +27,11 @@ type Props = {
   question_count: number;
   questions: Question[];
   orderNo?: number;
+  includeSpotify?: boolean;
   autoOpen?: boolean;
 };
 
-export default function CategorySection({ eventId, category_name, question_count, questions: initialQuestions, orderNo, autoOpen }: Props) {
+export default function CategorySection({ eventId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, autoOpen }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
   const count = questions.length;
@@ -189,37 +192,46 @@ export default function CategorySection({ eventId, category_name, question_count
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-start gap-3">
-                        <span className="text-[10px] font-black text-[#26300D]/20 mt-0.5 shrink-0 tabular-nums w-5 text-right">
-                          Q{idx + 1}
-                        </span>
-                        <div className="flex-1 min-w-0 space-y-1.5">
-                          <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
-                            {q.question_text}
-                          </p>
-                          <p className="text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-1.5 w-fit">
-                            {q.answer_text}
-                          </p>
+                      <div className="space-y-2">
+                        <div className="flex items-start gap-3">
+                          <span className="text-[10px] font-black text-[#26300D]/20 mt-0.5 shrink-0 tabular-nums w-5 text-right">
+                            Q{idx + 1}
+                          </span>
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            {(!includeSpotify || !q.spotify_track_id) && (
+                              <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
+                                {q.question_text}
+                              </p>
+                            )}
+                            <p className="text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-1.5 w-fit">
+                              {q.answer_text}
+                            </p>
+                          </div>
+                          <div className="flex flex-col gap-1 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => startEditing(q)}
+                              className="h-7 w-7 rounded-lg text-orange-500 hover:bg-orange-50 hover:text-orange-600"
+                            >
+                              <Edit2 className="w-3 h-3" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => deleteQuestion(q.id)}
+                              disabled={isPending}
+                              className="h-7 w-7 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex flex-col gap-1 shrink-0">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => startEditing(q)}
-                            className="h-7 w-7 rounded-lg text-orange-500 hover:bg-orange-50 hover:text-orange-600"
-                          >
-                            <Edit2 className="w-3 h-3" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => deleteQuestion(q.id)}
-                            disabled={isPending}
-                            className="h-7 w-7 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                          </Button>
-                        </div>
+                        {includeSpotify && q.spotify_track_id && (
+                          <div className="ml-8">
+                            <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>

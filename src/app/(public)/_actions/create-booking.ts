@@ -52,6 +52,55 @@ export async function checkTeamName(teamName: string, quizDate: string, excludeB
   return { isAvailable: !duplicateTeam };
 }
 
+/**
+ * Checks if there are any available tables for a given date and group size.
+ */
+export async function checkQuizAvailability(quizDate: string, teamSize: number): Promise<{ available: boolean }> {
+  if (!quizDate) return { available: true };
+  const supabase = await createClient();
+
+  // Find the event for this date
+  const { data: eventData } = await supabase
+    .from('events')
+    .select('id, event_types!inner(type, sub_type)')
+    .eq('date', quizDate)
+    .eq('event_types.type', 'games')
+    .eq('event_types.sub_type', 'quiz')
+    .maybeSingle();
+
+  // No event yet = available (it'll be created on booking)
+  if (!eventData) return { available: true };
+
+  // Find confirmed/waitlisted bookings for this event
+  const { data: bookings } = await supabase
+    .from('bookings')
+    .select('id')
+    .eq('event_id', eventData.id)
+    .in('status', ['confirmed', 'waitlisted']);
+
+  const bookingIds = bookings?.map(b => b.id) || [];
+
+  // Find tables already in use
+  let tablesInUse: number[] = [];
+  if (bookingIds.length > 0) {
+    const { data: mappings } = await supabase
+      .from('booking_table_mappings')
+      .select('table_id')
+      .in('booking_id', bookingIds);
+    tablesInUse = mappings?.map(m => m.table_id) || [];
+  }
+
+  // Find suitable tables not in use
+  const { data: suitableTables } = await supabase
+    .from('tables')
+    .select('id, max_capacity')
+    .gte('max_capacity', teamSize)
+    .order('max_capacity', { ascending: true });
+
+  const availableTable = suitableTables?.find(t => !tablesInUse.includes(t.id));
+  return { available: !!availableTable };
+}
+
 export async function createBooking(formData: BookingFormData, type: string, subType: string) {
   console.log(formData);
   const supabase = await createClient();
