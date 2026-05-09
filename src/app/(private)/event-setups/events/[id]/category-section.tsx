@@ -19,6 +19,8 @@ type Question = {
   answer_text: string;
   quiz_category_configs_id: number | null;
   spotify_track_id?: string | null;
+  hint_year?: number | null;
+  release_year?: number | null;
 };
 
 type Props = {
@@ -34,6 +36,7 @@ type Props = {
 export default function CategorySection({ eventId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, autoOpen }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
+  const isHigherOrLower = includeSpotify && category_name.toLowerCase().includes('higher');
   const count = questions.length;
   const isComplete = count >= question_count;
   const hasAny = count > 0;
@@ -198,7 +201,12 @@ export default function CategorySection({ eventId, category_name, question_count
                             Q{idx + 1}
                           </span>
                           <div className="flex-1 min-w-0 space-y-1.5">
-                            {(!includeSpotify || !q.spotify_track_id) && (
+                            {isHigherOrLower && q.hint_year ? (
+                              <p className="text-[10px] font-black text-amber-700 leading-tight">
+                                Higher or Lower than {q.hint_year}?
+                                <span className="ml-1.5 text-[#26300D]">Answer: {q.release_year}</span>
+                              </p>
+                            ) : (!includeSpotify || !q.spotify_track_id) && (
                               <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
                                 {q.question_text}
                               </p>

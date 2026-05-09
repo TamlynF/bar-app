@@ -66,7 +66,7 @@ export default async function EventQuizQuestionsPage({
       .order("order_no", { ascending: true }),
     supabase
       .from("past_quiz_questions")
-      .select("id, question_text, answer_text, quiz_category_configs_id, spotify_track_id")
+      .select("id, question_text, answer_text, quiz_category_configs_id, spotify_track_id, hint_year, release_year")
       .eq("events_id", id)
       .order("created_at"),
   ]);

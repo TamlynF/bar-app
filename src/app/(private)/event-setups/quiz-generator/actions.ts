@@ -15,6 +15,7 @@ export type MusicSnippetCandidate = {
   year: number
   intro_description: string
   spotify_track_id: string | null
+  hint_year?: number
 }
 
 export type SavedMusicSnippet = {
@@ -22,6 +23,7 @@ export type SavedMusicSnippet = {
   answer_text: string
   release_year: number | null
   spotify_track_id: string | null
+  hint_year: number | null
 }
 
 export type PastQuestionRecord = {
@@ -415,7 +417,20 @@ export async function generateMusicSnippetsAction(
     const model = 'gemini-2.5-flash'
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
-    const prompt = `You are a music expert for a pub quiz at "Don Fenticas".
+    const isHigherOrLower = categoryName.toLowerCase().includes('higher')
+
+    const prompt = isHigherOrLower
+      ? `You are a music expert for a pub quiz "Higher or Lower" round at "Don Fenticas".
+Generate exactly ${numberOfSongs} songs for a "Higher or Lower" game where teams guess if the song's release year is higher or lower than a given hint year.
+
+Requirements:
+- Songs from 1970 to present day.
+- Well-known, recognizable songs that a British pub audience would know.
+- For each song, provide a hint_year that is within 3 to 5 years of the actual release year. The hint_year should be randomly higher or lower than the actual year to create variety.
+- The songs should have a good mix of decades.
+- Avoid these previously used songs: [${existingList}]
+- Return a JSON array sorted by year ascending.`
+      : `You are a music expert for a pub quiz at "Don Fenticas".
 Generate exactly ${numberOfSongs} songs that are famous for having distinctive instrumental intros where NO singing or vocals appear in at least the first 15 seconds.
 
 Requirements:
@@ -426,6 +441,19 @@ Requirements:
 - Avoid these previously used songs: [${existingList}]
 - Return a JSON array sorted by year ascending.`
 
+    const schemaProperties: Record<string, { type: string }> = {
+      artist: { type: 'STRING' },
+      title: { type: 'STRING' },
+      year: { type: 'INTEGER' },
+      intro_description: { type: 'STRING' },
+    }
+    const requiredFields = ['artist', 'title', 'year', 'intro_description']
+
+    if (isHigherOrLower) {
+      schemaProperties.hint_year = { type: 'INTEGER' }
+      requiredFields.push('hint_year')
+    }
+
     const payload = {
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
@@ -435,13 +463,8 @@ Requirements:
           type: 'ARRAY',
           items: {
             type: 'OBJECT',
-            properties: {
-              artist: { type: 'STRING' },
-              title: { type: 'STRING' },
-              year: { type: 'INTEGER' },
-              intro_description: { type: 'STRING' },
-            },
-            required: ['artist', 'title', 'year', 'intro_description'],
+            properties: schemaProperties,
+            required: requiredFields,
           },
         },
       },
@@ -466,7 +489,7 @@ Requirements:
       return { error: 'The Music Expert returned an empty response.' }
     }
 
-    const rawSongs = JSON.parse(content) as { artist: string; title: string; year: number; intro_description: string }[]
+    const rawSongs = JSON.parse(content) as { artist: string; title: string; year: number; intro_description: string; hint_year?: number }[]
     rawSongs.sort((a, b) => a.year - b.year)
 
     // Auto-search Spotify for each song
@@ -477,7 +500,7 @@ Requirements:
         if (spotifyToken) {
           spotifyId = await searchSpotifyTrack(s.artist, s.title, spotifyToken)
         }
-        return { ...s, spotify_track_id: spotifyId }
+        return { ...s, spotify_track_id: spotifyId, hint_year: s.hint_year }
       })
     )
 
@@ -492,7 +515,7 @@ Requirements:
  * Saves selected music snippets to the database.
  */
 export async function saveMusicSnippetsAction(
-  songs: { artist: string; title: string; year: number; spotify_track_id: string | null }[],
+  songs: { artist: string; title: string; year: number; spotify_track_id: string | null; hint_year?: number }[],
   eventId: number,
   categoryName: string,
   categoryConfigId: number
@@ -517,13 +540,17 @@ export async function saveMusicSnippetsAction(
   }
 
   const now = new Date().toISOString()
+  const isHigherOrLower = categoryName.toLowerCase().includes('higher')
   const insertData = songs.map((s) => ({
-    question_text: `[${s.year}] Name the artist and song`,
+    question_text: isHigherOrLower && s.hint_year
+      ? `Higher or Lower than ${s.hint_year}?`
+      : `[${s.year}] Name the artist and song`,
     answer_text: `${s.artist} - ${s.title}`,
     category: categoryName,
     topic: categoryName,
     release_year: s.year,
     spotify_track_id: s.spotify_track_id,
+    hint_year: s.hint_year || null,
     asked_on: askedOn,
     events_id: eventId,
     quiz_category_configs_id: categoryConfigId,
@@ -558,7 +585,7 @@ export async function getMusicSnippetsForEventAction(
 
   const { data, error } = await supabase
     .from('past_quiz_questions')
-    .select('id, answer_text, release_year, spotify_track_id')
+    .select('id, answer_text, release_year, spotify_track_id, hint_year')
     .eq('events_id', eventId)
     .eq('quiz_category_configs_id', categoryConfigId)
     .order('release_year', { ascending: true })

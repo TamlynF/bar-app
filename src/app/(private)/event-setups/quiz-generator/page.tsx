@@ -206,6 +206,7 @@ export default function QuizGeneratorPage() {
   }, [categories, category])
 
   const isMusicSnippets = selectedCategoryConfig?.include_spotify ?? false
+  const isHigherOrLower = isMusicSnippets && category.toLowerCase().includes('higher')
 
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
@@ -301,6 +302,7 @@ export default function QuizGeneratorPage() {
             title: s.title,
             year: s.year,
             spotify_track_id: s.spotify_track_id,
+            hint_year: s.hint_year,
           })),
           parseInt(selectedEventId),
           category,
@@ -898,16 +900,29 @@ export default function QuizGeneratorPage() {
                       setSelectedSnippetIndices(next)
                     }}
                   >
-                    <span className="shrink-0 bg-[#3D4A2A] text-white text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
+                    <span className="shrink-0 bg-[#26300D] text-white text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
                       {song.year}
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-bold text-[#1F1F1A] leading-tight tracking-tight truncate">
-                        {song.artist} — {song.title}
-                      </p>
-                      <p className="text-[8px] text-[#5F624F] font-medium mt-0.5 leading-tight line-clamp-1">
-                        {song.intro_description}
-                      </p>
+                      {isHigherOrLower && song.hint_year ? (
+                        <>
+                          <p className="text-[10px] font-black text-amber-700 leading-tight">
+                            Higher or Lower than {song.hint_year}?
+                          </p>
+                          <p className="text-[11px] font-bold text-[#1F1F1A] leading-tight tracking-tight truncate mt-0.5">
+                            {song.artist} — {song.title}
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-[11px] font-bold text-[#1F1F1A] leading-tight tracking-tight truncate">
+                            {song.artist} — {song.title}
+                          </p>
+                          <p className="text-[8px] text-[#5F624F] font-medium mt-0.5 leading-tight line-clamp-1">
+                            {song.intro_description}
+                          </p>
+                        </>
+                      )}
                     </div>
                     <div className={cn(
                       "w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0",
@@ -955,12 +970,19 @@ export default function QuizGeneratorPage() {
             {savedSnippets.map((snippet) => (
               <div key={snippet.id} className="bg-white border border-[#26300D]/20 rounded-lg overflow-hidden shadow-sm">
                 <div className="px-2.5 py-2 flex items-center gap-2">
-                  <span className="shrink-0 bg-[#3D4A2A] text-white text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
+                  <span className="shrink-0 bg-[#26300D] text-white text-[8px] font-black px-1.5 py-0.5 rounded tracking-wider">
                     {snippet.release_year || '—'}
                   </span>
-                  <p className="text-[10px] font-bold text-[#1F1F1A] tracking-tight flex-1 min-w-0 truncate">
-                    {snippet.answer_text}
-                  </p>
+                  <div className="flex-1 min-w-0">
+                    {isHigherOrLower && snippet.hint_year && (
+                      <p className="text-[9px] font-black text-amber-700 leading-tight">
+                        Higher or Lower than {snippet.hint_year}?
+                      </p>
+                    )}
+                    <p className="text-[10px] font-bold text-[#1F1F1A] tracking-tight truncate">
+                      {snippet.answer_text}
+                    </p>
+                  </div>
                   <Button
                     variant="ghost"
                     size="icon"
