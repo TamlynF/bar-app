@@ -55,7 +55,8 @@
       "Bash(npx next:*)",
       "WebFetch(domain:developer.spotify.com)",
       "Read(//tmp/**)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "mcp__claude_ai_Supabase__list_tables"
     ]
   }
 }

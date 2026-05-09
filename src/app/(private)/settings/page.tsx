@@ -1,13 +1,13 @@
 import React from "react";
 import Link from "next/link";
-import { 
-  LayoutDashboard, 
-  CalendarDays, 
-  Tags, 
-  UserCircle, 
-  Users, 
-  Shield, 
-  ChevronRight, 
+import {
+  LayoutDashboard,
+  CalendarDays,
+  Tags,
+  UserCircle,
+  Users,
+  Shield,
+  ChevronRight,
   BrainCircuit,
   Grid2X2,
   CalendarCogIcon,
@@ -15,11 +15,18 @@ import {
   Dices,
   BookUser,
   Medal,
-  UserCog2
+  UserCog2,
+  Building2
 } from "lucide-react";
 
 const settingsItems = [
-
+  {
+    title: "Company Info",
+    description: "Business details and socials",
+    href: "/settings/company",
+    icon: Building2,
+    color: "bg-amber-500/10 text-amber-600",
+  },
   {
     title: "Guests",
     description: "Database and contact info",
