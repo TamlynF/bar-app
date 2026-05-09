@@ -103,6 +103,16 @@ export default function QuizGeneratorPage() {
   const [musicSnippets, setMusicSnippets] = useState<MusicSnippetCandidate[]>([])
   const [selectedSnippetIndices, setSelectedSnippetIndices] = useState<Set<number>>(new Set())
   const [savedSnippets, setSavedSnippets] = useState<SavedMusicSnippet[]>([])
+  const [spotifyConnected, setSpotifyConnected] = useState(false)
+
+  // Check Spotify connection on mount
+  useEffect(() => {
+    const hasCookie = document.cookie.includes('spotify_access_token')
+    const urlParams = new URLSearchParams(window.location.search)
+    if (hasCookie || urlParams.get('spotify_connected') === 'true') {
+      setSpotifyConnected(true)
+    }
+  }, [])
   // Ref to handle scrolling the detail popup to the top
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
@@ -728,7 +738,7 @@ export default function QuizGeneratorPage() {
             {category} is full for this date
           </p>
         )}
-        {isMusicSnippets && (
+        {isMusicSnippets && !spotifyConnected && (
           <div className="mt-2 flex items-center gap-2">
             <a
               href={`/api/spotify/login?return=${encodeURIComponent(`/event-setups/quiz-generator?category=${encodeURIComponent(category)}${selectedEventId ? `&event_id=${selectedEventId}` : ''}`)}`}
