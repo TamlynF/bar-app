@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { Play, Pause, Music } from 'lucide-react'
+import { Play, Pause, Music, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 function getCookie(name: string): string | null {
@@ -9,9 +9,101 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null
 }
 
-// Global refresh state — shared across all SpotifyPlayer instances
+// ── Global Spotify SDK singleton ──────────────────────────────────────────
+
+let globalPlayer: Spotify.Player | null = null
+let globalDeviceId: string | null = null
+let globalInitializing = false
+let globalReady = false
 let refreshAttempted = false
 let refreshedToken: string | null = null
+const deviceListeners: Set<(id: string | null) => void> = new Set()
+const stateListeners: Map<string, (playing: boolean, position: number) => void> = new Map()
+let currentTrackId: string | null = null
+
+async function getToken(): Promise<string | null> {
+  const token = getCookie('spotify_access_token')
+  if (token) return token
+
+  if (refreshAttempted) return refreshedToken
+  refreshAttempted = true
+
+  try {
+    const res = await fetch('/api/spotify/refresh', { method: 'POST' })
+    if (res.ok) {
+      const data = await res.json()
+      refreshedToken = data.access_token
+      return refreshedToken
+    }
+  } catch {}
+  return null
+}
+
+function initGlobalPlayer() {
+  if (globalInitializing || globalPlayer) return
+  globalInitializing = true
+
+  const doInit = () => {
+    if (!window.Spotify) return
+
+    const player = new window.Spotify.Player({
+      name: 'Don Fenticas Quiz',
+      getOAuthToken: async (cb: (token: string) => void) => {
+        const t = await getToken()
+        if (t) cb(t)
+      },
+      volume: 0.8,
+    })
+
+    player.addListener('ready', (data: unknown) => {
+      const { device_id } = data as { device_id: string }
+      globalDeviceId = device_id
+      globalReady = true
+      deviceListeners.forEach(fn => fn(device_id))
+    })
+
+    player.addListener('not_ready', () => {
+      globalDeviceId = null
+      globalReady = false
+      deviceListeners.forEach(fn => fn(null))
+    })
+
+    player.addListener('player_state_changed', (data: unknown) => {
+      const state = data as Spotify.PlaybackState | null
+      if (!state) return
+      const trackId = state.track_window?.current_track?.id
+      if (trackId && stateListeners.has(trackId)) {
+        stateListeners.get(trackId)!(!state.paused, state.position)
+      }
+    })
+
+    player.addListener('initialization_error', () => {
+      console.error('Spotify SDK init error')
+    })
+
+    player.addListener('authentication_error', () => {
+      console.error('Spotify auth error')
+    })
+
+    player.connect()
+    globalPlayer = player
+  }
+
+  if (window.Spotify) {
+    doInit()
+  } else {
+    window.onSpotifyWebPlaybackSDKReady = doInit
+    if (!document.getElementById('spotify-sdk-script')) {
+      const script = document.createElement('script')
+      script.id = 'spotify-sdk-script'
+      script.src = 'https://sdk.scdn.co/spotify-player.js'
+      script.async = true
+      document.body.appendChild(script)
+    }
+  }
+}
+
+// ── SpotifyPlayer Component ───────────────────────────────────────────────
 
 type SpotifyPlayerProps = {
   trackId: string
@@ -29,35 +121,41 @@ type SpotifyTrackInfo = {
 export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayerProps) {
   const [isConnected, setIsConnected] = useState(false)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
   const [trackInfo, setTrackInfo] = useState<SpotifyTrackInfo | null>(null)
   const [progress, setProgress] = useState(0)
-  const [deviceId, setDeviceId] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const playerRef = useRef<Spotify.Player | null>(null)
+  const [ready, setReady] = useState(globalReady)
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
-  const sdkReady = useRef(false)
 
-  const getToken = useCallback(async (): Promise<string | null> => {
+  // Check connection & init SDK
+  useEffect(() => {
     const token = getCookie('spotify_access_token')
-    if (token) return token
+    if (!token) return
+    setIsConnected(true)
+    initGlobalPlayer()
 
-    // Only attempt refresh once globally across all player instances
-    if (refreshAttempted) return refreshedToken
-    refreshAttempted = true
+    // Listen for device ready
+    const onDevice = (id: string | null) => setReady(!!id)
+    deviceListeners.add(onDevice)
+    if (globalDeviceId) setReady(true)
 
-    try {
-      const res = await fetch('/api/spotify/refresh', { method: 'POST' })
-      if (res.ok) {
-        const data = await res.json()
-        refreshedToken = data.access_token
-        return refreshedToken
-      }
-    } catch {}
-    return null
+    return () => { deviceListeners.delete(onDevice) }
   }, [])
+
+  // Listen for playback state changes for THIS track
+  useEffect(() => {
+    const onState = (playing: boolean, position: number) => {
+      setIsPlaying(playing)
+      setProgress(position)
+      setIsLoading(false)
+    }
+    stateListeners.set(trackId, onState)
+    return () => { stateListeners.delete(trackId) }
+  }, [trackId])
 
   // Fetch track info
   useEffect(() => {
+    if (!isConnected) return
     async function fetchTrack() {
       const token = await getToken()
       if (!token) return
@@ -77,74 +175,7 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
       } catch {}
     }
     fetchTrack()
-  }, [trackId, getToken])
-
-  // Initialize SDK
-  useEffect(() => {
-    const token = getCookie('spotify_access_token')
-    if (!token) return
-
-    setIsConnected(true)
-
-    if (sdkReady.current) return
-
-    const initPlayer = () => {
-      if (!window.Spotify || playerRef.current) return
-
-      sdkReady.current = true
-      const player = new window.Spotify.Player({
-        name: 'Don Fenticas Quiz',
-        getOAuthToken: async (cb: (token: string) => void) => {
-          const t = await getToken()
-          if (t) cb(t)
-        },
-        volume: 0.8,
-      })
-
-      player.addListener('ready', (data: unknown) => {
-        const { device_id } = data as { device_id: string }
-        setDeviceId(device_id)
-      })
-
-      player.addListener('not_ready', () => {
-        setDeviceId(null)
-      })
-
-      player.addListener('player_state_changed', (data: unknown) => {
-        const state = data as Spotify.PlaybackState | null
-        if (!state) return
-        setIsPlaying(!state.paused)
-        setProgress(state.position)
-      })
-
-      player.addListener('initialization_error', () => setError('Player init failed'))
-      player.addListener('authentication_error', () => {
-        setError('Auth expired')
-        setIsConnected(false)
-      })
-
-      player.connect()
-      playerRef.current = player
-    }
-
-    if (window.Spotify) {
-      initPlayer()
-    } else {
-      window.onSpotifyWebPlaybackSDKReady = initPlayer
-
-      if (!document.getElementById('spotify-sdk-script')) {
-        const script = document.createElement('script')
-        script.id = 'spotify-sdk-script'
-        script.src = 'https://sdk.scdn.co/spotify-player.js'
-        script.async = true
-        document.body.appendChild(script)
-      }
-    }
-
-    return () => {
-      if (progressInterval.current) clearInterval(progressInterval.current)
-    }
-  }, [getToken])
+  }, [trackId, isConnected])
 
   // Progress tracking
   useEffect(() => {
@@ -159,9 +190,9 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
     }
   }, [isPlaying, trackInfo])
 
-  const handlePlayPause = async () => {
+  const handlePlayPause = useCallback(async () => {
     const token = await getToken()
-    if (!token || !deviceId) return
+    if (!token || !globalDeviceId) return
 
     try {
       if (isPlaying) {
@@ -171,7 +202,18 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
         })
         setIsPlaying(false)
       } else {
-        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
+        setIsLoading(true)
+        // If switching tracks, play the new one
+        if (currentTrackId !== trackId) {
+          // Stop listening on the old track
+          if (currentTrackId) {
+            const oldListener = stateListeners.get(currentTrackId)
+            if (oldListener) oldListener(false, 0)
+          }
+        }
+        currentTrackId = trackId
+
+        await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${globalDeviceId}`, {
           method: 'PUT',
           headers: {
             Authorization: `Bearer ${token}`,
@@ -184,32 +226,21 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
         })
         setIsPlaying(true)
         setProgress(0)
+        setIsLoading(false)
       }
     } catch {
-      setError('Playback failed')
+      setIsLoading(false)
     }
-  }
+  }, [isPlaying, trackId])
 
   const progressPercent = trackInfo ? (progress / trackInfo.durationMs) * 100 : 0
 
-  // Not connected — show connect button
+  // Not connected — show nothing (connect button is on the form)
   if (!isConnected) {
     return (
-      <a
-        href="/api/spotify/login"
-        className="flex items-center gap-2 px-3 py-2 bg-[#1DB954] text-white rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-[#1ed760] transition-colors w-fit"
-      >
-        <Music className="w-3.5 h-3.5" />
-        Connect Spotify
-      </a>
-    )
-  }
-
-  if (error) {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-red-50 rounded-lg">
-        <span className="text-[9px] font-bold text-red-600">{error}</span>
-        <a href="/api/spotify/login" className="text-[9px] font-bold text-red-800 underline">Reconnect</a>
+      <div className="flex items-center gap-2 px-3 py-2 bg-[#282828] rounded-lg">
+        <Music className="w-3.5 h-3.5 text-white/30" />
+        <span className="text-[9px] text-white/40">Connect Spotify to play</span>
       </div>
     )
   }
@@ -240,7 +271,6 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
         <p className={cn("text-white/50 truncate", compact ? "text-[8px]" : "text-[9px]")}>
           {trackInfo?.artist || ''}
         </p>
-        {/* Progress bar */}
         <div className="mt-1 h-1 w-full rounded-full bg-white/10 overflow-hidden">
           <div
             className="h-full bg-[#1DB954] rounded-full transition-all duration-500"
@@ -253,35 +283,20 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
       <button
         type="button"
         onClick={(e) => { e.stopPropagation(); handlePlayPause() }}
-        disabled={!deviceId}
+        disabled={!ready}
         className={cn(
           "shrink-0 rounded-full bg-white flex items-center justify-center text-black transition-transform hover:scale-105 active:scale-95 disabled:opacity-30",
           compact ? "w-8 h-8" : "w-9 h-9"
         )}
       >
-        {isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+        {isLoading ? (
+          <Loader2 className="w-4 h-4 animate-spin" />
+        ) : isPlaying ? (
+          <Pause className="w-4 h-4 fill-current" />
+        ) : (
+          <Play className="w-4 h-4 fill-current ml-0.5" />
+        )}
       </button>
     </div>
-  )
-}
-
-// Connect prompt for when Spotify isn't connected yet
-export function SpotifyConnectButton() {
-  const [connected, setConnected] = useState(false)
-
-  useEffect(() => {
-    setConnected(!!getCookie('spotify_access_token'))
-  }, [])
-
-  if (connected) return null
-
-  return (
-    <a
-      href="/api/spotify/login"
-      className="flex items-center gap-2 px-3 py-1.5 bg-[#1DB954] text-white rounded-md text-[9px] font-bold uppercase tracking-wider hover:bg-[#1ed760] transition-colors w-fit"
-    >
-      <Music className="w-3 h-3" />
-      Connect Spotify
-    </a>
   )
 }
