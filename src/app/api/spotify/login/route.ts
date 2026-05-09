@@ -1,9 +1,11 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   const clientId = process.env.SPOTIFY_CLIENT_ID || ''
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'http://localhost:3000'
-  const redirectUri = `${siteUrl}/api/spotify/callback`
+  const redirectUri = 'http://localhost:3000/api/spotify/callback'
+
+  // Pass the return URL as state so we can redirect back to the right page/category
+  const returnUrl = request.nextUrl.searchParams.get('return') || '/event-setups/quiz-generator'
 
   const scopes = [
     'streaming',
@@ -19,6 +21,7 @@ export async function GET() {
     scope: scopes,
     redirect_uri: redirectUri,
     show_dialog: 'false',
+    state: returnUrl,
   })
 
   return NextResponse.redirect(`https://accounts.spotify.com/authorize?${params.toString()}`)

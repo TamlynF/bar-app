@@ -731,7 +731,7 @@ export default function QuizGeneratorPage() {
         {isMusicSnippets && (
           <div className="mt-2 flex items-center gap-2">
             <a
-              href="/api/spotify/login"
+              href={`/api/spotify/login?return=${encodeURIComponent(`/event-setups/quiz-generator?category=${encodeURIComponent(category)}${selectedEventId ? `&event_id=${selectedEventId}` : ''}`)}`}
               style={{ backgroundColor: '#1DB954' }}
               className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-md text-[9px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
             >

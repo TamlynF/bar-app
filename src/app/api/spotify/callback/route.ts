@@ -3,11 +3,13 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get('code')
   const error = request.nextUrl.searchParams.get('error')
+  const state = request.nextUrl.searchParams.get('state') || '/event-setups/quiz-generator'
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL || 'http://localhost:3000'
-  const redirectUri = `${siteUrl}/api/spotify/callback`
+  const redirectUri = 'http://localhost:3000/api/spotify/callback'
 
   if (error || !code) {
-    return NextResponse.redirect(`${siteUrl}/event-setups/quiz-generator?spotify_error=auth_failed`)
+    console.error('Spotify auth error:', error)
+    return NextResponse.redirect(`${siteUrl}${state}?spotify_error=auth_failed`)
   }
 
   const clientId = process.env.SPOTIFY_CLIENT_ID || ''
@@ -27,17 +29,20 @@ export async function GET(request: NextRequest) {
   })
 
   if (!tokenRes.ok) {
-    return NextResponse.redirect(`${siteUrl}/event-setups/quiz-generator?spotify_error=token_failed`)
+    const errBody = await tokenRes.text()
+    console.error('Spotify token exchange failed:', tokenRes.status, errBody)
+    return NextResponse.redirect(`${siteUrl}${state}?spotify_error=token_failed`)
   }
 
   const tokens = await tokenRes.json()
 
-  // Store tokens in a secure httpOnly cookie
-  const response = NextResponse.redirect(`${siteUrl}/event-setups/quiz-generator?spotify_connected=true`)
+  // Redirect back preserving the category selection
+  const separator = state.includes('?') ? '&' : '?'
+  const response = NextResponse.redirect(`${siteUrl}${state}${separator}spotify_connected=true`)
 
   response.cookies.set('spotify_access_token', tokens.access_token, {
-    httpOnly: false, // SDK needs access from client JS
-    secure: process.env.NODE_ENV === 'production',
+    httpOnly: false,
+    secure: false,
     sameSite: 'lax',
     path: '/',
     maxAge: tokens.expires_in || 3600,
@@ -45,10 +50,10 @@ export async function GET(request: NextRequest) {
 
   response.cookies.set('spotify_refresh_token', tokens.refresh_token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: false,
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge: 60 * 60 * 24 * 30,
   })
 
   return response
