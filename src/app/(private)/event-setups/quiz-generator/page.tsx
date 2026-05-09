@@ -630,17 +630,17 @@ export default function QuizGeneratorPage() {
       </Sheet>
 
       {/* GENERATOR FORM */}
-      <form onSubmit={handleGenerate} className="bg-white border border-[#E6DFC8] p-2 sm:p-3 rounded-xl shadow-sm">
-        <div className="grid grid-cols-2 gap-x-1.5 gap-y-1.5">
+      <form onSubmit={handleGenerate} className="bg-[#F7F4EA] border border-[#E6DFC8] p-3 sm:p-4 rounded-xl shadow-sm">
+        <div className="grid grid-cols-2 gap-x-3 gap-y-4">
           {/* Row 1 col 1: Event */}
           <div>
-            <Label className="text-[4px] font-medium uppercase tracking-wider text-[#5F624F] ml-0.5 mb-0.5 block text-left">Event</Label>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-[#26300D] ml-0.5 mb-0.5 block text-left">Event</Label>
             <div className="relative">
               <select
                 title='Event'
                 value={selectedEventId}
                 onChange={handleEventChange}
-                className="w-full h-8 rounded-md border border-[#E6DFC8] bg-[#F7F4EA]/40 pl-2 pr-6 text-[10px] font-black text-[#26300D] appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none focus:border-[#26300D] transition-all uppercase"
+                className="w-full h-8 rounded-md border border-[#E6DFC8] bg-white pl-2 pr-6 text-[10px] font-bold text-[#26300D] appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none focus:border-[#26300D] transition-all uppercase"
               >
                 {upcomingEvents.map(event => (
                   <option key={event.id} value={event.id}>{format(new Date(event.date), "dd MMM yyyy")}</option>
@@ -652,7 +652,7 @@ export default function QuizGeneratorPage() {
 
           {/* Row 1 col 2: Category */}
           <div>
-            <Label className="text-[4px] font-medium uppercase tracking-wider text-[#5F624F] ml-0.5 mb-0.5 block text-left">Category</Label>
+            <Label className="text-[10px] font-black uppercase tracking-widest text-[#26300D] ml-0.5 mb-0.5 block text-left">Category</Label>
             <div className="relative">
               <select
                 title='Category'
@@ -679,7 +679,7 @@ export default function QuizGeneratorPage() {
           {/* Row 2: Topic full width */}
           {!isMusicSnippets && (
             <div className="col-span-2">
-              <Label className="text-[4px] font-medium uppercase tracking-wider text-[#5F624F] ml-0.5 mb-0.5 block text-left">Topic</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-[#26300D] ml-0.5 mb-0.5 block text-left">Topic</Label>
               <Input
                 placeholder="e.g. Disney, 90s..."
                 value={topic}
@@ -698,7 +698,7 @@ export default function QuizGeneratorPage() {
           {/* Row 3: Difficulty + Generate button */}
           <div className="col-span-2">
             {!isMusicSnippets && (
-              <Label className="text-[4px] font-medium uppercase tracking-wider text-[#5F624F] ml-0.5 mb-0.5 block text-left">Difficulty</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest text-[#26300D] ml-0.5 mb-0.5 block text-left">Difficulty</Label>
             )}
             <div className="flex items-center justify-between gap-1.5">
               {!isMusicSnippets && (
