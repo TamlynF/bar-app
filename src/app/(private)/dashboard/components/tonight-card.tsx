@@ -99,7 +99,7 @@ export default function TonightCard({
                   "h-full transition-all duration-700 capacity-fill",
                   capacityPercent > 90 ? "bg-red-500" : "bg-[#26300D]"
                 )}
-                style={{ '--bar-width': `${capacityPercent}%` } as React.CSSProperties}
+                style={{"--capacity-width": `${capacityPercent}%`} as React.CSSProperties}
               />
             </div>
           </div>

@@ -29,18 +29,60 @@ export async function updateBandStatus(
     .from("band_booking_requests")
     .update({ status, admin_notes: adminNotes || null })
     .eq("id", id)
-    .select("booker_name, email")
+    .select("booker_name, email, type, group_name, selected_date, selected_start_time, selected_end_time, payment_amount")
     .single();
 
   if (error || !record) {
     console.log("Supabase error:", error);
     throw new Error("Failed to update status.");
-  } 
+  }
+
+  // When approved, create an event with the matching music event type
+  if (status === "approved" && record.selected_date) {
+    const bandSubType = record.type?.toLowerCase() ?? "";
+
+    // Look up the event_types row where type='music' and sub_type matches
+    let { data: eventType } = await supabase
+      .from("event_types")
+      .select("id")
+      .ilike("type", "music")
+      .ilike("sub_type", bandSubType)
+      .single();
+
+    if (!eventType) {
+      const { data: created } = await supabase
+        .from("event_types")
+        .insert({ type: "music", sub_type: bandSubType || "other" })
+        .select("id")
+        .single();
+      eventType = created;
+    }
+
+    if (eventType) {
+      const { data: newEvent } = await supabase.from("events").insert({
+        title: record.group_name || record.booker_name,
+        date: record.selected_date,
+        start_time: record.selected_start_time,
+        end_time: record.selected_end_time,
+        event_types_id: eventType.id,
+        payment_amount: record.payment_amount,
+        is_active: true,
+      }).select("id").single();
+
+      if (newEvent) {
+        await supabase
+          .from("band_booking_requests")
+          .update({ event_id: newEvent.id })
+          .eq("id", id);
+      }
+    }
+  }
 
   await sendOutcomeEmail(record.booker_name, record.email, status, adminNotes);
 
   revalidatePath("/event-bookings/music-bookings");
   revalidatePath("/dashboard");
+  revalidatePath("/event-setups/events");
 }
 
 async function sendOutcomeEmail(

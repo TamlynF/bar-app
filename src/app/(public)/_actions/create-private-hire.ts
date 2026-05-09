@@ -35,6 +35,7 @@ export async function createPrivateHire(data: PrivateHireData) {
         preferred_start_time: data.preferred_start_time || null,
         preferred_end_time: data.preferred_end_time || null,
         reason_for_hire: data.reason_for_hire,
+        reason: data.reason_for_hire,
         additional_requirements: data.additional_requirements || null,
         status: "pending_review",
       },

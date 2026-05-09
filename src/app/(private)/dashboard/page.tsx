@@ -24,6 +24,7 @@ import { EventRowListClient } from "./components/event-row-list-client";
 import TonightCard from "./components/tonight-card";
 import StatCard from "./components/stat-card";
 import ActionRow from "./components/action-row";
+import LeaderboardCard, { type LeaderboardEntry } from "./components/leaderboard-card";
 
 export const dynamic = "force-dynamic";
 
@@ -32,10 +33,12 @@ export type EventTypeRow = { type: string; sub_type: string; badge_color?: strin
 type BookingRow = { id: number; group_size: number; status: string; group_name: string | null; total_amount: number | null; paid_amount: number | null };
 type PrivateHireRow = {
   id: string;
+  event_id: number | null;
   selected_date: string;
   selected_start_time: string | null;
   selected_end_time: string | null;
   reason_for_hire: string;
+  reason: string | null;
   full_name: string;
   email: string;
   phone_no: string | null;
@@ -54,6 +57,7 @@ type PrivateDetails = {
 };
 type BandBookingRow = {
   id: string;
+  event_id: number | null;
   group_name: string | null;
   booker_name: string;
   email: string;
@@ -208,15 +212,23 @@ export default async function DashboardPage() {
       .select("preferred_dates"),
   ]);
 
-  const { data: rawUpcoming } = await supabase
+  const { data: leaderboardScores, error: leaderboardError } = await supabase
+    .from("booking_scores")
+    .select("id, score, is_winner, bookings(id, group_name), events(id, title, date)");
+  if (leaderboardError) console.error("Leaderboard query error:", leaderboardError);
+
+  const { data: rawUpcoming, error: upcomingError } = await supabase
     .from("events")
     .select(
-      "id, date, start_time, end_time, title, host_employee_id, event_types (type, sub_type, badge_color), bookings (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
+      "id, date, start_time, end_time, title, host_employee_id, event_types (type, sub_type, badge_color), bookings!bookings_event_id_fkey (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
     )
     .gte("date", todayStr)
+    .neq("is_active", false)
     .order("date", { ascending: true })
     .limit(5);
-
+  console.log("Raw upcoming events data:", JSON.stringify(rawUpcoming, null, 2), "Error:", upcomingError);
+  if (upcomingError) console.error("Upcoming events error:", upcomingError);
+  
   const upcomingEvents = (rawUpcoming ?? []) as unknown as UpcomingEvent[];
 
   const allUpcomingBookingIds = upcomingEvents.flatMap((ev) => ev.bookings.map((b) => b.id));
@@ -226,13 +238,13 @@ export default async function DashboardPage() {
     supabase.from("tables").select("id, max_capacity").eq("available", true),
     supabase
       .from("private_hire_requests")
-      .select("id, selected_date, selected_start_time, selected_end_time, reason_for_hire, full_name, email, phone_no, guest_count, deposit_amount, paid_amount")
+      .select("id, event_id, selected_date, selected_start_time, selected_end_time, reason_for_hire, reason, full_name, email, phone_no, guest_count, deposit_amount, paid_amount")
       .eq("status", "confirmed")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
     supabase
       .from("band_booking_requests")
-      .select("id, group_name, booker_name, email, phone_no, type, genre, payment_amount, payment_status, selected_date, selected_start_time, selected_end_time")
+      .select("id, event_id, group_name, booker_name, email, phone_no, type, genre, payment_amount, payment_status, selected_date, selected_start_time, selected_end_time")
       .eq("status", "approved")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
@@ -246,6 +258,16 @@ export default async function DashboardPage() {
 
   const tableCapacityMap = new Map((tablesData ?? []).map(t => [t.id, t.max_capacity]));
   const bookingTableMap = new Map((tableMappings ?? []).map(m => [m.booking_id, m.table_id]));
+  const privateHireByEventId = new Map(
+    ((confirmedPrivateHires ?? []) as PrivateHireRow[])
+      .filter(ph => ph.event_id != null)
+      .map(ph => [ph.event_id!, ph])
+  );
+  const bandByEventId = new Map(
+    ((confirmedBandBookings ?? []) as BandBookingRow[])
+      .filter(b => b.event_id != null)
+      .map(b => [b.event_id!, b])
+  );
    const totalTablesByCapacity = new Map<number, number>();
  (tablesData ?? []).forEach(t => {
    totalTablesByCapacity.set(t.max_capacity, (totalTablesByCapacity.get(t.max_capacity) ?? 0) + 1);
@@ -317,6 +339,24 @@ export default async function DashboardPage() {
       }));
   };
 
+  // ─── Leaderboard Aggregation ─────────────────────────────────────────────
+  const topTeams: LeaderboardEntry[] = (() => {
+    const statsMap: Record<string, LeaderboardEntry> = {};
+    (leaderboardScores ?? []).forEach((record: { score: number | null; is_winner: boolean | null; bookings: { id: number; group_name: string | null } | { id: number; group_name: string | null }[] | null }) => {
+      const booking = Array.isArray(record.bookings) ? record.bookings[0] : record.bookings;
+      const teamName = booking?.group_name || "Unknown Team";
+      if (!statsMap[teamName]) {
+        statsMap[teamName] = { team_name: teamName, wins: 0, quizzes_attended: 0, total_score: 0 };
+      }
+      statsMap[teamName].quizzes_attended += 1;
+      statsMap[teamName].total_score += record.score || 0;
+      if (record.is_winner) statsMap[teamName].wins += 1;
+    });
+    return Object.values(statsMap)
+      .sort((a, b) => b.wins !== a.wins ? b.wins - a.wins : b.total_score - a.total_score)
+      .slice(0, 5);
+  })();
+
   const eventListItems: ListItem[] = upcomingEvents.map((ev) => {
     const et = getEventType(ev);
     const confirmedBookings = ev.bookings.filter((b) => b.status === "confirmed");
@@ -329,6 +369,14 @@ export default async function DashboardPage() {
     const isBingo =
       et?.sub_type?.toLowerCase().includes("bingo") ||
       et?.type?.toLowerCase().includes("bingo");
+
+    const isPrivate =
+      et?.sub_type?.toLowerCase().includes("private") ||
+      et?.type?.toLowerCase().includes("private");
+
+    const isMusic =
+      et?.sub_type?.toLowerCase().includes("music") ||
+      et?.type?.toLowerCase().includes("music");
 
     const bingoDetails: BingoDetails | undefined = isBingo ? (() => {
       const totalPaid = confirmedBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);
@@ -366,6 +414,32 @@ export default async function DashboardPage() {
       tableGroups: computeTableGroups(confirmedBookings),
     } : undefined;
 
+    const ph = privateHireByEventId.get(ev.id);
+    const privateDetails: PrivateDetails | undefined = isPrivate && ph ? {
+      email: ph.email,
+      phone: ph.phone_no,
+      guestCount: ph.guest_count,
+      capacityPct: totalVenueCapacity > 0
+        ? Math.round((ph.guest_count / totalVenueCapacity) * 100)
+        : 0,
+      depositAmount: ph.deposit_amount,
+      outstanding: ph.deposit_amount !== null && ph.paid_amount !== null
+        ? Math.max(0, ph.deposit_amount - ph.paid_amount)
+        : null,
+      reasonForHire: ph.reason || ph.reason_for_hire,
+    } : undefined;
+
+    const bb = bandByEventId.get(ev.id);
+    const bandDetails: BandDetails | undefined = isMusic && bb ? {
+      bookerName: bb.booker_name,
+      email: bb.email,
+      phone: bb.phone_no,
+      actType: bb.type,
+      genre: bb.genre,
+      paymentRequired: bb.payment_status !== "not_required" && bb.payment_amount !== null && bb.payment_amount > 0,
+      paymentAmount: bb.payment_amount,
+    } : undefined;
+
     return {
       key: `event-${ev.id}`,
       date: ev.date,
@@ -374,66 +448,24 @@ export default async function DashboardPage() {
       endTime: ev.end_time,
       eventType: et,
       hostName: ev.host_employee_id ? (employeeMap.get(ev.host_employee_id) ?? null) : null,
-      guests: confirmedGuests,
       href: isQuiz
         ? `/event-bookings/quiz-bookings?date=${ev.date}&eventId=${ev.id}`
         : isBingo
           ? `/event-bookings/bingo-bookings?date=${ev.date}&eventId=${ev.id}`
-          : `/event-bookings/event/${ev.id}`,
+          : isPrivate && ph
+            ? `/event-bookings/private-bookings/${ph.id}`
+            : isMusic && bb
+              ? `/event-bookings/music-bookings/${bb.id}`
+              : `/event-bookings/event/${ev.id}`,
+      guests: isPrivate && ph ? ph.guest_count : confirmedGuests,
       quizDetails,
       bingoDetails,
+      privateDetails,
+      bandDetails,
     };
   });
 
-  const privateHireListItems: ListItem[] = ((confirmedPrivateHires ?? []) as PrivateHireRow[])
-    .filter((ph) => ph.selected_date >= todayStr)
-    .map((ph) => ({
-      key: `ph-${ph.id}`,
-      date: ph.selected_date,
-      title: ph.reason_for_hire,
-      startTime: ph.selected_start_time,
-      endTime: ph.selected_end_time,
-      eventType: { type: "Private Hire", sub_type: "private" } as EventTypeRow,
-      hostName: ph.full_name,
-      guests: ph.guest_count,
-      href: `/event-bookings/private-bookings/${ph.id}`,
-      privateDetails: {
-        email: ph.email,
-        phone: ph.phone_no,
-        guestCount: ph.guest_count,
-        capacityPct: totalVenueCapacity > 0
-          ? Math.round((ph.guest_count / totalVenueCapacity) * 100)
-          : 0,
-        depositAmount: ph.deposit_amount,
-        outstanding: ph.deposit_amount !== null && ph.paid_amount !== null
-          ? Math.max(0, ph.deposit_amount - ph.paid_amount)
-          : null,
-        reasonForHire: ph.reason_for_hire,
-      } satisfies PrivateDetails,
-    }));
-
-  const bandListItems: ListItem[] = ((confirmedBandBookings ?? []) as BandBookingRow[]).map((b) => ({
-    key: `band-${b.id}`,
-    date: b.selected_date,
-    title: b.group_name || b.booker_name,
-    startTime: b.selected_start_time,
-    endTime: b.selected_end_time,
-    eventType: { type: "Live Music", sub_type: b.type } as EventTypeRow,
-    hostName: null,
-    guests: 0,
-    href: `/event-bookings/music-bookings/${b.id}`,
-    bandDetails: {
-      bookerName: b.booker_name,
-      email: b.email,
-      phone: b.phone_no,
-      actType: b.type,
-      genre: b.genre,
-      paymentRequired: b.payment_status !== "not_required" && b.payment_amount !== null && b.payment_amount > 0,
-      paymentAmount: b.payment_amount,
-    } satisfies BandDetails,
-  }));
-
-  const allListItems = [...eventListItems, ...privateHireListItems, ...bandListItems]
+  const allListItems = [...eventListItems]
     .sort((a, b) => {
       const dateDiff = a.date.localeCompare(b.date); // ascending date
       if (dateDiff !== 0) return dateDiff;
@@ -552,6 +584,12 @@ export default async function DashboardPage() {
               sub="this month"
             />
           </div>
+        </section>
+
+        {/* SECTION: QUIZ LEADERBOARD */}
+        <section className="space-y-2">
+          <SectionLabel icon={Trophy} label="Quiz Leaderboard" />
+          <LeaderboardCard entries={topTeams} />
         </section>
 
         {/* SECTION C: UPCOMING EVENTS */}

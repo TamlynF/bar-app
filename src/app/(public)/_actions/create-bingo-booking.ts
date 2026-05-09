@@ -26,6 +26,7 @@ export async function createBingoBooking(formData: FormData) {
   const phoneNo = (formData.get("phone_no") as string) || null;
   const groupSize = parseInt(formData.get("group_size") as string, 10);
   const specialRequests = (formData.get("special_requests") as string) || null;
+  const groupName = (formData.get("group_name") as string) || fullName;
 
   if (!eventDate || !fullName || !email || !groupSize || groupSize < 1) {
     return { error: "Please fill in all required fields." };
@@ -146,10 +147,10 @@ export async function createBingoBooking(formData: FormData) {
       .insert([{
         event_id: eventId,
         contact_id: contactId,
-        group_name: fullName,
+        group_name: groupName,
         group_size: groupSize,
         status: isFree ? status : "pending",
-        payment_status: isFree ? "free" : "unpaid",
+        payment_status: isFree ? "paid" : "unpaid",
         special_requests: specialRequests,
         paid_amount: 0,
         total_amount: totalPence / 100,
@@ -158,7 +159,8 @@ export async function createBingoBooking(formData: FormData) {
       .single();
 
     if (bookingError || !newBooking) {
-      throw new Error("Failed to create booking.");
+      console.error("Booking insert error:", JSON.stringify(bookingError, null, 2));
+      throw new Error(`Failed to create booking: ${bookingError?.message || "unknown error"}`);
     }
 
     // 6. Table mapping

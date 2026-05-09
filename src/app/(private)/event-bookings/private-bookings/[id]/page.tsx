@@ -111,7 +111,7 @@ export default async function PrivateHireDetailPage({
               <h1 className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tight leading-tight">
                 {request.full_name}
               </h1>
-              <p className="text-sm text-[#5F624F] mt-0.5">{request.reason_for_hire}</p>
+              <p className="text-sm text-[#5F624F] mt-0.5">{request.reason || request.reason_for_hire}</p>
             </div>
             <span
               className={cn(
@@ -158,7 +158,7 @@ export default async function PrivateHireDetailPage({
                   {request.guest_count}
                 </span>
               </div>
-              <DetailRow label="Reason for Hire" value={request.reason_for_hire} />
+              <DetailRow label="Reason for Hire" value={request.reason || request.reason_for_hire} />
               {depositAmount != null && (
                 <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
                   <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">

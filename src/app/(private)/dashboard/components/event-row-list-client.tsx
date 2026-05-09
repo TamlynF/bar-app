@@ -92,7 +92,8 @@ function toTitleCase(str?: string | null) {
 
 export function EventRowListClient({ items }: { items: ListItem[] }) {
     const [expandedId, setExpandedId] = useState<string | null>(null);
-
+    //console.log("EventRowListClient items:", JSON.stringify(items, null, 2));
+    
     if (items.length === 0) return null;
 
     return (
@@ -402,7 +403,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                             </div>
 
                                             {/* Financials */}
-                                            {(item.privateDetails.depositAmount !== null || item.privateDetails.outstanding !== null) && (
+                                            {(item.privateDetails.depositAmount != null && item.privateDetails.depositAmount > 0) && (
                                                 <div className="grid grid-cols-2 gap-3 text-[11px]">
                                                     <div>
                                                         <p className="text-[#5F624F] font-medium">Deposit</p>

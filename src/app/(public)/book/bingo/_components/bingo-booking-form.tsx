@@ -33,9 +33,9 @@ interface Props {
 
 function formatEventDate(dateStr: string) {
   return new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
-    weekday: "long",
+    weekday: "short",
     day: "numeric",
-    month: "long",
+    month: "short",
     year: "numeric",
   });
 }
@@ -179,7 +179,7 @@ export default function BingoBookingForm({ events }: Props) {
             </div>
             <select
               title="Event Date"
-              name="event_date"
+              name="eventDate"
               value={formData.eventDate}
               onChange={handleInputChange}
               required
@@ -205,7 +205,7 @@ export default function BingoBookingForm({ events }: Props) {
             </div>
             <select
               title="Number of People"
-              name="group_size"
+              name="groupSize"
               required
               value={formData.groupSize}
               onChange={handleInputChange}
@@ -274,8 +274,13 @@ export default function BingoBookingForm({ events }: Props) {
           />
         </div>
       </div>
+      <input type="hidden" name="event_date" value={formData.eventDate} />
       <input type="hidden" name="full_name" value={formData.fullName} />
       <input type="hidden" name="group_name" value={formData.groupName.trim() || formData.fullName} />
+      <input type="hidden" name="group_size" value={formData.groupSize} />
+      <input type="hidden" name="country_code" value={formData.countryCode} />
+      <input type="hidden" name="phone_no" value={formData.phoneNo} />
+      <input type="hidden" name="special_requests" value={formData.specialRequests} />
 
       {/* Email */}
       <div className="space-y-1">
@@ -308,7 +313,7 @@ export default function BingoBookingForm({ events }: Props) {
             </div>
             <select
               title="Country Code"
-              name="country_code"
+              name="countryCode"
               value={formData.countryCode}
               onChange={handleInputChange}
               className={cn(inputBaseClasses, "pl-11 pr-2 appearance-none cursor-pointer")}
@@ -326,7 +331,7 @@ export default function BingoBookingForm({ events }: Props) {
             </div>
             <input
               type="tel"
-              name="phone_no"
+              name="phoneNo"
               value={formData.phoneNo}
               onChange={handleInputChange}
               className={inputBaseClasses}
@@ -364,7 +369,7 @@ export default function BingoBookingForm({ events }: Props) {
             <MessageSquareQuote className={iconClasses} />
           </div>
           <textarea
-            name="special_requests"
+            name="specialRequests"
             value={formData.specialRequests}
             onChange={handleInputChange}
             className={`${inputBaseClasses} min-h-[100px] py-3 text-sm resize-none`}

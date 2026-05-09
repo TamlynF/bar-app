@@ -14,6 +14,7 @@ export interface PrivateHireRequest {
   preferred_date: string | null;
   preferred_time: string | null;
   reason_for_hire: string;
+  reason: string | null;
   additional_requirements: string | null;
   status: string;
   admin_notes: string | null;
@@ -100,7 +101,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
 
           <div>
             <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">Reason for Hire</p>
-            <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] rounded-xl px-4 py-3">{request.reason_for_hire}</p>
+            <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] rounded-xl px-4 py-3">{request.reason || request.reason_for_hire}</p>
           </div>
 
           {request.additional_requirements && (

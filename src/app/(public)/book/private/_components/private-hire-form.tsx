@@ -4,7 +4,7 @@ import React, { useState, useTransition } from "react";
 import { createPrivateHire } from "@/app/(public)/_actions/create-private-hire";
 import {
   CheckCircle2, ArrowLeft, ChevronRight, Calendar, Clock, Users, Info,
-  User, Mail, Phone, MessageSquareQuote,
+  User, Mail, Phone, MessageSquareQuote, Tag,
 } from "lucide-react";
 
 const inputClass =
@@ -45,7 +45,7 @@ export default function PrivateHireForm() {
     if (step === 2) {
       const count = parseInt(guestCount, 10);
       if (isNaN(count) || count < 1) { setStepError("Please enter a valid number of guests."); return; }
-      if (!reason.trim()) { setStepError("Please describe the reason for hire."); return; }
+      if (!reason) { setStepError("Please select a reason for hire."); return; }
     }
     setStep((s) => s + 1);
   }
@@ -254,15 +254,28 @@ export default function PrivateHireForm() {
               <label className={labelClass}>Reason for Hire <span className="text-red-500">*</span></label>
               <div className="relative group">
                 <div className={iconContainerClass}>
-                  <MessageSquareQuote className={iconClass} />
+                  <Tag className={iconClass} />
                 </div>
-                <textarea
+                <select
+                  title="Reason for Hire"
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
-                  placeholder="e.g. Birthday party, corporate event, anniversary dinner…"
-                  rows={3}
-                  className={`${inputClass} min-h-[100px] py-3 resize-none`}
-                />
+                  className={`${inputClass} appearance-none pr-10 cursor-pointer`}
+                >
+                  <option value="">Select a reason</option>
+                  <option value="Birthday">Birthday</option>
+                  <option value="Retirement">Retirement</option>
+                  <option value="Corporate Event">Corporate Event</option>
+                  <option value="Anniversary">Anniversary</option>
+                  <option value="Engagement">Engagement</option>
+                  <option value="Wedding Reception">Wedding Reception</option>
+                  <option value="Graduation">Graduation</option>
+                  <option value="Fundraiser">Fundraiser</option>
+                  <option value="Leaving Party">Leaving Party</option>
+                  <option value="Christmas Party">Christmas Party</option>
+                  <option value="Other">Other</option>
+                </select>
+                <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 rotate-90 pointer-events-none" />
               </div>
             </div>
           </>

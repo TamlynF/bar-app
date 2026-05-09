@@ -29,17 +29,59 @@ export async function updatePrivateHireStatus(
     .from("private_hire_requests")
     .update({ status, admin_notes: adminNotes || null })
     .eq("id", id)
-    .select("full_name, email")
+    .select("full_name, email, reason_for_hire, reason, selected_date, selected_start_time, selected_end_time, deposit_amount")
     .single();
 
   if (error || !record) {
-    console.log("Supabase error:", error); 
+    console.log("Supabase error:", error);
     throw new Error("Failed to update status.");
   }
+
+  // When confirmed, create an event with the matching private event type
+  if (status === "confirmed" && record.selected_date) {
+    const reason = record.reason?.toLowerCase() ?? "";
+
+    let { data: eventType } = await supabase
+      .from("event_types")
+      .select("id")
+      .ilike("type", "private")
+      .ilike("sub_type", reason)
+      .single();
+
+    if (!eventType) {
+      const { data: created } = await supabase
+        .from("event_types")
+        .insert({ type: "private", sub_type: reason || "other" })
+        .select("id")
+        .single();
+      eventType = created;
+    }
+
+    if (eventType) {
+      const { data: newEvent } = await supabase.from("events").insert({
+        title: `${record.full_name} — ${record.reason || "Private Hire"}`,
+        date: record.selected_date,
+        start_time: record.selected_start_time,
+        end_time: record.selected_end_time,
+        event_types_id: eventType.id,
+        payment_amount: record.deposit_amount,
+        is_active: true,
+      }).select("id").single();
+
+      if (newEvent) {
+        await supabase
+          .from("private_hire_requests")
+          .update({ event_id: newEvent.id })
+          .eq("id", id);
+      }
+    }
+  }
+
   await sendOutcomeEmail(record.full_name, record.email, status, adminNotes);
 
   revalidatePath("/event-bookings/private-bookings");
   revalidatePath("/dashboard");
+  revalidatePath("/event-setups/events");
 }
 
 async function sendOutcomeEmail(
