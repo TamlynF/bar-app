@@ -97,8 +97,10 @@
     --color-rose-500: oklch(64.5% 0.246 16.439);
     --color-rose-600: oklch(58.6% 0.253 17.585);
     --color-rose-700: oklch(51.4% 0.222 16.935);
+    --color-sky-50: oklch(97.7% 0.013 236.62);
     --color-sky-100: oklch(95.1% 0.026 236.824);
     --color-sky-200: oklch(90.1% 0.058 230.902);
+    --color-sky-600: oklch(54.6% 0.145 242.749);
     --color-sky-700: oklch(50.0% 0.134 242.749);
     --color-teal-100: oklch(95.3% 0.051 180.801);
     --color-teal-200: oklch(89.9% 0.096 180.426);

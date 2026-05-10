@@ -14,28 +14,28 @@ const eventBookingItems = [
     description: "Manage bingo teams, seating and scores",
     href: "/event-bookings/bingo-bookings",
     icon: Speaker,
-    color: "bg-green-50 text-green-600",
+    color: "bg-purple-50 text-purple-600",
   },
   {
     title: "Music Bookings",
     description: "Schedule bands and live entertainment",
     href: "/event-bookings/music-bookings",
     icon: Music,
-    color: "bg-amber-50 text-amber-600",
+    color: "bg-sky-50 text-sky-600",
   },
   {
     title: "Private Event Bookings",
     description: "Enquiries and venue hire pipeline",
     href: "/event-bookings/private-bookings",
     icon: Lock,
-    color: "bg-purple-50 text-purple-600",
+    color: "bg-green-50 text-green-600",
   },
    {
     title: "Quiz Bookings",
     description: "Manage quiz teams, seating and scores",
     href: "/event-bookings/quiz-bookings",
     icon: Trophy,
-    color: "bg-blue-50 text-blue-600",
+    color: "bg-amber-50 text-amber-600",
   },
 ];
 
