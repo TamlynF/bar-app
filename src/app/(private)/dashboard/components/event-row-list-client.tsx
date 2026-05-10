@@ -119,7 +119,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             onClick={() => setExpandedId(isExpanded ? null : item.key)}
                             className={cn(
                                 "w-full text-left flex  flex-row items-center gap-3 p-4 transition-colors cursor-pointer sm:event-row-desktop",
-                                isExpanded ? "bg-[#FEF3C7]" : "hover:bg-amber-50"
+                                isExpanded ? "bg-amber-100" : "hover:bg-amber-50"
                             )}
                         >
                             {/* Date pill */}
