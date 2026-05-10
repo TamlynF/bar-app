@@ -5112,6 +5112,10 @@
   .group-open\:rotate-180:is(:where(.group)[open] *) { rotate: 180deg; }
   .bg-dropdown { background-color: #E2EDBF; }
 
+  /* Divide utilities for arbitrary colors */
+  .divide-\[\#E6DFC8\] > :not(:last-child) { border-color: #E6DFC8; }
+  .divide-\[\#E6DFC8\]\/50 > :not(:last-child) { border-color: color-mix(in oklab, #E6DFC8 50%, transparent); }
+
   /* Named-color utilities used in admin pages */
   .bg-blue-50 { background-color: var(--color-blue-50); }
   .bg-blue-500 { background-color: var(--color-blue-500); }
