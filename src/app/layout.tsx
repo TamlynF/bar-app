@@ -33,6 +33,7 @@ export default function RootLayout({
         className="antialiased min-h-screen"
       >
         {children}
+        <Analytics />
       </body>
     </html>
   );
