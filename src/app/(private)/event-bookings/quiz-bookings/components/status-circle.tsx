@@ -25,7 +25,7 @@ export default function StatusCircle({
         onClick={onClick}
         className={cn(
           "relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all touch-manipulation hover:scale-105 active:scale-95",
-          isActive ? `${theme.dot} ${theme.border} shadow-lg ring-4 ${theme.ring}` : `bg-white dark:bg-slate-800 ${theme.border}`,
+          isActive ? `${theme.dot} ${theme.border} shadow-lg ring-4 ${theme.ring}` : `bg-white ${theme.border}`,
         )}
       >
         <div className="flex flex-col items-center leading-none gap-0.5">
@@ -41,10 +41,10 @@ export default function StatusCircle({
         </div>
       </button>
       <div className="flex flex-col items-center leading-none">
-        <span className={cn("text-[9px] sm:text-[11px] font-black uppercase tracking-tight", isActive ? theme.text : "text-slate-500")}>
+        <span className={cn("text-[10px] sm:text-[11px] font-black uppercase tracking-tight", isActive ? theme.text : "text-[#5F624F]")}>
           {label}
         </span>
-        <span className="text-[8px] sm:text-[10px] font-bold text-slate-400 uppercase mt-0.5">
+        <span className="text-[8px] sm:text-[10px] font-bold text-[#5F624F]/50 uppercase mt-0.5">
           {guestCount} Guests
         </span>
       </div>

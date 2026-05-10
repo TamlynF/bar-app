@@ -129,7 +129,7 @@ export default async function BingoBookingsPage({
               {/* sm+: Time · Host · Paid · Outstanding evenly spaced with labels */}
               <div className="hidden sm:flex items-start justify-evenly gap-4">
                 <div className="flex flex-col gap-1 items-center">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Time</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Time</span>
                   <div className="flex items-center gap-1.5">
                     <Clock className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
                     <span className="text-xs font-bold text-[#1F1F1A] whitespace-nowrap">
@@ -138,7 +138,7 @@ export default async function BingoBookingsPage({
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 items-center">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Host</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Host</span>
                   <div className="flex items-center gap-1.5">
                     <User className="w-3.5 h-3.5 text-[#5F624F] opacity-50 shrink-0" />
                     <span className="text-xs font-bold text-[#1F1F1A]">
@@ -147,13 +147,13 @@ export default async function BingoBookingsPage({
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 items-center">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Paid</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Paid</span>
                   <div className="flex items-center gap-1">
                     <span className="text-xs font-black text-green-700 tabular-nums">£{totalPaid.toFixed(2)}</span>
                   </div>
                 </div>
                 <div className="flex flex-col gap-1 items-center">
-                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Outstanding</span>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Outstanding</span>
                   <div className="flex items-center gap-1">
                     <span className="text-xs font-black tabular-nums" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }}>
                       £{totalOutstanding.toFixed(2)}
@@ -167,7 +167,7 @@ export default async function BingoBookingsPage({
 
               {/* Table Status */}
               <div className="flex flex-col gap-2">
-                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none">Table Status</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none">Table Status</span>
                 <div className="flex flex-wrap gap-2">
                   {tableStatusByCapacity.length === 0 ? (
                     <span className="text-[11px] text-[#5F624F] opacity-60">No tables configured</span>
@@ -217,11 +217,11 @@ export default async function BingoBookingsPage({
                   </div>
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Paid</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Paid</span>
                       <span className="text-xs font-black text-green-700 tabular-nums">£{totalPaid.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center gap-1.5">
-                      <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Outstanding</span>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Outstanding</span>
                       <span className="text-xs font-black tabular-nums" style={{ color: totalOutstanding > 0 ? "#b45309" : "#5F624F" }}>
                         £{totalOutstanding.toFixed(2)}
                       </span>
@@ -231,13 +231,13 @@ export default async function BingoBookingsPage({
 
                 {/* Title — all sizes */}
                 <div>
-                  <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Title</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Title</p>
                   <p className="text-sm font-bold text-[#1F1F1A]">{eventDetails?.title || "—"}</p>
                 </div>
 
                 {(eventDetails as { description?: string } | null)?.description && (
                   <div>
-                    <p className="text-[8px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Description</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Description</p>
                     <p className="text-xs text-[#5F624F] leading-relaxed">{(eventDetails as { description?: string }).description}</p>
                   </div>
                 )}
@@ -245,7 +245,7 @@ export default async function BingoBookingsPage({
                 {(eventDetails as { payment_amount?: number } | null)?.payment_amount != null && (
                   <div className="flex items-center gap-1.5">
                     <DollarSign className="w-3.5 h-3.5 text-[#5F624F] opacity-50" />
-                    <span className="text-[8px] font-black uppercase tracking-widest text-slate-400">Entry</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Entry</span>
                     <span className="text-sm font-black text-[#1F1F1A]">
                       £{(eventDetails as { payment_amount: number }).payment_amount.toFixed(2)}
                     </span>

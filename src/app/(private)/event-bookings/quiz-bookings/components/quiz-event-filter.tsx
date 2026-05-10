@@ -83,7 +83,7 @@ export default function QuizEventFilter({
       {/* Input row */}
       <div className="flex items-center gap-3 h-12 px-4 bg-slate-50 rounded-xl">
         <div className="flex flex-col flex-1 min-w-0">
-          <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">
             Quiz Event
           </span>
           <div className="flex items-center gap-1.5">

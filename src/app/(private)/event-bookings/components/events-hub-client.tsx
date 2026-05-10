@@ -213,14 +213,14 @@ export default function EventsHubClient({
         >
           <div className="pt-2">
             <div className="bg-white border-2 border-dashed border-[#E6DFC8] rounded-2xl p-6 sm:p-10 flex flex-col items-center text-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300">
+              <div className="w-14 h-14 rounded-2xl bg-[#F7F4EA] flex items-center justify-center text-[#5F624F]/50">
                 <Lock className="w-7 h-7" />
               </div>
               <div>
                 <p className="font-black text-[#1F1F1A] uppercase tracking-tight">Hire Pipeline</p>
                 <p className="text-xs text-[#5F624F] font-medium max-w-64 mt-1 opacity-70 leading-relaxed">Review wedding, party, and corporate hire enquiries for the season.</p>
               </div>
-              <Button size="sm" variant="outline" className="rounded-full px-8 h-10 font-black uppercase tracking-widest border-[#26300D] text-[#26300D] hover:bg-[#26300D] hover:text-white transition-all">
+              <Button size="sm" variant="outline" className="rounded-full px-8 h-10 font-black uppercase tracking-wide border-[#26300D] text-[#26300D] hover:bg-[#26300D] hover:text-white transition-all">
                 View {privateHire.length} Requests
               </Button>
             </div>
@@ -279,7 +279,7 @@ function QuizEventCard({
         </div>
         <div className="flex flex-col items-end gap-1">
           <StatusBadge occupancy={occupancy} isHistoric={isHistoric} />
-          {isHistoric && <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">Completed</span>}
+          {isHistoric && <span className="text-[10px] font-bold text-[#5F624F]/50 uppercase tracking-wide">Completed</span>}
         </div>
       </div>
 
@@ -309,7 +309,7 @@ function QuizEventCard({
           )}
         </div>
         <div className={cn(
-          "w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center transition-colors",
+          "w-8 h-8 rounded-full bg-[#F7F4EA] flex items-center justify-center transition-colors",
           !isHistoric && "group-hover:bg-[#26300D] group-hover:text-white"
         )}>
           <ChevronRight className="w-4 h-4" />
@@ -349,7 +349,7 @@ function CollapsibleSection({
           <div className="flex items-center gap-2">
             <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] text-[#1F1F1A]">{title}</h3>
             {badge && (
-              <span className="text-[8px] font-black bg-[#FDCC4B] text-[#26300D] px-2 py-0.5 rounded-full shadow-sm border border-[#26300D]/10 uppercase">
+              <span className="text-[10px] font-black bg-[#FDCC4B] text-[#26300D] px-2 py-0.5 rounded-full shadow-sm border border-[#26300D]/10 uppercase">
                 {badge}
               </span>
             )}
@@ -395,10 +395,10 @@ function KPICard({ label, value, icon: Icon, color = "default" }: { label: strin
 function StatMini({ icon: Icon, value, label, color = "default" }: { icon: LucideIcon, value: number, label: string, color?: string }) {
   return (
     <div className="flex items-center gap-1">
-      <Icon className={cn("w-3 h-3", color === 'green' ? 'text-green-600' : color === 'amber' ? 'text-amber-600' : 'text-slate-400')} />
+      <Icon className={cn("w-3 h-3", color === 'green' ? 'text-green-600' : color === 'amber' ? 'text-amber-600' : 'text-[#5F624F]/50')} />
       <div className="flex items-baseline gap-1">
         <span className="text-xs font-black text-[#1F1F1A]">{value}</span>
-        <span className="text-[8px] font-bold text-[#5F624F] uppercase opacity-60 tracking-tighter">{label}</span>
+        <span className="text-[10px] font-bold text-[#5F624F] uppercase opacity-60 tracking-tighter">{label}</span>
       </div>
     </div>
   )
@@ -407,7 +407,7 @@ function StatMini({ icon: Icon, value, label, color = "default" }: { icon: Lucid
 function StatusBadge({ occupancy, isHistoric }: { occupancy: number, isHistoric: boolean }) {
   if (isHistoric) {
     return (
-      <div className="px-2 sm:px-3 py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border shrink-0 bg-slate-50 text-slate-400 border-slate-200">
+      <div className="px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-[9px] font-black uppercase tracking-wide border shrink-0 bg-[#F7F4EA] text-[#5F624F]/50 border-[#E6DFC8]">
         Closed
       </div>
     )
@@ -416,7 +416,7 @@ function StatusBadge({ occupancy, isHistoric }: { occupancy: number, isHistoric:
   const isFull = occupancy >= 100
   return (
     <div className={cn(
-      "px-2 sm:px-3 py-1 rounded-full text-[8px] sm:text-[9px] font-black uppercase tracking-widest border shrink-0",
+      "px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-[9px] font-black uppercase tracking-wide border shrink-0",
       isFull ? "bg-red-50 text-red-600 border-red-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"
     )}>
       {isFull ? "Full" : "Open"}
@@ -428,7 +428,7 @@ function EmptyState({ message, icon: Icon }: { message: string, icon: LucideIcon
   return (
     <div className="py-8 text-center border-2 border-dashed border-[#E6DFC8] rounded-2xl bg-white/40">
       <Icon className="w-6 h-6 text-[#E6DFC8] mx-auto mb-2" />
-      <p className="text-[9px] font-black text-[#5F624F] uppercase tracking-widest opacity-40">{message}</p>
+      <p className="text-[9px] font-black text-[#5F624F] uppercase tracking-wide opacity-40">{message}</p>
     </div>
   )
 }

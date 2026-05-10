@@ -70,48 +70,48 @@ export const statusTheme: Record<
   }
 > = {
   all: {
-    bg: "bg-slate-100 dark:bg-slate-800",
-    text: "text-slate-700 dark:text-slate-300",
-    border: "border-slate-300 dark:border-slate-600",
+    bg: "bg-slate-100",
+    text: "text-[#1F1F1A]",
+    border: "border-[#E6DFC8]",
     dot: "bg-slate-600",
     ring: "ring-slate-500/40",
-    cardBorder: "border-slate-200 dark:border-slate-700",
+    cardBorder: "border-[#E6DFC8]",
     icon: <TableIcon className="w-5 h-5" />,
   },
   confirmed: {
-    bg: "bg-green-50 dark:bg-green-500/10",
-    text: "text-green-700 dark:text-green-400",
-    border: "border-green-200 dark:border-green-500/30",
+    bg: "bg-green-50",
+    text: "text-green-700",
+    border: "border-green-200",
     dot: "bg-green-500",
     ring: "ring-green-500/40",
-    cardBorder: "border-green-500/50 dark:border-green-500/40",
+    cardBorder: "border-green-500/50",
     icon: <CheckCircle2 className="w-5 h-5" />,
   },
   waitlisted: {
-    bg: "bg-orange-50 dark:bg-orange-500/10",
-    text: "text-orange-700 dark:text-orange-400",
-    border: "border-orange-200 dark:border-orange-500/30",
+    bg: "bg-orange-50",
+    text: "text-orange-700",
+    border: "border-orange-200",
     dot: "bg-orange-500",
     ring: "ring-orange-500/40",
-    cardBorder: "border-orange-500/50 dark:border-orange-500/40",
+    cardBorder: "border-orange-500/50",
     icon: <Clock3 className="w-5 h-5" />,
   },
   pending: {
-    bg: "bg-yellow-50 dark:bg-yellow-500/10",
-    text: "text-yellow-700 dark:text-yellow-400",
-    border: "border-yellow-200 dark:border-yellow-500/30",
+    bg: "bg-yellow-50",
+    text: "text-yellow-700",
+    border: "border-yellow-200",
     dot: "bg-yellow-500",
     ring: "ring-yellow-500/40",
-    cardBorder: "border-yellow-500/50 dark:border-yellow-500/40",
+    cardBorder: "border-yellow-500/50",
     icon: <HelpCircle className="w-5 h-5" />,
   },
   cancelled: {
-    bg: "bg-red-50 dark:bg-red-500/10",
-    text: "text-red-700 dark:text-red-400",
-    border: "border-red-200 dark:border-red-500/30",
+    bg: "bg-red-50",
+    text: "text-red-700",
+    border: "border-red-200",
     dot: "bg-red-500",
     ring: "ring-red-500/40",
-    cardBorder: "border-red-500/50 dark:border-red-500/40",
+    cardBorder: "border-red-500/50",
     icon: <XCircle className="w-5 h-5" />,
   },
 }
@@ -426,7 +426,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   return (
     <div className="space-y-3 animate-in fade-in duration-500">
       {/* Stats + Search grouped card */}
-      <div className="bg-white dark:bg-slate-900 border border-[#E6DFC8] rounded-2xl shadow-sm">
+      <div className="bg-white border border-[#E6DFC8] rounded-2xl shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center">
 
           {/* Stats Bar — scrolls on mobile, evenly spaced on sm+ */}
@@ -481,15 +481,15 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
           {/* Search */}
           <div className="flex justify-center px-4 mb-3 sm:mb-0 sm:py-2 sm:px-3 sm:shrink-0">
-            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-slate-200 focus-within:border-slate-400 transition-colors">
+            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-slate-400 transition-colors">
               <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Search className="w-4 h-4 text-slate-400 shrink-0" />
+                <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
                 <input
                   type="text"
                   placeholder="Search team names or guests..."
                   value={searchQuery}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="flex-1 min-w-0 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
+                  className="flex-1 min-w-0 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
                 />
               </div>
               {(activeStatusFilters.size > 0 || searchQuery.length > 0) && (
@@ -499,7 +499,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   onClick={() => { setActiveStatusFilters(new Set()); setSearchQuery(""); }}
                   className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors"
                 >
-                  <X className="w-3.5 h-3.5 text-slate-400" />
+                  <X className="w-3.5 h-3.5 text-[#5F624F]/50" />
                 </button>
               )}
             </div>
@@ -511,9 +511,9 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       {/* Booking Cards */}
       <div className="space-y-2 pb-2">
         {filteredBookings.length === 0 ? (
-          <div className="py-16 text-center bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300">
-            <Inbox className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-            <p className="text-slate-500 text-sm font-medium">No bookings found</p>
+          <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-[#E6DFC8]">
+            <Inbox className="w-10 h-10 text-[#5F624F]/50 mx-auto mb-3" />
+            <p className="text-[#5F624F] text-sm font-medium">No bookings found</p>
           </div>
         ) : (
           filteredBookings.map((b) => (
@@ -887,17 +887,17 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
             </div>
             <span className="shrink-0 text-[11px] font-black text-blue-700 uppercase bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 ml-2">T: {tableName}</span>
           </div>
-          <div className="flex items-center justify-between text-slate-500 mt-1">
+          <div className="flex items-center justify-between text-[#5F624F] mt-1">
              <p className="text-xs truncate font-semibold">{booking.contacts?.full_name}</p>
-             <div className="flex items-center gap-1.5 text-slate-700">
-                <Users className="w-3.5 h-3.5 text-slate-400" />
+             <div className="flex items-center gap-1.5 text-[#1F1F1A]">
+                <Users className="w-3.5 h-3.5 text-[#5F624F]/50" />
                 <span className="text-sm font-black">{booking.group_size}</span>
                 <span className="text-sm font-black">/ {group_max_capacity}</span>
              </div>
           </div>
         </div>
       </div>
-      <ChevronRight className="w-4 h-4 text-slate-300 shrink-0" />
+      <ChevronRight className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
     </div>
   )
 }
