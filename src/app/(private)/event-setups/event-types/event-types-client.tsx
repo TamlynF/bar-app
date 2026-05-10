@@ -424,7 +424,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                           <MoreVertical className="w-4 h-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="z-9999 bg-[#F7F4EA] border-[#E6DFC8] min-w-[200px]">
+                      <DropdownMenuContent align="end" className="z-9999 bg-white border-[#E6DFC8] shadow-lg min-w-[200px]">
                         <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => openAddSubCategory(typeKey)}>
                           <Plus className="w-4 h-4 mr-3 text-[#26300D] stroke-[2.5]" /> Add Sub-Category
                         </DropdownMenuItem>
@@ -509,7 +509,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                     <MoreVertical className="w-4 h-4" />
                                   </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="z-9999 bg-[#F7F4EA] border-[#E6DFC8] min-w-[180px]">
+                                <DropdownMenuContent align="end" className="z-9999 bg-white border-[#E6DFC8] shadow-lg min-w-[180px]">
                                   <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => {
                                     setEditingInfo(null);
                                     setActiveTypeId(item.id);
@@ -608,7 +608,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                                 <MoreVertical className="w-3 h-3" />
                                               </Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="z-9999 bg-[#F7F4EA] border-[#E6DFC8] min-w-[160px]">
+                                            <DropdownMenuContent align="end" className="z-9999 bg-white border-[#E6DFC8] shadow-lg min-w-[160px]">
                                               <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => {
                                                 setEditingInfo(info);
                                                 setActiveTypeId(item.id);
