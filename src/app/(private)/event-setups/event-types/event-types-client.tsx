@@ -331,7 +331,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   return (
     <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl">
       <div className="flex items-center justify-between">
-        <p className="text-[11px] font-medium text-[#5F624F]">
+        <p className="text-xs font-medium text-[#5F624F]">
           Manage your event categories and requirements.
         </p>
         <button
@@ -358,7 +358,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
             <Layers className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
             <p className="text-sm font-black text-[#1F1F1A]">No Event Categories</p>
-            <p className="text-[11px] text-[#5F624F] mt-1">Add your first category to get started</p>
+            <p className="text-xs text-[#5F624F] mt-1">Add your first category to get started</p>
           </div>
         ) : (
           groupedEventTypes.map(([typeKey, items]) => {
@@ -380,7 +380,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         EVENT_TYPE_COLORS.find(c => c.key === groupTypeColor)?.swatchClass ?? "bg-[#E6DFC8]"
                       )} />
                     )}
-                    <p className="text-[11px] font-black uppercase tracking-wide text-[#26300D] truncate">
+                    <p className="text-xs font-bold uppercase tracking-wide text-[#26300D] truncate">
                       {toTitleCase(typeKey)}
                     </p>
                     <span className="text-[10px] font-black text-[#5F624F] shrink-0">
@@ -473,7 +473,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                   ? EVENT_TYPE_COLORS.find(c => c.key === item.badge_color)?.swatchClass ?? "bg-[#E6DFC8]"
                                   : "bg-[#E6DFC8]"
                               )} />
-                              <span className="text-xs font-bold text-[#1F1F1A] truncate">
+                              <span className="text-sm font-bold text-[#1F1F1A] truncate">
                                 {toTitleCase(item.sub_type)}
                               </span>
                               <span className="text-[10px] text-[#5F624F] shrink-0">
@@ -552,27 +552,27 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                               {/* Booking description preview */}
                               {item.information && (
                                 <div className="px-3 py-2.5 bg-white border border-[#E6DFC8] rounded-lg">
-                                  <p className="text-[9px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Booking Page Description</p>
-                                  <p className="text-[11px] text-[#1F1F1A] leading-relaxed">{item.information}</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] mb-1">Booking Page Description</p>
+                                  <p className="text-xs text-[#1F1F1A] leading-relaxed">{item.information}</p>
                                 </div>
                               )}
 
                               {/* Default title preview */}
                               {item.default_title && (
                                 <div className="px-3 py-2.5 bg-white border border-[#E6DFC8] rounded-lg">
-                                  <p className="text-[9px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Default Event Title</p>
-                                  <p className="text-[11px] text-[#1F1F1A] leading-relaxed">{item.default_title}</p>
+                                  <p className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] mb-1">Default Event Title</p>
+                                  <p className="text-xs text-[#1F1F1A] leading-relaxed">{item.default_title}</p>
                                 </div>
                               )}
 
                               {/* Badges container */}
                               <div className="bg-white border border-[#E6DFC8] rounded-lg overflow-hidden">
                                 <div className="flex items-center justify-between px-3 py-2 border-b border-[#E6DFC8]/50 bg-[#F7F4EA]/50">
-                                  <span className="text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Display Badges</span>
+                                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Display Badges</span>
                                   {/* Desktop + Badge button */}
                                   <button
                                     type="button"
-                                    className="hidden sm:flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-[#26300D] hover:text-[#26300D]/70"
+                                    className="hidden sm:flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#26300D] hover:text-[#26300D]/70"
                                     onClick={() => {
                                       setEditingInfo(null);
                                       setActiveTypeId(item.id);
@@ -585,7 +585,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 </div>
 
                                 {item.event_information.length === 0 ? (
-                                  <p className="text-[11px] text-[#5F624F] italic text-center py-4">No badges added yet.</p>
+                                  <p className="text-xs text-[#5F624F] italic text-center py-4">No badges added yet.</p>
                                 ) : (
                                   <div className="p-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                                     {item.event_information.map((info) => (
@@ -698,7 +698,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 : (editingType?.id ? "Edit Sub-Category" : "New Sub-Category")
               }
             </SheetTitle>
-            <SheetDescription className="text-[11px] text-[#5F624F] mt-1">
+            <SheetDescription className="text-xs text-[#5F624F] mt-1">
               {sheetMode === 'type'
                 ? "Manage the primary category for these events."
                 : `Defining a sub-category within "${typeInput || 'selected'}".`
@@ -732,7 +732,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       value={typeInput}
                       onChange={(e) => setTypeInput(e.target.value)}
                       autoFocus={isCustomType}
-                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      className="text-base sm:text-sm font-bold text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                     />
                   ) : (
                     <>
@@ -742,7 +742,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         name="type-select"
                         required={!isCustomType}
                         value={selectedTypeValue}
-                        className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
+                        className="text-base sm:text-sm font-bold text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
                         onChange={(e) => {
                           const val = e.target.value;
                           setSelectedTypeValue(val);
@@ -813,7 +813,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-[#5F624F]">Preview:</span>
                       <span className={cn(
-                        "text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md border",
+                        "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border",
                         badgeClassFromColor(selectedTypeColor)
                       )}>
                         {typeInput || "Category"}
@@ -843,7 +843,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       placeholder="e.g. General"
                       value={subTypeInput}
                       onChange={(e) => setSubTypeInput(e.target.value)}
-                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      className="text-base sm:text-sm font-bold text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                     />
                   </div>
 
@@ -864,7 +864,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       placeholder="e.g. Quiz Night"
                       value={defaultTitleInput}
                       onChange={(e) => setDefaultTitleInput(e.target.value)}
-                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      className="text-base sm:text-sm font-bold text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                     />
                   </div>
 
@@ -901,7 +901,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     <div className="flex items-center gap-2">
                       <span className="text-[10px] text-[#5F624F]">Preview:</span>
                       <span className={cn(
-                        "text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md border",
+                        "text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md border",
                         badgeClassFromColor(selectedColor)
                       )}>
                         {subTypeInput || "Sub-type"}
@@ -920,7 +920,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       placeholder="Shown on the public booking page..."
                       defaultValue={editingType?.information ?? ""}
                       rows={2}
-                      className="w-full text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none placeholder:text-[#5F624F]/40 resize-none"
+                      className="w-full text-base sm:text-sm font-bold text-[#1F1F1A] bg-transparent outline-none placeholder:text-[#5F624F]/40 resize-none"
                     />
                   </div>
                 </div>
@@ -992,7 +992,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight">
               {editingInfo ? "Edit Badge" : "New Badge"}
             </SheetTitle>
-            <SheetDescription className="text-[11px] text-[#5F624F] mt-1">
+            <SheetDescription className="text-xs text-[#5F624F] mt-1">
               Define an icon and label shown on booking pages.
             </SheetDescription>
           </div>
@@ -1016,7 +1016,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     required
                     placeholder="e.g. Every Thursday"
                     defaultValue={editingInfo?.title || ""}
-                    className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                    className="text-base sm:text-sm font-bold text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                   />
                 </div>
 
@@ -1029,7 +1029,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     name="description"
                     placeholder="e.g. 8:00PM start"
                     defaultValue={editingInfo?.description || ""}
-                    className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                    className="text-base sm:text-sm font-bold text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                   />
                 </div>
 
