@@ -55,6 +55,8 @@ export type EventTypeRecord = {
   sub_type: string;
   badge_color?: string | null;
   information?: string | null;
+  type_color?: string | null;
+  default_title?: string | null;
   event_information: EventInfo[];
 };
 
@@ -85,11 +87,19 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [selectedTypeValue, setSelectedTypeValue] = useState<string>("");
   const [typeInput, setTypeInput] = useState("");
   const [subTypeInput, setSubTypeInput] = useState("");
+  const [selectedTypeColor, setSelectedTypeColor] = useState<string | null>(null);
+  const [defaultTitleInput, setDefaultTitleInput] = useState("");
 
-  // Sync selectedColor from editingType when the sheet opens
+  // Sync color/title state from editingType when the sheet opens
   useEffect(() => {
     if (isTypeSheetOpen) {
       setSelectedColor(editingType?.badge_color ?? null);
+      setDefaultTitleInput(editingType?.default_title ?? "");
+      // For type_color, get from any item in the group
+      const groupItems = initialEventTypes.filter(
+        i => i.type.toLowerCase() === (editingType?.type ?? "").toLowerCase()
+      );
+      setSelectedTypeColor(groupItems[0]?.type_color ?? null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTypeSheetOpen]);
@@ -191,18 +201,13 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     if (sheetMode === 'type' && editingType?.type) {
       const oldType = editingType.type.toLowerCase();
 
-      if (oldType === formattedType) {
-        setIsTypeSheetOpen(false);
-        return;
-      }
-
-      if (isCustomType && uniqueTypes.some(t => t.toLowerCase() === formattedType)) {
+      if (isCustomType && oldType !== formattedType && uniqueTypes.some(t => t.toLowerCase() === formattedType)) {
         setTypeSheetError(`The type "${toTitleCase(formattedType)}" already exists.`);
         return;
       }
 
       startTransition(async () => {
-        const result = await renameEventTypeGroupAction(oldType, formattedType);
+        const result = await renameEventTypeGroupAction(oldType, formattedType, selectedTypeColor);
         if (result?.error) {
           setTypeSheetError(result.error);
         } else {
@@ -216,6 +221,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
     formData.set("type", formattedType);
     formData.set("sub_type", formattedSubType);
+    formData.set("default_title", defaultTitleInput.trim());
 
     startTransition(async () => {
       const result = await saveEventTypeAction(formData);
@@ -675,6 +681,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           setTypeSheetError(null);
           setTypeInput("");
           setSubTypeInput("");
+          setSelectedTypeColor(null);
+          setDefaultTitleInput("");
         }
       }}>
         <SheetContent side="right" className="w-full sm:max-w-md h-full flex flex-col p-0 gap-0 border-l border-border/50">
@@ -779,6 +787,48 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 </div>
               </div>
 
+              {/* Category colour picker — shown for type/category forms */}
+              {sheetMode === 'type' && (
+                <div className="space-y-3">
+                  <input type="hidden" name="type_color" value={selectedTypeColor ?? ""} />
+                  <Label className="text-sm font-semibold text-foreground">Category Colour</Label>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    {EVENT_TYPE_COLORS.map(c => (
+                      <button
+                        key={c.key}
+                        type="button"
+                        onClick={() => setSelectedTypeColor(selectedTypeColor === c.key ? null : c.key)}
+                        className={cn(
+                          "w-7 h-7 rounded-full transition-all",
+                          c.swatchClass,
+                          selectedTypeColor === c.key ? "swatch-selected scale-110" : "opacity-70 hover:opacity-100"
+                        )}
+                        title={c.key}
+                      />
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTypeColor(null)}
+                      className={cn(
+                        "w-7 h-7 rounded-full bg-[#F7F4EA] transition-all",
+                        !selectedTypeColor ? "swatch-selected scale-110" : "opacity-70 hover:opacity-100"
+                      )}
+                      title="default"
+                    />
+                  </div>
+                  {/* Live preview */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Preview:</span>
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
+                      badgeClassFromColor(selectedTypeColor)
+                    )}>
+                      {typeInput || "Category"}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Show Sub-type ONLY if NOT renaming a group (sheetMode type with editing ID) */}
               {(sheetMode === 'subtype' || !editingType?.id) && (
                 <div className="space-y-3">
@@ -860,6 +910,26 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   />
                   <p className="text-xs text-muted-foreground italic px-1">
                     This text appears on the public booking page under the logo.
+                  </p>
+                </div>
+              )}
+
+              {/* Default Title — shown for sub-type forms only */}
+              {(sheetMode === 'subtype' || !editingType?.id) && (
+                <div className="space-y-3">
+                  <Label htmlFor="default_title" className="text-sm font-semibold text-foreground">
+                    Default Event Title
+                  </Label>
+                  <Input
+                    id="default_title"
+                    name="default_title"
+                    placeholder="e.g. Quiz Night, DJ Night..."
+                    value={defaultTitleInput}
+                    onChange={(e) => setDefaultTitleInput(e.target.value)}
+                    className="h-12 sm:h-11 rounded-xl sm:rounded-lg px-4 text-base sm:text-sm shadow-sm bg-white"
+                  />
+                  <p className="text-xs text-muted-foreground italic px-1">
+                    This will be used as the default title when creating an event from the event lists section.
                   </p>
                 </div>
               )}

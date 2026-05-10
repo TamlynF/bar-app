@@ -537,7 +537,7 @@ export default async function DashboardPage() {
             />
             <ActionRow
               icon={Trophy}
-              label="Quizzes Without Questions"
+              label="Incomplete Quizzes"
               count={quizzesMissingQuestions}
               href="/event-setups/events?filter=quiz-incomplete"
               activeColor="text-green-700"

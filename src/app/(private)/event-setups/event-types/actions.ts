@@ -13,6 +13,7 @@ export async function saveEventTypeAction(formData: FormData) {
   const sub_type = formData.get("sub_type")?.toString()?.toLowerCase();
   const badge_color = formData.get("badge_color")?.toString() || null;
   const information = formData.get("information")?.toString() || null;
+  const default_title = formData.get("default_title")?.toString() || null;
 
   if (!type || !sub_type) {
     return { error: "Primary type and Sub-type are required." };
@@ -22,14 +23,14 @@ export async function saveEventTypeAction(formData: FormData) {
     if (id) {
       const { error } = await supabase
         .from("event_types")
-        .update({ type, sub_type, badge_color, information })
+        .update({ type, sub_type, badge_color, information, default_title })
         .eq("id", id);
 
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from("event_types")
-        .insert({ type, sub_type, badge_color, information });
+        .insert({ type, sub_type, badge_color, information, default_title });
         
       if (error) throw error;
     }
@@ -42,13 +43,16 @@ export async function saveEventTypeAction(formData: FormData) {
   }
 }
 
-export async function renameEventTypeGroupAction(oldType: string, newType: string) {
+export async function renameEventTypeGroupAction(oldType: string, newType: string, typeColor?: string | null) {
   const supabase = await createClient();
-  
+
   try {
+    const updateData: Record<string, unknown> = { type: newType.toLowerCase() };
+    if (typeColor !== undefined) updateData.type_color = typeColor || null;
+
     const { error } = await supabase
       .from("event_types")
-      .update({ type: newType.toLowerCase() })
+      .update(updateData)
       .ilike("type", oldType);
 
     if (error) throw error;
