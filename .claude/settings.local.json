@@ -62,7 +62,11 @@
       "Read(//c/Users/tamly/.claude/**)",
       "Edit(~/.claude/skills/admin-theme-fix/**)",
       "Bash(taskkill //F //IM node.exe)",
-      "Bash(rm -f c:/RN/bar-app/.next/lock)"
+      "Bash(rm -f c:/RN/bar-app/.next/lock)",
+      "Bash(for shade:*)",
+      "Bash(do grep:*)",
+      "Bash(echo \"MISSING: --color-$shade\")",
+      "Bash(done)"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills"

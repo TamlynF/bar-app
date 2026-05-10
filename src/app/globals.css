@@ -1,7 +1,9 @@
 /*! tailwindcss v4.2.1 | MIT License | https://tailwindcss.com */
 @layer properties;
 @layer theme, base, components, utilities;
-@source "../app/(public)/book/page.tsx";
+@source "../app/(public)/**/*.{ts,tsx}";
+@source "../app/(private)/**/*.{ts,tsx}";
+@source "../app/login/**/*.{ts,tsx}";
 @source "../components/**/*.{ts,tsx}";
 @layer theme {
   :root, :host {
@@ -70,6 +72,7 @@
     --color-blue-700: oklch(48.8% 0.243 264.376);
     --color-blue-800: oklch(42.4% 0.199 265.638);
     --color-blue-900: oklch(37.9% 0.146 265.522);
+    --color-indigo-50: oklch(96.2% 0.023 272.788);
     --color-indigo-100: oklch(93.1% 0.046 272.788);
     --color-indigo-200: oklch(87.0% 0.085 274.283);
     --color-indigo-400: oklch(67.3% 0.182 276.935);
@@ -5101,18 +5104,8 @@
   .capacity-fill { width: var(--bar-width, 0%); }
   .dir-rtl { direction: rtl; }
   .dir-ltr { direction: ltr; }
-  .border-slate-400 { border-color: var(--color-slate-400); }
-  .focus-within\:border-slate-400:focus-within { border-color: var(--color-slate-400); }
   .group-open\:rotate-180:is(:where(.group)[open] *) { rotate: 180deg; }
-  .divide-gray-300 > :not(:last-child) { border-color: var(--color-gray-300); }
   .bg-dropdown { background-color: #E2EDBF; }
-  .bg-red-600 { background-color: var(--color-red-600); }
-  .bg-red-700 { background-color: var(--color-red-700); }
-  .hover\:bg-yellow-100:hover {
-      background-color: var(--color-yellow-100);
-    }
-  .hover\:bg-red-600:hover { background-color: var(--color-red-600); }
-  .hover\:bg-red-700:hover { background-color: var(--color-red-700); }
   .event-row-desktop {
     display: grid;
     align-items: center;
