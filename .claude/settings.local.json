@@ -67,7 +67,11 @@
       "Bash(do grep:*)",
       "Bash(echo \"MISSING: --color-$shade\")",
       "Bash(done)",
-      "Bash(echo \"OK: --color-$shade\")"
+      "Bash(echo \"OK: --color-$shade\")",
+      "Bash(for cls:*)",
+      "Bash(echo \"OK: $cls\")",
+      "Bash(echo \"MISSING: $cls\")",
+      "Bash(echo \"MISSING VAR: --color-$shade\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills"
