@@ -264,12 +264,12 @@ export default function EventsClient({
       {/* Filter notice */}
       {filter === "quiz-incomplete" && (
         <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-2xl">
-          <p className="text-[11px] font-black uppercase tracking-widest text-amber-700">
+          <p className="text-[11px] font-black uppercase tracking-wide text-amber-700">
             Upcoming quizzes with incomplete questions
           </p>
           <Link
             href="/event-setups/events"
-            className="text-[11px] font-black uppercase tracking-widest text-amber-700 underline shrink-0"
+            className="text-[11px] font-black uppercase tracking-wide text-amber-700 underline shrink-0"
           >
             Clear
           </Link>
@@ -299,7 +299,7 @@ export default function EventsClient({
                   onClick={() => toggleGroup(eventType.id)}
                   className="flex-1 min-w-0 text-left"
                 >
-                  <p className="text-[11px] font-black uppercase tracking-widest text-[#26300D] truncate">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-[#26300D] truncate">
                     {eventTypeLabel(eventType)} <span className="text-[#5F624F]">({events.length})</span>
                   </p>
                 </button>
@@ -307,7 +307,7 @@ export default function EventsClient({
                   <button
                     type="button"
                     onClick={() => setHistoryGroups((prev) => { const next = new Set(prev); next.delete(eventType.id); return next; })}
-                    className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] underline hover:text-[#26300D] shrink-0"
+                    className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] underline hover:text-[#26300D] shrink-0"
                   >
                     Recent
                   </button>
@@ -319,7 +319,7 @@ export default function EventsClient({
                   title={`Create ${eventTypeLabel(eventType)} event`}
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
-                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Create</span>
+                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wide">Create</span>
                 </button>
                 <button
                   type="button"
@@ -393,7 +393,7 @@ export default function EventsClient({
                             ) : (
                               <span className={cn(
                                 "text-[10px] font-black",
-                                inactive ? muted : hasPricing ? "text-emerald-700" : "text-[#5F624F]/40"
+                                inactive ? muted : hasPricing ? "text-green-700" : "text-[#5F624F]/40"
                               )}>
                                 £{hasPricing ? event.payment_amount!.toFixed(2) : "0"}
                               </span>
@@ -442,7 +442,7 @@ export default function EventsClient({
                           </span>
                         )}
                         {hasPricing ? (
-                          <span className="text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg flex items-center gap-1">
+                          <span className="text-[11px] font-black text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-lg flex items-center gap-1">
                             <BadgePoundSterling className="w-3 h-3" />
                             {event.payment_amount!.toFixed(2)}
                           </span>
@@ -465,7 +465,7 @@ export default function EventsClient({
                         <span className={cn(
                           "text-[11px] font-black px-2 py-1 rounded-lg border",
                           event.is_active !== false
-                            ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                            ? "text-green-700 bg-green-50 border-green-200"
                             : "text-red-500 bg-red-50 border-red-200"
                         )}>
                           {event.is_active !== false ? "Active" : "Inactive"}
@@ -481,7 +481,7 @@ export default function EventsClient({
                   <button
                     type="button"
                     onClick={() => setHistoryGroups((prev) => new Set(prev).add(eventType.id))}
-                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#26300D] hover:bg-[#F7F4EA]/50 transition-colors"
+                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#26300D] hover:bg-[#F7F4EA]/50 transition-colors"
                   >
                     View All History
                     <ChevronRight className="w-3 h-3" />
@@ -494,7 +494,7 @@ export default function EventsClient({
           {ungrouped.length > 0 && (
             <section className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3.5 bg-[#F7F4EA]">
-                <p className="text-[11px] font-black uppercase tracking-widest text-[#26300D]">Other</p>
+                <p className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Other</p>
                 <span className="text-[10px] font-black text-[#5F624F] bg-white border border-[#E6DFC8] px-2.5 py-1 rounded-lg tabular-nums">
                   {ungrouped.length}
                 </span>
@@ -541,7 +541,7 @@ export default function EventsClient({
                 {selected && (
                   <div className="flex items-center gap-1.5 mt-1">
                     <Hash className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-wide tabular-nums">
                       ID: {selected.id}
                     </span>
                   </div>
@@ -608,7 +608,7 @@ export default function EventsClient({
                     return (
                       <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
                         <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-3 border-b border-[#E6DFC8]">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-[#26300D]">Quiz Questions</span>
+                          <span className="text-[10px] font-black uppercase tracking-wide text-[#26300D]">Quiz Questions</span>
                           <span className="flex-1" />
                           <Link
                             href={`/event-setups/events/${selected.id}`}
@@ -616,7 +616,7 @@ export default function EventsClient({
                             title="Manage Quiz"
                           >
                             <Brain className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-black uppercase tracking-widest">Manage Quiz</span>
+                            <span className="text-[9px] font-black uppercase tracking-wide">Manage Quiz</span>
                           </Link>
                         </div>
                         <div className="px-4 sm:px-5 py-2.5 space-y-2">
@@ -646,28 +646,28 @@ export default function EventsClient({
                   {/* Bookings summary */}
                   <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
                     <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 border-b border-[#E6DFC8]">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-[#26300D]">Bookings</span>
+                      <span className="text-[10px] font-black uppercase tracking-wide text-[#26300D]">Bookings</span>
                       <span className="flex-1" />
                       <Link
                         href={`/event-bookings/event/${selected.id}`}
                         className="h-7 rounded-xl bg-[#26300D] flex items-center justify-center text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors px-2.5 gap-1.5"
                       >
                         <Users className="w-3.5 h-3.5" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">View All</span>
+                        <span className="text-[9px] font-black uppercase tracking-wide">View All</span>
                       </Link>
                     </div>
                     <div className="grid grid-cols-3 divide-x divide-[#E6DFC8]/50">
                       <div className="px-2 sm:px-3 py-2 text-center">
                         <p className="text-base sm:text-lg font-black text-green-600 tabular-nums leading-tight">{bk.confirmedPeople}</p>
-                        <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Confirmed</p>
+                        <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Confirmed</p>
                       </div>
                       <div className="px-2 sm:px-3 py-2 text-center">
                         <p className="text-base sm:text-lg font-black text-amber-500 tabular-nums leading-tight">{bk.waitlistedPeople}</p>
-                        <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Waitlisted</p>
+                        <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Waitlisted</p>
                       </div>
                       <div className="px-2 sm:px-3 py-2 text-center">
                         <p className="text-base sm:text-lg font-black text-red-500 tabular-nums leading-tight">{bk.cancelledPeople}</p>
-                        <p className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Cancelled</p>
+                        <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Cancelled</p>
                       </div>
                     </div>
                   </div>
@@ -865,7 +865,7 @@ export default function EventsClient({
                   {/* Description */}
                   <div className="px-4 sm:px-5 py-2.5 sm:py-4">
                     <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 mb-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest">Description</span>
+                      <span className="text-[10px] font-black uppercase tracking-wide">Description</span>
                     </div>
                     <textarea
                       name="description"
@@ -892,7 +892,7 @@ export default function EventsClient({
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-widest text-[10px] bg-white hover:bg-red-50 hover:border-red-200"
+                  className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-wide text-[10px] bg-white hover:bg-red-50 hover:border-red-200"
                 >
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                   Delete
@@ -917,7 +917,7 @@ export default function EventsClient({
                     else setIsEditing(false);
                   }}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px] bg-white"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white"
                 >
                   Cancel
                 </Button>
@@ -953,7 +953,7 @@ function FormRow({
   return (
     <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
       <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
-        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">
           {label}
         </span>
         {required && <span className="text-red-500 text-[10px] font-black">*</span>}
@@ -976,7 +976,7 @@ function DetailCell({
     <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-b border-[#E6DFC8] last:border-0">
       <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
         {icon}
-        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">
           {label}
         </span>
       </div>

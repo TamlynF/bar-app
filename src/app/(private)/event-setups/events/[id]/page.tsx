@@ -90,7 +90,7 @@ export default async function EventQuizQuestionsPage({
       {/* Back nav */}
       <Link
         href={`/event-setups/events?open=${id}`}
-        className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#26300D] transition-colors"
+        className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#26300D] transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Back to Event
@@ -110,7 +110,7 @@ export default async function EventQuizQuestionsPage({
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
             Questions
           </p>
           <p className="text-lg font-black text-[#26300D] tabular-nums leading-none">

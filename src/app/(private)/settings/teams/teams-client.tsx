@@ -117,8 +117,8 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${
-                        index === 0 ? 'bg-yellow-100 text-yellow-600' : 
-                        index === 1 ? 'bg-gray-200 text-gray-600' : 
+                        index === 0 ? 'bg-amber-100 text-amber-600' : 
+                        index === 1 ? 'bg-[#E6DFC8] text-[#5F624F]' : 
                         index === 2 ? 'bg-orange-100 text-orange-700' : 
                         'bg-primary/10 text-primary'
                       }`}>
@@ -203,7 +203,7 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
               <div key={record.id} className="p-4 border rounded-lg bg-card flex flex-col gap-2 relative overflow-hidden">
                 {/* Visual indicator for a win */}
                 {record.is_winner && (
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-green-500/10 rounded-bl-full flex items-start justify-end p-2">
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-green-50 rounded-bl-full flex items-start justify-end p-2">
                     <Trophy className="w-4 h-4 text-green-600" />
                   </div>
                 )}

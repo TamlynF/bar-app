@@ -329,7 +329,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         {groupedEventTypes.length === 0 ? (
           <div className="text-center py-12 border rounded-xl bg-muted/10 border-dashed">
             <Layers className="w-8 h-8 text-muted-foreground mx-auto mb-3 opacity-20" />
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-widest">No Event Categories Configured</h3>
+            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">No Event Categories Configured</h3>
           </div>
         ) : (
           groupedEventTypes.map(([typeKey, items]) => {
@@ -345,7 +345,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     className="flex-1 p-4 flex items-center gap-3 hover:bg-muted/5 transition-colors"
                   >
                     <div className="flex items-center gap-2 sm:gap-3">
-                      <h4 className="text-base font-black tracking-tight text-foreground truncate">
+                      <h4 className="text-base font-bold tracking-tight text-foreground truncate">
                         {toTitleCase(typeKey)}
                       </h4>
                       <span className="inline-flex items-center bg-primary/10 text-primary text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter shrink-0">
@@ -359,7 +359,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       <Button
                         variant="outline"
                         size="xs"
-                        className="h-7 px-2 rounded-lg border-primary/20 text-primary font-bold uppercase tracking-wider text-[9px]"
+                        className="h-7 px-2 rounded-lg border-primary/20 text-primary font-bold uppercase tracking-wider text-[10px]"
                         onClick={(e) => {
                           e.stopPropagation();
                           const val = toTitleCase(typeKey);
@@ -482,9 +482,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                 {/* Sub-types List */}
                 {isGroupExpanded && (
-                  <div className="py-2 px-2 sm:px-4 space-y-2 bg-background/50 border-t border-slate-100 dark:border-slate-800">
+                  <div className="py-2 px-2 sm:px-4 space-y-2 bg-background/50 border-t border-[#E6DFC8]">
                     {items.map((item) => (
-                      <div key={item.id} className="border rounded-xl bg-card overflow-hidden border-slate-200 dark:border-slate-800">
+                      <div key={item.id} className="border rounded-xl bg-card overflow-hidden border-[#E6DFC8]">
                         <div className="p-1 flex items-center justify-between">
                           <button
                             type="button"
@@ -751,7 +751,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                   {isCustomType && (
                     <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200 bg-muted/30 p-4 rounded-2xl border border-border/50">
-                      <Label htmlFor="custom-type" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                      <Label htmlFor="custom-type" className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                         Enter New Category Name
                       </Label>
                       <div className="flex gap-3">
@@ -820,7 +820,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Preview:</span>
                     <span className={cn(
-                      "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
+                      "text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md border",
                       badgeClassFromColor(selectedTypeColor)
                     )}>
                       {typeInput || "Category"}
@@ -885,7 +885,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Preview:</span>
                     <span className={cn(
-                      "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md border",
+                      "text-[10px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md border",
                       badgeClassFromColor(selectedColor)
                     )}>
                       {subTypeInput || "Sub-type"}
@@ -939,7 +939,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 shadow-sm">
                   <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
                   <div className="flex flex-col gap-1">
-                    <h5 className="text-xs font-black text-destructive uppercase tracking-widest">Conflict Detected</h5>
+                    <h5 className="text-xs font-black text-destructive uppercase tracking-wide">Conflict Detected</h5>
                     <p className="text-sm text-destructive/90 font-medium leading-snug">{subTypeConflictError}</p>
                   </div>
                 </div>
@@ -950,7 +950,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 <div className="p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3 animate-in fade-in slide-in-from-top-1 shadow-sm">
                   <AlertCircle className="w-5 h-5 text-destructive shrink-0 mt-0.5" />
                   <div className="flex flex-col gap-1">
-                    <h5 className="text-xs font-black text-destructive uppercase tracking-widest">Configuration Error</h5>
+                    <h5 className="text-xs font-black text-destructive uppercase tracking-wide">Configuration Error</h5>
                     <p className="text-sm text-destructive/90 font-medium leading-snug">{typeSheetError}</p>
                   </div>
                 </div>

@@ -387,7 +387,7 @@ export default function BingoBookingListClient({
 
           {/* Search */}
           <div className="flex justify-center px-4 mb-3 sm:mb-0 sm:py-2 sm:px-3 sm:shrink-0">
-            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-slate-400 transition-colors">
+            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-[#26300D] transition-colors">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
                 <input
@@ -460,7 +460,7 @@ export default function BingoBookingListClient({
                   </SheetTitle>
                   <div className="flex items-center gap-1.5 mt-1">
                     <Hash className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-wide tabular-nums">
                       Ref: {selectedBooking.id}
                     </span>
                   </div>
@@ -481,7 +481,7 @@ export default function BingoBookingListClient({
                   >
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", statusTheme[normStatus(selectedBooking.status) || "pending"]?.dot)} />
-                      <span className={cn("text-sm font-black uppercase tracking-widest", statusTheme[normStatus(selectedBooking.status) || "pending"]?.text)}>
+                      <span className={cn("text-sm font-black uppercase tracking-wide", statusTheme[normStatus(selectedBooking.status) || "pending"]?.text)}>
                         {normStatus(selectedBooking.status) || "pending"}
                       </span>
                     </div>
@@ -498,7 +498,7 @@ export default function BingoBookingListClient({
 
                     {/* Event */}
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-[#5F624F] ml-1">Event Date & Session</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] ml-1">Event Date & Session</Label>
                       <div className="relative group">
                         <select
                           title="Select Event"
@@ -524,7 +524,7 @@ export default function BingoBookingListClient({
 
                     {/* Group Name */}
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-[#5F624F] ml-1">Group Name</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] ml-1">Group Name</Label>
                       <Input
                         value={editForm.group_name}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
@@ -536,7 +536,7 @@ export default function BingoBookingListClient({
 
                     {/* Group Size */}
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-[#5F624F] ml-1">Group Size</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] ml-1">Group Size</Label>
                       <Input
                         type="number"
                         min={1}
@@ -550,7 +550,7 @@ export default function BingoBookingListClient({
 
                     {/* Table Assignment */}
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-[#5F624F] ml-1">Table Assignment</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] ml-1">Table Assignment</Label>
                       <div className="relative group">
                         <select
                           title="Select Table"
@@ -573,9 +573,9 @@ export default function BingoBookingListClient({
                         <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5F624F] opacity-40 pointer-events-none" />
                       </div>
                       {showTableConfirmedHint && (
-                        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl animate-in fade-in slide-in-from-top-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          <p className="text-[10px] font-black uppercase text-emerald-700 tracking-tight">Table selected. Status will update to Confirmed.</p>
+                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                          <p className="text-[10px] font-black uppercase text-green-700 tracking-tight">Table selected. Status will update to Confirmed.</p>
                         </div>
                       )}
                       {showTableCancelledHint && (
@@ -588,7 +588,7 @@ export default function BingoBookingListClient({
 
                     {/* Status */}
                     <div className="pt-6 border-t border-[#E6DFC8]">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-[#5F624F] ml-1 mb-3 block">Status</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] ml-1 mb-3 block">Status</Label>
                       <div
                         className={cn(
                           "flex items-center h-14 rounded-2xl border-2 overflow-hidden transition-all",
@@ -602,7 +602,7 @@ export default function BingoBookingListClient({
                           value={editForm.status}
                           onChange={(e) => handleStatusChangeInEdit(e.target.value)}
                           className={cn(
-                            "flex-1 h-full px-3 bg-transparent outline-none text-sm font-black uppercase tracking-widest cursor-pointer appearance-none",
+                            "flex-1 h-full px-3 bg-transparent outline-none text-sm font-black uppercase tracking-wide cursor-pointer appearance-none",
                             statusTheme[editForm.status]?.text || "text-[#1F1F1A]",
                           )}
                         >
@@ -628,7 +628,7 @@ export default function BingoBookingListClient({
 
                     {/* Special Requests */}
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-[#5F624F] ml-1">Special Requests</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] ml-1">Special Requests</Label>
                       <Textarea
                         value={editForm.special_requests}
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
@@ -647,7 +647,7 @@ export default function BingoBookingListClient({
                     {selectedBooking.payment_status && (
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={cn(
-                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide border",
                           selectedBooking.payment_status === "paid"
                             ? "bg-green-50 border-green-200 text-green-700"
                             : selectedBooking.payment_status === "refunded"
@@ -717,7 +717,7 @@ export default function BingoBookingListClient({
                       <div className="bg-[#FDCC4B]/5 p-6 rounded-3xl border-2 border-[#FDCC4B]/20 shadow-sm relative overflow-hidden">
                         <div className="flex items-center gap-2 mb-4 relative z-10">
                           <MessageSquareQuote className="w-5 h-5 text-[#26300D] opacity-40" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-[#26300D]">Special Requests</span>
+                          <span className="text-[10px] font-black uppercase tracking-wide text-[#26300D]">Special Requests</span>
                         </div>
                         <p className="text-[15px] text-[#1F1F1A] italic leading-relaxed font-bold relative z-10 text-left">
                           &quot;{selectedBooking.special_requests}&quot;
@@ -743,7 +743,7 @@ export default function BingoBookingListClient({
                     <Button
                       variant="outline"
                       onClick={() => setIsEditing(false)}
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px] bg-white shadow-sm"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white shadow-sm"
                     >
                       Discard
                     </Button>
@@ -791,7 +791,7 @@ export default function BingoBookingListClient({
                           if (ok) handleRefund(selectedBooking.id);
                         }}
                         disabled={isPending}
-                        className="h-12 w-full rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px] bg-white hover:bg-[#F7F4EA]"
+                        className="h-12 w-full rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white hover:bg-[#F7F4EA]"
                       >
                         {isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
                         Refund via Square
@@ -807,7 +807,7 @@ export default function BingoBookingListClient({
 
       {/* Syncing indicator */}
       {isPending && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#26300D] text-[#FDCC4B] px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#26300D] text-[#FDCC4B] px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-wide shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <Loader2 className="w-4 h-4 animate-spin" /> Syncing with DB...
         </div>
       )}
@@ -833,7 +833,7 @@ function BingoBookingCard({
     <div
       onClick={onClick}
       className={cn(
-        "group active:scale-[0.98] active:bg-slate-50 transition-all border-2 border-[#E6DFC8] rounded-2xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3"
+        "group active:scale-[0.98] active:bg-[#F7F4EA] transition-all border-2 border-[#E6DFC8] rounded-2xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3"
       )}
     >
       <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
@@ -901,7 +901,7 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E6DFC8] last:border-0">
       <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
         {icon}
-        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{label}</span>
+        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">{label}</span>
       </div>
       <span className={cn("text-sm font-black text-right flex-1 leading-snug", label === "Booked On" ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
         {value}

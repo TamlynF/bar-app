@@ -107,13 +107,13 @@ export default function TablesClient({
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between">
-        <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+        <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
           {initialTables.length} table{initialTables.length !== 1 ? "s" : ""}
         </p>
         <Button
           onClick={openAdd}
           size="sm"
-          className="h-9 px-4 rounded-xl font-black uppercase tracking-widest text-[10px] bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/90"
+          className="h-11 sm:h-9 px-4 rounded-xl font-black uppercase tracking-wide text-[10px] bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/90"
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" />
           Add Table
@@ -197,7 +197,7 @@ export default function TablesClient({
             {selected && !isEditing && (
               <div className="flex items-center gap-1.5 mt-1">
                 <Hash className="w-3 h-3 text-[#5F624F]" />
-                <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                <span className="text-xs font-black text-[#5F624F] uppercase tracking-wide tabular-nums">
                   ID: {selected.id}
                 </span>
               </div>
@@ -223,7 +223,7 @@ export default function TablesClient({
                       <XCircle className="w-5 h-5 text-red-500 shrink-0" />
                     )}
                     <span className={cn(
-                      "text-sm font-black uppercase tracking-widest",
+                      "text-sm font-black uppercase tracking-wide",
                       selected.available ? "text-green-700" : "text-red-600"
                     )}>
                       {selected.available ? "Available for booking" : "Not available"}
@@ -263,7 +263,7 @@ export default function TablesClient({
 
                   {/* Table Name — full width */}
                   <div className="space-y-2 sm:col-span-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                    <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
                       Table Name <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -271,13 +271,13 @@ export default function TablesClient({
                       placeholder="e.g. Window Booth 1"
                       defaultValue={formDefault?.name ?? ""}
                       required
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-base sm:text-sm font-bold focus:border-[#26300D] transition-all"
                     />
                   </div>
 
                   {/* Max Capacity */}
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                    <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
                       Max Capacity <span className="text-red-500">*</span>
                     </Label>
                     <div className="flex items-center h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white focus-within:border-[#26300D] transition-all overflow-hidden">
@@ -315,7 +315,7 @@ export default function TablesClient({
 
                   {/* Location / Notes — full width */}
                   <div className="space-y-2 sm:col-span-2">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">
+                    <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
                       Location / Notes
                     </Label>
                     <Input
@@ -377,7 +377,7 @@ export default function TablesClient({
                     else setIsEditing(false);
                   }}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px] bg-white"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white"
                 >
                   Cancel
                 </Button>
@@ -418,7 +418,7 @@ function DetailRow({
     <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E6DFC8] last:border-0">
       <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
         {icon}
-        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">
           {label}
         </span>
       </div>

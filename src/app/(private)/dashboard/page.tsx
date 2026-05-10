@@ -494,7 +494,7 @@ export default async function DashboardPage() {
       <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-8">
 
         <header className="flex justify-center">
-          <p className="text-sm font-bold text-[#5F624F] uppercase tracking-widest">
+          <p className="text-sm font-bold text-[#5F624F] uppercase tracking-wide">
             {format(new Date(), "EEEE, do MMMM yyyy")}
           </p>
         </header>
@@ -507,7 +507,7 @@ export default async function DashboardPage() {
             highlight={totalActions > 0}
             badge={totalActions > 0 ? `${totalActions} Pending` : undefined}
           />
-          <div className="bg-white border border-gray-300 rounded-2xl divide-y divide-gray-300 overflow-hidden">
+          <div className="bg-white border border-[#E6DFC8] rounded-2xl divide-y divide-[#E6DFC8] overflow-hidden">
             <ActionRow
               icon={Building2}
               label="Private Hires"
@@ -522,8 +522,8 @@ export default async function DashboardPage() {
               label="Band Submissions"
               count={pendingBands ?? 0}
               href="/event-bookings/music-bookings?status=pending_review"
-              activeColor="text-purple-600"
-              activeBg="bg-purple-50"
+              activeColor="text-purple-700"
+              activeBg="bg-purple-100"
               activeDot="bg-purple-500"
             />
             <ActionRow
@@ -549,8 +549,8 @@ export default async function DashboardPage() {
               label="Open Saturdays This Month"
               count={openSaturdays}
               href="/event-bookings/music-bookings"
-              activeColor="text-rose-600"
-              activeBg="bg-rose-50"
+              activeColor="text-red-600"
+              activeBg="bg-red-50"
               activeDot="bg-rose-500"
             />
           </div>
@@ -664,7 +664,7 @@ function QuickLink({
       <div className="w-10 h-10 bg-[#F7F4EA] group-hover:bg-white rounded-full flex items-center justify-center transition-colors shadow-sm">
         <Icon className="w-5 h-5 text-[#26300D]" />
       </div>
-      <span className="text-[10px] font-black uppercase tracking-widest text-[#1F1F1A]">
+      <span className="text-[10px] font-black uppercase tracking-wide text-[#1F1F1A]">
         {label}
       </span>
     </Link>

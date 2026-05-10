@@ -40,7 +40,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
       {/* Performance Videos */}
       {videos.length > 0 && (
         <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">
+          <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-2">
             Performance Videos
           </p>
           <div className="flex flex-row flex-wrap gap-2">
@@ -57,7 +57,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
                   <div className="w-10 h-10 rounded-full bg-[#FDCC4B]/20 border border-[#FDCC4B]/40 flex items-center justify-center group-hover:bg-[#FDCC4B]/30 transition-colors">
                     <Play className="w-3.5 h-3.5 text-[#FDCC4B] fill-[#FDCC4B] translate-x-px" />
                   </div>
-                  <span className="text-[9px] font-black text-[#FDCC4B]/70 uppercase tracking-widest">
+                  <span className="text-[9px] font-black text-[#FDCC4B]/70 uppercase tracking-wide">
                     Video {i + 1}
                   </span>
                 </button>
@@ -70,7 +70,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
                   className="h-20 w-28 shrink-0 rounded-xl flex flex-col items-center justify-center gap-1 bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA] transition-colors"
                 >
                   <Link2 className="w-4 h-4" />
-                  <span className="text-[9px] font-black uppercase tracking-widest">
+                  <span className="text-[9px] font-black uppercase tracking-wide">
                     Link {i + 1}
                   </span>
                 </a>
@@ -84,7 +84,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
       {request.status === "pending_review" && (
         <div className="space-y-3 pt-4 border-t border-[#E6DFC8]">
           <div>
-            <label className="block text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1.5">
+            <label className="block text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1.5">
               Note to Applicant (optional)
             </label>
             <textarea

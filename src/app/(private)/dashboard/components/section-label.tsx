@@ -16,7 +16,7 @@ export default function SectionLabel({
       <Icon
         className={cn("w-4 h-4", highlight ? "text-red-600" : "text-[#5F624F]")}
       />
-      <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-[#5F624F]">
+      <h2 className="text-[11px] font-black uppercase tracking-wide text-[#5F624F]">
         {label}
       </h2>
       {badge && (

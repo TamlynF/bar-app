@@ -81,13 +81,13 @@ export default function QuizEventFilter({
   return (
     <div className="relative w-full">
       {/* Input row */}
-      <div className="flex items-center gap-3 h-12 px-4 bg-slate-50 rounded-xl">
+      <div className="flex items-center gap-3 h-12 px-4 bg-[#F7F4EA] rounded-xl">
         <div className="flex flex-col flex-1 min-w-0">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 leading-none mb-0.5">
+          <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]/50 leading-none mb-0.5">
             Quiz Event
           </span>
           <div className="flex items-center gap-1.5">
-            <Search className="w-3 h-3 text-slate-400 shrink-0" />
+            <Search className="w-3 h-3 text-[#5F624F]/50 shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -100,7 +100,7 @@ export default function QuizEventFilter({
               onClick={() => setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 150)}
               placeholder={selectedEvent ? displayValue : "All history — type to filter…"}
-              className="flex-1 min-w-0 bg-transparent text-sm font-black text-slate-900 uppercase tracking-tight outline-none placeholder:text-slate-400 placeholder:normal-case placeholder:font-medium placeholder:tracking-normal"
+              className="flex-1 min-w-0 bg-transparent text-sm font-black text-[#1F1F1A] uppercase tracking-tight outline-none placeholder:text-[#5F624F]/50 placeholder:normal-case placeholder:font-medium placeholder:tracking-normal"
             />
           </div>
         </div>
@@ -109,10 +109,10 @@ export default function QuizEventFilter({
           <button
             type="button"
             onClick={handleClear}
-            className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors"
+            className="shrink-0 p-1 rounded-lg hover:bg-[#E6DFC8] transition-colors"
             aria-label="Clear filter"
           >
-            <X className="w-3.5 h-3.5 text-slate-400" />
+            <X className="w-3.5 h-3.5 text-[#5F624F]/50" />
           </button>
         )}
       </div>

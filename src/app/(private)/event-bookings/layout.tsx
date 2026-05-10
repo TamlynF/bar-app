@@ -17,7 +17,7 @@ export default function EventsHubLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         <main className={cn(
-          "flex-1 bg-card rounded-[2.5rem] border border-slate-200 dark:border-white/10 shadow-2xl min-h-125 overflow-hidden relative",
+          "flex-1 bg-card rounded-[2.5rem] border border-[#E6DFC8] shadow-2xl min-h-125 overflow-hidden relative",
           isEventsRoot && "bg-transparent border-none shadow-none lg:bg-card lg:border lg:shadow-2xl"
         )}>
           {/* Decorative background blurs */}

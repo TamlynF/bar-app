@@ -88,7 +88,7 @@ const SOCIAL_ICONS: Record<string, React.ElementType> = {
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
-      <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5">
+      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
         {label}
       </span>
       <span className="text-sm font-bold text-[#1F1F1A] text-right">{value || "—"}</span>
@@ -147,7 +147,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
         {/* Type pill */}
         {request.type && (
-          <span className="hidden sm:inline-flex shrink-0 px-2.5 py-1 rounded-lg bg-[#F7F4EA] border border-[#E6DFC8] text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+          <span className="hidden sm:inline-flex shrink-0 px-2.5 py-1 rounded-lg bg-[#F7F4EA] border border-[#E6DFC8] text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
             {request.type}
           </span>
         )}
@@ -207,7 +207,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-4 space-y-6 sm:space-y-0">
                 {/* Event details */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
                     Event Details
                   </p>
                   <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
@@ -217,7 +217,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     <SheetRow label="Payment Amount" value={request.payment_amount} />
                     {dates.length > 0 ? (
                       <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5">
+                        <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
                           Preferred Dates
                         </span>
                         <ul className="text-right space-y-1">
@@ -236,7 +236,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
                 {/* Contact info */}
                 <div className="space-y-2">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
                     Contact Information
                   </p>
                   <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
@@ -258,7 +258,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             {/* Social links */}
             {socials.length > 0 && (
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">
+                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-2">
                   Social Media
                 </p>
                 <div className="flex flex-wrap gap-2">
@@ -284,7 +284,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             {/* Videos */}
             {videos.length > 0 && (
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">
+                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-2">
                   Performance Videos
                 </p>
                 <div className="flex flex-row flex-wrap gap-1.5">
@@ -301,7 +301,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         <div className="w-8 h-8 rounded-full bg-[#FDCC4B]/20 border border-[#FDCC4B]/40 flex items-center justify-center group-hover:bg-[#FDCC4B]/30 transition-colors">
                           <Play className="w-3.5 h-3.5 text-[#FDCC4B] fill-[#FDCC4B] translate-x-px" />
                         </div>
-                        <span className="text-[9px] font-black text-[#FDCC4B]/70 uppercase tracking-widest">
+                        <span className="text-[9px] font-black text-[#FDCC4B]/70 uppercase tracking-wide">
                           Video {i + 1}
                         </span>
                       </button>
@@ -314,7 +314,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         className="h-16 w-24 shrink-0 rounded-xl flex flex-col items-center justify-center gap-1 bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA] transition-colors"
                       >
                         <Link2 className="w-4 h-4" />
-                        <span className="text-[9px] font-black uppercase tracking-widest">
+                        <span className="text-[9px] font-black uppercase tracking-wide">
                           Link {i + 1}
                         </span>
                       </a>
@@ -327,7 +327,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             {/* Notes from applicant */}
             {request.notes && (
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">
+                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-2">
                   Notes from Applicant
                 </p>
                 <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] border border-[#E6DFC8] rounded-2xl px-4 py-3">
@@ -339,7 +339,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             {/* Admin notes (read-only, resolved) */}
             {request.status !== "pending_review" && request.admin_notes && (
               <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-2">
+                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-2">
                   Admin Notes
                 </p>
                 <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] border border-[#E6DFC8] rounded-2xl px-4 py-3">
@@ -354,7 +354,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             {request.status === "pending_review" && (
               <div className="space-y-3 pt-2 border-t border-[#E6DFC8]">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1.5">
+                  <label className="block text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1.5">
                     Note to Applicant (optional)
                   </label>
                   <textarea

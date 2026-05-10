@@ -39,8 +39,8 @@ interface CompanyInfo {
   private_hire_min_capacity: number | null;
 }
 
-const sectionLabel = "text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1 mb-3";
-const fieldLabel = "text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1";
+const sectionLabel = "text-[10px] font-bold uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1 mb-3";
+const fieldLabel = "text-[10px] font-bold uppercase tracking-wide text-[#5F624F] ml-1";
 const inputClasses = "h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D]";
 
 function InfoRow({
@@ -59,7 +59,7 @@ function InfoRow({
     <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E6DFC8] last:border-0">
       <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
         {icon}
-        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+        <span className="text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
           {label}
         </span>
       </div>
@@ -191,7 +191,7 @@ export default function CompanyInfoClient({
             <Button
               variant="outline"
               onClick={() => setIsEditing(false)}
-              className="h-12 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px]"
+              className="h-12 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-bold uppercase tracking-wide text-[10px]"
             >
               <X className="w-4 h-4" />
             </Button>

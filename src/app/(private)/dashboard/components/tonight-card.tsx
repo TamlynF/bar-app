@@ -31,7 +31,7 @@ export default function TonightCard({
       <Link href={event.href} className="block rounded-[2rem]">
         <div className="bg-[#26300D] px-6 py-3 sm:py-5 text-white flex items-start justify-between gap-2 sm:gap-4 rounded-t-[2rem]">
           <div className="min-w-0">
-            <span className="bg-[#FDCC4B] text-[#26300D] text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-widest">
+            <span className="bg-[#FDCC4B] text-[#26300D] text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wide">
               Tonight
             </span>
             <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight mt-2 leading-none truncate">
@@ -60,7 +60,7 @@ export default function TonightCard({
                   <p className="text-lg sm:text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
                     {confirmedTeams}
                   </p>
-                  <p className="text-[9px] font-black uppercase tracking-widest text-white/50 mt-1">
+                  <p className="text-[9px] font-black uppercase tracking-wide text-white/50 mt-1">
                     Teams
                   </p>
                 </div>
@@ -71,7 +71,7 @@ export default function TonightCard({
               <p className="text-lg sm:text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
                 {guests}
               </p>
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/50 mt-1">
+              <p className="text-[9px] font-black uppercase tracking-wide text-white/50 mt-1">
                 Guests
               </p>
             </div>
@@ -85,7 +85,7 @@ export default function TonightCard({
         {capacity > 0 && (
           <div>
             <div className="flex justify-between items-center mb-2">
-              <span className="text-[11px] font-black uppercase tracking-widest text-[#1F1F1A] flex items-center gap-1.5">
+              <span className="text-[11px] font-black uppercase tracking-wide text-[#1F1F1A] flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5 text-[#5F624F]" />
                 Capacity
               </span>
@@ -108,14 +108,14 @@ export default function TonightCard({
         <div className={cn("grid gap-3", isQuiz ? "grid-cols-2" : "grid-cols-2")}>
           <Link
             href="/book/bingo"
-            className="flex items-center justify-center gap-2 h-11 bg-[#F7F4EA] hover:bg-[#E6DFC8] border border-[#E6DFC8] rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest text-[#1F1F1A]"
+            className="flex items-center justify-center gap-2 h-11 bg-[#F7F4EA] hover:bg-[#E6DFC8] border border-[#E6DFC8] rounded-xl transition-colors text-[10px] font-black uppercase tracking-wide text-[#1F1F1A]"
           >
             <Plus className="w-4 h-4" />
             Walk-in
           </Link>
           <Link
             href="/settings/tables"
-            className="flex items-center justify-center gap-2 h-11 bg-[#F7F4EA] hover:bg-[#E6DFC8] border border-[#E6DFC8] rounded-xl transition-colors text-[10px] font-black uppercase tracking-widest text-[#1F1F1A]"
+            className="flex items-center justify-center gap-2 h-11 bg-[#F7F4EA] hover:bg-[#E6DFC8] border border-[#E6DFC8] rounded-xl transition-colors text-[10px] font-black uppercase tracking-wide text-[#1F1F1A]"
           >
             <Grid2X2 className="w-4 h-4" />
             Floorplan

@@ -131,7 +131,7 @@ export default async function EventDetailPage({
       <div>
         <Link
           href="/event-bookings"
-          className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#1F1F1A] transition-colors mb-4"
+          className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#1F1F1A] transition-colors mb-4"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Events
@@ -142,7 +142,7 @@ export default async function EventDetailPage({
           </h1>
           {et && (
             <span className={cn(
-              "text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md whitespace-nowrap shrink-0 mt-1",
+              "text-[9px] font-black uppercase tracking-wide px-2.5 py-1 rounded-md whitespace-nowrap shrink-0 mt-1",
               badgeClass(et)
             )}>
               {badgeLabel(et)}
@@ -212,7 +212,7 @@ export default async function EventDetailPage({
 
       {/* Bookings */}
       <section className="space-y-2">
-        <h2 className="text-[11px] font-black uppercase tracking-widest text-[#5F624F]">
+        <h2 className="text-[11px] font-black uppercase tracking-wide text-[#5F624F]">
           Bookings ({bookings.length})
         </h2>
 
@@ -239,7 +239,7 @@ export default async function EventDetailPage({
                 >
                   {/* Status badge */}
                   <span className={cn(
-                    "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 self-start",
+                    "text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 self-start",
                     statusBadge(b.status)
                   )}>
                     {b.status ?? "–"}

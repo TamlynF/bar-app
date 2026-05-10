@@ -35,8 +35,8 @@ export default function LeaderboardCard({ entries }: { entries: LeaderboardEntry
               {/* Rank badge */}
               <span className={cn(
                 "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-black",
-                rank === 1 && "bg-yellow-100 text-yellow-700",
-                rank === 2 && "bg-gray-200 text-gray-600",
+                rank === 1 && "bg-amber-100 text-amber-700",
+                rank === 2 && "bg-[#E6DFC8] text-[#5F624F]",
                 rank === 3 && "bg-orange-100 text-orange-700",
                 rank > 3 && "bg-[#F7F4EA] text-[#5F624F]"
               )}>
@@ -55,7 +55,7 @@ export default function LeaderboardCard({ entries }: { entries: LeaderboardEntry
 
               {/* Wins */}
               {entry.wins > 0 && (
-                <span className="flex items-center gap-1 text-[11px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-1 rounded-lg shrink-0">
+                <span className="flex items-center gap-1 text-[11px] font-black text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-lg shrink-0">
                   <Medal className="w-3 h-3" />
                   {entry.wins} win{entry.wins !== 1 ? "s" : ""}
                 </span>
@@ -72,7 +72,7 @@ export default function LeaderboardCard({ entries }: { entries: LeaderboardEntry
 
       <Link
         href="/settings/teams"
-        className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-[#E6DFC8] text-[10px] font-black uppercase tracking-widest text-[#5F624F] hover:text-[#26300D] hover:bg-[#F7F4EA]/50 transition-colors"
+        className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-[#E6DFC8] text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#26300D] hover:bg-[#F7F4EA]/50 transition-colors"
       >
         View Full Leaderboard
         <ChevronRight className="w-3 h-3" />

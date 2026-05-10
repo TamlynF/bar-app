@@ -119,7 +119,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             onClick={() => setExpandedId(isExpanded ? null : item.key)}
                             className={cn(
                                 "w-full text-left flex  flex-row items-center gap-3 p-4 transition-colors cursor-pointer sm:event-row-desktop",
-                                isExpanded ? "bg-[#FEF3C7]" : "hover:bg-yellow-100"
+                                isExpanded ? "bg-[#FEF3C7]" : "hover:bg-amber-50"
                             )}
                         >
                             {/* Date pill */}
@@ -127,13 +127,13 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                 "w-10 sm:w-14 text-center rounded-xl py-1.5 sm:py-2 shrink-0 self-center",
                                 today ? "bg-[#FDCC4B]" : "bg-[#F7F4EA]"
                             )}>
-                                <p className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-widest", today ? "text-[#26300D]" : "text-[#5F624F]")}>
+                                <p className={cn("text-[10px] sm:text-[9px] font-bold uppercase tracking-wide", today ? "text-[#26300D]" : "text-[#5F624F]")}>
                                     {format(parsed, "EEE")}
                                 </p>
                                 <p className={cn("text-base sm:text-xl font-black leading-tight", today ? "text-[#26300D]" : "text-[#1F1F1A]")}>
                                     {format(parsed, "d")}
                                 </p>
-                                <p className={cn("text-[8px] sm:text-[9px] font-black uppercase tracking-widest", today ? "text-[#26300D]" : "text-[#5F624F]")}>
+                                <p className={cn("text-[10px] sm:text-[9px] font-bold uppercase tracking-wide", today ? "text-[#26300D]" : "text-[#5F624F]")}>
                                     {format(parsed, "MMM")}
                                 </p>
                             </div>
@@ -155,7 +155,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                     <div className="flex-1" />
                                     {item.eventType && (
                                         <span className={cn(
-                                            "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md whitespace-nowrap shrink-0",
+                                            "text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md whitespace-nowrap shrink-0",
                                             badgeClass(item.eventType)
                                         )}>
                                             {badgeLabel(item.eventType)}
@@ -179,7 +179,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                 <div className="flex-1 min-w-0 flex-col gap-1 items-start">
                                     {item.eventType && (
                                         <span className={cn(
-                                            "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md whitespace-nowrap",
+                                            "text-[9px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-md whitespace-nowrap",
                                             badgeClass(item.eventType)
                                         )}>
                                             {badgeLabel(item.eventType)}
@@ -210,7 +210,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
 
                         {/* Expanded details */}
                         {isExpanded && (
-                            <div className="bg-yellow-50 border-t-2 border-[#fdcc4b] px-5 py-4 animate-in fade-in duration-150">
+                            <div className="bg-amber-50 border-t-2 border-[#fdcc4b] px-5 py-4 animate-in fade-in duration-150">
                                 {/* Guest count — mobile only */}
                                 {item.guests > 0 && (
                                     <div className="flex items-center gap-1.5 text-[11px] text-[#5F624F] font-medium mb-3 sm:hidden">
@@ -251,7 +251,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                             {/* Tables */}
                                             {item.quizDetails.tableGroups.length > 0 ? (
                                                 <div className="flex flex-row space-y-1 items-start gap-4">
-                                                    <p className="flex-1 text-[10px] text-[#5F624F] font-medium uppercase tracking-widest">Tables: </p>
+                                                    <p className="flex-1 text-[10px] text-[#5F624F] font-medium uppercase tracking-wide">Tables: </p>
                                                     <div className="flex flex-wrap gap-x-4 gap-y-1">
                                                         {item.quizDetails.tableGroups.map(g => (
                                                             <div key={g.capacity} className="flex justify-between items-center gap-2 text-[11px]">
@@ -283,7 +283,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                                 const complete = qd.questionsTarget > 0 && qd.questionsGenerated >= qd.questionsTarget;
                                                 return (
                                                     <span className={cn(
-                                                        "inline-flex items-center text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-md border",
+                                                        "inline-flex items-center text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-md border",
                                                         complete
                                                             ? "bg-green-100 text-green-700 border-green-200"
                                                             : "bg-red-100 text-red-600 border-red-200"
@@ -296,7 +296,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
 
                                         <Link
                                             href={item.href}
-                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest hover:bg-[#26300D]/90 transition-colors shrink-0"
+                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-bold uppercase tracking-wide hover:bg-[#26300D]/90 transition-colors shrink-0"
                                         >
                                             Manage Bookings <ChevronRight className="w-3.5 h-3.5" />
                                         </Link>
@@ -341,7 +341,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                             {/* Tables */}
                                             {item.bingoDetails.tableGroups.length > 0 ? (
                                                 <div className="space-y-1">
-                                                    <p className="text-[10px] text-[#5F624F] font-medium uppercase tracking-widest">Tables</p>
+                                                    <p className="text-[10px] text-[#5F624F] font-medium uppercase tracking-wide">Tables</p>
                                                     <div className="flex flex-wrap gap-x-4 gap-y-1">
                                                         {item.bingoDetails.tableGroups.map(g => (
                                                             <div key={g.capacity} className="flex items-center gap-1.5 text-[11px]">
@@ -370,7 +370,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
 
                                         <Link
                                             href={item.href}
-                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest hover:bg-[#26300D]/90 transition-colors shrink-0"
+                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-bold uppercase tracking-wide hover:bg-[#26300D]/90 transition-colors shrink-0"
                                         >
                                             Manage Bookings <ChevronRight className="w-3.5 h-3.5" />
                                         </Link>
@@ -429,7 +429,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
 
                                         <Link
                                             href={item.href}
-                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest hover:bg-[#26300D]/90 transition-colors shrink-0"
+                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-bold uppercase tracking-wide hover:bg-[#26300D]/90 transition-colors shrink-0"
                                         >
                                             Manage Bookings <ChevronRight className="w-3.5 h-3.5" />
                                         </Link>
@@ -489,7 +489,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
 
                                         <Link
                                             href={item.href}
-                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest hover:bg-[#26300D]/90 transition-colors shrink-0"
+                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-bold uppercase tracking-wide hover:bg-[#26300D]/90 transition-colors shrink-0"
                                         >
                                             View Booking <ChevronRight className="w-3.5 h-3.5" />
                                         </Link>
@@ -509,7 +509,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                                         </div>
                                         <Link
                                             href={item.href}
-                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest hover:bg-[#26300D]/90 transition-colors shrink-0"
+                                            className="flex items-center justify-center gap-2 h-10 px-5 rounded-xl bg-[#26300D] text-[#FDCC4B] text-[10px] font-bold uppercase tracking-wide hover:bg-[#26300D]/90 transition-colors shrink-0"
                                         >
                                             Manage Bookings <ChevronRight className="w-3.5 h-3.5" />
                                         </Link>

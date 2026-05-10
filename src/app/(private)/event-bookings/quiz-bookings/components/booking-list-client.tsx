@@ -70,10 +70,10 @@ export const statusTheme: Record<
   }
 > = {
   all: {
-    bg: "bg-slate-100",
+    bg: "bg-[#F7F4EA]",
     text: "text-[#1F1F1A]",
     border: "border-[#E6DFC8]",
-    dot: "bg-slate-600",
+    dot: "bg-[#5F624F]",
     ring: "ring-slate-500/40",
     cardBorder: "border-[#E6DFC8]",
     icon: <TableIcon className="w-5 h-5" />,
@@ -97,10 +97,10 @@ export const statusTheme: Record<
     icon: <Clock3 className="w-5 h-5" />,
   },
   pending: {
-    bg: "bg-yellow-50",
-    text: "text-yellow-700",
+    bg: "bg-amber-50",
+    text: "text-amber-700",
     border: "border-yellow-200",
-    dot: "bg-yellow-500",
+    dot: "bg-amber-500",
     ring: "ring-yellow-500/40",
     cardBorder: "border-yellow-500/50",
     icon: <HelpCircle className="w-5 h-5" />,
@@ -481,7 +481,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
           {/* Search */}
           <div className="flex justify-center px-4 mb-3 sm:mb-0 sm:py-2 sm:px-3 sm:shrink-0">
-            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-slate-400 transition-colors">
+            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-[#26300D] transition-colors">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
                 <input
@@ -497,7 +497,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   type="button"
                   title="Cancel"
                   onClick={() => { setActiveStatusFilters(new Set()); setSearchQuery(""); }}
-                  className="shrink-0 p-1 rounded-lg hover:bg-slate-200 transition-colors"
+                  className="shrink-0 p-1 rounded-lg hover:bg-[#E6DFC8] transition-colors"
                 >
                   <X className="w-3.5 h-3.5 text-[#5F624F]/50" />
                 </button>
@@ -551,7 +551,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   {/* REFERENCE ID */}
                   <div className="flex items-center gap-1.5 mt-1">
                     <Hash className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-wide tabular-nums">
                       Ref: {selectedBooking.id}
                     </span>
                   </div>
@@ -570,7 +570,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   )}>
                     <div className="flex items-center gap-2.5">
                       <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", statusTheme[normStatus(selectedBooking.status) || "pending"]?.dot)} />
-                      <span className={cn("text-sm font-black uppercase tracking-widest", statusTheme[normStatus(selectedBooking.status) || "pending"]?.text)}>
+                      <span className={cn("text-sm font-black uppercase tracking-wide", statusTheme[normStatus(selectedBooking.status) || "pending"]?.text)}>
                         {normStatus(selectedBooking.status) || "pending"}
                       </span>
                     </div>
@@ -586,7 +586,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   // EDIT MODE FORM - Consistent with Quiz Generator inline editor
                   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Event Date & Session</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Event Date & Session</Label>
                       <div className="relative group">
                         <select 
                           title="Select Event"
@@ -611,7 +611,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Team Name</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Team Name</Label>
                       <Input 
                         value={editForm.group_name} 
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm(prev => ({...prev, group_name: e.target.value}))}
@@ -620,7 +620,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Team Size</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Team Size</Label>
                       <div className="grid grid-cols-5 gap-2">
                         {[4, 5, 6].map(size => (
                           <button
@@ -642,7 +642,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
                     {/* SEATING SELECTION */}
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Table Assignment</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Table Assignment</Label>
                       <div className="relative group">
                         <select 
                           title="Select Table"
@@ -663,9 +663,9 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                       
                       {/* TABLE TO STATUS INDICATORS */}
                       {showTableConfirmedHint && (
-                        <div className="flex items-center gap-2 p-3 bg-emerald-50 border border-emerald-200 rounded-xl animate-in fade-in slide-in-from-top-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                          <p className="text-[10px] font-black uppercase text-emerald-700 tracking-tight">Table selected. Status will update to Confirmed.</p>
+                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl animate-in fade-in slide-in-from-top-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                          <p className="text-[10px] font-black uppercase text-green-700 tracking-tight">Table selected. Status will update to Confirmed.</p>
                         </div>
                       )}
                       {showTableCancelledHint && (
@@ -677,7 +677,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </div>
                     
                     <div className="pt-6 border-t border-[#E6DFC8]">
-                       <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1 mb-3 block">Status</Label>
+                       <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1 mb-3 block">Status</Label>
                        <div className={cn(
                          "flex items-center h-14 rounded-2xl border-2 overflow-hidden transition-all",
                          statusTheme[editForm.status]?.border || "border-[#E6DFC8]",
@@ -689,7 +689,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                            value={editForm.status}
                            onChange={(e) => handleStatusChangeInEdit(e.target.value)}
                            className={cn(
-                             "flex-1 h-full px-3 bg-transparent outline-none text-sm font-black uppercase tracking-widest cursor-pointer appearance-none",
+                             "flex-1 h-full px-3 bg-transparent outline-none text-sm font-black uppercase tracking-wide cursor-pointer appearance-none",
                              statusTheme[editForm.status]?.text || "text-[#1F1F1A]",
                            )}
                          >
@@ -712,7 +712,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] ml-1">Special Requests</Label>
+                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Special Requests</Label>
                       <Textarea 
                         value={editForm.special_requests} 
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({...prev, special_requests: e.target.value}))}
@@ -774,7 +774,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                       <div className="bg-[#FDCC4B]/5 p-6 rounded-3xl border-2 border-[#FDCC4B]/20 shadow-sm relative overflow-hidden">
                         <div className="flex items-center gap-2 mb-4 relative z-10">
                           <MessageSquareQuote className="w-5 h-5 text-[#26300D] opacity-40" />
-                          <span className="text-[10px] font-black uppercase tracking-widest text-[#26300D]">Staff Instructions</span>
+                          <span className="text-[10px] font-black uppercase tracking-wide text-[#26300D]">Staff Instructions</span>
                         </div>
                         <p className="text-[15px] text-[#1F1F1A] italic leading-relaxed font-bold relative z-10 text-left">
                           &quot;{selectedBooking.special_requests}&quot;
@@ -800,7 +800,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     <Button 
                       variant="outline" 
                       onClick={() => setIsEditing(false)}
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px] bg-white shadow-sm"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white shadow-sm"
                     >
                       Discard
                     </Button>
@@ -841,7 +841,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
       {/* Global Transition Overlay */}
       {isPending && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#26300D] text-[#FDCC4B] px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-widest shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#26300D] text-[#FDCC4B] px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-wide shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <Loader2 className="w-4 h-4 animate-spin" /> Syncing with DB...
         </div>
       )}
@@ -862,7 +862,7 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
     <div
       onClick={onClick}
       className={cn(
-        "group active:scale-[0.98] active:bg-slate-50 transition-all border-2 border-[#E6DFC8] rounded-2xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3"
+        "group active:scale-[0.98] active:bg-[#F7F4EA] transition-all border-2 border-[#E6DFC8] rounded-2xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3"
       )}
     >
       <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
@@ -907,7 +907,7 @@ function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string;
     <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E6DFC8] last:border-0">
       <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
         {icon}
-        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">{label}</span>
+        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">{label}</span>
       </div>
       {label === "Booked On" || label === "Last Modified" || label === "Modified By" ? (
         <span className="text-sm font-black text-[#5F624F] text-right flex-1 leading-snug">{value}</span>

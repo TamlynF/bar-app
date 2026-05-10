@@ -30,13 +30,13 @@ export type QuizEventSummary = {
 
 // UI/UX Theme palette for category differentiation
 const CATEGORY_THEMES = [
-  { bg: "bg-blue-100/40", border: "border-blue-300/50", iconBg: "bg-blue-600", text: "text-blue-900" },
+  { bg: "bg-blue-50", border: "border-blue-200", iconBg: "bg-blue-600", text: "text-blue-900" },
   { bg: "bg-amber-50/50", border: "border-amber-200", iconBg: "bg-amber-600", text: "text-amber-900" },
-  { bg: "bg-emerald-50/50", border: "border-emerald-200", iconBg: "bg-emerald-600", text: "text-emerald-900" },
+  { bg: "bg-green-50/50", border: "border-green-200", iconBg: "bg-green-600", text: "text-green-700" },
   { bg: "bg-orange-50/50", border: "border-orange-200", iconBg: "bg-orange-600", text: "text-orange-900" },
   { bg: "bg-red-50/50", border: "border-red-200", iconBg: "bg-red-600", text: "text-red-900" },
-  { bg: "bg-purple-100/40", border: "border-purple-300/50", iconBg: "bg-purple-600", text: "text-purple-900" },
-  { bg: "bg-slate-100/40", border: "border-slate-300/50", iconBg: "bg-slate-600", text: "text-slate-900" },
+  { bg: "bg-purple-50", border: "border-purple-200", iconBg: "bg-purple-600", text: "text-purple-900" },
+  { bg: "bg-[#F7F4EA]", border: "border-[#E6DFC8]", iconBg: "bg-[#5F624F]", text: "text-[#1F1F1A]" },
 ];
 
 export const dynamic = 'force-dynamic'
@@ -75,7 +75,7 @@ export default async function QuizArchivePage({
         <div className="py-32 text-center border-4 border-dashed border-[#E6DFC8] rounded-[3.5rem] bg-white/40 flex flex-col items-center">
           <BookOpen className="w-16 h-16 text-[#E6DFC8] mb-6" />
           <h2 className="font-black text-xl text-[#1F1F1A] uppercase tracking-tight">Archive Is Empty</h2>
-          <p className="text-xs text-[#5F624F] mt-3 uppercase tracking-widest opacity-60 max-w-xs font-bold leading-relaxed">
+          <p className="text-xs text-[#5F624F] mt-3 uppercase tracking-wide opacity-60 max-w-xs font-bold leading-relaxed">
             There are no approved questions for this specific filter.
           </p>
         </div>
@@ -102,8 +102,8 @@ export default async function QuizArchivePage({
                       <LayoutGrid className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <h3 className={cn("text-base font-black uppercase tracking-tight", theme.text)}>{category}</h3>
-                      <p className="text-[10px] text-[#5F624F] font-bold opacity-60 uppercase tracking-widest">{questions.length} Items Logged</p>
+                      <h3 className={cn("text-base font-bold uppercase tracking-tight", theme.text)}>{category}</h3>
+                      <p className="text-[10px] text-[#5F624F] font-bold opacity-60 uppercase tracking-wide">{questions.length} Items Logged</p>
                     </div>
                   </div>
                   <div className="w-5 h-5 text-[#5F624F] opacity-40 group-open:rotate-180 transition-transform">
@@ -121,7 +121,7 @@ export default async function QuizArchivePage({
                         <div className="p-5 flex-1 space-y-5 flex flex-col">
                           {/* Question Section */}
                           <div className="flex items-start gap-3">
-                            <div className="mt-1 p-1 bg-slate-50 rounded-lg">
+                            <div className="mt-1 p-1 bg-[#F7F4EA] rounded-lg">
                                 <MessageSquareQuote className="w-4 h-4 text-[#26300D] opacity-40" />
                             </div>
                             <p className="text-[14px] font-bold text-[#1F1F1A] leading-snug tracking-tight">

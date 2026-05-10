@@ -33,7 +33,7 @@ export default function PrivateHireDetailClient({
   return (
     <div className="space-y-3 pt-4 border-t border-[#E6DFC8]">
       <div>
-        <label className="block text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1.5">
+        <label className="block text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1.5">
           Note to Enquirer (optional)
         </label>
         <textarea

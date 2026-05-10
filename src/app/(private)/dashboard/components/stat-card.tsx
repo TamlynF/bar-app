@@ -16,7 +16,7 @@ export default function StatCard({
 }) {
   return (
     <div className="bg-white border border-[#E6DFC8] rounded-2xl p-3 sm:p-4 shadow-sm items-center text-center">
-      <p className="text-[9px] font-black uppercase tracking-widest text-[#5F624F] sm:mb-3 leading-tight">
+      <p className="text-[9px] font-black uppercase tracking-wide text-[#5F624F] sm:mb-3 leading-tight">
         {label}
       </p>
       <p

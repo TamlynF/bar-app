@@ -112,7 +112,7 @@ export default function CategorySection({ eventId, category_name, question_count
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-5 py-3.5 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
       >
-        <p className="text-[11px] font-black uppercase tracking-widest text-[#26300D]">
+        <p className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">
           {orderNo != null ? `${orderNo}. ` : ''}{category_name}
         </p>
         <div className="flex items-center gap-2 shrink-0">
@@ -120,7 +120,7 @@ export default function CategorySection({ eventId, category_name, question_count
             className={cn(
               "text-[10px] font-black tabular-nums px-2.5 py-1 rounded-lg border",
               isComplete
-                ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                ? "bg-green-50 border-green-200 text-green-700"
                 : hasAny
                 ? "bg-amber-50 border-amber-200 text-amber-700"
                 : "bg-[#F7F4EA] border-[#E6DFC8] text-[#5F624F]"
@@ -144,7 +144,7 @@ export default function CategorySection({ eventId, category_name, question_count
             {count === 0 ? (
               <div className="px-5 py-8 text-center">
                 <BookOpen className="w-6 h-6 text-[#5F624F] opacity-20 mx-auto mb-2" />
-                <p className="text-xs font-black text-[#5F624F] opacity-40 uppercase tracking-widest">
+                <p className="text-xs font-black text-[#5F624F] opacity-40 uppercase tracking-wide">
                   No questions yet
                 </p>
               </div>
@@ -159,7 +159,7 @@ export default function CategorySection({ eventId, category_name, question_count
                     {isEditing ? (
                       <div className="space-y-2.5 animate-in fade-in duration-200">
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase text-[#5F624F] tracking-widest">Question</label>
+                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Question</label>
                           <textarea
                             title="Edit question"
                             value={editForm.question}
@@ -168,7 +168,7 @@ export default function CategorySection({ eventId, category_name, question_count
                           />
                         </div>
                         <div className="space-y-1">
-                          <label className="text-[8px] font-black uppercase text-[#5F624F] tracking-widest">Answer</label>
+                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Answer</label>
                           <input
                             title="Edit answer"
                             value={editForm.answer}
@@ -180,7 +180,7 @@ export default function CategorySection({ eventId, category_name, question_count
                           <Button
                             onClick={() => saveEdit(q.id)}
                             disabled={isPending}
-                            className="flex-1 bg-[#26300D] text-white font-black uppercase text-[10px] tracking-widest h-9 rounded-xl"
+                            className="flex-1 bg-[#26300D] text-white font-black uppercase text-[10px] tracking-wide h-9 rounded-xl"
                           >
                             {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-1.5" /> Save</>}
                           </Button>
@@ -261,7 +261,7 @@ export default function CategorySection({ eventId, category_name, question_count
             <Link
               href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
               className={cn(
-                "flex items-center justify-center gap-2 w-full h-10 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all",
+                "flex items-center justify-center gap-2 w-full h-10 rounded-xl font-black text-[11px] uppercase tracking-wide transition-all",
                 isComplete
                   ? "bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA]"
                   : "bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/90 shadow-sm"

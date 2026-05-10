@@ -52,7 +52,7 @@ const SOCIAL_ICONS: Record<string, React.ElementType> = {
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
-      <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5">
+      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
         {label}
       </span>
       <span className="text-sm font-bold text-[#1F1F1A] text-right">{value || "—"}</span>
@@ -133,7 +133,7 @@ export default async function BandBookingDetailPage({
 
           {/* Event details */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
               Event Details
             </p>
             <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden shadow-sm">
@@ -159,7 +159,7 @@ export default async function BandBookingDetailPage({
               )}
               {request.payment_amount != null && (
                 <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
                     Payment
                   </span>
                   <div className="flex items-center gap-1.5 text-right">
@@ -182,7 +182,7 @@ export default async function BandBookingDetailPage({
               )}
               {dates.length > 0 ? (
                 <div className="flex items-start justify-between gap-4 py-3">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5">
+                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
                     Preferred Dates
                   </span>
                   <ul className="text-right space-y-1">
@@ -206,13 +206,13 @@ export default async function BandBookingDetailPage({
 
           {/* Contact */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
               Contact Information
             </p>
             <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden shadow-sm">
               <DetailRow label="Name" value={request.booker_name} />
               <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8]">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
                   <Mail className="w-3 h-3" /> Email
                 </span>
                 <a
@@ -224,7 +224,7 @@ export default async function BandBookingDetailPage({
               </div>
               {request.phone_no && (
                 <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8]">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
                     <Phone className="w-3 h-3" /> Phone
                   </span>
                   <a
@@ -236,7 +236,7 @@ export default async function BandBookingDetailPage({
                 </div>
               )}
               <div className="flex items-start justify-between gap-4 py-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
                   <CalendarDays className="w-3 h-3" /> Submitted
                 </span>
                 <span className="text-sm font-bold text-[#1F1F1A]">
@@ -252,7 +252,7 @@ export default async function BandBookingDetailPage({
             {/* Bank details — only if present */}
             {(request.bank_account_no || request.bank_sort_code) && (
               <div className="space-y-2 mt-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
                   Bank Details
                 </p>
                 <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden shadow-sm">
@@ -269,7 +269,7 @@ export default async function BandBookingDetailPage({
         {/* Social links */}
         {socials.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
               Social Media
             </p>
             <div className="flex flex-wrap gap-2">
@@ -295,7 +295,7 @@ export default async function BandBookingDetailPage({
         {/* Notes from applicant */}
         {request.notes && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
               Notes from Applicant
             </p>
             <p className="text-sm text-[#1F1F1A] bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3 shadow-sm">
@@ -307,7 +307,7 @@ export default async function BandBookingDetailPage({
         {/* Admin notes — read-only when resolved */}
         {request.status !== "pending_review" && request.admin_notes && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F]">
+            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
               Admin Notes
             </p>
             <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] border border-[#E6DFC8] rounded-2xl px-4 py-3">

@@ -45,7 +45,7 @@ export default function QuizHistoryFilter({
           name="event"
           title="Filter by Event"
           defaultValue={currentFilter}
-          className="w-full bg-transparent border-none text-[10px] font-black uppercase tracking-widest text-[#1F1F1A] h-10 px-2 appearance-none outline-none cursor-pointer"
+          className="w-full bg-transparent border-none text-[10px] font-black uppercase tracking-wide text-[#1F1F1A] h-10 px-2 appearance-none outline-none cursor-pointer"
           onChange={handleChange}
         >
           <option value="all">All Quiz Nights</option>
@@ -55,7 +55,7 @@ export default function QuizHistoryFilter({
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-300 pointer-events-none" />
+        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#E6DFC8] pointer-events-none" />
       </div>
     </div>
   )

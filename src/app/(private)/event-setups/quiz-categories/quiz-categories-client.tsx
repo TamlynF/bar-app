@@ -94,7 +94,7 @@ export default function QuizCategoriesClient({
       {/* Category list */}
       <section className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
         <div className="flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3 gap-2">
-          <p className="flex-1 text-[11px] font-black uppercase tracking-widest text-[#26300D] truncate">
+          <p className="flex-1 text-[11px] font-black uppercase tracking-wide text-[#26300D] truncate">
             Quiz Categories <span className="text-[#5F624F]">({initialConfigs.length})</span>
           </p>
           <button
@@ -104,7 +104,7 @@ export default function QuizCategoriesClient({
             title="Add category"
           >
             <Plus className="w-3.5 h-3.5 shrink-0" />
-            <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Create</span>
+            <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wide">Create</span>
           </button>
         </div>
 
@@ -178,7 +178,7 @@ export default function QuizCategoriesClient({
                     <span className={cn(
                       "text-[11px] font-black px-2 py-1 rounded-lg border",
                       config.is_active
-                        ? "text-emerald-700 bg-emerald-50 border-emerald-200"
+                        ? "text-green-700 bg-green-50 border-green-200"
                         : "text-red-500 bg-red-50 border-red-200"
                     )}>
                       {config.is_active ? "Active" : "Inactive"}
@@ -215,7 +215,7 @@ export default function QuizCategoriesClient({
                 {selected && (
                   <div className="flex items-center gap-1.5 mt-1">
                     <Hash className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-widest tabular-nums">
+                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-wide tabular-nums">
                       ID: {selected.id}
                     </span>
                   </div>
@@ -353,7 +353,7 @@ export default function QuizCategoriesClient({
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-widest text-[10px] bg-white hover:bg-red-50 hover:border-red-200"
+                  className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-wide text-[10px] bg-white hover:bg-red-50 hover:border-red-200"
                 >
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                   Delete
@@ -378,7 +378,7 @@ export default function QuizCategoriesClient({
                     else setIsEditing(false);
                   }}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-widest text-[10px] bg-white"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white"
                 >
                   Cancel
                 </Button>
@@ -414,7 +414,7 @@ function FormRow({
   return (
     <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
       <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
-        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">
           {label}
         </span>
         {required && <span className="text-red-500 text-[10px] font-black">*</span>}
@@ -428,7 +428,7 @@ function DetailCell({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-b border-[#E6DFC8] last:border-0">
       <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
-        <span className="text-[10px] font-black uppercase tracking-widest whitespace-nowrap">
+        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">
           {label}
         </span>
       </div>

@@ -60,7 +60,9 @@
       "Bash(curl -s -b /dev/null http://localhost:3000/login)",
       "Bash(source .env.local)",
       "Read(//c/Users/tamly/.claude/**)",
-      "Edit(~/.claude/skills/admin-theme-fix/**)"
+      "Edit(~/.claude/skills/admin-theme-fix/**)",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(rm -f c:/RN/bar-app/.next/lock)"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills"

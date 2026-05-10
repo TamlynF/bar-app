@@ -82,37 +82,37 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
         <div className="px-5 pb-5 pt-1 border-t border-[#E6DFC8] space-y-4">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">Phone</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Phone</p>
               <p className="text-[#1F1F1A] font-medium">{request.phone_no || "—"}</p>
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">Guests</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Guests</p>
               <p className="text-[#1F1F1A] font-medium">{request.guest_count}</p>
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">Date</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Date</p>
               <p className="text-[#1F1F1A] font-medium">{request.preferred_date || "—"}</p>
             </div>
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">Time</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Time</p>
               <p className="text-[#1F1F1A] font-medium">{request.preferred_time || "—"}</p>
             </div>
           </div>
 
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">Reason for Hire</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Reason for Hire</p>
             <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] rounded-xl px-4 py-3">{request.reason || request.reason_for_hire}</p>
           </div>
 
           {request.additional_requirements && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">Additional Requirements</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Additional Requirements</p>
               <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] rounded-xl px-4 py-3">{request.additional_requirements}</p>
             </div>
           )}
 
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">Submitted</p>
+            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Submitted</p>
             <p className="text-sm text-[#1F1F1A]">{new Date(request.created_at).toLocaleDateString("en-GB", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
           </div>
 
@@ -120,7 +120,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           {request.status === "pending_review" && (
             <div className="space-y-3 pt-2 border-t border-[#E6DFC8]">
               <div>
-                <label className="block text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1.5">
+                <label className="block text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1.5">
                   Note to Enquirer (optional)
                 </label>
                 <textarea
@@ -157,7 +157,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
 
           {request.status !== "pending_review" && request.admin_notes && (
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-1">Admin Notes</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Admin Notes</p>
               <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] rounded-xl px-4 py-3">{request.admin_notes}</p>
             </div>
           )}

@@ -259,7 +259,7 @@ function QuizEventCard({
       href={`/dashboard?date=${event.date}`} 
       className={cn(
         "group block bg-white border border-[#E6DFC8] rounded-2xl p-4 sm:p-5 shadow-sm transition-all active:scale-[0.99]",
-        isHistoric ? "hover:border-slate-400" : "hover:border-[#26300D] hover:shadow-md"
+        isHistoric ? "hover:border-[#E6DFC8]" : "hover:border-[#26300D] hover:shadow-md"
       )}
     >
       <div className="flex justify-between items-start mb-4">
@@ -417,7 +417,7 @@ function StatusBadge({ occupancy, isHistoric }: { occupancy: number, isHistoric:
   return (
     <div className={cn(
       "px-2 sm:px-3 py-1 rounded-full text-[10px] sm:text-[9px] font-black uppercase tracking-wide border shrink-0",
-      isFull ? "bg-red-50 text-red-600 border-red-200" : "bg-emerald-50 text-emerald-600 border-emerald-200"
+      isFull ? "bg-red-50 text-red-600 border-red-200" : "bg-green-50 text-green-600 border-green-200"
     )}>
       {isFull ? "Full" : "Open"}
     </div>
