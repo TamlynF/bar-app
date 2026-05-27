@@ -708,7 +708,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y space-y-4 sm:space-y-5">
-            <form id="type-form" className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
+            <form id="type-form" onSubmit={(e) => e.preventDefault()} className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
               {editingType?.id && <input type="hidden" name="id" value={editingType.id} />}
 
               {/* ===== CATEGORY SECTION ===== */}
@@ -1002,7 +1002,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y space-y-4 sm:space-y-5">
-            <form id="info-form" className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
+            <form id="info-form" onSubmit={(e) => e.preventDefault()} className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
               {editingInfo && <input type="hidden" name="id" value={editingInfo.id} />}
               <input type="hidden" name="event_types_id" value={activeTypeId || ""} />
               <input type="hidden" name="icon" value={selectedIcon} />
