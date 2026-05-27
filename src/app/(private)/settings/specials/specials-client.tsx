@@ -502,9 +502,12 @@ export default function SpecialsClient({
                   Cancel
                 </Button>
                 <Button
-                  type="submit"
-                  form="special-form"
+                  type="button"
                   disabled={isPending}
+                  onClick={() => {
+                    const form = document.getElementById('special-form') as HTMLFormElement | null;
+                    if (form) form.requestSubmit();
+                  }}
                   className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending ? (
