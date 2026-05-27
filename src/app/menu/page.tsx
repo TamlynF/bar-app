@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
+import PrintButton from "./print-button";
 
 export const metadata = {
   title: "Menu | Don Fenticas",
@@ -52,19 +53,31 @@ export default async function MenuPage() {
     <main className="min-h-dvh w-full bg-[#26300D] text-white selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
       <style
         dangerouslySetInnerHTML={{
-          __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }`,
+          __html: `
+            html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }
+            @media print {
+              html, body { background-color: #26300D !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+              .no-print { display: none !important; }
+              .print-grid { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+              main { font-size: 10px; }
+              .print-tight { padding: 8px 16px !important; margin: 0 auto !important; max-width: 100% !important; }
+            }
+          `,
         }}
       />
 
-      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-12">
-        {/* Back */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-stone-500 text-xs font-bold uppercase tracking-wide hover:text-stone-300 transition-colors mb-6"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Home
-        </Link>
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-12 print-tight">
+        {/* Back + Print */}
+        <div className="flex items-center justify-between mb-6 no-print">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 text-stone-500 text-xs font-bold uppercase tracking-wide hover:text-stone-300 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Home
+          </Link>
+          <PrintButton />
+        </div>
 
         {/* Logo */}
         <div className="text-center mb-8 sm:mb-10">
@@ -89,7 +102,7 @@ export default async function MenuPage() {
         </div>
 
         {/* Menu grid — 2 columns on desktop, single on mobile */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 print-grid">
           <div className="space-y-4 sm:space-y-5">
             {col1.map((cat) => (
               <CategorySection key={cat.id} category={cat} />
@@ -103,7 +116,7 @@ export default async function MenuPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-12 sm:mt-16 text-center space-y-2">
+        <div className="mt-12 sm:mt-16 text-center space-y-2 no-print">
           <p className="text-stone-600 text-[10px] font-bold uppercase tracking-wide">
             Menu items subject to availability &middot; Prices may vary
           </p>
