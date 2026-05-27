@@ -14,6 +14,7 @@ export async function saveEventTypeAction(formData: FormData) {
   const badge_color = formData.get("badge_color")?.toString() || null;
   const information = formData.get("information")?.toString() || null;
   const default_title = formData.get("default_title")?.toString() || null;
+  const type_color = formData.get("type_color")?.toString() || null;
 
   if (!type || !sub_type) {
     return { error: "Primary type and Sub-type are required." };
@@ -23,14 +24,14 @@ export async function saveEventTypeAction(formData: FormData) {
     if (id) {
       const { error } = await supabase
         .from("event_types")
-        .update({ type, sub_type, badge_color, information, default_title })
+        .update({ type, sub_type, badge_color, information, default_title, type_color })
         .eq("id", id);
 
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from("event_types")
-        .insert({ type, sub_type, badge_color, information, default_title });
+        .insert({ type, sub_type, badge_color, information, default_title, type_color });
         
       if (error) throw error;
     }

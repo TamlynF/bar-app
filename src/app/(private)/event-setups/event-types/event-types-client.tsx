@@ -87,6 +87,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [subTypeInput, setSubTypeInput] = useState("");
   const [selectedTypeColor, setSelectedTypeColor] = useState<string | null>(null);
   const [defaultTitleInput, setDefaultTitleInput] = useState("");
+  const [infoTitleInput, setInfoTitleInput] = useState("");
 
   const { groupedEventTypes, uniqueTypes } = useMemo(() => {
     const groups: Record<string, EventTypeRecord[]> = {};
@@ -109,19 +110,40 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     };
   }, [initialEventTypes]);
 
+  // --- Category name duplicate ---
+  const categoryNameError = useMemo(() => {
+    const name = typeInput.trim().toLowerCase();
+    if (!name) return null;
+
+    const isNewCategory = (sheetMode === 'type' && !editingType?.type) ||
+                           (sheetMode === 'subtype' && isCustomType);
+
+    if (isNewCategory && uniqueTypes.some(t => t.toLowerCase() === name)) {
+      return `Category "${toTitleCase(typeInput)}" already exists.`;
+    }
+
+    if (sheetMode === 'type' && editingType?.type) {
+      const oldName = editingType.type.toLowerCase();
+      if (oldName !== name && uniqueTypes.some(t => t.toLowerCase() === name)) {
+        return `Category "${toTitleCase(typeInput)}" already exists.`;
+      }
+    }
+
+    return null;
+  }, [sheetMode, typeInput, editingType, uniqueTypes, isCustomType]);
+
+  // --- Sub-type name duplicate ---
   const subTypeConflictError = useMemo(() => {
     if (!typeInput) return null;
-
     const formattedType = typeInput.trim().toLowerCase();
+
     if (sheetMode === 'subtype' && subTypeInput) {
       const formattedSubType = subTypeInput.trim().toLowerCase();
-
       const isDuplicate = initialEventTypes.some(item =>
         item.type.toLowerCase() === formattedType &&
         item.sub_type.toLowerCase() === formattedSubType &&
         item.id !== editingType?.id
       );
-
       if (isDuplicate) {
         return `"${toTitleCase(subTypeInput)}" already exists in "${toTitleCase(typeInput)}".`;
       }
@@ -129,26 +151,67 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
     if (sheetMode === 'type' && editingType?.type) {
       const oldType = editingType.type.toLowerCase();
-
       if (oldType === formattedType) return null;
-
       const subTypesToMigrate = initialEventTypes
         .filter(item => item.type.toLowerCase() === oldType)
         .map(item => item.sub_type.toLowerCase());
-
       const existingSubTypesInTarget = initialEventTypes
         .filter(item => item.type.toLowerCase() === formattedType)
         .map(item => item.sub_type.toLowerCase());
-
       const conflicts = subTypesToMigrate.filter(sub => existingSubTypesInTarget.includes(sub));
-
       if (conflicts.length > 0) {
         const list = conflicts.map(s => `"${toTitleCase(s)}"`).join(", ");
-        return `Cannot merge into "${toTitleCase(typeInput)}" because these sub-types already exist there: ${list}.`;
+        return `Cannot merge into "${toTitleCase(typeInput)}" — these sub-types already exist there: ${list}.`;
       }
     }
     return null;
   }, [typeInput, subTypeInput, initialEventTypes, editingType, sheetMode]);
+
+  // --- Type colour duplicate (across categories) ---
+  const typeColorError = useMemo(() => {
+    if (sheetMode !== 'type' || !selectedTypeColor) return null;
+    const currentType = editingType?.type?.toLowerCase();
+    const conflict = initialEventTypes.find(item =>
+      item.type_color === selectedTypeColor &&
+      item.type.toLowerCase() !== currentType
+    );
+    if (conflict) {
+      return `This colour is already used by "${toTitleCase(conflict.type)}".`;
+    }
+    return null;
+  }, [sheetMode, selectedTypeColor, initialEventTypes, editingType]);
+
+  // --- Badge colour duplicate (across sub-categories) ---
+  const badgeColorError = useMemo(() => {
+    if (sheetMode === 'type' && editingType?.id) return null;
+    if (!selectedColor) return null;
+    const conflict = initialEventTypes.find(item =>
+      item.badge_color === selectedColor &&
+      item.id !== editingType?.id
+    );
+    if (conflict) {
+      return `This badge colour is already used by "${toTitleCase(conflict.sub_type)}" in "${toTitleCase(conflict.type)}".`;
+    }
+    return null;
+  }, [selectedColor, initialEventTypes, editingType, sheetMode]);
+
+  // --- Badge title duplicate (per sub-category) ---
+  const infoTitleError = useMemo(() => {
+    const title = infoTitleInput.trim().toLowerCase();
+    if (!title || !activeTypeId) return null;
+    const parentType = initialEventTypes.find(t => t.id === activeTypeId);
+    if (!parentType) return null;
+    const isDuplicate = parentType.event_information.some(info =>
+      info.title.toLowerCase() === title &&
+      info.id !== editingInfo?.id
+    );
+    if (isDuplicate) {
+      return `Badge "${toTitleCase(infoTitleInput)}" already exists for this sub-category.`;
+    }
+    return null;
+  }, [infoTitleInput, activeTypeId, initialEventTypes, editingInfo]);
+
+  const hasTypeSheetConflict = !!categoryNameError || !!subTypeConflictError || !!typeColorError || !!badgeColorError;
 
   const toggleGroup = (type: string) => {
     const next = new Set(expandedGroups);
@@ -175,13 +238,10 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       return;
     }
 
+    if (hasTypeSheetConflict) return;
+
     if (sheetMode === 'type' && editingType?.type) {
       const oldType = editingType.type.toLowerCase();
-
-      if (isCustomType && oldType !== formattedType && uniqueTypes.some(t => t.toLowerCase() === formattedType)) {
-        setTypeSheetError(`The type "${toTitleCase(formattedType)}" already exists.`);
-        return;
-      }
 
       startTransition(async () => {
         const result = await renameEventTypeGroupAction(oldType, formattedType, selectedTypeColor);
@@ -193,8 +253,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       });
       return;
     }
-
-    if (subTypeConflictError) return;
 
     formData.set("type", formattedType);
     formData.set("sub_type", formattedSubType);
@@ -518,6 +576,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                     setEditingInfo(null);
                                     setActiveTypeId(item.id);
                                     setSelectedIcon("");
+                                    setInfoTitleInput("");
                                     setIsInfoSheetOpen(true);
                                   }}>
                                     <Plus className="w-4 h-4 mr-3 text-[#26300D] stroke-[2.5]" /> Add Badge
@@ -617,6 +676,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                                 setEditingInfo(info);
                                                 setActiveTypeId(item.id);
                                                 setSelectedIcon(info.icon || "");
+                                                setInfoTitleInput(info.title);
                                                 setIsInfoSheetOpen(true);
                                               }}>
                                                 <Edit2 className="w-4 h-4 mr-3 text-[#26300D] stroke-[2.5]" /> Edit
@@ -641,6 +701,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                               setEditingInfo(info);
                                               setActiveTypeId(item.id);
                                               setSelectedIcon(info.icon || "");
+                                              setInfoTitleInput(info.title);
                                               setIsInfoSheetOpen(true);
                                             }}
                                           >
@@ -931,20 +992,17 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               )}
 
               {/* Validation / error messages */}
-              {subTypeConflictError && (
+              {(categoryNameError || subTypeConflictError || typeColorError || badgeColorError || typeSheetError) && (
                 <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                  <div>
+                  <div className="space-y-1">
                     <p className="text-[10px] font-black text-red-500 uppercase tracking-wide">Conflict</p>
-                    <p className="text-sm text-red-700 font-bold leading-snug">{subTypeConflictError}</p>
+                    {[categoryNameError, subTypeConflictError, typeColorError, badgeColorError, typeSheetError]
+                      .filter(Boolean)
+                      .map((msg, i) => (
+                        <p key={i} className="text-sm text-red-700 font-bold leading-snug">{msg}</p>
+                      ))}
                   </div>
-                </div>
-              )}
-
-              {typeSheetError && (
-                <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                  <p className="text-sm text-red-700 font-bold leading-snug">{typeSheetError}</p>
                 </div>
               )}
             </form>
@@ -966,7 +1024,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               </Button>
               <Button
                 type="button"
-                disabled={isPending || !!subTypeConflictError}
+                disabled={isPending || hasTypeSheetConflict}
                 onClick={() => {
                   const form = document.getElementById('type-form') as HTMLFormElement | null;
                   if (form) handleTypeSubmit(new FormData(form));
@@ -1022,7 +1080,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     name="title"
                     required
                     placeholder="e.g. Every Thursday"
-                    defaultValue={editingInfo?.title || ""}
+                    value={infoTitleInput}
+                    onChange={(e) => setInfoTitleInput(e.target.value)}
                     className="text-base sm:text-sm font-bold text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                   />
                 </div>
@@ -1065,6 +1124,16 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   </div>
                 </div>
               </div>
+
+              {infoTitleError && (
+                <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-wide">Conflict</p>
+                    <p className="text-sm text-red-700 font-bold leading-snug">{infoTitleError}</p>
+                  </div>
+                </div>
+              )}
             </form>
 
             <div className="h-4" />
@@ -1084,7 +1153,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               </Button>
               <Button
                 type="button"
-                disabled={isPending}
+                disabled={isPending || !!infoTitleError}
                 onClick={() => {
                   const form = document.getElementById('info-form') as HTMLFormElement | null;
                   if (form) handleInfoSubmit(new FormData(form));
