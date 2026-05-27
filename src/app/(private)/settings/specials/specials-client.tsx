@@ -437,6 +437,7 @@ export default function SpecialsClient({
 
                   <FormRow label="Order">
                     <input
+                      title="Order"
                       name="display_order"
                       type="number"
                       min="0"
