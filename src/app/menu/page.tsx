@@ -56,30 +56,66 @@ export default async function MenuPage() {
             html, body { background-color: #2a3612 !important; margin: 0; padding: 0; overflow-x: hidden; }
 
             @media print {
-              @page { size: A4; margin: 0; }
-              html, body, main {
-                background-color: #2a3612 !important;
+              @page { size: A4; margin: 0mm; }
+              *, *::before, *::after {
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
-                margin: 0 !important; padding: 0 !important;
               }
-              * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              html, body, main {
+                background: #2a3612 !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                width: 100% !important;
+              }
               .no-print { display: none !important; }
-              .menu-frame { margin: 0 !important; border-radius: 0 !important; min-height: 100vh !important; }
-              .menu-inner { padding: 8px 12px !important; }
-              .menu-logo img { width: 200px !important; }
-              .menu-subtitle { font-size: 7px !important; margin-top: 2px !important; }
-              .spirits-pill { font-size: 6.5px !important; padding: 2px 8px !important; margin-bottom: 6px !important; }
-              .menu-grid { gap: 3px 8px !important; }
-              .menu-col { gap: 3px !important; }
-              .cat-banner { padding: 1.5px 0 !important; }
-              .cat-banner h2 { font-size: 9px !important; }
-              .cat-items { padding: 1px 6px !important; }
-              .cat-note { font-size: 5.5px !important; padding: 0 0 1px !important; }
-              .menu-row { padding: 1px 0 !important; }
-              .menu-row-name { font-size: 7px !important; }
-              .menu-row-price { font-size: 6.5px !important; }
+
+              /* Frame */
+              .menu-frame {
+                margin: 0 !important;
+                border-radius: 0 !important;
+                border-width: 6px !important;
+                border-color: #3d4a22 !important;
+                min-height: 100vh !important;
+              }
+              .menu-inner {
+                border-width: 2px !important;
+                border-color: #B8962E !important;
+                padding: 10px 14px !important;
+              }
+
+              /* Header */
+              .menu-logo { margin-bottom: 3px !important; }
+              .menu-logo img { width: 180px !important; height: auto !important; }
+              .menu-subtitle { font-size: 6px !important; margin-top: 1px !important; letter-spacing: 0.2em !important; }
+              .spirits-pill { font-size: 6px !important; padding: 2px 8px !important; margin-bottom: 6px !important; }
+
+              /* FORCE two-column grid */
+              .menu-grid {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 3px 10px !important;
+              }
+              .menu-col {
+                display: flex !important;
+                flex-direction: column !important;
+                gap: 3px !important;
+              }
+
+              /* Category banners */
+              .cat-banner {
+                padding: 1px 0 !important;
+                border-top-width: 2px !important;
+                border-bottom-width: 2px !important;
+              }
+              .cat-banner h2 { font-size: 8px !important; line-height: 1.2 !important; }
+
+              /* Items */
+              .cat-items { padding: 0px 4px 1px !important; }
+              .cat-note { font-size: 5px !important; padding: 0 !important; margin: 0 !important; }
+              .menu-row { padding: 0.5px 0 !important; gap: 3px !important; }
+              .menu-row-name { font-size: 6.5px !important; line-height: 1.15 !important; }
+              .menu-row-price { font-size: 6px !important; line-height: 1.15 !important; }
             }
           `,
         }}
