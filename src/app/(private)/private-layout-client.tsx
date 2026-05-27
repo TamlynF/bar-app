@@ -34,7 +34,10 @@ import {
     Medal,
     UserCog,
     UserCog2,
-    Speaker
+    Speaker,
+    Building2,
+    UtensilsCrossed,
+    Image as ImageIcon
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
@@ -89,10 +92,14 @@ export default function PrivateLayoutClient({
         { label: "Private Events", href: "/event-bookings/private-bookings", icon: PartyPopper },
     ]
 
-    const settingsSubItems = [        
+    const settingsSubItems = [
+        { label: "Company Info", href: "/settings/company", icon: Building2 },
         { label: "Guests", href: "/settings/customers", icon: BookUser },
         { label: "Teams", href: "/settings/teams", icon: Medal },
         { label: "Floor Plan", href: "/settings/tables", icon: Grid2X2 },
+        { label: "Menu", href: "/settings/menu", icon: UtensilsCrossed },
+        { label: "Specials", href: "/settings/specials", icon: Sparkles },
+        { label: "Promo Content", href: "/settings/promo-content", icon: ImageIcon },
         { label: "System Users", href: "/settings/users", icon: UserCog2 },
     ]
 
