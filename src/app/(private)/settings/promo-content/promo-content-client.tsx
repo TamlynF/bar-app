@@ -93,7 +93,9 @@ export default function PromoContentClient({
     setMediaType("image");
   };
 
-  const handleSubmit = (formData: FormData) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setFormError(null);
     formData.set("media_url", mediaUrl);
     formData.set("media_type", mediaType);
@@ -357,7 +359,7 @@ export default function PromoContentClient({
             {showForm && (
               <form
                 id="promo-form"
-                action={handleSubmit}
+                onSubmit={handleSubmit}
                 className="animate-in fade-in duration-200 space-y-4 sm:space-y-5"
               >
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}

@@ -81,7 +81,9 @@ export default function SpecialsClient({
     setFormError(null);
   };
 
-  const handleSubmit = (formData: FormData) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
     setFormError(null);
     startTransition(async () => {
       const result = await saveSpecialAction(formData);
@@ -340,7 +342,7 @@ export default function SpecialsClient({
             {showForm && (
               <form
                 id="special-form"
-                action={handleSubmit}
+                onSubmit={handleSubmit}
                 className="animate-in fade-in duration-200 space-y-4 sm:space-y-5"
               >
                 {formDefault && (
