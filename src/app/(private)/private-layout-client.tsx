@@ -37,7 +37,8 @@ import {
     Speaker,
     Building2,
     UtensilsCrossed,
-    Image as ImageIcon
+    Image as ImageIcon,
+    Camera
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
@@ -109,6 +110,7 @@ export default function PrivateLayoutClient({
         { label: "Menu", href: "/settings/menu", icon: UtensilsCrossed },
         { label: "Specials", href: "/settings/specials", icon: Sparkles },
         { label: "Promo Content", href: "/settings/promo-content", icon: ImageIcon },
+        { label: "Gallery", href: "/settings/gallery", icon: Camera },
         { label: "System Users", href: "/settings/users", icon: UserCog2 },
     ]
 

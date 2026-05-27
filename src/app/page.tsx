@@ -113,7 +113,7 @@ export default async function HomePage() {
               Book Now
             </Link>
             <NavLink href="/menu">Menu</NavLink>
-            <NavLink href="/#gallery">Gallery</NavLink>
+            <NavLink href="/gallery">Gallery</NavLink>
             <NavLink href="/contact">Contact Us</NavLink>
             {/* Staff Login: text on desktop, user icon on mobile */}
             <Link
@@ -358,11 +358,19 @@ export default async function HomePage() {
       {promos && promos.length > 0 && (
         <section id="gallery" className="px-4 py-14 sm:py-20">
           <div className="max-w-3xl mx-auto">
-            <SectionHeader
-              title="Gallery"
-              subtitle="Latest from our socials"
-              color="yellow"
-            />
+            <div className="flex items-end justify-between">
+              <SectionHeader
+                title="Gallery"
+                subtitle="Latest from our socials"
+                color="yellow"
+              />
+              <Link
+                href="/gallery"
+                className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B] hover:text-white transition-colors mb-1 shrink-0"
+              >
+                View All →
+              </Link>
+            </div>
 
             <div className="flex gap-3 sm:gap-4 overflow-x-auto snap-x snap-mandatory pb-4 mt-8 -mx-4 px-4 scrollbar-hide">
               {promos.map((raw) => {

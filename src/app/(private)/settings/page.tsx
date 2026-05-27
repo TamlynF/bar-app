@@ -19,6 +19,7 @@ import {
   Sparkles,
   UtensilsCrossed,
   ImageIcon,
+  Camera,
 } from "lucide-react";
 
 const settingsItems = [
@@ -70,6 +71,13 @@ const settingsItems = [
     href: "/settings/promo-content",
     icon: ImageIcon,
     color: "bg-pink-50 text-pink-600",
+  },
+  {
+    title: "Gallery",
+    description: "Upload and manage gallery photos",
+    href: "/settings/gallery",
+    icon: Camera,
+    color: "bg-sky-50 text-sky-600",
   },
   {
     title: "System Users",
