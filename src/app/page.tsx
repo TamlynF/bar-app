@@ -118,7 +118,7 @@ export default async function HomePage() {
             {/* Staff Login: text on desktop, user icon on mobile */}
             <Link
               href="/login"
-              className="text-[10px] sm:text-xs font-bold uppercase tracking-wide px-2 sm:px-3 py-1.5 rounded-full text-stone-400 hover:text-white hover:bg-white/5 transition-colors"
+              className="inline-flex items-center text-[10px] sm:text-xs font-bold uppercase tracking-wide px-2 sm:px-3 py-1.5 rounded-full text-stone-400 hover:text-white hover:bg-white/5 transition-colors"
             >
               <span className="hidden sm:inline">Staff Login</span>
               <User className="w-3.5 h-3.5 sm:hidden" />

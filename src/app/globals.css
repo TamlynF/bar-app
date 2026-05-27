@@ -1,6 +1,7 @@
 /*! tailwindcss v4.2.1 | MIT License | https://tailwindcss.com */
 @layer properties;
 @layer theme, base, components, utilities;
+@source "../app/*.{ts,tsx}";
 @source "../app/(public)/**/*.{ts,tsx}";
 @source "../app/(private)/**/*.{ts,tsx}";
 @source "../app/login/**/*.{ts,tsx}";
