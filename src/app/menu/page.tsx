@@ -1,66 +1,53 @@
+import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { ArrowLeft, Beer, Wine, Coffee, UtensilsCrossed } from "lucide-react";
+import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
 
 export const metadata = {
   title: "Menu | Don Fenticas",
-  description: "Explore the Don Fenticas menu — drinks, bites, and more.",
+  description: "Explore the Don Fenticas menu — draught, cocktails, spirits, wine, and snacks.",
 };
 
-const menuSections = [
-  {
-    title: "Draught",
-    icon: Beer,
-    items: [
-      { name: "House Lager", detail: "Pint / Half" },
-      { name: "Craft IPA", detail: "Pint / Half" },
-      { name: "Stout", detail: "Pint / Half" },
-      { name: "Cider", detail: "Pint / Half" },
-    ],
-  },
-  {
-    title: "Spirits & Cocktails",
-    icon: Wine,
-    items: [
-      { name: "House Spirit & Mixer", detail: "Single / Double" },
-      { name: "Premium Spirit & Mixer", detail: "Single / Double" },
-      { name: "Espresso Martini", detail: "" },
-      { name: "Aperol Spritz", detail: "" },
-      { name: "Margarita", detail: "" },
-    ],
-  },
-  {
-    title: "Wine",
-    icon: Wine,
-    items: [
-      { name: "House Red", detail: "Glass / Bottle" },
-      { name: "House White", detail: "Glass / Bottle" },
-      { name: "Prosecco", detail: "Glass / Bottle" },
-      { name: "Rose", detail: "Glass / Bottle" },
-    ],
-  },
-  {
-    title: "Soft Drinks",
-    icon: Coffee,
-    items: [
-      { name: "Soft Drinks & Mixers", detail: "" },
-      { name: "Fresh Juice", detail: "" },
-      { name: "Coffee", detail: "" },
-      { name: "Tea", detail: "" },
-    ],
-  },
-  {
-    title: "Bites",
-    icon: UtensilsCrossed,
-    items: [
-      { name: "Loaded Nachos", detail: "" },
-      { name: "Chicken Wings", detail: "" },
-      { name: "Halloumi Fries", detail: "" },
-      { name: "Cheese Board", detail: "" },
-    ],
-  },
-];
+export const revalidate = 300;
 
-export default function MenuPage() {
+type MenuItem = {
+  id: number;
+  name: string;
+  price: string;
+  display_order: number;
+  is_active: boolean;
+};
+
+type MenuCategory = {
+  id: number;
+  name: string;
+  note: string | null;
+  display_order: number;
+  is_active: boolean;
+  menu_items: MenuItem[];
+};
+
+export default async function MenuPage() {
+  const supabase = await createClient();
+
+  const { data: categories } = await supabase
+    .from("menu_categories")
+    .select("*, menu_items(*)")
+    .eq("is_active", true)
+    .order("display_order", { ascending: true });
+
+  const sorted = ((categories as MenuCategory[]) || []).map((cat) => ({
+    ...cat,
+    menu_items: cat.menu_items
+      .filter((i) => i.is_active)
+      .sort((a, b) => a.display_order - b.display_order),
+  }));
+
+  // Split into two columns for desktop (like the real menu)
+  const mid = Math.ceil(sorted.length / 2);
+  const col1 = sorted.slice(0, mid);
+  const col2 = sorted.slice(mid);
+
   return (
     <main className="min-h-dvh w-full bg-[#26300D] text-white selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
       <style
@@ -69,71 +56,58 @@ export default function MenuPage() {
         }}
       />
 
-      <div className="max-w-xl mx-auto px-4 py-8 sm:py-16">
+      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-12">
         {/* Back */}
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-stone-500 text-xs font-bold uppercase tracking-wide hover:text-stone-300 transition-colors mb-8"
+          className="inline-flex items-center gap-1.5 text-stone-500 text-xs font-bold uppercase tracking-wide hover:text-stone-300 transition-colors mb-6"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Home
+          Home
         </Link>
 
-        {/* Header */}
-        <div className="mb-10">
-          <h1 className="text-white font-black text-2xl sm:text-3xl uppercase tracking-tight">
-            Our Menu
-          </h1>
-          <p className="text-stone-400 text-sm mt-2">
-            A selection of what we have on offer. Ask at the bar for the full range.
+        {/* Logo */}
+        <div className="text-center mb-8 sm:mb-10">
+          <Image
+            src="/CompanyName.png"
+            alt="Don Fenticas"
+            width={300}
+            height={80}
+            className="w-[200px] sm:w-[260px] mx-auto h-auto object-contain"
+            priority
+          />
+          <p className="text-[#FDCC4B]/50 text-[10px] font-bold uppercase tracking-[0.3em] mt-3">
+            Drinks &amp; Snacks Menu
           </p>
-          <div className="inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mt-4">
-            <span className="text-[9px] font-black uppercase tracking-widest text-[#FDCC4B]">
-              Prices available at the bar
-            </span>
+        </div>
+
+        {/* Spirits note */}
+        <div className="text-center mb-6">
+          <span className="inline-block bg-[#FDCC4B] text-[#26300D] text-[10px] sm:text-[11px] font-black uppercase tracking-wide px-4 py-1.5 rounded-full">
+            Spirits — + £1.45 for mixers, + £1.95 for tonic
+          </span>
+        </div>
+
+        {/* Menu grid — 2 columns on desktop, single on mobile */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
+          <div className="space-y-4 sm:space-y-5">
+            {col1.map((cat) => (
+              <CategorySection key={cat.id} category={cat} />
+            ))}
+          </div>
+          <div className="space-y-4 sm:space-y-5">
+            {col2.map((cat) => (
+              <CategorySection key={cat.id} category={cat} />
+            ))}
           </div>
         </div>
 
-        {/* Menu Sections */}
-        <div className="space-y-6">
-          {menuSections.map((section) => (
-            <div
-              key={section.title}
-              className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden"
-            >
-              <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5">
-                <div className="shrink-0 w-9 h-9 rounded-xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">
-                  <section.icon className="w-4 h-4 text-[#FDCC4B]" />
-                </div>
-                <h2 className="text-white font-black text-sm uppercase tracking-tight">
-                  {section.title}
-                </h2>
-              </div>
-              <div className="divide-y divide-white/5">
-                {section.items.map((item) => (
-                  <div
-                    key={item.name}
-                    className="px-5 py-3 flex items-center justify-between"
-                  >
-                    <span className="text-white text-sm font-bold">{item.name}</span>
-                    {item.detail && (
-                      <span className="text-stone-500 text-[11px] font-bold uppercase tracking-wide shrink-0 ml-4">
-                        {item.detail}
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
         {/* Footer */}
-        <div className="mt-16 text-center">
-          <p className="text-stone-600 text-[10px] font-bold uppercase tracking-wide mb-6">
-            Menu items are subject to availability
+        <div className="mt-12 sm:mt-16 text-center space-y-2">
+          <p className="text-stone-600 text-[10px] font-bold uppercase tracking-wide">
+            Menu items subject to availability &middot; Prices may vary
           </p>
-          <div className="flex items-center justify-center gap-3 text-stone-800">
+          <div className="flex items-center justify-center gap-3 text-stone-800 pt-2">
             <div className="h-px w-6 bg-stone-800/50" />
             <span className="text-[9px] font-bold uppercase tracking-[0.4em]">
               Don Fenticas
@@ -143,5 +117,42 @@ export default function MenuPage() {
         </div>
       </div>
     </main>
+  );
+}
+
+function CategorySection({ category }: { category: MenuCategory }) {
+  if (category.menu_items.length === 0) return null;
+
+  return (
+    <div className="overflow-hidden">
+      {/* Category header — styled like the real menu's yellow banner */}
+      <div className="bg-[#FDCC4B] rounded-t-lg px-4 py-1.5 flex items-center justify-center">
+        <h2 className="text-[#26300D] font-black text-sm sm:text-base uppercase tracking-tight text-center">
+          {category.name}
+        </h2>
+      </div>
+
+      {/* Items */}
+      <div className="bg-[#26300D] border border-[#FDCC4B]/20 border-t-0 rounded-b-lg px-4 py-2">
+        {category.note && (
+          <p className="text-[#FDCC4B]/60 text-[9px] font-bold uppercase tracking-wide text-center py-1 mb-1">
+            {category.note}
+          </p>
+        )}
+        {category.menu_items.map((item) => (
+          <div
+            key={item.id}
+            className="flex items-baseline justify-between py-1.5 gap-2"
+          >
+            <span className="text-white text-xs sm:text-sm font-medium flex-1 min-w-0">
+              {item.name}
+            </span>
+            <span className="text-[#FDCC4B] text-[11px] sm:text-xs font-bold shrink-0 text-right">
+              {item.price}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }

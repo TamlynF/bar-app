@@ -17,7 +17,8 @@ import {
   Medal,
   UserCog2,
   Building2,
-  Sparkles
+  Sparkles,
+  UtensilsCrossed
 } from "lucide-react";
 
 const settingsItems = [
@@ -48,6 +49,13 @@ const settingsItems = [
     href: "/settings/tables",
     icon: Grid2X2,
     color: "bg-blue-50 text-blue-600",
+  },
+  {
+    title: "Menu",
+    description: "Categories, items, and prices",
+    href: "/settings/menu",
+    icon: UtensilsCrossed,
+    color: "bg-purple-50 text-purple-600",
   },
   {
     title: "Specials",
