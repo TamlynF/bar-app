@@ -32,7 +32,7 @@ import {
 } from "@/app/(private)/event-setups/event-types/actions";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { EVENT_TYPE_COLORS, badgeClassFromColor } from "@/lib/event-type-colors";
+import { EVENT_TYPE_COLORS, badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
 
 const ICON_OPTIONS = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
@@ -449,7 +449,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             const groupTypeColor = items[0]?.type_color ?? null;
 
             return (
-              <section key={typeKey} className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
+              <section
+                key={typeKey}
+                className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden border-l-4"
+                style={{ borderLeftColor: swatchHexFromColor(groupTypeColor) ?? "#E6DFC8" }}
+              >
                 {/* Category Header */}
                 <div className="flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3 gap-2">
                   <button
@@ -457,15 +461,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     onClick={() => toggleGroup(typeKey)}
                     className="flex-1 min-w-0 text-left flex items-center gap-2"
                   >
-                    {groupTypeColor && (
-                      <span className={cn(
-                        "w-2.5 h-2.5 rounded-full shrink-0",
-                        EVENT_TYPE_COLORS.find(c => c.key === groupTypeColor)?.swatchClass ?? "bg-[#E6DFC8]"
-                      )} />
-                    )}
-                    <p className="text-xs font-bold uppercase tracking-wide text-[#26300D] truncate">
+                    <span className={cn(
+                      "text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-md border shrink-0",
+                      badgeClassFromColor(groupTypeColor)
+                    )}>
                       {toTitleCase(typeKey)}
-                    </p>
+                    </span>
                     <span className="text-[10px] font-black text-[#5F624F] shrink-0">
                       ({items.length})
                     </span>
@@ -551,12 +552,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                               className="flex-1 min-w-0 text-left flex items-center gap-2"
                             >
                               <span className={cn(
-                                "w-2.5 h-2.5 rounded-full shrink-0",
-                                item.badge_color
-                                  ? EVENT_TYPE_COLORS.find(c => c.key === item.badge_color)?.swatchClass ?? "bg-[#E6DFC8]"
-                                  : "bg-[#E6DFC8]"
-                              )} />
-                              <span className="text-sm font-bold text-[#1F1F1A] truncate">
+                                "text-[11px] font-bold px-2 py-0.5 rounded-md border shrink-0 truncate max-w-[140px] sm:max-w-[200px]",
+                                badgeClassFromColor(item.badge_color)
+                              )}>
                                 {toTitleCase(item.sub_type)}
                               </span>
                               <span className="text-[10px] text-[#5F624F] shrink-0">

@@ -23,9 +23,21 @@ export const EVENT_TYPE_COLORS = [
 
 export type ColorKey = typeof EVENT_TYPE_COLORS[number]["key"];
 
+const SWATCH_HEX: Record<string, string> = {
+  amber: "#FCD34D", green: "#6EE7B7", purple: "#C4B5FD", blue: "#93C5FD",
+  rose: "#FDA4AF", sky: "#7DD3FC", orange: "#FDBA74", teal: "#5EEAD4",
+  indigo: "#A5B4FC", pink: "#F9A8D4", red: "#F87171", yellow: "#FACC15",
+  emerald: "#34D399", lime: "#A3E635", cyan: "#22D3EE", violet: "#8B5CF6",
+  fuchsia: "#D946EF", slate: "#94A3B8", zinc: "#A1A1AA", stone: "#A8A29E",
+};
+
 export const FALLBACK_BADGE = "bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]";
 
 export function badgeClassFromColor(color: string | null | undefined): string {
   const found = EVENT_TYPE_COLORS.find(c => c.key === color);
   return found ? found.badge : FALLBACK_BADGE;
+}
+
+export function swatchHexFromColor(color: string | null | undefined): string | undefined {
+  return color ? SWATCH_HEX[color] : undefined;
 }
