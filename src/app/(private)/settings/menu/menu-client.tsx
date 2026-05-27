@@ -13,6 +13,8 @@ import {
   AlertCircle,
   UtensilsCrossed,
   GripVertical,
+  Printer,
+  Download,
 } from "lucide-react";
 import {
   saveCategoryAction,
@@ -114,9 +116,9 @@ export default function MenuClient({
 
   return (
     <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl">
-      {/* Header + Add Category */}
-      <div className="flex items-center justify-between">
-        <div>
+      {/* Header + Actions */}
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
           <h3 className="text-base font-black text-[#1F1F1A] uppercase tracking-tight">
             Menu
           </h3>
@@ -129,16 +131,34 @@ export default function MenuClient({
             items
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() =>
-            setSheet({ type: "edit-category", category: null })
-          }
-          className="h-7 px-2.5 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          Category
-        </button>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => window.open("/menu", "_blank")}
+            title="Print menu"
+            className="w-7 h-7 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F7F4EA] transition-colors flex items-center justify-center"
+          >
+            <Printer className="w-3.5 h-3.5 text-[#5F624F]" />
+          </button>
+          <button
+            type="button"
+            onClick={() => window.open("/menu", "_blank")}
+            title="Save menu as PDF (print from the menu page)"
+            className="w-7 h-7 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F7F4EA] transition-colors flex items-center justify-center"
+          >
+            <Download className="w-3.5 h-3.5 text-[#5F624F]" />
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setSheet({ type: "edit-category", category: null })
+            }
+            className="h-7 px-2.5 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            Category
+          </button>
+        </div>
       </div>
 
       {/* Categories */}
