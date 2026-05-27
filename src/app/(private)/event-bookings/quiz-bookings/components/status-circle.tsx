@@ -33,7 +33,7 @@ export default function StatusCircle({
             {teamCount}
           </span>
           <span className={cn(
-            "hidden sm:block text-[8px] font-bold uppercase tracking-tight opacity-70",
+            "hidden sm:block text-[9px] font-bold uppercase tracking-tight opacity-70",
             isActive ? "text-white" : theme.text
           )}>
             teams
@@ -44,7 +44,7 @@ export default function StatusCircle({
         <span className={cn("text-[10px] sm:text-[11px] font-black uppercase tracking-tight", isActive ? theme.text : "text-[#5F624F]")}>
           {label}
         </span>
-        <span className="text-[8px] sm:text-[10px] font-bold text-[#5F624F]/50 uppercase mt-0.5">
+        <span className="text-[9px] sm:text-[10px] font-bold text-[#5F624F] uppercase mt-0.5">
           {guestCount} Guests
         </span>
       </div>

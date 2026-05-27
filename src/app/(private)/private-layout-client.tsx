@@ -179,7 +179,7 @@ export default function PrivateLayoutClient({
                     </div>
                     <div className="flex flex-col min-w-0">
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A] truncate">{displayName}</span>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A]/50">{employeeRole}</span>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F]">{employeeRole}</span>
                     </div>
                 </div>
 
@@ -324,7 +324,7 @@ export default function PrivateLayoutClient({
                         <LogOut className="w-4 h-4" />
                         {isPending ? "Signing out…" : "Sign Out"}
                     </button>
-                    <p className="text-[8px] text-[#5F624F] font-bold uppercase tracking-widest opacity-40 px-4">
+                    <p className="text-[9px] text-[#5F624F]/70 font-bold uppercase tracking-widest px-4">
                         v0.1.0 Alpha
                     </p>
                 </div>

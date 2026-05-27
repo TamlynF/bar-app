@@ -10,7 +10,6 @@ import {
   ChevronRight,
   BrainCircuit,
   Grid2X2,
-  CalendarCogIcon,
   Component,
   Dices,
   BookUser,
