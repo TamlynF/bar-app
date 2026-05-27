@@ -1,0 +1,343 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { createEventBooking } from "@/app/(public)/_actions/create-event-booking";
+import {
+  CheckCircle,
+  ChevronRight,
+  User,
+  Mail,
+  Phone,
+  Users,
+  Tag,
+  Loader2,
+  MessageSquareQuote,
+  AlertCircle,
+  Flag,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { COUNTRY_CODES } from "@/lib/country-codes";
+
+interface EventData {
+  id: number;
+  date: string;
+  title: string;
+  payment_amount: number | null;
+  is_fully_booked: boolean;
+  seating_required: boolean;
+}
+
+interface Props {
+  event: EventData;
+  config: Record<string, unknown>;
+}
+
+function formatEventDate(dateStr: string) {
+  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+export default function EventBookingForm({ event, config }: Props) {
+  const [isPending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [booked, setBooked] = useState(false);
+
+  const collectGroupName = !!config.collect_group_name;
+  const groupNameLabel = (config.group_name_label as string) || "Group Name";
+  const collectPhone = config.collect_phone !== false;
+  const collectGroupSize = config.collect_group_size !== false;
+  const collectSpecialRequests = config.collect_special_requests !== false;
+  const maxGroupSize = (config.max_group_size as number) || 10;
+  const groupSizeOptions = (config.group_size_options as number[]) || Array.from({ length: maxGroupSize }, (_, i) => i + 1);
+  const ctaText = (config.custom_cta_text as string) || "Confirm Booking";
+  const confirmationMessage = (config.confirmation_message as string) || "A confirmation email is on its way.";
+
+  const hasPricing = !!event.payment_amount && event.payment_amount > 0;
+  const pricePerPerson = hasPricing ? event.payment_amount! : 0;
+
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    countryCode: "+44",
+    phoneNo: "",
+    groupName: "",
+    groupSize: "1",
+    specialRequests: "",
+  });
+
+  const total = pricePerPerson * parseInt(formData.groupSize || "1");
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setError(null);
+    const fd = new FormData(e.currentTarget);
+    startTransition(async () => {
+      const result = await createEventBooking(fd);
+      if (result.error) {
+        setError(result.error);
+      } else if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else if (result.success) {
+        setBooked(true);
+      }
+    });
+  };
+
+  if (booked) {
+    return (
+      <div className="text-center py-4 animate-in fade-in zoom-in duration-300">
+        <div className="flex justify-center mb-6">
+          <div className="p-4 rounded-full bg-emerald-500/20">
+            <CheckCircle className="w-10 h-10 text-emerald-500" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">
+          You&apos;re Booked!
+        </h2>
+        <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
+          {confirmationMessage}
+        </p>
+        <p className="text-stone-500 text-xs mb-6">
+          <span className="font-black text-white">{event.title}</span> — {formatEventDate(event.date)}
+        </p>
+        <Button
+          onClick={() => {
+            setBooked(false);
+            setFormData({ fullName: "", email: "", countryCode: "+44", phoneNo: "", groupName: "", groupSize: "1", specialRequests: "" });
+          }}
+          className="w-full bg-white text-[#26300D] font-black h-14 rounded-2xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
+        >
+          Book Another Spot
+        </Button>
+      </div>
+    );
+  }
+
+  if (event.is_fully_booked) {
+    return (
+      <div className="text-center py-4 animate-in fade-in zoom-in duration-300">
+        <div className="flex justify-center mb-6">
+          <div className="p-4 rounded-full bg-red-500/20">
+            <AlertCircle className="w-10 h-10 text-red-500" />
+          </div>
+        </div>
+        <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Fully Booked</h2>
+        <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
+          Sorry, this event is fully booked. Please keep an eye on our Instagram for updates.
+        </p>
+      </div>
+    );
+  }
+
+  const inputBaseClasses = "w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white placeholder-stone-700 focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-300 text-sm font-bold";
+  const labelClasses = "block text-[10px] font-black text-stone-500 mb-2 uppercase tracking-[0.15em] ml-1";
+  const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
+  const iconClasses = "w-4 h-4 text-stone-600 transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
+      {/* Hidden fields */}
+      <input type="hidden" name="event_id" value={event.id} />
+      <input type="hidden" name="full_name" value={formData.fullName} />
+      <input type="hidden" name="group_name" value={collectGroupName ? (formData.groupName.trim() || formData.fullName) : formData.fullName} />
+      <input type="hidden" name="group_size" value={formData.groupSize} />
+      <input type="hidden" name="country_code" value={formData.countryCode} />
+      <input type="hidden" name="phone_no" value={formData.phoneNo} />
+      <input type="hidden" name="special_requests" value={formData.specialRequests} />
+
+      {/* Group Size */}
+      {collectGroupSize && (
+        <div className="space-y-1">
+          <label className={labelClasses}>
+            Number of People <span className="text-red-500">*</span>
+          </label>
+          <div className="relative group">
+            <div className={iconContainerClasses}>
+              <Users className={iconClasses} />
+            </div>
+            <select
+              title="Number of People"
+              name="groupSize"
+              required
+              value={formData.groupSize}
+              onChange={handleInputChange}
+              className={cn(inputBaseClasses, "appearance-none pr-10 cursor-pointer")}
+            >
+              {groupSizeOptions.map((n) => (
+                <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>
+              ))}
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 rotate-90 pointer-events-none" />
+          </div>
+        </div>
+      )}
+
+      {/* Name */}
+      <div className="space-y-1">
+        <label className={labelClasses}>
+          Your Name <span className="text-red-500">*</span>
+        </label>
+        <div className="relative group">
+          <div className={iconContainerClasses}>
+            <User className={iconClasses} />
+          </div>
+          <input
+            type="text"
+            name="fullName"
+            required
+            value={formData.fullName}
+            onChange={handleInputChange}
+            className={inputBaseClasses}
+            placeholder="e.g. Jane Smith"
+          />
+        </div>
+      </div>
+
+      {/* Group Name (optional per config) */}
+      {collectGroupName && (
+        <div className="space-y-1">
+          <label className={labelClasses}>{groupNameLabel}</label>
+          <div className="relative group">
+            <div className={iconContainerClasses}>
+              <Tag className={iconClasses} />
+            </div>
+            <input
+              type="text"
+              name="groupName"
+              value={formData.groupName}
+              onChange={handleInputChange}
+              className={inputBaseClasses}
+              placeholder={formData.fullName || "Defaults to your name"}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Email */}
+      <div className="space-y-1">
+        <label className={labelClasses}>
+          Email Address <span className="text-red-500">*</span>
+        </label>
+        <div className="relative group">
+          <div className={iconContainerClasses}>
+            <Mail className={iconClasses} />
+          </div>
+          <input
+            type="email"
+            name="email"
+            required
+            value={formData.email}
+            onChange={handleInputChange}
+            className={inputBaseClasses}
+            placeholder="e.g. jane@email.com"
+          />
+        </div>
+      </div>
+
+      {/* Phone (optional per config) */}
+      {collectPhone && (
+        <div className="space-y-1">
+          <label className={labelClasses}>Phone Number</label>
+          <div className="flex gap-2">
+            <div className="relative group shrink-0 w-24">
+              <div className={iconContainerClasses}>
+                <Flag className={iconClasses} />
+              </div>
+              <select
+                title="Country Code"
+                name="countryCode"
+                value={formData.countryCode}
+                onChange={handleInputChange}
+                className={cn(inputBaseClasses, "pl-11 pr-2 appearance-none cursor-pointer")}
+              >
+                {COUNTRY_CODES.map((c) => (
+                  <option key={c.iso + c.code} value={c.code}>
+                    {c.iso} {c.code}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="relative group flex-1">
+              <div className={iconContainerClasses}>
+                <Phone className={iconClasses} />
+              </div>
+              <input
+                type="tel"
+                name="phoneNo"
+                value={formData.phoneNo}
+                onChange={handleInputChange}
+                className={inputBaseClasses}
+                placeholder="7123 456789"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price Preview */}
+      {hasPricing && (
+        <div className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#fdcc4b]/70">Total to Pay</p>
+            <p className="text-2xl font-black text-white tabular-nums">£{total.toFixed(2)}</p>
+          </div>
+          <p className="text-[11px] font-bold text-stone-500 text-right leading-snug">
+            £{pricePerPerson.toFixed(2)} per person<br />× {formData.groupSize} {parseInt(formData.groupSize) === 1 ? "person" : "people"}
+          </p>
+        </div>
+      )}
+
+      {/* Special Requests */}
+      {collectSpecialRequests && (
+        <div className="space-y-1">
+          <label className={labelClasses}>Additional Requests (Optional)</label>
+          <div className="relative group">
+            <div className={iconContainerClasses}>
+              <MessageSquareQuote className={iconClasses} />
+            </div>
+            <textarea
+              name="specialRequests"
+              value={formData.specialRequests}
+              onChange={handleInputChange}
+              className={`${inputBaseClasses} min-h-[100px] py-3 text-sm resize-none`}
+              placeholder="Dietary requirements, accessibility needs..."
+            />
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
+          <p className="text-sm text-red-400 font-bold leading-snug">{error}</p>
+        </div>
+      )}
+
+      <div className="pt-2">
+        <button
+          type="submit"
+          disabled={isPending}
+          className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
+        >
+          {isPending ? (
+            <Loader2 className="w-6 h-6 animate-spin" />
+          ) : hasPricing ? (
+            <span className="flex items-center">Pay & Book — £{total.toFixed(2)} <ChevronRight className="ml-2 w-6 h-6" /></span>
+          ) : (
+            <span className="flex items-center">{ctaText} <ChevronRight className="ml-2 w-6 h-6" /></span>
+          )}
+        </button>
+      </div>
+    </form>
+  );
+}

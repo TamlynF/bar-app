@@ -138,7 +138,7 @@ function getSaturdaysInMonth(year: number, month: number): string[] {
   return saturdays;
 }
 
-export function getBookingsHref(et: EventTypeRow): string {
+export function getBookingsHref(et: EventTypeRow, eventId?: number): string {
   if (!et) return "/event-bookings";
   const s = et.sub_type?.toLowerCase() ?? "";
   const t = et.type?.toLowerCase() ?? "";
@@ -146,6 +146,7 @@ export function getBookingsHref(et: EventTypeRow): string {
   if (s.includes("quiz") || t.includes("quiz")) return "/event-bookings/quiz-bookings";
   if (t.includes("music") || t.includes("band") || t.includes("live")) return "/event-bookings/music-bookings";
   if (t.includes("private")) return "/event-bookings/private-bookings";
+  if (eventId) return `/event-bookings/event/${eventId}`;
   return "/event-bookings";
 }
 

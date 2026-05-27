@@ -22,6 +22,9 @@ import {
   CheckCircle2,
   XCircle,
   Brain,
+  Link2,
+  Copy,
+  Check,
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
 import { cn } from "@/lib/utils";
@@ -50,6 +53,23 @@ export type EventRecord = {
   group_name: string | null;
   booking_id: number | null;
   external_link: string | null;
+  is_bookable: boolean | null;
+  booking_config: BookingConfig | null;
+};
+
+export type BookingConfig = {
+  collect_group_name?: boolean;
+  group_name_label?: string;
+  collect_phone?: boolean;
+  collect_group_size?: boolean;
+  collect_special_requests?: boolean;
+  min_group_size?: number;
+  max_group_size?: number;
+  group_size_options?: number[];
+  custom_cta_text?: string;
+  custom_tagline?: string;
+  confirmation_message?: string;
+  booking_image_url?: string | null;
 };
 
 function toTitleCase(str?: string | null) {
@@ -140,6 +160,9 @@ export default function EventsClient({
   const [historyGroups, setHistoryGroups] = useState<Set<number>>(new Set());
   const [formBookingId, setFormBookingId] = useState<string>("");
   const [formGroupName, setFormGroupName] = useState<string>("");
+  const [formIsBookable, setFormIsBookable] = useState(false);
+  const [formBookingConfig, setFormBookingConfig] = useState<BookingConfig>({});
+  const [linkCopied, setLinkCopied] = useState(false);
 
   // Auto-open sheet when returning from another page (?open=id)
   useEffect(() => {
@@ -179,6 +202,8 @@ export default function EventsClient({
     setAddForTypeId(eventTypeId ?? null);
     setFormBookingId("");
     setFormGroupName("");
+    setFormIsBookable(false);
+    setFormBookingConfig({});
     setIsAdding(true);
   };
 
@@ -604,7 +629,36 @@ export default function EventsClient({
                     {selected.external_link && (
                       <DetailCell label="External Link" value={selected.external_link} />
                     )}
+                    <DetailCell label="Public Booking" value={selected.is_bookable ? "Enabled" : "Disabled"} />
                   </div>
+
+                  {/* Shareable booking link */}
+                  {selected.is_bookable && (
+                    <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden p-4">
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <Link2 className="w-3.5 h-3.5 text-[#5F624F]" />
+                        <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Shareable Booking Link</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <code className="text-[11px] font-bold text-[#26300D] bg-[#F7F4EA] border border-[#E6DFC8] rounded-lg px-3 py-2 flex-1 truncate">
+                          {typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`}
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 shrink-0"
+                          onClick={() => {
+                            const url = `${window.location.origin}/book/event/${selected.id}`;
+                            navigator.clipboard.writeText(url);
+                            setLinkCopied(true);
+                            setTimeout(() => setLinkCopied(false), 2000);
+                          }}
+                        >
+                          {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-[#5F624F]" />}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Quiz questions section */}
                   {isQuiz && (() => {
@@ -892,6 +946,137 @@ export default function EventsClient({
                   </FormRow>
                 </div>
 
+                {/* Public Booking Config */}
+                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                  <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#E6DFC8]/60">
+                    <span className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Public Booking</span>
+                  </div>
+
+                  <FormRow label="Enable Booking Page">
+                    <input type="hidden" name="is_bookable" value={formIsBookable ? "on" : ""} />
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wide",
+                        formIsBookable ? "text-green-600" : "text-[#5F624F]"
+                      )}>
+                        {formIsBookable ? "On" : "Off"}
+                      </span>
+                      <button
+                        type="button"
+                        title="Toggle public booking"
+                        onClick={() => setFormIsBookable(!formIsBookable)}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative shrink-0 border",
+                          formIsBookable ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30"
+                        )}
+                      >
+                        <span className={cn(
+                          "absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
+                          formIsBookable ? "translate-x-[21px]" : "translate-x-0.5"
+                        )} />
+                      </button>
+                    </div>
+                  </FormRow>
+
+                  {formIsBookable && (
+                    <>
+                      <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
+
+                      {/* Form Fields Section Header */}
+                      <div className="px-4 sm:px-5 py-2 bg-[#F7F4EA]/50">
+                        <span className="text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Form Fields</span>
+                      </div>
+
+                      {/* Always-on fields (not toggleable) */}
+                      <div className="px-4 sm:px-5 py-2.5 flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">Name</span>
+                        <span className="text-[10px] font-black uppercase tracking-wide text-green-600">Always On</span>
+                      </div>
+                      <div className="px-4 sm:px-5 py-2.5 flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">Email</span>
+                        <span className="text-[10px] font-black uppercase tracking-wide text-green-600">Always On</span>
+                      </div>
+
+                      {/* Toggleable fields */}
+                      <ToggleRow label="Phone Number" value={formBookingConfig.collect_phone !== false} onChange={v => setFormBookingConfig(c => ({ ...c, collect_phone: v }))} />
+                      <ToggleRow label="Group Size" value={formBookingConfig.collect_group_size !== false} onChange={v => setFormBookingConfig(c => ({ ...c, collect_group_size: v }))} />
+                      <ToggleRow label="Group Name" value={!!formBookingConfig.collect_group_name} onChange={v => setFormBookingConfig(c => ({ ...c, collect_group_name: v }))} />
+                      <ToggleRow label="Special Requests" value={formBookingConfig.collect_special_requests !== false} onChange={v => setFormBookingConfig(c => ({ ...c, collect_special_requests: v }))} />
+                    </>
+                  )}
+                </div>
+
+                {/* Booking Customisation */}
+                {formIsBookable && (
+                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                    <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#E6DFC8]/60">
+                      <span className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Booking Customisation</span>
+                    </div>
+
+                    {formBookingConfig.collect_group_name && (
+                      <FormRow label="Group Name Label">
+                        <input
+                          placeholder="e.g. Team Name"
+                          value={formBookingConfig.group_name_label ?? ""}
+                          onChange={e => setFormBookingConfig(c => ({ ...c, group_name_label: e.target.value }))}
+                          className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                        />
+                      </FormRow>
+                    )}
+
+                    {formBookingConfig.collect_group_size !== false && (
+                      <FormRow label="Max Group Size">
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          placeholder="e.g. 10"
+                          value={formBookingConfig.max_group_size ?? ""}
+                          onChange={e => setFormBookingConfig(c => ({ ...c, max_group_size: e.target.value ? parseInt(e.target.value, 10) : undefined }))}
+                          className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40 w-16"
+                        />
+                      </FormRow>
+                    )}
+
+                    <FormRow label="Button Text">
+                      <input
+                        placeholder="e.g. Book Now"
+                        value={formBookingConfig.custom_cta_text ?? ""}
+                        onChange={e => setFormBookingConfig(c => ({ ...c, custom_cta_text: e.target.value }))}
+                        className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      />
+                    </FormRow>
+
+                    <FormRow label="Tagline">
+                      <input
+                        placeholder="e.g. Join us for an unforgettable night!"
+                        value={formBookingConfig.custom_tagline ?? ""}
+                        onChange={e => setFormBookingConfig(c => ({ ...c, custom_tagline: e.target.value }))}
+                        className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      />
+                    </FormRow>
+
+                    <FormRow label="Confirmation Msg">
+                      <input
+                        placeholder="e.g. See you there!"
+                        value={formBookingConfig.confirmation_message ?? ""}
+                        onChange={e => setFormBookingConfig(c => ({ ...c, confirmation_message: e.target.value }))}
+                        className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      />
+                    </FormRow>
+
+                    <FormRow label="Booking Image URL">
+                      <input
+                        type="url"
+                        placeholder="https://..."
+                        value={formBookingConfig.booking_image_url ?? ""}
+                        onChange={e => setFormBookingConfig(c => ({ ...c, booking_image_url: e.target.value || null }))}
+                        className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      />
+                    </FormRow>
+                  </div>
+                )}
+
                 {formError && <ErrorBox message={formError} />}
               </form>
             )}
@@ -913,7 +1098,7 @@ export default function EventsClient({
                   Delete
                 </Button>
                 <Button
-                  onClick={() => { setFormError(null); setFormBookingId(selected?.booking_id ? String(selected.booking_id) : ""); setFormGroupName(selected?.group_name ?? ""); setIsEditing(true); }}
+                  onClick={() => { setFormError(null); setFormBookingId(selected?.booking_id ? String(selected.booking_id) : ""); setFormGroupName(selected?.group_name ?? ""); setFormIsBookable(!!selected?.is_bookable); setFormBookingConfig(selected?.booking_config ?? {}); setIsEditing(true); }}
                   className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit
@@ -937,9 +1122,12 @@ export default function EventsClient({
                   Cancel
                 </Button>
                 <Button
-                  type="submit"
-                  form="event-form"
+                  type="button"
                   disabled={isPending}
+                  onClick={() => {
+                    const form = document.getElementById('event-form') as HTMLFormElement | null;
+                    if (form) form.requestSubmit();
+                  }}
                   className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending
@@ -952,6 +1140,33 @@ export default function EventsClient({
           {ConfirmDialogUI}
         </SheetContent>
       </Sheet>
+    </div>
+  );
+}
+
+function ToggleRow({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <div className="flex items-center justify-between px-4 sm:px-5 py-2.5">
+      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">{label}</span>
+      <div className="flex items-center gap-2">
+        <span className={cn("text-[10px] font-black uppercase tracking-wide", value ? "text-green-600" : "text-[#5F624F]")}>
+          {value ? "On" : "Off"}
+        </span>
+        <button
+          type="button"
+          title={`Toggle ${label}`}
+          onClick={() => onChange(!value)}
+          className={cn(
+            "w-11 h-6 rounded-full transition-colors relative shrink-0 border",
+            value ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30"
+          )}
+        >
+          <span className={cn(
+            "absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
+            value ? "translate-x-[21px]" : "translate-x-0.5"
+          )} />
+        </button>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,8 @@
 import React from "react";
 import Link from "next/link";
-import { Trophy, Music, Building2, ArrowRight, Disc3 } from "lucide-react";
+import { Trophy, Music, Building2, ArrowRight, Disc3, CalendarDays, Ticket } from "lucide-react";
 import Image from "next/image";
+import { createClient } from "@/lib/supabase/server";
 
 export const metadata = {
   title: "Book | Don Fenticas",
@@ -51,7 +52,21 @@ const bookingOptions = [
   },
 ];
 
-export default function BookingHubPage() {
+export default async function BookingHubPage() {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data: bookableEvents } = await supabase
+    .from("events")
+    .select("id, date, title, payment_amount, is_fully_booked, event_types_id")
+    .eq("is_active", true)
+    .eq("is_bookable", true)
+    .gte("date", today)
+    .order("date", { ascending: true })
+    .limit(10);
+
+  const events = bookableEvents ?? [];
+
   return (
     <main className="min-h-dvh w-full bg-[#26300D] flex flex-col items-center justify-center px-4 py-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{
@@ -115,6 +130,50 @@ export default function BookingHubPage() {
           </Link>
         ))}
       </div>
+
+      {/* Upcoming Bookable Events */}
+      {events.length > 0 && (
+        <div className="w-full max-w-2xl mt-10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-px flex-1 bg-white/10" />
+            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-500">Upcoming Events</span>
+            <div className="h-px flex-1 bg-white/10" />
+          </div>
+          <div className="space-y-3">
+            {events.map((ev) => {
+              const dateStr = new Date(ev.date + "T00:00:00").toLocaleDateString("en-GB", {
+                weekday: "short", day: "numeric", month: "short",
+              });
+              const isFree = !ev.payment_amount || ev.payment_amount === 0;
+              return (
+                <Link
+                  key={ev.id}
+                  href={`/book/event/${ev.id}`}
+                  className="group flex items-center gap-4 bg-white/5 hover:bg-white/[0.15] border border-white/20 hover:border-white/30 rounded-2xl p-4 sm:p-5 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
+                >
+                  <div className="shrink-0 w-12 h-12 rounded-2xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">
+                    <CalendarDays className="w-5 h-5 text-[#FDCC4B]" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                      <span className="text-white font-black text-sm uppercase tracking-tight truncate">{ev.title || "Event"}</span>
+                      {ev.is_fully_booked ? (
+                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">Full</span>
+                      ) : (
+                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#FDCC4B]/10 text-[#FDCC4B] border border-[#FDCC4B]/20">
+                          {isFree ? "Free" : `£${ev.payment_amount!.toFixed(2)}`}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-stone-500 text-xs font-bold">{dateStr}</p>
+                  </div>
+                  <Ticket className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-[#FDCC4B] transition-colors" />
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="mt-10 flex flex-col items-center gap-2">

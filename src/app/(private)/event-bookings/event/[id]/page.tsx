@@ -6,6 +6,7 @@ import { ArrowLeft, CalendarDays, Clock, User, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { badgeClassFromColor, FALLBACK_BADGE } from "@/lib/event-type-colors";
+import { BookingStatusButtons, CopyLinkButton } from "./booking-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -149,6 +150,7 @@ export default async function EventDetailPage({
             </span>
           )}
         </div>
+        <CopyLinkButton eventId={eventId} />
       </div>
 
       {/* Event detail card */}
@@ -287,6 +289,11 @@ export default async function EventDetailPage({
                       <p className="text-[9px] text-[#5F624F] font-bold uppercase tracking-wider">paid</p>
                     </div>
                   )}
+
+                  {/* Actions */}
+                  <div className="shrink-0">
+                    <BookingStatusButtons bookingId={b.id} currentStatus={b.status} />
+                  </div>
                 </div>
               );
             })}
