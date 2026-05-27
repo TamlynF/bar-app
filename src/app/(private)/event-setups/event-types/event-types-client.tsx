@@ -708,7 +708,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y space-y-4 sm:space-y-5">
-            <form id="type-form" action={handleTypeSubmit} className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
+            <form id="type-form" className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
               {editingType?.id && <input type="hidden" name="id" value={editingType.id} />}
 
               {/* ===== CATEGORY SECTION ===== */}
@@ -961,9 +961,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 Cancel
               </Button>
               <Button
-                type="submit"
-                form="type-form"
+                type="button"
                 disabled={isPending || !!subTypeConflictError}
+                onClick={() => {
+                  const form = document.getElementById('type-form') as HTMLFormElement | null;
+                  if (form) handleTypeSubmit(new FormData(form));
+                }}
                 className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
               >
                 {isPending
@@ -999,7 +1002,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
           {/* Scrollable body */}
           <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y space-y-4 sm:space-y-5">
-            <form id="info-form" action={handleInfoSubmit} className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
+            <form id="info-form" className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
               {editingInfo && <input type="hidden" name="id" value={editingInfo.id} />}
               <input type="hidden" name="event_types_id" value={activeTypeId || ""} />
               <input type="hidden" name="icon" value={selectedIcon} />
@@ -1076,9 +1079,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 Cancel
               </Button>
               <Button
-                type="submit"
-                form="info-form"
+                type="button"
                 disabled={isPending}
+                onClick={() => {
+                  const form = document.getElementById('info-form') as HTMLFormElement | null;
+                  if (form) handleInfoSubmit(new FormData(form));
+                }}
                 className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
               >
                 {isPending
