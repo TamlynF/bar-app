@@ -23,7 +23,7 @@ export async function updateBooking(
         event_id,
         status,
         group_size,
-        events (date)
+        events!bookings_event_id_fkey (date)
       `)
       .eq("id", bookingId)
       .single();

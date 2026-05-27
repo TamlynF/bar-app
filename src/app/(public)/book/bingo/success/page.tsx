@@ -20,7 +20,7 @@ async function confirmAndNotify(bookingId: string) {
     .select(`
       id, status, payment_status, group_name, group_size, total_amount, square_order_id,
       contacts(full_name, email),
-      events(date, title)
+      events!bookings_event_id_fkey(date, title)
     `)
     .eq("id", bookingId)
     .maybeSingle();

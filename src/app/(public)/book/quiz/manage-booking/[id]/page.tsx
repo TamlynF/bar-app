@@ -22,7 +22,7 @@ export default async function ManageBookingPage({
     .select(`
       *,
       special_requests,
-      events (id, event_date: date, event_title: title),
+      events!bookings_event_id_fkey (id, event_date: date, event_title: title),
       contacts (full_name, email),
       booking_table_mappings (
         tables (id, name, max_capacity)
