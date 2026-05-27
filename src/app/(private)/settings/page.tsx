@@ -16,7 +16,8 @@ import {
   BookUser,
   Medal,
   UserCog2,
-  Building2
+  Building2,
+  Sparkles
 } from "lucide-react";
 
 const settingsItems = [
@@ -47,6 +48,13 @@ const settingsItems = [
     href: "/settings/tables",
     icon: Grid2X2,
     color: "bg-blue-50 text-blue-600",
+  },
+  {
+    title: "Specials",
+    description: "Deals and offers on the homepage",
+    href: "/settings/specials",
+    icon: Sparkles,
+    color: "bg-orange-50 text-orange-600",
   },
   {
     title: "System Users",
