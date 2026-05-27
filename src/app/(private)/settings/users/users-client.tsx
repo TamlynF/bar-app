@@ -33,7 +33,6 @@ export type EmployeeRecord = {
   start_date: string;
   end_date: string | null;
   status: string | null;
-  is_skeleton_staff: boolean | null;
   created_at?: string;
   updated_at?: string | null;
   created_by?: number | null;

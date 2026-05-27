@@ -17,10 +17,11 @@ export async function saveEmployeeAction(formData: FormData) {
     status: formData.get("status")?.toString() || "",
     start_date: formData.get("start_date")?.toString() || new Date().toISOString().split('T')[0],
     end_date: formData.get("end_date")?.toString() || null,
-    country_code: formData.get("country_code")?.toString() || null,
     phone_no: formData.get("phone_no")?.toString() || null,
+    country_code: formData.get("phone_no")?.toString()
+      ? formData.get("country_code")?.toString() || null
+      : null,
     birthday: formData.get("birthday")?.toString() || null,
-    is_skeleton_staff: formData.get("is_skeleton_staff") === "on",
   };
 
   if (!payload.full_name || !payload.email || !payload.start_date) {
@@ -72,10 +73,18 @@ export async function saveEmployeeAction(formData: FormData) {
         throw new Error(`Failed to send login invite: ${inviteError.message}`);
       }
 
-      // Insert employee — record invite_sent_at only when the email was actually sent
-      const { error } = await supabase.from("employees").insert({
+      // Resolve auth_user_id — either from the invite or by looking up an existing user
+      let authUserId: string | null = inviteData?.user?.id ?? null;
+      if (!authUserId) {
+        const { data: { users } } = await adminSupabase.auth.admin.listUsers();
+        const existingUser = users.find((u) => u.email === payload.email);
+        if (existingUser) authUserId = existingUser.id;
+      }
+
+      // Use admin client for the insert to bypass RLS (the acting user may not have an employee record yet)
+      const { error } = await adminSupabase.from("employees").insert({
         ...payload,
-        auth_user_id: inviteData?.user?.id ?? null,
+        auth_user_id: authUserId,
         invite_sent_at: !inviteError ? new Date().toISOString() : null,
         created_by: currentEmployeeId,
         updated_by: currentEmployeeId,
