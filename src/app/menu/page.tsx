@@ -49,162 +49,136 @@ export default async function MenuPage() {
   const col2 = sorted.slice(mid);
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] text-white selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
+    <main className="min-h-dvh w-full bg-[#2a3612] antialiased">
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }
+            html, body { background-color: #2a3612 !important; margin: 0; padding: 0; overflow-x: hidden; }
 
             @media print {
               @page { size: A4; margin: 0; }
-              html, body {
-                background-color: #26300D !important;
+              html, body, main {
+                background-color: #2a3612 !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
-                margin: 0 !important;
-                padding: 0 !important;
+                margin: 0 !important; padding: 0 !important;
               }
               * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-              main { background-color: #26300D !important; min-height: 100vh !important; }
               .no-print { display: none !important; }
-
-              /* Page wrapper — gold border inset from edge */
-              .menu-page {
-                background-color: #26300D !important;
-                border: 3px solid #B8962E !important;
-                outline: 1px solid #8B7536 !important;
-                outline-offset: 4px;
-                padding: 10px 14px !important;
-                max-width: 100% !important;
-                margin: 8px !important;
-                box-sizing: border-box;
-              }
-
-              /* Header compact */
-              .menu-header { margin-bottom: 4px !important; }
-              .menu-header img { width: 180px !important; height: auto !important; }
-              .menu-subtitle { font-size: 6px !important; margin-top: 1px !important; letter-spacing: 0.2em !important; }
-              .spirits-note { margin-bottom: 6px !important; font-size: 7px !important; padding: 2px 8px !important; }
-
-              /* Grid */
-              .menu-grid {
-                grid-template-columns: 1fr 1fr !important;
-                gap: 4px 10px !important;
-                display: grid !important;
-              }
-              .menu-col { gap: 4px !important; display: flex !important; flex-direction: column !important; }
-
-              /* Category */
-              .cat-header { padding: 1px 6px !important; border-radius: 2px !important; }
-              .cat-header h2 { font-size: 9px !important; line-height: 1.3 !important; }
-              .cat-body { padding: 1px 6px 2px !important; border-width: 1px !important; border-radius: 0 0 2px 2px !important; }
-              .cat-note { font-size: 5.5px !important; padding: 0 !important; margin-bottom: 0 !important; }
-
-              /* Items */
-              .menu-item { padding: 0.5px 0 !important; gap: 4px !important; }
-              .item-name { font-size: 7.5px !important; line-height: 1.2 !important; }
-              .item-price { font-size: 7px !important; line-height: 1.2 !important; }
+              .menu-frame { margin: 0 !important; border-radius: 0 !important; min-height: 100vh !important; }
+              .menu-inner { padding: 8px 12px !important; }
+              .menu-logo img { width: 200px !important; }
+              .menu-subtitle { font-size: 7px !important; margin-top: 2px !important; }
+              .spirits-pill { font-size: 6.5px !important; padding: 2px 8px !important; margin-bottom: 6px !important; }
+              .menu-grid { gap: 3px 8px !important; }
+              .menu-col { gap: 3px !important; }
+              .cat-banner { padding: 1.5px 0 !important; }
+              .cat-banner h2 { font-size: 9px !important; }
+              .cat-items { padding: 1px 6px !important; }
+              .cat-note { font-size: 5.5px !important; padding: 0 0 1px !important; }
+              .menu-row { padding: 1px 0 !important; }
+              .menu-row-name { font-size: 7px !important; }
+              .menu-row-price { font-size: 6.5px !important; }
             }
           `,
         }}
       />
 
-      <div className="max-w-4xl mx-auto px-4 py-6 sm:py-12 menu-page">
-        {/* Back + Print */}
-        <div className="flex items-center justify-between mb-6 no-print">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-1.5 text-stone-500 text-xs font-bold uppercase tracking-wide hover:text-stone-300 transition-colors"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Home
-          </Link>
-          <PrintButton />
-        </div>
+      {/* Screen-only nav */}
+      <div className="no-print max-w-4xl mx-auto px-4 pt-6 sm:pt-10 flex items-center justify-between">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-[#8B7536] text-xs font-bold uppercase tracking-wide hover:text-[#FDCC4B] transition-colors"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Home
+        </Link>
+        <PrintButton />
+      </div>
 
-        {/* Logo */}
-        <div className="text-center mb-8 sm:mb-10 menu-header">
-          <Image
-            src="/CompanyName.png"
-            alt="Don Fenticas"
-            width={300}
-            height={80}
-            className="w-[200px] sm:w-[260px] mx-auto h-auto object-contain"
-            priority
-          />
-          <p className="text-[#FDCC4B]/50 text-[10px] font-bold uppercase tracking-[0.3em] mt-3 menu-subtitle">
-            Drinks &amp; Snacks Menu
-          </p>
-        </div>
+      {/* Menu frame — the bordered page */}
+      <div className="menu-frame max-w-4xl mx-auto my-4 sm:my-8 rounded-sm border-[5px] border-[#4a5a28] relative">
+        {/* Gold inner border */}
+        <div className="menu-inner border-2 border-[#B8962E] bg-[#2a3612] p-4 sm:p-8">
 
-        {/* Spirits note */}
-        <div className="text-center mb-6">
-          <span className="spirits-note inline-block bg-[#FDCC4B] text-[#26300D] text-[10px] sm:text-[11px] font-black uppercase tracking-wide px-4 py-1.5 rounded-full">
-            Spirits — + £1.45 for mixers, + £1.95 for tonic
-          </span>
-        </div>
-
-        {/* Menu grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5 menu-grid">
-          <div className="space-y-4 sm:space-y-5 menu-col">
-            {col1.map((cat) => (
-              <CategorySection key={cat.id} category={cat} />
-            ))}
+          {/* Logo */}
+          <div className="menu-logo text-center mb-4 sm:mb-6">
+            <Image
+              src="/CompanyName.png"
+              alt="Don Fenticas"
+              width={360}
+              height={90}
+              className="w-[220px] sm:w-[300px] mx-auto h-auto object-contain"
+              priority
+            />
+            <p className="menu-subtitle text-[#FDCC4B]/40 text-[8px] sm:text-[10px] font-bold uppercase tracking-[0.25em] mt-2">
+              Drinks &amp; Snacks Menu
+            </p>
           </div>
-          <div className="space-y-4 sm:space-y-5 menu-col">
-            {col2.map((cat) => (
-              <CategorySection key={cat.id} category={cat} />
-            ))}
-          </div>
-        </div>
 
-        {/* Footer */}
-        <div className="mt-12 sm:mt-16 text-center space-y-2 no-print">
-          <p className="text-stone-600 text-[10px] font-bold uppercase tracking-wide">
-            Menu items subject to availability &middot; Prices may vary
-          </p>
-          <div className="flex items-center justify-center gap-3 text-stone-800 pt-2">
-            <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">
-              Don Fenticas
+          {/* Spirits note */}
+          <div className="text-center mb-4 sm:mb-5">
+            <span className="spirits-pill inline-block bg-[#FDCC4B] text-[#26300D] text-[8px] sm:text-[10px] font-black uppercase tracking-wide px-3 sm:px-4 py-1 rounded-sm">
+              Spirits* — (+ £1.45 for mixers, + £1.95 for tonic)
             </span>
-            <div className="h-px w-6 bg-stone-800/50" />
           </div>
+
+          {/* Two-column grid */}
+          <div className="menu-grid grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+            <div className="menu-col flex flex-col gap-3 sm:gap-4">
+              {col1.map((cat) => (
+                <CategoryBlock key={cat.id} category={cat} />
+              ))}
+            </div>
+            <div className="menu-col flex flex-col gap-3 sm:gap-4">
+              {col2.map((cat) => (
+                <CategoryBlock key={cat.id} category={cat} />
+              ))}
+            </div>
+          </div>
+
         </div>
+      </div>
+
+      {/* Screen-only footer */}
+      <div className="no-print max-w-4xl mx-auto px-4 pb-8 text-center">
+        <p className="text-[#4a5a28] text-[9px] font-bold uppercase tracking-widest">
+          &copy; {new Date().getFullYear()} Don Fenticas &middot; Regent Street, Hinckley
+        </p>
       </div>
     </main>
   );
 }
 
-function CategorySection({ category }: { category: MenuCategory }) {
+function CategoryBlock({ category }: { category: MenuCategory }) {
   if (category.menu_items.length === 0) return null;
 
   return (
-    <div className="overflow-hidden">
-      {/* Category header — gold banner like the real printed menu */}
-      <div className="cat-header bg-[#FDCC4B] rounded-t-lg px-4 py-1.5 flex items-center justify-center">
-        <h2 className="text-[#26300D] font-black text-sm sm:text-base uppercase tracking-tight text-center">
+    <div>
+      {/* Yellow banner header with dark top/bottom borders */}
+      <div className="cat-banner bg-[#FDCC4B] border-y-[3px] border-[#2a3612] py-0.5 sm:py-1">
+        <h2 className="text-[#2a3612] font-black text-xs sm:text-sm uppercase tracking-wide text-center leading-tight">
           {category.name}
         </h2>
       </div>
 
-      {/* Items */}
-      <div className="cat-body bg-[#26300D] border border-[#FDCC4B]/20 border-t-0 rounded-b-lg px-4 py-2">
+      {/* Items — no visible border, just rows on dark green */}
+      <div className="cat-items px-2 sm:px-3 py-1">
         {category.note && (
-          <p className="cat-note text-[#FDCC4B]/60 text-[9px] font-bold uppercase tracking-wide text-center py-1 mb-1">
+          <p className="cat-note text-[#FDCC4B]/50 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide text-center py-0.5">
             {category.note}
           </p>
         )}
         {category.menu_items.map((item) => (
           <div
             key={item.id}
-            className="menu-item flex items-baseline justify-between py-1.5 gap-2"
+            className="menu-row flex items-baseline justify-between py-[3px] sm:py-1 gap-2"
           >
-            <span className="item-name text-white text-xs sm:text-sm font-medium flex-1 min-w-0">
+            <span className="menu-row-name text-white text-[11px] sm:text-xs font-medium leading-tight flex-1 min-w-0">
               {item.name}
             </span>
-            <span className="item-price text-[#FDCC4B] text-[11px] sm:text-xs font-bold shrink-0 text-right">
+            <span className="menu-row-price text-[#FDCC4B] text-[10px] sm:text-[11px] font-bold shrink-0 text-right leading-tight">
               {item.price}
             </span>
           </div>
