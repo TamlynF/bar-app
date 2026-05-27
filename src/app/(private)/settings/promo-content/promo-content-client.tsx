@@ -434,6 +434,7 @@ export default function PromoContentClient({
                     <input
                       ref={fileInputRef}
                       type="file"
+                      title="Upload media file"
                       accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
                       onChange={handleFileUpload}
                       className="hidden"
