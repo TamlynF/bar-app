@@ -238,6 +238,7 @@ export default function MenuClient({
                       }))
                     }
                     className="shrink-0"
+                    title="Toggle category items"
                   >
                     <ChevronDown
                       className={cn(
@@ -348,7 +349,7 @@ export default function MenuClient({
                     <input name="note" placeholder="e.g. +£1.45 for mixers" defaultValue={sheet.category?.note ?? ""} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
                   <FormRow label="Order">
-                    <input name="display_order" type="number" min="0" defaultValue={sheet.category?.display_order ?? 0} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none w-16" />
+                    <input name="display_order" type="number" min="0" defaultValue={sheet.category?.display_order ?? 0} title="Order" placeholder="0" className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none w-16" />
                   </FormRow>
                   <FormRow label="Status">
                     <select name="is_active" title="Status" defaultValue={sheet.category?.is_active === false ? "false" : "true"} className="text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl">
@@ -386,7 +387,7 @@ export default function MenuClient({
                     <input name="price" required placeholder="e.g. £8.95" defaultValue={sheet.item?.price ?? ""} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
                   <FormRow label="Order">
-                    <input name="display_order" type="number" min="0" defaultValue={sheet.item?.display_order ?? 0} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none w-16" />
+                    <input name="display_order" type="number" min="0" title="Order" defaultValue={sheet.item?.display_order ?? 0} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none w-16" />
                   </FormRow>
                   <FormRow label="Status">
                     <select name="is_active" title="Status" defaultValue={sheet.item?.is_active === false ? "false" : "true"} className="text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl">
