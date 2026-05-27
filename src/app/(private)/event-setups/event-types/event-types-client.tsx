@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useMemo, useEffect } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -88,19 +88,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [selectedTypeColor, setSelectedTypeColor] = useState<string | null>(null);
   const [defaultTitleInput, setDefaultTitleInput] = useState("");
 
-  // Sync color/title state from editingType when the sheet opens
-  useEffect(() => {
-    if (isTypeSheetOpen) {
-      setSelectedColor(editingType?.badge_color ?? null);
-      setDefaultTitleInput(editingType?.default_title ?? "");
-      const groupItems = initialEventTypes.filter(
-        i => i.type.toLowerCase() === (editingType?.type ?? "").toLowerCase()
-      );
-      setSelectedTypeColor(groupItems[0]?.type_color ?? null);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isTypeSheetOpen]);
-
   const { groupedEventTypes, uniqueTypes } = useMemo(() => {
     const groups: Record<string, EventTypeRecord[]> = {};
     const typeSet = new Set<string>();
@@ -122,7 +109,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     };
   }, [initialEventTypes]);
 
-  // Real-time check for existing Type + Sub-type combination
   const subTypeConflictError = useMemo(() => {
     if (!typeInput) return null;
 
@@ -298,6 +284,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setIsCustomType(false);
     setTypeInput(val);
     setSubTypeInput(subVal);
+    setSelectedColor(item.badge_color ?? null);
+    setDefaultTitleInput(item.default_title ?? "");
+    const groupItems = initialEventTypes.filter(
+      i => i.type.toLowerCase() === item.type.toLowerCase()
+    );
+    setSelectedTypeColor(groupItems[0]?.type_color ?? null);
     setIsTypeSheetOpen(true);
   };
 
@@ -312,6 +304,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setIsCustomType(false);
     setTypeInput(val);
     setSubTypeInput(subVal);
+    setSelectedColor(items[0].badge_color ?? null);
+    setDefaultTitleInput(items[0].default_title ?? "");
+    setSelectedTypeColor(items[0].type_color ?? null);
     setIsTypeSheetOpen(true);
   };
 
@@ -325,6 +320,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setIsCustomType(false);
     setTypeInput(val);
     setSubTypeInput("");
+    setSelectedColor(null);
+    setDefaultTitleInput("");
+    const groupItems = initialEventTypes.filter(
+      i => i.type.toLowerCase() === typeKey.toLowerCase()
+    );
+    setSelectedTypeColor(groupItems[0]?.type_color ?? null);
     setIsTypeSheetOpen(true);
   };
 
@@ -344,6 +345,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             setSelectedTypeValue("custom");
             setTypeInput("");
             setSubTypeInput("General");
+            setSelectedColor(null);
+            setDefaultTitleInput("");
+            setSelectedTypeColor(null);
             setIsTypeSheetOpen(true);
           }}
           className="h-8 px-3 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center gap-1.5 shrink-0"

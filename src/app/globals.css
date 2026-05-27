@@ -132,7 +132,23 @@
     --color-stone-500: oklch(55.3% 0.013 58.071);
     --color-stone-600: oklch(44.4% 0.011 73.639);
     --color-stone-700: oklch(37% 0.013 67.558);
+    --color-stone-100: oklch(97% 0.001 106.424);
     --color-stone-800: oklch(26.8% 0.007 34.298);
+    --color-lime-100: oklch(96.7% 0.071 130.85);
+    --color-lime-200: oklch(93.8% 0.127 130.687);
+    --color-lime-700: oklch(53.2% 0.157 131.589);
+    --color-cyan-100: oklch(97.1% 0.039 200.873);
+    --color-cyan-200: oklch(93.6% 0.077 203.364);
+    --color-cyan-700: oklch(52% 0.105 209.85);
+    --color-violet-100: oklch(94.3% 0.029 294.588);
+    --color-violet-200: oklch(89.4% 0.057 293.283);
+    --color-violet-700: oklch(49.1% 0.155 292.888);
+    --color-fuchsia-100: oklch(95.2% 0.037 318.852);
+    --color-fuchsia-200: oklch(90.3% 0.076 319.62);
+    --color-fuchsia-700: oklch(51.8% 0.159 323.949);
+    --color-zinc-100: oklch(96.7% 0.001 286.375);
+    --color-zinc-200: oklch(92% 0.004 286.32);
+    --color-zinc-700: oklch(44.2% 0.017 285.786);
     --color-black: #000;
     --color-white: #fff;
     --spacing: 0.25rem;
@@ -1424,6 +1440,24 @@
   }
   .border-yellow-200 {
     border-color: var(--color-yellow-200);
+  }
+  .border-lime-200 {
+    border-color: var(--color-lime-200);
+  }
+  .border-cyan-200 {
+    border-color: var(--color-cyan-200);
+  }
+  .border-violet-200 {
+    border-color: var(--color-violet-200);
+  }
+  .border-fuchsia-200 {
+    border-color: var(--color-fuchsia-200);
+  }
+  .border-zinc-200 {
+    border-color: var(--color-zinc-200);
+  }
+  .border-stone-200 {
+    border-color: var(--color-stone-200);
   }
   .border-yellow-500\/50 {
     border-color: color-mix(in srgb, oklch(79.5% 0.184 86.047) 50%, transparent);
@@ -5100,17 +5134,41 @@
   .badge-bingo { background-color: rgb(165 180 252 / 0.2); color: #A5B4FC; }
   .badge-band  { background-color: rgb(125 211 252 / 0.2); color: #7DD3FC; }
   .badge-hire  { background-color: rgb(134 239 172 / 0.2); color: #86EFAC; }
-  .swatch-amber  { background-color: #FCD34D; }
-  .swatch-green  { background-color: #6EE7B7; }
-  .swatch-purple { background-color: #C4B5FD; }
-  .swatch-blue   { background-color: #93C5FD; }
-  .swatch-rose   { background-color: #FDA4AF; }
-  .swatch-sky    { background-color: #7DD3FC; }
-  .swatch-orange { background-color: #FDBA74; }
-  .swatch-teal   { background-color: #5EEAD4; }
-  .swatch-indigo { background-color: #A5B4FC; }
-  .swatch-pink   { background-color: #F9A8D4; }
+  .swatch-amber   { background-color: #FCD34D; }
+  .swatch-green   { background-color: #6EE7B7; }
+  .swatch-purple  { background-color: #C4B5FD; }
+  .swatch-blue    { background-color: #93C5FD; }
+  .swatch-rose    { background-color: #FDA4AF; }
+  .swatch-sky     { background-color: #7DD3FC; }
+  .swatch-orange  { background-color: #FDBA74; }
+  .swatch-teal    { background-color: #5EEAD4; }
+  .swatch-indigo  { background-color: #A5B4FC; }
+  .swatch-pink    { background-color: #F9A8D4; }
+  .swatch-red     { background-color: #F87171; }
+  .swatch-yellow  { background-color: #FACC15; }
+  .swatch-emerald { background-color: #34D399; }
+  .swatch-lime    { background-color: #A3E635; }
+  .swatch-cyan    { background-color: #22D3EE; }
+  .swatch-violet  { background-color: #8B5CF6; }
+  .swatch-fuchsia { background-color: #D946EF; }
+  .swatch-slate   { background-color: #94A3B8; }
+  .swatch-zinc    { background-color: #A1A1AA; }
+  .swatch-stone   { background-color: #A8A29E; }
   .swatch-selected { outline: 2.5px solid #1F1F1A; outline-offset: 2px; }
+  .bg-emerald-100 { background-color: var(--color-emerald-100); }
+  .bg-lime-100 { background-color: var(--color-lime-100); }
+  .bg-cyan-100 { background-color: var(--color-cyan-100); }
+  .bg-violet-100 { background-color: var(--color-violet-100); }
+  .bg-fuchsia-100 { background-color: var(--color-fuchsia-100); }
+  .bg-zinc-100 { background-color: var(--color-zinc-100); }
+  .bg-stone-100 { background-color: var(--color-stone-100); }
+  .text-emerald-700 { color: var(--color-emerald-700); }
+  .text-lime-700 { color: var(--color-lime-700); }
+  .text-cyan-700 { color: var(--color-cyan-700); }
+  .text-violet-700 { color: var(--color-violet-700); }
+  .text-fuchsia-700 { color: var(--color-fuchsia-700); }
+  .text-zinc-700 { color: var(--color-zinc-700); }
+  .text-stone-700 { color: var(--color-stone-700); }
   .input-scheme-dark { color-scheme: dark; box-sizing: border-box; max-width: 100%; }
   .capacity-fill { width: var(--bar-width, 0%); }
   .dir-rtl { direction: rtl; }
