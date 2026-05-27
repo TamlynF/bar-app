@@ -211,6 +211,27 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     return null;
   }, [infoTitleInput, activeTypeId, initialEventTypes, editingInfo]);
 
+  const usedTypeColors = useMemo(() => {
+    const currentType = editingType?.type?.toLowerCase();
+    const used = new Set<string>();
+    initialEventTypes.forEach(item => {
+      if (item.type_color && item.type.toLowerCase() !== currentType) {
+        used.add(item.type_color);
+      }
+    });
+    return used;
+  }, [initialEventTypes, editingType]);
+
+  const usedBadgeColors = useMemo(() => {
+    const used = new Set<string>();
+    initialEventTypes.forEach(item => {
+      if (item.badge_color && item.id !== editingType?.id) {
+        used.add(item.badge_color);
+      }
+    });
+    return used;
+  }, [initialEventTypes, editingType]);
+
   const hasTypeSheetConflict = !!categoryNameError || !!subTypeConflictError || !!typeColorError || !!badgeColorError;
 
   const toggleGroup = (type: string) => {
@@ -831,6 +852,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   )}
                 </div>
 
+                {categoryNameError && (
+                  <div className="px-4 sm:px-5 py-1.5">
+                    <p className="text-[11px] text-red-600 font-bold">{categoryNameError}</p>
+                  </div>
+                )}
+
                 {/* Back to list link (only for custom type in subtype mode) */}
                 {isCustomType && sheetMode !== 'type' && uniqueTypes.length > 0 && (
                   <div className="px-4 sm:px-5 py-2">
@@ -852,19 +879,25 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       <span className="text-[10px] font-black uppercase tracking-wide">Colour</span>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">
-                      {EVENT_TYPE_COLORS.map(c => (
-                        <button
-                          key={c.key}
-                          type="button"
-                          onClick={() => setSelectedTypeColor(selectedTypeColor === c.key ? null : c.key)}
-                          className={cn(
-                            "w-7 h-7 rounded-full transition-all",
-                            c.swatchClass,
-                            selectedTypeColor === c.key ? "swatch-selected scale-110" : "opacity-70 hover:opacity-100"
-                          )}
-                          title={c.key}
-                        />
-                      ))}
+                      {EVENT_TYPE_COLORS.map(c => {
+                        const taken = usedTypeColors.has(c.key);
+                        return (
+                          <button
+                            key={c.key}
+                            type="button"
+                            disabled={taken}
+                            onClick={() => setSelectedTypeColor(selectedTypeColor === c.key ? null : c.key)}
+                            className={cn(
+                              "w-7 h-7 rounded-full transition-all",
+                              c.swatchClass,
+                              taken
+                                ? "opacity-20 cursor-not-allowed"
+                                : selectedTypeColor === c.key ? "swatch-selected scale-110" : "opacity-70 hover:opacity-100"
+                            )}
+                            title={taken ? `${c.key} (in use)` : c.key}
+                          />
+                        );
+                      })}
                       <button
                         type="button"
                         onClick={() => setSelectedTypeColor(null)}
@@ -884,6 +917,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         {typeInput || "Category"}
                       </span>
                     </div>
+                    {typeColorError && (
+                      <p className="text-[11px] text-red-600 font-bold">{typeColorError}</p>
+                    )}
                   </div>
                 )}
               </div>
@@ -911,6 +947,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       className="text-base sm:text-sm font-bold text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                     />
                   </div>
+
+                  {subTypeConflictError && (
+                    <div className="px-4 sm:px-5 py-1.5">
+                      <p className="text-[11px] text-red-600 font-bold">{subTypeConflictError}</p>
+                    </div>
+                  )}
 
                   {!editingType?.id && sheetMode === 'type' && (
                     <div className="px-4 sm:px-5 py-2">
@@ -940,19 +982,25 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       <span className="text-[10px] font-black uppercase tracking-wide">Badge Colour</span>
                     </div>
                     <div className="flex flex-wrap gap-2 items-center">
-                      {EVENT_TYPE_COLORS.map(c => (
-                        <button
-                          key={c.key}
-                          type="button"
-                          onClick={() => setSelectedColor(selectedColor === c.key ? null : c.key)}
-                          className={cn(
-                            "w-7 h-7 rounded-full transition-all",
-                            c.swatchClass,
-                            selectedColor === c.key ? "swatch-selected scale-110" : "opacity-70 hover:opacity-100"
-                          )}
-                          title={c.key}
-                        />
-                      ))}
+                      {EVENT_TYPE_COLORS.map(c => {
+                        const taken = usedBadgeColors.has(c.key);
+                        return (
+                          <button
+                            key={c.key}
+                            type="button"
+                            disabled={taken}
+                            onClick={() => setSelectedColor(selectedColor === c.key ? null : c.key)}
+                            className={cn(
+                              "w-7 h-7 rounded-full transition-all",
+                              c.swatchClass,
+                              taken
+                                ? "opacity-20 cursor-not-allowed"
+                                : selectedColor === c.key ? "swatch-selected scale-110" : "opacity-70 hover:opacity-100"
+                            )}
+                            title={taken ? `${c.key} (in use)` : c.key}
+                          />
+                        );
+                      })}
                       <button
                         type="button"
                         onClick={() => setSelectedColor(null)}
@@ -972,6 +1020,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         {subTypeInput || "Sub-type"}
                       </span>
                     </div>
+                    {badgeColorError && (
+                      <p className="text-[11px] text-red-600 font-bold">{badgeColorError}</p>
+                    )}
                   </div>
 
                   {/* Booking Page Description */}
@@ -991,18 +1042,10 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 </div>
               )}
 
-              {/* Validation / error messages */}
-              {(categoryNameError || subTypeConflictError || typeColorError || badgeColorError || typeSheetError) && (
-                <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                  <div className="space-y-1">
-                    <p className="text-[10px] font-black text-red-500 uppercase tracking-wide">Conflict</p>
-                    {[categoryNameError, subTypeConflictError, typeColorError, badgeColorError, typeSheetError]
-                      .filter(Boolean)
-                      .map((msg, i) => (
-                        <p key={i} className="text-sm text-red-700 font-bold leading-snug">{msg}</p>
-                      ))}
-                  </div>
+              {typeSheetError && (
+                <div className="p-3 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-red-600 font-bold leading-snug">{typeSheetError}</p>
                 </div>
               )}
             </form>
@@ -1086,6 +1129,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   />
                 </div>
 
+                {infoTitleError && (
+                  <div className="px-4 sm:px-5 py-1.5">
+                    <p className="text-[11px] text-red-600 font-bold">{infoTitleError}</p>
+                  </div>
+                )}
+
                 {/* Description */}
                 <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
                   <div className="flex items-center gap-1.5 text-[#5F624F] opacity-60 shrink-0">
@@ -1125,15 +1174,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 </div>
               </div>
 
-              {infoTitleError && (
-                <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-[10px] font-black text-red-500 uppercase tracking-wide">Conflict</p>
-                    <p className="text-sm text-red-700 font-bold leading-snug">{infoTitleError}</p>
-                  </div>
-                </div>
-              )}
             </form>
 
             <div className="h-4" />
