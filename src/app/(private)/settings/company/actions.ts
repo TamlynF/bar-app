@@ -35,6 +35,8 @@ export async function updateCompanyInfo(formData: FormData) {
     twitter: formData.get("twitter")?.toString() || null,
     tiktok: formData.get("tiktok")?.toString() || null,
     youtube: formData.get("youtube")?.toString() || null,
+    description: formData.get("description")?.toString() || null,
+    opening_hours: JSON.parse(formData.get("opening_hours")?.toString() || "{}"),
     max_capacity: parseInt(formData.get("max_capacity")?.toString() || "0", 10) || null,
     private_hire_min_capacity: parseInt(formData.get("private_hire_min_capacity")?.toString() || "0", 10) || null,
     updated_at: new Date().toISOString(),
