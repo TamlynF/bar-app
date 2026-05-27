@@ -71,7 +71,8 @@
       "Bash(for cls:*)",
       "Bash(echo \"OK: $cls\")",
       "Bash(echo \"MISSING: $cls\")",
-      "Bash(echo \"MISSING VAR: --color-$shade\")"
+      "Bash(echo \"MISSING VAR: --color-$shade\")",
+      "mcp__claude_ai_Figma__whoami"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills"
