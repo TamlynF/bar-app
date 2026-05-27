@@ -56,24 +56,29 @@ export default async function MenuPage() {
             html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }
 
             @media print {
-              @page { size: A4; margin: 6mm; }
+              @page { size: A4; margin: 0; }
               html, body {
                 background-color: #26300D !important;
                 -webkit-print-color-adjust: exact !important;
                 print-color-adjust: exact !important;
                 color-adjust: exact !important;
+                margin: 0 !important;
+                padding: 0 !important;
               }
               * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+              main { background-color: #26300D !important; min-height: 100vh !important; }
               .no-print { display: none !important; }
 
-              /* Page wrapper */
+              /* Page wrapper — gold border inset from edge */
               .menu-page {
-                border: 3px solid #8B7536 !important;
-                outline: 1px solid #5a4d25 !important;
-                outline-offset: 3px;
+                background-color: #26300D !important;
+                border: 3px solid #B8962E !important;
+                outline: 1px solid #8B7536 !important;
+                outline-offset: 4px;
                 padding: 10px 14px !important;
                 max-width: 100% !important;
-                margin: 0 !important;
+                margin: 8px !important;
+                box-sizing: border-box;
               }
 
               /* Header compact */
