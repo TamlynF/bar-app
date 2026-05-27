@@ -94,13 +94,13 @@ export default function QuizCategoriesClient({
       {/* Category list */}
       <section className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
         <div className="flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3 gap-2">
-          <p className="flex-1 text-[11px] font-black uppercase tracking-wide text-[#26300D] truncate">
+          <p className="flex-1 text-[11px] font-black uppercase tracking-wide text-[#5C4033] truncate">
             Quiz Categories <span className="text-[#5F624F]">({initialConfigs.length})</span>
           </p>
           <button
             type="button"
             onClick={openAdd}
-            className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+            className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
             title="Add category"
           >
             <Plus className="w-3.5 h-3.5 shrink-0" />
@@ -321,7 +321,7 @@ export default function QuizCategoriesClient({
                       name="include_spotify"
                       type="checkbox"
                       defaultChecked={formDefault?.include_spotify ?? false}
-                      className="w-5 h-5 rounded accent-[#26300D] cursor-pointer"
+                      className="w-5 h-5 rounded accent-[#5C4033] cursor-pointer"
                     />
                   </FormRow>
 
@@ -333,7 +333,7 @@ export default function QuizCategoriesClient({
                       name="is_active"
                       type="checkbox"
                       defaultChecked={formDefault?.is_active ?? true}
-                      className="w-5 h-5 rounded accent-[#26300D] cursor-pointer"
+                      className="w-5 h-5 rounded accent-[#5C4033] cursor-pointer"
                     />
                   </FormRow>
                 </div>
@@ -360,7 +360,7 @@ export default function QuizCategoriesClient({
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit
                 </Button>
@@ -386,7 +386,7 @@ export default function QuizCategoriesClient({
                   type="submit"
                   form="category-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending
                     ? <Loader2 className="w-4 h-4 animate-spin" />

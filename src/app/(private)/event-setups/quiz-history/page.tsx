@@ -122,7 +122,7 @@ export default async function QuizArchivePage({
                           {/* Question Section */}
                           <div className="flex items-start gap-3">
                             <div className="mt-1 p-1 bg-[#F7F4EA] rounded-lg">
-                                <MessageSquareQuote className="w-4 h-4 text-[#26300D] opacity-40" />
+                                <MessageSquareQuote className="w-4 h-4 text-[#5C4033] opacity-40" />
                             </div>
                             <p className="text-[14px] font-bold text-[#1F1F1A] leading-snug tracking-tight">
                               {record.question_text}
@@ -130,11 +130,11 @@ export default async function QuizArchivePage({
                           </div>
 
                           {/* Unified Answer Box: Dark/Gold High Contrast */}
-                          <div className="mt-auto p-4 rounded-xl bg-[#26300D] text-center shadow-inner relative overflow-hidden group/answer">
-                            <div className="absolute top-0 left-0 w-full h-full bg-[#FDCC4B]/5 pointer-events-none" />
+                          <div className="mt-auto p-4 rounded-xl bg-[#5C4033] text-center shadow-inner relative overflow-hidden group/answer">
+                            <div className="absolute top-0 left-0 w-full h-full bg-[#5C4033]/5 pointer-events-none" />
                             <div className="flex items-center justify-center gap-1.5 mb-1.5 opacity-60">
-                                <Target className="w-3 h-3 text-[#FDCC4B]" />
-                                <span className="text-[9px] font-black text-[#FDCC4B] uppercase tracking-[0.2em]">Correct Answer</span>
+                                <Target className="w-3 h-3 text-white" />
+                                <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">Correct Answer</span>
                             </div>
                             <p className="text-[15px] font-black text-white leading-tight tracking-tight">
                               {record.answer_text}

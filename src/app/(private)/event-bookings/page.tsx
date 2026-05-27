@@ -47,7 +47,7 @@ export default async function EventsHubPage() {
           <Link
             key={item.href}
             href={item.href}
-            className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#26300D] hover:shadow-md transition-all active:scale-[0.98]"
+            className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#5C4033] hover:shadow-md transition-all active:scale-[0.98]"
           >
             <div className="flex items-center gap-4">
               {/* Icon Container with hover animation */}
@@ -67,7 +67,7 @@ export default async function EventsHubPage() {
             </div>
 
             {/* Trailing Chevron */}
-            <ChevronRight className="w-5 h-5 text-[#E6DFC8] group-hover:text-[#26300D] transition-colors" />
+            <ChevronRight className="w-5 h-5 text-[#E6DFC8] group-hover:text-[#5C4033] transition-colors" />
           </Link>
         ))}
       </div>

@@ -29,9 +29,9 @@ export default function TonightCard({
   return (
     <div className="bg-white border-2 border-[#E6DFC8] rounded-[2rem] overflow-hidden shadow-sm rounded-t-[2rem]">
       <Link href={event.href} className="block rounded-[2rem]">
-        <div className="bg-[#26300D] px-6 py-3 sm:py-5 text-white flex items-start justify-between gap-2 sm:gap-4 rounded-t-[2rem]">
+        <div className="bg-[#5C4033] px-6 py-3 sm:py-5 text-white flex items-start justify-between gap-2 sm:gap-4 rounded-t-[2rem]">
           <div className="min-w-0">
-            <span className="bg-[#FDCC4B] text-[#26300D] text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wide">
+            <span className="bg-[#C8956D] text-[#5C4033] text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wide">
               Tonight
             </span>
             <h3 className="text-lg sm:text-xl font-black uppercase tracking-tight mt-2 leading-none truncate">
@@ -57,7 +57,7 @@ export default function TonightCard({
             {isQuiz ? (
               <>
                 <div className="text-right">
-                  <p className="text-lg sm:text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
+                  <p className="text-lg sm:text-3xl font-black tabular-nums text-white leading-none">
                     {confirmedTeams}
                   </p>
                   <p className="text-[9px] font-black uppercase tracking-wide text-white/50 mt-1">
@@ -68,7 +68,7 @@ export default function TonightCard({
               </>
             ) : (
                 <div className="text-right">
-              <p className="text-lg sm:text-3xl font-black tabular-nums text-[#FDCC4B] leading-none">
+              <p className="text-lg sm:text-3xl font-black tabular-nums text-white leading-none">
                 {guests}
               </p>
               <p className="text-[9px] font-black uppercase tracking-wide text-white/50 mt-1">
@@ -97,7 +97,7 @@ export default function TonightCard({
               <div
                 className={cn(
                   "h-full transition-all duration-700 capacity-fill",
-                  capacityPercent > 90 ? "bg-red-500" : "bg-[#26300D]"
+                  capacityPercent > 90 ? "bg-red-500" : "bg-[#5C4033]"
                 )}
                 style={{"--capacity-width": `${capacityPercent}%`} as React.CSSProperties}
               />

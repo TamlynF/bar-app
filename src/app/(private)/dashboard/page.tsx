@@ -662,7 +662,7 @@ function QuickLink({
       className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-[#E6DFC8] rounded-2xl hover:bg-[#F7F4EA] transition-colors group"
     >
       <div className="w-10 h-10 bg-[#F7F4EA] group-hover:bg-white rounded-full flex items-center justify-center transition-colors shadow-sm">
-        <Icon className="w-5 h-5 text-[#26300D]" />
+        <Icon className="w-5 h-5 text-[#5C4033]" />
       </div>
       <span className="text-[10px] font-black uppercase tracking-wide text-[#1F1F1A]">
         {label}

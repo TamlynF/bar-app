@@ -72,8 +72,8 @@ export default async function MusicBookingsPage({
             href={`?status=${f.value}`}
             className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all ${
               filterStatus === f.value
-                ? "bg-[#26300D] text-white"
-                : "bg-white border border-[#E6DFC8] text-[#5F624F] hover:border-[#26300D]/20"
+                ? "bg-[#5C4033] text-white"
+                : "bg-white border border-[#E6DFC8] text-[#5F624F] hover:border-[#5C4033]/20"
             }`}
           >
             {f.label}

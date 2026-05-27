@@ -174,7 +174,7 @@ export default function PromoContentClient({
           <button
             type="button"
             onClick={openAdd}
-            className="mt-4 h-8 px-4 rounded-lg bg-[#26300D] text-[#FDCC4B] text-[10px] font-bold uppercase tracking-wide hover:bg-[#26300D]/85 transition-colors"
+            className="mt-4 h-8 px-4 rounded-lg bg-[#5C4033] text-white text-[10px] font-bold uppercase tracking-wide hover:bg-[#5C4033]/85 transition-colors"
           >
             <Plus className="w-3.5 h-3.5 inline mr-1" />
             Add Promo
@@ -188,7 +188,7 @@ export default function PromoContentClient({
               onClick={() => setIsCollapsed(!isCollapsed)}
               className="flex-1 min-w-0 text-left"
             >
-              <p className="text-[11px] font-bold uppercase tracking-wide text-[#26300D] truncate">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-[#5C4033] truncate">
                 Promo Content{" "}
                 <span className="text-[#5F624F]">({initialPromos.length})</span>
               </p>
@@ -196,7 +196,7 @@ export default function PromoContentClient({
             <button
               type="button"
               onClick={openAdd}
-              className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+              className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
               title="Add Promo"
             >
               <Plus className="w-3.5 h-3.5 shrink-0" />
@@ -421,7 +421,7 @@ export default function PromoContentClient({
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading}
-                        className="w-full flex items-center justify-center gap-2 py-6 border-2 border-dashed border-[#E6DFC8] rounded-xl text-[#5F624F] hover:border-[#26300D] hover:text-[#26300D] transition-colors"
+                        className="w-full flex items-center justify-center gap-2 py-6 border-2 border-dashed border-[#E6DFC8] rounded-xl text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033] transition-colors"
                       >
                         {uploading ? (
                           <Loader2 className="w-5 h-5 animate-spin" />
@@ -503,7 +503,7 @@ export default function PromoContentClient({
                 </Button>
                 <Button
                   onClick={startEdit}
-                  className="h-14 flex-1 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
@@ -530,7 +530,7 @@ export default function PromoContentClient({
                   type="submit"
                   form="promo-form"
                   disabled={isPending || uploading}
-                  className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

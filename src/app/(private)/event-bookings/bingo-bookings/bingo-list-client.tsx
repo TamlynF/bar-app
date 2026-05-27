@@ -387,7 +387,7 @@ export default function BingoBookingListClient({
 
           {/* Search */}
           <div className="flex justify-center px-4 mb-3 sm:mb-0 sm:py-2 sm:px-3 sm:shrink-0">
-            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-[#26300D] transition-colors">
+            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-[#5C4033] transition-colors">
               <div className="flex items-center gap-2 flex-1 min-w-0">
                 <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
                 <input
@@ -504,7 +504,7 @@ export default function BingoBookingListClient({
                           title="Select Event"
                           value={editForm.event_id}
                           onChange={(e) => handleEventChange(e.target.value)}
-                          className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold appearance-none outline-none focus:border-[#26300D] transition-all"
+                          className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold appearance-none outline-none focus:border-[#5C4033] transition-all"
                         >
                           {availableEvents.map((e) => (
                             <option key={e.id} value={e.id}>
@@ -530,7 +530,7 @@ export default function BingoBookingListClient({
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setEditForm((prev) => ({ ...prev, group_name: e.target.value }))
                         }
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D]"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033]"
                       />
                     </div>
 
@@ -544,7 +544,7 @@ export default function BingoBookingListClient({
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           handleGroupSizeChange(parseInt(e.target.value) || 0)
                         }
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D]"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033]"
                       />
                     </div>
 
@@ -559,7 +559,7 @@ export default function BingoBookingListClient({
                           className={cn(
                             "w-full h-14 rounded-2xl border-2 px-4 text-sm font-bold appearance-none outline-none transition-all",
                             editForm.table_id
-                              ? "bg-white border-[#E6DFC8] focus:border-[#26300D]"
+                              ? "bg-white border-[#E6DFC8] focus:border-[#5C4033]"
                               : "bg-[#F7F4EA] border-dashed border-[#E6DFC8]"
                           )}
                         >
@@ -635,7 +635,7 @@ export default function BingoBookingListClient({
                           setEditForm((prev) => ({ ...prev, special_requests: e.target.value }))
                         }
                         placeholder="Dietary requirements, seating preference..."
-                        className="min-h-[140px] rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] resize-none"
+                        className="min-h-[140px] rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033] resize-none"
                       />
                     </div>
                   </div>
@@ -699,25 +699,25 @@ export default function BingoBookingListClient({
                     {/* Contact */}
                     <div className="space-y-3">
                       <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1">Primary Contact</h3>
-                      <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl p-5 shadow-sm flex items-center gap-4 hover:border-[#26300D]/30 transition-all group/contact">
-                        <div className="w-14 h-14 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#26300D] border border-[#E6DFC8]">
+                      <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl p-5 shadow-sm flex items-center gap-4 hover:border-[#5C4033]/30 transition-all group/contact">
+                        <div className="w-14 h-14 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#5C4033] border border-[#E6DFC8]">
                           {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
                         </div>
                         <div className="min-w-0 flex-1 text-left">
                           <p className="text-base font-black text-[#1F1F1A] uppercase tracking-tight truncate">{selectedBooking.contacts?.full_name}</p>
                           <p className="text-xs font-bold text-[#5F624F] opacity-60 break-all mt-0.5">{selectedBooking.contacts?.email}</p>
                         </div>
-                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-4 bg-[#26300D]/5 rounded-2xl text-[#26300D] hover:bg-[#26300D] hover:text-white transition-all active:scale-95 shadow-xs">
+                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-4 bg-[#5C4033]/5 rounded-2xl text-[#5C4033] hover:bg-[#5C4033] hover:text-white transition-all active:scale-95 shadow-xs">
                           <ExternalLink className="w-5 h-5" />
                         </Link>
                       </div>
                     </div>
 
                     {selectedBooking.special_requests && (
-                      <div className="bg-[#FDCC4B]/5 p-6 rounded-3xl border-2 border-[#FDCC4B]/20 shadow-sm relative overflow-hidden">
+                      <div className="bg-[#5C4033]/5 p-6 rounded-3xl border-2 border-[#5C4033]/15 shadow-sm relative overflow-hidden">
                         <div className="flex items-center gap-2 mb-4 relative z-10">
-                          <MessageSquareQuote className="w-5 h-5 text-[#26300D] opacity-40" />
-                          <span className="text-[10px] font-black uppercase tracking-wide text-[#26300D]">Special Requests</span>
+                          <MessageSquareQuote className="w-5 h-5 text-[#5C4033] opacity-40" />
+                          <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Special Requests</span>
                         </div>
                         <p className="text-[15px] text-[#1F1F1A] italic leading-relaxed font-bold relative z-10 text-left">
                           &quot;{selectedBooking.special_requests}&quot;
@@ -736,7 +736,7 @@ export default function BingoBookingListClient({
                     <Button
                       onClick={handleSaveDetails}
                       disabled={isPending}
-                      className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-xs shadow-lg active:scale-95 transition-transform"
+                      className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-xs shadow-lg active:scale-95 transition-transform"
                     >
                       {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save</>}
                     </Button>
@@ -753,7 +753,7 @@ export default function BingoBookingListClient({
                     <div className="grid grid-cols-2 gap-3">
                       <Button
                         variant="ghost"
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
                         onClick={async (e) => {
                           e.stopPropagation();
                           const ok = await confirm({
@@ -772,7 +772,7 @@ export default function BingoBookingListClient({
                         variant="outline"
                         title="Edit Details"
                         onClick={handleEnterEditMode}
-                        className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                        className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                       >
                         <Pencil className="w-4 h-4 mr-2" />Edit
                       </Button>
@@ -807,7 +807,7 @@ export default function BingoBookingListClient({
 
       {/* Syncing indicator */}
       {isPending && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#26300D] text-[#FDCC4B] px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-wide shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#5C4033] text-white px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-wide shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
           <Loader2 className="w-4 h-4 animate-spin" /> Syncing with DB...
         </div>
       )}

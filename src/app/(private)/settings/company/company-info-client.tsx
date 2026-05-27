@@ -41,7 +41,7 @@ interface CompanyInfo {
 
 const sectionLabel = "text-[10px] font-bold uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1 mb-3";
 const fieldLabel = "text-[10px] font-bold uppercase tracking-wide text-[#5F624F] ml-1";
-const inputClasses = "h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D]";
+const inputClasses = "h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033]";
 
 function InfoRow({
   icon,
@@ -67,7 +67,7 @@ function InfoRow({
         <Link
           href={href}
           target="_blank"
-          className="text-sm font-black text-right flex-1 text-[#26300D] underline underline-offset-2 hover:opacity-70 transition-opacity"
+          className="text-sm font-black text-right flex-1 text-[#5C4033] underline underline-offset-2 hover:opacity-70 transition-opacity"
         >
           {display}
         </Link>
@@ -171,7 +171,7 @@ export default function CompanyInfoClient({
         {!isEditing ? (
           <Button
             onClick={handleEdit}
-            className="h-12 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] px-6 shadow-lg active:scale-95 transition-transform"
+            className="h-12 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] px-6 shadow-lg active:scale-95 transition-transform"
           >
             <Pencil className="w-4 h-4 mr-2" /> Edit
           </Button>
@@ -180,7 +180,7 @@ export default function CompanyInfoClient({
             <Button
               onClick={handleSave}
               disabled={isPending}
-              className="h-12 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] px-6 shadow-lg active:scale-95 transition-transform"
+              className="h-12 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] px-6 shadow-lg active:scale-95 transition-transform"
             >
               {isPending ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -215,7 +215,7 @@ export default function CompanyInfoClient({
               </div>
               <div className="space-y-2">
                 <Label className={fieldLabel}>Address</Label>
-                <Textarea value={form.address} onChange={(e) => update("address", e.target.value)} className="rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-bold p-4 focus:ring-2 focus:ring-[#26300D]/10 focus:border-[#26300D] resize-none min-h-[80px]" placeholder="Full address" />
+                <Textarea value={form.address} onChange={(e) => update("address", e.target.value)} className="rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-bold p-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033] resize-none min-h-[80px]" placeholder="Full address" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">

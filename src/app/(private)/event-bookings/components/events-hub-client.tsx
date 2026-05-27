@@ -220,7 +220,7 @@ export default function EventsHubClient({
                 <p className="font-black text-[#1F1F1A] uppercase tracking-tight">Hire Pipeline</p>
                 <p className="text-xs text-[#5F624F] font-medium max-w-64 mt-1 opacity-70 leading-relaxed">Review wedding, party, and corporate hire enquiries for the season.</p>
               </div>
-              <Button size="sm" variant="outline" className="rounded-full px-8 h-10 font-black uppercase tracking-wide border-[#26300D] text-[#26300D] hover:bg-[#26300D] hover:text-white transition-all">
+              <Button size="sm" variant="outline" className="rounded-full px-8 h-10 font-black uppercase tracking-wide border-[#5C4033] text-[#5C4033] hover:bg-[#5C4033] hover:text-white transition-all">
                 View {privateHire.length} Requests
               </Button>
             </div>
@@ -259,7 +259,7 @@ function QuizEventCard({
       href={`/dashboard?date=${event.date}`} 
       className={cn(
         "group block bg-white border border-[#E6DFC8] rounded-2xl p-4 sm:p-5 shadow-sm transition-all active:scale-[0.99]",
-        isHistoric ? "hover:border-[#E6DFC8]" : "hover:border-[#26300D] hover:shadow-md"
+        isHistoric ? "hover:border-[#E6DFC8]" : "hover:border-[#5C4033] hover:shadow-md"
       )}
     >
       <div className="flex justify-between items-start mb-4">
@@ -287,7 +287,7 @@ function QuizEventCard({
         <div className="bg-[#F7F4EA]/50 p-3 rounded-xl border border-[#E6DFC8]/50 mb-4">
           <div className="flex justify-between text-[9px] font-black uppercase text-[#5F624F] mb-2 px-1">
             <span>Floor Utilization</span>
-            <span className={cn(occupancy > 90 ? "text-red-600" : "text-[#26300D]")}>
+            <span className={cn(occupancy > 90 ? "text-red-600" : "text-[#5C4033]")}>
               {tablesReserved} / {eventTotalTables} Tables
             </span>
           </div>
@@ -310,7 +310,7 @@ function QuizEventCard({
         </div>
         <div className={cn(
           "w-8 h-8 rounded-full bg-[#F7F4EA] flex items-center justify-center transition-colors",
-          !isHistoric && "group-hover:bg-[#26300D] group-hover:text-white"
+          !isHistoric && "group-hover:bg-[#5C4033] group-hover:text-white"
         )}>
           <ChevronRight className="w-4 h-4" />
         </div>
@@ -340,16 +340,16 @@ function CollapsibleSection({
       <button
         type="button"
         onClick={onToggle}
-        className="w-full flex items-center justify-between px-1 group outline-none focus-visible:ring-2 focus-visible:ring-[#26300D] rounded-xl"
+        className="w-full flex items-center justify-between px-1 group outline-none focus-visible:ring-2 focus-visible:ring-[#5C4033] rounded-xl"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#26300D] rounded-xl shadow-sm group-active:scale-95 transition-transform">
-            <Icon className="w-4 h-4 text-[#FDCC4B]" />
+          <div className="p-2 bg-[#5C4033] rounded-xl shadow-sm group-active:scale-95 transition-transform">
+            <Icon className="w-4 h-4 text-white" />
           </div>
           <div className="flex items-center gap-2">
             <h3 className="text-xs sm:text-sm font-black uppercase tracking-[0.15em] text-[#1F1F1A]">{title}</h3>
             {badge && (
-              <span className="text-[10px] font-black bg-[#FDCC4B] text-[#26300D] px-2 py-0.5 rounded-full shadow-sm border border-[#26300D]/10 uppercase">
+              <span className="text-[10px] font-black bg-[#C8956D] text-[#5C4033] px-2 py-0.5 rounded-full shadow-sm border border-[#5C4033]/10 uppercase">
                 {badge}
               </span>
             )}
@@ -380,7 +380,7 @@ function KPICard({ label, value, icon: Icon, color = "default" }: { label: strin
         "w-8 h-8 rounded-lg flex items-center justify-center",
         color === "amber" ? "bg-amber-100 text-amber-700" : 
         color === "green" ? "bg-green-100 text-green-700" :
-        "bg-[#F7F4EA] text-[#26300D]"
+        "bg-[#F7F4EA] text-[#5C4033]"
       )}>
         <Icon className="w-4 h-4" />
       </div>

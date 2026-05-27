@@ -131,7 +131,7 @@ export default function SpecialsClient({
           <button
             type="button"
             onClick={openAdd}
-            className="mt-4 h-8 px-4 rounded-lg bg-[#26300D] text-[#FDCC4B] text-[10px] font-bold uppercase tracking-wide hover:bg-[#26300D]/85 transition-colors"
+            className="mt-4 h-8 px-4 rounded-lg bg-[#5C4033] text-white text-[10px] font-bold uppercase tracking-wide hover:bg-[#5C4033]/85 transition-colors"
           >
             <Plus className="w-3.5 h-3.5 inline mr-1" />
             Create Special
@@ -145,7 +145,7 @@ export default function SpecialsClient({
               onClick={() => setIsCollapsed(!isCollapsed)}
               className="flex-1 min-w-0 text-left"
             >
-              <p className="text-[11px] font-bold uppercase tracking-wide text-[#26300D] truncate">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-[#5C4033] truncate">
                 Specials{" "}
                 <span className="text-[#5F624F]">
                   ({initialSpecials.length})
@@ -155,7 +155,7 @@ export default function SpecialsClient({
             <button
               type="button"
               onClick={openAdd}
-              className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+              className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
               title="Add Special"
             >
               <Plus className="w-3.5 h-3.5 shrink-0" />
@@ -478,7 +478,7 @@ export default function SpecialsClient({
                     setFormError(null);
                     setIsEditing(true);
                   }}
-                  className="h-14 flex-1 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
@@ -505,7 +505,7 @@ export default function SpecialsClient({
                   type="submit"
                   form="special-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

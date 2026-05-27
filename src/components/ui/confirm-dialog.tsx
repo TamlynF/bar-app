@@ -73,7 +73,7 @@ export function useConfirm() {
             className={
               isDestructive
                 ? "flex-1 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 transition-colors"
-                : "flex-1 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest text-[#FDCC4B] bg-[#26300D] hover:bg-[#26300D]/90 transition-colors"
+                : "flex-1 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-[#5C4033] hover:bg-[#5C4033]/90 transition-colors"
             }
           >
             {options.confirmLabel ?? "Confirm"}

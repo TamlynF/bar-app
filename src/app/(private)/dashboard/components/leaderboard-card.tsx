@@ -72,7 +72,7 @@ export default function LeaderboardCard({ entries }: { entries: LeaderboardEntry
 
       <Link
         href="/settings/teams"
-        className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-[#E6DFC8] text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#26300D] hover:bg-[#F7F4EA]/50 transition-colors"
+        className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-[#E6DFC8] text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#5C4033] hover:bg-[#F7F4EA]/50 transition-colors"
       >
         View Full Leaderboard
         <ChevronRight className="w-3 h-3" />

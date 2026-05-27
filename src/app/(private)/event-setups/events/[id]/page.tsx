@@ -90,7 +90,7 @@ export default async function EventQuizQuestionsPage({
       {/* Back nav */}
       <Link
         href={`/event-setups/events?open=${id}`}
-        className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#26300D] transition-colors"
+        className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#5C4033] transition-colors"
       >
         <ArrowLeft className="w-3.5 h-3.5" />
         Back to Event
@@ -98,11 +98,11 @@ export default async function EventQuizQuestionsPage({
 
       {/* Event header card */}
       <div className="bg-white border border-[#E6DFC8] rounded-2xl px-5 py-4 flex items-start gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-[#FDCC4B]/15 border border-[#FDCC4B]/30 flex items-center justify-center shrink-0">
-          <Brain className="w-4 h-4 text-[#FDCC4B]" />
+        <div className="w-10 h-10 rounded-2xl bg-[#C8956D]/15 border border-[#C8956D]/30 flex items-center justify-center shrink-0">
+          <Brain className="w-4 h-4 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-black text-[#26300D] uppercase tracking-tighter leading-tight">
+          <h1 className="text-xl font-black text-[#5C4033] uppercase tracking-tighter leading-tight">
             {event.title ?? "Untitled Event"}
           </h1>
           <p className="text-[11px] font-bold text-[#5F624F] mt-0.5">
@@ -113,7 +113,7 @@ export default async function EventQuizQuestionsPage({
           <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
             Questions
           </p>
-          <p className="text-lg font-black text-[#26300D] tabular-nums leading-none">
+          <p className="text-lg font-black text-[#5C4033] tabular-nums leading-none">
             {totalQuestions}
             <span className="text-xs text-[#5F624F]/50 font-bold"> / {targetQuestions}</span>
           </p>

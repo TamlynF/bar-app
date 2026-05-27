@@ -270,7 +270,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         href={url as string}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E6DFC8] rounded-xl text-xs font-bold text-[#26300D] hover:bg-[#F7F4EA] transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E6DFC8] rounded-xl text-xs font-bold text-[#5C4033] hover:bg-[#F7F4EA] transition-colors"
                       >
                         <Icon className="w-3.5 h-3.5" />
                         {key.charAt(0).toUpperCase() + key.slice(1)}
@@ -296,12 +296,12 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         key={i}
                         type="button"
                         onClick={() => setActiveVideo(url)}
-                        className="relative h-16 w-24 shrink-0 rounded-xl overflow-hidden bg-[#26300D] flex flex-col items-center justify-center gap-1 group active:scale-95 transition-transform"
+                        className="relative h-16 w-24 shrink-0 rounded-xl overflow-hidden bg-[#5C4033] flex flex-col items-center justify-center gap-1 group active:scale-95 transition-transform"
                       >
-                        <div className="w-8 h-8 rounded-full bg-[#FDCC4B]/20 border border-[#FDCC4B]/40 flex items-center justify-center group-hover:bg-[#FDCC4B]/30 transition-colors">
-                          <Play className="w-3.5 h-3.5 text-[#FDCC4B] fill-[#FDCC4B] translate-x-px" />
+                        <div className="w-8 h-8 rounded-full bg-[#5C4033]/15 border border-[#C8956D]/40 flex items-center justify-center group-hover:bg-[#C8956D]/30 transition-colors">
+                          <Play className="w-3.5 h-3.5 text-white fill-white translate-x-px" />
                         </div>
-                        <span className="text-[9px] font-black text-[#FDCC4B]/70 uppercase tracking-wide">
+                        <span className="text-[9px] font-black text-white/70 uppercase tracking-wide">
                           Video {i + 1}
                         </span>
                       </button>
@@ -362,7 +362,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     onChange={(e) => setAdminNotes(e.target.value)}
                     placeholder="Add a message to include in the outcome email…"
                     rows={2}
-                    className="w-full bg-[#F7F4EA] border border-[#E6DFC8] rounded-2xl px-4 py-3 text-sm text-[#1F1F1A] placeholder:text-[#5F624F]/50 focus:outline-none focus:border-[#26300D]/30 resize-none transition-all"
+                    className="w-full bg-[#F7F4EA] border border-[#E6DFC8] rounded-2xl px-4 py-3 text-sm text-[#1F1F1A] placeholder:text-[#5F624F]/50 focus:outline-none focus:border-[#5C4033]/30 resize-none transition-all"
                   />
                 </div>
 

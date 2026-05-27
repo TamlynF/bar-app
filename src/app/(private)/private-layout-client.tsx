@@ -174,8 +174,8 @@ export default function PrivateLayoutClient({
             <aside className="hidden sm:flex flex-col w-64 bg-white border-r border-[#E6DFC8] sticky top-0 h-screen shrink-0 z-50">
                 {/* Sidebar Brand */}
                 <div className="p-6 border-b border-[#E6DFC8] flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#26300D] flex items-center justify-center shrink-0 shadow-sm">
-                        <span className="text-[#FDCC4B] font-black text-sm">{initials}</span>
+                    <div className="w-10 h-10 rounded-xl bg-[#5C4033] flex items-center justify-center shrink-0 shadow-sm">
+                        <span className="text-white font-black text-sm">{initials}</span>
                     </div>
                     <div className="flex flex-col min-w-0">
                         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A] truncate">{displayName}</span>
@@ -214,11 +214,11 @@ export default function PrivateLayoutClient({
                                         className={cn(
                                             "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
                                             isActive
-                                                ? "bg-[#26300D] text-white shadow-lg shadow-[#26300D]/10"
-                                                : "text-[#5F624F] hover:bg-[#26300D]/5"
+                                                ? "bg-[#5C4033] text-white shadow-lg shadow-[#5C4033]/10"
+                                                : "text-[#5F624F] hover:bg-[#5C4033]/5"
                                         )}
                                     >
-                                        <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-[#FDCC4B]" : "text-[#5F624F]")} />
+                                        <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-white" : "text-[#5F624F]")} />
                                         <span className="flex-1 text-left">{item.label}</span>
                                         {isOpen ? <ChevronUp className="w-3.5 h-3.5 shrink-0 transition-transform duration-200" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0 transition-transform duration-200" />}
                                     </button>
@@ -228,11 +228,11 @@ export default function PrivateLayoutClient({
                                         className={cn(
                                             "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
                                             isActive
-                                                ? "bg-[#26300D] text-white shadow-lg shadow-[#26300D]/10"
-                                                : "text-[#5F624F] hover:bg-[#26300D]/5"
+                                                ? "bg-[#5C4033] text-white shadow-lg shadow-[#5C4033]/10"
+                                                : "text-[#5F624F] hover:bg-[#5C4033]/5"
                                         )}
                                     >
-                                        <item.icon className={cn("w-5 h-5", isActive ? "text-[#FDCC4B]" : "text-[#5F624F]")} />
+                                        <item.icon className={cn("w-5 h-5", isActive ? "text-white" : "text-[#5F624F]")} />
                                         {item.label}
                                     </Link>
                                 )}
@@ -249,11 +249,11 @@ export default function PrivateLayoutClient({
                                                     className={cn(
                                                         "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[11px] uppercase tracking-wider",
                                                         isSubActive
-                                                            ? "text-[#26300D] bg-[#FDCC4B]/20"
-                                                            : "text-[#5F624F] hover:text-[#26300D] hover:bg-[#26300D]/5"
+                                                            ? "text-[#5C4033] bg-[#5C4033]/15"
+                                                            : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
                                                     )}
                                                 >
-                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#26300D]" : "text-[#5F624F]/50")} />
+                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
                                                     {sub.label}
                                                 </Link>
                                             )
@@ -273,11 +273,11 @@ export default function PrivateLayoutClient({
                                                     className={cn(
                                                         "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[11px] uppercase tracking-wider",
                                                         isSubActive
-                                                            ? "text-[#26300D] bg-[#FDCC4B]/20"
-                                                            : "text-[#5F624F] hover:text-[#26300D] hover:bg-[#26300D]/5"
+                                                            ? "text-[#5C4033] bg-[#5C4033]/15"
+                                                            : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
                                                     )}
                                                 >
-                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#26300D]" : "text-[#5F624F]/50")} />
+                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
                                                     {sub.label}
                                                 </Link>
                                             )
@@ -297,11 +297,11 @@ export default function PrivateLayoutClient({
                                                     className={cn(
                                                         "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[11px] uppercase tracking-wider",
                                                         isSubActive
-                                                            ? "text-[#26300D] bg-[#FDCC4B]/20"
-                                                            : "text-[#5F624F] hover:text-[#26300D] hover:bg-[#26300D]/5"
+                                                            ? "text-[#5C4033] bg-[#5C4033]/15"
+                                                            : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
                                                     )}
                                                 >
-                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#26300D]" : "text-[#5F624F]/50")} />
+                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
                                                     {sub.label}
                                                 </Link>
                                             )
@@ -391,18 +391,18 @@ export default function PrivateLayoutClient({
                                 >
                                     <div className={cn(
                                         "px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center",
-                                        isActive ? "bg-[#FDCC4B]/20 text-[#26300D]" : "text-[#5F624F]"
+                                        isActive ? "bg-[#5C4033]/15 text-[#5C4033]" : "text-[#5F624F]"
                                     )}>
                                         <item.icon className="w-5 h-5 mx-auto" />
                                     </div>
                                     <span className={cn(
                                         "text-[9px] font-bold uppercase tracking-tight text-center block w-full transition-colors",
-                                        isActive ? "text-[#26300D]" : "text-[#5F624F]"
+                                        isActive ? "text-[#5C4033]" : "text-[#5F624F]"
                                     )}>
                                         {item.label}
                                     </span>
                                     {isActive && (
-                                        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#26300D] animate-in fade-in zoom-in duration-300" />
+                                        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#5C4033] animate-in fade-in zoom-in duration-300" />
                                     )}
                                 </Link>
                             )

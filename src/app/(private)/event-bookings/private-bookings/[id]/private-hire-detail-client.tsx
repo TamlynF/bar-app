@@ -41,7 +41,7 @@ export default function PrivateHireDetailClient({
           onChange={(e) => setAdminNotes(e.target.value)}
           placeholder="Add a message to include in the outcome email…"
           rows={3}
-          className="w-full bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3 text-sm text-[#1F1F1A] placeholder:text-[#5F624F]/50 focus:outline-none focus:border-[#26300D]/30 resize-none transition-all"
+          className="w-full bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3 text-sm text-[#1F1F1A] placeholder:text-[#5F624F]/50 focus:outline-none focus:border-[#5C4033]/30 resize-none transition-all"
         />
       </div>
 

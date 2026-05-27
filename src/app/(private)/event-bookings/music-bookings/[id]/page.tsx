@@ -217,7 +217,7 @@ export default async function BandBookingDetailPage({
                 </span>
                 <a
                   href={`mailto:${request.email}`}
-                  className="text-sm font-bold text-[#26300D] underline underline-offset-2 text-right break-all"
+                  className="text-sm font-bold text-[#5C4033] underline underline-offset-2 text-right break-all"
                 >
                   {request.email}
                 </a>
@@ -229,7 +229,7 @@ export default async function BandBookingDetailPage({
                   </span>
                   <a
                     href={`tel:${request.phone_no}`}
-                    className="text-sm font-bold text-[#26300D] underline underline-offset-2"
+                    className="text-sm font-bold text-[#5C4033] underline underline-offset-2"
                   >
                     {request.phone_no}
                   </a>
@@ -281,7 +281,7 @@ export default async function BandBookingDetailPage({
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E6DFC8] rounded-xl text-xs font-bold text-[#26300D] hover:bg-[#F7F4EA] transition-colors shadow-sm"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E6DFC8] rounded-xl text-xs font-bold text-[#5C4033] hover:bg-[#F7F4EA] transition-colors shadow-sm"
                   >
                     <Icon className="w-3.5 h-3.5" />
                     {key.charAt(0).toUpperCase() + key.slice(1)}

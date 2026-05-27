@@ -27,7 +27,7 @@
   height: 100%;
   transition: all 1000ms ease-out;
   width: var(--progress-width, 0%);
-  background-color: #26300D; /* Primary brand color */
+  background-color: #5C4033; /* Primary brand color */
 }
 
 /* Red state for high occupancy levels */

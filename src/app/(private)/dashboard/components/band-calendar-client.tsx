@@ -31,25 +31,25 @@ export function BandCalendarClient({
           ...(popularDates.length > 0 ? { popular: popularDates } : {}),
         }}
         modifiersClassNames={{
-          confirmed: "!bg-[#26300D] !text-white !rounded-md",
-          pending: "!bg-[#FDCC4B]/60 !text-[#26300D] !rounded-md !font-bold",
-          popular: "!ring-2 !ring-[#FDCC4B] !ring-offset-1 !rounded-md",
+          confirmed: "!bg-[#5C4033] !text-white !rounded-md",
+          pending: "!bg-[#C8956D]/60 !text-[#5C4033] !rounded-md !font-bold",
+          popular: "!ring-2 !ring-[#C8956D] !ring-offset-1 !rounded-md",
         }}
         className="w-full"
       />
 
       <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-[#E6DFC8]">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-[#26300D]" />
+          <div className="w-3 h-3 rounded-sm bg-[#5C4033]" />
           <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Confirmed</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-[#FDCC4B]/60 border border-[#FDCC4B]" />
+          <div className="w-3 h-3 rounded-sm bg-[#C8956D]/60 border border-[#C8956D]" />
           <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Requested</span>
         </div>
         {popularDates.length > 0 && (
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm ring-2 ring-[#FDCC4B] ring-offset-1" />
+            <div className="w-3 h-3 rounded-sm ring-2 ring-[#C8956D] ring-offset-1" />
             <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Most popular</span>
           </div>
         )}

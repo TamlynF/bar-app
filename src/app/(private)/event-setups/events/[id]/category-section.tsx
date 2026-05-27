@@ -112,7 +112,7 @@ export default function CategorySection({ eventId, category_name, question_count
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-5 py-3.5 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
       >
-        <p className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">
+        <p className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">
           {orderNo != null ? `${orderNo}. ` : ''}{category_name}
         </p>
         <div className="flex items-center gap-2 shrink-0">
@@ -164,7 +164,7 @@ export default function CategorySection({ eventId, category_name, question_count
                             title="Edit question"
                             value={editForm.question}
                             onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                            className="w-full text-[13px] font-semibold min-h-[60px] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#26300D] rounded-lg outline-none resize-none"
+                            className="w-full text-[13px] font-semibold min-h-[60px] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none resize-none"
                           />
                         </div>
                         <div className="space-y-1">
@@ -173,14 +173,14 @@ export default function CategorySection({ eventId, category_name, question_count
                             title="Edit answer"
                             value={editForm.answer}
                             onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })}
-                            className="w-full text-[13px] font-black text-[#26300D] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#26300D] rounded-lg outline-none h-10"
+                            className="w-full text-[13px] font-black text-[#5C4033] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10"
                           />
                         </div>
                         <div className="flex gap-2">
                           <Button
                             onClick={() => saveEdit(q.id)}
                             disabled={isPending}
-                            className="flex-1 bg-[#26300D] text-white font-black uppercase text-[10px] tracking-wide h-9 rounded-xl"
+                            className="flex-1 bg-[#5C4033] text-white font-black uppercase text-[10px] tracking-wide h-9 rounded-xl"
                           >
                             {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-1.5" /> Save</>}
                           </Button>
@@ -197,7 +197,7 @@ export default function CategorySection({ eventId, category_name, question_count
                     ) : (
                       <div className="space-y-2">
                         <div className="flex items-start gap-3">
-                          <span className="text-[10px] font-black text-[#26300D]/20 mt-0.5 shrink-0 tabular-nums w-5 text-right">
+                          <span className="text-[10px] font-black text-[#5C4033]/20 mt-0.5 shrink-0 tabular-nums w-5 text-right">
                             Q{idx + 1}
                           </span>
                           <div className="flex-1 min-w-0 space-y-1.5">
@@ -264,7 +264,7 @@ export default function CategorySection({ eventId, category_name, question_count
                 "flex items-center justify-center gap-2 w-full h-10 rounded-xl font-black text-[11px] uppercase tracking-wide transition-all",
                 isComplete
                   ? "bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA]"
-                  : "bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/90 shadow-sm"
+                  : "bg-[#5C4033] text-white hover:bg-[#5C4033]/90 shadow-sm"
               )}
             >
               <Sparkles className="w-3.5 h-3.5" />

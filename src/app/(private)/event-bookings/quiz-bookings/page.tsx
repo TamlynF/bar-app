@@ -313,7 +313,7 @@ export default async function QuizBookingsPage({
         ) : (
           <div className="bg-white border-2 border-dashed border-[#E6DFC8] rounded-[2rem] p-6 flex flex-col items-center justify-center text-center gap-3 shadow-sm">
             <div className="p-3 bg-[#F7F4EA] rounded-2xl">
-              <CalendarDays className="w-6 h-6 text-[#26300D] opacity-30" />
+              <CalendarDays className="w-6 h-6 text-[#5C4033] opacity-30" />
             </div>
             <p className="text-[10px] font-bold uppercase text-[#5F624F] tracking-wide opacity-60 max-w-[200px] leading-relaxed">
               Select a date to see event details

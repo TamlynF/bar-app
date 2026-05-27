@@ -185,7 +185,7 @@ export default async function EventDetailPage({
             <div
               className={cn(
                 "h-full rounded-full transition-all capacity-fill",
-                capacityPct > 90 ? "bg-red-500" : "bg-[#26300D]"
+                capacityPct > 90 ? "bg-red-500" : "bg-[#5C4033]"
               )}
               style={{ '--bar-width': `${Math.min(capacityPct, 100)}%` } as React.CSSProperties}
             />

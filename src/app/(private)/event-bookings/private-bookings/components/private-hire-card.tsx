@@ -128,7 +128,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                   onChange={(e) => setAdminNotes(e.target.value)}
                   placeholder="Add a message to include in the outcome email…"
                   rows={2}
-                  className="w-full bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-4 py-3 text-sm text-[#1F1F1A] placeholder:text-[#5F624F]/50 focus:outline-none focus:border-[#26300D]/30 resize-none transition-all"
+                  className="w-full bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-4 py-3 text-sm text-[#1F1F1A] placeholder:text-[#5F624F]/50 focus:outline-none focus:border-[#5C4033]/30 resize-none transition-all"
                 />
               </div>
 

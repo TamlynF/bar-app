@@ -178,14 +178,14 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className="flex-1 min-w-0 text-left"
               >
-                <p className="text-[11px] font-bold uppercase tracking-wide text-[#26300D] truncate">
+                <p className="text-[11px] font-bold uppercase tracking-wide text-[#5C4033] truncate">
                   Employees <span className="text-[#5F624F]">({initialEmployees.length})</span>
                 </p>
               </button>
               <button
                 type="button"
                 onClick={openAdd}
-                className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+                className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
                 title="Add Employee"
               >
                 <Plus className="w-3.5 h-3.5 shrink-0" />
@@ -357,7 +357,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                   {/* Account Access */}
                   <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
                     <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-3 border-b border-[#E6DFC8]">
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#26300D] flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#5C4033] flex items-center gap-1.5">
                         <Mail className="w-3 h-3" />
                         Account Access
                       </span>
@@ -366,7 +366,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                         type="button"
                         onClick={() => handlePasswordReset(selected.email)}
                         disabled={isPending}
-                        className="h-7 rounded-xl bg-[#26300D] flex items-center justify-center text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors px-2.5 gap-1.5"
+                        className="h-7 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors px-2.5 gap-1.5"
                         title="Send password reset email"
                       >
                         <KeyRound className="w-3.5 h-3.5" />
@@ -548,7 +548,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit
                 </Button>
@@ -574,7 +574,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                   type="submit"
                   form="employee-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending
                     ? <Loader2 className="w-4 h-4 animate-spin" />

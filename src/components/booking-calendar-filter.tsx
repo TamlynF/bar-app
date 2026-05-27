@@ -58,7 +58,7 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
           >
             <div className="flex items-center gap-3">
               <div className="p-2 bg-white rounded-lg shadow-xs group-hover:scale-110 transition-transform">
-                <CalendarDays className="w-4 h-4 text-[#26300D]" />
+                <CalendarDays className="w-4 h-4 text-[#5C4033]" />
               </div>
               <div className="flex flex-col text-left">
                 <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Active Date</span>
@@ -86,7 +86,7 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
             <Button
               variant="ghost"
               size="sm"
-              className="w-full h-10 text-[10px] font-black uppercase tracking-widest text-[#26300D] hover:bg-white/50 rounded-xl"
+              className="w-full h-10 text-[10px] font-black uppercase tracking-widest text-[#5C4033] hover:bg-white/50 rounded-xl"
               onClick={clearFilter}
             >
               <RotateCcw className="w-3.5 h-3.5 mr-2" />

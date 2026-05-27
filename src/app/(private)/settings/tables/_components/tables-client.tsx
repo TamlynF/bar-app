@@ -113,7 +113,7 @@ export default function TablesClient({
         <Button
           onClick={openAdd}
           size="sm"
-          className="h-11 sm:h-9 px-4 rounded-xl font-black uppercase tracking-wide text-[10px] bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/90"
+          className="h-11 sm:h-9 px-4 rounded-xl font-black uppercase tracking-wide text-[10px] bg-[#5C4033] text-white hover:bg-[#5C4033]/90"
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" />
           Add Table
@@ -135,11 +135,11 @@ export default function TablesClient({
             <div
               key={table.id}
               onClick={() => openView(table)}
-              className="bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:border-[#26300D]/30 hover:shadow-sm transition-all active:scale-[0.99]"
+              className="bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:border-[#5C4033]/30 hover:shadow-sm transition-all active:scale-[0.99]"
             >
               {/* Icon */}
               <div className="w-10 h-10 rounded-xl bg-[#F7F4EA] flex items-center justify-center shrink-0">
-                <LayoutDashboard className="w-4 h-4 text-[#26300D]" />
+                <LayoutDashboard className="w-4 h-4 text-[#5C4033]" />
               </div>
 
               {/* Text */}
@@ -271,7 +271,7 @@ export default function TablesClient({
                       placeholder="e.g. Window Booth 1"
                       defaultValue={formDefault?.name ?? ""}
                       required
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-base sm:text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-base sm:text-sm font-bold focus:border-[#5C4033] transition-all"
                     />
                   </div>
 
@@ -280,7 +280,7 @@ export default function TablesClient({
                     <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
                       Max Capacity <span className="text-red-500">*</span>
                     </Label>
-                    <div className="flex items-center h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white focus-within:border-[#26300D] transition-all overflow-hidden">
+                    <div className="flex items-center h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white focus-within:border-[#5C4033] transition-all overflow-hidden">
                       <div className="flex items-center justify-center px-4 h-full border-r-2 border-[#E6DFC8] shrink-0">
                         <Users className="w-4 h-4 text-[#5F624F]" />
                       </div>
@@ -308,7 +308,7 @@ export default function TablesClient({
                       title="Available for booking"
                       type="checkbox"
                       name="available"
-                      className="h-5 w-5 rounded accent-[#26300D] shrink-0 cursor-pointer"
+                      className="h-5 w-5 rounded accent-[#5C4033] shrink-0 cursor-pointer"
                       defaultChecked={formDefault ? formDefault.available : true}
                     />
                   </div>
@@ -322,7 +322,7 @@ export default function TablesClient({
                       name="description"
                       placeholder="e.g. Near the fireplace, quiet corner..."
                       defaultValue={formDefault?.description ?? ""}
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#26300D] transition-all"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
                     />
                   </div>
 
@@ -348,7 +348,7 @@ export default function TablesClient({
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#26300D] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
                 >
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -358,7 +358,7 @@ export default function TablesClient({
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setIsEditing(true); }}
-                  className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit
                 </Button>
@@ -385,7 +385,7 @@ export default function TablesClient({
                   type="submit"
                   form="table-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

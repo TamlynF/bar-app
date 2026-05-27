@@ -429,7 +429,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             setSelectedTypeColor(null);
             setIsTypeSheetOpen(true);
           }}
-          className="h-8 px-3 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center gap-1.5 shrink-0"
+          className="h-8 px-3 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center gap-1.5 shrink-0"
         >
           <Plus className="w-3.5 h-3.5" />
           <span className="text-[10px] font-black uppercase tracking-wide">New</span>
@@ -477,7 +477,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     <button
                       type="button"
                       onClick={() => openAddSubCategory(typeKey)}
-                      className="h-7 px-2.5 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center gap-1 shrink-0"
+                      className="h-7 px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center gap-1 shrink-0"
                     >
                       <Plus className="w-3 h-3" />
                       <span className="text-[9px] font-black uppercase tracking-wide">Sub-Category</span>
@@ -485,7 +485,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-7 w-7 text-[#5F624F] hover:text-[#26300D]"
+                      className="h-7 w-7 text-[#5F624F] hover:text-[#5C4033]"
                       onClick={() => openCategoryEdit(items)}
                     >
                       <Edit2 className="w-3.5 h-3.5" />
@@ -510,11 +510,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="z-9999 border-[#E6DFC8] shadow-lg min-w-[200px]" style={{ ["--popover" as string]: "#ffffff", ["--accent" as string]: "#F7F4EA" }}>
                         <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => openAddSubCategory(typeKey)}>
-                          <Plus className="w-4 h-4 mr-3 text-[#26300D] stroke-[2.5]" /> Add Sub-Category
+                          <Plus className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Add Sub-Category
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-[#E6DFC8]" />
                         <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => openCategoryEdit(items)}>
-                          <Edit2 className="w-4 h-4 mr-3 text-[#26300D] stroke-[2.5]" /> Edit Category
+                          <Edit2 className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Edit Category
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-[#E6DFC8]" />
                         <DropdownMenuItem
@@ -571,7 +571,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7 text-[#5F624F] hover:text-[#26300D]"
+                                className="h-7 w-7 text-[#5F624F] hover:text-[#5C4033]"
                                 onClick={() => openSubCategoryEdit(item)}
                               >
                                 <Edit2 className="w-3 h-3" />
@@ -602,11 +602,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                     setInfoTitleInput("");
                                     setIsInfoSheetOpen(true);
                                   }}>
-                                    <Plus className="w-4 h-4 mr-3 text-[#26300D] stroke-[2.5]" /> Add Badge
+                                    <Plus className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Add Badge
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator className="bg-[#E6DFC8]" />
                                   <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => openSubCategoryEdit(item)}>
-                                    <Edit2 className="w-4 h-4 mr-3 text-[#26300D] stroke-[2.5]" /> Edit
+                                    <Edit2 className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Edit
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator className="bg-[#E6DFC8]" />
                                   <DropdownMenuItem
@@ -658,7 +658,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                   {/* Desktop + Badge button */}
                                   <button
                                     type="button"
-                                    className="hidden sm:flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#26300D] hover:text-[#26300D]/70"
+                                    className="hidden sm:flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-[#5C4033] hover:text-[#5C4033]/70"
                                     onClick={() => {
                                       setEditingInfo(null);
                                       setActiveTypeId(item.id);
@@ -676,7 +676,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                   <div className="p-2 grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                                     {item.event_information.map((info) => (
                                       <div key={info.id} className="flex items-center gap-2.5 px-3 py-2 border border-[#E6DFC8] rounded-lg bg-[#F7F4EA]/30 relative group">
-                                        <div className="shrink-0 w-7 h-7 flex items-center justify-center bg-[#F7F4EA] text-[#26300D] rounded-lg">
+                                        <div className="shrink-0 w-7 h-7 flex items-center justify-center bg-[#F7F4EA] text-[#5C4033] rounded-lg">
                                           {renderIcon(info.icon)}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -702,7 +702,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                                 setInfoTitleInput(info.title);
                                                 setIsInfoSheetOpen(true);
                                               }}>
-                                                <Edit2 className="w-4 h-4 mr-3 text-[#26300D] stroke-[2.5]" /> Edit
+                                                <Edit2 className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Edit
                                               </DropdownMenuItem>
                                               <DropdownMenuSeparator className="bg-[#E6DFC8]" />
                                               <DropdownMenuItem
@@ -719,7 +719,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                         <div className="absolute top-1.5 right-1.5 hidden sm:flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                                           <Button
                                             variant="ghost"
-                                            className="p-1 h-auto text-[#5F624F] hover:text-[#26300D]"
+                                            className="p-1 h-auto text-[#5F624F] hover:text-[#5C4033]"
                                             onClick={() => {
                                               setEditingInfo(info);
                                               setActiveTypeId(item.id);
@@ -802,7 +802,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               {/* ===== CATEGORY SECTION ===== */}
               <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
                 <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#E6DFC8]/60">
-                  <span className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Category</span>
+                  <span className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">Category</span>
                 </div>
 
                 {/* Category Name */}
@@ -866,7 +866,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     <button
                       type="button"
                       onClick={() => { setIsCustomType(false); setSelectedTypeValue(""); setTypeInput(""); }}
-                      className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] underline hover:text-[#26300D]"
+                      className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] underline hover:text-[#5C4033]"
                     >
                       Select from existing
                     </button>
@@ -930,7 +930,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               {(sheetMode === 'subtype' || !editingType?.id) && (
                 <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
                   <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#E6DFC8]/60">
-                    <span className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Sub-Category</span>
+                    <span className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">Sub-Category</span>
                   </div>
 
                   {/* Sub-category Name */}
@@ -1074,7 +1074,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   const form = document.getElementById('type-form') as HTMLFormElement | null;
                   if (form) handleTypeSubmit(new FormData(form));
                 }}
-                className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
               >
                 {isPending
                   ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -1165,8 +1165,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         className={cn(
                           "flex items-center justify-center aspect-square rounded-xl border transition-all duration-200 active:scale-95",
                           selectedIcon === name
-                            ? "bg-[#26300D] text-[#FDCC4B] border-[#26300D] shadow-md ring-2 ring-[#26300D]/20 scale-105"
-                            : "hover:bg-[#F7F4EA] bg-white text-[#5F624F] border-[#E6DFC8] hover:border-[#26300D]/30"
+                            ? "bg-[#5C4033] text-white border-[#5C4033] shadow-md ring-2 ring-[#5C4033]/20 scale-105"
+                            : "hover:bg-[#F7F4EA] bg-white text-[#5F624F] border-[#E6DFC8] hover:border-[#5C4033]/30"
                         )}
                       >
                         <IconComponent className="w-5 h-5 sm:w-4 sm:h-4" />
@@ -1200,7 +1200,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   const form = document.getElementById('info-form') as HTMLFormElement | null;
                   if (form) handleInfoSubmit(new FormData(form));
                 }}
-                className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
               >
                 {isPending
                   ? <Loader2 className="w-4 h-4 animate-spin" />

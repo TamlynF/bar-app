@@ -199,7 +199,7 @@ export default async function PrivateHireDetailPage({
                 </span>
                 <a
                   href={`mailto:${request.email}`}
-                  className="text-sm font-bold text-[#26300D] underline underline-offset-2 text-right break-all"
+                  className="text-sm font-bold text-[#5C4033] underline underline-offset-2 text-right break-all"
                 >
                   {request.email}
                 </a>
@@ -211,7 +211,7 @@ export default async function PrivateHireDetailPage({
                   </span>
                   <a
                     href={`tel:${request.phone_no}`}
-                    className="text-sm font-bold text-[#26300D] underline underline-offset-2"
+                    className="text-sm font-bold text-[#5C4033] underline underline-offset-2"
                   >
                     {request.phone_no}
                   </a>

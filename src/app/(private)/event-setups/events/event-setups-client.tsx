@@ -300,7 +300,7 @@ export default function EventsClient({
                   onClick={() => toggleGroup(eventType.id)}
                   className="flex-1 min-w-0 text-left"
                 >
-                  <p className="text-[11px] font-black uppercase tracking-wide text-[#26300D] truncate">
+                  <p className="text-[11px] font-black uppercase tracking-wide text-[#5C4033] truncate">
                     {eventTypeLabel(eventType)} <span className="text-[#5F624F]">({events.length})</span>
                   </p>
                 </button>
@@ -308,7 +308,7 @@ export default function EventsClient({
                   <button
                     type="button"
                     onClick={() => setHistoryGroups((prev) => { const next = new Set(prev); next.delete(eventType.id); return next; })}
-                    className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] underline hover:text-[#26300D] shrink-0"
+                    className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] underline hover:text-[#5C4033] shrink-0"
                   >
                     Recent
                   </button>
@@ -316,7 +316,7 @@ export default function EventsClient({
                 <button
                   type="button"
                   onClick={() => openAdd(eventType.id)}
-                  className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#26300D] text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+                  className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
                   title={`Create ${eventTypeLabel(eventType)} event`}
                 >
                   <Plus className="w-3.5 h-3.5 shrink-0" />
@@ -455,12 +455,12 @@ export default function EventsClient({
                         <span className={cn(
                           "text-[11px] font-black px-2 py-1 rounded-lg border flex items-center gap-1",
                           event.seating_required
-                            ? "text-[#26300D] bg-[#26300D]/10 border-[#26300D]/20"
+                            ? "text-[#5C4033] bg-[#5C4033]/10 border-[#5C4033]/20"
                             : "text-[#5F624F]/40 bg-[#F7F4EA] border-[#E6DFC8]"
                         )}>
                           Seating
                           {event.seating_required
-                            ? <CheckCircle2 className="w-3.5 h-3.5 text-[#26300D]" />
+                            ? <CheckCircle2 className="w-3.5 h-3.5 text-[#5C4033]" />
                             : <XCircle className="w-3.5 h-3.5 text-[#5F624F]/30" />}
                         </span>
                         <span className={cn(
@@ -482,7 +482,7 @@ export default function EventsClient({
                   <button
                     type="button"
                     onClick={() => setHistoryGroups((prev) => new Set(prev).add(eventType.id))}
-                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#26300D] hover:bg-[#F7F4EA]/50 transition-colors"
+                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#5C4033] hover:bg-[#F7F4EA]/50 transition-colors"
                   >
                     View All History
                     <ChevronRight className="w-3 h-3" />
@@ -495,7 +495,7 @@ export default function EventsClient({
           {ungrouped.length > 0 && (
             <section className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
               <div className="flex items-center justify-between px-5 py-3.5 bg-[#F7F4EA]">
-                <p className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Other</p>
+                <p className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">Other</p>
                 <span className="text-[10px] font-black text-[#5F624F] bg-white border border-[#E6DFC8] px-2.5 py-1 rounded-lg tabular-nums">
                   {ungrouped.length}
                 </span>
@@ -612,11 +612,11 @@ export default function EventsClient({
                     return (
                       <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
                         <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-3 border-b border-[#E6DFC8]">
-                          <span className="text-[10px] font-black uppercase tracking-wide text-[#26300D]">Quiz Questions</span>
+                          <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Quiz Questions</span>
                           <span className="flex-1" />
                           <Link
                             href={`/event-setups/events/${selected.id}`}
-                            className="h-7 rounded-xl bg-[#26300D] flex items-center justify-center text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors px-2.5 gap-1.5"
+                            className="h-7 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors px-2.5 gap-1.5"
                             title="Manage Quiz"
                           >
                             <Brain className="w-3.5 h-3.5" />
@@ -650,11 +650,11 @@ export default function EventsClient({
                   {/* Bookings summary */}
                   <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
                     <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 border-b border-[#E6DFC8]">
-                      <span className="text-[10px] font-black uppercase tracking-wide text-[#26300D]">Bookings</span>
+                      <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Bookings</span>
                       <span className="flex-1" />
                       <Link
                         href={`/event-bookings/event/${selected.id}`}
-                        className="h-7 rounded-xl bg-[#26300D] flex items-center justify-center text-[#FDCC4B] hover:bg-[#26300D]/85 transition-colors px-2.5 gap-1.5"
+                        className="h-7 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors px-2.5 gap-1.5"
                       >
                         <Users className="w-3.5 h-3.5" />
                         <span className="text-[9px] font-black uppercase tracking-wide">View All</span>
@@ -790,7 +790,7 @@ export default function EventsClient({
                       name="seating_required"
                       type="checkbox"
                       defaultChecked={formDefault?.seating_required ?? true}
-                      className="w-5 h-5 rounded accent-[#26300D] cursor-pointer"
+                      className="w-5 h-5 rounded accent-[#5C4033] cursor-pointer"
                     />
                   </FormRow>
 
@@ -803,7 +803,7 @@ export default function EventsClient({
                       name="is_active"
                       type="checkbox"
                       defaultChecked={formDefault?.is_active ?? true}
-                      className="w-5 h-5 rounded accent-[#26300D] cursor-pointer"
+                      className="w-5 h-5 rounded accent-[#5C4033] cursor-pointer"
                     />
                   </FormRow>
 
@@ -914,7 +914,7 @@ export default function EventsClient({
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setFormBookingId(selected?.booking_id ? String(selected.booking_id) : ""); setFormGroupName(selected?.group_name ?? ""); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit
                 </Button>
@@ -940,7 +940,7 @@ export default function EventsClient({
                   type="submit"
                   form="event-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending
                     ? <Loader2 className="w-4 h-4 animate-spin" />
