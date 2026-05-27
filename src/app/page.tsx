@@ -10,18 +10,20 @@ import {
   ArrowRight,
   ChevronDown,
   UtensilsCrossed,
-  Sparkles,
   Instagram,
   Facebook,
+  Music,
+  Mic,
+  PartyPopper,
 } from "lucide-react";
 
 export const metadata = {
-  title: "Don Fenticas | Bar & Restaurant",
+  title: "Don Fenticas | Bar & Live Music Venue",
   description:
-    "Welcome to Don Fenticas — quiz nights, live music, great food, and unforgettable nights out.",
+    "Don Fenticas, Regent Street, Hinckley — quiz nights, live music, karaoke, and unforgettable nights out.",
 };
 
-export const revalidate = 300; // revalidate every 5 minutes
+export const revalidate = 300;
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -48,138 +50,200 @@ export default async function HomePage() {
     ]);
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] text-white selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
+    <main className="min-h-dvh w-full bg-[#1a2008] text-white selection:bg-[#fdcc4b] selection:text-[#1a2008] antialiased overflow-x-hidden">
       <style
         dangerouslySetInnerHTML={{
-          __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }`,
+          __html: `html, body { background-color: #1a2008 !important; margin: 0; padding: 0; overflow-x: hidden; }`,
         }}
       />
 
       {/* ── Nav ── */}
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#26300D]/80 backdrop-blur-lg border-b border-white/5">
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-4 py-3 sm:px-6">
-          <Link href="/" className="text-sm font-black uppercase tracking-tight text-[#FDCC4B]">
-            Don Fenticas
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1a2008]/90 backdrop-blur-xl border-b border-[#FDCC4B]/10">
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-4 py-2.5">
+          <Link href="/" className="shrink-0">
+            <Image
+              src="/CompanyName.png"
+              alt="Don Fenticas"
+              width={120}
+              height={32}
+              className="h-7 sm:h-8 w-auto object-contain"
+            />
           </Link>
-          <div className="flex items-center gap-1 sm:gap-2">
+          <div className="flex items-center gap-0.5 sm:gap-1">
             <NavLink href="/contact">Contact</NavLink>
             <NavLink href="/menu">Menu</NavLink>
             <Link
               href="/book"
-              className="ml-1 sm:ml-2 bg-[#FDCC4B] text-[#26300D] text-[10px] sm:text-xs font-black uppercase tracking-wide px-3 sm:px-4 py-2 rounded-full hover:bg-[#e5b843] transition-colors active:scale-95"
+              className="ml-1 bg-[#FDCC4B] text-[#1a2008] text-[10px] sm:text-xs font-black uppercase tracking-wide px-3 py-1.5 sm:px-4 sm:py-2 rounded-full hover:bg-[#e5b843] transition-colors active:scale-95"
             >
               Book Now
             </Link>
-            <NavLink href="/login" subtle>Staff</NavLink>
           </div>
         </div>
       </nav>
 
       {/* ── Hero ── */}
-      <section className="relative min-h-dvh flex flex-col items-center justify-center px-4 pt-16">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(253,204,75,0.06)_0%,_transparent_70%)] pointer-events-none" />
-        <div className="relative text-center max-w-lg mx-auto">
+      <section className="relative min-h-[85vh] sm:min-h-dvh flex flex-col items-center justify-center px-6 pt-20 pb-12">
+        {/* Glow effects */}
+        <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#FDCC4B]/8 blur-[150px] rounded-full pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-red-500/5 blur-[120px] rounded-full pointer-events-none" />
+
+        <div className="relative text-center w-full max-w-md mx-auto">
           <Image
             src="/CompanyName.png"
             alt="Don Fenticas"
-            width={400}
-            height={100}
-            className="w-full max-w-xs sm:max-w-sm mx-auto h-auto object-contain drop-shadow-[0_10px_30px_rgba(0,0,0,0.4)]"
+            width={500}
+            height={130}
+            className="w-[80%] max-w-[320px] mx-auto h-auto object-contain drop-shadow-[0_8px_40px_rgba(253,204,75,0.15)]"
             priority
           />
-          <p className="text-stone-400 text-sm sm:text-base font-medium mt-6 leading-relaxed max-w-sm mx-auto">
-            Your neighbourhood bar for quiz nights, live music, great drinks, and good times.
+
+          <p className="text-[#FDCC4B]/70 text-xs sm:text-sm font-bold uppercase tracking-[0.2em] mt-5">
+            Regent Street, Hinckley
           </p>
-          <div className="flex items-center justify-center gap-3 mt-8">
+
+          <p className="text-stone-300 text-sm sm:text-base font-medium mt-4 leading-relaxed max-w-xs mx-auto">
+            Live music, quiz nights, karaoke, and the best nights out in town.
+          </p>
+
+          {/* Quick feature pills */}
+          <div className="flex flex-wrap items-center justify-center gap-2 mt-6">
+            <FeaturePill icon={Music} label="Live Bands" />
+            <FeaturePill icon={Mic} label="Karaoke" />
+            <FeaturePill icon={PartyPopper} label="Quiz Nights" />
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
             <Link
               href="/book"
-              className="bg-[#FDCC4B] text-[#26300D] font-black text-xs uppercase tracking-wide px-6 py-3.5 rounded-full hover:bg-[#e5b843] transition-all duration-300 active:scale-95 shadow-lg shadow-[#FDCC4B]/20"
+              className="w-full sm:w-auto bg-[#FDCC4B] text-[#1a2008] font-black text-sm uppercase tracking-wide px-8 py-4 rounded-2xl hover:bg-[#e5b843] transition-all duration-300 active:scale-95 shadow-lg shadow-[#FDCC4B]/20 text-center"
             >
               Make a Booking
             </Link>
             <Link
               href="/menu"
-              className="bg-white/5 border border-white/15 text-white font-black text-xs uppercase tracking-wide px-6 py-3.5 rounded-full hover:bg-white/10 hover:border-white/25 transition-all duration-300 active:scale-95"
+              className="w-full sm:w-auto bg-white/5 border border-white/15 text-white font-black text-sm uppercase tracking-wide px-8 py-4 rounded-2xl hover:bg-white/10 hover:border-white/25 transition-all duration-300 active:scale-95 text-center"
             >
               View Menu
             </Link>
           </div>
+
+          <Link
+            href="/login"
+            className="inline-block mt-6 text-stone-600 text-[10px] font-bold uppercase tracking-widest hover:text-stone-400 transition-colors"
+          >
+            Staff Login
+          </Link>
         </div>
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-          <ChevronDown className="w-5 h-5 text-stone-600" />
+
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 animate-bounce">
+          <ChevronDown className="w-5 h-5 text-[#FDCC4B]/30" />
         </div>
       </section>
 
       {/* ── What's On ── */}
-      <section className="px-4 py-16 sm:py-24">
-        <div className="max-w-4xl mx-auto">
-          <SectionHeader title="What's On" subtitle="Upcoming events at Don Fenticas" />
+      <section className="px-4 py-14 sm:py-20">
+        <div className="max-w-3xl mx-auto">
+          <SectionHeader
+            title="What's On"
+            subtitle="Upcoming events at Don Fenticas"
+            color="yellow"
+          />
 
           {events && events.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-8">
+            <div className="space-y-3 mt-8">
               {events.map((event) => {
-                type EventType = { type: string; sub_type: string; badge_color: string | null; type_color: string | null };
-                const ev = event as unknown as { id: number; date: string; start_time: string | null; title: string | null; description: string | null; event_types: EventType | EventType[] | null };
-                const eventType = Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types;
+                type EventType = {
+                  type: string;
+                  sub_type: string;
+                  badge_color: string | null;
+                  type_color: string | null;
+                };
+                const ev = event as unknown as {
+                  id: number;
+                  date: string;
+                  start_time: string | null;
+                  title: string | null;
+                  description: string | null;
+                  event_types: EventType | EventType[] | null;
+                };
+                const eventType = Array.isArray(ev.event_types)
+                  ? ev.event_types[0]
+                  : ev.event_types;
                 const dateObj = new Date(ev.date + "T00:00:00");
-                const day = dateObj.toLocaleDateString("en-GB", { day: "numeric" });
-                const month = dateObj.toLocaleDateString("en-GB", { month: "short" });
-                const weekday = dateObj.toLocaleDateString("en-GB", { weekday: "short" });
+                const day = dateObj.toLocaleDateString("en-GB", {
+                  day: "numeric",
+                });
+                const monthShort = dateObj.toLocaleDateString("en-GB", {
+                  month: "short",
+                });
+                const weekday = dateObj.toLocaleDateString("en-GB", {
+                  weekday: "short",
+                });
+                const badgeColor = eventType?.badge_color || "#FDCC4B";
 
                 return (
                   <div
                     key={ev.id}
-                    className="bg-white/5 border border-white/10 rounded-2xl p-5 hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300"
+                    className="flex items-center gap-3 sm:gap-4 bg-white/[0.04] border border-white/[0.06] rounded-2xl p-3.5 sm:p-4 hover:bg-white/[0.07] transition-all duration-300"
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="shrink-0 w-14 h-14 rounded-2xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex flex-col items-center justify-center">
-                        <span className="text-[#FDCC4B] text-lg font-black leading-none">{day}</span>
-                        <span className="text-[#FDCC4B] text-[9px] font-bold uppercase">{month}</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h3 className="text-white font-black text-sm uppercase tracking-tight truncate">
-                          {ev.title || "Event"}
-                        </h3>
-                        <p className="text-stone-500 text-[11px] font-bold uppercase tracking-wide mt-0.5">
-                          {weekday}
-                          {ev.start_time ? ` · ${formatTime(ev.start_time)}` : ""}
-                        </p>
-                        {eventType && (
-                          <span
-                            className="inline-block mt-2 text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
-                            style={{
-                              backgroundColor: `${eventType.badge_color || "#FDCC4B"}20`,
-                              color: eventType.badge_color || "#FDCC4B",
-                              borderWidth: 1,
-                              borderColor: `${eventType.badge_color || "#FDCC4B"}40`,
-                            }}
-                          >
-                            {eventType.sub_type || eventType.type}
-                          </span>
-                        )}
-                      </div>
+                    {/* Date block */}
+                    <div className="shrink-0 w-14 h-14 rounded-xl bg-[#FDCC4B] flex flex-col items-center justify-center">
+                      <span className="text-[#1a2008] text-xl font-black leading-none">
+                        {day}
+                      </span>
+                      <span className="text-[#1a2008] text-[8px] font-black uppercase tracking-wide">
+                        {monthShort}
+                      </span>
                     </div>
-                    {ev.description && (
-                      <p className="text-stone-400 text-xs leading-relaxed mt-3 line-clamp-2">
-                        {ev.description}
+
+                    {/* Info */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-white font-black text-sm uppercase tracking-tight truncate">
+                        {ev.title || "Event"}
+                      </h3>
+                      <p className="text-stone-500 text-[11px] font-bold uppercase tracking-wide mt-0.5">
+                        {weekday}
+                        {ev.start_time
+                          ? ` · ${formatTime(ev.start_time)}`
+                          : ""}
                       </p>
+                    </div>
+
+                    {/* Type badge */}
+                    {eventType && (
+                      <span
+                        className="shrink-0 text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full"
+                        style={{
+                          backgroundColor: `${badgeColor}20`,
+                          color: badgeColor,
+                          borderWidth: 1,
+                          borderColor: `${badgeColor}40`,
+                        }}
+                      >
+                        {eventType.sub_type || eventType.type}
+                      </span>
                     )}
                   </div>
                 );
               })}
             </div>
           ) : (
-            <div className="mt-8 text-center py-12 bg-white/3 border border-white/5 rounded-2xl">
+            <div className="mt-8 text-center py-12 bg-white/[0.03] border border-white/5 rounded-2xl">
               <Calendar className="w-8 h-8 text-stone-700 mx-auto mb-3" />
-              <p className="text-stone-500 text-sm font-bold">No upcoming events right now</p>
-              <p className="text-stone-600 text-xs mt-1">Check back soon for new dates</p>
+              <p className="text-stone-500 text-sm font-bold">
+                No upcoming events right now
+              </p>
+              <p className="text-stone-600 text-xs mt-1">
+                Check back soon for new dates
+              </p>
             </div>
           )}
 
           <div className="text-center mt-8">
             <Link
               href="/book"
-              className="inline-flex items-center gap-2 text-[#FDCC4B] text-xs font-black uppercase tracking-wide hover:text-[#e5b843] transition-colors"
+              className="inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 text-[#FDCC4B] text-xs font-black uppercase tracking-wide px-5 py-2.5 rounded-full hover:bg-[#FDCC4B]/20 transition-colors"
             >
               Book Your Spot <ArrowRight className="w-3.5 h-3.5" />
             </Link>
@@ -189,57 +253,71 @@ export default async function HomePage() {
 
       {/* ── Specials ── */}
       {specials && specials.length > 0 && (
-        <section className="px-4 py-16 sm:py-24 border-t border-white/5">
-          <div className="max-w-4xl mx-auto">
-            <SectionHeader title="Specials" subtitle="Deals and offers you won't want to miss" />
+        <section className="px-4 py-14 sm:py-20">
+          <div className="max-w-3xl mx-auto">
+            <SectionHeader
+              title="Specials"
+              subtitle="Deals and offers you won't want to miss"
+              color="red"
+            />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-8">
               {specials.map((raw) => {
-                const sp = raw as unknown as { id: number; title: string; description: string | null; badges: string[]; image_url: string | null; start_date: string | null; end_date: string | null };
+                const sp = raw as unknown as {
+                  id: number;
+                  title: string;
+                  description: string | null;
+                  badges: string[];
+                  image_url: string | null;
+                  start_date: string | null;
+                  end_date: string | null;
+                };
                 return (
-                <div
-                  key={sp.id}
-                  className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300"
-                >
-                  {sp.image_url && (
-                    <div className="relative h-40 bg-black/20">
-                      <Image
-                        src={sp.image_url}
-                        alt={sp.title}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  )}
-                  <div className="p-5">
-                    <div className="flex items-center gap-2 flex-wrap mb-2">
-                      {(sp.badges || []).map((badge) => (
-                        <span
-                          key={badge}
-                          className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 text-[#FDCC4B]"
-                        >
-                          {badge}
-                        </span>
-                      ))}
-                    </div>
-                    <h3 className="text-white font-black text-sm uppercase tracking-tight">
-                      {sp.title}
-                    </h3>
-                    {sp.description && (
-                      <p className="text-stone-400 text-xs leading-relaxed mt-2 line-clamp-3">
-                        {sp.description}
-                      </p>
+                  <div
+                    key={sp.id}
+                    className="bg-white/[0.04] border border-white/[0.06] rounded-2xl overflow-hidden hover:bg-white/[0.07] transition-all duration-300"
+                  >
+                    {sp.image_url && (
+                      <div className="relative h-44 bg-black/30">
+                        <Image
+                          src={sp.image_url}
+                          alt={sp.title}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
                     )}
-                    {(sp.start_date || sp.end_date) && (
-                      <p className="text-stone-600 text-[10px] font-bold uppercase tracking-wide mt-3 flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
-                        {sp.start_date && formatDateShort(sp.start_date)}
-                        {sp.start_date && sp.end_date && " – "}
-                        {sp.end_date && formatDateShort(sp.end_date)}
-                      </p>
-                    )}
+                    <div className="p-4">
+                      {(sp.badges || []).length > 0 && (
+                        <div className="flex items-center gap-1.5 flex-wrap mb-2">
+                          {sp.badges.map((badge) => (
+                            <span
+                              key={badge}
+                              className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/15 border border-red-500/25 text-red-400"
+                            >
+                              {badge}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      <h3 className="text-white font-black text-sm uppercase tracking-tight">
+                        {sp.title}
+                      </h3>
+                      {sp.description && (
+                        <p className="text-stone-400 text-xs leading-relaxed mt-1.5 line-clamp-3">
+                          {sp.description}
+                        </p>
+                      )}
+                      {(sp.start_date || sp.end_date) && (
+                        <p className="text-stone-600 text-[10px] font-bold uppercase tracking-wide mt-2.5 flex items-center gap-1">
+                          <Clock className="w-3 h-3" />
+                          {sp.start_date && formatDateShort(sp.start_date)}
+                          {sp.start_date && sp.end_date && " – "}
+                          {sp.end_date && formatDateShort(sp.end_date)}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
                 );
               })}
             </div>
@@ -248,51 +326,66 @@ export default async function HomePage() {
       )}
 
       {/* ── Menu CTA ── */}
-      <section className="px-4 py-16 sm:py-24 border-t border-white/5">
-        <div className="max-w-4xl mx-auto">
+      <section className="px-4 py-14 sm:py-20">
+        <div className="max-w-3xl mx-auto">
           <Link
             href="/menu"
-            className="group flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8 hover:bg-white/[0.08] hover:border-white/20 transition-all duration-300 active:scale-[0.99]"
+            className="group flex items-center gap-4 bg-white/[0.04] border border-white/[0.06] rounded-2xl p-5 sm:p-6 hover:bg-white/[0.07] transition-all duration-300 active:scale-[0.99]"
           >
-            <div className="flex items-center gap-4">
-              <div className="shrink-0 w-14 h-14 rounded-2xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">
-                <UtensilsCrossed className="w-6 h-6 text-[#FDCC4B]" />
-              </div>
-              <div>
-                <h3 className="text-white font-black text-base sm:text-lg uppercase tracking-tight">
-                  Explore Our Menu
-                </h3>
-                <p className="text-stone-400 text-xs sm:text-sm mt-0.5">
-                  Drinks, bites, and everything in between
-                </p>
-              </div>
+            <div className="shrink-0 w-12 h-12 rounded-xl bg-[#FDCC4B] flex items-center justify-center">
+              <UtensilsCrossed className="w-5 h-5 text-[#1a2008]" />
             </div>
-            <ArrowRight className="shrink-0 w-5 h-5 text-stone-500 group-hover:text-stone-400 group-hover:translate-x-1 transition-all duration-200" />
+            <div className="flex-1 min-w-0">
+              <h3 className="text-white font-black text-base uppercase tracking-tight">
+                Explore Our Menu
+              </h3>
+              <p className="text-stone-500 text-xs mt-0.5">
+                Drinks, bites, and everything in between
+              </p>
+            </div>
+            <ArrowRight className="shrink-0 w-5 h-5 text-stone-600 group-hover:text-stone-400 group-hover:translate-x-1 transition-all duration-200" />
           </Link>
         </div>
       </section>
 
       {/* ── Find Us ── */}
-      <section className="px-4 py-16 sm:py-24 border-t border-white/5">
-        <div className="max-w-4xl mx-auto">
-          <SectionHeader title="Find Us" subtitle="Drop by for a drink or get in touch" />
+      <section className="px-4 py-14 sm:py-20">
+        <div className="max-w-3xl mx-auto">
+          <SectionHeader
+            title="Find Us"
+            subtitle="Drop by for a drink or get in touch"
+            color="green"
+          />
 
-          <div className="mt-8 bg-white/5 border border-white/10 rounded-2xl p-6 sm:p-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <div className="mt-8 bg-white/[0.04] border border-white/[0.06] rounded-2xl p-5 sm:p-6">
+            <div className="space-y-4">
               {companyInfo?.address && (
-                <ContactItem icon={MapPin} label="Address" value={companyInfo.address} />
+                <ContactItem
+                  icon={MapPin}
+                  label="Address"
+                  value={companyInfo.address}
+                />
               )}
               {companyInfo?.phone && (
-                <ContactItem icon={Phone} label="Phone" value={companyInfo.phone} href={`tel:${companyInfo.phone}`} />
+                <ContactItem
+                  icon={Phone}
+                  label="Phone"
+                  value={companyInfo.phone}
+                  href={`tel:${companyInfo.phone}`}
+                />
               )}
               {companyInfo?.email && (
-                <ContactItem icon={Mail} label="Email" value={companyInfo.email} href={`mailto:${companyInfo.email}`} />
+                <ContactItem
+                  icon={Mail}
+                  label="Email"
+                  value={companyInfo.email}
+                  href={`mailto:${companyInfo.email}`}
+                />
               )}
             </div>
 
-            {/* Socials */}
             {(companyInfo?.instagram || companyInfo?.facebook) && (
-              <div className="flex items-center gap-3 mt-6 pt-6 border-t border-white/5">
+              <div className="flex items-center gap-2.5 mt-5 pt-5 border-t border-white/5">
                 {companyInfo.instagram && (
                   <SocialLink
                     href={`https://instagram.com/${companyInfo.instagram}`}
@@ -310,12 +403,12 @@ export default async function HomePage() {
               </div>
             )}
 
-            <div className="mt-6 pt-6 border-t border-white/5 text-center">
+            <div className="mt-5 pt-5 border-t border-white/5 text-center">
               <Link
                 href="/contact"
                 className="inline-flex items-center gap-2 text-[#FDCC4B] text-xs font-black uppercase tracking-wide hover:text-[#e5b843] transition-colors"
               >
-                View Full Contact Details <ArrowRight className="w-3.5 h-3.5" />
+                Full Contact Details <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
@@ -323,15 +416,21 @@ export default async function HomePage() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="px-4 py-8 border-t border-white/5">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="flex items-center justify-center gap-3 text-stone-800">
-            <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
-            <div className="h-px w-6 bg-stone-800/50" />
-          </div>
-          <p className="text-[8px] text-stone-700 uppercase tracking-widest font-bold opacity-40 mt-2">
-            &copy; {new Date().getFullYear()} Don Fenticas &middot; Licensed Venue &middot; Please Drink Responsibly
+      <footer className="px-4 py-10 border-t border-white/5">
+        <div className="max-w-3xl mx-auto text-center space-y-3">
+          <Image
+            src="/CompanyName.png"
+            alt="Don Fenticas"
+            width={140}
+            height={36}
+            className="h-6 w-auto mx-auto object-contain opacity-30"
+          />
+          <p className="text-[9px] text-stone-700 uppercase tracking-widest font-bold">
+            Regent Street, Hinckley LE10 0BB
+          </p>
+          <p className="text-[8px] text-stone-800 uppercase tracking-widest font-bold">
+            &copy; {new Date().getFullYear()} Don Fenticas &middot; Licensed
+            Venue &middot; Please Drink Responsibly
           </p>
         </div>
       </footer>
@@ -341,30 +440,69 @@ export default async function HomePage() {
 
 /* ─── Helper Components ─── */
 
-function NavLink({ href, children, subtle }: { href: string; children: React.ReactNode; subtle?: boolean }) {
+function NavLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
   return (
     <Link
       href={href}
-      className={`text-[10px] sm:text-xs font-bold uppercase tracking-wide px-2 sm:px-3 py-2 rounded-full transition-colors ${
-        subtle
-          ? "text-stone-600 hover:text-stone-400"
-          : "text-stone-400 hover:text-white hover:bg-white/5"
-      }`}
+      className="text-[10px] sm:text-xs font-bold uppercase tracking-wide px-2 sm:px-3 py-1.5 rounded-full text-stone-400 hover:text-white hover:bg-white/5 transition-colors"
     >
       {children}
     </Link>
   );
 }
 
-function SectionHeader({ title, subtitle }: { title: string; subtitle: string }) {
+function FeaturePill({
+  icon: Icon,
+  label,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
+      <Icon className="w-3 h-3 text-[#FDCC4B]" />
+      <span className="text-[10px] font-black uppercase tracking-wide text-stone-300">
+        {label}
+      </span>
+    </div>
+  );
+}
+
+const SECTION_COLORS = {
+  yellow: { bg: "bg-[#FDCC4B]/10", border: "border-[#FDCC4B]/20", text: "text-[#FDCC4B]" },
+  red: { bg: "bg-red-500/10", border: "border-red-500/20", text: "text-red-400" },
+  green: { bg: "bg-emerald-500/10", border: "border-emerald-500/20", text: "text-emerald-400" },
+};
+
+function SectionHeader({
+  title,
+  subtitle,
+  color = "yellow",
+}: {
+  title: string;
+  subtitle: string;
+  color?: keyof typeof SECTION_COLORS;
+}) {
+  const c = SECTION_COLORS[color];
   return (
     <div className="text-center">
-      <div className="inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-4 py-1.5 mb-4">
-        <Sparkles className="w-3 h-3 text-[#FDCC4B]" />
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]">{title}</span>
+      <div
+        className={`inline-flex items-center gap-2 ${c.bg} ${c.border} border rounded-full px-4 py-1.5 mb-4`}
+      >
+        <span className={`text-[10px] font-black uppercase tracking-widest ${c.text}`}>
+          {title}
+        </span>
       </div>
-      <h2 className="text-white font-black text-2xl sm:text-3xl uppercase tracking-tight">{title}</h2>
-      <p className="text-stone-400 text-sm mt-2">{subtitle}</p>
+      <h2 className="text-white font-black text-2xl sm:text-3xl uppercase tracking-tight">
+        {title}
+      </h2>
+      <p className="text-stone-500 text-sm mt-2">{subtitle}</p>
     </div>
   );
 }
@@ -382,19 +520,23 @@ function ContactItem({
 }) {
   const content = (
     <div className="flex items-start gap-3">
-      <div className="shrink-0 w-9 h-9 rounded-xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center mt-0.5">
-        <Icon className="w-4 h-4 text-[#FDCC4B]" />
+      <div className="shrink-0 w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center mt-0.5">
+        <Icon className="w-4 h-4 text-emerald-400" />
       </div>
       <div>
-        <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wide">{label}</p>
-        <p className="text-white text-sm font-bold mt-0.5 whitespace-pre-line">{value}</p>
+        <p className="text-stone-600 text-[10px] font-bold uppercase tracking-wide">
+          {label}
+        </p>
+        <p className="text-white text-sm font-bold mt-0.5 whitespace-pre-line">
+          {value}
+        </p>
       </div>
     </div>
   );
 
   if (href) {
     return (
-      <a href={href} className="hover:opacity-80 transition-opacity">
+      <a href={href} className="block hover:opacity-80 transition-opacity">
         {content}
       </a>
     );
@@ -416,7 +558,7 @@ function SocialLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-all"
+      className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 hover:border-white/20 transition-all"
       title={label}
     >
       <Icon className="w-4 h-4 text-stone-400" />
