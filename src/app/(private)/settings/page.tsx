@@ -18,7 +18,8 @@ import {
   UserCog2,
   Building2,
   Sparkles,
-  UtensilsCrossed
+  UtensilsCrossed,
+  ImageIcon,
 } from "lucide-react";
 
 const settingsItems = [
@@ -63,6 +64,13 @@ const settingsItems = [
     href: "/settings/specials",
     icon: Sparkles,
     color: "bg-orange-50 text-orange-600",
+  },
+  {
+    title: "Promo Content",
+    description: "Social media posts and event promos",
+    href: "/settings/promo-content",
+    icon: ImageIcon,
+    color: "bg-pink-50 text-pink-600",
   },
   {
     title: "System Users",

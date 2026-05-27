@@ -49,6 +49,7 @@ export type EventRecord = {
   is_fully_booked: boolean | null;
   group_name: string | null;
   booking_id: number | null;
+  external_link: string | null;
 };
 
 function toTitleCase(str?: string | null) {
@@ -600,6 +601,9 @@ export default function EventsClient({
                     {selected.description && (
                       <DetailCell label="Description" value={selected.description} />
                     )}
+                    {selected.external_link && (
+                      <DetailCell label="External Link" value={selected.external_link} />
+                    )}
                   </div>
 
                   {/* Quiz questions section */}
@@ -875,6 +879,17 @@ export default function EventsClient({
                       className="w-full text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none placeholder:text-[#5F624F]/40 resize-none"
                     />
                   </div>
+
+                  {/* External Link */}
+                  <FormRow label="External Link">
+                    <input
+                      name="external_link"
+                      type="url"
+                      placeholder="https://instagram.com/..."
+                      defaultValue={formDefault?.external_link ?? ""}
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                    />
+                  </FormRow>
                 </div>
 
                 {formError && <ErrorBox message={formError} />}
