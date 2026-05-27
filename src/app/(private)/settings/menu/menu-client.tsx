@@ -65,6 +65,13 @@ export default function MenuClient({
     setFormError(null);
   };
 
+  const printMenuPage = () => {
+    const frame = document.getElementById("menu-print-frame") as HTMLIFrameElement | null;
+    if (frame?.contentWindow) {
+      frame.contentWindow.print();
+    }
+  };
+
   const handleCategorySave = (formData: FormData) => {
     setFormError(null);
     startTransition(async () => {
@@ -116,6 +123,14 @@ export default function MenuClient({
 
   return (
     <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl">
+      {/* Hidden iframe for printing the public menu page */}
+      <iframe
+        id="menu-print-frame"
+        src="/menu"
+        className="hidden"
+        title="Menu print frame"
+      />
+
       {/* Header + Actions */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -134,7 +149,7 @@ export default function MenuClient({
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => printMenuPage()}
             title="Print menu"
             className="w-7 h-7 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F7F4EA] transition-colors flex items-center justify-center"
           >
@@ -142,7 +157,7 @@ export default function MenuClient({
           </button>
           <button
             type="button"
-            onClick={() => window.print()}
+            onClick={() => printMenuPage()}
             title="Save menu as PDF"
             className="w-7 h-7 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F7F4EA] transition-colors flex items-center justify-center"
           >
