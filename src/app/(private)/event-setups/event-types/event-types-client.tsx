@@ -452,7 +452,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               <section
                 key={typeKey}
                 className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden border-l-4"
-                style={{ borderLeftColor: swatchHexFromColor(groupTypeColor) ?? "#E6DFC8" }}
+                style={{ "--border-left-color": swatchHexFromColor(groupTypeColor) ?? "#E6DFC8" } as React.CSSProperties}
               >
                 {/* Category Header */}
                 <div className="flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3 gap-2">

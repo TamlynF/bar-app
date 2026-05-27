@@ -5155,6 +5155,7 @@
   .swatch-zinc    { background-color: #A1A1AA; }
   .swatch-stone   { background-color: #A8A29E; }
   .swatch-selected { outline: 2.5px solid #1F1F1A; outline-offset: 2px; }
+  .border-l-4[style*="--border-left-color"] { border-left-color: var(--border-left-color); }
   .bg-emerald-100 { background-color: var(--color-emerald-100); }
   .bg-lime-100 { background-color: var(--color-lime-100); }
   .bg-cyan-100 { background-color: var(--color-cyan-100); }
