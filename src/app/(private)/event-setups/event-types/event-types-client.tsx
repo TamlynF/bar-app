@@ -537,13 +537,17 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                 {/* Sub-categories */}
                 {isGroupExpanded && (
-                  <div className="ml-3 sm:ml-4 mr-1 sm:mr-2 my-2 rounded-xl bg-[#F7F4EA]/50 border border-[#E6DFC8] overflow-hidden divide-y divide-[#E6DFC8]">
+                  <div className="ml-5 sm:ml-8 mr-1 sm:mr-2 my-2 space-y-1.5">
                     {items.map((item) => {
                       const isExpanded = expandedSubtype === item.id;
                       const badgeCount = item.event_information?.length || 0;
 
                       return (
-                        <div key={item.id}>
+                        <div
+                          key={item.id}
+                          className="rounded-xl bg-[#F7F4EA]/50 border border-[#E6DFC8] overflow-hidden border-l-4"
+                          style={{ "--border-left-color": swatchHexFromColor(item.badge_color) ?? "#E6DFC8" } as React.CSSProperties}
+                        >
                           {/* Sub-category row */}
                           <div className="px-3 sm:px-4 py-2.5 flex items-center gap-2 sm:gap-3">
                             <button
