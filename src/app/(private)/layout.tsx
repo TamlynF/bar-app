@@ -3,7 +3,20 @@ import PrivateLayoutClient from "./private-layout-client";
 
 export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const today = new Date().toISOString().split("T")[0];
+
+    const [{ data: { user } }, { data: bookableEvents }] = await Promise.all([
+        supabase.auth.getUser(),
+        supabase
+            .from("events")
+            .select("id, title, date")
+            .eq("is_active", true)
+            .eq("is_bookable", true)
+            .gte("date", today)
+            .order("date", { ascending: true })
+            .limit(10),
+    ]);
+
     let employeeName = "";
     let employeeRole = "";
     if (user?.email) {
@@ -17,5 +30,12 @@ export default async function PrivateLayout({ children }: { children: React.Reac
             employeeRole = emp.role;
         }
     }
-    return <PrivateLayoutClient employeeName={employeeName} employeeRole={employeeRole}>{children}</PrivateLayoutClient>;
+
+    const navEvents = (bookableEvents ?? []).map(e => ({
+        id: e.id as number,
+        title: (e.title as string) || "Event",
+        date: e.date as string,
+    }));
+
+    return <PrivateLayoutClient employeeName={employeeName} employeeRole={employeeRole} bookableEvents={navEvents}>{children}</PrivateLayoutClient>;
 }

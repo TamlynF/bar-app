@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import React from "react";
 import Link from "next/link";
 import {
@@ -7,7 +9,6 @@ import {
   ChevronRight,
   Speaker,
   CalendarDays,
-  Ticket
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 
@@ -46,20 +47,18 @@ export default async function EventsHubPage() {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  // Fetch bookable events that have bookings
-  const { data: bookableEvents } = await supabase
+  // Fetch all bookable events
+  const { data: bookableEvents, error: evError } = await supabase
     .from("events")
-    .select("id, date, title, is_bookable, bookings(id)")
+    .select("id, date, title")
     .eq("is_active", true)
     .eq("is_bookable", true)
     .gte("date", today)
     .order("date", { ascending: true })
     .limit(20);
 
-  const eventsWithBookings = (bookableEvents ?? []).map((ev) => ({
-    ...ev,
-    bookingCount: Array.isArray(ev.bookings) ? ev.bookings.length : 0,
-  }));
+  if (evError) console.error("Failed to fetch bookable events:", evError);
+  const generalEvents = bookableEvents ?? [];
 
   return (
     <div className="p-2 sm:p-8 space-y-6">
@@ -89,13 +88,13 @@ export default async function EventsHubPage() {
       </div>
 
       {/* General Bookable Events */}
-      {eventsWithBookings.length > 0 && (
+      {generalEvents.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-[11px] font-black uppercase tracking-wide text-[#5F624F] px-1">
             General Events
           </h2>
-          <div className="space-y-2">
-            {eventsWithBookings.map((ev) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {generalEvents.map((ev) => {
               const dateStr = new Date(ev.date + "T00:00:00").toLocaleDateString("en-GB", {
                 weekday: "short", day: "numeric", month: "short",
               });
@@ -103,30 +102,22 @@ export default async function EventsHubPage() {
                 <Link
                   key={ev.id}
                   href={`/event-bookings/event/${ev.id}`}
-                  className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-2xl shadow-sm hover:border-[#5C4033] hover:shadow-md transition-all active:scale-[0.98]"
+                  className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#5C4033] hover:shadow-md transition-all active:scale-[0.98]"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#F7F4EA] border border-[#E6DFC8] flex items-center justify-center shrink-0">
-                      <CalendarDays className="w-4.5 h-4.5 text-[#5C4033]" />
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-[#F7F4EA] text-[#5C4033] flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
+                      <CalendarDays className="w-6 h-6" />
                     </div>
                     <div className="flex flex-col text-left min-w-0">
-                      <span className="font-black text-[#1F1F1A] text-sm uppercase tracking-tight leading-none truncate">
+                      <span className="font-black text-[#1F1F1A] uppercase tracking-tight leading-none truncate">
                         {ev.title || "Event"}
                       </span>
-                      <span className="text-[10px] text-[#5F624F] font-bold mt-1 tracking-wider">
+                      <span className="text-[11px] text-[#5F624F] font-bold opacity-60 uppercase mt-1.5 tracking-wider">
                         {dateStr}
                       </span>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {ev.bookingCount > 0 && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#F7F4EA] border border-[#E6DFC8] text-[9px] font-black uppercase tracking-wider text-[#5F624F]">
-                        <Ticket className="w-3 h-3" />
-                        {ev.bookingCount}
-                      </span>
-                    )}
-                    <ChevronRight className="w-4 h-4 text-[#E6DFC8] group-hover:text-[#5C4033] transition-colors" />
-                  </div>
+                  <ChevronRight className="w-5 h-5 text-[#E6DFC8] group-hover:text-[#5C4033] transition-colors" />
                 </Link>
               );
             })}
