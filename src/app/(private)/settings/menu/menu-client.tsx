@@ -134,7 +134,7 @@ export default function MenuClient({
         <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
-            onClick={() => window.open("/menu", "_blank")}
+            onClick={() => window.print()}
             title="Print menu"
             className="w-7 h-7 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F7F4EA] transition-colors flex items-center justify-center"
           >
@@ -142,8 +142,8 @@ export default function MenuClient({
           </button>
           <button
             type="button"
-            onClick={() => window.open("/menu", "_blank")}
-            title="Save menu as PDF (print from the menu page)"
+            onClick={() => window.print()}
+            title="Save menu as PDF"
             className="w-7 h-7 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F7F4EA] transition-colors flex items-center justify-center"
           >
             <Download className="w-3.5 h-3.5 text-[#5F624F]" />

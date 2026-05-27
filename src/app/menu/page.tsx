@@ -2,7 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
-import PrintButton from "./print-button";
+import PrintButton from "@/components/ui/print-button";
 
 export const metadata = {
   title: "Menu | Don Fenticas",
