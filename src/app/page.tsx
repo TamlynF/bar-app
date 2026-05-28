@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { format, endOfWeek } from "date-fns";
-import Link from "next/link";
+import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
 import Image from "next/image";
 import {
   Calendar,
@@ -9,28 +8,29 @@ import {
   Mic,
   PartyPopper,
   Instagram,
-  ChevronRight,
   ArrowRight,
-  ExternalLink,
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { swatchHexFromColor } from "@/lib/event-type-colors";
+import { ScheduleMore } from "@/components/schedule-more";
+import { MonthEventList } from "@/components/month-event-list";
 
 export const revalidate = 300;
 
-type EventTypeJoin = {
+export type EventTypeJoin = {
   type: string;
   sub_type: string;
   type_color: string | null;
   badge_color: string | null;
 };
 
-type EventRow = {
+export type EventRow = {
   id: number;
   title: string;
   date: string;
   start_time: string | null;
   end_time: string | null;
+  is_active: boolean;
   is_fully_booked: boolean;
   is_bookable: boolean;
   external_link: string | null;
@@ -59,31 +59,78 @@ function getEventType(event: EventRow): EventTypeJoin | null {
   return Array.isArray(event.event_types) ? event.event_types[0] : event.event_types;
 }
 
+/** The type colour for an event, from badge_color, falling back to gold. */
+function eventBadgeColor(event: EventRow): string {
+  const et = getEventType(event);
+  return swatchHexFromColor(et?.badge_color) ?? "#FDCC4B";
+}
+
 export default async function HomePage() {
   const supabase = await createClient();
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
+  // Fetch from start of current month through end of next month
+  const monthStart = startOfMonth(today);
+  const monthStartStr = format(monthStart, "yyyy-MM-dd");
+  const monthEnd = endOfMonth(today);
+  const nextMonthEnd = endOfMonth(addMonths(today, 1));
+  const nextMonthEndStr = format(nextMonthEnd, "yyyy-MM-dd");
+
   const { data: rawEvents } = await supabase
     .from("events")
-    .select("id, title, date, start_time, end_time, is_fully_booked, is_bookable, external_link, event_types!inner(type, sub_type, type_color, badge_color)")
-    .gte("date", todayStr)
-    .eq("is_active", true)
+    .select(
+      "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, event_types!inner(type, sub_type, type_color, badge_color)"
+    )
+    .gte("date", monthStartStr)
+    .lte("date", nextMonthEndStr)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true })
-    .limit(20);
+    .limit(100);
 
-  const events = (rawEvents ?? []) as EventRow[];
+  // Keep past events regardless of is_active.
+  // For today/future: only include if is_active=true or is_fully_booked=true.
+  const events = ((rawEvents ?? []) as EventRow[]).filter(
+    (e) => e.date < todayStr || e.is_active || e.is_fully_booked
+  );
 
-  const nextEvent = events[0];
-  const tonightEvents = events.filter((e) => e.date === todayStr);
-  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
-  const thisWeekEvents = events.filter(
-    (e) => e.date !== todayStr && parseDate(e.date) <= weekEnd
-  );
-  const upcomingEvents = events.filter(
-    (e) => parseDate(e.date) > weekEnd
-  );
+  // All events for the current month (past + future) in one list
+  const thisMonthEvents = events.filter((e) => parseDate(e.date) <= monthEnd);
+
+  // The first event on or after today is the "next upcoming"
+  const nextEventId = thisMonthEvents.find((e) => e.date >= todayStr)?.id ?? null;
+
+  // Serialize for client component
+  const serializedMonthEvents = thisMonthEvents.map((e) => ({
+    id: e.id,
+    title: e.title,
+    date: e.date,
+    startTimeLabel: formatTime(e.start_time),
+    externalLink: e.external_link,
+    color: eventBadgeColor(e),
+    subType: getEventType(e)?.sub_type ?? null,
+  }));
+
+  // Events past this month → "View [Next Month]" reveal
+  const laterEvents = events
+    .filter((e) => parseDate(e.date) > monthEnd)
+    .map((e) => ({
+      id: e.id,
+      title: e.title,
+      date: e.date,
+      startTimeLabel: formatTime(e.start_time),
+      endTimeLabel: formatTime(e.end_time),
+      isActive: e.is_active,
+      isFullyBooked: e.is_fully_booked,
+      isBookable: e.is_bookable,
+      externalLink: e.external_link,
+      color: eventBadgeColor(e),
+      type: getEventType(e)?.type ?? null,
+      subType: getEventType(e)?.sub_type ?? null,
+    }));
+
+  const thisMonthLabel = format(today, "MMMM");
+  const nextMonthLabel = format(addMonths(today, 1), "MMMM");
 
   return (
     <main className="min-h-dvh w-full bg-[#1a2008] text-stone-300 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased">
@@ -95,16 +142,14 @@ export default async function HomePage() {
 
       <PublicNav currentPath="/" />
 
-      {/* HERO — the schedule IS the priority. No giant logo word. */}
+      {/* HERO */}
       <section className="relative overflow-hidden">
-        {/* Atmospheric glow */}
         <div className="pointer-events-none absolute inset-0 -z-10">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-[#FDCC4B]/10 blur-[120px] rounded-full" />
           <div className="absolute top-20 right-0 w-[300px] h-[200px] bg-[#7A1F1F]/20 blur-[100px] rounded-full" />
         </div>
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-4 sm:pb-6 text-center">
-          {/* Location pill */}
           <div className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-4">
             <span className="relative flex w-1.5 h-1.5">
               <span className="absolute inline-flex w-full h-full bg-[#FDCC4B] rounded-full animate-ping opacity-60" />
@@ -115,7 +160,7 @@ export default async function HomePage() {
             </span>
           </div>
 
-            <Image
+          <Image
             src="/CompanyName.png"
             alt="Don Fenticas"
             width={500}
@@ -123,8 +168,7 @@ export default async function HomePage() {
             className="w-[80%] max-w-[320px] mx-auto h-auto object-contain drop-shadow-[0_8px_40px_rgba(253,204,75,0.2)] mb-4"
             priority
           />
-          
-          {/* Tagline — short, confident, no hero wordmark */}
+
           <h1 className="text-white font-black text-3xl sm:text-5xl uppercase tracking-tighter leading-[0.95] max-w-2xl mx-auto">
             Live music, quizzes,
             <br />
@@ -134,97 +178,28 @@ export default async function HomePage() {
             The best nights out in town. Walk-ins welcome, bookings encouraged.
           </p>
 
-          {/* Vibe pills */}
           <div className="flex flex-wrap justify-center gap-2 mt-5">
             <VibePill icon={Music} label="Live Bands" />
             <VibePill icon={Mic} label="Karaoke" />
             <VibePill icon={PartyPopper} label="Quiz Nights" />
           </div>
-
-          {/* Featured next event */}
-          {nextEvent && (
-            <Link
-              href="#schedule"
-              className="group mt-6 inline-flex items-center gap-4 bg-white/5 border border-[#FDCC4B]/20 hover:border-[#FDCC4B]/50 rounded-2xl px-4 sm:px-5 py-3 sm:py-4 transition-all hover:bg-white/[0.08] max-w-full"
-            >
-              <div className="shrink-0 w-10 h-10 rounded-xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/30 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-[#FDCC4B]" />
-              </div>
-              <div className="text-left min-w-0">
-                <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.25em]">
-                  {nextEvent.date === todayStr
-                    ? "Tonight"
-                    : `Next — ${format(parseDate(nextEvent.date), "d MMM")}`}
-                </p>
-                <p className="text-white text-sm sm:text-base font-black mt-1 truncate">
-                  {nextEvent.title}
-                  {formatTime(nextEvent.start_time) && (
-                    <span className="text-stone-500 font-bold ml-2">
-                      {formatTime(nextEvent.start_time)}
-                    </span>
-                  )}
-                </p>
-              </div>
-              <ChevronRight className="w-5 h-5 text-stone-500 group-hover:text-[#FDCC4B] group-hover:translate-x-0.5 transition-all shrink-0" />
-            </Link>
-          )}
         </div>
       </section>
 
-      {/* SCHEDULE — the actual content priority */}
+      {/* SCHEDULE */}
       <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <header className="text-center mb-8">
-          <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
-            <Sparkles className="w-3 h-3 text-[#FDCC4B]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
-              What&apos;s On
-            </span>
-          </div>
-          <h2 className="text-white font-black text-3xl sm:text-4xl uppercase tracking-tighter">
-            The Schedule
-          </h2>
-          <p className="text-stone-500 text-xs sm:text-sm font-medium mt-2">
-            Live music, quizzes, bingo, themed nights
-          </p>
-        </header>
+        <MonthHeader label={thisMonthLabel} />
 
-        {/* Tonight */}
-        {tonightEvents.length > 0 && (
-          <div className="mb-8">
-            <SectionLabel label="Tonight" accent="neon" />
-            <div className="grid gap-3 mt-3">
-              {tonightEvents.map((ev) => (
-                <EventCard key={ev.id} event={ev} prominent />
-              ))}
-            </div>
-          </div>
-        )}
+        <MonthEventList
+          events={serializedMonthEvents}
+          todayStr={todayStr}
+          nextEventId={nextEventId}
+        />
 
-        {/* This week */}
-        {thisWeekEvents.length > 0 && (
-          <div className="mb-8">
-            <SectionLabel label="This Week" />
-            <div className="grid gap-3 mt-3">
-              {thisWeekEvents.slice(0, 4).map((ev) => (
-                <EventCard key={ev.id} event={ev} />
-              ))}
-            </div>
-          </div>
-        )}
+        <ScheduleMore events={laterEvents} nextMonthLabel={nextMonthLabel} />
 
-        {/* Coming up */}
-        {upcomingEvents.length > 0 && (
-          <div className="mb-2">
-            <SectionLabel label="Coming Up" />
-            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl divide-y divide-white/5 mt-3 overflow-hidden">
-              {upcomingEvents.slice(0, 8).map((ev) => (
-                <EventRowItem key={ev.id} event={ev} />
-              ))}
-            </div>
-          </div>
-        )}
+        {events.length > 0 && <ColorKey events={events} />}
 
-        {/* Empty state */}
         {events.length === 0 && (
           <div className="text-center py-16 bg-white/[0.03] border border-white/5 rounded-2xl">
             <Calendar className="w-8 h-8 text-stone-700 mx-auto mb-3" />
@@ -252,9 +227,7 @@ export default async function HomePage() {
               <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.25em]">
                 Follow Us
               </p>
-              <p className="text-white text-sm font-black truncate">
-                @donfenticas
-              </p>
+              <p className="text-white text-sm font-black truncate">@donfenticas</p>
             </div>
           </div>
           <ArrowRight className="w-5 h-5 text-stone-400 group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0" />
@@ -265,9 +238,7 @@ export default async function HomePage() {
       <footer className="max-w-5xl mx-auto px-4 sm:px-6 pb-10 text-center">
         <div className="flex items-center justify-center gap-4 text-stone-800">
           <div className="h-px w-6 bg-stone-800/50" />
-          <span className="text-[9px] font-bold uppercase tracking-[0.4em]">
-            Don Fenticas
-          </span>
+          <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
           <div className="h-px w-6 bg-stone-800/50" />
         </div>
         <p className="text-[9px] text-stone-700 uppercase tracking-widest mt-2">
@@ -275,6 +246,25 @@ export default async function HomePage() {
         </p>
       </footer>
     </main>
+  );
+}
+
+function MonthHeader({ label }: { label: string }) {
+  return (
+    <header className="text-center mb-8">
+      <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
+        <Sparkles className="w-3 h-3 text-[#FDCC4B]" />
+        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
+          What&apos;s On
+        </span>
+      </div>
+      <h2 className="text-white font-black text-5xl sm:text-7xl uppercase tracking-tighter leading-[0.85]">
+        {label}
+      </h2>
+      <p className="text-[#FDCC4B] text-sm sm:text-base font-black uppercase tracking-[0.3em] mt-1">
+        at Don Fenticas
+      </p>
+    </header>
   );
 }
 
@@ -295,131 +285,32 @@ function VibePill({
   );
 }
 
-function SectionLabel({
-  label,
-  accent,
-}: {
-  label: string;
-  accent?: "neon" | "default";
-}) {
+function ColorKey({ events }: { events: EventRow[] }) {
+  const seen = new Map<string, string>();
+  for (const e of events) {
+    const et = getEventType(e);
+    const label = et?.sub_type || et?.type;
+    if (label && !seen.has(label)) {
+      seen.set(label, eventBadgeColor(e));
+    }
+  }
+  const entries = Array.from(seen.entries());
+  if (entries.length === 0) return null;
+
   return (
-    <div className="flex items-center gap-2 px-1">
-      {accent === "neon" && (
-        <span className="relative flex w-1.5 h-1.5">
-          <span className="absolute inline-flex w-full h-full bg-[#FF6B35] rounded-full animate-ping opacity-75" />
-          <span className="relative inline-flex w-1.5 h-1.5 bg-[#FF6B35] rounded-full" />
-        </span>
-      )}
-      <span
-        className={
-          accent === "neon"
-            ? "text-[10px] font-black uppercase tracking-[0.25em] text-[#FF6B35]"
-            : "text-[10px] font-black uppercase tracking-[0.25em] text-stone-500"
-        }
-      >
-        {label}
-      </span>
-      <div className="flex-1 h-px bg-stone-800/50" />
-    </div>
-  );
-}
-
-function EventCard({
-  event,
-  prominent = false,
-}: {
-  event: EventRow;
-  prominent?: boolean;
-}) {
-  const dateObj = parseDate(event.date);
-  const et = getEventType(event);
-  const badgeHex = swatchHexFromColor(et?.badge_color) ?? "#FDCC4B";
-  const cardClass = prominent
-    ? "bg-gradient-to-br from-[#FDCC4B]/10 to-transparent border-[#FDCC4B]/30"
-    : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07]";
-
-  const inner = (
-    <div
-      className={`group flex items-stretch gap-4 border rounded-2xl p-4 transition-all ${cardClass}`}
-    >
-      <div className="shrink-0 w-16 text-center flex flex-col items-center justify-center bg-white/5 rounded-xl py-2">
-        <p className="text-stone-500 text-[9px] font-black uppercase tracking-widest">
-          {format(dateObj, "EEE")}
-        </p>
-        <p className="text-white text-2xl font-black tabular-nums leading-none mt-1">
-          {format(dateObj, "d")}
-        </p>
-        <p className="text-stone-500 text-[9px] font-bold uppercase mt-0.5">
-          {format(dateObj, "MMM")}
-        </p>
-      </div>
-      <div className="flex-1 min-w-0 flex flex-col justify-center">
-        {et?.sub_type && (
-          <p
-            className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 text-(--badge-c)"
-            style={{ "--badge-c": badgeHex } as React.CSSProperties}
-          >
-            {et.sub_type}
-          </p>
-        )}
-        <p className="text-white text-sm sm:text-base font-black truncate">
-          {event.title}
-        </p>
-        {formatTime(event.start_time) && (
-          <p className="text-stone-400 text-xs font-bold mt-0.5 tabular-nums">
-            {formatTime(event.start_time)}
-          </p>
-        )}
-      </div>
-      <div className="shrink-0 flex items-center">
-        {event.external_link ? (
-          <ExternalLink className="w-4 h-4 text-stone-500 group-hover:text-[#FDCC4B] transition-colors" />
-        ) : (
-          <ChevronRight className="w-5 h-5 text-stone-600 group-hover:text-stone-300 group-hover:translate-x-0.5 transition-all" />
-        )}
-      </div>
-    </div>
-  );
-
-  return event.external_link ? (
-    <a href={event.external_link} target="_blank" rel="noopener noreferrer">
-      {inner}
-    </a>
-  ) : (
-    inner
-  );
-}
-
-function EventRowItem({ event }: { event: EventRow }) {
-  const dateObj = parseDate(event.date);
-  const inner = (
-    <div className="flex items-center gap-4 px-4 py-3 hover:bg-white/[0.03] transition-colors">
-      <div className="shrink-0 w-14">
-        <p className="text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest">
-          {format(dateObj, "EEE")} {format(dateObj, "d")}
-        </p>
-      </div>
-      <div className="shrink-0 w-1 h-1 bg-stone-700 rounded-full" />
-      <div className="flex-1 min-w-0">
-        <span className="text-white text-sm font-black truncate">
-          {event.title}
-        </span>
-        {formatTime(event.start_time) && (
-          <span className="text-stone-500 text-xs font-bold ml-2 tabular-nums">
-            {formatTime(event.start_time)}
+    <div className="mt-10 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
+      {entries.map(([label, color]) => (
+        <span key={label} className="inline-flex items-center gap-1.5">
+          <span
+            className="ev-dot w-2.5 h-2.5 rounded-full"
+            style={{ "--key-c": color } as React.CSSProperties}
+          />
+          <span className="text-stone-400 text-[10px] font-black uppercase tracking-wide">
+            {label}
           </span>
-        )}
-      </div>
-      {event.external_link && (
-        <ExternalLink className="w-3.5 h-3.5 text-stone-600 shrink-0" />
-      )}
+        </span>
+      ))}
     </div>
   );
-  return event.external_link ? (
-    <a href={event.external_link} target="_blank" rel="noopener noreferrer">
-      {inner}
-    </a>
-  ) : (
-    inner
-  );
 }
+
