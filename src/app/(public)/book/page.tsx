@@ -1,7 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Trophy, Music, Building2, ArrowRight, Disc3, CalendarDays, Ticket } from "lucide-react";
-import Image from "next/image";
+import { Trophy, Music, Building2, ArrowRight, Disc3, CalendarDays, Ticket, Sparkles } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
 
@@ -69,40 +68,28 @@ export default async function BookingHubPage() {
   const events = bookableEvents ?? [];
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] flex flex-col items-center px-4 pt-20 pb-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
+    <main className="min-h-dvh w-full bg-[#26300D] flex flex-col items-center px-4 pb-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{
         __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }`
       }} />
 
-      <PublicNav />
+      <PublicNav currentPath="/book" />
 
-      {/* Header */}
-      <div className="text-center mb-10 max-w-md">
-        {/* <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#FDCC4B] mb-5 shadow-lg">
-          <span className="text-[#26300D] font-black text-xl">DF</span>
+      {/* Header — H1 is the page's purpose, not the bar name */}
+      <div className="text-center mb-8 sm:mb-10 max-w-md mt-6 sm:mt-10">
+        <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
+          <Sparkles className="w-3 h-3 text-[#FDCC4B]" />
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
+            Reservations &amp; Bookings
+          </span>
         </div>
-        <h1 className="text-white font-black text-3xl sm:text-4xl uppercase tracking-tight leading-none mb-3">
-          Don Fenticas
-        </h1> */}
-        
-        <Image
-          src="/CompanyName.png"
-          alt="Don Fenticas Logo"
-          width={300}
-          height={80}
-          className="w-full h-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
-          priority
-          />
-      
-      <div className="w-full max-w-sm mx-auto mt-15">
-        <h2 className="text-white font-black text-xl sm:text-3xl uppercase tracking-tight leading-none mb-3">
+        <h1 className="text-white font-black text-3xl sm:text-4xl uppercase tracking-tighter leading-none mb-3">
           Book Your Experience
-        </h2>
+        </h1>
         <p className="text-stone-400 text-sm font-medium leading-relaxed">
           Choose how you&apos;d like to book with us.
         </p>
       </div>
-        </div>
 
       {/* Booking Cards */}
       <div className="w-full max-w-2xl space-y-4">
