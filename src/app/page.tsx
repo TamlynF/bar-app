@@ -179,44 +179,48 @@ export default async function HomePage() {
       <PublicNav currentPath="/" />
 
       {/* Page hero */}
-      <header className="relative pt-28 pb-2 px-6 flex flex-col items-center text-center overflow-hidden">
-        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[120%] max-w-2xl h-64 bg-[#FDCC4B]/5 blur-[100px] rounded-[100%] pointer-events-none" />
-          <div className="relative z-10 flex flex-col items-center w-full">        
+      <header className="relative mt-6 sm:pt-36 pb-2 px-2 flex flex-col items-start text-left overflow-hidden">
+        <div className="absolute -top-10 left-0 w-[120%] max-w-2xl h-64 bg-[#FDCC4B]/5 blur-[100px] rounded-[100%] pointer-events-none" />
+          <div className="relative z-10 flex flex-col items-start w-full px-10 sm:px-16">        
           <h1
-            className="month-title leading-none font-black italic uppercase tracking-tighter text-white mb-2 drop-shadow-2xl"
+            className="month-title leading-none font-black italic uppercase tracking-tighter text-white drop-shadow-2xl"
             style={{ "--month-fs": "2rem", "--month-fs-sm": "8rem" } as React.CSSProperties}
           >
             {thisMonthLabel}
           </h1>
-        <div className="flex items-center justify-center gap-3 mt-1">
-          <span className="text-xl md:text-2xl italic text-gray-400 font-serif">at</span>
+        <div
+            className="at-row flex items-center gap-3 mt-1"
+            style={{ "--at-indent": "3.5rem", "--at-indent-sm": "4.8rem" } as React.CSSProperties}
+          >
+          <span className="text-lg sm:text-2xl italic text-stone-400 font-serif">at</span>
             <Image 
               src="/CompanyName.png"
             alt="Don Fenticas"
               width={300} 
               height={80} 
-              className="h-9 md:h-12 w-auto object-contain drop-shadow-md"
+              className="h-12 sm:h-12 w-auto object-contain drop-shadow-md"
               priority
             />
           </div>
         </div>
         
         {/* Bar Themes Badges - Indie/Rock Vibe */}
-        <div className="mt-10 flex flex-wrap justify-center gap-2 max-w-md mx-auto relative z-10">
-          <span className="px-4 py-1.5 border border-[#FDCC4B]/20 text-[#FDCC4B] text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] rounded-md bg-[#FDCC4B]/10 backdrop-blur-sm cursor-default">
+        <div className="mt-4 flex gap-2 overflow-x-auto no-scrollbar relative z-10">
+          <span className="pill-neon-orange border shrink-0 text-[9px] font-black uppercase tracking-[0.15em] h-10 px-4 flex items-center justify-center rounded-full backdrop-blur cursor-default">
             Live Music
           </span>
-          <span className="px-4 py-1.5 border border-[#FDCC4B]/20 text-[#FDCC4B] text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] rounded-md bg-[#FDCC4B]/10 backdrop-blur-sm cursor-default">
-            Indie & Rock
+          <span className="pill-neon-pink border shrink-0 text-[9px] font-black uppercase tracking-[0.15em] h-10 px-4 flex items-center justify-center rounded-full backdrop-blur cursor-default">
+            Indie &amp; Rock
           </span>
-          <span className="px-4 py-1.5 border border-[#FDCC4B]/20 text-[#FDCC4B] text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] rounded-md bg-[#FDCC4B]/10 backdrop-blur-sm cursor-default">
+          <span className="pill-neon-cyan border shrink-0 text-[9px] font-black uppercase tracking-[0.15em] h-10 px-4 flex items-center justify-center rounded-full backdrop-blur cursor-default">
+            DJs
+          </span>
+          <span className="pill-neon-lime border shrink-0 text-[9px] font-black uppercase tracking-[0.15em] h-10 px-4 flex items-center justify-center rounded-full backdrop-blur cursor-default">
             Karaoke
           </span>
-          <span className="px-4 py-1.5 border border-[#FDCC4B]/20 text-[#FDCC4B] text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] rounded-md bg-[#FDCC4B]/10 backdrop-blur-sm cursor-default">
-            Game Nights
-          </span>
         </div>
-<div className="mt-12 w-32 h-[2px] bg-linear-to-r from-transparent via-[#FDCC4B]/20 to-transparent relative z-10" />
+      
+        <div className="mt-6 w-32 h-[2px] bg-linear-to-r from-transparent via-[#FDCC4B]/20 to-transparent relative z-10" />
       </header>
 
       <div className="px-4 max-w-3xl mx-auto space-y-12">
