@@ -11,6 +11,7 @@ import { swatchHexFromColor } from "@/lib/event-type-colors";
 import { ScheduleMore } from "@/components/schedule-more";
 import { MonthEventList } from "@/components/month-event-list";
 import { NextEventHero } from "@/components/next-event-hero";
+import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 
 export const revalidate = 300;
 
@@ -99,16 +100,25 @@ export default async function HomePage() {
   const nextMonthEnd = endOfMonth(addMonths(today, 1));
   const nextMonthEndStr = format(nextMonthEnd, "yyyy-MM-dd");
 
-  const { data: rawEvents } = await supabase
-    .from("events")
-    .select(
-      "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, event_types!inner(type, sub_type, type_color, badge_color)"
-    )
-    .gte("date", monthStartStr)
-    .lte("date", nextMonthEndStr)
-    .order("date", { ascending: true })
-    .order("start_time", { ascending: true })
-    .limit(100);
+  const [{ data: rawEvents }, { data: rawSpecials }] = await Promise.all([
+    supabase
+      .from("events")
+      .select(
+        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, event_types!inner(type, sub_type, type_color, badge_color)"
+      )
+      .gte("date", monthStartStr)
+      .lte("date", nextMonthEndStr)
+      .order("date", { ascending: true })
+      .order("start_time", { ascending: true })
+      .limit(100),
+    supabase
+      .from("specials")
+      .select("id, title, description, badges, image_url, start_date, end_date, display_order")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true }),
+  ]);
+
+  const specials = (rawSpecials ?? []) as SpecialRow[];
 
   const events = ((rawEvents ?? []) as EventRow[]).filter(
     (e) => e.date < todayStr || e.is_active || e.is_fully_booked
@@ -174,26 +184,38 @@ export default async function HomePage() {
 
       <PublicNav currentPath="/" />
 
-      <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-6 pb-6 sm:pb-10">
-        <header className="flex flex-col justify-center mb-8 sm:mb-12 min-h-[32dvh] sm:min-h-[44dvh]">
-          <h2
-            className="text-white font-black uppercase tracking-tighter leading-[0.70] italic month-title text-left px-8"
-            style={{ "--month-fs": "2rem", "--month-fs-sm": "10rem" } as React.CSSProperties}
-          >
-            {thisMonthLabel}
-          </h2>
-          <div className="flex items-center justify-center gap-2.5 -mt-1 h-7 sm:h-12 px-4">
-            <span className="text-stone-300 text-lg sm:text-xl font-medium italic">at</span>
-            <Image
-              src="/CompanyName.png"
-              alt="Don Fenticas"
-              width={160}
-              height={40}
-              className="h-7 sm:h-12 w-auto object-contain"
-              priority
-            />
-          </div>
-        </header>
+      {/* Page hero */}
+      <header className="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-6 flex flex-col justify-center mb-8 sm:mb-12 min-h-[32dvh] sm:min-h-[44dvh]">
+        <h2
+          className="text-white font-black uppercase tracking-tighter leading-[0.70] italic month-title text-left px-8"
+          style={{ "--month-fs": "2rem", "--month-fs-sm": "10rem" } as React.CSSProperties}
+        >
+          {thisMonthLabel}
+        </h2>
+        <div className="flex items-center justify-center gap-2.5 -mt-1 h-7 sm:h-12 px-4">
+          <span className="text-stone-300 text-lg sm:text-xl font-medium italic">at</span>
+          <Image
+            src="/CompanyName.png"
+            alt="Don Fenticas"
+            width={160}
+            height={40}
+            className="h-7 sm:h-12 w-auto object-contain"
+            priority
+          />
+        </div>
+      </header>
+
+      {/* Section 1: Specials */}
+      <SpecialsSection specials={specials} />
+
+      {/* Section 2: Events */}
+      <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pb-6 sm:pb-10">
+        <div className="flex items-center gap-2.5 mb-4">
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
+            What&apos;s On
+          </span>
+          <div className="flex-1 h-px bg-[#FDCC4B]/20" />
+        </div>
 
         {/* Hero: the next upcoming event */}
         {nextEvent && <NextEventHero event={nextEvent} isTonight={isTonight} />}

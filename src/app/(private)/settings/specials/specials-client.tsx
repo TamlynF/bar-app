@@ -15,10 +15,12 @@ import {
   AlertCircle,
   Sparkles,
   Image as ImageIcon,
+  Upload,
 } from "lucide-react";
 import { saveSpecialAction, deleteSpecialAction } from "./actions";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { createClient } from "@/lib/supabase/client";
 
 export type SpecialRecord = {
   id: number;
@@ -57,6 +59,8 @@ export default function SpecialsClient({
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUrl, setImageUrl] = useState("");
 
   const isSheetOpen = !!selected || isAdding;
 
@@ -71,6 +75,7 @@ export default function SpecialsClient({
     setFormError(null);
     setIsEditing(false);
     setSelected(null);
+    setImageUrl("");
     setIsAdding(true);
   };
 
@@ -79,6 +84,35 @@ export default function SpecialsClient({
     setIsAdding(false);
     setIsEditing(false);
     setFormError(null);
+    setImageUrl("");
+  };
+
+  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    setFormError(null);
+
+    const supabase = createClient();
+    const ext = file.name.split(".").pop();
+    const path = `specials/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    const { data, error } = await supabase.storage
+      .from("gallery")
+      .upload(path, file, { cacheControl: "3600", upsert: false });
+
+    if (error) {
+      setFormError(`Upload failed: ${error.message}`);
+      setUploadingImage(false);
+      return;
+    }
+
+    const publicUrl = supabase.storage
+      .from("gallery")
+      .getPublicUrl(data.path).data.publicUrl;
+    setImageUrl(publicUrl);
+    setUploadingImage(false);
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -296,10 +330,6 @@ export default function SpecialsClient({
                     }
                   />
                   <DetailCell
-                    label="Image URL"
-                    value={selected.image_url || "—"}
-                  />
-                  <DetailCell
                     label="Start Date"
                     value={formatDate(selected.start_date)}
                   />
@@ -348,6 +378,55 @@ export default function SpecialsClient({
                 {formDefault && (
                   <input type="hidden" name="id" value={formDefault.id} />
                 )}
+                <input type="hidden" name="image_url" value={imageUrl} />
+
+                {/* Image upload */}
+                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden p-4 space-y-3">
+                  <div className="flex items-center gap-1.5">
+                    <ImageIcon className="w-3 h-3 text-[#5F624F]" />
+                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">
+                      Image
+                    </span>
+                  </div>
+
+                  {imageUrl ? (
+                    <div className="relative rounded-xl overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={imageUrl}
+                        alt="Preview"
+                        className="w-full max-h-[200px] object-cover rounded-xl"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setImageUrl("")}
+                        className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg text-white hover:bg-black/80 transition-colors"
+                        title="Remove image"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-[#E6DFC8] rounded-xl cursor-pointer hover:border-[#5C4033] hover:bg-[#F7F4EA] transition-colors">
+                      {uploadingImage ? (
+                        <Loader2 className="w-8 h-8 text-[#5F624F] animate-spin mb-2" />
+                      ) : (
+                        <Upload className="w-8 h-8 text-[#5F624F] opacity-40 mb-2" />
+                      )}
+                      <span className="text-[11px] font-black uppercase tracking-wide text-[#5F624F]">
+                        {uploadingImage ? "Uploading..." : "Click to upload"}
+                      </span>
+                      <span className="text-[9px] text-[#5F624F] opacity-60 mt-1">JPG, PNG up to 10MB</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleUpload}
+                        disabled={uploadingImage}
+                      />
+                    </label>
+                  )}
+                </div>
 
                 <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
                   <FormRow label="Title" required>
@@ -374,15 +453,6 @@ export default function SpecialsClient({
                       name="badges"
                       placeholder="e.g. NEW, FRIDAY (comma-separated)"
                       defaultValue={formDefault?.badges.join(", ") ?? ""}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Image URL">
-                    <input
-                      name="image_url"
-                      placeholder="https://..."
-                      defaultValue={formDefault?.image_url ?? ""}
                       className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                     />
                   </FormRow>
@@ -476,6 +546,7 @@ export default function SpecialsClient({
                 <Button
                   onClick={() => {
                     setFormError(null);
+                    setImageUrl(selected?.image_url || "");
                     setIsEditing(true);
                   }}
                   className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
@@ -503,7 +574,7 @@ export default function SpecialsClient({
                 </Button>
                 <Button
                   type="button"
-                  disabled={isPending}
+                  disabled={isPending || uploadingImage}
                   onClick={() => {
                     const form = document.getElementById('special-form') as HTMLFormElement | null;
                     if (form) form.requestSubmit();
