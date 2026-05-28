@@ -33,43 +33,42 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
 
   return (
     <>
-      {/* Masonry Thumbnail Grid */}
-      <div className="columns-3 sm:columns-4 gap-2 sm:gap-3">
+      {/* Thumbnail Grid — 2 columns, natural aspect ratios */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-3">
         {items.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => setSelected(item)}
-            className="break-inside-avoid mb-2 sm:mb-3 block w-full text-left group focus:outline-none"
+            className="block w-full text-left group focus:outline-none"
           >
             <div className="relative rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-white/25 transition-all duration-300 hover:shadow-lg hover:shadow-black/20 active:scale-[0.97]">
-              {item.media_type === "video" ? (
-                <div className="relative aspect-square">
-                  <video
-                    src={item.image_url}
-                    className="w-full h-full object-cover"
-                    muted
-                    preload="metadata"
-                    playsInline
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
-                      <Play className="w-4 h-4 text-white ml-0.5" fill="white" />
+              <div className="relative aspect-square bg-black">
+                {item.media_type === "video" ? (
+                  <>
+                    <video
+                      src={`${item.image_url}#t=0.1`}
+                      className="absolute inset-0 w-full h-full object-contain"
+                      muted
+                      preload="metadata"
+                      playsInline
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="w-9 h-9 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center border border-white/20">
+                        <Play className="w-4 h-4 text-white ml-0.5" fill="white" />
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="aspect-square">
+                  </>
+                ) : (
                   <Image
                     src={item.image_url}
                     alt={item.title}
-                    width={400}
-                    height={400}
-                    className="w-full h-full object-cover"
-                    sizes="(max-width: 640px) 33vw, 25vw"
+                    fill
+                    className="object-cover"
+                    sizes="50vw"
                   />
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </button>
         ))}
