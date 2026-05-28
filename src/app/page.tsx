@@ -10,6 +10,7 @@ import { PublicNav } from "@/components/public-nav";
 import { swatchHexFromColor } from "@/lib/event-type-colors";
 import { ScheduleMore } from "@/components/schedule-more";
 import { MonthEventList } from "@/components/month-event-list";
+import { NextEventHero } from "@/components/next-event-hero";
 
 export const revalidate = 300;
 
@@ -57,11 +58,7 @@ function getEventType(event: EventRow): EventTypeJoin | null {
 
 /**
  * Lift a hex colour toward white until it's bright enough to read as a TITLE
- * on the near-black olive canvas (#1a2008). The poster could use mid-tone
- * colours because it sat on a bright yellow background; on dark we need the
- * text itself to clear WCAG, so we raise luminance while keeping the hue.
- *
- * Returns the original if it's already bright enough.
+ * on the near-black olive canvas (#1a2008).
  */
 function brightenForDark(hex: string): string {
   const h = hex.replace("#", "");
@@ -70,13 +67,11 @@ function brightenForDark(hex: string): string {
   let g = parseInt(h.slice(2, 4), 16);
   let b = parseInt(h.slice(4, 6), 16);
 
-  // Perceived luminance (0–255)
   const lum = 0.299 * r + 0.587 * g + 0.114 * b;
-  const TARGET = 165; // empirically reads cleanly on #1a2008
+  const TARGET = 165;
 
   if (lum >= TARGET) return hex;
 
-  // Mix toward white by the deficit ratio
   const t = Math.min(0.7, (TARGET - lum) / 255 + 0.25);
   r = Math.round(r + (255 - r) * t);
   g = Math.round(g + (255 - g) * t);
@@ -98,7 +93,6 @@ export default async function HomePage() {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
-  // Fetch from start of current month through end of next month
   const monthStart = startOfMonth(today);
   const monthStartStr = format(monthStart, "yyyy-MM-dd");
   const monthEnd = endOfMonth(today);
@@ -116,20 +110,15 @@ export default async function HomePage() {
     .order("start_time", { ascending: true })
     .limit(100);
 
-  // Keep past events regardless of is_active.
-  // For today/future: only include if is_active=true or is_fully_booked=true.
   const events = ((rawEvents ?? []) as EventRow[]).filter(
     (e) => e.date < todayStr || e.is_active || e.is_fully_booked
   );
 
-  // All events in the current calendar month (past + upcoming)
   const monthEvents = events.filter((e) => parseDate(e.date) <= monthEnd);
 
-  // The first event on or after today is the "next upcoming"
-  const nextEventId = monthEvents.find((e) => e.date >= todayStr)?.id ?? null;
-
-  // Serialize all month events for the client component
-  const serializedMonthEvents = monthEvents.map((e) => ({
+  // Map every month event into the shared serialized shape (now incl. the
+  // fields the hero needs: end time + fully-booked flag).
+  const serialize = (e: EventRow) => ({
     id: e.id,
     title: e.title,
     date: e.date,
@@ -139,9 +128,15 @@ export default async function HomePage() {
     isFullyBooked: e.is_fully_booked,
     color: eventBadgeColor(e),
     subType: getEventType(e)?.sub_type ?? null,
-  }));
+  });
 
-  // Events past this month → "View [Next Month]" reveal
+  const serializedMonthEvents = monthEvents.map(serialize);
+
+  // The first event on or after today is the "next upcoming" — promoted to hero.
+  const nextEvent =
+    serializedMonthEvents.find((e) => e.date >= todayStr) ?? null;
+  const isTonight = nextEvent?.date === todayStr;
+
   const laterEvents = events
     .filter((e) => parseDate(e.date) > monthEnd)
     .map((e) => ({
@@ -157,7 +152,6 @@ export default async function HomePage() {
   const thisMonthLabel = format(today, "MMMM");
   const nextMonthLabel = format(addMonths(today, 1), "MMMM");
 
-  // Build the colour key from upcoming events only (deduped by label)
   const keySeen = new Map<string, string>();
   for (const e of events) {
     if (e.date < todayStr) continue;
@@ -180,9 +174,8 @@ export default async function HomePage() {
 
       <PublicNav currentPath="/" />
 
-      {/* SCHEDULE */}
       <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-6 pb-6 sm:pb-10">
-        <header className="flex flex-col justify-center mb-8 sm:mb-12 min-h-[40dvh] sm:min-h-[50dvh]">
+        <header className="flex flex-col justify-center mb-8 sm:mb-12 min-h-[32dvh] sm:min-h-[44dvh]">
           <h2
             className="text-white font-black uppercase tracking-tighter leading-[0.70] italic month-title text-left px-8"
             style={{ "--month-fs": "2rem", "--month-fs-sm": "10rem" } as React.CSSProperties}
@@ -202,10 +195,14 @@ export default async function HomePage() {
           </div>
         </header>
 
+        {/* Hero: the next upcoming event */}
+        {nextEvent && <NextEventHero event={nextEvent} isTonight={isTonight} />}
+
+        {/* The rest of the month, split into upcoming (by week) + past (collapsed) */}
         <MonthEventList
           events={serializedMonthEvents}
           todayStr={todayStr}
-          nextEventId={nextEventId}
+          excludeId={nextEvent?.id ?? null}
         />
 
         <ScheduleMore events={laterEvents} nextMonthLabel={nextMonthLabel} />
@@ -246,7 +243,6 @@ export default async function HomePage() {
         </a>
       </section>
 
-      {/* Footer */}
       <footer className="max-w-5xl mx-auto px-4 sm:px-6 pb-10 text-center">
         <div className="flex items-center justify-center gap-4 text-stone-800">
           <div className="h-px w-6 bg-stone-800/50" />

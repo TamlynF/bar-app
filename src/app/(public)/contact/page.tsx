@@ -121,8 +121,8 @@ export default async function ContactPage() {
                     <div className="flex items-center gap-2">
                       {isToday && (
                         <span className="relative flex w-1.5 h-1.5">
-                          <span className="absolute inline-flex w-full h-full bg-[#FF6B35] rounded-full animate-ping opacity-75" />
-                          <span className="relative inline-flex w-1.5 h-1.5 bg-[#FF6B35] rounded-full" />
+                          <span className="absolute inline-flex w-full h-full neon-bg rounded-full animate-ping opacity-75" />
+                          <span className="relative inline-flex w-1.5 h-1.5 neon-bg rounded-full" />
                         </span>
                       )}
                       <span

@@ -1,7 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { format, startOfWeek } from "date-fns";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 
 type MonthEvent = {
@@ -21,28 +22,37 @@ function parseDate(dateStr: string) {
 }
 
 /**
- * Renders the current month's events. Upcoming events are grouped by ISO week
- * (Monday start) and always visible. Past events in the same month are tucked
- * behind a collapsed "earlier this month" toggle so the page leads with what's
- * actually coming up — the priority on a "what's on" screen.
+ * Renders the current month's events in two clearly separated buckets:
  *
- * The next upcoming event is NOT highlighted here; it's promoted to the hero
- * card in page.tsx. This list is everything after it.
+ *  1. UPCOMING (date >= today, excluding the hero event) — grouped by ISO week
+ *     (Monday start), always visible, full opacity. This is the priority on a
+ *     "what's on" screen.
+ *  2. PAST (date < today) — collapsed behind an "earlier this month" toggle,
+ *     rendered at 50% opacity with struck-through titles so they read as
+ *     disabled/done without being deleted.
+ *
+ * The next-upcoming event is promoted to the hero card in page.tsx and is
+ * excluded here via `excludeId`.
  */
 export function MonthEventList({
   events,
   todayStr,
-  nextEventId,
+  excludeId,
 }: {
   events: MonthEvent[];
   todayStr: string;
-  nextEventId: number | null;
+  excludeId: number | null;
 }) {
-  if (events.length === 0) return null;
+  const [showPast, setShowPast] = useState(false);
 
-  // Group ALL events (past + upcoming) by week
+  const upcoming = events.filter(
+    (e) => e.date >= todayStr && e.id !== excludeId
+  );
+  const past = events.filter((e) => e.date < todayStr);
+
+  // Group upcoming events by week
   const weeks = new Map<string, MonthEvent[]>();
-  for (const ev of events) {
+  for (const ev of upcoming) {
     const weekStart = startOfWeek(parseDate(ev.date), { weekStartsOn: 1 });
     const key = format(weekStart, "yyyy-MM-dd");
     const group = weeks.get(key) ?? [];
@@ -51,7 +61,8 @@ export function MonthEventList({
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
+      {/* Upcoming, grouped by week */}
       {Array.from(weeks.entries()).map(([weekKey, weekEvents]) => {
         const weekStart = parseDate(weekKey);
         const weekEndDate = new Date(weekStart);
@@ -69,51 +80,80 @@ export function MonthEventList({
 
             <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl divide-y divide-white/5 overflow-hidden">
               {weekEvents.map((ev) => (
-                <EventRow
-                  key={ev.id}
-                  event={ev}
-                  isPast={ev.date < todayStr}
-                  isNext={ev.id === nextEventId}
-                />
+                <EventRow key={ev.id} event={ev} isPast={false} />
               ))}
             </div>
           </div>
         );
       })}
+
+      {/* Past — collapsed toggle */}
+      {past.length > 0 && (
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowPast((o) => !o)}
+            aria-expanded={showPast}
+            className="group w-full flex items-center gap-2 px-1 mb-2"
+          >
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-stone-600">
+              Earlier this month
+            </span>
+            <div className="flex-1 h-px bg-stone-800/50" />
+            <ChevronDown
+              className={`w-4 h-4 text-stone-600 transition-transform ${
+                showPast ? "rotate-180" : ""
+              }`}
+              aria-hidden="true"
+            />
+          </button>
+
+          {showPast && (
+            <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl divide-y divide-white/5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+              {past.map((ev) => (
+                <EventRow key={ev.id} event={ev} isPast />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {upcoming.length === 0 && past.length === 0 && (
+        <p className="text-center text-stone-600 text-xs font-bold uppercase tracking-widest py-6">
+          Nothing else this month
+        </p>
+      )}
     </div>
   );
 }
 
-function EventRow({ event, isPast, isNext = false }: { event: MonthEvent; isPast: boolean; isNext?: boolean }) {
+function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
   const dateObj = parseDate(event.date);
 
   const inner = (
     <div
       className={`flex items-center gap-3 px-4 py-4 transition-colors ${
-        isPast
-          ? "opacity-50"
-          : isNext
-            ? "bg-[#FDCC4B]/5 border-l-2 border-l-[#FDCC4B]"
-            : "hover:bg-white/[0.04]"
+        isPast ? "opacity-50" : "hover:bg-white/[0.04]"
       }`}
     >
-      {/* Type colour dot */}
       <span
         className="ev-dot shrink-0 w-2 h-2 rounded-full"
         style={{ "--ev-c": event.color } as React.CSSProperties}
       />
 
-      {/* Date */}
       <div className="shrink-0 w-12">
         <p className="text-stone-500 text-[10px] font-black uppercase tracking-widest leading-tight">
           {format(dateObj, "EEE")}
         </p>
-        <p className="text-white text-base font-black tabular-nums leading-none">
+        <p
+          className={`text-base font-black tabular-nums leading-none ${
+            isPast ? "text-stone-300" : "text-white"
+          }`}
+        >
           {format(dateObj, "d")}
         </p>
       </div>
 
-      {/* Title + sub-type + time */}
       <div className="flex-1 min-w-0">
         <p
           className={`ev-text text-sm font-black leading-tight truncate ${
@@ -131,25 +171,20 @@ function EventRow({ event, isPast, isNext = false }: { event: MonthEvent; isPast
           )}
           {event.startTimeLabel && (
             <span className="text-stone-400 text-xs font-bold tabular-nums shrink-0">
-              {event.startTimeLabel}{event.endTimeLabel ? ` - ${event.endTimeLabel}` : ""}
+              {event.startTimeLabel}
+              {event.endTimeLabel ? ` - ${event.endTimeLabel}` : ""}
             </span>
           )}
         </div>
       </div>
 
-      {/* Trailing marker */}
-      {!isPast && isNext && (
-        <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-[#1a2008] bg-[#FDCC4B] px-2.5 py-1 rounded-full">
-          Next
-        </span>
-      )}
-      {!isPast && !isNext && event.isFullyBooked && (
+      {!isPast && event.isFullyBooked && (
         <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">
           Sold Out
         </span>
       )}
       {!isPast && !event.isFullyBooked && event.externalLink && (
-        <ExternalLink className="w-3.5 h-3.5 text-stone-600 shrink-0" />
+        <ExternalLink className="w-3.5 h-3.5 text-stone-600 shrink-0" aria-hidden="true" />
       )}
     </div>
   );

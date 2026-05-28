@@ -5167,6 +5167,25 @@
   .ev-dot[style*="--key-c"]  { background-color: var(--key-c); }
   .month-title { font-size: var(--month-fs); }
   @media (min-width: 640px) { .month-title { font-size: var(--month-fs-sm); } }
+
+  /* Neon accent (#FF6B35) — next-event hero + urgency framing */
+  .neon-text       { color: #FF6B35; }
+  .neon-bg         { background-color: #FF6B35; }
+  .neon-bg-muted   { background-color: rgb(255 107 53 / 0.25); }
+  .neon-border     { border-color: rgb(255 107 53 / 0.45); }
+  .neon-glow       { box-shadow: 0 0 15px rgba(255,107,53,0.1); }
+
+  /* Dark olive surfaces */
+  .olive-bg        { background-color: #26300D; }
+  .olive-dark-bg   { background-color: #1a2008; }
+  .olive-dark-text { color: #1a2008; }
+
+  /* Core public palette — arbitrary hex values used across 30+ files */
+  .text-\[\#FDCC4B\] { color: #FDCC4B; }
+  .bg-\[\#FDCC4B\]   { background-color: #FDCC4B; }
+  .text-\[\#1a2008\] { color: #1a2008; }
+  .bg-\[\#1a2008\]   { background-color: #1a2008; }
+  .bg-\[\#26300D\]   { background-color: #26300D; }
   .bg-emerald-100 { background-color: var(--color-emerald-100); }
   .bg-lime-100 { background-color: var(--color-lime-100); }
   .bg-cyan-100 { background-color: var(--color-cyan-100); }
