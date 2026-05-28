@@ -25,8 +25,8 @@ const STATUS_CONFIG: Record<
   string,
   { label: string; badge: string; icon: React.ElementType }
 > = {
-  pending_review: {
-    label: "Pending Review",
+  pending: {
+    label: "Pending",
     badge: "bg-amber-50 text-amber-700 border-amber-200",
     icon: Clock,
   },
@@ -35,8 +35,13 @@ const STATUS_CONFIG: Record<
     badge: "bg-green-50 text-green-700 border-green-200",
     icon: CheckCircle,
   },
-  rejected: {
-    label: "Rejected",
+  waitlisted: {
+    label: "Waitlisted",
+    badge: "bg-orange-50 text-orange-700 border-orange-200",
+    icon: Clock,
+  },
+  cancelled: {
+    label: "Cancelled",
     badge: "bg-red-50 text-red-700 border-red-200",
     icon: XCircle,
   },
@@ -88,7 +93,7 @@ export default async function BandBookingDetailPage({
     notFound();
   }
 
-  const cfg = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.pending_review;
+  const cfg = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.pending;
   const StatusIcon = cfg.icon;
 
   const socials = request.social_links
@@ -305,7 +310,7 @@ export default async function BandBookingDetailPage({
         )}
 
         {/* Admin notes — read-only when resolved */}
-        {request.status !== "pending_review" && request.admin_notes && (
+        {request.status !== "pending" && request.admin_notes && (
           <div className="space-y-2">
             <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
               Admin Notes

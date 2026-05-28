@@ -23,7 +23,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
 
   const videos = (request.video_urls ?? []).filter(Boolean);
 
-  function handleAction(status: "approved" | "rejected") {
+  function handleAction(status: "confirmed" | "cancelled") {
     setError(null);
     startTransition(async () => {
       try {
@@ -81,7 +81,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
       )}
 
       {/* Action area — pending only */}
-      {request.status === "pending_review" && (
+      {request.status === "pending" && (
         <div className="space-y-3 pt-4 border-t border-[#E6DFC8]">
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1.5">
@@ -101,7 +101,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
           <div className="flex gap-3">
             <button
               type="button"
-              onClick={() => handleAction("approved")}
+              onClick={() => handleAction("confirmed")}
               disabled={isPending}
               className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl py-4 transition-all disabled:opacity-50"
             >
@@ -110,11 +110,11 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
               ) : (
                 <CheckCircle className="w-4 h-4" />
               )}
-              Approve
+              Confirm
             </button>
             <button
               type="button"
-              onClick={() => handleAction("rejected")}
+              onClick={() => handleAction("cancelled")}
               disabled={isPending}
               className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs uppercase tracking-wider rounded-2xl py-4 transition-all disabled:opacity-50"
             >
@@ -123,7 +123,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
               ) : (
                 <XCircle className="w-4 h-4" />
               )}
-              Reject
+              Cancel
             </button>
           </div>
         </div>

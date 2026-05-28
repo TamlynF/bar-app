@@ -175,7 +175,7 @@ export default async function DashboardPage() {
     supabase
       .from("band_booking_requests")
       .select("*", { count: "exact", head: true })
-      .eq("status", "pending_review"),
+      .eq("status", "pending"),
     supabase
       .from("bookings")
       .select("id, events!bookings_event_id_fkey!inner(date)")
@@ -249,7 +249,7 @@ export default async function DashboardPage() {
     supabase
       .from("band_booking_requests")
       .select("id, event_id, group_name, booker_name, email, phone_no, type, genre, payment_amount, payment_status, selected_date, selected_start_time, selected_end_time")
-      .eq("status", "approved")
+      .eq("status", "confirmed")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
     supabase.from("quiz_category_configs").select("question_count").eq("is_active", true),
@@ -522,7 +522,7 @@ export default async function DashboardPage() {
               icon={Music}
               label="Band Submissions"
               count={pendingBands ?? 0}
-              href="/event-bookings/music-bookings?status=pending_review"
+              href="/event-bookings/music-bookings?status=pending"
               activeColor="text-purple-700"
               activeBg="bg-purple-100"
               activeDot="bg-purple-500"

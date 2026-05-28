@@ -50,7 +50,7 @@ export function PendingReviews({ items }: { items: PendingItem[] }) {
 
       <div className="flex gap-2 pt-1">
         <Link
-          href="/event-bookings/music-bookings?status=pending_review"
+          href="/event-bookings/music-bookings?status=pending"
           className="flex-1 text-center text-[10px] font-black uppercase tracking-wide py-2 rounded-xl bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
         >
           View Band Applications
