@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { format, isToday, isThisWeek, parseISO } from "date-fns";
 import Link from "next/link";
+import Image from "next/image";
 import {
   Calendar,
   Sparkles,
@@ -79,6 +80,15 @@ export default async function HomePage() {
             </span>
           </div>
 
+            <Image
+            src="/CompanyName.png"
+            alt="Don Fenticas"
+            width={500}
+            height={130}
+            className="w-[80%] max-w-[320px] mx-auto h-auto object-contain drop-shadow-[0_8px_40px_rgba(253,204,75,0.2)] mb-4"
+            priority
+          />
+          
           {/* Tagline — short, confident, no hero wordmark */}
           <h1 className="text-white font-black text-3xl sm:text-5xl uppercase tracking-tighter leading-[0.95] max-w-2xl mx-auto">
             Live music, quizzes,

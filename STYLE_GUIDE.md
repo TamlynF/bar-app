@@ -25,9 +25,9 @@ The H1 of every page is the **purpose of that page**, not the bar's name:
 | `/manage-booking/[id]` | `YOUR BOOKING` |
 | `/login` | `STAFF LOGIN` |
 
-**The home page is the only exception** where the bar's identity gets *any* hero treatment — and even then, the treatment is the location pill, vibe tagline, and a featured event CTA. There is no giant "DON FENTICAS" hero word on the home page either; the logo in the nav is sufficient.
+**The home page is the only exception** where the bar's identity gets hero treatment — a single `CompanyName.png` wordmark in the hero, plus the location pill and featured-event CTA. This exception applies to the home page only; all sub-pages still follow the single-logo-in-nav rule.
 
-If you find yourself adding `<Image src="/CompanyName.png" ... className="w-[80%]" />` to a page wrapper, **stop**. You're recreating the redundancy this rule exists to prevent.
+If you find yourself adding `<Image src="/CompanyName.png" ... className="w-[80%]" />` to a page wrapper, **stop**. You're recreating the redundancy this rule exists to prevent — this applies to sub-pages; the home hero is the one sanctioned use.
 
 ### What to lead each page with instead
 
