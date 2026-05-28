@@ -147,7 +147,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
       </nav>
 
       {/* Spacer so content doesn't sit under the fixed nav */}
-      <div className="h-[48px] sm:h-[56px]" aria-hidden="true" />
+      <div className="h-14 sm:h-16" aria-hidden="true" />
     </>
   );
 }

@@ -5,12 +5,12 @@ import { format } from "date-fns";
 import { ChevronDown, ExternalLink } from "lucide-react";
 
 /**
- * Client island for the "View more" reveal on the home schedule.
+ * Client island for the "View [next month]" reveal on the home schedule.
  *
- * The server component (page.tsx) does all the data fetching and bucketing,
- * then passes the already-computed "later events" (next month) into this
- * component. This component only owns the show/hide state — keeping the
- * `"use client"` surface as small as possible per CLAUDE.md.
+ * The server component (page.tsx) does all fetching, bucketing and colour
+ * brightening, then passes the already-computed next-month events here. This
+ * component only owns the show/hide state — keeping the "use client" surface
+ * as small as possible per CLAUDE.md.
  */
 
 type LaterEvent = {
@@ -18,13 +18,8 @@ type LaterEvent = {
   title: string;
   date: string; // YYYY-MM-DD
   startTimeLabel: string | null;
-  endTimeLabel: string | null;
-    externalLink: string | null;
-    isActive: boolean;
-    isFullyBooked: boolean;
-  isBookable: boolean;
-  color: string; // event-type colour from badge_color
-  type: string | null;
+  externalLink: string | null;
+  color: string; // brightened event-type colour
   subType: string | null;
 };
 
@@ -39,8 +34,7 @@ export function ScheduleMore({
   events: LaterEvent[];
   nextMonthLabel: string;
 }) {
-    const [open, setOpen] = useState(false);
-    console.log("ScheduleMore events:", JSON.stringify(events, null, 2));
+  const [open, setOpen] = useState(false);
 
   if (events.length === 0) return null;
 
@@ -64,34 +58,38 @@ export function ScheduleMore({
           {events.map((ev) => {
             const dateObj = parseDate(ev.date);
             const inner = (
-              <div className="flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03] transition-colors">
+              <div className="flex items-center gap-3 px-4 py-4 hover:bg-white/[0.04] transition-colors">
                 <span
                   className="ev-dot shrink-0 w-2 h-2 rounded-full"
                   style={{ "--ev-c": ev.color } as React.CSSProperties}
                 />
-                <div className="shrink-0 w-14">
-                  <p
-                    className="ev-text text-[10px] font-black uppercase tracking-widest"
-                    style={{ "--ev-c": ev.color } as React.CSSProperties}
-                  >
-                    {format(dateObj, "EEE")} {format(dateObj, "d")}
+                <div className="shrink-0 w-12">
+                  <p className="text-stone-500 text-[10px] font-black uppercase tracking-widest leading-tight">
+                    {format(dateObj, "EEE")}
+                  </p>
+                  <p className="text-white text-base font-black tabular-nums leading-none">
+                    {format(dateObj, "d")}
                   </p>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <span
-                    className="ev-text text-sm font-black truncate"
+                  <p
+                    className="ev-text text-sm font-black leading-tight truncate"
                     style={{ "--ev-c": ev.color } as React.CSSProperties}
                   >
                     {ev.title}
-                  </span>
-                  {ev.startTimeLabel && (
-                    <span
-                      className="ev-text text-xs font-bold ml-2 tabular-nums"
-                      style={{ "--ev-c": ev.color } as React.CSSProperties}
-                    >
-                      {ev.startTimeLabel}
-                    </span>
-                  )}
+                  </p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {ev.subType && (
+                      <span className="text-stone-500 text-[10px] font-bold uppercase tracking-wide truncate">
+                        {ev.subType}
+                      </span>
+                    )}
+                    {ev.startTimeLabel && (
+                      <span className="text-stone-400 text-xs font-bold tabular-nums shrink-0">
+                        {ev.startTimeLabel}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {ev.externalLink && (
                   <ExternalLink className="w-3.5 h-3.5 text-stone-600 shrink-0" />
@@ -100,12 +98,7 @@ export function ScheduleMore({
             );
 
             return ev.externalLink ? (
-              <a
-                key={ev.id}
-                href={ev.externalLink}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a key={ev.id} href={ev.externalLink} target="_blank" rel="noopener noreferrer">
                 {inner}
               </a>
             ) : (

@@ -3,10 +3,6 @@ import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
 import Image from "next/image";
 import {
   Calendar,
-  Sparkles,
-  Music,
-  Mic,
-  PartyPopper,
   Instagram,
   ArrowRight,
 } from "lucide-react";
@@ -59,10 +55,42 @@ function getEventType(event: EventRow): EventTypeJoin | null {
   return Array.isArray(event.event_types) ? event.event_types[0] : event.event_types;
 }
 
-/** The type colour for an event, from badge_color, falling back to gold. */
+/**
+ * Lift a hex colour toward white until it's bright enough to read as a TITLE
+ * on the near-black olive canvas (#1a2008). The poster could use mid-tone
+ * colours because it sat on a bright yellow background; on dark we need the
+ * text itself to clear WCAG, so we raise luminance while keeping the hue.
+ *
+ * Returns the original if it's already bright enough.
+ */
+function brightenForDark(hex: string): string {
+  const h = hex.replace("#", "");
+  if (h.length !== 6) return hex;
+  let r = parseInt(h.slice(0, 2), 16);
+  let g = parseInt(h.slice(2, 4), 16);
+  let b = parseInt(h.slice(4, 6), 16);
+
+  // Perceived luminance (0–255)
+  const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+  const TARGET = 165; // empirically reads cleanly on #1a2008
+
+  if (lum >= TARGET) return hex;
+
+  // Mix toward white by the deficit ratio
+  const t = Math.min(0.7, (TARGET - lum) / 255 + 0.25);
+  r = Math.round(r + (255 - r) * t);
+  g = Math.round(g + (255 - g) * t);
+  b = Math.round(b + (255 - b) * t);
+
+  const toHex = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+/** The (brightened) type colour for an event, from badge_color, falling back to gold. */
 function eventBadgeColor(event: EventRow): string {
   const et = getEventType(event);
-  return swatchHexFromColor(et?.badge_color) ?? "#FDCC4B";
+  const base = swatchHexFromColor(et?.badge_color) ?? "#FDCC4B";
+  return brightenForDark(base);
 }
 
 export default async function HomePage() {
@@ -94,19 +122,20 @@ export default async function HomePage() {
     (e) => e.date < todayStr || e.is_active || e.is_fully_booked
   );
 
-  // All events for the current month (past + future) in one list
-  const thisMonthEvents = events.filter((e) => parseDate(e.date) <= monthEnd);
+  // All events in the current calendar month (past + upcoming)
+  const monthEvents = events.filter((e) => parseDate(e.date) <= monthEnd);
 
   // The first event on or after today is the "next upcoming"
-  const nextEventId = thisMonthEvents.find((e) => e.date >= todayStr)?.id ?? null;
+  const nextEventId = monthEvents.find((e) => e.date >= todayStr)?.id ?? null;
 
-  // Serialize for client component
-  const serializedMonthEvents = thisMonthEvents.map((e) => ({
+  // Serialize all month events for the client component
+  const serializedMonthEvents = monthEvents.map((e) => ({
     id: e.id,
     title: e.title,
     date: e.date,
     startTimeLabel: formatTime(e.start_time),
     externalLink: e.external_link,
+    isFullyBooked: e.is_fully_booked,
     color: eventBadgeColor(e),
     subType: getEventType(e)?.sub_type ?? null,
   }));
@@ -119,18 +148,26 @@ export default async function HomePage() {
       title: e.title,
       date: e.date,
       startTimeLabel: formatTime(e.start_time),
-      endTimeLabel: formatTime(e.end_time),
-      isActive: e.is_active,
-      isFullyBooked: e.is_fully_booked,
-      isBookable: e.is_bookable,
       externalLink: e.external_link,
       color: eventBadgeColor(e),
-      type: getEventType(e)?.type ?? null,
       subType: getEventType(e)?.sub_type ?? null,
     }));
 
   const thisMonthLabel = format(today, "MMMM");
   const nextMonthLabel = format(addMonths(today, 1), "MMMM");
+
+  // Build the colour key from upcoming events only (deduped by label)
+  const keySeen = new Map<string, string>();
+  for (const e of events) {
+    if (e.date < todayStr) continue;
+    const et = getEventType(e);
+    const label = et?.sub_type || et?.type;
+    if (label && !keySeen.has(label)) keySeen.set(label, eventBadgeColor(e));
+  }
+  const colorKey = Array.from(keySeen.entries()).map(([label, color]) => ({
+    label,
+    color,
+  }));
 
   return (
     <main className="min-h-dvh w-full bg-[#1a2008] text-stone-300 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased">
@@ -142,53 +179,24 @@ export default async function HomePage() {
 
       <PublicNav currentPath="/" />
 
-      {/* HERO */}
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] bg-[#FDCC4B]/10 blur-[120px] rounded-full" />
-          <div className="absolute top-20 right-0 w-[300px] h-[200px] bg-[#7A1F1F]/20 blur-[100px] rounded-full" />
-        </div>
-
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-6 sm:pt-10 pb-4 sm:pb-6 text-center">
-          <div className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1 mb-4">
-            <span className="relative flex w-1.5 h-1.5">
-              <span className="absolute inline-flex w-full h-full bg-[#FDCC4B] rounded-full animate-ping opacity-60" />
-              <span className="relative inline-flex w-1.5 h-1.5 bg-[#FDCC4B] rounded-full" />
-            </span>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-300">
-              Regent St &middot; Hinckley
-            </span>
-          </div>
-
+      {/* SCHEDULE */}
+      <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-6 pb-6 sm:pb-10">
+        <header className="text-center mb-5 sm:mb-8">
           <Image
             src="/CompanyName.png"
             alt="Don Fenticas"
             width={500}
             height={130}
-            className="w-[80%] max-w-[320px] mx-auto h-auto object-contain drop-shadow-[0_8px_40px_rgba(253,204,75,0.2)] mb-4"
+            className="w-[55%] max-w-[200px] sm:max-w-[280px] mx-auto h-auto object-contain drop-shadow-[0_8px_40px_rgba(253,204,75,0.2)] mb-2"
             priority
           />
-
-          <h1 className="text-white font-black text-3xl sm:text-5xl uppercase tracking-tighter leading-[0.95] max-w-2xl mx-auto">
-            Live music, quizzes,
-            <br />
-            <span className="text-[#FDCC4B]">karaoke &amp; more</span>
-          </h1>
-          <p className="text-stone-400 text-sm sm:text-base font-medium mt-3 max-w-md mx-auto">
-            The best nights out in town. Walk-ins welcome, bookings encouraged.
+          <p className="text-stone-500 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] mb-1">
+            Live music &middot; Quizzes &middot; Karaoke
           </p>
-
-          <div className="flex flex-wrap justify-center gap-2 mt-5">
-            <VibePill icon={Music} label="Live Bands" />
-            <VibePill icon={Mic} label="Karaoke" />
-            <VibePill icon={PartyPopper} label="Quiz Nights" />
-          </div>
-        </div>
-      </section>
-
-      {/* SCHEDULE */}
-      <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <MonthHeader label={thisMonthLabel} />
+          <h2 className="text-white font-black text-4xl sm:text-6xl uppercase tracking-tighter leading-[0.85]">
+            {thisMonthLabel}
+          </h2>
+        </header>
 
         <MonthEventList
           events={serializedMonthEvents}
@@ -198,7 +206,7 @@ export default async function HomePage() {
 
         <ScheduleMore events={laterEvents} nextMonthLabel={nextMonthLabel} />
 
-        {events.length > 0 && <ColorKey events={events} />}
+        {colorKey.length > 0 && <ColorKey entries={colorKey} />}
 
         {events.length === 0 && (
           <div className="text-center py-16 bg-white/[0.03] border border-white/5 rounded-2xl">
@@ -249,65 +257,25 @@ export default async function HomePage() {
   );
 }
 
-function MonthHeader({ label }: { label: string }) {
+function ColorKey({ entries }: { entries: { label: string; color: string }[] }) {
   return (
-    <header className="text-center mb-8">
-      <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
-        <Sparkles className="w-3 h-3 text-[#FDCC4B]" />
-        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
-          What&apos;s On
-        </span>
-      </div>
-      <h2 className="text-white font-black text-5xl sm:text-7xl uppercase tracking-tighter leading-[0.85]">
-        {label}
-      </h2>
-    </header>
-  );
-}
-
-function VibePill({
-  icon: Icon,
-  label,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-}) {
-  return (
-    <span className="inline-flex items-center gap-1.5 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
-      <Icon className="w-3 h-3 text-[#FDCC4B]" />
-      <span className="text-[10px] font-black uppercase tracking-wide text-stone-200">
-        {label}
-      </span>
-    </span>
-  );
-}
-
-function ColorKey({ events }: { events: EventRow[] }) {
-  const seen = new Map<string, string>();
-  for (const e of events) {
-    const et = getEventType(e);
-    const label = et?.sub_type || et?.type;
-    if (label && !seen.has(label)) {
-      seen.set(label, eventBadgeColor(e));
-    }
-  }
-  const entries = Array.from(seen.entries());
-  if (entries.length === 0) return null;
-
-  return (
-    <div className="mt-10 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
-      {entries.map(([label, color]) => (
-        <span key={label} className="inline-flex items-center gap-1.5">
-          <span
-            className="ev-dot w-2.5 h-2.5 rounded-full"
-            style={{ "--key-c": color } as React.CSSProperties}
-          />
-          <span className="text-stone-400 text-[10px] font-black uppercase tracking-wide">
-            {label}
+    <div className="mt-10 pt-6 border-t border-white/[0.06]">
+      <p className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-stone-600 mb-4">
+        Event Types
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-3 max-w-md mx-auto">
+        {entries.map(({ label, color }) => (
+          <span key={label} className="inline-flex items-center gap-2 min-w-0">
+            <span
+              className="ev-dot shrink-0 w-2.5 h-2.5 rounded-full"
+              style={{ "--key-c": color } as React.CSSProperties}
+            />
+            <span className="text-stone-400 text-[10px] font-black uppercase tracking-wide truncate">
+              {label}
+            </span>
           </span>
-        </span>
-      ))}
+        ))}
+      </div>
     </div>
   );
 }
-
