@@ -261,9 +261,6 @@ function MonthHeader({ label }: { label: string }) {
       <h2 className="text-white font-black text-5xl sm:text-7xl uppercase tracking-tighter leading-[0.85]">
         {label}
       </h2>
-      <p className="text-[#FDCC4B] text-sm sm:text-base font-black uppercase tracking-[0.3em] mt-1">
-        at Don Fenticas
-      </p>
     </header>
   );
 }
