@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Trophy, Music, Building2, ArrowRight, Disc3, CalendarDays, Ticket } from "lucide-react";
 import Image from "next/image";
 import { createClient } from "@/lib/supabase/server";
+import { PublicNav } from "@/components/public-nav";
 
 export const metadata = {
   title: "Book | Don Fenticas",
@@ -68,10 +69,12 @@ export default async function BookingHubPage() {
   const events = bookableEvents ?? [];
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] flex flex-col items-center justify-center px-4 py-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
+    <main className="min-h-dvh w-full bg-[#26300D] flex flex-col items-center px-4 pt-20 pb-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{
         __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }`
       }} />
+
+      <PublicNav />
 
       {/* Header */}
       <div className="text-center mb-10 max-w-md">

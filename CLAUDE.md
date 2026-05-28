@@ -1,11 +1,15 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file is read by Claude Code on every session. Treat it as authoritative. If a request would cause you to break something in here, **stop and ask** rather than guessing.
+
+For visual / design decisions, also read `STYLE_GUIDE.md`. The two files together are the source of truth.
+
+---
 
 ## Commands
 
 ```bash
-npm run dev      # Start dev server
+npm run dev      # Dev server
 npm run build    # Production build (also runs TypeScript check)
 npm run lint     # ESLint
 npm run start    # Start production server
@@ -13,13 +17,13 @@ npm run start    # Start production server
 
 There are no tests. Do not add a test framework unless explicitly requested.
 
-## Git Workflow
+## Git workflow
 
 Commit and push to GitHub regularly throughout work — after each meaningful unit (feature complete, bug fixed, page built). Never leave a session's work uncommitted.
 
 ```bash
 git add <specific files>   # Stage specific files, never git add -A or git add .
-git commit -m "message"    # See conventions below
+git commit -m "message"
 git push origin production
 ```
 
@@ -31,89 +35,199 @@ git push origin production
 
 Always run `npm run build` successfully before committing.
 
-## Architecture
+---
 
-**Stack:** Next.js 16 (App Router) · TypeScript · Supabase (Postgres + Auth + Storage) · Tailwind CSS 4 · Shadcn/UI · Resend (email) · Google Gemini (AI quiz generation)
+## Tech stack — do not deviate without asking
 
-### Route Groups
+- **Framework:** Next.js 16 (App Router, Server Components by default, React 19, React Compiler enabled)
+- **Language:** TypeScript, strict mode
+- **Styling:** Tailwind CSS 4 only — no CSS modules in new code (existing `.module.css` files are tolerated, but don't add more). No styled-components. **No inline `style` props** — this triggers Edge DevTools `no-inline-styles` warnings. For dynamic values that can't be expressed as static Tailwind classes:
+  1. **Preferred:** Set a CSS custom property via `style` and consume it via Tailwind arbitrary value — e.g. `style={{ "--badge-color": color } as React.CSSProperties}` + `className="bg-[var(--badge-color)]"`. This keeps the actual styling in classes.
+  2. **Acceptable:** Use `style` only for CSS custom properties (`--var-name`), never for standard CSS properties like `backgroundColor`, `color`, `borderColor`, `minWidth`, etc.
+  3. When refactoring existing inline styles, convert `style={{ backgroundColor: x, color: y }}` → `style={{ "--c": x, "--bg": y } as React.CSSProperties}` + Tailwind `text-[var(--c)] bg-[var(--bg)]`.
+- **Component library:** shadcn/ui (new-york style), components live in `src/components/ui/`. Owned by us — edit freely.
+- **Primitives:** Radix UI (via shadcn)
+- **Icons:** Lucide React only
+- **Forms:** react-hook-form + zod where validation is non-trivial; plain `useState` is fine for simple forms
+- **Auth:** Supabase Auth via `@supabase/ssr`
+- **DB:** Supabase Postgres (no Prisma; use the Supabase client directly)
+- **Email:** Resend (sender: `Don Fenticas <admin@bookingsdonfenticas.co.uk>`)
+- **Payments:** Square (sandbox + production envs)
+- **AI:** Google Gemini (quiz generation)
+- **Storage:** Supabase Storage (`gallery`, `band-videos` buckets)
+- **Music:** Spotify Web Playback SDK (quiz integration only)
+- **Animations:** `tw-animate-css` + Tailwind animate utilities. No Framer Motion (yet) — ask before adding.
+- **Toasts:** `sonner`
+- **Date handling:** `date-fns` only
+- **Charts/tables:** none currently; ask before adding
+
+If you think a new dependency is needed, **stop and ask** before installing.
+
+---
+
+## Route structure
 
 ```
 src/app/
-├── (public)/               # No auth required
-│   ├── book/               # Hub → redirects to quiz/band/private
-│   │   ├── quiz/           # Quiz night booking form
-│   │   ├── band/           # Band/artist stage application
-│   │   └── private/        # Private hire enquiry
-│   ├── manage-booking/[id] # Customer self-service (cancel/view)
-│   └── _actions/           # Server actions for all public forms
-├── (private)/              # Protected by proxy.ts
-│   ├── dashboard/          # Stat cards + pending reviews + booking list
-│   ├── event-bookings/
-│   │   ├── quiz-bookings/  # Manage quiz night bookings (edit, cancel)
-│   │   ├── music-bookings/ # Review band applications (confirm/reject)
-│   │   └── private-bookings/ # Review private hire enquiries
-│   ├── quiz-generator/     # AI quiz creation + question archive
-│   └── settings/           # CRUD for tables, events, categories, contacts
-└── login/                  # Staff login (Supabase email/password)
+├── (public)/              # No auth required, public-facing
+│   ├── book/              # Hub → quiz/band/private/bingo + per-event pages
+│   ├── gallery/
+│   ├── manage-booking/[id]
+│   └── _actions/          # Server actions for public forms
+├── (private)/             # Protected by src/proxy.ts (NOT middleware.ts)
+│   ├── dashboard/
+│   ├── event-bookings/    # Quiz, music, bingo, private, per-event
+│   ├── event-setups/      # Events, event types, quiz config, quiz generator
+│   └── settings/          # Company, customers, teams, tables, menu, gallery, users, etc.
+├── login/
+├── accept-invite/
+├── update-password/
+├── auth/callback/
+├── menu/                  # Public menu page (not in (public) group)
+├── contact/               # Public contact page (not in (public) group)
+├── api/                   # Route handlers (Spotify, Square webhook)
+└── page.tsx               # Public home
 ```
 
-### Auth
+**Important Next.js 16 conventions in this project:**
+- Middleware is in `src/proxy.ts` and the exported function is named `proxy`, not `middleware`.
+- `params` and `searchParams` are async. Always `await` them: `const { id } = await params;`.
+- Server Actions live in `actions.ts` files co-located with the route, marked `"use server"`.
 
-Route protection lives in `src/proxy.ts` (Next.js 16 renamed `middleware.ts` → `proxy.ts`; the exported function must be named `proxy`, not `middleware`). It uses `@supabase/ssr` `createServerClient` to check `supabase.auth.getUser()` on every request matching the config matcher. Unauthenticated requests to private routes redirect to `/login`; authenticated requests to `/login` redirect to `/dashboard`.
+---
 
-Login/logout server actions are in `src/app/login/actions.ts`.
+## Supabase clients — pick the right one
 
-### Supabase Clients
+- **Server** (`@/lib/supabase/server.ts`) → Server Components, Server Actions, `proxy.ts`. Reads cookies via `next/headers`.
+- **Browser** (`@/lib/supabase/client.ts`) → Client Components that need direct access (e.g. Storage uploads).
+- **Admin** (`@/lib/supabase/admin.ts`) → Service role key, server-only, use sparingly (currently for invite acceptance flow).
 
-- **Server** (`src/lib/supabase/server.ts`): `createServerClient` from `@supabase/ssr` — use in Server Components, server actions, and `proxy.ts`. Uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (new Supabase format).
-- **Browser** (`src/lib/supabase/client.ts`): `createBrowserClient` from `@supabase/ssr` — use in Client Components that need direct Supabase access (e.g. file uploads to Storage). Uses `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
-- `proxy.ts` also uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the JWT, required for session validation).
+Required env vars:
+```
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY            # JWT — used in proxy.ts and browser client
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY     # New Supabase publishable key format
+SUPABASE_SERVICE_ROLE_KEY                # Admin client only, never NEXT_PUBLIC_
+RESEND_API_KEY
+NEXT_PUBLIC_GEMINI_API_KEY
+NEXT_PUBLIC_SITE_URL                     # e.g. https://bar-app-tau.vercel.app
+SQUARE_ACCESS_TOKEN
+SQUARE_ENVIRONMENT                       # 'sandbox' | 'production'
+SQUARE_LOCATION_ID
+SQUARE_WEBHOOK_SIGNATURE_KEY
+SPOTIFY_CLIENT_ID
+SPOTIFY_CLIENT_SECRET
+```
 
-### Data Fetching Pattern
+---
 
-- **Page components** (async Server Components) fetch read-only data directly via the server Supabase client.
-- **Mutations** live in `actions.ts` files co-located with the route (marked `"use server"`).
-- **Client Components** call server actions via `useTransition` + async handlers — not via API routes.
+## Data fetching & mutations
 
-### Database Tables
+- **Reads** happen in async Server Components via the server Supabase client. Don't fetch in `useEffect` unless there's a specific client-side reason.
+- **Writes** go through Server Actions co-located with the route (`actions.ts`). No API routes for mutations unless there's a specific reason (webhooks, third-party callbacks like Square).
+- **Email sending** fires from Server Actions — never from client code.
+
+For unauthenticated/public mutations (booking forms, manage-booking page), Server Actions are still fine; they don't require an authenticated session.
+
+---
+
+## Two distinct UI surfaces
+
+This app has two faces and they look intentionally different. **Don't mix them.**
+
+### Public site (`/`, `/book`, `/menu`, `/gallery`, `/contact`)
+- Dark theme: `#26300D` (deep olive) background, `#FDCC4B` (gold) accent
+- "Gritty bar" aesthetic — see `STYLE_GUIDE.md` for the full palette and rules
+- Mobile-first; design at 375px width and scale up
+- Bottom-sheet style nav at the top is acceptable; no persistent bottom nav on public pages
+- Big, confident typography; lots of uppercase tracking; serif or bold display vibes welcome
+- Real photography over illustration
+
+### Admin portal (`/dashboard`, `/event-bookings/*`, `/event-setups/*`, `/settings/*`)
+- Light/warm theme: `#F7F4EA` background, `#5C4033` espresso primary, `#E6DFC8` borders
+- Card-based information density — this is a working tool, not a marketing surface
+- Sidebar nav on desktop (≥sm), persistent bottom nav on mobile (≤sm)
+- Sheet-based detail/edit views (bottom sheet on mobile, centered on desktop)
+
+If you find yourself styling a public page with espresso/cream tones, or an admin page with olive/gold, **stop**. You're on the wrong surface.
+
+---
+
+## Visual standards (summary — full version in `STYLE_GUIDE.md`)
+
+- **Touch targets ≥ 44×44px** on anything tappable on mobile (WCAG)
+- **Tailwind spacing scale only** — no arbitrary `p-[13px]` values
+- **Type scale:** Tailwind defaults. Display headings get `font-black uppercase tracking-tight` or `tracking-tighter`. Eyebrows/labels get `text-[10px] font-black uppercase tracking-widest`.
+- **Colour usage:** Public pages use the olive/gold palette plus deep burgundy and a neon accent (see STYLE_GUIDE). Admin pages stay on the espresso/cream palette.
+- **Card radii:** `rounded-2xl` (cards) and `rounded-3xl` (sheets) are the defaults. Don't introduce new radius values without a reason.
+- **Borders are visible but soft:** `border-[#E6DFC8]` on admin, `border-white/10` on public dark theme.
+- **No emojis in production UI** unless explicitly requested by the user (some legacy emoji exist in emails; that's fine).
+
+---
+
+## Booking page route map
+
+The booking pages share a public dark theme but each has its own logic:
+
+- `/book` — hub, lists quiz/bingo/band/private + upcoming bookable events
+- `/book/quiz` — Thursday quiz booking form (free, lazy event creation, waitlist when full)
+- `/book/bingo` — Music Bingo (paid via Square, pay upfront)
+- `/book/band` — band/artist stage application (review queue)
+- `/book/private` — private hire enquiry (review queue)
+- `/book/event/[id]` — generic ticketed event booking (paid via Square)
+- `/manage-booking/[id]` — public self-service (view, modify, cancel)
+
+---
+
+## Common pitfalls — known issues to avoid
+
+- **`use client` directives:** Server Components are the default. Don't add `"use client"` unless you actually need state, effects, or browser APIs. Layouts (`layout.tsx`) under `(private)/` and `(public)/` are currently marked `"use client"` because they use `usePathname` — that's deliberate, don't change without thinking.
+- **Cookie/JWT mismatch:** `proxy.ts` and the browser client use `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the JWT). The server client uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Don't swap them.
+- **`event_types` joins:** Supabase joins can return as array OR object depending on the query. Always handle both: `const et = Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types`.
+- **Square BigInt:** Square payment amounts use `BigInt`. Don't try to `JSON.stringify` a payment link response without handling it.
+- **Date strings vs Date objects:** DB stores `date` as `YYYY-MM-DD` strings. When parsing in JS, always use `new Date(dateStr + "T00:00:00")` to avoid timezone shifts.
+- **`is_active` vs `is_bookable`:** An event can be `is_active: true` (visible on the schedule) but `is_bookable: false` (no booking form). Don't conflate them.
+
+---
+
+## Database tables (key ones)
 
 | Table | Purpose |
 |---|---|
-| `bookings` | Quiz night bookings — status: `confirmed`, `waitlisted`, `cancelled` |
-| `contacts` | Customer details (shared across booking types) |
-| `events` / `event_types` | Quiz night schedule — lazily created on first booking for a date |
-| `booking_table_mappings` | Table assignment for confirmed quiz bookings |
-| `tables` | Physical tables with capacity |
-| `band_booking_requests` | Band/artist stage applications — status: `pending_review`, `confirmed`, `rejected` |
-| `private_hire_requests` | Private event enquiries — same status flow as band |
-| `quiz_category_configs` | Category name + question count targets |
-| `past_quiz_questions` | Archive of used questions (fed back to Gemini to avoid repeats) |
-| `employees` | Staff records (separate from Supabase Auth users) |
+| `bookings` | Quiz / bingo / event bookings — status: `confirmed`, `waitlisted`, `pending`, `cancelled` |
+| `contacts` | Customer details (shared across booking types, keyed on email) |
+| `events` / `event_types` | Schedule; events lazily created on first booking for a date |
+| `booking_table_mappings` | Seating assignment for confirmed bookings |
+| `tables` | Physical tables with `max_capacity` |
+| `band_booking_requests` | Stage applications — `pending_review`, `approved`, `rejected` |
+| `private_hire_requests` | Private hire enquiries — same flow |
+| `quiz_category_configs` | Quiz rounds + question count targets |
+| `past_quiz_questions` | Archive (fed back to Gemini to avoid repeats) |
+| `gallery_images` | Media on the public gallery and homepage |
+| `specials` | Drink deals on the homepage |
+| `promo_content` | Social-style promo cards on the homepage |
+| `menu_categories` / `menu_items` | Public menu |
+| `company_information` | Address, socials, opening hours, capacity |
+| `employees` | Staff records, separate from Supabase Auth users |
 
-### Email (Resend)
+---
 
-Sender: `Don Fenticas <admin@bookingsdonfenticas.co.uk>`
-Admin inbox: `admin@bookingsdonfenticas.co.uk`
+## What to do when unsure
 
-Emails fire from server actions — never from client code. The app URL is resolved as `NEXT_PUBLIC_SITE_URL` → `VERCEL_URL` → `http://localhost:3000`.
+1. Read this file and `STYLE_GUIDE.md`.
+2. If a question isn't covered, look at existing patterns in the codebase and match them.
+3. If there's no precedent and the choice is significant, **stop and ask**.
+4. Never install a new dependency, change the theme, or introduce a new architectural pattern without flagging it.
 
-Three triggers: quiz booking confirmation/waitlist, band application receipt + admin alert, private hire receipt + admin alert. Outcome emails (confirm/reject) fire from the admin review server actions in `src/app/(private)/event-bookings/*/actions.ts`.
+## Things to never do without explicit permission
 
-### Quiz Generator
-
-Uses Google Gemini (`NEXT_PUBLIC_GEMINI_API_KEY`). Fetches the last 50 `past_quiz_questions` and includes them in the prompt to avoid repeats. Generated questions are staged for review before being saved. Categories and question-count targets come from `quiz_category_configs`.
-
-### Supabase Storage
-
-Bucket: `band-videos` (public, 50 MB limit, video MIME types only). Videos are uploaded directly from the browser using the browser Supabase client before form submission. Public URLs are stored in `band_booking_requests.video_urls` (text array).
-
-### Key Environment Variables
-
-```
-NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY          # JWT — used in proxy.ts and browser client
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY   # New Supabase format — used in server client
-RESEND_API_KEY
-NEXT_PUBLIC_GEMINI_API_KEY
-NEXT_PUBLIC_SITE_URL                   # e.g. https://yourdomain.com
-```
+- Add a new dependency (npm package)
+- Change the colour palette or fonts on either surface
+- Move files out of the established folder structure
+- Add CSS outside Tailwind (no new `.module.css`, no styled-components)
+- Refactor `proxy.ts` to `middleware.ts` or rename the exported function
+- Use API routes for mutations that could be Server Actions
+- Disable TypeScript or ESLint rules
+- Commit secrets — `.env.local` only, never committed
+- Use `git add .` or `git add -A`
+- Touch the admin theme when working on public pages, or vice versa

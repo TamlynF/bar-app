@@ -1,8 +1,6 @@
-import React from "react";
 import { createClient } from "@/lib/supabase/server";
-import Image from "next/image";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { Camera } from "lucide-react";
+import { PublicNav } from "@/components/public-nav";
 import GalleryGrid from "./gallery-grid";
 
 export const metadata = {
@@ -29,50 +27,47 @@ export default async function GalleryPage() {
   }[];
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] text-stone-300 flex flex-col selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
-      <style dangerouslySetInnerHTML={{ __html: `
-        html, body {
-          background-color: #26300D !important;
-          margin: 0; padding: 0;
-          width: 100%; height: 100%;
-          overflow-x: hidden;
-        }
-        main {
-          padding-top: env(safe-area-inset-top, 10px);
-          padding-bottom: env(safe-area-inset-bottom, 20px);
-        }
-      `}} />
+    <main className="min-h-dvh w-full bg-[#1a2008] text-stone-300 flex flex-col selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            html, body {
+              background-color: #1a2008 !important;
+              margin: 0; padding: 0;
+              width: 100%; height: 100%;
+              overflow-x: hidden;
+            }
+          `,
+        }}
+      />
 
-      <div className="w-full max-w-5xl mx-auto py-6 sm:py-12 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col items-center text-center mb-8 sm:mb-12">
-          <Link
-            href="/"
-            className="self-start inline-flex items-center gap-1.5 text-stone-500 hover:text-[#FDCC4B] text-[11px] font-black uppercase tracking-wide transition-colors mb-6"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back
-          </Link>
-          <div className="w-full max-w-[160px] sm:max-w-[200px]">
-            <Image
-              src="/CompanyName.png"
-              alt="Don Fenticas"
-              width={300}
-              height={90}
-              className="w-full h-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
-              priority
-            />
+      <PublicNav currentPath="/gallery" />
+
+      <div className="w-full max-w-5xl mx-auto py-6 sm:py-10 px-4 sm:px-6">
+        {/* Page header — H1 is "GALLERY", not the bar's name */}
+        <header className="text-center mb-8 sm:mb-10">
+          <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
+            <Camera className="w-3 h-3 text-[#FDCC4B]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
+              Photos &amp; Videos
+            </span>
           </div>
-          <div className="mt-5 space-y-2">
-            <h1 className="text-3xl sm:text-4xl font-black text-white uppercase tracking-tighter">Gallery</h1>
-            <p className="text-stone-400 text-xs sm:text-sm font-medium">Moments from Don Fenticas</p>
-          </div>
-        </div>
+          <h1 className="text-white font-black text-3xl sm:text-4xl uppercase tracking-tighter">
+            Gallery
+          </h1>
+          <p className="text-stone-400 text-xs sm:text-sm font-medium mt-2">
+            Moments from the bar &mdash; gigs, nights out, behind the bar
+          </p>
+        </header>
 
         {/* Gallery */}
         {galleryItems.length === 0 ? (
-          <div className="text-center py-20">
-            <p className="text-stone-500 font-black text-lg uppercase tracking-tight mb-2">No Photos Yet</p>
-            <p className="text-stone-600 text-sm">Check back soon!</p>
+          <div className="text-center py-20 bg-white/[0.03] border border-white/5 rounded-2xl">
+            <Camera className="w-8 h-8 text-stone-700 mx-auto mb-3" />
+            <p className="text-stone-500 font-black text-sm uppercase tracking-tight">
+              No Photos Yet
+            </p>
+            <p className="text-stone-600 text-xs mt-1">Check back soon</p>
           </div>
         ) : (
           <GalleryGrid items={galleryItems} />
@@ -86,7 +81,7 @@ export default async function GalleryPage() {
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
           <p className="text-[8px] text-stone-600 uppercase tracking-widest opacity-30">
-            Licensed Venue · Please Drink Responsibly
+            Licensed Venue &middot; Please Drink Responsibly
           </p>
         </div>
       </div>

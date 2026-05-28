@@ -72,10 +72,12 @@
       "Bash(echo \"OK: $cls\")",
       "Bash(echo \"MISSING: $cls\")",
       "Bash(echo \"MISSING VAR: --color-$shade\")",
-      "mcp__claude_ai_Figma__whoami"
+      "mcp__claude_ai_Figma__whoami",
+      "Read(//c/Users/tamly/AppData/Roaming/Code/User/profiles/-9def7b0/**)"
     ],
     "additionalDirectories": [
-      "C:\\Users\\tamly\\.claude\\skills"
+      "C:\\Users\\tamly\\.claude\\skills",
+      "c:\\Users\\tamly\\AppData\\Roaming\\Code\\User\\profiles\\-9def7b0"
     ]
   }
 }

@@ -1,12 +1,12 @@
 import { createClient } from "@/lib/supabase/server";
-import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft } from "lucide-react";
+import { PublicNav } from "@/components/public-nav";
 import PrintButton from "@/components/ui/print-button";
+import { Wine } from "lucide-react";
 
 export const metadata = {
   title: "Menu | Don Fenticas",
-  description: "Explore the Don Fenticas menu — draught, cocktails, spirits, wine, and snacks.",
+  description:
+    "Explore the Don Fenticas menu — draught, cocktails, spirits, wine, and snacks.",
 };
 
 export const revalidate = 300;
@@ -70,7 +70,6 @@ export default async function MenuPage() {
               }
               .no-print { display: none !important; }
 
-              /* Frame */
               .menu-frame {
                 margin: 0 !important;
                 border-radius: 0 !important;
@@ -84,13 +83,11 @@ export default async function MenuPage() {
                 padding: 10px 14px !important;
               }
 
-              /* Header */
-              .menu-logo { margin-bottom: 3px !important; }
-              .menu-logo img { width: 180px !important; height: auto !important; }
-              .menu-subtitle { font-size: 6px !important; margin-top: 1px !important; letter-spacing: 0.2em !important; }
+              .menu-header { margin-bottom: 8px !important; }
+              .menu-h1 { font-size: 26px !important; line-height: 1 !important; }
+              .menu-subtitle { font-size: 8px !important; margin-top: 3px !important; letter-spacing: 0.25em !important; }
               .spirits-pill { font-size: 6px !important; padding: 2px 8px !important; margin-bottom: 6px !important; }
 
-              /* FORCE two-column grid */
               .menu-grid {
                 display: grid !important;
                 grid-template-columns: 1fr 1fr !important;
@@ -102,7 +99,6 @@ export default async function MenuPage() {
                 gap: 3px !important;
               }
 
-              /* Category banners */
               .cat-banner {
                 padding: 1px 0 !important;
                 border-top-width: 2px !important;
@@ -110,7 +106,6 @@ export default async function MenuPage() {
               }
               .cat-banner h2 { font-size: 8px !important; line-height: 1.2 !important; }
 
-              /* Items */
               .cat-items { padding: 0px 4px 1px !important; }
               .cat-note { font-size: 5px !important; padding: 0 !important; margin: 0 !important; }
               .menu-row { padding: 0.5px 0 !important; gap: 3px !important; }
@@ -121,41 +116,39 @@ export default async function MenuPage() {
         }}
       />
 
-      {/* Screen-only nav */}
-      <div className="no-print max-w-4xl mx-auto px-4 pt-6 sm:pt-10 flex items-center justify-between">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-[#8B7536] text-xs font-bold uppercase tracking-wide hover:text-[#FDCC4B] transition-colors"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Home
-        </Link>
+      {/* Shared sticky nav */}
+      <div className="no-print">
+        <PublicNav currentPath="/menu" />
+      </div>
+
+      {/* Print button (screen only) */}
+      <div className="no-print max-w-4xl mx-auto px-4 pt-2 flex justify-end">
         <PrintButton />
       </div>
 
-      {/* Menu frame — the bordered page */}
-      <div className="menu-frame max-w-4xl mx-auto my-4 sm:my-8 rounded-sm border-[5px] border-[#4a5a28] relative">
-        {/* Gold inner border */}
+      {/* Menu frame — the bordered page (kept for the print aesthetic) */}
+      <div className="menu-frame max-w-4xl mx-auto my-4 sm:my-8 mx-3 sm:mx-auto rounded-sm border-[5px] border-[#4a5a28] relative">
         <div className="menu-inner border-2 border-[#B8962E] bg-[#2a3612] p-4 sm:p-8">
 
-          {/* Logo */}
-          <div className="menu-logo text-center mb-4 sm:mb-6">
-            <Image
-              src="/CompanyName.png"
-              alt="Don Fenticas"
-              width={360}
-              height={90}
-              className="w-[220px] sm:w-[300px] mx-auto h-auto object-contain"
-              priority
-            />
-            <p className="menu-subtitle text-[#FDCC4B]/40 text-[8px] sm:text-[10px] font-bold uppercase tracking-[0.25em] mt-2">
-              Drinks &amp; Snacks Menu
+          {/* Page header — H1 is "MENU", not the bar's name */}
+          <header className="menu-header text-center mb-5 sm:mb-7">
+            <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
+              <Wine className="w-3 h-3 text-[#FDCC4B]" />
+              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
+                Drinks &amp; Snacks
+              </span>
+            </div>
+            <h1 className="menu-h1 text-white font-black text-3xl sm:text-4xl uppercase tracking-tighter">
+              Menu
+            </h1>
+            <p className="menu-subtitle text-[#FDCC4B]/50 text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] mt-2">
+              Updated regularly &middot; Tap to print
             </p>
-          </div>
+          </header>
 
           {/* Spirits note */}
-          <div className="text-center mb-4 sm:mb-5">
-            <span className="spirits-pill inline-block bg-[#FDCC4B] text-[#26300D] text-[8px] sm:text-[10px] font-black uppercase tracking-wide px-3 sm:px-4 py-1 rounded-sm">
+          <div className="text-center mb-5">
+            <span className="spirits-pill inline-block bg-[#FDCC4B] text-[#26300D] text-[10px] sm:text-xs font-black uppercase tracking-wide px-3 sm:px-4 py-1 rounded-sm">
               Spirits* — (+ £1.45 for mixers, + £1.95 for tonic)
             </span>
           </div>
@@ -178,7 +171,7 @@ export default async function MenuPage() {
       </div>
 
       {/* Screen-only footer */}
-      <div className="no-print max-w-4xl mx-auto px-4 pb-8 text-center">
+      <div className="no-print max-w-4xl mx-auto px-4 pb-10 text-center">
         <p className="text-[#4a5a28] text-[9px] font-bold uppercase tracking-widest">
           &copy; {new Date().getFullYear()} Don Fenticas &middot; Regent Street, Hinckley
         </p>
@@ -192,14 +185,12 @@ function CategoryBlock({ category }: { category: MenuCategory }) {
 
   return (
     <div>
-      {/* Yellow banner header with dark top/bottom borders */}
       <div className="cat-banner bg-[#FDCC4B] border-y-[3px] border-[#2a3612] py-0.5 sm:py-1">
         <h2 className="text-[#2a3612] font-black text-xs sm:text-sm uppercase tracking-wide text-center leading-tight">
           {category.name}
         </h2>
       </div>
 
-      {/* Items — no visible border, just rows on dark green */}
       <div className="cat-items px-2 sm:px-3 py-1">
         {category.note && (
           <p className="cat-note text-[#FDCC4B]/50 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide text-center py-0.5">
