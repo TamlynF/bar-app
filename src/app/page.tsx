@@ -184,19 +184,19 @@ export default async function HomePage() {
       <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-6 pb-6 sm:pb-10">
         <header className="flex flex-col justify-center mb-8 sm:mb-12 min-h-[40dvh] sm:min-h-[50dvh]">
           <h2
-            className="text-white font-black uppercase tracking-tighter leading-[0.70] italic month-title text-left ml-2.5"
-            style={{ "--month-fs": "3rem", "--month-fs-sm": "10rem" } as React.CSSProperties}
+            className="text-white font-black uppercase tracking-tighter leading-[0.70] italic month-title text-left px-8"
+            style={{ "--month-fs": "2rem", "--month-fs-sm": "10rem" } as React.CSSProperties}
           >
             {thisMonthLabel}
           </h2>
-          <div className="flex items-center justify-end gap-2.5 -mt-1 h-10 sm:h-12">
+          <div className="flex items-center justify-center gap-2.5 -mt-1 h-7 sm:h-12 px-4">
             <span className="text-stone-300 text-lg sm:text-xl font-medium italic">at</span>
             <Image
               src="/CompanyName.png"
               alt="Don Fenticas"
               width={160}
               height={40}
-              className="h-10 sm:h-12 w-auto object-contain"
+              className="h-7 sm:h-12 w-auto object-contain"
               priority
             />
           </div>

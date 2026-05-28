@@ -19,5 +19,11 @@
   "eslint.format.enable": true,
   "eslint.lintTask.enable": true,
   "eslint.useESLintClass": true,
-  "npm.packageManager": "npm"
+  "npm.packageManager": "npm",
+  "tailwindCSS.classFunctions": [
+    "cn",
+    "cva",
+    "clsx"
+  ],
+  "tailwindCSS.emmetCompletions": true
 }
