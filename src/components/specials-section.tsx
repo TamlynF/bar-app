@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import { format } from "date-fns";
 import { Sparkles } from "lucide-react";
 
@@ -56,20 +55,19 @@ function SpecialCard({ special }: { special: SpecialRow }) {
     <button
       type="button"
       onClick={() => setFlipped((f) => !f)}
-      className="flip-card shrink-0 w-64 sm:w-72 h-32 sm:h-36 snap-start text-left cursor-pointer"
+      className="shrink-0 snap-start w-64 sm:w-72 h-32 sm:h-36 rounded-2xl border border-white/10 bg-white/[0.04] overflow-hidden text-left cursor-pointer"
     >
-      <div className={`flip-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
-        {/* Front — image left, title right */}
-        <div className="flip-front absolute inset-0 flex rounded-2xl overflow-hidden border border-white/10 bg-white/[0.04]">
+      {!flipped ? (
+        /* Front — image left, title right */
+        <div className="flex h-full animate-in fade-in duration-200">
           {/* Image */}
-          <div className="relative w-28 sm:w-32 h-full shrink-0 bg-white/10">
+          <div className="w-28 sm:w-32 h-full shrink-0 bg-white/10 overflow-hidden">
             {special.image_url ? (
-              <Image
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
                 src={special.image_url}
                 alt={special.title}
-                fill
-                className="object-cover"
-                sizes="128px"
+                className="w-full h-full object-cover"
               />
             ) : (
               <div className="flex items-center justify-center h-full">
@@ -98,9 +96,9 @@ function SpecialCard({ special }: { special: SpecialRow }) {
             )}
           </div>
         </div>
-
-        {/* Back — description + dates */}
-        <div className="flip-back absolute inset-0 flex flex-col justify-center rounded-2xl overflow-hidden border border-[#FDCC4B]/20 bg-[#26300D] p-4">
+      ) : (
+        /* Back — description + dates */
+        <div className="flex flex-col justify-center h-full p-4 animate-in fade-in duration-200">
           {special.description && (
             <p className="text-xs text-stone-300 font-medium leading-snug line-clamp-3 mb-2">
               {special.description}
@@ -119,7 +117,7 @@ function SpecialCard({ special }: { special: SpecialRow }) {
             </p>
           )}
         </div>
-      </div>
+      )}
     </button>
   );
 }
