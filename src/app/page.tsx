@@ -184,22 +184,22 @@ export default async function HomePage() {
       <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-6 pb-6 sm:pb-10">
         <header className="flex flex-col justify-center mb-8 sm:mb-12 min-h-[40dvh] sm:min-h-[50dvh]">
           <h2
-            className="text-white font-black uppercase tracking-tighter leading-[0.70] italic drop-shadow-[0_4px_20px_rgba(255,255,255,0.08)] month-title text-left ml-2.5"
+            className="text-white font-black uppercase tracking-tighter leading-[0.70] italic month-title text-left ml-2.5"
             style={{ "--month-fs": "3rem", "--month-fs-sm": "10rem" } as React.CSSProperties}
           >
             {thisMonthLabel}
           </h2>
-          <p className="flex items-center justify-end gap-2.5 -mt-1">
+          <div className="flex items-center justify-end gap-2.5 -mt-1 h-10 sm:h-12">
             <span className="text-stone-300 text-lg sm:text-xl font-medium italic">at</span>
             <Image
               src="/CompanyName.png"
               alt="Don Fenticas"
-              width={400}
-              height={104}
+              width={160}
+              height={40}
               className="h-10 sm:h-12 w-auto object-contain"
               priority
             />
-          </p>
+          </div>
         </header>
 
         <MonthEventList
@@ -229,7 +229,7 @@ export default async function HomePage() {
           href="https://www.instagram.com/donfenticas"
           target="_blank"
           rel="noopener noreferrer"
-          className="group flex items-center justify-between gap-4 bg-gradient-to-r from-[#7A1F1F]/30 to-[#FDCC4B]/10 border border-white/10 hover:border-[#FDCC4B]/30 rounded-2xl p-4 sm:p-5 transition-all"
+          className="group flex items-center justify-between gap-4 bg-linear-to-r from-[#7A1F1F]/30 to-[#FDCC4B]/10 border border-white/10 hover:border-[#FDCC4B]/30 rounded-2xl p-4 sm:p-5 transition-all"
         >
           <div className="flex items-center gap-3 min-w-0">
             <div className="shrink-0 w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center">
