@@ -175,36 +175,51 @@ export default async function HomePage() {
   }));
 
   return (
-    <main className="min-h-dvh w-full bg-[#1a2008] text-stone-300 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased">
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `html, body { background-color: #1a2008 !important; margin: 0; padding: 0; overflow-x: hidden; }`,
-        }}
-      />
-
+    <main className="min-h-dvh w-full bg-[#1a2008] text-stone-300 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
       <PublicNav currentPath="/" />
 
       {/* Page hero */}
-      <header className="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-6 flex flex-col justify-center mb-8 sm:mb-12 min-h-[32dvh] sm:min-h-[44dvh]">
-        <h2
-          className="text-white font-black uppercase tracking-tighter leading-[0.70] italic month-title text-left px-8"
-          style={{ "--month-fs": "2rem", "--month-fs-sm": "10rem" } as React.CSSProperties}
-        >
-          {thisMonthLabel}
-        </h2>
-        <div className="flex items-center justify-center gap-2.5 -mt-1 h-7 sm:h-12 px-4">
-          <span className="text-stone-300 text-lg sm:text-xl font-medium italic">at</span>
-          <Image
-            src="/CompanyName.png"
+      <header className="relative pt-28 pb-2 px-6 flex flex-col items-center text-center overflow-hidden">
+        <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[120%] max-w-2xl h-64 bg-[#FDCC4B]/5 blur-[100px] rounded-[100%] pointer-events-none" />
+          <div className="relative z-10 flex flex-col items-center w-full">        
+          <h1
+            className="month-title leading-none font-black italic uppercase tracking-tighter text-white mb-2 drop-shadow-2xl"
+            style={{ "--month-fs": "2rem", "--month-fs-sm": "8rem" } as React.CSSProperties}
+          >
+            {thisMonthLabel}
+          </h1>
+        <div className="flex items-center justify-center gap-3 mt-1">
+          <span className="text-xl md:text-2xl italic text-gray-400 font-serif">at</span>
+            <Image 
+              src="/CompanyName.png"
             alt="Don Fenticas"
-            width={160}
-            height={40}
-            className="h-7 sm:h-12 w-auto object-contain"
-            priority
-          />
+              width={300} 
+              height={80} 
+              className="h-9 md:h-12 w-auto object-contain drop-shadow-md"
+              priority
+            />
+          </div>
         </div>
+        
+        {/* Bar Themes Badges - Indie/Rock Vibe */}
+        <div className="mt-10 flex flex-wrap justify-center gap-2 max-w-md mx-auto relative z-10">
+          <span className="px-4 py-1.5 border border-[#FDCC4B]/20 text-[#FDCC4B] text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] rounded-md bg-[#FDCC4B]/10 backdrop-blur-sm cursor-default">
+            Live Music
+          </span>
+          <span className="px-4 py-1.5 border border-[#FDCC4B]/20 text-[#FDCC4B] text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] rounded-md bg-[#FDCC4B]/10 backdrop-blur-sm cursor-default">
+            Indie & Rock
+          </span>
+          <span className="px-4 py-1.5 border border-[#FDCC4B]/20 text-[#FDCC4B] text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] rounded-md bg-[#FDCC4B]/10 backdrop-blur-sm cursor-default">
+            Karaoke
+          </span>
+          <span className="px-4 py-1.5 border border-[#FDCC4B]/20 text-[#FDCC4B] text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] rounded-md bg-[#FDCC4B]/10 backdrop-blur-sm cursor-default">
+            Game Nights
+          </span>
+        </div>
+<div className="mt-12 w-32 h-[2px] bg-linear-to-r from-transparent via-[#FDCC4B]/20 to-transparent relative z-10" />
       </header>
 
+      <div className="px-4 max-w-3xl mx-auto space-y-12">
       {/* Section 1: Specials */}
       <SpecialsSection specials={specials} />
 
@@ -227,7 +242,7 @@ export default async function HomePage() {
           excludeId={nextEvent?.id ?? null}
         />
 
-        <ScheduleMore events={laterEvents} nextMonthLabel={nextMonthLabel} />
+      {/*   <ScheduleMore events={laterEvents} nextMonthLabel={nextMonthLabel} /> */}
 
         {colorKey.length > 0 && <ColorKey entries={colorKey} />}
 
@@ -241,7 +256,7 @@ export default async function HomePage() {
           </div>
         )}
       </section>
-
+</div>
       {/* Instagram CTA */}
       <section className="max-w-5xl mx-auto px-4 sm:px-6 pb-12">
         <a
@@ -274,7 +289,8 @@ export default async function HomePage() {
         <p className="text-[9px] text-stone-700 uppercase tracking-widest mt-2">
           &copy; {new Date().getFullYear()} &middot; Licensed Venue &middot; Drink Responsibly
         </p>
-      </footer>
+        </footer>
+        
     </main>
   );
 }

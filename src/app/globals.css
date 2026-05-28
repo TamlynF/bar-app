@@ -6,6 +6,12 @@
 @source "../app/(private)/**/*.{ts,tsx}";
 @source "../app/login/**/*.{ts,tsx}";
 @source "../components/**/*.{ts,tsx}";
+
+html, body {
+  background-color: #1a2008;
+  overflow-x: hidden;
+}
+
 @layer theme {
   :root, :host {
     --font-sans: ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
