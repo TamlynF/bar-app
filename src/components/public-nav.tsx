@@ -98,7 +98,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
             {/* Primary CTA — always visible */}
             <Link
               href="/book"
-              className="ml-1 bg-[#FDCC4B] text-[#1a2008] text-[10px] sm:text-xs font-black uppercase tracking-wide px-3 py-1.5 sm:px-4 sm:py-2 rounded-full hover:bg-[#e5b843] transition-colors active:scale-95"
+              className="ml-1 bg-[#FDCC4B] text-[#1a2008]! text-[10px] sm:text-xs font-black uppercase tracking-wide px-3 py-1.5 sm:px-4 sm:py-2 rounded-full hover:bg-[#e5b843] transition-colors active:scale-95"
             >
               Book
             </Link>
