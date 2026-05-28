@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import { format, startOfWeek } from "date-fns";
-import { ChevronDown, ExternalLink, History } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 type MonthEvent = {
@@ -10,6 +9,7 @@ type MonthEvent = {
   title: string;
   date: string;
   startTimeLabel: string | null;
+  endTimeLabel: string | null;
   externalLink: string | null;
   isFullyBooked: boolean;
   color: string;
@@ -33,21 +33,18 @@ export function MonthEventList({
   events,
   todayStr,
   nextEventId,
+  monthLabel,
 }: {
   events: MonthEvent[];
   todayStr: string;
   nextEventId: number | null;
+  monthLabel: string;
 }) {
-  const [showPast, setShowPast] = useState(false);
-
-  const upcoming = events.filter((e) => e.date >= todayStr);
-  const past = events.filter((e) => e.date < todayStr);
-
   if (events.length === 0) return null;
 
-  // Group upcoming events by week start
+  // Group ALL events (past + upcoming) by week
   const weeks = new Map<string, MonthEvent[]>();
-  for (const ev of upcoming) {
+  for (const ev of events) {
     const weekStart = startOfWeek(parseDate(ev.date), { weekStartsOn: 1 });
     const key = format(weekStart, "yyyy-MM-dd");
     const group = weeks.get(key) ?? [];
@@ -56,37 +53,11 @@ export function MonthEventList({
   }
 
   return (
-    <div className="space-y-6">
-      {/* Past events — collapsed by default, above upcoming (chronological) */}
-      {past.length > 0 && (
-        <div>
-          <button
-            type="button"
-            onClick={() => setShowPast((v) => !v)}
-            className="group w-full flex items-center justify-center gap-2 bg-white/[0.02] hover:bg-white/[0.05] border border-white/[0.06] rounded-2xl py-2.5 transition-all"
-          >
-            <History className="w-3.5 h-3.5 text-stone-500" />
-            <span className="text-stone-500 text-[10px] font-black uppercase tracking-[0.2em]">
-              {showPast ? "Hide" : "Show"} earlier this month ({past.length})
-            </span>
-            <ChevronDown
-              className={`w-3.5 h-3.5 text-stone-500 transition-transform ${
-                showPast ? "rotate-180" : ""
-              }`}
-            />
-          </button>
+    <div className="space-y-5">
+      <h2 className="text-white font-black text-2xl sm:text-4xl uppercase tracking-tighter leading-none text-center">
+        {monthLabel}
+      </h2>
 
-          {showPast && (
-            <div className="mt-3 bg-white/[0.02] border border-white/[0.06] rounded-2xl divide-y divide-white/5 overflow-hidden">
-              {past.map((ev) => (
-                <EventRow key={ev.id} event={ev} isPast />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Upcoming, grouped by week */}
       {Array.from(weeks.entries()).map(([weekKey, weekEvents]) => {
         const weekStart = parseDate(weekKey);
         const weekEndDate = new Date(weekStart);
@@ -104,18 +75,17 @@ export function MonthEventList({
 
             <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl divide-y divide-white/5 overflow-hidden">
               {weekEvents.map((ev) => (
-                <EventRow key={ev.id} event={ev} isPast={false} isNext={ev.id === nextEventId} />
+                <EventRow
+                  key={ev.id}
+                  event={ev}
+                  isPast={ev.date < todayStr}
+                  isNext={ev.id === nextEventId}
+                />
               ))}
             </div>
           </div>
         );
       })}
-
-      {upcoming.length === 0 && past.length > 0 && (
-        <p className="text-center text-stone-600 text-xs font-bold uppercase tracking-wide py-4">
-          Nothing left this month — check {format(parseDate(todayStr), "MMMM")} is wrapping up
-        </p>
-      )}
     </div>
   );
 }
@@ -167,7 +137,7 @@ function EventRow({ event, isPast, isNext = false }: { event: MonthEvent; isPast
           )}
           {event.startTimeLabel && (
             <span className="text-stone-400 text-xs font-bold tabular-nums shrink-0">
-              {event.startTimeLabel}
+              {event.startTimeLabel}{event.endTimeLabel ? ` - ${event.endTimeLabel}` : ""}
             </span>
           )}
         </div>

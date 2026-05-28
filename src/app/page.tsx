@@ -46,7 +46,7 @@ function formatTime(time: string | null): string | null {
   const minute = m ?? "00";
   const ampm = hour >= 12 ? "pm" : "am";
   const displayHour = hour % 12 || 12;
-  return minute === "00" ? `${displayHour}${ampm}` : `${displayHour}:${minute}${ampm}`;
+  return `${displayHour}:${minute}${ampm}`;
 }
 
 /** Safely extract the event type from the join (can be array or object) */
@@ -134,6 +134,7 @@ export default async function HomePage() {
     title: e.title,
     date: e.date,
     startTimeLabel: formatTime(e.start_time),
+    endTimeLabel: formatTime(e.end_time),
     externalLink: e.external_link,
     isFullyBooked: e.is_fully_booked,
     color: eventBadgeColor(e),
@@ -181,27 +182,25 @@ export default async function HomePage() {
 
       {/* SCHEDULE */}
       <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-6 pb-6 sm:pb-10">
-        <header className="text-center mb-5 sm:mb-8">
+        <header className="flex items-center gap-3 mb-4 sm:mb-6">
           <Image
             src="/CompanyName.png"
             alt="Don Fenticas"
-            width={500}
-            height={130}
-            className="w-[55%] max-w-[200px] sm:max-w-[280px] mx-auto h-auto object-contain drop-shadow-[0_8px_40px_rgba(253,204,75,0.2)] mb-2"
+            width={300}
+            height={78}
+            className="h-8 sm:h-10 w-auto object-contain shrink-0"
             priority
           />
-          <p className="text-stone-500 text-[10px] sm:text-xs font-bold uppercase tracking-[0.2em] mb-1">
+          <span className="hidden sm:inline text-stone-600 text-[10px] font-bold uppercase tracking-[0.15em]">
             Live music &middot; Quizzes &middot; Karaoke
-          </p>
-          <h2 className="text-white font-black text-4xl sm:text-6xl uppercase tracking-tighter leading-[0.85]">
-            {thisMonthLabel}
-          </h2>
+          </span>
         </header>
 
         <MonthEventList
           events={serializedMonthEvents}
           todayStr={todayStr}
           nextEventId={nextEventId}
+          monthLabel={thisMonthLabel}
         />
 
         <ScheduleMore events={laterEvents} nextMonthLabel={nextMonthLabel} />
