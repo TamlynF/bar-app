@@ -72,6 +72,8 @@ src/app/
 ├── (public)/              # No auth required, public-facing
 │   ├── book/              # Hub → quiz/band/private/bingo + per-event pages
 │   ├── gallery/
+│   ├── menu/
+│   ├── contact/
 │   ├── manage-booking/[id]
 │   └── _actions/          # Server actions for public forms
 ├── (private)/             # Protected by src/proxy.ts (NOT middleware.ts)
@@ -83,8 +85,6 @@ src/app/
 ├── accept-invite/
 ├── update-password/
 ├── auth/callback/
-├── menu/                  # Public menu page (not in (public) group)
-├── contact/               # Public contact page (not in (public) group)
 ├── api/                   # Route handlers (Spotify, Square webhook)
 └── page.tsx               # Public home
 ```
