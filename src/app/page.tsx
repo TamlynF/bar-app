@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { format, isToday, isThisWeek, parseISO } from "date-fns";
+import { format, endOfWeek } from "date-fns";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -14,40 +14,75 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
+import { swatchHexFromColor } from "@/lib/event-type-colors";
 
 export const revalidate = 300;
 
+type EventTypeJoin = {
+  type: string;
+  sub_type: string;
+  type_color: string | null;
+  badge_color: string | null;
+};
+
 type EventRow = {
   id: number;
-  name: string;
-  description: string | null;
-  starts_at: string;
-  ticket_url: string | null;
-  type_name: string | null;
-  type_color: string | null;
+  title: string;
+  date: string;
+  start_time: string | null;
+  end_time: string | null;
+  is_fully_booked: boolean;
+  is_bookable: boolean;
+  external_link: string | null;
+  event_types: EventTypeJoin | EventTypeJoin[];
 };
+
+/** Parse a YYYY-MM-DD date string without timezone shift */
+function parseDate(dateStr: string) {
+  return new Date(dateStr + "T00:00:00");
+}
+
+/** Format a time string like "20:00:00+00" to "8pm" or "8:30pm" */
+function formatTime(time: string | null): string | null {
+  if (!time) return null;
+  const [h, m] = time.split(":");
+  const hour = parseInt(h, 10);
+  const minute = m ?? "00";
+  const ampm = hour >= 12 ? "pm" : "am";
+  const displayHour = hour % 12 || 12;
+  return minute === "00" ? `${displayHour}${ampm}` : `${displayHour}:${minute}${ampm}`;
+}
+
+/** Safely extract the event type from the join (can be array or object) */
+function getEventType(event: EventRow): EventTypeJoin | null {
+  if (!event.event_types) return null;
+  return Array.isArray(event.event_types) ? event.event_types[0] : event.event_types;
+}
 
 export default async function HomePage() {
   const supabase = await createClient();
+  const today = new Date();
+  const todayStr = today.toISOString().split("T")[0];
 
   const { data: rawEvents } = await supabase
-    .from("public_events_view")
-    .select("*")
-    .gte("starts_at", new Date().toISOString())
-    .order("starts_at", { ascending: true })
+    .from("events")
+    .select("id, title, date, start_time, end_time, is_fully_booked, is_bookable, external_link, event_types!inner(type, sub_type, type_color, badge_color)")
+    .gte("date", todayStr)
+    .eq("is_active", true)
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true })
     .limit(20);
 
   const events = (rawEvents ?? []) as EventRow[];
 
   const nextEvent = events[0];
-  const tonightEvents = events.filter((e) => isToday(parseISO(e.starts_at)));
+  const tonightEvents = events.filter((e) => e.date === todayStr);
+  const weekEnd = endOfWeek(today, { weekStartsOn: 1 });
   const thisWeekEvents = events.filter(
-    (e) => !isToday(parseISO(e.starts_at)) && isThisWeek(parseISO(e.starts_at), { weekStartsOn: 1 })
+    (e) => e.date !== todayStr && parseDate(e.date) <= weekEnd
   );
   const upcomingEvents = events.filter(
-    (e) =>
-      !isToday(parseISO(e.starts_at)) &&
-      !isThisWeek(parseISO(e.starts_at), { weekStartsOn: 1 })
+    (e) => parseDate(e.date) > weekEnd
   );
 
   return (
@@ -117,15 +152,17 @@ export default async function HomePage() {
               </div>
               <div className="text-left min-w-0">
                 <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.25em]">
-                  {isToday(parseISO(nextEvent.starts_at))
+                  {nextEvent.date === todayStr
                     ? "Tonight"
-                    : `Next — ${format(parseISO(nextEvent.starts_at), "d MMM")}`}
+                    : `Next — ${format(parseDate(nextEvent.date), "d MMM")}`}
                 </p>
                 <p className="text-white text-sm sm:text-base font-black mt-1 truncate">
-                  {nextEvent.name}
-                  <span className="text-stone-500 font-bold ml-2">
-                    {format(parseISO(nextEvent.starts_at), "h:mma").toLowerCase()}
-                  </span>
+                  {nextEvent.title}
+                  {formatTime(nextEvent.start_time) && (
+                    <span className="text-stone-500 font-bold ml-2">
+                      {formatTime(nextEvent.start_time)}
+                    </span>
+                  )}
                 </p>
               </div>
               <ChevronRight className="w-5 h-5 text-stone-500 group-hover:text-[#FDCC4B] group-hover:translate-x-0.5 transition-all shrink-0" />
@@ -181,7 +218,7 @@ export default async function HomePage() {
             <SectionLabel label="Coming Up" />
             <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl divide-y divide-white/5 mt-3 overflow-hidden">
               {upcomingEvents.slice(0, 8).map((ev) => (
-                <EventRow key={ev.id} event={ev} />
+                <EventRowItem key={ev.id} event={ev} />
               ))}
             </div>
           </div>
@@ -294,7 +331,9 @@ function EventCard({
   event: EventRow;
   prominent?: boolean;
 }) {
-  const start = parseISO(event.starts_at);
+  const dateObj = parseDate(event.date);
+  const et = getEventType(event);
+  const badgeHex = swatchHexFromColor(et?.badge_color) ?? "#FDCC4B";
   const cardClass = prominent
     ? "bg-gradient-to-br from-[#FDCC4B]/10 to-transparent border-[#FDCC4B]/30"
     : "bg-white/[0.04] border-white/[0.08] hover:bg-white/[0.07]";
@@ -305,33 +344,35 @@ function EventCard({
     >
       <div className="shrink-0 w-16 text-center flex flex-col items-center justify-center bg-white/5 rounded-xl py-2">
         <p className="text-stone-500 text-[9px] font-black uppercase tracking-widest">
-          {format(start, "EEE")}
+          {format(dateObj, "EEE")}
         </p>
         <p className="text-white text-2xl font-black tabular-nums leading-none mt-1">
-          {format(start, "d")}
+          {format(dateObj, "d")}
         </p>
         <p className="text-stone-500 text-[9px] font-bold uppercase mt-0.5">
-          {format(start, "MMM")}
+          {format(dateObj, "MMM")}
         </p>
       </div>
       <div className="flex-1 min-w-0 flex flex-col justify-center">
-        {event.type_name && (
+        {et?.sub_type && (
           <p
-            className="text-[10px] font-black uppercase tracking-[0.2em] mb-1"
-            style={{ color: event.type_color ?? "#FDCC4B" }}
+            className="text-[10px] font-black uppercase tracking-[0.2em] mb-1 text-(--badge-c)"
+            style={{ "--badge-c": badgeHex } as React.CSSProperties}
           >
-            {event.type_name}
+            {et.sub_type}
           </p>
         )}
         <p className="text-white text-sm sm:text-base font-black truncate">
-          {event.name}
+          {event.title}
         </p>
-        <p className="text-stone-400 text-xs font-bold mt-0.5 tabular-nums">
-          {format(start, "h:mma").toLowerCase()}
-        </p>
+        {formatTime(event.start_time) && (
+          <p className="text-stone-400 text-xs font-bold mt-0.5 tabular-nums">
+            {formatTime(event.start_time)}
+          </p>
+        )}
       </div>
       <div className="shrink-0 flex items-center">
-        {event.ticket_url ? (
+        {event.external_link ? (
           <ExternalLink className="w-4 h-4 text-stone-500 group-hover:text-[#FDCC4B] transition-colors" />
         ) : (
           <ChevronRight className="w-5 h-5 text-stone-600 group-hover:text-stone-300 group-hover:translate-x-0.5 transition-all" />
@@ -340,8 +381,8 @@ function EventCard({
     </div>
   );
 
-  return event.ticket_url ? (
-    <a href={event.ticket_url} target="_blank" rel="noopener noreferrer">
+  return event.external_link ? (
+    <a href={event.external_link} target="_blank" rel="noopener noreferrer">
       {inner}
     </a>
   ) : (
@@ -349,31 +390,33 @@ function EventCard({
   );
 }
 
-function EventRow({ event }: { event: EventRow }) {
-  const start = parseISO(event.starts_at);
+function EventRowItem({ event }: { event: EventRow }) {
+  const dateObj = parseDate(event.date);
   const inner = (
     <div className="flex items-center gap-4 px-4 py-3 hover:bg-white/[0.03] transition-colors">
       <div className="shrink-0 w-14">
         <p className="text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest">
-          {format(start, "EEE")} {format(start, "d")}
+          {format(dateObj, "EEE")} {format(dateObj, "d")}
         </p>
       </div>
       <div className="shrink-0 w-1 h-1 bg-stone-700 rounded-full" />
       <div className="flex-1 min-w-0">
         <span className="text-white text-sm font-black truncate">
-          {event.name}
+          {event.title}
         </span>
-        <span className="text-stone-500 text-xs font-bold ml-2 tabular-nums">
-          {format(start, "h:mma").toLowerCase()}
-        </span>
+        {formatTime(event.start_time) && (
+          <span className="text-stone-500 text-xs font-bold ml-2 tabular-nums">
+            {formatTime(event.start_time)}
+          </span>
+        )}
       </div>
-      {event.ticket_url && (
+      {event.external_link && (
         <ExternalLink className="w-3.5 h-3.5 text-stone-600 shrink-0" />
       )}
     </div>
   );
-  return event.ticket_url ? (
-    <a href={event.ticket_url} target="_blank" rel="noopener noreferrer">
+  return event.external_link ? (
+    <a href={event.external_link} target="_blank" rel="noopener noreferrer">
       {inner}
     </a>
   ) : (
