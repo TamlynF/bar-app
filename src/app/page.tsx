@@ -182,25 +182,30 @@ export default async function HomePage() {
 
       {/* SCHEDULE */}
       <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pt-2 sm:pt-6 pb-6 sm:pb-10">
-        <header className="flex items-center gap-3 mb-4 sm:mb-6">
-          <Image
-            src="/CompanyName.png"
-            alt="Don Fenticas"
-            width={300}
-            height={78}
-            className="h-8 sm:h-10 w-auto object-contain shrink-0"
-            priority
-          />
-          <span className="hidden sm:inline text-stone-600 text-[10px] font-bold uppercase tracking-[0.15em]">
-            Live music &middot; Quizzes &middot; Karaoke
-          </span>
+        <header className="flex flex-col justify-center mb-8 sm:mb-12 min-h-[40dvh] sm:min-h-[50dvh]">
+          <h2
+            className="text-white font-black uppercase tracking-tighter leading-[0.70] italic drop-shadow-[0_4px_20px_rgba(255,255,255,0.08)] month-title text-left ml-2.5"
+            style={{ "--month-fs": "3rem", "--month-fs-sm": "10rem" } as React.CSSProperties}
+          >
+            {thisMonthLabel}
+          </h2>
+          <p className="flex items-center justify-end gap-2.5 -mt-1">
+            <span className="text-stone-300 text-lg sm:text-xl font-medium italic">at</span>
+            <Image
+              src="/CompanyName.png"
+              alt="Don Fenticas"
+              width={400}
+              height={104}
+              className="h-10 sm:h-12 w-auto object-contain"
+              priority
+            />
+          </p>
         </header>
 
         <MonthEventList
           events={serializedMonthEvents}
           todayStr={todayStr}
           nextEventId={nextEventId}
-          monthLabel={thisMonthLabel}
         />
 
         <ScheduleMore events={laterEvents} nextMonthLabel={nextMonthLabel} />

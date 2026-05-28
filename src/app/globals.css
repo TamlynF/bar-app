@@ -5165,6 +5165,8 @@
   .ev-text[style*="--ev-c"]  { color: var(--ev-c); }
   .ev-text[style*="--badge-c"] { color: var(--badge-c); }
   .ev-dot[style*="--key-c"]  { background-color: var(--key-c); }
+  .month-title { font-size: var(--month-fs); }
+  @media (min-width: 640px) { .month-title { font-size: var(--month-fs-sm); } }
   .bg-emerald-100 { background-color: var(--color-emerald-100); }
   .bg-lime-100 { background-color: var(--color-lime-100); }
   .bg-cyan-100 { background-color: var(--color-cyan-100); }

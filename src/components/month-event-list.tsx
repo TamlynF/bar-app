@@ -33,12 +33,10 @@ export function MonthEventList({
   events,
   todayStr,
   nextEventId,
-  monthLabel,
 }: {
   events: MonthEvent[];
   todayStr: string;
   nextEventId: number | null;
-  monthLabel: string;
 }) {
   if (events.length === 0) return null;
 
@@ -54,10 +52,6 @@ export function MonthEventList({
 
   return (
     <div className="space-y-5">
-      <h2 className="text-white font-black text-2xl sm:text-4xl uppercase tracking-tighter leading-none text-center">
-        {monthLabel}
-      </h2>
-
       {Array.from(weeks.entries()).map(([weekKey, weekEvents]) => {
         const weekStart = parseDate(weekKey);
         const weekEndDate = new Date(weekStart);
