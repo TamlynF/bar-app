@@ -32,7 +32,7 @@ export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
   return (
     <section id="specials" className="max-w-5xl mx-auto px-4 sm:px-6 pb-4 sm:pb-14">
       <div className="flex items-center gap-2.5 mb-4">
-        <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
+        <span className="text-xs font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
           Specials
         </span>
         <div className="flex-1 h-px bg-[#FDCC4B]/20" />

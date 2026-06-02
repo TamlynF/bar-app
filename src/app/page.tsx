@@ -226,14 +226,14 @@ export default async function HomePage() {
         <div className="mt-6 w-32 h-[2px] bg-linear-to-r from-transparent via-[#FDCC4B]/20 to-transparent relative z-10" />
       </header>
 
-      <div className="px-2 max-w-3xl mx-auto space-y-12">
+      <div className="px-2 max-w-3xl mx-auto space-y-6">
       {/* Section 1: Specials */}
       <SpecialsSection specials={specials} />
 
       {/* Section 2: Events */}
       <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pb-6 sm:pb-10">
         <div className="flex items-center gap-2.5 mb-4">
-          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
+          <span className="text-xs font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
             What&apos;s On
           </span>
           <div className="flex-1 h-px bg-[#FDCC4B]/20" />
