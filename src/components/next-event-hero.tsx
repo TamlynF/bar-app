@@ -42,7 +42,7 @@ export function NextEventHero({
         <div className="flex-1 h-px neon-bg-muted" />
       </div>
 
-      <div className="olive-bg border border-[#FDCC4B]/30 rounded-2xl overflow-hidden">
+      <div className="olive-bg border neon-border rounded-2xl neon-glow overflow-hidden">
         {/* Main event row */}
         <div className="px-4 py-3.5 flex items-center gap-3">
           {/* Date column */}
@@ -117,7 +117,7 @@ export function NextEventHero({
 
         {/* Also on the night — sibling events on the same date */}
         {siblings.length > 0 && (
-          <div className="border-t border-[#FDCC4B]/10 px-4 pb-3">
+          <div className="border-t neon-border px-4 pb-3">
             <div className="flex gap-3">
               {/* Spacer — matches the date column width so siblings align with the title */}
               <div className="shrink-0 w-10" />
