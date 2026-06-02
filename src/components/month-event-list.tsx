@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { format, startOfWeek } from "date-fns";
-import { ExternalLink, ChevronDown } from "lucide-react";
+import { ExternalLink, ChevronDown, CalendarDays } from "lucide-react";
 import { toast } from "sonner";
 
 type MonthEvent = {
@@ -13,6 +13,8 @@ type MonthEvent = {
   endTimeLabel: string | null;
   externalLink: string | null;
   isFullyBooked: boolean;
+  isBookable: boolean;
+  bookingPageUrl: string | null;
   color: string;
   subType: string | null;
 };
@@ -252,14 +254,33 @@ function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <p
-          className={`ev-text text-sm font-black leading-tight truncate ${
-            isPast ? "line-through" : ""
-          }`}
-          style={{ "--ev-c": event.color } as React.CSSProperties}
-        >
-          {event.title}
-        </p>
+        {/* Title — when externalLink exists, wrap title+icon in an inline link */}
+        {event.externalLink && !isPast ? (
+          <a
+            href={event.externalLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 min-w-0 max-w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <p
+              className="ev-text text-sm font-black leading-tight truncate underline underline-offset-2"
+              style={{ "--ev-c": event.color } as React.CSSProperties}
+            >
+              {event.title}
+            </p>
+            <ExternalLink className="w-3 h-3 shrink-0 text-stone-500" aria-hidden="true" />
+          </a>
+        ) : (
+          <p
+            className={`ev-text text-sm font-black leading-tight truncate ${
+              isPast ? "line-through" : ""
+            }`}
+            style={{ "--ev-c": event.color } as React.CSSProperties}
+          >
+            {event.title}
+          </p>
+        )}
         {subLine && (
           <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wide mt-0.5 truncate">
             {subLine}
@@ -272,8 +293,17 @@ function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
           Sold Out
         </span>
       )}
-      {!isPast && !event.isFullyBooked && event.externalLink && (
-        <ExternalLink className="w-3.5 h-3.5 text-stone-600 shrink-0" aria-hidden="true" />
+
+      {!isPast && event.isBookable && event.bookingPageUrl && (
+        <a
+          href={event.bookingPageUrl}
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-[#1a2008] bg-[#FDCC4B] px-2.5 py-1.5 rounded-full hover:bg-[#FDCC4B]/90 active:scale-95 transition-all"
+          aria-label={`Book ${event.title}`}
+        >
+          <CalendarDays className="w-3 h-3 shrink-0" aria-hidden="true" />
+          Book
+        </a>
       )}
     </div>
   );
@@ -287,14 +317,6 @@ function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
       >
         {inner}
       </button>
-    );
-  }
-
-  if (event.externalLink) {
-    return (
-      <a href={event.externalLink} target="_blank" rel="noopener noreferrer">
-        {inner}
-      </a>
     );
   }
 

@@ -54,6 +54,7 @@ export type EventRecord = {
   booking_id: number | null;
   external_link: string | null;
   is_bookable: boolean | null;
+  booking_page_url: string | null;
   booking_config: BookingConfig | null;
 };
 
@@ -629,6 +630,7 @@ export default function EventsClient({
                     {selected.external_link && (
                       <DetailCell label="External Link" value={selected.external_link} />
                     )}
+                    <DetailCell label="Booking URL" value={selected.booking_page_url ?? "—"} />
                     <DetailCell label="Public Booking" value={selected.is_bookable ? "Enabled" : "Disabled"} />
                   </div>
 
@@ -641,14 +643,14 @@ export default function EventsClient({
                       </div>
                       <div className="flex items-center gap-2">
                         <code className="text-[11px] font-bold text-[#26300D] bg-[#F7F4EA] border border-[#E6DFC8] rounded-lg px-3 py-2 flex-1 truncate">
-                          {typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`}
+                          {selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`)}
                         </code>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 shrink-0"
                           onClick={() => {
-                            const url = `${window.location.origin}/book/event/${selected.id}`;
+                            const url = selected.booking_page_url ?? `${window.location.origin}/book/event/${selected.id}`;
                             navigator.clipboard.writeText(url);
                             setLinkCopied(true);
                             setTimeout(() => setLinkCopied(false), 2000);
@@ -941,6 +943,17 @@ export default function EventsClient({
                       type="url"
                       placeholder="https://instagram.com/..."
                       defaultValue={formDefault?.external_link ?? ""}
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                    />
+                  </FormRow>
+
+                  {/* Booking URL (auto-generated on save; override here if needed) */}
+                  <FormRow label="Booking URL">
+                    <input
+                      name="booking_page_url"
+                      type="url"
+                      placeholder="Auto-generated on save"
+                      defaultValue={formDefault?.booking_page_url ?? ""}
                       className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                     />
                   </FormRow>

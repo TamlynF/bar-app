@@ -7,15 +7,20 @@ export async function saveEventAction(formData: FormData) {
   const supabase = await createClient();
 
   const id = formData.get("id")?.toString();
+  const isBookable = formData.get("is_bookable") === "on";
+  const date = formData.get("date")?.toString() ?? "";
+  const eventTypesId = parseInt(formData.get("event_types_id")?.toString() || "0", 10);
+  const manualUrl = formData.get("booking_page_url")?.toString() || null;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
   const payload = {
     title: formData.get("title")?.toString() || "",
     description: formData.get("description")?.toString() || "",
-    date: formData.get("date")?.toString(),
+    date,
     start_time: formData.get("start_time")?.toString() || null,
     end_time: formData.get("end_time")?.toString() || null,
     payment_amount: parseFloat(formData.get("payment_amount")?.toString() || "0"),
-    event_types_id: parseInt(formData.get("event_types_id")?.toString() || "0", 10),
+    event_types_id: eventTypesId,
     host_employee_id: formData.get("host_employee_id") ? parseInt(formData.get("host_employee_id") as string, 10) : null,
     seating_required: formData.get("seating_required") === "on",
     is_active: formData.get("is_active") === "on",
@@ -23,9 +28,22 @@ export async function saveEventAction(formData: FormData) {
     group_name: formData.get("group_name")?.toString() || null,
     booking_id: formData.get("booking_id") ? parseInt(formData.get("booking_id") as string, 10) : null,
     external_link: formData.get("external_link")?.toString() || null,
-    is_bookable: formData.get("is_bookable") === "on",
+    is_bookable: isBookable,
     booking_config: JSON.parse(formData.get("booking_config")?.toString() || "{}"),
   };
+
+  // Fetch sub_type to determine the right booking URL path
+  const { data: et } = await supabase.from("event_types").select("sub_type")
+    .eq("id", eventTypesId).maybeSingle();
+  const subType = et?.sub_type?.toLowerCase() ?? "";
+
+  function computeBookingUrl(eventId: number | string): string | null {
+    if (!isBookable) return null;
+    if (manualUrl) return manualUrl;
+    if (subType === "quiz")  return `${siteUrl}/book/quiz?date=${date}`;
+    if (subType === "bingo") return `${siteUrl}/book/bingo?date=${date}`;
+    return `${siteUrl}/book/event/${eventId}`;
+  }
 
   // Resolve current logged-in user to an employee id
   let currentEmployeeId: number | null = null;
@@ -39,19 +57,30 @@ export async function saveEventAction(formData: FormData) {
 
   try {
     if (id) {
+      const bookingPageUrl = computeBookingUrl(id);
       const { error } = await supabase.from("events").update({
         ...payload,
+        booking_page_url: bookingPageUrl,
         updated_by: currentEmployeeId,
         updated_at: new Date().toISOString(),
       }).eq("id", id);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from("events").insert({
+      // INSERT first to get the generated ID, then compute and store the URL
+      const { data: inserted, error: insertError } = await supabase.from("events").insert({
         ...payload,
         created_by: currentEmployeeId,
         updated_by: currentEmployeeId,
-      });
-      if (error) throw error;
+      }).select("id").single();
+      if (insertError) throw insertError;
+
+      const bookingPageUrl = computeBookingUrl(inserted.id);
+      if (bookingPageUrl !== null) {
+        const { error: urlError } = await supabase.from("events")
+          .update({ booking_page_url: bookingPageUrl })
+          .eq("id", inserted.id);
+        if (urlError) throw urlError;
+      }
     }
 
     revalidatePath("/event-setups");

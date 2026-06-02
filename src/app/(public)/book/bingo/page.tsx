@@ -22,7 +22,12 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Sparkles, AlertCircle, Beer, Info, Speaker, User
 };
 
-export default async function BingoBookingPage() {
+export default async function BingoBookingPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ date?: string }>;
+}) {
+  const { date: preselect } = await searchParams;
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
@@ -56,6 +61,11 @@ export default async function BingoBookingPage() {
     payment_amount: e.payment_amount as number | null,
     is_fully_booked: (e.is_fully_booked as boolean) ?? false,
   }));
+
+  // Pre-select a specific date when linked from the events page
+  if (preselect) {
+    events.sort((a, b) => (a.date === preselect ? -1 : b.date === preselect ? 1 : 0));
+  }
 
   const dbBadges = (infoItems || []).map((item) => ({
     icon: ICON_MAP[item.icon || ""] || Info,

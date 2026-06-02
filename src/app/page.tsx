@@ -32,6 +32,7 @@ export type EventRow = {
   is_fully_booked: boolean;
   is_bookable: boolean;
   external_link: string | null;
+  booking_page_url: string | null;
   event_types: EventTypeJoin | EventTypeJoin[];
 };
 
@@ -104,7 +105,7 @@ export default async function HomePage() {
     supabase
       .from("events")
       .select(
-        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, event_types!inner(type, sub_type, type_color, badge_color)"
+        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, event_types!inner(type, sub_type, type_color, badge_color)"
       )
       .gte("date", monthStartStr)
       .lte("date", nextMonthEndStr)
@@ -136,6 +137,8 @@ export default async function HomePage() {
     endTimeLabel: formatTime(e.end_time),
     externalLink: e.external_link,
     isFullyBooked: e.is_fully_booked,
+    isBookable: e.is_bookable ?? false,
+    bookingPageUrl: e.booking_page_url ?? null,
     color: eventBadgeColor(e),
     subType: getEventType(e)?.sub_type ?? null,
   });
