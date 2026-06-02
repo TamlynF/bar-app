@@ -47,45 +47,33 @@ export function NextEventHero({
   const isExternal = Boolean(event.externalLink);
 
   const card = (
-    <div className="olive-bg border neon-border rounded-3xl p-4 neon-glow">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1.5">
-            <span
-              className="ev-dot shrink-0 w-2 h-2 rounded-full"
-              style={{ "--ev-c": event.color } as React.CSSProperties}
-            />
-            {event.subType && (
-              <span className="text-stone-500 text-[10px] font-black uppercase tracking-widest truncate">
-                {event.subType}
-              </span>
-            )}
-          </div>
+    <div className="olive-bg border neon-border rounded-2xl p-4 neon-glow">
+      <div className="flex flex-col gap-1.5">
+        {event.subType && (
+          <span className="text-stone-500 text-[10px] font-black uppercase tracking-widest">
+            {event.subType}
+          </span>
+        )}
 
-          <p
-            className="ev-text text-xl font-black tracking-tight leading-tight truncate"
-            style={{ "--ev-c": event.color } as React.CSSProperties}
-          >
-            {event.title}
+        <p
+          className="ev-text text-xl font-black tracking-tight leading-tight truncate"
+          style={{ "--ev-c": event.color } as React.CSSProperties}
+        >
+          {event.title}
+        </p>
+
+        {event.startTimeLabel && (
+          <p className="flex items-center gap-1.5 text-stone-300 text-[13px] font-bold tabular-nums">
+            <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+            {event.startTimeLabel}
+            {event.endTimeLabel ? ` – ${event.endTimeLabel}` : ""}
           </p>
-
-          {event.startTimeLabel && (
-            <p className="flex items-center gap-1.5 text-stone-300 text-[13px] font-bold tabular-nums mt-1.5">
-              <Clock className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
-              {event.startTimeLabel}
-              {event.endTimeLabel ? ` – ${event.endTimeLabel}` : ""}
-            </p>
-          )}
-        </div>
-
-        <span className="shrink-0 text-[9px] font-black uppercase tracking-widest olive-dark-text neon-bg px-2.5 py-1 rounded-full">
-          Next
-        </span>
+        )}
       </div>
 
       {/* CTA — only meaningful when the event is bookable */}
       {!event.isFullyBooked && (
-        <div className="mt-3.5 w-full flex items-center justify-center gap-1.5 bg-[#FDCC4B] text-[#1a2008] text-xs font-black uppercase tracking-wide py-3 rounded-xl">
+        <div className="mt-4 w-full h-12 flex items-center justify-center gap-1.5 bg-[#FDCC4B] text-[#1a2008] text-xs font-black uppercase tracking-wide rounded-xl">
           {isExternal ? "Get Tickets" : "Book a Table"}
           <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
         </div>

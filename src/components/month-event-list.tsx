@@ -155,7 +155,7 @@ export function MonthEventList({
               <div className="flex-1 h-px bg-stone-800/50" />
             </div>
 
-            <div className="bg-white/[0.03] border border-white/[0.08] rounded-2xl divide-y divide-white/5 overflow-hidden">
+            <div className="border border-white/10 rounded-2xl divide-y divide-white/[0.06] overflow-hidden">
               {weekEvents.map((ev) => (
                 <EventRow key={ev.id} event={ev} isPast={false} />
               ))}
@@ -195,7 +195,7 @@ export function MonthEventList({
           </button>
 
           {showPast && (
-            <div className="bg-white/[0.02] border border-white/[0.06] rounded-2xl divide-y divide-white/5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="border border-white/10 rounded-2xl divide-y divide-white/[0.06] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
               {visiblePast.map((ev) => (
                 <EventRow key={ev.id} event={ev} isPast />
               ))}
@@ -216,19 +216,19 @@ export function MonthEventList({
 function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
   const dateObj = parseDate(event.date);
 
+  const timeLabel = event.startTimeLabel
+    ? `${event.startTimeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ""}`
+    : null;
+  const subLine = [event.subType, timeLabel].filter(Boolean).join(" · ");
+
   const inner = (
     <div
-      className={`flex items-center gap-3 px-4 py-4 transition-colors ${
+      className={`flex items-center gap-3 px-4 py-3 transition-colors ${
         isPast ? "opacity-50" : "hover:bg-white/[0.04]"
       }`}
     >
-      <span
-        className="ev-dot shrink-0 w-2 h-2 rounded-full"
-        style={{ "--ev-c": event.color } as React.CSSProperties}
-      />
-
-      <div className="shrink-0 w-12">
-        <p className="text-stone-500 text-[10px] font-black uppercase tracking-widest leading-tight">
+      <div className="shrink-0 w-10 text-center">
+        <p className="text-stone-500 text-[9px] font-black uppercase tracking-widest leading-tight">
           {format(dateObj, "EEE")}
         </p>
         <p
@@ -249,19 +249,11 @@ function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
         >
           {event.title}
         </p>
-        <div className="flex items-center gap-2 mt-0.5">
-          {event.subType && (
-            <span className="text-stone-500 text-[10px] font-bold uppercase tracking-wide truncate">
-              {event.subType}
-            </span>
-          )}
-          {event.startTimeLabel && (
-            <span className="text-stone-400 text-xs font-bold tabular-nums shrink-0">
-              {event.startTimeLabel}
-              {event.endTimeLabel ? ` - ${event.endTimeLabel}` : ""}
-            </span>
-          )}
-        </div>
+        {subLine && (
+          <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wide mt-0.5 truncate">
+            {subLine}
+          </p>
+        )}
       </div>
 
       {!isPast && event.isFullyBooked && (
