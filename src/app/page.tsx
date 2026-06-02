@@ -226,7 +226,7 @@ export default async function HomePage() {
         <div className="mt-6 w-32 h-[2px] bg-linear-to-r from-transparent via-[#FDCC4B]/20 to-transparent relative z-10" />
       </header>
 
-      <div className="px-4 max-w-3xl mx-auto space-y-12">
+      <div className="px-2 max-w-3xl mx-auto space-y-12">
       {/* Section 1: Specials */}
       <SpecialsSection specials={specials} />
 
