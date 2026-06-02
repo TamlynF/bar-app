@@ -17,6 +17,8 @@ import {
   generateMusicSnippetsAction,
   saveMusicSnippetsAction,
   getMusicSnippetsForEventAction,
+  generatePictureRoundAction,
+  savePictureRoundAction,
 } from '@/app/(private)/event-setups/quiz-generator/actions'
 
 import type {
@@ -25,6 +27,7 @@ import type {
   PastQuestionRecord,
   MusicSnippetCandidate,
   SavedMusicSnippet,
+  PictureRoundItem,
 } from '@/app/(private)/event-setups/quiz-generator/actions'
 
 import { Button } from '@/components/ui/button'
@@ -53,6 +56,7 @@ import {
   Music,
   ExternalLink,
   ArrowLeft,
+  ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { SpotifyPlayer } from '@/components/spotify-player'
@@ -105,6 +109,10 @@ export default function QuizGeneratorPage() {
   const [selectedSnippetIndices, setSelectedSnippetIndices] = useState<Set<number>>(new Set())
   const [savedSnippets, setSavedSnippets] = useState<SavedMusicSnippet[]>([])
   const [spotifyConnected, setSpotifyConnected] = useState(false)
+
+  // Picture Round state
+  const [pictureItems, setPictureItems] = useState<PictureRoundItem[]>([])
+  const [selectedPictureIndices, setSelectedPictureIndices] = useState<Set<number>>(new Set())
 
   // Check Spotify connection on mount
   useEffect(() => {
@@ -207,6 +215,7 @@ export default function QuizGeneratorPage() {
 
   const isMusicSnippets = selectedCategoryConfig?.include_spotify ?? false
   const isHigherOrLower = isMusicSnippets && category.toLowerCase().includes('higher')
+  const isPictureRound = selectedCategoryConfig?.is_picture ?? false
 
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
@@ -228,6 +237,8 @@ export default function QuizGeneratorPage() {
     setSelectedIndices(new Set())
     setMusicSnippets([])
     setSelectedSnippetIndices(new Set())
+    setPictureItems([])
+    setSelectedPictureIndices(new Set())
     setError('')
   };
 
@@ -252,7 +263,24 @@ export default function QuizGeneratorPage() {
     setIsLoading(true)
     setError('')
     try {
-      if (isMusicSnippets) {
+      if (isPictureRound) {
+        if (!topic.trim()) {
+          toast.error("Topic is required for picture rounds")
+          setIsLoading(false)
+          return
+        }
+        const result = await generatePictureRoundAction(numQuestions, category, topic, difficulty)
+        if (result.error) {
+          setError(result.error)
+          toast.error(result.error)
+        } else if (result.items) {
+          setPictureItems(result.items)
+          setSelectedPictureIndices(new Set(result.items.map((_, i) => i)))
+          setQuestions([])
+          setMusicSnippets([])
+          toast.success("Picture round generated!")
+        }
+      } else if (isMusicSnippets) {
         const result = await generateMusicSnippetsAction(numQuestions, category, topic, difficulty)
         if (result.error) {
           setError(result.error)
@@ -288,6 +316,26 @@ export default function QuizGeneratorPage() {
     if (isSaving) return
     if (!selectedEventId) {
       toast.error("Select a Quiz Event first.");
+      return
+    }
+
+    if (isPictureRound) {
+      const selectedData = pictureItems.filter((_, i) => selectedPictureIndices.has(i))
+      if (selectedData.length === 0) return
+      setIsSaving(true)
+      try {
+        await savePictureRoundAction(selectedData, parseInt(selectedEventId), category, selectedCategoryConfig!.id)
+        const eventName = upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'Event'
+        toast.success(`Approved ${selectedData.length} images for ${eventName}!`)
+        setPictureItems([])
+        setSelectedPictureIndices(new Set())
+        loadEventHistory(selectedEventId)
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Failed to save to database.'
+        toast.error(message)
+      } finally {
+        setIsSaving(false)
+      }
       return
     }
 
@@ -580,9 +628,12 @@ export default function QuizGeneratorPage() {
                                   <span className="text-[10px] font-black text-[#5C4033]/20 mt-1 shrink-0">Q{i+1}</span>
                                 )}
                                 <div className="space-y-3 flex-1 min-w-0">
-                                  {!record.spotify_track_id && (
+                                  {record.image_url ? (
+                                    /* eslint-disable-next-line @next/next/no-img-element */
+                                    <img src={record.image_url} alt={record.answer_text} className="w-full h-40 object-cover rounded-xl" />
+                                  ) : !record.spotify_track_id && record.question_text ? (
                                     <p className="text-sm font-bold text-[#1F1F1A] leading-snug">{record.question_text}</p>
-                                  )}
+                                  ) : null}
                                   <div className="flex items-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
                                     <Target className="w-3 h-3 text-white/50" />
                                     <span className="text-xs font-black tracking-tight">{record.answer_text}</span>
@@ -694,11 +745,13 @@ export default function QuizGeneratorPage() {
           <div className="col-span-2">
             <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 mb-0.5 block text-left">
               {isMusicSnippets ? 'Theme' : 'Topic'}
+              {isPictureRound && <span className="text-red-500 ml-0.5">*</span>}
             </Label>
             <Input
-              placeholder={isMusicSnippets ? "e.g. 80s, Rock, Christmas..." : "e.g. Disney, 90s..."}
+              placeholder={isPictureRound ? "e.g. Dog Breeds, World Flags, Famous Landmarks..." : isMusicSnippets ? "e.g. 80s, Rock, Christmas..." : "e.g. Disney, 90s..."}
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
+              required={isPictureRound}
               disabled={currentCategoryIsFull}
               className={cn(
                 "h-8 rounded-md border text-[10px] font-bold focus:ring-0 px-2 w-full",
@@ -729,7 +782,7 @@ export default function QuizGeneratorPage() {
                 </div>
               <Button
                 type="submit"
-                disabled={isLoading || categories.length === 0 || currentCategoryIsFull}
+                disabled={isLoading || categories.length === 0 || currentCategoryIsFull || (isPictureRound && !topic.trim())}
                 className="h-8 px-6 rounded-md bg-[#5C4033] text-white font-black uppercase tracking-wider text-[10px] shadow-sm active:scale-95 transition-all hover:bg-[#5C4033]/90"
               >
                 {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
@@ -956,6 +1009,80 @@ export default function QuizGeneratorPage() {
         </div>
       )}
 
+      {/* PICTURE ROUND DRAFT SECTION */}
+      {pictureItems.length > 0 && (
+        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F7F4EA] rounded-xl p-2 sm:p-3 space-y-2">
+          {/* Sticky action bar */}
+          <div className="flex items-center justify-between bg-white border border-[#E6DFC8] p-2 rounded-lg shadow-md sticky top-16 z-20">
+            <div className="flex items-center gap-2 px-0.5">
+              <div className="bg-[#5C4033] text-white w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
+                {selectedPictureIndices.size}
+              </div>
+              <span className="text-[#5C4033] text-[10px] font-black uppercase tracking-wider leading-none">Images</span>
+            </div>
+            <Button
+              variant="default"
+              onClick={handleSave}
+              disabled={isSaving || selectedPictureIndices.size === 0}
+              className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
+            >
+              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
+                <span className="flex items-center gap-1">
+                  <Check className="w-3 h-3" />
+                  Approve
+                </span>
+              )}
+            </Button>
+          </div>
+
+          {/* Picture cards grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {pictureItems.map((item, idx) => {
+              const isSelected = selectedPictureIndices.has(idx)
+              return (
+                <div
+                  key={idx}
+                  onClick={() => {
+                    const next = new Set(selectedPictureIndices)
+                    if (next.has(idx)) next.delete(idx)
+                    else next.add(idx)
+                    setSelectedPictureIndices(next)
+                  }}
+                  className={cn(
+                    "group relative bg-white rounded-lg transition-all cursor-pointer select-none overflow-hidden shadow-sm",
+                    isSelected
+                      ? "border border-[#5C4033]/60 shadow-md"
+                      : "border border-transparent opacity-60 hover:opacity-100"
+                  )}
+                >
+                  {item.imageUrl ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={item.imageUrl} alt={item.answer} className="w-full h-36 object-cover" />
+                  ) : (
+                    <div className="w-full h-36 bg-[#F7F4EA] flex items-center justify-center">
+                      <ImageIcon className="w-8 h-8 text-[#E6DFC8]" />
+                    </div>
+                  )}
+                  <div className="p-2 flex items-center justify-between gap-1.5">
+                    <p className="text-[10px] font-black text-[#5C4033] leading-tight flex-1 min-w-0 truncate uppercase tracking-tight">
+                      {item.answer}
+                    </p>
+                    <div className={cn(
+                      "w-4 h-4 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0",
+                      isSelected
+                        ? "bg-[#5C4033] border-[#5C4033] text-white"
+                        : "bg-white border-[#E6DFC8] text-[#E6DFC8]"
+                    )}>
+                      {isSelected ? <Check className="w-2.5 h-2.5 stroke-4" /> : <Plus className="w-2.5 h-2.5" />}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* SAVED SNIPPETS FOR EVENT */}
       {isMusicSnippets && savedSnippets.length > 0 && musicSnippets.length === 0 && questions.length === 0 && (
         <div className="animate-in fade-in duration-500 bg-[#F7F4EA] rounded-xl p-2 sm:p-3 space-y-2">
@@ -1008,18 +1135,20 @@ export default function QuizGeneratorPage() {
       )}
 
       {/* EMPTY STATE */}
-      {!isLoading && questions.length === 0 && musicSnippets.length === 0 && (
+      {!isLoading && questions.length === 0 && musicSnippets.length === 0 && pictureItems.length === 0 && (
         <div className={cn(
           "py-10 text-center border border-dashed border-[#E6DFC8] rounded-xl bg-white/40 flex flex-col items-center",
           isMusicSnippets && savedSnippets.length > 0 && "hidden"
         )}>
-           {isMusicSnippets ? (
+           {isPictureRound ? (
+             <ImageIcon className="w-6 h-6 text-[#5C4033]/10 mb-2" />
+           ) : isMusicSnippets ? (
              <Music className="w-6 h-6 text-[#5C4033]/10 mb-2" />
            ) : (
              <BookOpen className="w-6 h-6 text-[#5C4033]/10 mb-2" />
            )}
            <p className="text-[10px] text-[#5F624F] uppercase tracking-[0.2em] font-black opacity-40">
-             {isMusicSnippets ? 'Generate song suggestions' : 'Select parameters to draft a round'}
+             {isPictureRound ? 'Enter a topic and generate picture cards' : isMusicSnippets ? 'Generate song suggestions' : 'Select parameters to draft a round'}
            </p>
         </div>
       )}

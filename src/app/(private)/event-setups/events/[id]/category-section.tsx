@@ -21,6 +21,7 @@ type Question = {
   spotify_track_id?: string | null;
   hint_year?: number | null;
   release_year?: number | null;
+  image_url?: string | null;
 };
 
 type Props = {
@@ -198,7 +199,7 @@ export default function CategorySection({ eventId, category_name, question_count
                       <div className="space-y-2">
                         <div className="flex items-start gap-3">
                           <span className="text-[10px] font-black text-[#5C4033]/20 mt-0.5 shrink-0 tabular-nums w-5 text-right">
-                            Q{idx + 1}
+                            Q{idx + 1}.
                           </span>
                           <div className="flex-1 min-w-0 space-y-1.5">
                             {isHigherOrLower && q.hint_year ? (
@@ -212,10 +213,19 @@ export default function CategorySection({ eventId, category_name, question_count
                               </>
                             ) : (
                               <>
-                                {(!includeSpotify || !q.spotify_track_id) && (
-                                  <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
-                                    {q.question_text}
-                                  </p>
+                                {q.image_url ? (
+                                  /* eslint-disable-next-line @next/next/no-img-element */
+                                  <img
+                                    src={q.image_url}
+                                    alt={q.answer_text}
+                                    className="w-full h-36 object-cover rounded-xl mb-1"
+                                  />
+                                ) : (
+                                  (!includeSpotify || !q.spotify_track_id) && (
+                                    <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
+                                      {q.question_text}
+                                    </p>
+                                  )
                                 )}
                                 <p className="text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-1.5 w-fit">
                                   {q.answer_text}

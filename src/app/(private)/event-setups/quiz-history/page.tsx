@@ -17,6 +17,7 @@ export type PastQuestionRecord = {
   answer_text: string;
   category: string;
   asked_on: string;
+  image_url?: string | null;
   quiz_category_configs?: {
     category_name: string;
   } | null;
@@ -120,14 +121,19 @@ export default async function QuizArchivePage({
                       >
                         <div className="p-5 flex-1 space-y-5 flex flex-col">
                           {/* Question Section */}
-                          <div className="flex items-start gap-3">
-                            <div className="mt-1 p-1 bg-[#F7F4EA] rounded-lg">
+                          {record.image_url ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img src={record.image_url} alt={record.answer_text} className="w-full h-44 object-cover rounded-xl" />
+                          ) : record.question_text ? (
+                            <div className="flex items-start gap-3">
+                              <div className="mt-1 p-1 bg-[#F7F4EA] rounded-lg">
                                 <MessageSquareQuote className="w-4 h-4 text-[#5C4033] opacity-40" />
+                              </div>
+                              <p className="text-[14px] font-bold text-[#1F1F1A] leading-snug tracking-tight">
+                                {record.question_text}
+                              </p>
                             </div>
-                            <p className="text-[14px] font-bold text-[#1F1F1A] leading-snug tracking-tight">
-                              {record.question_text}
-                            </p>
-                          </div>
+                          ) : null}
 
                           {/* Unified Answer Box: Dark/Gold High Contrast */}
                           <div className="mt-auto p-4 rounded-xl bg-[#5C4033] text-center shadow-inner relative overflow-hidden group/answer">

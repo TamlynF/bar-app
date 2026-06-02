@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
 
 export type QuizQuestion = {
@@ -39,6 +40,7 @@ export type PastQuestionRecord = {
   } | null;
   release_year?: number | null;
   spotify_track_id?: string | null;
+  image_url?: string | null;
 }
 
 export type QuizEventSummary = {
@@ -54,6 +56,12 @@ export type QuizCategoryConfig = {
   points_per_question: number;
   include_spotify: boolean;
   short_name: string;
+  is_picture: boolean;
+}
+
+export type PictureRoundItem = {
+  answer: string;
+  imageUrl: string | null;
 }
 
 /**
@@ -588,6 +596,192 @@ export async function saveMusicSnippetsAction(
   revalidatePath('/event-setups/quiz-generator')
   revalidatePath('/event-setups/quiz-history')
   return { success: true }
+}
+
+// ─── Picture Round ──────────────────────────────────────────────────────────
+
+async function generateImageForAnswer(answer: string): Promise<string | null> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
+  if (!apiKey) return null
+  const model = 'gemini-2.0-flash-preview-image-generation'
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text:
+          `A clear, high-quality photograph of ${answer} for a pub quiz picture round. ` +
+          `Clean background. Subject clearly visible and fills the frame. No text overlays. No watermarks.`
+        }] }],
+        generationConfig: { responseModalities: ['IMAGE'] },
+      }),
+    })
+    if (!res.ok) return null
+    const data = await res.json()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parts: any[] = data?.candidates?.[0]?.content?.parts ?? []
+    const imagePart = parts.find((p) => p.inlineData?.data)
+    if (!imagePart) return null
+    return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Generates a picture round: Gemini text produces answer list,
+ * then Gemini image produces a photo for each (batched 3 at a time).
+ * Returns base64 data URLs for the draft stage; images are uploaded on save.
+ */
+export async function generatePictureRoundAction(
+  numberOfItems: number = 10,
+  categoryName: string = 'Pictures',
+  topic: string,
+  difficulty: string = 'Medium'
+): Promise<{ items?: PictureRoundItem[]; error?: string }> {
+  const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
+  if (!apiKey) return { error: 'API Key is missing.' }
+
+  try {
+    // Step 1: Gemini text → list of answers
+    const model = 'gemini-2.5-flash'
+    const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
+
+    const difficultyGuide = difficulty === 'Easy'
+      ? 'very well-known, instantly recognisable by almost everyone'
+      : difficulty === 'Difficult'
+        ? 'less common or niche — a challenge for enthusiasts'
+        : 'a mix of well-known and moderately challenging'
+
+    const prompt = `Generate exactly ${numberOfItems} specific, identifiable items for a pub quiz picture round on the topic "${topic}".
+
+Rules:
+- Each item must be a specific named thing with a visually distinctive appearance (suitable for a single photograph)
+- Vary across the topic — avoid repetition within subtypes (e.g. for "dog breeds" don't list 5 retrievers)
+- Difficulty: ${difficultyGuide}
+- Return ONLY a valid JSON array of strings. No markdown, no explanation.
+Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border Collie","Dalmatian","Dachshund"]`
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.85,
+          responseMimeType: 'application/json',
+          responseSchema: { type: 'ARRAY', items: { type: 'STRING' } },
+        },
+      }),
+    })
+
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}))
+      return { error: `AI Error (${response.status}): ${err.error?.message || 'Generation failed.'}` }
+    }
+
+    const result = await response.json()
+    const content = result.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!content) return { error: 'AI returned an empty response.' }
+    const answers = JSON.parse(content) as string[]
+
+    // Step 2: Generate one image per answer, 3 at a time
+    const items: PictureRoundItem[] = []
+    for (let i = 0; i < answers.length; i += 3) {
+      const batch = answers.slice(i, i + 3)
+      const images = await Promise.all(batch.map((a) => generateImageForAnswer(a)))
+      batch.forEach((answer, j) => items.push({ answer, imageUrl: images[j] }))
+    }
+
+    return { items }
+  } catch (err: unknown) {
+    console.error('Picture round generation failed:', err)
+    return { error: 'Generation failed. Please try again.' }
+  }
+}
+
+/**
+ * Saves approved picture round items: uploads base64 images to Supabase Storage,
+ * then inserts rows to past_quiz_questions with the public image URL.
+ */
+export async function savePictureRoundAction(
+  items: PictureRoundItem[],
+  eventId: number,
+  categoryName: string,
+  categoryConfigId: number
+): Promise<void> {
+  const supabase = await createClient()
+  const adminClient = createAdminClient()
+
+  let currentEmployeeId: number | null = null
+  const { data: { user } } = await supabase.auth.getUser()
+  if (user?.email) {
+    const { data: emp } = await supabase
+      .from('employees')
+      .select('id')
+      .eq('email', user.email)
+      .maybeSingle()
+    if (emp) currentEmployeeId = emp.id
+  }
+
+  let askedOn = new Date().toISOString().split('T')[0]
+  const { data: event } = await supabase.from('events').select('date').eq('id', eventId).single()
+  if (event?.date) askedOn = event.date
+
+  const now = new Date().toISOString()
+
+  const insertData = await Promise.all(items.map(async (item) => {
+    let storedImageUrl: string | null = null
+
+    if (item.imageUrl?.startsWith('data:')) {
+      try {
+        const [header, base64] = item.imageUrl.split(',')
+        const mimeMatch = header.match(/data:([^;]+);/)
+        const mimeType = mimeMatch?.[1] ?? 'image/png'
+        const ext = mimeType === 'image/jpeg' ? 'jpg' : 'png'
+        const buffer = Buffer.from(base64, 'base64')
+        const path = `quiz-pictures/${eventId}/${crypto.randomUUID()}.${ext}`
+
+        const { data: uploadData, error: uploadError } = await adminClient.storage
+          .from('gallery')
+          .upload(path, buffer, { contentType: mimeType })
+
+        if (!uploadError && uploadData) {
+          const { data: { publicUrl } } = adminClient.storage
+            .from('gallery')
+            .getPublicUrl(uploadData.path)
+          storedImageUrl = publicUrl
+        }
+      } catch (err) {
+        console.error('Image upload failed for', item.answer, err)
+      }
+    }
+
+    return {
+      question_text: '',
+      answer_text: item.answer,
+      category: categoryName,
+      topic: categoryName,
+      image_url: storedImageUrl,
+      asked_on: askedOn,
+      events_id: eventId,
+      quiz_category_configs_id: categoryConfigId,
+      created_by: currentEmployeeId,
+      created_at: now,
+      updated_by: currentEmployeeId,
+      updated_at: now,
+    }
+  }))
+
+  const { error } = await supabase.from('past_quiz_questions').insert(insertData)
+  if (error) {
+    console.error('Database save error:', error)
+    throw new Error('Failed to save picture round.')
+  }
+
+  revalidatePath('/event-setups/quiz-generator')
+  revalidatePath('/event-setups/quiz-history')
 }
 
 /**

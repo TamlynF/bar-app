@@ -12,6 +12,7 @@ export type QuizCategoryConfig = {
   order_no: number;
   include_spotify: boolean;
   short_name: string;
+  is_picture: boolean;
 };
 
 export async function saveQuizCategoryAction(formData: FormData) {
@@ -20,6 +21,7 @@ export async function saveQuizCategoryAction(formData: FormData) {
   const id = formData.get("id")?.toString();
   const is_active = formData.get("is_active") === "on";
   const include_spotify = formData.get("include_spotify") === "on";
+  const is_picture = formData.get("is_picture") === "on";
   const order_no = parseInt(formData.get("order_no")?.toString() || "1", 10);
   const category_name = formData.get("category_name")?.toString() || "";
   const short_name_raw = formData.get("short_name")?.toString() || "";
@@ -51,6 +53,7 @@ export async function saveQuizCategoryAction(formData: FormData) {
     order_no,
     include_spotify,
     short_name,
+    is_picture,
   };
 
   try {

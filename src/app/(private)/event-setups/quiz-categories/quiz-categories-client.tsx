@@ -15,6 +15,7 @@ import {
   Hash,
   CheckCircle2,
   XCircle,
+  ImageIcon,
 } from "lucide-react";
 import { saveQuizCategoryAction, deleteQuizCategoryAction, QuizCategoryConfig } from "./actions";
 import { cn } from "@/lib/utils";
@@ -150,9 +151,12 @@ export default function QuizCategoriesClient({
                       <span className={cn("text-[10px] font-black w-10 text-right tabular-nums", muted)}>
                         {config.points_per_question}pt
                       </span>
-                      <span className="w-5 flex items-center justify-center shrink-0">
+                      <span className="flex items-center gap-1 shrink-0">
                         {config.include_spotify && (
                           <Music className={cn("w-3.5 h-3.5", inactive ? muted : "text-green-600")} />
+                        )}
+                        {config.is_picture && (
+                          <ImageIcon className={cn("w-3.5 h-3.5", inactive ? muted : "text-blue-600")} />
                         )}
                       </span>
                     </div>
@@ -173,6 +177,11 @@ export default function QuizCategoriesClient({
                     {config.include_spotify && (
                       <span className={cn("flex items-center gap-1 text-[11px] font-black bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-1 rounded-lg", inactive ? muted : "text-green-700")}>
                         <Music className="w-3 h-3" /> Spotify
+                      </span>
+                    )}
+                    {config.is_picture && (
+                      <span className={cn("flex items-center gap-1 text-[11px] font-black bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-1 rounded-lg", inactive ? muted : "text-blue-700")}>
+                        <ImageIcon className="w-3 h-3" /> Picture
                       </span>
                     )}
                     <span className={cn(
@@ -247,6 +256,7 @@ export default function QuizCategoriesClient({
                   <DetailCell label="Questions" value={String(selected.question_count)} />
                   <DetailCell label="Points / Q" value={String(selected.points_per_question)} />
                   <DetailCell label="Spotify" value={selected.include_spotify ? "Yes" : "No"} />
+                  <DetailCell label="Picture Round" value={selected.is_picture ? "Yes" : "No"} />
                 </div>
                 {formError && <ErrorBox message={formError} />}
               </div>
@@ -321,6 +331,18 @@ export default function QuizCategoriesClient({
                       name="include_spotify"
                       type="checkbox"
                       defaultChecked={formDefault?.include_spotify ?? false}
+                      className="w-5 h-5 rounded accent-[#5C4033] cursor-pointer"
+                    />
+                  </FormRow>
+
+                  <FormRow label="Picture Round">
+                    <span className="flex-1" />
+                    <input
+                      title="Picture Round"
+                      id="is_picture"
+                      name="is_picture"
+                      type="checkbox"
+                      defaultChecked={formDefault?.is_picture ?? false}
                       className="w-5 h-5 rounded accent-[#5C4033] cursor-pointer"
                     />
                   </FormRow>

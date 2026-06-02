@@ -98,8 +98,8 @@ export default async function EventQuizQuestionsPage({
 
       {/* Event header card */}
       <div className="bg-white border border-[#E6DFC8] rounded-2xl px-5 py-4 flex items-start gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-[#C8956D]/15 border border-[#C8956D]/30 flex items-center justify-center shrink-0">
-          <Brain className="w-4 h-4 text-white" />
+        <div className="w-10 h-10 rounded-2xl bg-[#C8956D]/30 border border-[#C8956D]/30 flex items-center justify-center shrink-0">
+          <Brain className="w-4 h-4 text-[#5C4033]" />
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-xl font-black text-[#5C4033] uppercase tracking-tighter leading-tight">
