@@ -218,17 +218,40 @@ export default function SpecialsClient({
             <div className="divide-y divide-[#E6DFC8]/50">
               {initialSpecials.map((special) => {
                 const inactive = !special.is_active;
+                const dateRange = [
+                  special.start_date ? formatDate(special.start_date) : null,
+                  special.end_date ? formatDate(special.end_date) : null,
+                ]
+                  .filter(Boolean)
+                  .join(" – ");
                 return (
                   <div
                     key={special.id}
                     onClick={() => openView(special)}
-                    className="px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
+                    className="px-3 sm:px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
                   >
+                    {/* Thumbnail */}
+                    <div className="w-11 h-11 shrink-0 rounded-xl overflow-hidden border border-[#E6DFC8] bg-[#F7F4EA]">
+                      {special.image_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={special.image_url}
+                          alt={special.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <Sparkles className="w-4 h-4 text-[#5F624F] opacity-30" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p
                           className={cn(
-                            "text-xs sm:text-sm font-black leading-snug truncate flex-1 min-w-0",
+                            "text-sm font-black leading-snug truncate flex-1 min-w-0",
                             inactive ? "text-[#5F624F]" : "text-[#1F1F1A]"
                           )}
                         >
@@ -236,33 +259,20 @@ export default function SpecialsClient({
                         </p>
                         <span
                           className={cn(
-                            "text-[10px] font-bold shrink-0",
+                            "text-[9px] font-bold uppercase tracking-wide shrink-0 px-1.5 py-0.5 rounded-full border",
                             special.is_active
-                              ? "text-green-600"
-                              : "text-red-500"
+                              ? "text-green-700 bg-green-50 border-green-200"
+                              : "text-red-500 bg-red-50 border-red-200"
                           )}
                         >
                           {special.is_active ? "Active" : "Inactive"}
                         </span>
                       </div>
-                      <div className="flex items-center mt-0.5 gap-1.5">
-                        {special.badges.length > 0 && (
-                          <div className="flex items-center gap-1">
-                            {special.badges.slice(0, 3).map((b) => (
-                              <span
-                                key={b}
-                                className="text-[9px] font-bold text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-1.5 py-0.5 rounded"
-                              >
-                                {b}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        <span className="text-[10px] text-[#5F624F] font-medium truncate">
-                          Order: {special.display_order}
-                        </span>
-                      </div>
+                      <p className="text-[10px] text-[#5F624F] font-medium mt-0.5 tabular-nums truncate">
+                        {dateRange || "No dates set"}
+                      </p>
                     </div>
+
                     <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
                   </div>
                 );
