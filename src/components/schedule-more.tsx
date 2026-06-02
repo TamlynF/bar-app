@@ -43,7 +43,7 @@ export function ScheduleMore({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="group w-full flex items-center justify-center gap-2 bg-white/[0.04] hover:bg-white/[0.07] border border-white/10 hover:border-[#FDCC4B]/30 rounded-2xl py-3.5 transition-all"
+        className="group w-full flex items-center justify-center gap-2 bg-white/4 hover:bg-white/7 border border-white/10 hover:border-[#FDCC4B]/30 rounded-2xl py-3.5 transition-all"
       >
         <span className="text-[#FDCC4B] text-[11px] font-black uppercase tracking-[0.2em]">
           {open ? `Hide ${nextMonthLabel}` : `View ${nextMonthLabel}`}
@@ -54,11 +54,11 @@ export function ScheduleMore({
       </button>
 
       {open && (
-        <div className="mt-3 bg-white/[0.03] border border-white/[0.08] rounded-2xl divide-y divide-white/5 overflow-hidden">
+        <div className="mt-3 bg-white/3 border border-white/8 rounded-2xl divide-y divide-white/5 overflow-hidden">
           {events.map((ev) => {
             const dateObj = parseDate(ev.date);
             const inner = (
-              <div className="flex items-center gap-3 px-4 py-4 hover:bg-white/[0.04] transition-colors">
+              <div className="flex items-center gap-3 px-4 py-4 hover:bg-white/4 transition-colors">
                 <span
                   className="ev-dot shrink-0 w-2 h-2 rounded-full"
                   style={{ "--ev-c": ev.color } as React.CSSProperties}

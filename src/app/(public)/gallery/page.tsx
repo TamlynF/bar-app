@@ -62,7 +62,7 @@ export default async function GalleryPage() {
 
         {/* Gallery */}
         {galleryItems.length === 0 ? (
-          <div className="text-center py-20 bg-white/[0.03] border border-white/5 rounded-2xl">
+          <div className="text-center py-20 bg-white/3 border border-white/5 rounded-2xl">
             <Camera className="w-8 h-8 text-stone-700 mx-auto mb-3" />
             <p className="text-stone-500 font-black text-sm uppercase tracking-tight">
               No Photos Yet

@@ -251,7 +251,7 @@ export default async function HomePage() {
         {colorKey.length > 0 && <ColorKey entries={colorKey} />}
 
         {events.length === 0 && (
-          <div className="text-center py-16 bg-white/[0.03] border border-white/5 rounded-2xl">
+          <div className="text-center py-16 bg-white/3 border border-white/5 rounded-2xl">
             <Calendar className="w-8 h-8 text-stone-700 mx-auto mb-3" />
             <p className="text-stone-500 font-black text-sm uppercase tracking-tight">
               No Events Scheduled Yet
@@ -301,7 +301,7 @@ export default async function HomePage() {
 
 function ColorKey({ entries }: { entries: { label: string; color: string }[] }) {
   return (
-    <div className="mt-10 pt-6 border-t border-white/[0.06]">
+    <div className="mt-10 pt-6 border-t border-white/6">
       <p className="text-center text-[10px] font-black uppercase tracking-[0.25em] text-stone-600 mb-4">
         Event Types
       </p>

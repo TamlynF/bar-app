@@ -301,7 +301,7 @@ function SocialCard({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3 hover:bg-white/[0.08] hover:border-white/20 transition-all"
+      className="group bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3 hover:bg-white/8 hover:border-white/20 transition-all"
     >
       <div className="shrink-0 w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors">
         {Icon ? (

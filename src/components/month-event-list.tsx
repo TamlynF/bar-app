@@ -123,7 +123,7 @@ export function MonthEventList({
                 className={`shrink-0 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full transition-colors active:scale-95 ${
                   isActive
                     ? "bg-[#FDCC4B] text-[#1a2008]"
-                    : "bg-white/[0.05] text-stone-400 border border-white/[0.08] hover:text-white hover:bg-white/[0.08]"
+                    : "bg-white/5 text-stone-400 border border-white/8 hover:text-white hover:bg-white/8"
                 }`}
               >
                 {f.label !== ALL && (
@@ -224,7 +224,7 @@ function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
   const inner = (
     <div
       className={`flex items-center gap-3 px-4 py-3 transition-colors ${
-        isPast ? "opacity-50" : "hover:bg-white/[0.04]"
+        isPast ? "opacity-50" : "hover:bg-white/4"
       }`}
     >
       <div className="shrink-0 w-10 text-center">

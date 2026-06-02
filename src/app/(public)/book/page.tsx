@@ -97,7 +97,7 @@ export default async function BookingHubPage() {
           <Link
             key={opt.href}
             href={opt.href}
-            className="group flex items-center gap-4 bg-white/5 hover:bg-white/[0.15] border border-white/20 hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
+            className="group flex items-center gap-4 bg-white/5 hover:bg-white/15 border border-white/20 hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
           >
             {/* Icon */}
             <div className={`shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center ${opt.iconClass}`}>
@@ -139,7 +139,7 @@ export default async function BookingHubPage() {
                 <Link
                   key={ev.id}
                   href={`/book/event/${ev.id}`}
-                  className="group flex items-center gap-4 bg-white/5 hover:bg-white/[0.15] border border-white/20 hover:border-white/30 rounded-2xl p-4 sm:p-5 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
+                  className="group flex items-center gap-4 bg-white/5 hover:bg-white/15 border border-white/20 hover:border-white/30 rounded-2xl p-4 sm:p-5 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
                 >
                   <div className="shrink-0 w-12 h-12 rounded-2xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">
                     <CalendarDays className="w-5 h-5 text-[#FDCC4B]" />
