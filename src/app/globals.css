@@ -4762,6 +4762,47 @@ html, body {
     background-color: #5C6F31;
   }
 }
+
+/* ── Rich text editor (Tiptap) ─────────────────────────────── */
+.rich-editor .ProseMirror {
+  outline: none;
+  min-height: 120px;
+}
+.rich-editor .ProseMirror p { margin: 0 0 0.25rem; }
+.rich-editor .ProseMirror h1 { font-size: 1.25rem; font-weight: 900; margin: 0.25rem 0; }
+.rich-editor .ProseMirror h2 { font-size: 1.05rem; font-weight: 800; margin: 0.25rem 0; }
+.rich-editor .ProseMirror ul { list-style: disc; padding-left: 1.25rem; margin: 0.25rem 0; }
+.rich-editor .ProseMirror ol { list-style: decimal; padding-left: 1.25rem; margin: 0.25rem 0; }
+.rich-editor .ProseMirror li { margin: 0.1rem 0; }
+.rich-editor .ProseMirror p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  color: #a8a29e;
+  pointer-events: none;
+  float: left;
+  height: 0;
+}
+
+/* ── Rich text content renderer ────────────────────────────── */
+.rich-content p { margin: 0 0 0.2rem; }
+.rich-content h1 { font-size: 1rem; font-weight: 900; margin: 0.25rem 0 0.1rem; }
+.rich-content h2 { font-size: 0.875rem; font-weight: 800; margin: 0.2rem 0 0.1rem; }
+.rich-content ul { list-style: disc; padding-left: 1.1rem; margin: 0.15rem 0; }
+.rich-content ol { list-style: decimal; padding-left: 1.1rem; margin: 0.15rem 0; }
+.rich-content li { margin: 0.05rem 0; }
+.rich-content strong { font-weight: 700; }
+.rich-content em { font-style: italic; }
+.rich-content u { text-decoration: underline; }
+
+/* Admin variant */
+.rich-content--admin { font-size: 0.875rem; color: #1F1F1A; line-height: 1.5; }
+
+/* Public card variant (dark background) */
+.rich-content--public { font-size: 0.7rem; color: #d6d3d1; line-height: 1.4; }
+.rich-content--public strong { color: #fff; }
+.rich-content--public h1 { font-size: 0.8rem; color: #fff; }
+.rich-content--public h2 { font-size: 0.75rem; color: #fff; }
+.rich-content--public ul,
+.rich-content--public ol { padding-left: 1rem; }
 @property --tw-translate-x {
   syntax: "*";
   inherits: false;

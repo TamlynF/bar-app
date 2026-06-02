@@ -21,6 +21,8 @@ import { saveSpecialAction, deleteSpecialAction } from "./actions";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { createClient } from "@/lib/supabase/client";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { RichTextContent } from "@/components/rich-text-content";
 
 export type SpecialRecord = {
   id: number;
@@ -317,10 +319,16 @@ export default function SpecialsClient({
               <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
                 <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
                   <DetailCell label="Title" value={selected.title} />
-                  <DetailCell
-                    label="Description"
-                    value={selected.description || "—"}
-                  />
+                  {selected.description ? (
+                    <div className="px-4 sm:px-5 py-3 border-b border-[#E6DFC8]">
+                      <p className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] opacity-60 mb-1.5">
+                        Description
+                      </p>
+                      <RichTextContent html={selected.description} variant="admin" />
+                    </div>
+                  ) : (
+                    <DetailCell label="Description" value="—" />
+                  )}
                   <DetailCell
                     label="Badges"
                     value={
@@ -439,14 +447,15 @@ export default function SpecialsClient({
                     />
                   </FormRow>
 
-                  <FormRow label="Description">
-                    <input
+                  <div className="px-4 sm:px-5 py-3">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] opacity-60 mb-2">
+                      Description
+                    </p>
+                    <RichTextEditor
                       name="description"
-                      placeholder="e.g. Every Friday 5-8pm"
                       defaultValue={formDefault?.description ?? ""}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                     />
-                  </FormRow>
+                  </div>
 
                   <FormRow label="Badges">
                     <input
@@ -603,14 +612,16 @@ export default function SpecialsClient({
 function FormRow({
   label,
   required,
+  align = "center",
   children,
 }: {
   label: string;
   required?: boolean;
+  align?: "center" | "start";
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
+    <div className={cn("flex gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4", align === "start" ? "items-start" : "items-center")}>
       <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
         <span className="text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
           {label}
@@ -624,15 +635,15 @@ function FormRow({
   );
 }
 
-function DetailCell({ label, value }: { label: string; value: string }) {
+function DetailCell({ label, value, multiline }: { label: string; value: string; multiline?: boolean }) {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-b border-[#E6DFC8] last:border-0">
+    <div className={cn("flex gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-b border-[#E6DFC8] last:border-0", multiline ? "items-start" : "items-center")}>
       <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
         <span className="text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
           {label}
         </span>
       </div>
-      <span className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug break-all">
+      <span className={cn("text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug wrap-break-word", multiline && "whitespace-pre-line text-left")}>
         {value}
       </span>
     </div>

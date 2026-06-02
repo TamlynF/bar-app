@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { Sparkles } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { RichTextContent } from "@/components/rich-text-content";
 
 export type SpecialRow = {
   id: number;
@@ -55,13 +57,16 @@ function SpecialCard({ special }: { special: SpecialRow }) {
     <button
       type="button"
       onClick={() => setFlipped((f) => !f)}
-      className="shrink-0 snap-start w-48 sm:w-56 h-20 sm:h-24 rounded-2xl border border-white/10 bg-[#26300D] overflow-hidden text-left cursor-pointer"
+      className={cn(
+        "shrink-0 snap-start w-[82vw] sm:w-64 rounded-2xl border border-white/10 bg-[#26300D] overflow-hidden text-left cursor-pointer transition-all duration-300",
+        flipped ? "h-auto min-h-24" : "h-24 sm:h-28"
+      )}
     >
       {!flipped ? (
         /* Front — circle thumbnail + info */
-        <div className="flex h-full gap-2.5 p-2 items-center animate-in fade-in duration-200">
+        <div className="flex h-full gap-3 p-3 items-center animate-in fade-in duration-200">
           {/* Image — circle */}
-          <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full overflow-hidden border border-white/10 bg-white/5">
+          <div className="w-16 h-16 sm:w-18 sm:h-18 shrink-0 rounded-full overflow-hidden border border-white/10 bg-white/5">
             {special.image_url ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img
@@ -78,12 +83,12 @@ function SpecialCard({ special }: { special: SpecialRow }) {
 
           {/* Info — two thirds */}
           <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-            <p className="text-sm font-black text-white leading-tight line-clamp-2">
+            <p className="text-base sm:text-sm font-black text-white leading-tight line-clamp-2">
               {special.title}
             </p>
 
             {dateRange && (
-              <p className="text-[10px] text-[#FDCC4B] font-bold tabular-nums uppercase tracking-wide">
+              <p className="text-xs sm:text-[10px] text-[#FDCC4B] font-bold tabular-nums uppercase tracking-wide">
                 {dateRange}
               </p>
             )}
@@ -93,9 +98,7 @@ function SpecialCard({ special }: { special: SpecialRow }) {
         /* Back — description + badges */
         <div className="flex flex-col justify-center h-full p-3 animate-in fade-in duration-200 gap-1.5">
           {special.description && (
-            <p className="text-[10px] text-stone-300 font-medium leading-snug line-clamp-2">
-              {special.description}
-            </p>
+            <RichTextContent html={special.description} variant="public" />
           )}
 
           {special.badges.length > 0 && (
