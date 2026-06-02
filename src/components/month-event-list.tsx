@@ -19,7 +19,12 @@ type MonthEvent = {
 
 const ALL = "All";
 
-function parseDate(dateStr: string) {
+interface FilterOption {
+  label: string;
+  color: string;
+}
+
+function parseDate(dateStr: string): Date {
   return new Date(dateStr + "T00:00:00");
 }
 
