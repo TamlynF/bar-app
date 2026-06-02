@@ -4784,6 +4784,7 @@ html, body {
 
 /* ── Rich text content renderer ────────────────────────────── */
 .rich-content p { margin: 0 0 0.2rem; }
+.rich-content p:empty::before { content: " "; }
 .rich-content h1 { font-size: 1rem; font-weight: 900; margin: 0.25rem 0 0.1rem; }
 .rich-content h2 { font-size: 0.875rem; font-weight: 800; margin: 0.2rem 0 0.1rem; }
 .rich-content ul { list-style: disc; padding-left: 1.1rem; margin: 0.15rem 0; }
