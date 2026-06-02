@@ -84,15 +84,21 @@ export function MonthEventList({
       ? activeFilter
       : ALL;
 
-  const visibleUpcoming =
-    effectiveFilter === ALL
-      ? upcoming
-      : upcoming.filter((e) => e.subType === effectiveFilter);
+  const visibleUpcoming = useMemo(
+    () =>
+      effectiveFilter === ALL
+        ? upcoming
+        : upcoming.filter((e) => e.subType === effectiveFilter),
+    [effectiveFilter, upcoming]
+  );
 
-  const visiblePast =
-    effectiveFilter === ALL
-      ? past
-      : past.filter((e) => e.subType === effectiveFilter);
+  const visiblePast = useMemo(
+    () =>
+      effectiveFilter === ALL
+        ? past
+        : past.filter((e) => e.subType === effectiveFilter),
+    [effectiveFilter, past]
+  );
 
   // Group the visible upcoming events by week
   const weeks = useMemo(() => {
@@ -108,7 +114,7 @@ export function MonthEventList({
   }, [visibleUpcoming]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       {/* Filter chips — only show if there's more than one option (i.e. at
           least one sub-type beyond "All") */}
       {filters.length > 1 && (
@@ -125,9 +131,12 @@ export function MonthEventList({
                 type="button"
                 aria-pressed={isActive}
                 onClick={() => setActiveFilter(f.label)}
+                style={{ "--chip-c": f.color } as React.CSSProperties}
                 className={`shrink-0 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full transition-colors active:scale-95 ${
                   isActive
-                    ? "bg-[#FDCC4B] text-[#1a2008]"
+                    ? f.label === ALL
+                      ? "bg-[#FDCC4B] text-[#1a2008]"
+                      : "bg-(--chip-c) text-[#1a2008]"
                     : "bg-white/5 text-stone-400 border border-white/8 hover:text-white hover:bg-white/8"
                 }`}
               >
@@ -145,22 +154,19 @@ export function MonthEventList({
       )}
 
       {/* Upcoming, grouped by week */}
-      {Array.from(weeks.entries()).map(([weekKey, weekEvents]) => {
-        const weekStart = parseDate(weekKey);
-        const weekEndDate = new Date(weekStart);
-        weekEndDate.setDate(weekEndDate.getDate() + 6);
-        const label = `${format(weekStart, "d")} – ${format(weekEndDate, "d MMM")}`;
+      {Array.from(weeks.entries()).map(([weekKey, weekEvents], index) => {
+        const label = `Week ${index + 1}`;
 
         return (
           <div key={weekKey}>
-            <div className="flex items-center gap-2 px-1 mb-2">
+            <div className="flex items-center gap-2 px-1 mb-1">
               <span className="text-[10px] font-black uppercase tracking-[0.25em] text-stone-500">
                 {label}
               </span>
               <div className="flex-1 h-px bg-stone-800/50" />
             </div>
 
-            <div className="border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden">
+            <div className="bg-[#26300D] border border-white/10 rounded-2xl divide-y divide-[#2a3610] overflow-hidden">
               {weekEvents.map((ev) => (
                 <EventRow key={ev.id} event={ev} isPast={false} />
               ))}
@@ -200,7 +206,7 @@ export function MonthEventList({
           </button>
 
           {showPast && (
-            <div className="border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="bg-[#26300D] border border-white/10 rounded-2xl divide-y divide-[#2a3610] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
               {visiblePast.map((ev) => (
                 <EventRow key={ev.id} event={ev} isPast />
               ))}
