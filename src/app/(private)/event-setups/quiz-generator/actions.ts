@@ -35,6 +35,7 @@ export type PastQuestionRecord = {
   asked_on: string;
   events_id: number | null;
   quiz_category_configs_id: number | null;
+  question_no: number | null;
   quiz_category_configs?: {
     category_name: string;
   } | null;
@@ -57,6 +58,7 @@ export type QuizCategoryConfig = {
   include_spotify: boolean;
   short_name: string;
   is_picture: boolean;
+  order_no: number | null;
 }
 
 export type PictureRoundItem = {
@@ -180,6 +182,24 @@ export async function generateQuizAction(
   }
 }
 
+type SupabaseClient = Awaited<ReturnType<typeof createClient>>
+
+/** Returns the current max question_no for a given event+category (0 if none). */
+async function getMaxQuestionNo(
+  supabase: SupabaseClient,
+  eventId: number,
+  configId: number
+): Promise<number> {
+  const { data } = await supabase
+    .from('past_quiz_questions')
+    .select('question_no')
+    .eq('events_id', eventId)
+    .eq('quiz_category_configs_id', configId)
+    .order('question_no', { ascending: false })
+    .limit(1)
+  return data?.[0]?.question_no ?? 0
+}
+
 /**
  * Fetches question history with category joins and event filtering.
  */
@@ -189,7 +209,9 @@ export async function getFullQuestionHistoryAction(eventIdFilter?: string): Prom
   let query = supabase
     .from('past_quiz_questions')
     .select('*, quiz_category_configs(category_name)')
-    .order('asked_on', { ascending: false });
+    .order('asked_on', { ascending: false })
+    .order('quiz_category_configs_id', { ascending: true })
+    .order('question_no', { ascending: true, nullsFirst: false });
 
   if (eventIdFilter && eventIdFilter !== 'all') {
     query = query.eq('events_id', eventIdFilter);
@@ -206,14 +228,21 @@ export async function getFullQuestionHistoryAction(eventIdFilter?: string): Prom
 }
 
 /**
- * Updates an existing question.
+ * Updates an existing question, optionally replacing its image.
  */
-export async function updatePastQuestionAction(id: string, question: string, answer: string) {
+export async function updatePastQuestionAction(
+  id: string,
+  question: string | null,
+  answer: string,
+  imageData?: { base64: string; mimeType: string; oldImageUrl: string | null } | null,
+  newQuestionNo?: number | null,
+  eventId?: number | null
+): Promise<{ success: true; image_url?: string | null }> {
   const supabase = await createClient()
-    let currentEmployeeId: number | null = null;
+  let currentEmployeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
 
-    if (user?.email) {
+  if (user?.email) {
     const { data: emp } = await supabase
       .from("employees")
       .select("id")
@@ -221,15 +250,99 @@ export async function updatePastQuestionAction(id: string, question: string, ans
       .maybeSingle();
     if (emp) currentEmployeeId = emp.id;
   }
-  
+
+  let newImageUrl: string | null | undefined = undefined;
+
+  if (imageData) {
+    const adminClient = createAdminClient()
+    // Delete old image from storage
+    if (imageData.oldImageUrl) {
+      try {
+        const url = new URL(imageData.oldImageUrl)
+        const parts = url.pathname.split('/storage/v1/object/public/')
+        if (parts[1]) {
+          const [bucket, ...rest] = parts[1].split('/')
+          await adminClient.storage.from(bucket).remove([rest.join('/')])
+        }
+      } catch (err) {
+        console.error('Old image delete failed', err)
+      }
+    }
+    // Upload new image
+    try {
+      const ext = imageData.mimeType === 'image/jpeg' ? 'jpg' : 'png'
+      const folder = eventId ? `quiz-pictures/${eventId}` : 'quiz-pictures'
+      const path = `${folder}/${crypto.randomUUID()}.${ext}`
+      const buffer = Buffer.from(imageData.base64, 'base64')
+      const { data: uploadData, error: uploadError } = await adminClient.storage
+        .from('gallery')
+        .upload(path, buffer, { contentType: imageData.mimeType })
+      if (!uploadError && uploadData) {
+        const { data: { publicUrl } } = adminClient.storage
+          .from('gallery')
+          .getPublicUrl(uploadData.path)
+        newImageUrl = publicUrl
+      }
+    } catch (err) {
+      console.error('New image upload failed', err)
+    }
+  }
+
+  const updateFields: Record<string, unknown> = {
+    answer_text: answer,
+    updated_by: currentEmployeeId,
+    updated_at: new Date().toISOString(),
+  }
+  if (question !== null) updateFields.question_text = question
+  if (newImageUrl !== undefined) updateFields.image_url = newImageUrl
+
+  // Reorder if a new question_no was requested
+  if (newQuestionNo != null) {
+    const { data: currentQ } = await supabase
+      .from('past_quiz_questions')
+      .select('events_id, quiz_category_configs_id, question_no')
+      .eq('id', id)
+      .single()
+
+    const evId = currentQ?.events_id
+    const cfgId = currentQ?.quiz_category_configs_id
+
+    if (evId && cfgId && currentQ.question_no !== newQuestionNo) {
+      const { data: allQs } = await supabase
+        .from('past_quiz_questions')
+        .select('id, question_no')
+        .eq('events_id', evId)
+        .eq('quiz_category_configs_id', cfgId)
+        .order('question_no', { ascending: true, nullsFirst: false })
+
+      if (allQs && allQs.length > 0) {
+        const allIds = allQs.map(q => q.id)
+        const clamped = Math.max(1, Math.min(newQuestionNo, allQs.length))
+
+        // Null out all so uniqueness constraint won't block intermediate states
+        await supabase.from('past_quiz_questions').update({ question_no: null }).in('id', allIds)
+
+        // New order: remove current, splice in at target position
+        const others = allQs.map(q => q.id).filter(qid => qid !== id)
+        others.splice(clamped - 1, 0, id)
+
+        // Assign sequential numbers — skip the current id (set via updateFields below)
+        for (let i = 0; i < others.length; i++) {
+          if (others[i] !== id) {
+            await supabase
+              .from('past_quiz_questions')
+              .update({ question_no: i + 1 })
+              .eq('id', others[i])
+          }
+        }
+        updateFields.question_no = clamped
+      }
+    }
+  }
+
   const { error } = await supabase
     .from('past_quiz_questions')
-    .update({ 
-      question_text: question, 
-      answer_text: answer,
-      updated_by: currentEmployeeId,
-      updated_at: new Date().toISOString()
-    })
+    .update(updateFields)
     .eq('id', id);
 
   if (error) {
@@ -240,10 +353,33 @@ export async function updatePastQuestionAction(id: string, question: string, ans
 }
 
 /**
- * Deletes a question from history.
+ * Deletes a question from history, and its storage image if present.
  */
 export async function deletePastQuestionAction(id: string) {
   const supabase = await createClient()
+
+  const { data: row } = await supabase
+    .from('past_quiz_questions')
+    .select('image_url')
+    .eq('id', id)
+    .single()
+
+  if (row?.image_url) {
+    try {
+      const adminClient = createAdminClient()
+      const url = new URL(row.image_url)
+      // Path format: /storage/v1/object/public/{bucket}/{rest}
+      const parts = url.pathname.split('/storage/v1/object/public/')
+      if (parts[1]) {
+        const [bucket, ...rest] = parts[1].split('/')
+        const storagePath = rest.join('/')
+        await adminClient.storage.from(bucket).remove([storagePath])
+      }
+    } catch (err) {
+      console.error('Storage delete failed for question', id, err)
+    }
+  }
+
   const { error } = await supabase
     .from('past_quiz_questions')
     .delete()
@@ -326,19 +462,41 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
     if (event?.date) askedOn = event.date;
   }
 
-  const insertData = questions.map(q => ({
-    question_text: q.question,
-    answer_text: q.answer,
-    category: q.category,
-    topic: topic.trim() || null,
-    asked_on: askedOn,
-    events_id: eventId,
-    quiz_category_configs_id: configMap.get(q.category.toLowerCase()) || null,
-    created_by: currentEmployeeId,
-    created_at: new Date().toISOString(),
-    updated_by: currentEmployeeId,
-    updated_at: new Date().toISOString(),
-  }));
+  // Pre-compute max question_no per configId for this event
+  const configIds = [...new Set(
+    questions.map(q => configMap.get(q.category.toLowerCase())).filter((id): id is number => !!id)
+  )]
+  const maxNos = new Map<number, number>()
+  if (eventId) {
+    await Promise.all(configIds.map(async (cid) => {
+      maxNos.set(cid, await getMaxQuestionNo(supabase, eventId, cid))
+    }))
+  }
+  const batchCounters = new Map<number, number>()
+
+  const insertData = questions.map(q => {
+    const cid = configMap.get(q.category.toLowerCase()) || null
+    let question_no: number | undefined
+    if (cid && eventId) {
+      const count = batchCounters.get(cid) ?? 0
+      batchCounters.set(cid, count + 1)
+      question_no = (maxNos.get(cid) ?? 0) + count + 1
+    }
+    return {
+      question_text: q.question,
+      answer_text: q.answer,
+      category: q.category,
+      topic: topic.trim() || null,
+      asked_on: askedOn,
+      events_id: eventId,
+      quiz_category_configs_id: cid,
+      question_no: question_no ?? null,
+      created_by: currentEmployeeId,
+      created_at: new Date().toISOString(),
+      updated_by: currentEmployeeId,
+      updated_at: new Date().toISOString(),
+    }
+  });
 
   const { error } = await supabase
     .from('past_quiz_questions')
@@ -565,7 +723,8 @@ export async function saveMusicSnippetsAction(
 
   const now = new Date().toISOString()
   const isHigherOrLower = categoryName.toLowerCase().includes('higher')
-  const insertData = songs.map((s) => ({
+  const baseNo = await getMaxQuestionNo(supabase, eventId, categoryConfigId)
+  const insertData = songs.map((s, i) => ({
     question_text: isHigherOrLower && s.hint_year
       ? `Higher or Lower than ${s.hint_year}?`
       : `[${s.year}] Name the artist and song`,
@@ -578,6 +737,7 @@ export async function saveMusicSnippetsAction(
     asked_on: askedOn,
     events_id: eventId,
     quiz_category_configs_id: categoryConfigId,
+    question_no: baseNo + i + 1,
     created_by: currentEmployeeId,
     created_at: now,
     updated_by: currentEmployeeId,
@@ -603,7 +763,7 @@ export async function saveMusicSnippetsAction(
 async function generateImageForAnswer(answer: string): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
   if (!apiKey) return null
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`
   try {
     const res = await fetch(url, {
       method: 'POST',
@@ -716,7 +876,8 @@ export async function savePictureRoundAction(
   items: PictureRoundItem[],
   eventId: number,
   categoryName: string,
-  categoryConfigId: number
+  categoryConfigId: number,
+  questionText: string
 ): Promise<void> {
   const supabase = await createClient()
   const adminClient = createAdminClient()
@@ -737,8 +898,9 @@ export async function savePictureRoundAction(
   if (event?.date) askedOn = event.date
 
   const now = new Date().toISOString()
+  const baseNo = await getMaxQuestionNo(supabase, eventId, categoryConfigId)
 
-  const insertData = await Promise.all(items.map(async (item) => {
+  const insertData = await Promise.all(items.map(async (item, i) => {
     let storedImageUrl: string | null = null
 
     if (item.imageUrl?.startsWith('data:')) {
@@ -766,14 +928,15 @@ export async function savePictureRoundAction(
     }
 
     return {
-      question_text: '',
+      question_text: questionText,
       answer_text: item.answer,
       category: categoryName,
-      topic: categoryName,
+      topic: questionText,
       image_url: storedImageUrl,
       asked_on: askedOn,
       events_id: eventId,
       quiz_category_configs_id: categoryConfigId,
+      question_no: baseNo + i + 1,
       created_by: currentEmployeeId,
       created_at: now,
       updated_by: currentEmployeeId,

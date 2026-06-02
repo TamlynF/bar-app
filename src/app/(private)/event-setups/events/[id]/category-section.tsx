@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X } from "lucide-react";
+import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SpotifyPlayer } from "@/components/spotify-player";
@@ -18,6 +18,7 @@ type Question = {
   question_text: string;
   answer_text: string;
   quiz_category_configs_id: number | null;
+  question_no?: number | null;
   spotify_track_id?: string | null;
   hint_year?: number | null;
   release_year?: number | null;
@@ -31,10 +32,11 @@ type Props = {
   questions: Question[];
   orderNo?: number;
   includeSpotify?: boolean;
+  isPicture?: boolean;
   autoOpen?: boolean;
 };
 
-export default function CategorySection({ eventId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, autoOpen }: Props) {
+export default function CategorySection({ eventId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, autoOpen }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
   const isHigherOrLower = includeSpotify && category_name.toLowerCase().includes('higher');
@@ -52,32 +54,76 @@ export default function CategorySection({ eventId, category_name, question_count
       }, 300);
     }
   }, [autoOpen]);
-  const [editForm, setEditForm] = useState({ question: "", answer: "" });
+  const [editForm, setEditForm] = useState({ question: "", answer: "", questionNo: 1 });
+  const [newImageFile, setNewImageFile] = useState<File | null>(null);
+  const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
 
   const startEditing = (q: Question) => {
+    const idx = questions.findIndex(qq => qq.id === q.id);
     setEditingId(q.id);
-    setEditForm({ question: q.question_text, answer: q.answer_text });
+    setEditForm({ question: q.question_text, answer: q.answer_text, questionNo: q.question_no ?? idx + 1 });
+    setNewImageFile(null);
+    setNewImagePreview(null);
   };
 
   const cancelEditing = () => {
     setEditingId(null);
-    setEditForm({ question: "", answer: "" });
+    setEditForm({ question: "", answer: "", questionNo: 1 });
+    if (newImagePreview) URL.revokeObjectURL(newImagePreview);
+    setNewImageFile(null);
+    setNewImagePreview(null);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (newImagePreview) URL.revokeObjectURL(newImagePreview);
+    setNewImageFile(file);
+    setNewImagePreview(URL.createObjectURL(file));
   };
 
   const saveEdit = async (id: string) => {
-    if (!editForm.question || !editForm.answer) {
+    if ((!isPicture && !editForm.question) || !editForm.answer) {
       toast.error("Fields cannot be empty");
       return;
     }
     setIsPending(true);
     try {
-      await updatePastQuestionAction(id, editForm.question, editForm.answer);
-      setQuestions((prev) =>
-        prev.map((q) => (q.id === id ? { ...q, question_text: editForm.question, answer_text: editForm.answer } : q))
-      );
+      let imageData: { base64: string; mimeType: string; oldImageUrl: string | null } | null = null;
+      if (isPicture && newImageFile) {
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve((reader.result as string).split(',')[1]);
+          reader.onerror = reject;
+          reader.readAsDataURL(newImageFile);
+        });
+        const currentQ = questions.find((q) => q.id === id);
+        imageData = { base64, mimeType: newImageFile.type, oldImageUrl: currentQ?.image_url ?? null };
+      }
+      const result = await updatePastQuestionAction(id, isPicture ? null : editForm.question, editForm.answer, imageData, editForm.questionNo, eventId);
+      setQuestions((prev) => {
+        const updated = prev.map((q) => q.id === id ? {
+          ...q,
+          ...(!isPicture ? { question_text: editForm.question } : {}),
+          answer_text: editForm.answer,
+          question_no: editForm.questionNo,
+          ...(result.image_url !== undefined ? { image_url: result.image_url } : {}),
+        } : q);
+        const currentNo = prev.find(q => q.id === id)?.question_no;
+        if (currentNo === editForm.questionNo) return updated;
+        // Re-sort: remove edited, splice at new position, renumber
+        const others = updated.filter(q => q.id !== id);
+        const editedQ = updated.find(q => q.id === id)!;
+        const clamped = Math.max(1, Math.min(editForm.questionNo, prev.length));
+        others.splice(clamped - 1, 0, editedQ);
+        return others.map((q, i) => ({ ...q, question_no: i + 1 }));
+      });
       toast.success("Question updated");
       setEditingId(null);
+      if (newImagePreview) URL.revokeObjectURL(newImagePreview);
+      setNewImageFile(null);
+      setNewImagePreview(null);
     } catch {
       toast.error("Update failed");
     } finally {
@@ -152,6 +198,7 @@ export default function CategorySection({ eventId, category_name, question_count
             ) : (
               questions.map((q, idx) => {
                 const isEditing = editingId === q.id;
+                console.log("questions", q);
                 return (
                   <div key={q.id} className={cn(
                     "px-3 py-3 transition-all",
@@ -159,15 +206,33 @@ export default function CategorySection({ eventId, category_name, question_count
                   )}>
                     {isEditing ? (
                       <div className="space-y-2.5 animate-in fade-in duration-200">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Question</label>
-                          <textarea
-                            title="Edit question"
-                            value={editForm.question}
-                            onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                            className="w-full text-[13px] font-semibold min-h-[60px] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none resize-none"
-                          />
-                        </div>
+                        {isPicture && q.image_url && (
+                          <div className="space-y-1.5">
+                            <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Image</label>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={newImagePreview ?? q.image_url}
+                              alt={q.answer_text}
+                              className="w-full h-36 object-cover rounded-xl"
+                            />
+                            <label className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border-2 border-dashed border-[#E6DFC8] text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033] cursor-pointer transition-all">
+                              <Upload className="w-3.5 h-3.5" />
+                              {newImageFile ? newImageFile.name : 'Replace image'}
+                              <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
+                            </label>
+                          </div>
+                        )}
+                        {!isPicture && (
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Question</label>
+                            <textarea
+                              title="Edit question"
+                              value={editForm.question}
+                              onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
+                              className="w-full text-[13px] font-semibold min-h-[60px] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none resize-none"
+                            />
+                          </div>
+                        )}
                         <div className="space-y-1">
                           <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Answer</label>
                           <input
@@ -175,6 +240,18 @@ export default function CategorySection({ eventId, category_name, question_count
                             value={editForm.answer}
                             onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })}
                             className="w-full text-[13px] font-black text-[#5C4033] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10"
+                          />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Question No.</label>
+                          <input
+                            type="number"
+                            title="Question number"
+                            min={1}
+                            max={questions.length}
+                            value={editForm.questionNo}
+                            onChange={(e) => setEditForm({ ...editForm, questionNo: Math.max(1, parseInt(e.target.value) || 1) })}
+                            className="w-24 text-[13px] font-black text-[#5C4033] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10"
                           />
                         </div>
                         <div className="flex gap-2">
@@ -199,7 +276,7 @@ export default function CategorySection({ eventId, category_name, question_count
                       <div className="space-y-2">
                         <div className="flex items-start gap-3">
                           <span className="text-[10px] font-black text-[#5C4033]/20 mt-0.5 shrink-0 tabular-nums w-5 text-right">
-                            Q{idx + 1}.
+                            Q{q.question_no ?? idx + 1}:
                           </span>
                           <div className="flex-1 min-w-0 space-y-1.5">
                             {isHigherOrLower && q.hint_year ? (

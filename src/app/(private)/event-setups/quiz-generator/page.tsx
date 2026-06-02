@@ -113,6 +113,7 @@ export default function QuizGeneratorPage() {
   // Picture Round state
   const [pictureItems, setPictureItems] = useState<PictureRoundItem[]>([])
   const [selectedPictureIndices, setSelectedPictureIndices] = useState<Set<number>>(new Set())
+  const [pictureTopicLocked, setPictureTopicLocked] = useState(false)
 
   // Check Spotify connection on mount
   useEffect(() => {
@@ -251,6 +252,24 @@ export default function QuizGeneratorPage() {
     }
   }, [selectedEventId, selectedCategoryConfig])
 
+  // For picture rounds, lock the topic to the saved question_text if one exists for this event+category
+  useEffect(() => {
+    if (!selectedCategoryConfig?.is_picture) {
+      setPictureTopicLocked(false)
+      return
+    }
+    const existing = eventHistory.find(
+      q => q.quiz_category_configs_id === selectedCategoryConfig.id && q.question_text
+    )
+    if (existing) {
+      setTopic(existing.question_text)
+      setPictureTopicLocked(true)
+    } else {
+      setTopic('')
+      setPictureTopicLocked(false)
+    }
+  }, [selectedCategoryConfig, eventHistory])
+
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading) return
@@ -324,7 +343,7 @@ export default function QuizGeneratorPage() {
       if (selectedData.length === 0) return
       setIsSaving(true)
       try {
-        await savePictureRoundAction(selectedData, parseInt(selectedEventId), category, selectedCategoryConfig!.id)
+        await savePictureRoundAction(selectedData, parseInt(selectedEventId), category, selectedCategoryConfig!.id, topic)
         const eventName = upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'Event'
         toast.success(`Approved ${selectedData.length} images for ${eventName}!`)
         setPictureItems([])
@@ -409,12 +428,13 @@ export default function QuizGeneratorPage() {
     }
     setIsActionPending(true)
     try {
-      await updatePastQuestionAction(id, editForm.question, editForm.answer)
+      await updatePastQuestionAction(id, editForm.question, editForm.answer, null, null, selectedEventId ? Number(selectedEventId) : null)
       toast.success("Question updated")
       await loadEventHistory(selectedEventId)
       setEditingQuestionId(null)
     } catch (err) {
-      toast.error("Update failed")
+      const message = err instanceof Error ? err.message : 'Failed to update database.'
+      toast.error(message)
     } finally {
       setIsActionPending(false)
     }
@@ -427,7 +447,8 @@ export default function QuizGeneratorPage() {
       toast.success("Question removed")
       await loadEventHistory(selectedEventId)
     } catch (err) {
-      toast.error("Delete failed")
+      const message = err instanceof Error ? err.message : 'Failed to delete from database.'
+      toast.error(message)
     } finally {
       setIsActionPending(false)
     }
@@ -731,7 +752,9 @@ export default function QuizGeneratorPage() {
                 )}
               >
                 {categories.map(opt => (
-                  <option key={opt.id} value={opt.category_name}>{opt.category_name}</option>
+                  <option key={opt.id} value={opt.category_name}>
+                    {opt.order_no != null ? `${opt.order_no}. ` : ''}{opt.category_name}
+                  </option>
                 ))}
               </select>
               <ChevronDown className={cn(
@@ -752,11 +775,11 @@ export default function QuizGeneratorPage() {
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
               required={isPictureRound}
-              disabled={currentCategoryIsFull}
+              disabled={currentCategoryIsFull || pictureTopicLocked}
               className={cn(
                 "h-8 rounded-md border text-[10px] font-bold focus:ring-0 px-2 w-full",
-                currentCategoryIsFull
-                  ? "bg-[#F7F4EA] border-[#E6DFC8] placeholder:text-[#5F624F]/40"
+                currentCategoryIsFull || pictureTopicLocked
+                  ? "bg-[#F7F4EA] border-[#E6DFC8] text-[#5F624F] placeholder:text-[#5F624F]/40"
                   : "bg-white border-[#E6DFC8] focus:border-[#5C4033]"
               )}
             />
