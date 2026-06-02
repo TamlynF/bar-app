@@ -5243,6 +5243,7 @@ html, body {
   .text-\[\#1a2008\] { color: #1a2008; }
   .bg-\[\#1a2008\]   { background-color: #1a2008; }
   .bg-\[\#26300D\]   { background-color: #26300D; }
+  .divide-\[\#2a3610\] > :not(:last-child) { border-color: #2a3610; }
   .bg-emerald-100 { background-color: var(--color-emerald-100); }
   .bg-lime-100 { background-color: var(--color-lime-100); }
   .bg-cyan-100 { background-color: var(--color-cyan-100); }
