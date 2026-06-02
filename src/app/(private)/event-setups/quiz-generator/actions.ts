@@ -603,32 +603,35 @@ export async function saveMusicSnippetsAction(
 async function generateImageForAnswer(answer: string): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
   if (!apiKey) return null
-  // Use Imagen 3 for stable image generation
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${apiKey}`
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-image:generateContent?key=${apiKey}`
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        instances: [{ prompt:
+        contents: [{ parts: [{ text:
           `A clear, high-quality photograph of ${answer} for a pub quiz picture round. ` +
           `Clean background. Subject clearly visible and fills the frame. No text overlays. No watermarks.`
-        }],
-        parameters: { sampleCount: 1, aspectRatio: '1:1' },
+        }] }],
+        generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
       }),
     })
     if (!res.ok) {
       const errBody = await res.text()
-      console.error(`[imagen] ${answer}: HTTP ${res.status}`, errBody)
+      console.error(`[img-gen] ${answer}: HTTP ${res.status}`, errBody)
       return null
     }
     const data = await res.json()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const prediction = data?.predictions?.[0] as any
-    if (!prediction?.bytesBase64Encoded) return null
-    return `data:${prediction.mimeType ?? 'image/png'};base64,${prediction.bytesBase64Encoded}`
+    const parts: any[] = data?.candidates?.[0]?.content?.parts ?? []
+    const imagePart = parts.find((p) => p.inlineData?.data)
+    if (!imagePart) {
+      console.error(`[img-gen] ${answer}: no inlineData in response`, JSON.stringify(data).slice(0, 300))
+      return null
+    }
+    return `data:${imagePart.inlineData.mimeType};base64,${imagePart.inlineData.data}`
   } catch (err) {
-    console.error(`[imagen] ${answer}:`, err)
+    console.error(`[img-gen] ${answer}:`, err)
     return null
   }
 }
