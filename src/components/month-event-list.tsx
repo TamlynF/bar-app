@@ -327,12 +327,12 @@ function EventCluster({ events, isPast }: { events: MonthEvent[]; isPast: boolea
   const dateObj = parseDate(events[0].date);
   const inner = (
     <div
-      className={`flex items-stretch gap-3 px-4 py-3 transition-colors ${
+      className={`flex items-stretch gap-3 px-4 py-3 transition-colors bg-[#FDCC4B]/5 ${
         isPast ? "opacity-50" : ""
       }`}
     >
       <EventDateCell dateObj={dateObj} isPast={isPast} count={events.length} />
-      <div className="flex-1 min-w-0 border-l-2 border-[#FDCC4B]/25 pl-3 divide-y divide-[#2a3610]">
+      <div className="flex-1 min-w-0 border-l-2 border-[#FDCC4B]/40 pl-3 divide-y divide-[#2a3610]">
         {events.map((ev) => (
           <div
             key={ev.id}
