@@ -19,7 +19,6 @@ export function RichTextContent({ html, variant, className }: Props) {
         variant === "admin" && "rich-content--admin",
         className
       )}
-      // eslint-disable-next-line react/no-danger
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
