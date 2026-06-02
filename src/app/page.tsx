@@ -150,6 +150,12 @@ export default async function HomePage() {
     serializedMonthEvents.find((e) => e.date >= todayStr) ?? null;
   const isTonight = nextEvent?.date === todayStr;
 
+  const heroSiblings = nextEvent
+    ? serializedMonthEvents.filter(
+        (e) => e.date === nextEvent.date && e.id !== nextEvent.id
+      )
+    : [];
+
   const laterEvents = events
     .filter((e) => parseDate(e.date) > monthEnd)
     .map((e) => ({
@@ -240,13 +246,13 @@ export default async function HomePage() {
         </div>
 
         {/* Hero: the next upcoming event */}
-        {nextEvent && <NextEventHero event={nextEvent} isTonight={isTonight} />}
+        {nextEvent && <NextEventHero event={nextEvent} isTonight={isTonight} siblings={heroSiblings} />}
 
         {/* The rest of the month, split into upcoming (by week) + past (collapsed) */}
         <MonthEventList
           events={serializedMonthEvents}
           todayStr={todayStr}
-          excludeId={nextEvent?.id ?? null}
+          excludeDate={nextEvent?.date ?? null}
         />
 
       {/*   <ScheduleMore events={laterEvents} nextMonthLabel={nextMonthLabel} /> */}

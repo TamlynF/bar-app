@@ -21,54 +21,53 @@ type MonthEvent = {
 
 const ALL = "All";
 
-interface FilterOption {
-  label: string;
-  color: string;
-}
-
 function parseDate(dateStr: string): Date {
   return new Date(dateStr + "T00:00:00");
+}
+
+/** Groups an already-ordered event array into same-date buckets, preserving order. */
+function groupByDate(evs: MonthEvent[]): MonthEvent[][] {
+  const groups: MonthEvent[][] = [];
+  const idx = new Map<string, MonthEvent[]>();
+  for (const ev of evs) {
+    let g = idx.get(ev.date);
+    if (!g) { g = []; idx.set(ev.date, g); groups.push(g); }
+    g.push(ev);
+  }
+  return groups;
 }
 
 /**
  * Renders the current month's events in two clearly separated buckets:
  *
- *  1. UPCOMING (date >= today, excluding the hero event) — grouped by ISO week
+ *  1. UPCOMING (date >= today, excluding the hero date) — grouped by ISO week
  *     (Monday start), always visible, full opacity. Filterable by sub-type via
- *     the chip row.
+ *     the chip row. Same-date events are clustered under one shared date column.
  *  2. PAST (date < today) — collapsed behind an "earlier this month" toggle,
  *     rendered at 50% opacity with struck-through titles. Respects the active
  *     filter, same as the upcoming bucket, and shows a count in its label.
- *
- * The filter chips are derived from the sub-types actually present in the
- * upcoming events (deduped, in first-seen order), prefixed with "All". No chip
- * ever appears that wouldn't match at least one event.
  */
 export function MonthEventList({
   events,
   todayStr,
-  excludeId,
+  excludeDate,
 }: {
   events: MonthEvent[];
   todayStr: string;
-  excludeId: number | null;
+  excludeDate: string | null;
 }) {
   const [showPast, setShowPast] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string>(ALL);
 
   const upcoming = useMemo(
-    () => events.filter((e) => e.date >= todayStr && e.id !== excludeId),
-    [events, todayStr, excludeId]
+    () => events.filter((e) => e.date >= todayStr && e.date !== excludeDate),
+    [events, todayStr, excludeDate]
   );
   const past = useMemo(
     () => events.filter((e) => e.date < todayStr),
     [events, todayStr]
   );
 
-  // Chips: "All" + each distinct sub-type present this month, in first-seen
-  // order (upcoming first, then any sub-types that only appear in past events,
-  // so filtering still reveals them in the collapsed bucket). A type colour
-  // rides along for the active-dot accent.
   const filters = useMemo(() => {
     const seen = new Map<string, string>();
     for (const e of [...upcoming, ...past]) {
@@ -80,7 +79,6 @@ export function MonthEventList({
     ];
   }, [upcoming, past]);
 
-  // If the active filter no longer matches anything (e.g. data changed), fall back to All.
   const effectiveFilter =
     activeFilter === ALL || filters.some((f) => f.label === activeFilter)
       ? activeFilter
@@ -102,7 +100,6 @@ export function MonthEventList({
     [effectiveFilter, past]
   );
 
-  // Group the visible upcoming events by week
   const weeks = useMemo(() => {
     const map = new Map<string, MonthEvent[]>();
     for (const ev of visibleUpcoming) {
@@ -117,8 +114,7 @@ export function MonthEventList({
 
   return (
     <div className="space-y-3">
-      {/* Filter chips — only show if there's more than one option (i.e. at
-          least one sub-type beyond "All") */}
+      {/* Filter chips */}
       {filters.length > 1 && (
         <div
           className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1"
@@ -155,27 +151,26 @@ export function MonthEventList({
         </div>
       )}
 
-      {/* Upcoming, grouped by week */}
-      {Array.from(weeks.entries()).map(([weekKey, weekEvents], index) => {
-        const label = `Week ${index + 1}`;
-
-        return (
-          <div key={weekKey}>
-            <div className="flex items-center gap-2 px-1 mb-1">
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-stone-500">
-                {label}
-              </span>
-              <div className="flex-1 h-px bg-stone-800/50" />
-            </div>
-
-            <div className="bg-[#26300D] border border-white/10 rounded-2xl divide-y divide-[#2a3610] overflow-hidden">
-              {weekEvents.map((ev) => (
-                <EventRow key={ev.id} event={ev} isPast={false} />
-              ))}
-            </div>
+      {/* Upcoming, grouped by week then by date */}
+      {Array.from(weeks.entries()).map(([weekKey, weekEvents], index) => (
+        <div key={weekKey}>
+          <div className="flex items-center gap-2 px-1 mb-1">
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-stone-500">
+              Week {index + 1}
+            </span>
+            <div className="flex-1 h-px bg-stone-800/50" />
           </div>
-        );
-      })}
+          <div className="bg-[#26300D] border border-white/10 rounded-2xl divide-y divide-[#2a3610] overflow-hidden">
+            {groupByDate(weekEvents).map((g) =>
+              g.length === 1 ? (
+                <EventRow key={g[0].id} event={g[0]} isPast={false} />
+              ) : (
+                <EventCluster key={g[0].date} events={g} isPast={false} />
+              )
+            )}
+          </div>
+        </div>
+      ))}
 
       {/* Empty state when the active filter matches nothing this month */}
       {visibleUpcoming.length === 0 &&
@@ -186,7 +181,7 @@ export function MonthEventList({
           </p>
         )}
 
-      {/* Past — collapsed toggle (respects the active filter) */}
+      {/* Past — collapsed toggle */}
       {visiblePast.length > 0 && (
         <div>
           <button
@@ -209,9 +204,13 @@ export function MonthEventList({
 
           {showPast && (
             <div className="bg-[#26300D] border border-white/10 rounded-2xl divide-y divide-[#2a3610] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
-              {visiblePast.map((ev) => (
-                <EventRow key={ev.id} event={ev} isPast />
-              ))}
+              {groupByDate(visiblePast).map((g) =>
+                g.length === 1 ? (
+                  <EventRow key={g[0].id} event={g[0]} isPast />
+                ) : (
+                  <EventCluster key={g[0].date} events={g} isPast />
+                )
+              )}
             </div>
           )}
         </div>
@@ -226,35 +225,49 @@ export function MonthEventList({
   );
 }
 
-function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
-  const dateObj = parseDate(event.date);
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
 
+function EventDateCell({
+  dateObj,
+  isPast,
+  count,
+}: {
+  dateObj: Date;
+  isPast: boolean;
+  count: number;
+}) {
+  return (
+    <div className="shrink-0 w-10 text-center">
+      <p className="text-stone-500 text-[9px] font-black uppercase tracking-widest leading-tight">
+        {format(dateObj, "EEE")}
+      </p>
+      <p
+        className={`text-base font-black tabular-nums leading-none ${
+          isPast ? "text-stone-300" : "text-white"
+        }`}
+      >
+        {format(dateObj, "d")}
+      </p>
+      {count > 1 && (
+        <span className="mt-1 inline-block text-[8px] font-black tabular-nums leading-none text-[#FDCC4B] bg-[#FDCC4B]/10 rounded-full px-1.5 py-0.5">
+          ×{count}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function EventBody({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
   const timeLabel = event.startTimeLabel
     ? `${event.startTimeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ""}`
     : null;
   const subLine = [event.subType, timeLabel].filter(Boolean).join(" · ");
 
-  const inner = (
-    <div
-      className={`flex items-center gap-3 px-4 py-3 transition-colors ${
-        isPast ? "opacity-50" : "hover:bg-white/4"
-      }`}
-    >
-      <div className="shrink-0 w-10 text-center">
-        <p className="text-stone-500 text-[9px] font-black uppercase tracking-widest leading-tight">
-          {format(dateObj, "EEE")}
-        </p>
-        <p
-          className={`text-base font-black tabular-nums leading-none ${
-            isPast ? "text-stone-300" : "text-white"
-          }`}
-        >
-          {format(dateObj, "d")}
-        </p>
-      </div>
-
+  return (
+    <>
       <div className="flex-1 min-w-0">
-        {/* Title — when externalLink exists, wrap title+icon in an inline link */}
         {event.externalLink && !isPast ? (
           <a
             href={event.externalLink}
@@ -305,6 +318,30 @@ function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
           Book
         </a>
       )}
+    </>
+  );
+}
+
+/** Two or more events on the same date — shared date column + gold accent bar. */
+function EventCluster({ events, isPast }: { events: MonthEvent[]; isPast: boolean }) {
+  const dateObj = parseDate(events[0].date);
+  const inner = (
+    <div
+      className={`flex items-stretch gap-3 px-4 py-3 transition-colors ${
+        isPast ? "opacity-50" : ""
+      }`}
+    >
+      <EventDateCell dateObj={dateObj} isPast={isPast} count={events.length} />
+      <div className="flex-1 min-w-0 border-l-2 border-[#FDCC4B]/25 pl-3 divide-y divide-[#2a3610]">
+        {events.map((ev) => (
+          <div
+            key={ev.id}
+            className="py-2.5 first:pt-0 last:pb-0 flex items-center gap-3 min-w-0"
+          >
+            <EventBody event={ev} isPast={isPast} />
+          </div>
+        ))}
+      </div>
     </div>
   );
 
@@ -319,6 +356,32 @@ function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
       </button>
     );
   }
+  return inner;
+}
 
+function EventRow({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
+  const dateObj = parseDate(event.date);
+  const inner = (
+    <div
+      className={`flex items-center gap-3 px-4 py-3 transition-colors ${
+        isPast ? "opacity-50" : "hover:bg-white/4"
+      }`}
+    >
+      <EventDateCell dateObj={dateObj} isPast={isPast} count={1} />
+      <EventBody event={event} isPast={isPast} />
+    </div>
+  );
+
+  if (isPast) {
+    return (
+      <button
+        type="button"
+        className="w-full text-left"
+        onClick={() => toast("This event has already happened")}
+      >
+        {inner}
+      </button>
+    );
+  }
   return inner;
 }
