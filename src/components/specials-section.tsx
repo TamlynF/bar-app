@@ -30,7 +30,7 @@ export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
   if (specials.length === 0) return null;
 
   return (
-    <section id="specials" className="max-w-5xl mx-auto px-4 sm:px-6 pb-4 sm:pb-14">
+    <section id="specials" className="max-w-5xl mx-auto px-2 sm:px-6 pb-4 sm:pb-14">
       <div className="flex items-center gap-2.5 mb-4">
         <span className="text-xs font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
           Specials
@@ -38,7 +38,7 @@ export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
         <div className="flex-1 h-px bg-[#FDCC4B]/20" />
       </div>
 
-      <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 items-start">
+      <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-2 px-2 items-start">
         {specials.map((s) => (
           <SpecialCard key={s.id} special={s} />
         ))}

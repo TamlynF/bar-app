@@ -231,7 +231,7 @@ export default async function HomePage() {
       <SpecialsSection specials={specials} />
 
       {/* Section 2: Events */}
-      <section id="schedule" className="max-w-5xl mx-auto px-4 sm:px-6 pb-6 sm:pb-10">
+      <section id="schedule" className="max-w-5xl mx-auto px-2 sm:px-6 pb-6 sm:pb-10">
         <div className="flex items-center gap-2.5 mb-4">
           <span className="text-xs font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
             What&apos;s On
