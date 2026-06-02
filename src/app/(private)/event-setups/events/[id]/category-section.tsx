@@ -88,6 +88,14 @@ export default function CategorySection({ eventId, category_name, question_count
       toast.error("Fields cannot be empty");
       return;
     }
+    const currentQ = questions.find((q) => q.id === id);
+    if (editForm.questionNo !== (currentQ?.question_no ?? 0)) {
+      const duplicate = questions.find((q) => q.id !== id && q.question_no === editForm.questionNo);
+      if (duplicate) {
+        toast.error(`Q${editForm.questionNo} is already taken`);
+        return;
+      }
+    }
     setIsPending(true);
     try {
       let imageData: { base64: string; mimeType: string; oldImageUrl: string | null } | null = null;
@@ -206,6 +214,22 @@ export default function CategorySection({ eventId, category_name, question_count
                   )}>
                     {isEditing ? (
                       <div className="space-y-2.5 animate-in fade-in duration-200">
+                        <div className="flex items-center gap-2">
+                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Q</label>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            title="Question number"
+                            min={1}
+                            max={questions.length}
+                            value={editForm.questionNo}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
+                              setEditForm({ ...editForm, questionNo: Math.max(1, parseInt(val) || 1) });
+                            }}
+                            className="w-16 text-[13px] font-black text-[#5C4033] px-3 py-2 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10 text-center tabular-nums"
+                          />
+                        </div>
                         {isPicture && q.image_url && (
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Image</label>
@@ -223,35 +247,23 @@ export default function CategorySection({ eventId, category_name, question_count
                           </div>
                         )}
                         {!isPicture && (
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Question</label>
                             <textarea
                               title="Edit question"
                               value={editForm.question}
                               onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                              className="w-full text-[13px] font-semibold min-h-[60px] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none resize-none"
+                              className="w-full text-[13px] font-semibold leading-relaxed min-h-[120px] pl-4 pr-3.5 py-3 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
                             />
                           </div>
                         )}
-                        <div className="space-y-1">
+                        <div className="space-y-1.5">
                           <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Answer</label>
                           <input
                             title="Edit answer"
                             value={editForm.answer}
                             onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })}
-                            className="w-full text-[13px] font-black text-[#5C4033] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10"
-                          />
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Question No.</label>
-                          <input
-                            type="number"
-                            title="Question number"
-                            min={1}
-                            max={questions.length}
-                            value={editForm.questionNo}
-                            onChange={(e) => setEditForm({ ...editForm, questionNo: Math.max(1, parseInt(e.target.value) || 1) })}
-                            className="w-24 text-[13px] font-black text-[#5C4033] p-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10"
+                            className="w-full text-[13px] font-black text-[#5C4033] pl-4 pr-3.5 py-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none h-11"
                           />
                         </div>
                         <div className="flex gap-2">
