@@ -1036,7 +1036,7 @@ export default function QuizGeneratorPage() {
           </div>
 
           {/* Picture cards grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {pictureItems.map((item, idx) => {
               const isSelected = selectedPictureIndices.has(idx)
               return (
@@ -1057,10 +1057,10 @@ export default function QuizGeneratorPage() {
                 >
                   {item.imageUrl ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
-                    <img src={item.imageUrl} alt={item.answer} className="w-full h-36 object-cover" />
+                    <img src={item.imageUrl} alt={item.answer} className="w-full h-52 object-cover" />
                   ) : (
-                    <div className="w-full h-36 bg-[#F7F4EA] flex items-center justify-center">
-                      <ImageIcon className="w-8 h-8 text-[#E6DFC8]" />
+                    <div className="w-full h-52 bg-[#F7F4EA] flex items-center justify-center">
+                      <ImageIcon className="w-10 h-10 text-[#E6DFC8]" />
                     </div>
                   )}
                   <div className="p-2 flex items-center justify-between gap-1.5">
