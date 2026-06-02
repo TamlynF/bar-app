@@ -5224,6 +5224,7 @@ html, body {
   .ev-text[style*="--ev-c"]  { color: var(--ev-c); }
   .ev-text[style*="--badge-c"] { color: var(--badge-c); }
   .ev-dot[style*="--key-c"]  { background-color: var(--key-c); }
+  .bg-\(--chip-c\)[style*="--chip-c"] { background-color: var(--chip-c); }
   .month-title { font-size: var(--month-fs); }
   @media (min-width: 640px) { .month-title { font-size: var(--month-fs-sm); } }
 
