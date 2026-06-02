@@ -67,7 +67,7 @@ export function NextEventHero({
               className="inline-flex items-center gap-1 min-w-0 max-w-full"
             >
               <p
-                className="ev-text text-sm font-black leading-tight truncate underline underline-offset-2"
+                className="ev-text text-sm font-black leading-tight truncate underline underline-offset-2 pb-px"
                 style={{ "--ev-c": event.color } as React.CSSProperties}
               >
                 {event.title}
