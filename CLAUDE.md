@@ -19,15 +19,9 @@ There are no tests. Do not add a test framework unless explicitly requested.
 
 ## Git workflow
 
-Commit and push to GitHub regularly throughout work — after each meaningful unit (feature complete, bug fixed, page built). Never leave a session's work uncommitted.
+**Do not commit or push changes.** All git operations (staging, committing, pushing) are done manually by the user.
 
-```bash
-git add <specific files>   # Stage specific files, never git add -A or git add .
-git commit -m "message"
-git push origin production
-```
-
-**Commit message conventions:**
+**Commit message conventions (for reference):**
 - `add: <thing>` — new feature or file
 - `fix: <thing>` — bug fix
 - `update: <thing>` — enhancement to existing feature
