@@ -155,7 +155,7 @@ export function MonthEventList({
               <div className="flex-1 h-px bg-stone-800/50" />
             </div>
 
-            <div className="border border-white/10 rounded-2xl divide-y divide-white/[0.06] overflow-hidden">
+            <div className="border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden">
               {weekEvents.map((ev) => (
                 <EventRow key={ev.id} event={ev} isPast={false} />
               ))}
@@ -195,7 +195,7 @@ export function MonthEventList({
           </button>
 
           {showPast && (
-            <div className="border border-white/10 rounded-2xl divide-y divide-white/[0.06] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
               {visiblePast.map((ev) => (
                 <EventRow key={ev.id} event={ev} isPast />
               ))}
