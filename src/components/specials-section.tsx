@@ -38,7 +38,7 @@ export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
         <div className="flex-1 h-px bg-[#FDCC4B]/20" />
       </div>
 
-      <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4">
+      <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 items-start">
         {specials.map((s) => (
           <SpecialCard key={s.id} special={s} />
         ))}
@@ -55,11 +55,11 @@ function SpecialCard({ special }: { special: SpecialRow }) {
     <button
       type="button"
       onClick={() => setFlipped((f) => !f)}
-      className="shrink-0 snap-start w-56 sm:w-64 h-20 sm:h-24 rounded-2xl border border-white/10 bg-[#26300D] overflow-hidden text-left cursor-pointer"
+      className="shrink-0 snap-start w-56 sm:w-64 min-h-20 sm:min-h-24 rounded-2xl border border-white/10 bg-[#26300D] overflow-hidden text-left cursor-pointer"
     >
       {!flipped ? (
         /* Front — circle thumbnail + info */
-        <div className="flex h-full gap-2.5 p-2 items-center animate-in fade-in duration-200">
+        <div className="flex h-20 sm:h-24 gap-2.5 p-2 items-center animate-in fade-in duration-200">
           <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full overflow-hidden border border-white/10 bg-white/5">
             {special.image_url ? (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -88,7 +88,7 @@ function SpecialCard({ special }: { special: SpecialRow }) {
         </div>
       ) : (
         /* Back — description + badges */
-        <div className="flex flex-col justify-center h-full p-3 animate-in fade-in duration-200 gap-1.5 overflow-y-auto">
+        <div className="flex flex-col p-3 animate-in fade-in duration-200 gap-1.5">
           {special.description && (
             <div
               className="text-[10px] text-stone-300 font-medium leading-snug rich-content rich-content--public"
