@@ -737,6 +737,15 @@ html, body {
   .h-32 {
     height: calc(var(--spacing) * 32);
   }
+  .h-36 {
+    height: calc(var(--spacing) * 36);
+  }
+  .h-40 {
+    height: calc(var(--spacing) * 40);
+  }
+  .h-52 {
+    height: calc(var(--spacing) * 52);
+  }
   .h-64 {
     height: calc(var(--spacing) * 64);
   }
@@ -2119,6 +2128,9 @@ html, body {
   }
   .pl-11 {
     padding-left: calc(var(--spacing) * 11);
+  }
+  .min-h-\[80px\] {
+    min-height: 80px;
   }
   .min-h-\[120px\] {
     min-height: 120px;
@@ -5464,5 +5476,23 @@ html, body {
   .bg-\[\#FDCC4B\]\/10 { background-color: color-mix(in oklab, #FDCC4B 10%, transparent); }
   .border-\[\#FDCC4B\]\/20 { border-color: color-mix(in oklab, #FDCC4B 20%, transparent); }
   .via-\[\#FDCC4B\]\/20 { --tw-gradient-via: color-mix(in oklab, #FDCC4B 20%, transparent); }
+
+  /* ── Admin quiz card utilities ── */
+
+  /* Espresso opacity variants */
+  .bg-\[\#5C4033\]\/5 { background-color: color-mix(in oklab, #5C4033 5%, transparent); }
+  .bg-\[\#5C4033\]\/10 { background-color: color-mix(in oklab, #5C4033 10%, transparent); }
+  .bg-\[\#5C4033\]\/15 { background-color: color-mix(in oklab, #5C4033 15%, transparent); }
+  .border-\[\#5C4033\]\/15 { border-color: color-mix(in oklab, #5C4033 15%, transparent); }
+  .ring-\[\#5C4033\]\/5 { --tw-ring-color: color-mix(in oklab, #5C4033 5%, transparent); }
+
+  /* Cream opacity variant */
+  .bg-\[\#F7F4EA\]\/30 { background-color: color-mix(in oklab, #F7F4EA 30%, transparent); }
+
+  /* Animation */
+  .zoom-in-95 { --tw-enter-scale: .95; }
+
+  /* CSS custom property background */
+  .bg-\(--spotify-bg\) { background-color: var(--spotify-bg); }
 
 }

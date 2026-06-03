@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload } from "lucide-react";
+import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SpotifyPlayer } from "@/components/spotify-player";
@@ -199,9 +199,9 @@ export default function CategorySection({ eventId, category_name, question_count
       {/* Questions body */}
       {open && (
         <>
-          <div className="divide-y divide-[#E6DFC8]">
+          <div className="p-3 space-y-3">
             {count === 0 ? (
-              <div className="px-5 py-8 text-center">
+              <div className="py-8 text-center">
                 <BookOpen className="w-6 h-6 text-[#5F624F] opacity-20 mx-auto mb-2" />
                 <p className="text-xs font-black text-[#5F624F] opacity-40 uppercase tracking-wide">
                   No questions yet
@@ -210,14 +210,13 @@ export default function CategorySection({ eventId, category_name, question_count
             ) : (
               questions.map((q, idx) => {
                 const isEditing = editingId === q.id;
-                console.log("questions", q);
                 return (
                   <div key={q.id} className={cn(
-                    "px-3 py-3 transition-all",
-                    isEditing && "bg-[#F7F4EA]/50"
+                    "bg-white border-2 rounded-2xl p-4 shadow-sm relative overflow-hidden transition-all",
+                    isEditing ? "border-[#5C4033] ring-4 ring-[#5C4033]/5" : "border-[#E6DFC8]"
                   )}>
                     {isEditing ? (
-                      <div className="space-y-2.5 animate-in fade-in duration-200">
+                      <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
                         <div className="flex items-center gap-2">
                           <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Q</label>
                           <input
@@ -241,7 +240,7 @@ export default function CategorySection({ eventId, category_name, question_count
                             <img
                               src={newImagePreview ?? q.image_url}
                               alt={q.answer_text}
-                              className="w-full h-36 object-cover rounded-xl"
+                              className="w-full h-40 object-cover rounded-xl"
                             />
                             <label className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border-2 border-dashed border-[#E6DFC8] text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033] cursor-pointer transition-all">
                               <Upload className="w-3.5 h-3.5" />
@@ -252,49 +251,47 @@ export default function CategorySection({ eventId, category_name, question_count
                         )}
                         {!isPicture && (
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Question</label>
+                            <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide ml-1">Question</label>
                             <textarea
                               title="Edit question"
                               value={editForm.question}
                               onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                              className="w-full text-[13px] font-semibold leading-relaxed min-h-[120px] pl-4 pr-3.5 py-3 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
+                              className="w-full text-sm font-semibold leading-relaxed min-h-[120px] p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
                             />
                           </div>
                         )}
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Answer</label>
+                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide ml-1">Answer</label>
                           <input
                             title="Edit answer"
                             value={editForm.answer}
                             onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })}
-                            className="w-full text-[13px] font-black text-[#5C4033] pl-4 pr-3.5 py-2.5 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none h-11"
+                            className="w-full text-sm font-black text-[#5C4033] bg-[#5C4033]/10 border-2 border-[#5C4033]/15 focus:border-[#5C4033] rounded-xl outline-none h-11 px-3"
                           />
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 pt-1">
                           <Button
                             onClick={() => saveEdit(q.id)}
                             disabled={isPending}
-                            className="flex-1 bg-[#5C4033] text-white font-black uppercase text-[10px] tracking-wide h-9 rounded-xl"
+                            className="flex-1 bg-[#5C4033] text-white font-black uppercase text-[10px] tracking-wide h-10 rounded-xl"
                           >
-                            {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-1.5" /> Save</>}
+                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-2" /> Save</>}
                           </Button>
                           <Button
                             variant="outline"
                             onClick={cancelEditing}
                             disabled={isPending}
-                            className="px-3 border border-[#E6DFC8] text-[#5F624F] font-bold uppercase text-[10px] h-9 rounded-xl"
+                            className="px-4 border-2 border-[#E6DFC8] text-[#5F624F] font-bold uppercase text-[10px] h-10 rounded-xl"
                           >
                             <X className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-2">
-                        <div className="flex items-start gap-3">
-                          <span className="text-[10px] font-black text-[#5C4033]/20 mt-0.5 shrink-0 tabular-nums w-5 text-right">
-                            Q{q.question_no ?? idx + 1}:
-                          </span>
-                          <div className="flex-1 min-w-0 space-y-1.5">
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-4">
+                          <span className="text-[10px] font-black text-[#5C4033]/20 mt-1 shrink-0">Q{q.question_no ?? idx + 1}</span>
+                          <div className="space-y-3 flex-1 min-w-0">
                             {isHigherOrLower && q.hint_year ? (
                               <>
                                 <p className="text-[10px] font-black text-amber-700 leading-tight">
@@ -311,7 +308,7 @@ export default function CategorySection({ eventId, category_name, question_count
                                   <img
                                     src={q.image_url}
                                     alt={q.answer_text}
-                                    className="w-full h-36 object-cover rounded-xl mb-1"
+                                    className="w-full h-40 object-cover rounded-xl"
                                   />
                                 ) : (
                                   (!includeSpotify || !q.spotify_track_id) && (
@@ -320,36 +317,35 @@ export default function CategorySection({ eventId, category_name, question_count
                                     </p>
                                   )
                                 )}
-                                <p className="text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-1.5 w-fit">
-                                  {q.answer_text}
-                                </p>
+                                <div className="flex items-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
+                                  <Target className="w-3 h-3 text-white/50" />
+                                  <span className="text-xs font-black tracking-tight">{q.answer_text}</span>
+                                </div>
                               </>
                             )}
                           </div>
-                          <div className="flex flex-col gap-1 shrink-0">
+                          <div className="flex flex-col gap-2 shrink-0">
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => startEditing(q)}
-                              className="h-7 w-7 rounded-lg text-orange-500 hover:bg-orange-50 hover:text-orange-600"
+                              className="h-9 w-9 rounded-xl bg-[#F7F4EA] text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
                             >
-                              <Edit2 className="w-3 h-3" />
+                              <Edit2 className="w-4 h-4" />
                             </Button>
                             <Button
                               variant="ghost"
                               size="icon"
                               onClick={() => deleteQuestion(q.id)}
                               disabled={isPending}
-                              className="h-7 w-7 rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600"
+                              className="h-9 w-9 rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
                             >
-                              <Trash2 className="w-3 h-3" />
+                              <Trash2 className="w-4 h-4" />
                             </Button>
                           </div>
                         </div>
                         {includeSpotify && q.spotify_track_id && (
-                          <div className="ml-8">
-                            <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
-                          </div>
+                          <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
                         )}
                       </div>
                     )}
