@@ -115,6 +115,7 @@ export default function QuizGeneratorPage() {
   const [selectedPictureIndices, setSelectedPictureIndices] = useState<Set<number>>(new Set())
   const [pictureTopicLocked, setPictureTopicLocked] = useState(false)
   const [previousPictureAnswers, setPreviousPictureAnswers] = useState<string[]>([])
+  const [formOpen, setFormOpen] = useState(true)
 
   // Check Spotify connection on mount
   useEffect(() => {
@@ -719,125 +720,157 @@ export default function QuizGeneratorPage() {
       </Sheet>
 
       {/* GENERATOR FORM */}
-      <form onSubmit={handleGenerate} className="bg-[#F7F4EA] border border-[#E6DFC8] p-3 sm:p-4 rounded-xl shadow-sm">
-        <div className="grid grid-cols-2 gap-x-3 gap-y-4">
-          {/* Row 1 col 1: Event */}
-          <div>
-            <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 mb-0.5 block text-left">Event</Label>
-            <div className="relative">
-              <select
-                title='Event'
-                value={selectedEventId}
-                onChange={handleEventChange}
-                className="w-full h-8 rounded-md border border-[#E6DFC8] bg-white pl-2 pr-6 text-[10px] font-bold text-[#5C4033] appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none focus:border-[#5C4033] transition-all uppercase"
-              >
-                {upcomingEvents.map(event => (
-                  <option key={event.id} value={event.id}>{format(new Date(event.date), "dd MMM yyyy")}</option>
-                ))}
-              </select>
-              <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#5C4033] opacity-40 pointer-events-none" />
+      <form onSubmit={handleGenerate} className="bg-white border border-[#E6DFC8] rounded-2xl shadow-sm overflow-hidden">
+        {/* Collapsible header — Event & Category on same row */}
+        <button
+          type="button"
+          onClick={() => setFormOpen(o => !o)}
+          className="w-full flex items-center justify-between px-4 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+        >
+          <div className="flex items-center gap-3 min-w-0">
+            <Sparkles className="w-4 h-4 text-[#5C4033] shrink-0" />
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] font-black text-[#5C4033] uppercase tracking-tight truncate">
+                {category || 'Select Category'}
+              </span>
+              <span className="text-[10px] text-[#5F624F]/50 font-bold shrink-0">/</span>
+              <span className="text-[11px] font-bold text-[#5F624F] uppercase tracking-tight shrink-0">
+                {selectedEventId ? format(new Date(upcomingEvents.find(e => String(e.id) === selectedEventId)?.date || ''), "dd MMM") : '—'}
+              </span>
             </div>
           </div>
+          <ChevronDown className={cn(
+            "w-4 h-4 text-[#5F624F] transition-transform duration-200 shrink-0",
+            formOpen && "rotate-180"
+          )} />
+        </button>
 
-          {/* Row 1 col 2: Category */}
-          <div>
-            <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 mb-0.5 block text-left">Category</Label>
-            <div className="relative">
-              <select
-                title='Category'
-                value={category}
-                onChange={handleCategoryChange}
-                className={cn(
-                  "w-full h-8 rounded-md border pl-2 pr-6 text-[10px] font-bold appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none transition-all uppercase",
-                  currentCategoryIsFull
-                    ? "border-red-200 bg-red-50 text-red-600"
-                    : "border-[#E6DFC8] bg-white text-[#5C4033] focus:border-[#5C4033]"
-                )}
-              >
-                {categories.map(opt => (
-                  <option key={opt.id} value={opt.category_name}>
-                    {opt.order_no != null ? `${opt.order_no}. ` : ''}{opt.category_name}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className={cn(
-                "absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 pointer-events-none",
-                currentCategoryIsFull ? "text-red-400" : "text-[#5F624F] opacity-40"
-              )} />
-            </div>
-          </div>
-
-          {/* Row 2: Topic full width */}
-          <div className="col-span-2">
-            <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 mb-0.5 block text-left">
-              {isMusicSnippets ? 'Theme' : 'Topic'}
-              {isPictureRound && <span className="text-red-500 ml-0.5">*</span>}
-            </Label>
-            <Input
-              placeholder={isPictureRound ? "e.g. Dog Breeds, World Flags, Famous Landmarks..." : isMusicSnippets ? "e.g. 80s, Rock, Christmas..." : "e.g. Disney, 90s..."}
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              required={isPictureRound}
-              disabled={currentCategoryIsFull || pictureTopicLocked}
-              className={cn(
-                "h-8 rounded-md border text-[10px] font-bold focus:ring-0 px-2 w-full",
-                currentCategoryIsFull || pictureTopicLocked
-                  ? "bg-[#F7F4EA] border-[#E6DFC8] text-[#5F624F] placeholder:text-[#5F624F]/40"
-                  : "bg-white border-[#E6DFC8] focus:border-[#5C4033]"
-              )}
-            />
-          </div>
-
-          {/* Row 3: Difficulty + Generate button */}
-          <div className="col-span-2">
-            <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 mb-0.5 block text-left">Difficulty</Label>
-            <div className="flex items-center justify-between gap-1.5">
-              <div className="relative">
+        {/* Collapsible body */}
+        {formOpen && (
+          <div className="p-4 space-y-4 border-t border-[#E6DFC8]">
+            {/* Event & Category — same row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">Event</Label>
+                <div className="relative">
                   <select
-                    title="Difficulty"
-                    value={difficulty}
-                    onChange={(e) => setDifficulty(e.target.value)}
-                    style={{ minWidth: '180px' }}
-                    className="h-8 rounded-md border border-[#E6DFC8] bg-white pl-2 pr-6 text-[10px] font-bold text-[#5C4033] appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none focus:border-[#5C4033] transition-all uppercase"
+                    title='Event'
+                    value={selectedEventId}
+                    onChange={handleEventChange}
+                    className="w-full h-11 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] pl-3 pr-8 text-xs font-bold text-[#5C4033] appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none focus:border-[#5C4033] transition-all uppercase"
                   >
-                    <option value="Easy">Easy</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Difficult">Hard</option>
+                    {upcomingEvents.map(event => (
+                      <option key={event.id} value={event.id}>{format(new Date(event.date), "dd MMM yyyy")}</option>
+                    ))}
                   </select>
-                  <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3 h-3 text-[#5C4033] opacity-40 pointer-events-none" />
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5C4033] opacity-40 pointer-events-none" />
                 </div>
-              <Button
-                type="submit"
-                disabled={isLoading || categories.length === 0 || currentCategoryIsFull || (isPictureRound && !topic.trim())}
-                className="h-8 px-6 rounded-md bg-[#5C4033] text-white font-black uppercase tracking-wider text-[10px] shadow-sm active:scale-95 transition-all hover:bg-[#5C4033]/90"
-              >
-                {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
-                  <span className="flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" />
-                    Generate
-                  </span>
-                )}
-              </Button>
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">Category</Label>
+                <div className="relative">
+                  <select
+                    title='Category'
+                    value={category}
+                    onChange={handleCategoryChange}
+                    className={cn(
+                      "w-full h-11 rounded-xl border pl-3 pr-8 text-xs font-bold appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none transition-all uppercase",
+                      currentCategoryIsFull
+                        ? "border-red-200 bg-red-50 text-red-600"
+                        : "border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] focus:border-[#5C4033]"
+                    )}
+                  >
+                    {categories.map(opt => (
+                      <option key={opt.id} value={opt.category_name}>
+                        {opt.order_no != null ? `${opt.order_no}. ` : ''}{opt.category_name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className={cn(
+                    "absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none",
+                    currentCategoryIsFull ? "text-red-400" : "text-[#5F624F] opacity-40"
+                  )} />
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-        {currentCategoryIsFull && (
-          <p className="text-[10px] font-black text-red-600 uppercase tracking-wide mt-1 ml-0.5 animate-in fade-in slide-in-from-top-1">
-            <AlertCircle className="inline w-2.5 h-2.5 mr-0.5 -mt-0.5" />
-            {category} is full for this date
-          </p>
-        )}
-        {isMusicSnippets && !spotifyConnected && (
-          <div className="mt-2 flex items-center gap-2">
-            <a
-              href={`/api/spotify/login?return=${encodeURIComponent(`/event-setups/quiz-generator?category=${encodeURIComponent(category)}${selectedEventId ? `&event_id=${selectedEventId}` : ''}`)}`}
-              style={{ backgroundColor: '#1DB954' }}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-white rounded-md text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+
+            {/* Topic */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">
+                {isMusicSnippets ? 'Theme' : 'Topic'}
+                {isPictureRound && <span className="text-red-500 ml-0.5">*</span>}
+              </Label>
+              <Input
+                placeholder={isPictureRound ? "e.g. Dog Breeds, World Flags, Famous Landmarks..." : isMusicSnippets ? "e.g. 80s, Rock, Christmas..." : "e.g. Disney, 90s..."}
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                required={isPictureRound}
+                disabled={currentCategoryIsFull || pictureTopicLocked}
+                className={cn(
+                  "h-11 rounded-xl border text-xs font-bold focus:ring-0 px-3 w-full",
+                  currentCategoryIsFull || pictureTopicLocked
+                    ? "bg-[#F7F4EA] border-[#E6DFC8] text-[#5F624F] placeholder:text-[#5F624F]/40"
+                    : "bg-[#F7F4EA] border-[#E6DFC8] focus:border-[#5C4033]"
+                )}
+              />
+            </div>
+
+            {/* Difficulty — segmented buttons */}
+            <div className="space-y-1.5">
+              <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">Difficulty</Label>
+              <div className="flex gap-2">
+                {[{ value: 'Easy', label: 'Easy' }, { value: 'Medium', label: 'Medium' }, { value: 'Difficult', label: 'Hard' }].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setDifficulty(opt.value)}
+                    className={cn(
+                      "flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all",
+                      difficulty === opt.value
+                        ? "bg-[#5C4033] text-white shadow-sm"
+                        : "bg-[#F7F4EA] border border-[#E6DFC8] text-[#5F624F] hover:bg-[#E6DFC8]/50"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Generate button — full width */}
+            <Button
+              type="submit"
+              disabled={isLoading || categories.length === 0 || currentCategoryIsFull || (isPictureRound && !topic.trim())}
+              className="w-full h-12 rounded-xl bg-[#5C4033] text-white font-black uppercase tracking-wider text-xs shadow-sm active:scale-[0.98] transition-all hover:bg-[#5C4033]/90"
             >
-              <Music className="w-3 h-3" />
-              Connect Spotify
-            </a>
-            <span className="text-[10px] text-[#5F624F]">Required to play songs</span>
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
+                <span className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4" />
+                  Generate
+                </span>
+              )}
+            </Button>
+
+            {currentCategoryIsFull && (
+              <p className="text-[10px] font-black text-red-600 uppercase tracking-wide ml-0.5 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle className="inline w-2.5 h-2.5 mr-0.5 -mt-0.5" />
+                {category} is full for this date
+              </p>
+            )}
+            {isMusicSnippets && !spotifyConnected && (
+              <div className="flex items-center gap-2">
+                <a
+                  href={`/api/spotify/login?return=${encodeURIComponent(`/event-setups/quiz-generator?category=${encodeURIComponent(category)}${selectedEventId ? `&event_id=${selectedEventId}` : ''}`)}`}
+                  style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-(--spotify-bg) text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+                >
+                  <Music className="w-3.5 h-3.5" />
+                  Connect Spotify
+                </a>
+                <span className="text-[10px] text-[#5F624F]">Required to play songs</span>
+              </div>
+            )}
           </div>
         )}
       </form>

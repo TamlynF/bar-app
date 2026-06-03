@@ -2099,6 +2099,9 @@ html, body {
   .pl-2 {
     padding-left: calc(var(--spacing) * 2);
   }
+  .pl-3 {
+    padding-left: calc(var(--spacing) * 3);
+  }
   .pl-3\.5 {
     padding-left: calc(var(--spacing) * 3.5);
   }
@@ -2131,6 +2134,11 @@ html, body {
   }
   .font-mono {
     font-family: var(--font-mono);
+  }
+  .focus\:border-\[\#5C4033\] {
+    &:focus {
+        border-color: #5C4033;
+    }
   }
   .text-2xl {
     font-size: var(--text-2xl);
