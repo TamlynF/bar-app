@@ -1012,6 +1012,9 @@ html, body {
   .grid-cols-2 {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+  .grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
   .grid-cols-5 {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
@@ -5488,6 +5491,10 @@ html, body {
 
   /* Cream opacity variant */
   .bg-\[\#F7F4EA\]\/30 { background-color: color-mix(in oklab, #F7F4EA 30%, transparent); }
+
+  /* Cream/border opacity variants */
+  .bg-\[\#E6DFC8\]\/60 { background-color: color-mix(in oklab, #E6DFC8 60%, transparent); }
+  .bg-\[\#E6DFC8\]\/80 { background-color: color-mix(in oklab, #E6DFC8 80%, transparent); }
 
   /* Animation */
   .zoom-in-95 { --tw-enter-scale: .95; }

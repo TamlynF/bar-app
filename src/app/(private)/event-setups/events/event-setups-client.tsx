@@ -164,6 +164,13 @@ export default function EventsClient({
   const [formIsBookable, setFormIsBookable] = useState(false);
   const [formBookingConfig, setFormBookingConfig] = useState<BookingConfig>({});
   const [linkCopied, setLinkCopied] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [quizOpen, setQuizOpen] = useState(true);
+  const [bookingsOpen, setBookingsOpen] = useState(true);
+  const [bookingSettingsOpen, setBookingSettingsOpen] = useState(false);
+  const [bookingCustomOpen, setBookingCustomOpen] = useState(false);
+  const [pageFieldsOpen, setPageFieldsOpen] = useState(true);
+  const [pageCustomOpen, setPageCustomOpen] = useState(true);
 
   // Auto-open sheet when returning from another page (?open=id)
   useEffect(() => {
@@ -563,7 +570,11 @@ export default function EventsClient({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
-                  {isAdding ? "New Event" : isEditing ? "Edit Event" : "View Event"}
+                  {isAdding ? "New Event" : isEditing ? "Edit Event" : (() => {
+                    const et = selected ? eventTypes.find((e) => e.id === selected.event_types_id) : null;
+                    const subType = toTitleCase(et?.sub_type);
+                    return subType ? `${subType} Event` : "View Event";
+                  })()}
                 </SheetTitle>
                 {selected && (
                   <div className="flex items-center gap-1.5 mt-1">
@@ -599,137 +610,263 @@ export default function EventsClient({
               const bk = getBookingStats(selected.id, bookings);
               return (
                 <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
-                  {/* Event details */}
+                  {/* Event Details — collapsible */}
                   <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                    <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
-                    <DetailCell label="Date" value={formatDate(selected.date)} />
-                    <DetailCell
-                      label="Time"
-                      value={
-                        selected.start_time || selected.end_time
-                          ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}`
-                          : "—"
-                      }
-                    />
-                    <DetailCell label="Host" value={host?.full_name ?? "—"} />
-                    <DetailCell
-                      label="Payment"
-                      value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"}
-                    />
-                    <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
-                    <DetailCell label="Fully Booked" value={selected.is_fully_booked ? "Yes" : "No"} />
-                    {et?.type === "games" && (
+                    <button
+                      type="button"
+                      onClick={() => setDetailsOpen(o => !o)}
+                      className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+                    >
+                      <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Event Details</span>
+                      <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", detailsOpen && "rotate-180")} />
+                    </button>
+                    {detailsOpen && (
                       <>
-                        <DetailCell label="Group Name" value={selected.group_name || "—"} />
-                        <DetailCell label="Linked Booking" value={selected.booking_id ? `#${selected.booking_id}` : "—"} />
+                        <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
+                        <DetailCell label="Date" value={formatDate(selected.date)} />
+                        <DetailCell
+                          label="Time"
+                          value={
+                            selected.start_time || selected.end_time
+                              ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}`
+                              : "—"
+                          }
+                        />
+                        <DetailCell label="Host" value={host?.full_name ?? "—"} />
+                        <DetailCell
+                          label="Payment"
+                          value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"}
+                        />
+                        <DetailCell label="Seating Required" value={selected.seating_required ? "Yes" : "No"} />
+                        {selected.description && (
+                          <DetailCell label="Description" value={selected.description} />
+                        )}
+                        {selected.external_link && (
+                          <DetailCell label="External Link" value={selected.external_link} />
+                        )}
                       </>
                     )}
-                    {selected.description && (
-                      <DetailCell label="Description" value={selected.description} />
-                    )}
-                    {selected.external_link && (
-                      <DetailCell label="External Link" value={selected.external_link} />
-                    )}
-                    <DetailCell label="Booking URL" value={selected.booking_page_url ?? "—"} />
-                    <DetailCell label="Public Booking" value={selected.is_bookable ? "Enabled" : "Disabled"} />
                   </div>
 
-                  {/* Shareable booking link */}
-                  {selected.is_bookable && (
-                    <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden p-4">
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Link2 className="w-3.5 h-3.5 text-[#5F624F]" />
-                        <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Shareable Booking Link</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <code className="text-[11px] font-bold text-[#26300D] bg-[#F7F4EA] border border-[#E6DFC8] rounded-lg px-3 py-2 flex-1 truncate">
-                          {selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`)}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 shrink-0"
-                          onClick={() => {
-                            const url = selected.booking_page_url ?? `${window.location.origin}/book/event/${selected.id}`;
-                            navigator.clipboard.writeText(url);
-                            setLinkCopied(true);
-                            setTimeout(() => setLinkCopied(false), 2000);
-                          }}
-                        >
-                          {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-[#5F624F]" />}
-                        </Button>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quiz questions section */}
+                  {/* Quiz questions — collapsible */}
                   {isQuiz && (() => {
                     const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
                     return (
                       <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                        <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-3 border-b border-[#E6DFC8]">
+                        <button
+                          type="button"
+                          onClick={() => setQuizOpen(o => !o)}
+                          className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+                        >
                           <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Quiz Questions</span>
-                          <span className="flex-1" />
-                          <Link
-                            href={`/event-setups/events/${selected.id}`}
-                            className="h-7 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors px-2.5 gap-1.5"
-                            title="Manage Quiz"
-                          >
-                            <Brain className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-black uppercase tracking-wide">Manage Quiz</span>
-                          </Link>
-                        </div>
-                        <div className="px-4 sm:px-5 py-2.5 space-y-2">
-                          {categoryCounts.map(cat => (
-                            <div key={cat.id} className="flex items-center justify-between gap-2">
-                              <span className="text-xs sm:text-sm font-bold text-[#1F1F1A]">
-                                {cat.category_name}
-                                {cat.short_name && <span className="text-[10px] font-black text-[#5F624F]/60 mr-1.5"> ({cat.short_name})</span>}                                
-                              </span>
-                              <div className="flex items-center gap-1.5">
-                                {cat.count >= cat.question_count
-                                  ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                                  : cat.count > 0
-                                  ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                                  : <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
-                                <span className="text-xs sm:text-sm font-black tabular-nums text-[#5F624F]">
-                                  {cat.count} / {cat.question_count}
-                                </span>
-                              </div>
+                          <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", quizOpen && "rotate-180")} />
+                        </button>
+                        {quizOpen && (
+                          <>
+                            <div className="px-4 sm:px-5 py-2.5 space-y-2">
+                              {categoryCounts.map(cat => (
+                                <div key={cat.id} className="flex items-center justify-between gap-2">
+                                  <span className="text-xs sm:text-sm font-bold text-[#1F1F1A]">
+                                    {cat.category_name}
+                                  </span>
+                                  <div className="flex items-center gap-1.5">
+                                    {cat.count >= cat.question_count
+                                      ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
+                                      : cat.count > 0
+                                      ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                                      : <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
+                                    <span className="text-xs sm:text-sm font-black tabular-nums text-[#5F624F]">
+                                      {cat.count} / {cat.question_count}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
+                            <div className="px-4 sm:px-5 py-2.5 border-t border-[#E6DFC8]">
+                              <Link
+                                href={`/event-setups/events/${selected.id}`}
+                                className="w-full h-9 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors gap-1.5"
+                                title="Manage Quiz"
+                              >
+                                <Brain className="w-3.5 h-3.5" />
+                                <span className="text-[9px] font-black uppercase tracking-wide">Manage Quiz</span>
+                              </Link>
+                            </div>
+                          </>
+                        )}
                       </div>
                     );
                   })()}
 
-                  {/* Bookings summary */}
-                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                    <div className="flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-2.5 border-b border-[#E6DFC8]">
+                  {/* Bookings — collapsible (only when bookable) */}
+                  {selected.is_bookable && <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setBookingsOpen(o => !o)}
+                      className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+                    >
                       <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Bookings</span>
-                      <span className="flex-1" />
-                      <Link
-                        href={`/event-bookings/event/${selected.id}`}
-                        className="h-7 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors px-2.5 gap-1.5"
-                      >
-                        <Users className="w-3.5 h-3.5" />
-                        <span className="text-[9px] font-black uppercase tracking-wide">View All</span>
-                      </Link>
-                    </div>
-                    <div className="grid grid-cols-3 divide-x divide-[#E6DFC8]/50">
-                      <div className="px-2 sm:px-3 py-2 text-center">
-                        <p className="text-base sm:text-lg font-black text-green-600 tabular-nums leading-tight">{bk.confirmedPeople}</p>
-                        <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Confirmed</p>
-                      </div>
-                      <div className="px-2 sm:px-3 py-2 text-center">
-                        <p className="text-base sm:text-lg font-black text-amber-500 tabular-nums leading-tight">{bk.waitlistedPeople}</p>
-                        <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Waitlisted</p>
-                      </div>
-                      <div className="px-2 sm:px-3 py-2 text-center">
-                        <p className="text-base sm:text-lg font-black text-red-500 tabular-nums leading-tight">{bk.cancelledPeople}</p>
-                        <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Cancelled</p>
-                      </div>
-                    </div>
+                      <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingsOpen && "rotate-180")} />
+                    </button>
+                    {bookingsOpen && (
+                      <>
+                        <DetailCell label="Fully Booked" value={selected.is_fully_booked ? "Yes" : "No"} />
+                        {et?.type === "games" && (
+                          <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "—"} />
+                        )}
+                        <div className="grid grid-cols-3 divide-x divide-[#E6DFC8]/50">
+                          <div className="px-2 sm:px-3 py-2 text-center">
+                            <p className="text-base sm:text-lg font-black text-green-600 tabular-nums leading-tight">{bk.confirmedPeople}</p>
+                            <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Confirmed</p>
+                          </div>
+                          <div className="px-2 sm:px-3 py-2 text-center">
+                            <p className="text-base sm:text-lg font-black text-amber-500 tabular-nums leading-tight">{bk.waitlistedPeople}</p>
+                            <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Waitlisted</p>
+                          </div>
+                          <div className="px-2 sm:px-3 py-2 text-center">
+                            <p className="text-base sm:text-lg font-black text-red-500 tabular-nums leading-tight">{bk.cancelledPeople}</p>
+                            <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Cancelled</p>
+                          </div>
+                        </div>
+                        <div className="px-4 sm:px-5 py-2.5 border-t border-[#E6DFC8]">
+                          <Link
+                            href={`/event-bookings/event/${selected.id}`}
+                            className="w-full h-9 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors gap-1.5"
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                            <span className="text-[9px] font-black uppercase tracking-wide">View All</span>
+                          </Link>
+                        </div>
+                      </>
+                    )}
+                  </div>}
+
+                  {/* Booking Page Settings — collapsible */}
+                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setBookingSettingsOpen(o => !o)}
+                      className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+                    >
+                      <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Public Booking Settings</span>
+                      <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingSettingsOpen && "rotate-180")} />
+                    </button>
+                    {bookingSettingsOpen && (
+                      <>
+                        <DetailCell label="Public Booking" value={selected.is_bookable ? "Enabled" : "Disabled"} />
+
+                        {/* Booking Page Customizations — only when bookable and not quiz/bingo */}
+                        {selected.is_bookable && !et?.sub_type?.toLowerCase().includes("quiz") && !et?.sub_type?.toLowerCase().includes("bingo") && (() => {
+                          const cfg = selected.booking_config ?? {};
+                          return (
+                            <div className="border-t border-[#E6DFC8]">
+                              <button
+                                type="button"
+                                onClick={() => setBookingCustomOpen(o => !o)}
+                                className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#E6DFC8]/60 hover:bg-[#E6DFC8]/80 transition-colors text-left"
+                              >
+                                <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Booking Page Customizations</span>
+                                <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingCustomOpen && "rotate-180")} />
+                              </button>
+                              {bookingCustomOpen && (
+                                <div className="space-y-0">
+                                  {/* Page Fields — collapsible */}
+                                  <div className="border-t border-[#E6DFC8]">
+                                    <button
+                                      type="button"
+                                      onClick={() => setPageFieldsOpen(o => !o)}
+                                      className="w-full flex items-center justify-between px-4 sm:px-5 py-2.5 bg-[#F7F4EA]/50 hover:bg-[#F7F4EA] transition-colors text-left"
+                                    >
+                                      <span className="text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Page Fields</span>
+                                      <ChevronDown className={cn("w-3.5 h-3.5 text-[#5F624F] transition-transform duration-200", pageFieldsOpen && "rotate-180")} />
+                                    </button>
+                                    {pageFieldsOpen && (
+                                      <div className="divide-y divide-[#E6DFC8]/50">
+                                        {[
+                                          { label: "Name", enabled: true, always: true },
+                                          { label: "Email", enabled: true, always: true },
+                                          { label: "Phone Number", enabled: cfg.collect_phone !== false },
+                                          { label: "Group Size", enabled: cfg.collect_group_size !== false },
+                                          { label: "Group Name", enabled: !!cfg.collect_group_name },
+                                          { label: "Special Requests", enabled: cfg.collect_special_requests !== false },
+                                        ].map(field => (
+                                          <div key={field.label} className="flex items-center justify-between px-4 sm:px-5 py-2">
+                                            <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">{field.label}</span>
+                                            {field.always ? (
+                                              <span className="text-[10px] font-black uppercase tracking-wide text-green-600">Always On</span>
+                                            ) : (
+                                              <input type="checkbox" checked={field.enabled} readOnly className="w-4 h-4 rounded accent-[#5C4033] pointer-events-none" />
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+
+                                  {/* Page Customizations — collapsible */}
+                                  <div className="border-t border-[#E6DFC8]">
+                                    <button
+                                      type="button"
+                                      onClick={() => setPageCustomOpen(o => !o)}
+                                      className="w-full flex items-center justify-between px-4 sm:px-5 py-2.5 bg-[#F7F4EA]/50 hover:bg-[#F7F4EA] transition-colors text-left"
+                                    >
+                                      <span className="text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Page Customizations</span>
+                                      <ChevronDown className={cn("w-3.5 h-3.5 text-[#5F624F] transition-transform duration-200", pageCustomOpen && "rotate-180")} />
+                                    </button>
+                                    {pageCustomOpen && (
+                                      <div>
+                                        {cfg.collect_group_name && (
+                                          <DetailCell label="Group Name Label" value={cfg.group_name_label || "—"} />
+                                        )}
+                                        {cfg.collect_group_size !== false && (
+                                          <>
+                                            <DetailCell label="Min Group Size" value={cfg.min_group_size != null ? String(cfg.min_group_size) : "—"} />
+                                            <DetailCell label="Max Group Size" value={cfg.max_group_size != null ? String(cfg.max_group_size) : "—"} />
+                                            <DetailCell label="Size Options" value={cfg.group_size_options?.length ? cfg.group_size_options.join(", ") : "—"} />
+                                          </>
+                                        )}
+                                        <DetailCell label="Button Text" value={cfg.custom_cta_text || "—"} />
+                                        <DetailCell label="Tagline" value={cfg.custom_tagline || "—"} />
+                                        <DetailCell label="Confirmation Msg" value={cfg.confirmation_message || "—"} />
+                                        <DetailCell label="Booking Image" value={cfg.booking_image_url || "—"} />
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Shareable booking link */}
+                        {selected.is_bookable && (
+                          <div className="px-4 sm:px-5 py-3 border-t border-[#E6DFC8]">
+                            <div className="flex items-center gap-1.5 mb-2">
+                              <Link2 className="w-3.5 h-3.5 text-[#5F624F]" />
+                              <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Shareable Booking Link</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <code className="text-[11px] font-bold text-[#26300D] bg-[#F7F4EA] border border-[#E6DFC8] rounded-lg px-3 py-2 flex-1 truncate">
+                                {selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`)}
+                              </code>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 shrink-0"
+                                onClick={() => {
+                                  const url = selected.booking_page_url ?? `${window.location.origin}/book/event/${selected.id}`;
+                                  navigator.clipboard.writeText(url);
+                                  setLinkCopied(true);
+                                  setTimeout(() => setLinkCopied(false), 2000);
+                                }}
+                              >
+                                {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-[#5F624F]" />}
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   {formError && <ErrorBox message={formError} />}
@@ -1111,7 +1248,14 @@ export default function EventsClient({
                   Delete
                 </Button>
                 <Button
-                  onClick={() => { setFormError(null); setFormBookingId(selected?.booking_id ? String(selected.booking_id) : ""); setFormGroupName(selected?.group_name ?? ""); setFormIsBookable(!!selected?.is_bookable); setFormBookingConfig(selected?.booking_config ?? {}); setIsEditing(true); }}
+                  onClick={() => {
+                    setFormError(null);
+                    setFormBookingId(selected?.booking_id ? String(selected.booking_id) : "");
+                    setFormGroupName(selected?.group_name ?? "");
+                    setFormIsBookable(!!selected?.is_bookable);
+                    setFormBookingConfig(selected?.booking_config ?? {});
+                    setIsEditing(true);
+                  }}
                   className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit
