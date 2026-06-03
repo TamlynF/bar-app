@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import styles from './quiz-generator.module.css'
 
@@ -45,7 +44,6 @@ import {
   AlertCircle,
   BookOpen,
   ChevronDown,
-  History,
   Check,
   Plus,
   CheckCircle,
@@ -55,7 +53,6 @@ import {
   Save,
   Music,
   ExternalLink,
-  ArrowLeft,
   ImageIcon,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -476,30 +473,8 @@ export default function QuizGeneratorPage() {
   return (
     <div className="max-w-6xl mx-auto px-2 sm:px-6 py-2 sm:py-4 space-y-2 sm:space-y-4 animate-in fade-in duration-700 pb-32 text-left">
 
-      {/* HEADER */}
-      <div className="flex items-center justify-between">
-        {presetEventId ? (
-          <Link
-            href={`/event-setups/events/${presetEventId}${presetCategory ? `?category=${encodeURIComponent(presetCategory)}` : ''}`}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[10px] uppercase tracking-wider hover:bg-[#5C4033]/5 transition-all shadow-xs"
-          >
-            <ArrowLeft className="w-3 h-3" />
-            <span>Back to Event</span>
-          </Link>
-        ) : (
-          <div />
-        )}
-        <Link
-          href="/event-setups/quiz-history"
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#E6DFC8] bg-white text-[#5F624F] font-bold text-[10px] uppercase tracking-wider hover:bg-[#5C4033]/5 transition-all shadow-xs"
-        >
-          <History className="w-3 h-3" />
-          <span>History</span>
-        </Link>
-      </div>
-
       {/* CATEGORY PROGRESS INDICATORS */}
-      <div className={styles.pillsContainer}>
+      {/* <div className={styles.pillsContainer}>
         {categoryStats.map((stat) => {
           const isFull = stat.isFull;
           const hasQuestions = stat.currentCount > 0;
@@ -540,7 +515,7 @@ export default function QuizGeneratorPage() {
             </button>
           )
         })}
-      </div>
+      </div> */}
 
       {/* POPUP: Category Details Sheet with Edit/Delete */}
       <Sheet open={!!viewingCategory} onOpenChange={(open) => {

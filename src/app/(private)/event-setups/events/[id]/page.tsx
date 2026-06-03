@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Brain, BookOpen } from "lucide-react";
+import { Brain, BookOpen } from "lucide-react";
 import CategorySection from "./category-section";
 
 function formatDate(dateStr: string | null) {
@@ -98,16 +98,7 @@ export default async function EventQuizQuestionsPage({
   const targetQuestions = cats.reduce((s, c) => s + c.question_count, 0);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 max-w-2xl">
-
-      {/* Back nav */}
-      <Link
-        href={`/event-setups/events?open=${id}`}
-        className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#5C4033] transition-colors"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        Back to Event
-      </Link>
+    <div className="p-2 md:p-6 space-y-6 max-w-2xl">
 
       {/* Event header card */}
       <div className="bg-white border border-[#E6DFC8] rounded-2xl px-5 py-4 flex items-start gap-3">

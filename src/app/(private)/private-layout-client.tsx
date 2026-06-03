@@ -183,8 +183,6 @@ export default function PrivateLayoutClient({
     }
 
     const { title, subtitle, backHref } = getPageInfo()
-    const normalizedPathForDepth = pathname?.replace(/\/$/, "") ?? ""
-    const isDetailPage = normalizedPathForDepth.split("/").filter(Boolean).length > 2
 
     return (
         <div className="flex min-h-screen bg-[#F7F4EA]">
@@ -358,13 +356,7 @@ export default function PrivateLayoutClient({
                             <button
                                 title="Go back"
                                 type="button"
-                                onClick={() => {
-                                    if (isDetailPage) {
-                                        router.back()
-                                    } else {
-                                        router.push(backHref)
-                                    }
-                                }}
+                                onClick={() => router.push(backHref)}
                                 className="absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
                             >
                                 <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
