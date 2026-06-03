@@ -805,12 +805,31 @@ export async function generatePictureRoundAction(
   numberOfItems: number = 10,
   categoryName: string = 'Pictures',
   topic: string,
-  difficulty: string = 'Medium'
+  difficulty: string = 'Medium',
+  eventId?: number,
+  categoryConfigId?: number,
+  excludeAnswers?: string[]
 ): Promise<{ items?: PictureRoundItem[]; error?: string }> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
   if (!apiKey) return { error: 'API Key is missing.' }
 
   try {
+    // Fetch existing answers for this event+category to avoid duplicates
+    let existingAnswers: string[] = []
+    if (eventId && categoryConfigId) {
+      const supabase = await createClient()
+      const { data: existing } = await supabase
+        .from('past_quiz_questions')
+        .select('answer_text')
+        .eq('events_id', eventId)
+        .eq('quiz_category_configs_id', categoryConfigId)
+      if (existing) {
+        existingAnswers = existing.map(q => q.answer_text)
+      }
+    }
+    if (excludeAnswers?.length) {
+      existingAnswers = [...existingAnswers, ...excludeAnswers]
+    }
     // Step 1: Gemini text → list of answers
     const model = 'gemini-2.5-flash'
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
@@ -821,12 +840,16 @@ export async function generatePictureRoundAction(
         ? 'less common or niche — a challenge for enthusiasts'
         : 'a mix of well-known and moderately challenging'
 
+    const excludeRule = existingAnswers.length > 0
+      ? `\n- Do NOT include any of these already-used answers: ${JSON.stringify(existingAnswers)}`
+      : ''
+
     const prompt = `Generate exactly ${numberOfItems} specific, identifiable items for a pub quiz picture round on the topic "${topic}".
 
 Rules:
 - Each item must be a specific named thing with a visually distinctive appearance (suitable for a single photograph)
 - Vary across the topic — avoid repetition within subtypes (e.g. for "dog breeds" don't list 5 retrievers)
-- Difficulty: ${difficultyGuide}
+- Difficulty: ${difficultyGuide}${excludeRule}
 - Return ONLY a valid JSON array of strings. No markdown, no explanation.
 Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border Collie","Dalmatian","Dachshund"]`
 

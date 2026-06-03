@@ -114,6 +114,7 @@ export default function QuizGeneratorPage() {
   const [pictureItems, setPictureItems] = useState<PictureRoundItem[]>([])
   const [selectedPictureIndices, setSelectedPictureIndices] = useState<Set<number>>(new Set())
   const [pictureTopicLocked, setPictureTopicLocked] = useState(false)
+  const [previousPictureAnswers, setPreviousPictureAnswers] = useState<string[]>([])
 
   // Check Spotify connection on mount
   useEffect(() => {
@@ -240,6 +241,7 @@ export default function QuizGeneratorPage() {
     setSelectedSnippetIndices(new Set())
     setPictureItems([])
     setSelectedPictureIndices(new Set())
+    setPreviousPictureAnswers([])
     setError('')
   };
 
@@ -288,11 +290,12 @@ export default function QuizGeneratorPage() {
           setIsLoading(false)
           return
         }
-        const result = await generatePictureRoundAction(numQuestions, category, topic, difficulty)
+        const result = await generatePictureRoundAction(numQuestions, category, topic, difficulty, selectedEventId ? parseInt(selectedEventId) : undefined, selectedCategoryConfig?.id, previousPictureAnswers)
         if (result.error) {
           setError(result.error)
           toast.error(result.error)
         } else if (result.items) {
+          setPreviousPictureAnswers(prev => [...prev, ...result.items!.map(i => i.answer)])
           setPictureItems(result.items)
           setSelectedPictureIndices(new Set(result.items.map((_, i) => i)))
           setQuestions([])

@@ -88,6 +88,10 @@ export default function CategorySection({ eventId, category_name, question_count
       toast.error("Fields cannot be empty");
       return;
     }
+    if (!editForm.questionNo || editForm.questionNo < 1) {
+      toast.error("Question number is required");
+      return;
+    }
     const currentQ = questions.find((q) => q.id === id);
     if (editForm.questionNo !== (currentQ?.question_no ?? 0)) {
       const duplicate = questions.find((q) => q.id !== id && q.question_no === editForm.questionNo);
@@ -222,10 +226,10 @@ export default function CategorySection({ eventId, category_name, question_count
                             title="Question number"
                             min={1}
                             max={questions.length}
-                            value={editForm.questionNo}
+                            value={editForm.questionNo || ''}
                             onChange={(e) => {
                               const val = e.target.value.replace(/\D/g, '');
-                              setEditForm({ ...editForm, questionNo: Math.max(1, parseInt(val) || 1) });
+                              setEditForm({ ...editForm, questionNo: val === '' ? 0 : parseInt(val) });
                             }}
                             className="w-16 text-[13px] font-black text-[#5C4033] px-3 py-2 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10 text-center tabular-nums"
                           />
