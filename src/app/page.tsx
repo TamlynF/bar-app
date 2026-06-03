@@ -20,6 +20,7 @@ export type EventTypeJoin = {
   sub_type: string;
   type_color: string | null;
   badge_color: string | null;
+  is_karaoke: boolean | null;
 };
 
 export type EventRow = {
@@ -33,6 +34,7 @@ export type EventRow = {
   is_bookable: boolean;
   external_link: string | null;
   booking_page_url: string | null;
+  karaoke_request_url: string | null;
   event_types: EventTypeJoin | EventTypeJoin[];
 };
 
@@ -105,7 +107,7 @@ export default async function HomePage() {
     supabase
       .from("events")
       .select(
-        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, event_types!inner(type, sub_type, type_color, badge_color)"
+        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(type, sub_type, type_color, badge_color, is_karaoke)"
       )
       .gte("date", monthStartStr)
       .lte("date", nextMonthEndStr)
@@ -141,6 +143,8 @@ export default async function HomePage() {
     bookingPageUrl: e.booking_page_url ?? null,
     color: eventBadgeColor(e),
     subType: getEventType(e)?.sub_type ?? null,
+    isKaraoke: getEventType(e)?.is_karaoke ?? false,
+    karaokeRequestUrl: e.karaoke_request_url ?? null,
   });
 
   const serializedMonthEvents = monthEvents.map(serialize);

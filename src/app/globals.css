@@ -5502,4 +5502,11 @@ html, body {
   /* CSS custom property background */
   .bg-\(--spotify-bg\) { background-color: var(--spotify-bg); }
 
+  /* ── Karaoke / neon-orange pill ── */
+  .bg-\[\#FF6B35\]   { background-color: #FF6B35; }
+  .hover\:bg-\[\#FF6B35\]\/90:hover { background-color: color-mix(in oklab, #FF6B35 90%, transparent); }
+
+  /* Book pill hover (gold) — was missing */
+  .hover\:bg-\[\#FDCC4B\]\/90:hover { background-color: color-mix(in oklab, #FDCC4B 90%, transparent); }
+
 }

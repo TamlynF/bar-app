@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Clock, CalendarDays, ExternalLink } from "lucide-react";
+import { Clock, CalendarDays, ExternalLink, Mic2 } from "lucide-react";
 
 type HeroEvent = {
   id: number;
@@ -13,6 +13,8 @@ type HeroEvent = {
   bookingPageUrl: string | null;
   color: string;
   subType: string | null;
+  isKaraoke: boolean;
+  karaokeRequestUrl: string | null;
 };
 
 function parseDate(dateStr: string) {
@@ -103,7 +105,30 @@ export function NextEventHero({
             </span>
           )}
 
-          {!event.isFullyBooked && event.isBookable && event.bookingPageUrl && (
+          {!event.isFullyBooked && event.isKaraoke && event.karaokeRequestUrl && (
+            <a
+              href={event.karaokeRequestUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-white bg-[#FF6B35] px-2.5 py-1.5 rounded-full hover:bg-[#FF6B35]/90 active:scale-95 transition-all"
+              aria-label="Request a song to sing on Singa"
+            >
+              <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+              Sing
+            </a>
+          )}
+
+          {!event.isFullyBooked && event.isKaraoke && !event.karaokeRequestUrl && (
+            <span
+              className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide px-2.5 py-1.5 rounded-full bg-white/5 text-stone-500 border border-white/10"
+              title="Karaoke night hasn't started yet"
+            >
+              <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+              Not Started
+            </span>
+          )}
+
+          {!event.isFullyBooked && !event.isKaraoke && event.isBookable && event.bookingPageUrl && (
             <a
               href={event.bookingPageUrl}
               className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-[#1a2008] bg-[#FDCC4B] px-2.5 py-1.5 rounded-full hover:bg-[#FDCC4B]/90 active:scale-95 transition-all"
@@ -175,7 +200,28 @@ export function NextEventHero({
                             Full
                           </span>
                         )}
-                        {!s.isFullyBooked && s.isBookable && s.bookingPageUrl && (
+                        {!s.isFullyBooked && s.isKaraoke && s.karaokeRequestUrl && (
+                          <a
+                            href={s.karaokeRequestUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-white bg-[#FF6B35] px-2.5 py-1.5 rounded-full hover:bg-[#FF6B35]/90 active:scale-95 transition-all"
+                            aria-label="Request a song to sing on Singa"
+                          >
+                            <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+                            Sing
+                          </a>
+                        )}
+                        {!s.isFullyBooked && s.isKaraoke && !s.karaokeRequestUrl && (
+                          <span
+                            className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide px-2.5 py-1.5 rounded-full bg-white/5 text-stone-500 border border-white/10"
+                            title="Karaoke night hasn't started yet"
+                          >
+                            <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+                            Not Started
+                          </span>
+                        )}
+                        {!s.isFullyBooked && !s.isKaraoke && s.isBookable && s.bookingPageUrl && (
                           <a
                             href={s.bookingPageUrl}
                             className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-[#1a2008] bg-[#FDCC4B] px-2.5 py-1.5 rounded-full hover:bg-[#FDCC4B]/90 active:scale-95 transition-all"

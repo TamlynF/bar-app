@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { format, startOfWeek } from "date-fns";
-import { ExternalLink, ChevronDown, CalendarDays } from "lucide-react";
+import { ExternalLink, ChevronDown, CalendarDays, Mic2 } from "lucide-react";
 import { toast } from "sonner";
 
 type MonthEvent = {
@@ -17,6 +17,8 @@ type MonthEvent = {
   bookingPageUrl: string | null;
   color: string;
   subType: string | null;
+  isKaraoke: boolean;
+  karaokeRequestUrl: string | null;
 };
 
 const ALL = "All";
@@ -307,7 +309,31 @@ function EventBody({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
         </span>
       )}
 
-      {!isPast && event.isBookable && event.bookingPageUrl && (
+      {!isPast && event.isKaraoke && event.karaokeRequestUrl && (
+        <a
+          href={event.karaokeRequestUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-white bg-[#FF6B35] px-2.5 py-1.5 rounded-full hover:bg-[#FF6B35]/90 active:scale-95 transition-all"
+          aria-label="Request a song to sing on Singa"
+        >
+          <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+          Sing
+        </a>
+      )}
+
+      {!isPast && event.isKaraoke && !event.karaokeRequestUrl && (
+        <span
+          className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide px-2.5 py-1.5 rounded-full bg-white/5 text-stone-500 border border-white/10"
+          title="Karaoke night hasn't started yet"
+        >
+          <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+          Not Started
+        </span>
+      )}
+
+      {!isPast && !event.isKaraoke && event.isBookable && event.bookingPageUrl && (
         <a
           href={event.bookingPageUrl}
           onClick={(e) => e.stopPropagation()}

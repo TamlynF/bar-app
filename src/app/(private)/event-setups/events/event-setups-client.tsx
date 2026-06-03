@@ -53,6 +53,7 @@ export type EventRecord = {
   group_name: string | null;
   booking_id: number | null;
   external_link: string | null;
+  karaoke_request_url: string | null;
   is_bookable: boolean | null;
   booking_page_url: string | null;
   booking_config: BookingConfig | null;
@@ -644,6 +645,9 @@ export default function EventsClient({
                         {selected.external_link && (
                           <DetailCell label="External Link" value={selected.external_link} />
                         )}
+                        {selected.karaoke_request_url && (
+                          <DetailCell label="Karaoke Request URL" value={selected.karaoke_request_url} />
+                        )}
                       </>
                     )}
                   </div>
@@ -1080,6 +1084,17 @@ export default function EventsClient({
                       type="url"
                       placeholder="https://instagram.com/..."
                       defaultValue={formDefault?.external_link ?? ""}
+                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                    />
+                  </FormRow>
+
+                  {/* Karaoke Song Request Link */}
+                  <FormRow label="Singa Link">
+                    <input
+                      name="karaoke_request_url"
+                      type="url"
+                      placeholder="https://app.singa.com/..."
+                      defaultValue={formDefault?.karaoke_request_url ?? ""}
                       className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
                     />
                   </FormRow>

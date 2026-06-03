@@ -55,6 +55,7 @@ export type EventTypeRecord = {
   information?: string | null;
   type_color?: string | null;
   default_title?: string | null;
+  is_karaoke?: boolean | null;
   event_information: EventInfo[];
 };
 
@@ -87,6 +88,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [subTypeInput, setSubTypeInput] = useState("");
   const [selectedTypeColor, setSelectedTypeColor] = useState<string | null>(null);
   const [defaultTitleInput, setDefaultTitleInput] = useState("");
+  const [isKaraokeToggle, setIsKaraokeToggle] = useState(false);
   const [infoTitleInput, setInfoTitleInput] = useState("");
 
   const { groupedEventTypes, uniqueTypes } = useMemo(() => {
@@ -365,6 +367,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setSubTypeInput(subVal);
     setSelectedColor(item.badge_color ?? null);
     setDefaultTitleInput(item.default_title ?? "");
+    setIsKaraokeToggle(item.is_karaoke ?? false);
     const groupItems = initialEventTypes.filter(
       i => i.type.toLowerCase() === item.type.toLowerCase()
     );
@@ -385,6 +388,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setSubTypeInput(subVal);
     setSelectedColor(items[0].badge_color ?? null);
     setDefaultTitleInput(items[0].default_title ?? "");
+    setIsKaraokeToggle(items[0].is_karaoke ?? false);
     setSelectedTypeColor(items[0].type_color ?? null);
     setIsTypeSheetOpen(true);
   };
@@ -401,6 +405,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setSubTypeInput("");
     setSelectedColor(null);
     setDefaultTitleInput("");
+    setIsKaraokeToggle(false);
     const groupItems = initialEventTypes.filter(
       i => i.type.toLowerCase() === typeKey.toLowerCase()
     );
@@ -426,6 +431,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             setSubTypeInput("General");
             setSelectedColor(null);
             setDefaultTitleInput("");
+            setIsKaraokeToggle(false);
             setSelectedTypeColor(null);
             setIsTypeSheetOpen(true);
           }}
@@ -1040,6 +1046,36 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       rows={2}
                       className="w-full text-base sm:text-sm font-bold text-[#1F1F1A] bg-transparent outline-none placeholder:text-[#5F624F]/40 resize-none"
                     />
+                  </div>
+
+                  {/* Karaoke toggle */}
+                  <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
+                    <input type="hidden" name="is_karaoke" value={isKaraokeToggle ? "on" : ""} />
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
+                      <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">Karaoke</span>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wide",
+                        isKaraokeToggle ? "text-green-600" : "text-[#5F624F]"
+                      )}>
+                        {isKaraokeToggle ? "On" : "Off"}
+                      </span>
+                      <button
+                        type="button"
+                        title="Toggle karaoke"
+                        onClick={() => setIsKaraokeToggle(!isKaraokeToggle)}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative shrink-0 border",
+                          isKaraokeToggle ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30"
+                        )}
+                      >
+                        <span className={cn(
+                          "absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
+                          isKaraokeToggle ? "translate-x-[21px]" : "translate-x-0.5"
+                        )} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
