@@ -5358,6 +5358,29 @@ html, body {
   /* Divide utilities for arbitrary colors */
   .divide-\[\#E6DFC8\] > :not(:last-child) { border-color: #E6DFC8; }
   .divide-\[\#E6DFC8\]\/50 > :not(:last-child) { border-color: color-mix(in oklab, #E6DFC8 50%, transparent); }
+  .divide-\[\#E6DFC8\]\/30 > :not(:last-child) { border-color: color-mix(in oklab, #E6DFC8 30%, transparent);}
+
+  /* Divide utilities for badge colors (event sub-type sections) */
+  .divide-amber-200 > :not(:last-child) { border-color: var(--color-amber-200); }
+  .divide-green-200 > :not(:last-child) { border-color: var(--color-green-200); }
+  .divide-purple-200 > :not(:last-child) { border-color: var(--color-purple-200); }
+  .divide-blue-200 > :not(:last-child) { border-color: var(--color-blue-200); }
+  .divide-rose-200 > :not(:last-child) { border-color: var(--color-rose-200); }
+  .divide-sky-200 > :not(:last-child) { border-color: var(--color-sky-200); }
+  .divide-orange-200 > :not(:last-child) { border-color: var(--color-orange-200); }
+  .divide-teal-200 > :not(:last-child) { border-color: var(--color-teal-200); }
+  .divide-indigo-200 > :not(:last-child) { border-color: var(--color-indigo-200); }
+  .divide-pink-200 > :not(:last-child) { border-color: var(--color-pink-200); }
+  .divide-red-200 > :not(:last-child) { border-color: var(--color-red-200); }
+  .divide-yellow-200 > :not(:last-child) { border-color: var(--color-yellow-200); }
+  .divide-emerald-200 > :not(:last-child) { border-color: var(--color-emerald-200); }
+  .divide-lime-200 > :not(:last-child) { border-color: var(--color-lime-200); }
+  .divide-cyan-200 > :not(:last-child) { border-color: var(--color-cyan-200); }
+  .divide-violet-200 > :not(:last-child) { border-color: var(--color-violet-200); }
+  .divide-fuchsia-200 > :not(:last-child) { border-color: var(--color-fuchsia-200); }
+  .divide-slate-200 > :not(:last-child) { border-color: var(--color-slate-200); }
+  .divide-zinc-200 > :not(:last-child) { border-color: var(--color-zinc-200); }
+  .divide-stone-200 > :not(:last-child) { border-color: var(--color-stone-200); }
 
   /* Named-color utilities used in admin pages */
   .bg-blue-50 { background-color: var(--color-blue-50); }

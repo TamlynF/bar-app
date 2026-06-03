@@ -9,7 +9,6 @@ import {
   Plus,
   Loader2,
   CalendarDays,
-  BadgePoundSterling,
   Users,
   ChevronRight,
   ChevronDown,
@@ -20,20 +19,24 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
-  XCircle,
   Brain,
   Link2,
   Copy,
   Check,
+  Search,
+  X,
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { badgeClassFromColor } from "@/lib/event-type-colors";
 
 export type EventType = {
   id: number;
   type: string;
   sub_type: string | null;
+  badge_color: string | null;
+  type_color: string | null;
 };
 
 export type EventRecord = {
@@ -157,9 +160,14 @@ export default function EventsClient({
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<number>>(new Set());
+  const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
+  const [collapsedSubTypes, setCollapsedSubTypes] = useState<Set<string>>(new Set());
   const [addForTypeId, setAddForTypeId] = useState<number | null>(null);
-  const [historyGroups, setHistoryGroups] = useState<Set<number>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterMonth, setFilterMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  });
   const [formBookingId, setFormBookingId] = useState<string>("");
   const [formGroupName, setFormGroupName] = useState<string>("");
   const [formIsBookable, setFormIsBookable] = useState(false);
@@ -188,12 +196,22 @@ export default function EventsClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const toggleGroup = (id: number) =>
-    setCollapsedGroups((prev) => {
+  const toggleType = (type: string) =>
+    setCollapsedTypes((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      if (next.has(type)) { next.delete(type); } else { next.add(type); }
       return next;
     });
+
+  const toggleSubType = (key: string) =>
+    setCollapsedSubTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) { next.delete(key); } else { next.add(key); }
+      return next;
+    });
+
+  const isSearching = searchQuery.trim() !== "";
+  const forceOpen = isSearching;
 
   const isSheetOpen = !!selected || isAdding;
 
@@ -255,15 +273,26 @@ export default function EventsClient({
       });
   };
 
-  // Date filtering: show events from past week onwards by default
+  // --- Filtering ---
   const todayStr = new Date().toISOString().split("T")[0];
-  const oneWeekAgo = new Date();
-  oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-  const oneWeekAgoStr = oneWeekAgo.toISOString().split("T")[0];
+  const hostById = new Map(employees.map((e) => [e.id, e.full_name]));
 
-  const recentEvents = initialEvents.filter((e) => !e.date || e.date >= oneWeekAgoStr);
+  const matchesFilters = (e: EventRecord) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      const host = e.host_employee_id ? (hostById.get(e.host_employee_id) ?? "") : "";
+      const hay = `${e.title ?? ""} ${formatDate(e.date)} ${e.date ?? ""} ${host}`.toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    if (filterMonth && e.date) {
+      const eventMonth = e.date.slice(0, 7); // "YYYY-MM"
+      if (eventMonth !== filterMonth) return false;
+    }
+    return true;
+  };
 
-  const baseEvents = filter === "quiz-incomplete"
+  // Quiz-incomplete filter mode
+  const quizIncompleteBase = filter === "quiz-incomplete"
     ? initialEvents.filter((e) => {
         const et = eventTypes.find((t) => t.id === e.event_types_id);
         if (!et?.sub_type?.toLowerCase().includes("quiz")) return false;
@@ -271,24 +300,45 @@ export default function EventsClient({
         const { total, target } = getQuizStatus(e.id, quizCategories, quizQuestions);
         return total < target;
       })
-    : recentEvents;
+    : null;
 
-  // Group events by event type — history groups show all events for that type
-  const grouped = eventTypes
-    .map((et) => {
-      const isShowingHistory = historyGroups.has(et.id);
-      const events = isShowingHistory
-        ? initialEvents.filter((e) => e.event_types_id === et.id)
-        : baseEvents.filter((e) => e.event_types_id === et.id);
-      const totalCount = initialEvents.filter((e) => e.event_types_id === et.id).length;
-      return { eventType: et, events, totalCount, hasHidden: totalCount > events.length, isShowingHistory };
-    })
-    .filter((g) => g.events.length > 0 || g.totalCount > 0);
+  // --- Two-level grouping ---
+  type SubGroup = { eventType: EventType; key: string; events: EventRecord[] };
+  type TypeGroup = { type: string; subGroups: SubGroup[]; count: number };
 
-  const visibleEvents = grouped.flatMap((g) => g.events);
+  const typeGroupMap = new Map<string, TypeGroup>();
+
+  for (const et of eventTypes) {
+    let source: EventRecord[];
+    if (filter === "quiz-incomplete" && quizIncompleteBase) {
+      source = quizIncompleteBase.filter((e) => e.event_types_id === et.id && matchesFilters(e));
+    } else {
+      source = initialEvents.filter((e) => e.event_types_id === et.id && matchesFilters(e));
+    }
+    source.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "") || (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+    const key = `${et.type}::${et.sub_type ?? ""}`;
+    const sub: SubGroup = { eventType: et, key, events: source };
+
+    const typeKey = et.type.toLowerCase();
+    if (!typeGroupMap.has(typeKey)) {
+      typeGroupMap.set(typeKey, { type: et.type, subGroups: [], count: 0 });
+    }
+    const tg = typeGroupMap.get(typeKey)!;
+    // When searching, only include sub-groups with matches
+    if (!isSearching || sub.events.length > 0) {
+      tg.subGroups.push(sub);
+      tg.count += sub.events.length;
+    }
+  }
+
+  // Remove empty type groups when searching
+  const typeGroups = Array.from(typeGroupMap.values()).filter((tg) => !isSearching || tg.count > 0);
 
   const knownTypeIds = new Set(eventTypes.map((et) => et.id));
-  const ungrouped = visibleEvents.filter((e) => !knownTypeIds.has(e.event_types_id));
+  const ungroupedSource = initialEvents.filter(matchesFilters);
+  const ungrouped = ungroupedSource.filter((e) => !knownTypeIds.has(e.event_types_id));
+
+  const visibleEvents = typeGroups.flatMap((tg) => tg.subGroups.flatMap((sg) => sg.events)).concat(ungrouped);
 
   const showForm = isAdding || isEditing;
   const formDefault = isEditing ? selected : null;
@@ -311,220 +361,244 @@ export default function EventsClient({
         </div>
       )}
 
+      {/* Header bar — search + date range + New Event */}
+      <div className="bg-white border border-[#E6DFC8] rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
+        <button
+          type="button"
+          onClick={() => openAdd()}
+          className="h-11 px-4 rounded-xl bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0 sm:order-last"
+        >
+          <Plus className="w-4 h-4 shrink-0" />
+          <span className="text-[11px] font-black uppercase tracking-wide">New Event</span>
+        </button>
+        <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2 h-11 px-3 flex-1 min-w-0 rounded-xl border border-[#E6DFC8] focus-within:border-[#5C4033] transition-colors">
+            <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
+            <input
+              type="text"
+              placeholder="Search title, date or host..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="flex-1 min-w-0 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+            />
+          </div>
+          <input
+            type="month"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+            title="Filter by month"
+            className="h-11 w-[9rem] px-2 rounded-xl border border-[#E6DFC8] focus:border-[#5C4033] text-xs font-bold text-[#1F1F1A] bg-transparent outline-none transition-colors shrink-0"
+          />
+          {isSearching && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="shrink-0 p-2 rounded-lg hover:bg-[#E6DFC8] transition-colors"
+              title="Clear search"
+            >
+              <X className="w-4 h-4 text-[#5F624F]/50" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Event List */}
       {visibleEvents.length === 0 ? (
         <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
           <CalendarDays className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
           <p className="text-sm font-black text-[#1F1F1A]">
-            {filter === "quiz-incomplete" ? "No upcoming quizzes with incomplete questions" : "No events yet"}
+            {filter === "quiz-incomplete"
+              ? "No upcoming quizzes with incomplete questions"
+              : "No events found"}
           </p>
           <p className="text-[11px] text-[#5F624F] mt-1">
-            {filter === "quiz-incomplete" ? "All quiz questions are complete" : "Add your first event to get started"}
+            {filter === "quiz-incomplete"
+              ? "All quiz questions are complete"
+              : isSearching
+                ? "Try adjusting your search"
+                : "No events in this month"}
           </p>
+          {isSearching && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="mt-3 text-[11px] font-black uppercase tracking-wide text-[#5C4033] underline"
+            >
+              Clear Search
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">
-          {grouped.map(({ eventType, events, hasHidden, isShowingHistory }) => {
-            const isOpen = !collapsedGroups.has(eventType.id);
+          {typeGroups.map((tg) => {
+            const typeOpen = !collapsedTypes.has(tg.type.toLowerCase()) || forceOpen;
             return (
-            <section key={eventType.id} className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
-              <div className="flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3 gap-2">
+              <section key={tg.type} className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
+                {/* Type header */}
                 <button
                   type="button"
-                  onClick={() => toggleGroup(eventType.id)}
-                  className="flex-1 min-w-0 text-left"
+                  onClick={() => toggleType(tg.type.toLowerCase())}
+                  className="w-full flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3.5 gap-2.5 min-h-[44px]"
                 >
-                  <p className="text-[11px] font-black uppercase tracking-wide text-[#5C4033] truncate">
-                    {eventTypeLabel(eventType)} <span className="text-[#5F624F]">({events.length})</span>
-                  </p>
-                </button>
-                {isShowingHistory && (
-                  <button
-                    type="button"
-                    onClick={() => setHistoryGroups((prev) => { const next = new Set(prev); next.delete(eventType.id); return next; })}
-                    className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] underline hover:text-[#5C4033] shrink-0"
-                  >
-                    Recent
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => openAdd(eventType.id)}
-                  className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
-                  title={`Create ${eventTypeLabel(eventType)} event`}
-                >
-                  <Plus className="w-3.5 h-3.5 shrink-0" />
-                  <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wide">Create</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(eventType.id)}
-                  className="shrink-0"
-                  title="Toggle group"
-                >
+                  <span className="text-sm font-black uppercase tracking-tight text-[#5C4033] truncate flex-1 text-left">
+                    {toTitleCase(tg.type)} <span className="text-[#5F624F] text-xs font-bold">({tg.count})</span>
+                  </span>
                   <ChevronDown className={cn(
-                    "w-4 h-4 text-[#5F624F] transition-transform duration-200",
-                    isOpen && "rotate-180"
+                    "w-4 h-4 text-[#5F624F] transition-transform duration-200 shrink-0",
+                    typeOpen && "rotate-180"
                   )} />
                 </button>
-              </div>
 
-              {isOpen && <div className="divide-y divide-[#E6DFC8]/50">
-                {events.map((event) => {
-                  const hasPricing = !!event.payment_amount && event.payment_amount > 0;
-                  const host = employees.find((e) => e.id === event.host_employee_id);
-                  const hostInitials = host?.full_name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()
-                    .slice(0, 2) ?? null;
-                  const isQuiz = !!eventType.sub_type?.toLowerCase().includes("quiz");
-                  const quizStat = isQuiz ? getQuizStatus(event.id, quizCategories, quizQuestions) : null;
-                  const bStats = getBookingStats(event.id, bookings);
-                  const inactive = event.is_active === false;
-                  const muted = "text-[#5F624F]";
-                  return (
-                    <div
-                      key={event.id}
-                      onClick={() => openView(event)}
-                      className="px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
-                    >
-                      {/* Mobile layout */}
-                      <div className="flex-1 min-w-0 sm:hidden">
-                        {/* Row 1: date + active */}
-                        <div className="flex items-center gap-2">
-                          <p className={cn("text-xs font-black leading-snug truncate flex-1 min-w-0", inactive ? muted : "text-[#1F1F1A]")}>
-                            {formatDate(event.date)}
-                          </p>
-                          {event.is_fully_booked && (
-                            <span className="text-[9px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded shrink-0">Full</span>
-                          )}
-                          <span className={cn(
-                            "text-[10px] font-black shrink-0 w-14 text-right",
-                            !inactive ? "text-green-600" : "text-red-500"
+                {/* Sub-type sections */}
+                {typeOpen && (
+                  <div className="px-3 sm:px-4 py-2 space-y-1.5">
+                    {tg.subGroups.filter((sg) => sg.events.length > 0).map((sg) => {
+                      const subKey = sg.key;
+                      const subOpen = !collapsedSubTypes.has(subKey) || forceOpen;
+                      return (
+                        <div key={sg.eventType.id} className="rounded-xl overflow-hidden">
+                          {/* Sub-type header */}
+                          <div className={cn(
+                            "flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[40px] rounded-t-xl border",
+                            badgeClassFromColor(sg.eventType.badge_color)
                           )}>
-                            {!inactive ? "Active" : "Inactive"}
-                          </span>
-                        </div>
-                        {/* Row 2: title | people | quiz/price | host */}
-                        <div className="flex items-center mt-0.5 gap-1">
-                          <p className={cn("text-[10px] font-medium truncate flex-1 min-w-0", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
-                            {event.title || "Untitled Event"}
-                          </p>
-                          <span className={cn("text-[10px] font-black flex items-center gap-0.5 w-8 justify-end shrink-0 tabular-nums", muted)}>
-                            <Users className="w-3 h-3 shrink-0" />
-                            {bStats.confirmedPeople}
-                          </span>
-                          <span className="w-8 flex items-center justify-end shrink-0">
-                            {quizStat ? (
-                              inactive
-                                ? <span className={cn("w-4 h-4", muted)}>{quizStat.allComplete ? <CheckCircle2 className="w-4 h-4" /> : quizStat.someExist ? <AlertTriangle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}</span>
-                                : quizStat.allComplete
-                                  ? <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                  : quizStat.someExist
-                                    ? <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                    : <AlertCircle className="w-4 h-4 text-red-500" />
-                            ) : (
-                              <span className={cn(
-                                "text-[10px] font-black",
-                                inactive ? muted : hasPricing ? "text-green-700" : "text-[#5F624F]/40"
-                              )}>
-                                £{hasPricing ? event.payment_amount!.toFixed(2) : "0"}
+                            <button
+                              type="button"
+                              onClick={() => toggleSubType(subKey)}
+                              className="flex-1 min-w-0 flex items-center gap-2 text-left"
+                            >
+                              <span className="text-[11px] font-black uppercase tracking-wide">
+                                {toTitleCase(sg.eventType.sub_type)}
                               </span>
-                            )}
-                          </span>
-                          <span className="w-6 flex items-center justify-center shrink-0">
-                            {hostInitials ? (
-                              <span className={cn("text-[10px] font-black bg-[#F7F4EA] border border-[#E6DFC8] w-6 h-6 rounded-full flex items-center justify-center", muted)}>
-                                {hostInitials}
+                              <span className="text-[10px] font-bold opacity-60">
+                                ({sg.events.length})
                               </span>
-                            ) : <span className="w-6" />}
-                          </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openAdd(sg.eventType.id)}
+                              className="w-7 h-7 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center shrink-0"
+                              title={`Create ${eventTypeLabel(sg.eventType)} event`}
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => toggleSubType(subKey)}
+                              className="shrink-0"
+                            >
+                              <ChevronDown className={cn(
+                                "w-3.5 h-3.5 transition-transform duration-200",
+                                subOpen && "rotate-180"
+                              )} />
+                            </button>
+                          </div>
+
+                          {/* Event rows */}
+                          {subOpen && (
+                            <div className={cn(
+                              "divide-y border-x border-b rounded-b-xl",
+                              (() => {
+                                const parts = badgeClassFromColor(sg.eventType.badge_color).split(" ");
+                                const borderColor = parts.find((c) => c.startsWith("border-") && c !== "border") ?? "";
+                                const divideColor = borderColor.replace("border-", "divide-");
+                                return `${parts.filter((c) => c.startsWith("border")).join(" ")} ${divideColor}`;
+                              })()
+                            )}>
+                              {sg.events.map((event) => {
+                                const hasPricing = !!event.payment_amount && event.payment_amount > 0;
+                                const host = employees.find((emp) => emp.id === event.host_employee_id);
+                                const hostInitials = host?.full_name
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()
+                                  .slice(0, 2) ?? null;
+                                const isQuiz = !!sg.eventType.sub_type?.toLowerCase().includes("quiz");
+                                const quizStat = isQuiz ? getQuizStatus(event.id, quizCategories, quizQuestions) : null;
+                                const bStats = getBookingStats(event.id, bookings);
+                                const inactive = event.is_active === false;
+                                const dateObj = new Date(event.date + "T00:00:00");
+                                const monthAbbr = dateObj.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
+                                const dayNum = dateObj.getDate();
+
+                                return (
+                                  <div
+                                    key={event.id}
+                                    onClick={() => openView(event)}
+                                    className={cn(
+                                      "px-3 sm:px-4 py-3 flex items-center gap-2.5 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]",
+                                      inactive && "opacity-60"
+                                    )}
+                                  >
+                                    {/* Date badge */}
+                                    <div className={cn(
+                                      "w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 border",
+                                      badgeClassFromColor(sg.eventType.badge_color)
+                                    )}>
+                                      <span className="text-[9px] font-black uppercase tracking-tighter leading-none">{monthAbbr}</span>
+                                      <span className="text-sm font-black leading-none">{dayNum}</span>
+                                    </div>
+
+                                    {/* Title + meta */}
+                                    <div className="flex-1 min-w-0">
+                                      <p className={cn("text-sm font-black leading-snug truncate", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
+                                        {event.title || "Untitled Event"}
+                                      </p>
+                                      <p className="text-[11px] text-[#5F624F] truncate mt-0.5">
+                                        {host ? host.full_name : ""}
+                                        {host && (event.start_time || event.end_time) ? " · " : ""}
+                                        {formatTime(event.start_time)}
+                                        {event.end_time ? ` \u2192 ${formatTime(event.end_time)}` : ""}
+                                      </p>
+                                    </div>
+
+                                    {/* Right signals */}
+                                    <div className="flex items-center gap-1.5 shrink-0">
+                                      {(bStats.confirmedPeople > 0 || event.is_bookable) && (
+                                        <span className="text-[10px] font-black text-[#5F624F] flex items-center gap-0.5 tabular-nums">
+                                          <Users className="w-3 h-3" />
+                                          {bStats.confirmedPeople}
+                                        </span>
+                                      )}
+                                      {quizStat ? (
+                                        quizStat.allComplete
+                                          ? <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                          : quizStat.someExist
+                                            ? <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                            : <AlertCircle className="w-4 h-4 text-red-500" />
+                                      ) : hasPricing ? (
+                                        <span className="text-[10px] font-black text-green-700">
+                                          £{event.payment_amount!.toFixed(2)}
+                                        </span>
+                                      ) : null}
+                                      {event.is_fully_booked && (
+                                        <span className="text-[9px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Full</span>
+                                      )}
+                                      {hostInitials && (
+                                        <span className="text-[10px] font-black bg-[#F7F4EA] border border-[#E6DFC8] w-6 h-6 rounded-full flex items-center justify-center text-[#5F624F]">
+                                          {hostInitials}
+                                        </span>
+                                      )}
+                                      {inactive && (
+                                        <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" title="Inactive" />
+                                      )}
+                                    </div>
+
+                                    <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
-                      </div>
-
-                      {/* Desktop layout */}
-                      <div className="hidden sm:block flex-1 min-w-0">
-                        <p className={cn("text-sm font-black leading-snug truncate", inactive ? muted : "text-[#1F1F1A]")}>
-                          {formatDate(event.date)}
-                          {(event.start_time || event.end_time) && (
-                            <span className={cn("text-[11px] font-medium ml-2", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
-                              {formatTime(event.start_time)}
-                              {event.end_time && (
-                                <span className={inactive ? "text-[#5F624F]/30" : "text-[#5F624F]/50"}> {"\u2192"} {formatTime(event.end_time)}</span>
-                              )}
-                            </span>
-                          )}
-                        </p>
-                        <p className={cn("flex items-center gap-1 text-[11px] font-medium mt-0.5 flex-wrap", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
-                          {event.title || "Untitled Event"}
-                          {host && (
-                            <span className={cn("ml-2 font-black", inactive ? "text-[#5F624F]/40" : "text-[#1F1F1A]/60")}>{host.full_name}</span>
-                          )}
-                        </p>
-                      </div>
-
-                      <div className="hidden sm:flex items-center gap-2 shrink-0">
-                          {quizStat && (
-                          <span className="flex items-center gap-1.5 text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-1 rounded-lg">
-                            {quizStat.allComplete
-                              ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                              : quizStat.someExist
-                              ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                              : <AlertCircle className="w-3.5 h-3.5 text-red-500 shrink-0" />}
-                            {quizStat.total} / {quizStat.target} Questions
-                          </span>
-                        )}
-                        {hasPricing ? (
-                          <span className="text-[11px] font-black text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-lg flex items-center gap-1">
-                            <BadgePoundSterling className="w-3 h-3" />
-                            {event.payment_amount!.toFixed(2)}
-                          </span>
-                        ) : (
-                          <span className="text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-1 rounded-lg">
-                            Free
-                          </span>
-                        )}
-                        <span className={cn(
-                          "text-[11px] font-black px-2 py-1 rounded-lg border flex items-center gap-1",
-                          event.seating_required
-                            ? "text-[#5C4033] bg-[#5C4033]/10 border-[#5C4033]/20"
-                            : "text-[#5F624F]/40 bg-[#F7F4EA] border-[#E6DFC8]"
-                        )}>
-                          Seating
-                          {event.seating_required
-                            ? <CheckCircle2 className="w-3.5 h-3.5 text-[#5C4033]" />
-                            : <XCircle className="w-3.5 h-3.5 text-[#5F624F]/30" />}
-                        </span>
-                        <span className={cn(
-                          "text-[11px] font-black px-2 py-1 rounded-lg border",
-                          event.is_active !== false
-                            ? "text-green-700 bg-green-50 border-green-200"
-                            : "text-red-500 bg-red-50 border-red-200"
-                        )}>
-                          {event.is_active !== false ? "Active" : "Inactive"}
-                        </span>
-
-                      </div>
-
-                      <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
-                    </div>
-                  );
-                })}
-                {!isShowingHistory && hasHidden && (
-                  <button
-                    type="button"
-                    onClick={() => setHistoryGroups((prev) => new Set(prev).add(eventType.id))}
-                    className="w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#5C4033] hover:bg-[#F7F4EA]/50 transition-colors"
-                  >
-                    View All History
-                    <ChevronRight className="w-3 h-3" />
-                  </button>
+                      );
+                    })}
+                  </div>
                 )}
-              </div>}
-            </section>
-          )})}
+              </section>
+            );
+          })}
 
           {ungrouped.length > 0 && (
             <section className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
