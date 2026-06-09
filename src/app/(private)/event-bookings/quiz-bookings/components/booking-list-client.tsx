@@ -749,8 +749,15 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                       {selectedBooking.updated_at && (
                         <InfoRow icon={<History className="w-4 h-4" />} label="Last Modified" value={format(new Date(selectedBooking.updated_at), "dd MMM yyyy · HH:mm")} />
                       )}
-                      {selectedBooking.updated_by_employee && (
-                        <InfoRow icon={<UserCheck className="w-4 h-4" />} label="Modified By" value={selectedBooking.updated_by_employee.full_name} />
+                      {(selectedBooking.updated_by_employee || selectedBooking.updated_by_contact) && (
+                        <InfoRow
+                          icon={<UserCheck className="w-4 h-4" />}
+                          label="Modified By"
+                          value={
+                            selectedBooking.updated_by_employee?.full_name
+                              ?? `${selectedBooking.updated_by_contact!.full_name} (customer)`
+                          }
+                        />
                       )}
                     </div>
 

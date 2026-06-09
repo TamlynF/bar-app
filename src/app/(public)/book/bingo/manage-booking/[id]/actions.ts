@@ -9,9 +9,19 @@ export async function updateBingoSpecialRequests(
 ) {
   try {
     const supabase = await createClient();
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("contact_id")
+      .eq("id", bookingId)
+      .single();
+
     const { error } = await supabase
       .from("bookings")
-      .update({ special_requests: specialRequests || null })
+      .update({
+        special_requests: specialRequests || null,
+        updated_by_contact_id: booking?.contact_id ?? null,
+        updated_by: null,
+      })
       .eq("id", bookingId);
 
     if (error) return { success: false, error: "Failed to save. Please try again." };

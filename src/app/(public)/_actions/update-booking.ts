@@ -21,6 +21,7 @@ export async function updateBooking(
       .select(`
         id,
         event_id,
+        contact_id,
         status,
         group_size,
         events!bookings_event_id_fkey (date)
@@ -110,7 +111,9 @@ export async function updateBooking(
       .from("bookings")
       .update({
         ...updates,
-        status: finalStatus
+        status: finalStatus,
+        updated_by_contact_id: currentBooking.contact_id ?? null,
+        updated_by: null,
       })
       .eq("id", bookingId);
 

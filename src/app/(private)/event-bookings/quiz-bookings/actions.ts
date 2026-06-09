@@ -55,7 +55,9 @@ export async function getBookings(type: string, subType: string, selectedDate: s
           ),
           updated_at,
           updated_by,
-          updated_by_employee:employees!updated_by(full_name, role)
+          updated_by_employee:employees!updated_by(full_name, role),
+          updated_by_contact_id,
+          updated_by_contact:contacts!updated_by_contact_id(full_name)
         `)
       .ilike("events.event_types.type", type)
       .ilike("events.event_types.sub_type", subType)
@@ -269,6 +271,7 @@ export async function updateBookingDetails(
       ...bookingUpdates,
       updated_at: new Date().toISOString(),
       updated_by: updatedById,
+      updated_by_contact_id: null,
     })
     .eq("id", id)
 
@@ -319,9 +322,22 @@ export async function updateBookingDetails(
 
 export async function updateBookingStatus(id: string, status: string) {
   const supabase = await createClient()
+
+  let updatedById: number | null = null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.email) {
+    const { data: emp } = await supabase.from("employees").select("id").eq("email", user.email).single();
+    if (emp) updatedById = emp.id;
+  }
+
   const { error } = await supabase
     .from("bookings")
-    .update({ status: status.toLowerCase() })
+    .update({
+      status: status.toLowerCase(),
+      updated_by: updatedById,
+      updated_by_contact_id: null,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", id)
 
   if (error) {

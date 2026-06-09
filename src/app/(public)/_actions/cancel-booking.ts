@@ -7,10 +7,19 @@ export async function cancelBooking(bookingId: string | number) {
   try {
     const supabase = await createClient();
 
-    // Update the booking status to 'cancelled'
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("contact_id")
+      .eq("id", bookingId)
+      .single();
+
     const { error } = await supabase
       .from("bookings")
-      .update({ status: "cancelled" })
+      .update({
+        status: "cancelled",
+        updated_by_contact_id: booking?.contact_id ?? null,
+        updated_by: null,
+      })
       .eq("id", bookingId);
 
     if (error) {

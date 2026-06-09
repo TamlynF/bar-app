@@ -69,6 +69,8 @@ export interface Booking {
   updated_at?: string | null;
   updated_by?: number | null;
   updated_by_employee?: { full_name: string; role: string | null } | null;
+  updated_by_contact_id?: number | null;
+  updated_by_contact?: { full_name: string } | null;
 }
 
 export const dynamic = 'force-dynamic';

@@ -19,6 +19,7 @@ export async function updateBookingStatusAction(bookingId: number, status: strin
       .update({
         status,
         updated_by: currentEmployeeId,
+        updated_by_contact_id: null,
         updated_at: new Date().toISOString(),
       })
       .eq("id", bookingId);
