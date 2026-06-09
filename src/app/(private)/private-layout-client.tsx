@@ -185,7 +185,7 @@ export default function PrivateLayoutClient({
     const { title, subtitle, backHref } = getPageInfo()
 
     return (
-        <div className="flex min-h-screen bg-[#F7F4EA]">
+        <div className="flex min-h-screen bg-[#F7F4EA] pt-safe-top">
             {/* 1. Sidebar for Tablets/Desktops */}
             <aside className="hidden sm:flex flex-col w-64 bg-white border-r border-[#E6DFC8] sticky top-0 h-screen shrink-0 z-50">
                 {/* Sidebar Brand */}
@@ -348,7 +348,7 @@ export default function PrivateLayoutClient({
 
             {/* 2. Main Content Wrapper */}
             <div className="flex flex-col flex-1 min-w-0">
-                <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
+                <header className="sticky top-0 z-40 w-full bg-[#F7F4EA]/95 backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
                     <div className="flex items-center max-w-7xl mx-auto min-h-10 relative">
 
                         {/* Mobile Back Button */}
@@ -366,11 +366,11 @@ export default function PrivateLayoutClient({
                         {/* Title */}
                         <div className="flex flex-col items-center justify-center w-full">
                             <h1 className="text-sm sm:text-base font-black uppercase tracking-widest text-[#1F1F1A] text-center px-8 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
-                                <span>{title}</span>
+                                <span className={cn(subtitle && backHref ? "hidden sm:inline" : "")}>{title}</span>
                                 {subtitle && (
                                     <>
                                         <span className="hidden sm:inline opacity-30">/</span>
-                                        <span className="text-[#5F624F] opacity-70 sm:opacity-100">{subtitle}</span>
+                                        <span className={cn(subtitle && backHref ? "" : "text-[#5F624F] opacity-70 sm:opacity-100")}>{subtitle}</span>
                                     </>
                                 )}
                             </h1>

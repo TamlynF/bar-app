@@ -160,8 +160,8 @@ export default function EventsClient({
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
-  const [collapsedTypes, setCollapsedTypes] = useState<Set<string>>(new Set());
-  const [collapsedSubTypes, setCollapsedSubTypes] = useState<Set<string>>(new Set());
+  const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
+  const [expandedSubTypes, setExpandedSubTypes] = useState<Set<string>>(new Set());
   const [addForTypeId, setAddForTypeId] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterMonth, setFilterMonth] = useState(() => {
@@ -197,14 +197,14 @@ export default function EventsClient({
   }, [searchParams]);
 
   const toggleType = (type: string) =>
-    setCollapsedTypes((prev) => {
+    setExpandedTypes((prev) => {
       const next = new Set(prev);
       if (next.has(type)) { next.delete(type); } else { next.add(type); }
       return next;
     });
 
   const toggleSubType = (key: string) =>
-    setCollapsedSubTypes((prev) => {
+    setExpandedSubTypes((prev) => {
       const next = new Set(prev);
       if (next.has(key)) { next.delete(key); } else { next.add(key); }
       return next;
@@ -431,7 +431,7 @@ export default function EventsClient({
       ) : (
         <div className="space-y-2">
           {typeGroups.map((tg) => {
-            const typeOpen = !collapsedTypes.has(tg.type.toLowerCase()) || forceOpen;
+            const typeOpen = expandedTypes.has(tg.type.toLowerCase()) || forceOpen;
             return (
               <section key={tg.type} className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
                 {/* Type header */}
@@ -454,7 +454,7 @@ export default function EventsClient({
                   <div className="px-3 sm:px-4 py-3 space-y-3">
                     {tg.subGroups.filter((sg) => sg.events.length > 0).map((sg) => {
                       const subKey = sg.key;
-                      const subOpen = !collapsedSubTypes.has(subKey) || forceOpen;
+                      const subOpen = expandedSubTypes.has(subKey) || forceOpen;
                       return (
                         <div key={sg.eventType.id} className={cn(
                           "rounded-xl border overflow-hidden",

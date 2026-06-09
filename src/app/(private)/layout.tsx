@@ -1,5 +1,10 @@
+import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import PrivateLayoutClient from "./private-layout-client";
+
+export const viewport: Viewport = {
+    themeColor: "#F7F4EA",
+};
 
 export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient();

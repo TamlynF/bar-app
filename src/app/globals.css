@@ -367,6 +367,9 @@ html, body {
   }
 }
 @layer utilities {
+  .pt-safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
   .pointer-events-none {
     pointer-events: none;
   }

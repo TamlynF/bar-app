@@ -50,7 +50,7 @@ export default async function EventsHubPage() {
   // Fetch all bookable events
   const { data: bookableEvents, error: evError } = await supabase
     .from("events")
-    .select("id, date, title")
+    .select("id, date, title, event_types!inner(sub_type, type)")
     .eq("is_active", true)
     .eq("is_bookable", true)
     .gte("date", today)
