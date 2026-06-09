@@ -114,13 +114,14 @@ export default function CategorySection({ eventId, category_name, question_count
         imageData = { base64, mimeType: newImageFile.type, oldImageUrl: currentQ?.image_url ?? null };
       }
       const result = await updatePastQuestionAction(id, isPicture ? null : editForm.question, editForm.answer, imageData, editForm.questionNo, eventId);
+      const cacheBust = `?t=${Date.now()}`;
       setQuestions((prev) => {
         const updated = prev.map((q) => q.id === id ? {
           ...q,
           ...(!isPicture ? { question_text: editForm.question } : {}),
           answer_text: editForm.answer,
           question_no: editForm.questionNo,
-          ...(result.image_url !== undefined ? { image_url: result.image_url } : {}),
+          ...(result.image_url != null ? { image_url: result.image_url.split("?")[0] + cacheBust } : result.image_url === null ? { image_url: null } : {}),
         } : q);
         const currentNo = prev.find(q => q.id === id)?.question_no;
         if (currentNo === editForm.questionNo) return updated;
@@ -199,6 +200,16 @@ export default function CategorySection({ eventId, category_name, question_count
       {/* Questions body */}
       {open && (
         <>
+          {isPicture && (() => {
+            const firstQ = questions.find((q) => q.question_text);
+            return firstQ ? (
+              <div className="px-5 py-2.5 bg-[#5C4033]/5 border-b border-[#E6DFC8]">
+                <p className="pl-3 text-xs font-black text-[#5C4033]">
+                  Question: <span className="font-bold text-[#1F1F1A]">{firstQ.question_text}</span>
+                </p>
+              </div>
+            ) : null;
+          })()}
           <div className="p-3 space-y-3">
             {count === 0 ? (
               <div className="py-8 text-center">

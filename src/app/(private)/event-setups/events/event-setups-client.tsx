@@ -451,15 +451,18 @@ export default function EventsClient({
 
                 {/* Sub-type sections */}
                 {typeOpen && (
-                  <div className="px-3 sm:px-4 py-2 space-y-1.5">
+                  <div className="px-3 sm:px-4 py-3 space-y-3">
                     {tg.subGroups.filter((sg) => sg.events.length > 0).map((sg) => {
                       const subKey = sg.key;
                       const subOpen = !collapsedSubTypes.has(subKey) || forceOpen;
                       return (
-                        <div key={sg.eventType.id} className="rounded-xl overflow-hidden">
+                        <div key={sg.eventType.id} className={cn(
+                          "rounded-xl border overflow-hidden",
+                          badgeClassFromColor(sg.eventType.badge_color).split(" ").filter((c) => c.startsWith("border")).join(" ")
+                        )}>
                           {/* Sub-type header */}
                           <div className={cn(
-                            "flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[40px] rounded-t-xl border",
+                            "flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[40px]",
                             badgeClassFromColor(sg.eventType.badge_color)
                           )}>
                             <button
@@ -497,12 +500,10 @@ export default function EventsClient({
                           {/* Event rows */}
                           {subOpen && (
                             <div className={cn(
-                              "divide-y border-x border-b rounded-b-xl",
+                              "divide-y",
                               (() => {
-                                const parts = badgeClassFromColor(sg.eventType.badge_color).split(" ");
-                                const borderColor = parts.find((c) => c.startsWith("border-") && c !== "border") ?? "";
-                                const divideColor = borderColor.replace("border-", "divide-");
-                                return `${parts.filter((c) => c.startsWith("border")).join(" ")} ${divideColor}`;
+                                const borderColor = badgeClassFromColor(sg.eventType.badge_color).split(" ").find((c) => c.startsWith("border-") && c !== "border") ?? "";
+                                return borderColor.replace("border-", "divide-");
                               })()
                             )}>
                               {sg.events.map((event) => {
@@ -542,47 +543,49 @@ export default function EventsClient({
 
                                     {/* Title + meta */}
                                     <div className="flex-1 min-w-0">
-                                      <p className={cn("text-sm font-black leading-snug truncate", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
-                                        {event.title || "Untitled Event"}
-                                      </p>
-                                      <p className="text-[11px] text-[#5F624F] truncate mt-0.5">
-                                        {host ? host.full_name : ""}
-                                        {host && (event.start_time || event.end_time) ? " · " : ""}
-                                        {formatTime(event.start_time)}
-                                        {event.end_time ? ` \u2192 ${formatTime(event.end_time)}` : ""}
-                                      </p>
-                                    </div>
-
-                                    {/* Right signals */}
-                                    <div className="flex items-center gap-1.5 shrink-0">
-                                      {(bStats.confirmedPeople > 0 || event.is_bookable) && (
-                                        <span className="text-[10px] font-black text-[#5F624F] flex items-center gap-0.5 tabular-nums">
-                                          <Users className="w-3 h-3" />
-                                          {bStats.confirmedPeople}
-                                        </span>
-                                      )}
-                                      {quizStat ? (
-                                        quizStat.allComplete
-                                          ? <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                          : quizStat.someExist
-                                            ? <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                            : <AlertCircle className="w-4 h-4 text-red-500" />
-                                      ) : hasPricing ? (
-                                        <span className="text-[10px] font-black text-green-700">
-                                          £{event.payment_amount!.toFixed(2)}
-                                        </span>
-                                      ) : null}
-                                      {event.is_fully_booked && (
-                                        <span className="text-[9px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Full</span>
-                                      )}
-                                      {hostInitials && (
-                                        <span className="text-[10px] font-black bg-[#F7F4EA] border border-[#E6DFC8] w-6 h-6 rounded-full flex items-center justify-center text-[#5F624F]">
-                                          {hostInitials}
-                                        </span>
-                                      )}
-                                      {inactive && (
-                                        <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" title="Inactive" />
-                                      )}
+                                      <div className="flex items-center gap-1.5">
+                                        <p className={cn("text-sm font-black leading-snug truncate flex-1 min-w-0", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
+                                          {event.title || "Untitled Event"}
+                                        </p>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                          {(bStats.confirmedPeople > 0 || event.is_bookable) && (
+                                            <span className="text-[10px] font-black text-[#5F624F] flex items-center gap-0.5 tabular-nums">
+                                              <Users className="w-3 h-3" />
+                                              {bStats.confirmedPeople}
+                                            </span>
+                                          )}
+                                          {event.is_fully_booked && (
+                                            <span className="text-[9px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Full</span>
+                                          )}
+                                          {inactive && (
+                                            <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" title="Inactive" />
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="flex items-center gap-1.5 mt-0.5">
+                                        <p className="text-[11px] text-[#5F624F] truncate flex-1 min-w-0">
+                                          {formatTime(event.start_time)}
+                                          {event.end_time ? ` \u2192 ${formatTime(event.end_time)}` : ""}
+                                          {(event.start_time || event.end_time) && host ? " · " : ""}
+                                          {host ? (() => { const parts = host.full_name.split(" "); const first = parts[0].length > 4 ? parts[0].slice(0, 4) : parts[0]; return parts.length > 1 ? `${first} ${parts[parts.length - 1][0]}.` : first; })() : ""}
+                                        </p>
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                          {quizStat ? (
+                                            <span className="flex items-center gap-0.5">
+                                              <span className="text-[10px] font-black text-[#5F624F]">Qz:</span>
+                                              {quizStat.allComplete
+                                                ? <CheckCircle2 className="w-4 h-4 text-green-600" />
+                                                : quizStat.someExist
+                                                  ? <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                                  : <AlertCircle className="w-4 h-4 text-red-500" />}
+                                            </span>
+                                          ) : hasPricing ? (
+                                            <span className="text-[10px] font-black text-green-700">
+                                              £{event.payment_amount!.toFixed(2)}
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                      </div>
                                     </div>
 
                                     <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />

@@ -349,7 +349,7 @@ export async function updatePastQuestionAction(
     console.error("Update error:", error);
     throw new Error("Failed to update question.");
   }
-  return { success: true };
+  return { success: true, image_url: newImageUrl };
 }
 
 /**
