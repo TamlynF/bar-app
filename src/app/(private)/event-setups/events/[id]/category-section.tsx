@@ -442,7 +442,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
             const firstQ = questions.find((q) => q.question_text);
             return firstQ ? (
               <div className="px-5 py-2.5 bg-[#5C4033]/5 border-b border-[#E6DFC8]">
-                <p className="pl-3 text-xs font-black text-[#5C4033]">
+                <p className="pl-3 text-sm font-black text-[#5C4033]">
                   Question: <span className="font-bold text-[#1F1F1A]">{firstQ.question_text}</span>
                 </p>
               </div>
@@ -467,7 +467,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                     {isEditing ? (
                       <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
                         <div className="flex items-center gap-2">
-                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Q</label>
+                          <label className="text-xs font-black uppercase text-[#5F624F] tracking-wide ml-1">Question No.</label>
                           <input
                             type="number"
                             inputMode="numeric"
@@ -479,19 +479,19 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                               const val = e.target.value.replace(/\D/g, '');
                               setEditForm({ ...editForm, questionNo: val === '' ? 0 : parseInt(val) });
                             }}
-                            className="w-16 text-[13px] font-black text-[#5C4033] px-3 py-2 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10 text-center tabular-nums"
+                            className="w-16 text-xs font-black text-[#5C4033] px-3 py-2 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10 text-center tabular-nums"
                           />
                         </div>
                         {isPicture && q.image_url && (
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide">Image</label>
+                            <label className="text-xs font-black uppercase text-[#5F624F] tracking-wide ml-1">Image</label>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={newImagePreview ?? q.image_url}
                               alt={q.answer_text}
                               className="w-full h-40 object-cover rounded-xl"
                             />
-                            <label className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border-2 border-dashed border-[#E6DFC8] text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033] cursor-pointer transition-all">
+                            <label className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border-2 border-dashed border-[#E6DFC8] text-xs font-black uppercase tracking-wide text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033] cursor-pointer transition-all">
                               <Upload className="w-3.5 h-3.5" />
                               {newImageFile ? newImageFile.name : 'Replace image'}
                               <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
@@ -500,29 +500,29 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                         )}
                         {!isPicture && !hideQuestionText && (
                           <div className="space-y-1.5">
-                            <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide ml-1">Question</label>
+                            <label className="text-xs font-black uppercase text-[#5F624F] tracking-wide ml-1">Question</label>
                             <textarea
                               title="Edit question"
                               value={editForm.question}
                               onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                              className="w-full text-sm font-semibold leading-relaxed min-h-[120px] p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
+                              className="w-full text-xs leading-relaxed min-h-[120px] p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
                             />
                           </div>
                         )}
                         <div className="space-y-1.5">
-                          <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide ml-1">Answer</label>
+                          <label className="text-xs font-black uppercase text-[#5F624F] tracking-wide ml-1">Answer</label>
                           <input
                             title="Edit answer"
                             value={editForm.answer}
                             onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })}
-                            className="w-full text-sm font-black text-[#5C4033] bg-[#5C4033]/10 border-2 border-[#5C4033]/15 focus:border-[#5C4033] rounded-xl outline-none h-11 px-3"
+                            className="w-full text-xs font-black text-[#5C4033] bg-[#5C4033]/10 border-2 border-[#5C4033]/15 focus:border-[#5C4033] rounded-xl outline-none h-11 px-3"
                           />
                         </div>
                         <div className="flex gap-2 pt-1">
                           <Button
                             onClick={() => saveEdit(q.id)}
                             disabled={isPending}
-                            className="flex-1 bg-[#5C4033] text-white font-black uppercase text-[10px] tracking-wide h-10 rounded-xl"
+                            className="flex-1 bg-[#1B4332] text-white font-black uppercase text-xs tracking-wide h-10 rounded-xl"
                           >
                             {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-2" /> Save</>}
                           </Button>
@@ -530,7 +530,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                             variant="outline"
                             onClick={cancelEditing}
                             disabled={isPending}
-                            className="px-4 border-2 border-[#E6DFC8] text-[#5F624F] font-bold uppercase text-[10px] h-10 rounded-xl"
+                            className="px-4 bg-red-500 border-2 border-[#E6DFC8] text-white font-bold uppercase text-xs h-10 rounded-xl"
                           >
                             <X className="w-3.5 h-3.5" />
                           </Button>
@@ -539,7 +539,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                     ) : (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2 -mt-1">
-                          <span className="text-[10px] font-black text-[#5C4033]/20 shrink-0">Q{q.question_no ?? idx + 1}</span>
+                          <span className="text-sm font-black text-[#5C4033]/20 shrink-0">Question {q.question_no ?? idx + 1}:</span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -574,12 +574,12 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                               <p className="text-sm text-[#1F1F1A] leading-snug">
                                 <span className="font-bold italic">{q.answer_text_ext ?? q.answer_text}</span> higher or lower than <span className="font-bold text-orange-600">{q.hint_year}</span>?
                               </p>
-                              <div className="flex items-center justify-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-full shadow-sm">
+                              <div className="flex items-center justify-center gap-2 bg-[#7A1F1F] text-white px-3 py-2 rounded-xl w-full shadow-sm">
                                 <Target className="w-3 h-3 text-white/50 shrink-0" />
-                                <span className="text-sm font-black tracking-tight text-center">
+                                <span className="text-xs font-black tracking-tight text-center">
                                   {(q.release_year ?? 0) > q.hint_year ? 'Higher' : 'Lower'}
                                 </span>
-                                <span className="text-[11px] font-black text-white/50 tabular-nums shrink-0">{q.release_year}</span>
+                                <span className="text-xs font-black text-white/50 tabular-nums shrink-0">{q.release_year}</span>
                               </div>
                             </div>
                           ) : (
@@ -593,7 +593,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                                 />
                               ) : (
                                 (!includeSpotify || !q.spotify_track_id) && (
-                                  <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
+                                  <p className="text-sm text-[#1F1F1A] leading-snug">
                                     {q.question_text}
                                   </p>
                                 )
@@ -601,9 +601,9 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                               {hideQuestionText && q.spotify_track_id && (
                                 <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
                               )}
-                              <div className="flex items-center justify-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-full shadow-sm">
+                              <div className="flex items-center justify-center gap-2 bg-[#1B4332] text-white px-3 py-2 rounded-xl w-full shadow-sm">
                                 <Target className="w-3 h-3 text-white/50 shrink-0" />
-                                <span className="text-sm font-black tracking-tight text-center">{q.answer_text}</span>
+                                <span className="text-xs font-black tracking-tight text-center">{q.answer_text}</span>
                               </div>
                             </>
                           )}
@@ -627,7 +627,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                 "flex items-center justify-center gap-2 w-full h-10 rounded-xl font-black text-[11px] uppercase tracking-wide transition-all",
                 isComplete
                   ? "bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA]"
-                  : "bg-[#5C4033] text-white hover:bg-[#5C4033]/90 shadow-sm"
+                  : "bg-[#9A3412] text-white hover:bg-[#9A3412]/50 shadow-sm"
               )}
             >
               <Sparkles className="w-3.5 h-3.5" />

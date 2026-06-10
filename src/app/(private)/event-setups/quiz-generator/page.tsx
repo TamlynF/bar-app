@@ -679,7 +679,7 @@ export default function QuizGeneratorPage() {
                                   ) : !record.spotify_track_id && record.question_text ? (
                                     <p className="text-sm font-bold text-[#1F1F1A] leading-snug">{record.question_text}</p>
                                   ) : null}
-                                  <div className="flex items-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
+                                  <div className="flex items-center gap-2 bg-[#7A1F1F] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
                                     <Target className="w-3 h-3 text-white/50" />
                                     <span className="text-xs font-black tracking-tight">{record.answer_text}</span>
                                   </div>
