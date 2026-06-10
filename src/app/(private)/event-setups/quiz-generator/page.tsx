@@ -18,6 +18,7 @@ import {
   getMusicSnippetsForEventAction,
   generatePictureRoundAction,
   savePictureRoundAction,
+  cleanupGeneratedQuestionsForInactiveEventAction,
 } from '@/app/(private)/event-setups/quiz-generator/actions'
 
 import type {
@@ -220,6 +221,8 @@ export default function QuizGeneratorPage() {
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
     setSelectedEventId(id);
+    // Purge the generated-question exclusion log if this event is no longer active.
+    if (id) cleanupGeneratedQuestionsForInactiveEventAction(parseInt(id)).catch(() => {});
     loadEventHistory(id);
     // Load saved snippets for the new event
     if (selectedCategoryConfig?.include_spotify) {
@@ -274,6 +277,16 @@ export default function QuizGeneratorPage() {
     e.preventDefault();
     if (isLoading) return
 
+    if (!selectedEventId) {
+      toast.error("Select a Quiz Event first.");
+      return;
+    }
+
+    if (!selectedCategoryConfig) {
+      toast.error("Select a category first.");
+      return;
+    }
+
     if (currentCategoryIsFull) {
       toast.error(`${category} is already full for this event.`);
       return;
@@ -301,7 +314,7 @@ export default function QuizGeneratorPage() {
           toast.success("Picture round generated!")
         }
       } else if (isMusicSnippets) {
-        const result = await generateMusicSnippetsAction(numQuestions, category, topic, difficulty)
+        const result = await generateMusicSnippetsAction(numQuestions, category, topic, difficulty, parseInt(selectedEventId), selectedCategoryConfig!.id)
         if (result.error) {
           setError(result.error)
           toast.error(result.error)
@@ -312,7 +325,7 @@ export default function QuizGeneratorPage() {
           toast.success("Song suggestions generated!")
         }
       } else {
-        const result = await generateQuizAction(topic, category, numQuestions, difficulty)
+        const result = await generateQuizAction(topic, category, numQuestions, difficulty, parseInt(selectedEventId), selectedCategoryConfig!.id)
         if (result && 'error' in result && result.error) {
           setError(result.error)
           toast.error(result.error)

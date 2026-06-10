@@ -91,20 +91,36 @@ export async function generateQuizAction(
   topic: string,
   category: string,
   numberOfQuestions: number = 10,
-  difficulty: string = 'Medium'
+  difficulty: string = 'Medium',
+  eventId: number,
+  categoryConfigId: number
 ): Promise<{ questions?: QuizQuestion[], error?: string }> {
   const supabase = await createClient()
 
   try {
-    // 1. Fetch recent questions for exclusion to avoid duplicates
-  const { data: pastQuestions } = await supabase
-    .from('past_quiz_questions')
-    .select('question_text')
-    .order('asked_on', { ascending: false })
-    .limit(50);
+    // 1. Build exclusion list scoped to this event + category:
+    //    last 10 approved questions + every question already generated (draft log).
+  const [{ data: approved }, { data: generated }] = await Promise.all([
+    supabase
+      .from('past_quiz_questions')
+      .select('question_text')
+      .eq('events_id', eventId)
+      .eq('quiz_category_configs_id', categoryConfigId)
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('generated_quiz_questions')
+      .select('content_text')
+      .eq('events_id', eventId)
+      .eq('quiz_category_configs_id', categoryConfigId),
+  ]);
 
-  const pastQuestionsList = pastQuestions?.length 
-    ? pastQuestions.map(q => q.question_text).join(' | ')
+  const combinedExclusions = [
+    ...(approved?.map(q => q.question_text) ?? []),
+    ...(generated?.map(g => g.content_text) ?? []),
+  ];
+  const pastQuestionsList = combinedExclusions.length
+    ? combinedExclusions.join(' | ')
     : "None.";
 
   // 2. Setup Gemini API
@@ -174,11 +190,42 @@ export async function generateQuizAction(
     }
 
     const questions = JSON.parse(content) as QuizQuestion[];
+
+    // Persist generated questions immediately so they're excluded on future
+    // regenerations — even before approval and across page reloads.
+    if (questions.length) {
+      const { error: logError } = await supabase
+        .from('generated_quiz_questions')
+        .insert(questions.map(q => ({
+          events_id: eventId,
+          quiz_category_configs_id: categoryConfigId,
+          content_text: q.question,
+        })));
+      if (logError) console.error("Failed to log generated questions:", logError);
+    }
+
     return { questions };
-    
+
   } catch (error: unknown) {
     console.error("AI Generation failed:", error);
     return { error: "Connection lost or request timed out. Please try again." };
+  }
+}
+
+/**
+ * Clears the generated-question exclusion log for an event once it is no longer
+ * active. The log is only useful while a quiz is being built; reading is_active
+ * server-side keeps the decision authoritative.
+ */
+export async function cleanupGeneratedQuestionsForInactiveEventAction(eventId: number) {
+  const supabase = await createClient()
+  const { data: ev } = await supabase
+    .from('events')
+    .select('is_active')
+    .eq('id', eventId)
+    .single()
+  if (ev && ev.is_active === false) {
+    await supabase.from('generated_quiz_questions').delete().eq('events_id', eventId)
   }
 }
 
@@ -562,19 +609,36 @@ export async function generateMusicSnippetsAction(
   numberOfSongs: number = 15,
   categoryName: string = 'Music Snippets',
   topic: string = '',
-  difficulty: string = 'Medium'
+  difficulty: string = 'Medium',
+  eventId: number,
+  categoryConfigId: number
 ): Promise<{ songs?: MusicSnippetCandidate[]; error?: string }> {
   const supabase = await createClient()
 
   try {
-    // Fetch existing songs for this category to avoid duplicates
-    const { data: pastSnippets } = await supabase
-      .from('past_quiz_questions')
-      .select('answer_text')
-      .eq('category', categoryName)
+    // Build exclusion list scoped to this event + category:
+    // last 10 approved songs + every song already generated (draft log).
+    const [{ data: approved }, { data: generated }] = await Promise.all([
+      supabase
+        .from('past_quiz_questions')
+        .select('answer_text')
+        .eq('events_id', eventId)
+        .eq('quiz_category_configs_id', categoryConfigId)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('generated_quiz_questions')
+        .select('content_text')
+        .eq('events_id', eventId)
+        .eq('quiz_category_configs_id', categoryConfigId),
+    ])
 
-    const existingList = pastSnippets?.length
-      ? pastSnippets.map((q) => q.answer_text).join(' | ')
+    const combinedExclusions = [
+      ...(approved?.map((q) => q.answer_text) ?? []),
+      ...(generated?.map((g) => g.content_text) ?? []),
+    ]
+    const existingList = combinedExclusions.length
+      ? combinedExclusions.join(' | ')
       : 'None.'
 
     const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
@@ -685,6 +749,20 @@ ${difficultyLine}
         return { ...s, spotify_track_id: spotifyId, hint_year: s.hint_year }
       })
     )
+
+    // Persist generated songs immediately so they're excluded on future
+    // regenerations — even before approval and across page reloads.
+    // content_text matches the `artist - title` answer_text saved on approval.
+    if (songs.length) {
+      const { error: logError } = await supabase
+        .from('generated_quiz_questions')
+        .insert(songs.map((s) => ({
+          events_id: eventId,
+          quiz_category_configs_id: categoryConfigId,
+          content_text: `${s.artist} - ${s.title}`,
+        })))
+      if (logError) console.error('Failed to log generated songs:', logError)
+    }
 
     return { songs }
   } catch (error: unknown) {
