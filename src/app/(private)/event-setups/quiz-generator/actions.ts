@@ -67,6 +67,7 @@ export type QuizCategoryConfig = {
   include_spotify: boolean;
   short_name: string;
   is_picture: boolean;
+  is_higher_lower: boolean;
   order_no: number | null;
 }
 
@@ -629,7 +630,7 @@ export async function generateMusicSnippetsAction(
   try {
     // Build exclusion list scoped to this event + category:
     // last 10 approved songs + every song already generated (draft log).
-    const [{ data: approved }, { data: generated }] = await Promise.all([
+    const [{ data: approved }, { data: generated }, { data: config }] = await Promise.all([
       supabase
         .from('past_quiz_questions')
         .select('answer_text')
@@ -642,6 +643,11 @@ export async function generateMusicSnippetsAction(
         .select('content_text')
         .eq('events_id', eventId)
         .eq('quiz_category_configs_id', categoryConfigId),
+      supabase
+        .from('quiz_category_configs')
+        .select('is_higher_lower')
+        .eq('id', categoryConfigId)
+        .maybeSingle(),
     ])
 
     const combinedExclusions = [
@@ -660,7 +666,7 @@ export async function generateMusicSnippetsAction(
     const model = 'gemini-2.5-flash'
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
-    const isHigherOrLower = categoryName.toLowerCase().includes('higher')
+    const isHigherOrLower = config?.is_higher_lower ?? false
 
     const topicLine = topic.trim()
       ? `- Focus on this theme/genre: "${topic.trim()}".`
@@ -812,7 +818,12 @@ export async function saveMusicSnippetsAction(
   }
 
   const now = new Date().toISOString()
-  const isHigherOrLower = categoryName.toLowerCase().includes('higher')
+  const { data: config } = await supabase
+    .from('quiz_category_configs')
+    .select('is_higher_lower')
+    .eq('id', categoryConfigId)
+    .maybeSingle()
+  const isHigherOrLower = config?.is_higher_lower ?? false
   const baseNo = await getMaxQuestionNo(supabase, eventId, categoryConfigId)
   const insertData = songs.map((s, i) => ({
     question_text: isHigherOrLower && s.hint_year

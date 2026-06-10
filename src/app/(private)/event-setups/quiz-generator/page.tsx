@@ -224,7 +224,7 @@ export default function QuizGeneratorPage() {
   }, [categories, category])
 
   const isMusicSnippets = selectedCategoryConfig?.include_spotify ?? false
-  const isHigherOrLower = isMusicSnippets && category.toLowerCase().includes('higher')
+  const isHigherOrLower = isMusicSnippets && (selectedCategoryConfig?.is_higher_lower ?? false)
   const isPictureRound = selectedCategoryConfig?.is_picture ?? false
 
   const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {

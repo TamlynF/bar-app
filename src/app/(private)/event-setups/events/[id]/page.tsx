@@ -21,6 +21,7 @@ type Category = {
   order_no: number;
   include_spotify: boolean;
   is_picture: boolean;
+  is_higher_lower: boolean;
 };
 
 type Question = {
@@ -74,7 +75,7 @@ export default async function EventQuizQuestionsPage({
     supabase.from("events").select("id, title, date").eq("id", id).single(),
     supabase
       .from("quiz_category_configs")
-      .select("id, category_name, question_count, order_no, include_spotify, is_picture")
+      .select("id, category_name, question_count, order_no, include_spotify, is_picture, is_higher_lower")
       .eq("is_active", true)
       .order("order_no", { ascending: true }),
     supabase
@@ -146,6 +147,7 @@ export default async function EventQuizQuestionsPage({
             orderNo={cat.order_no}
             includeSpotify={cat.include_spotify}
             isPicture={cat.is_picture}
+            isHigherLower={cat.is_higher_lower}
             playlistUrl={playlistByCategory.get(cat.id) ?? null}
             autoOpen={focusCategory === cat.category_name}
           />

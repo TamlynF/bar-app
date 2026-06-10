@@ -36,6 +36,7 @@ type Props = {
   orderNo?: number;
   includeSpotify?: boolean;
   isPicture?: boolean;
+  isHigherLower?: boolean;
   playlistUrl?: string | null;
   autoOpen?: boolean;
 };
@@ -63,10 +64,10 @@ const printStyles = `
   @page { size: A4; margin: 1.2cm; }
 `;
 
-export default function CategorySection({ eventId, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, playlistUrl: initialPlaylistUrl, autoOpen }: Props) {
+export default function CategorySection({ eventId, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, playlistUrl: initialPlaylistUrl, autoOpen }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
-  const isHigherOrLower = includeSpotify && category_name.toLowerCase().includes('higher');
+  const isHigherOrLower = includeSpotify && !!isHigherLower;
   const count = questions.length;
   const isComplete = count >= question_count;
   const hasAny = count > 0;
