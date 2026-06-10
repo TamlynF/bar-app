@@ -537,8 +537,8 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-2">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2 -mt-1">
                           <span className="text-[10px] font-black text-[#5C4033]/20 shrink-0">Q{q.question_no ?? idx + 1}</span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -547,7 +547,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                                 size="icon"
                                 title="Question actions"
                                 aria-label="Question actions"
-                                className="h-8 w-8 -mr-1 rounded-xl text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033] shrink-0"
+                                className="h-7 w-7 -mr-1 rounded-xl text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033] shrink-0"
                               >
                                 <MoreVertical className="w-4 h-4" />
                               </Button>
@@ -570,19 +570,18 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                         </div>
                         <div className="space-y-3">
                           {isHigherOrLower && q.hint_year ? (
-                            <>
-                              <p className="text-[10px] font-black text-amber-700 leading-tight">
-                                Is {(q.release_year ?? 0) > q.hint_year ? 'higher' : 'lower'} than {q.hint_year}?
+                            <div className="space-y-2">
+                              <p className="text-sm text-[#1F1F1A] leading-snug">
+                                <span className="font-bold italic">{q.answer_text_ext ?? q.answer_text}</span> higher or lower than <span className="font-bold text-orange-600">{q.hint_year}</span>?
                               </p>
-                              <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
-                                {q.answer_text_ext ?? q.answer_text}
-                              </p>
-                              <div className="flex items-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
-                                <Target className="w-3 h-3 text-white/50" />
-                                <span className="text-xs font-black tracking-tight">{q.answer_text}</span>
-                                <span className="text-[10px] font-black text-white/50 tabular-nums">{q.release_year}</span>
+                              <div className="flex items-center justify-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-full shadow-sm">
+                                <Target className="w-3 h-3 text-white/50 shrink-0" />
+                                <span className="text-sm font-black tracking-tight text-center">
+                                  {(q.release_year ?? 0) > q.hint_year ? 'Higher' : 'Lower'}
+                                </span>
+                                <span className="text-[11px] font-black text-white/50 tabular-nums shrink-0">{q.release_year}</span>
                               </div>
-                            </>
+                            </div>
                           ) : (
                             <>
                               {q.image_url ? (
@@ -602,9 +601,9 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                               {hideQuestionText && q.spotify_track_id && (
                                 <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
                               )}
-                              <div className="flex items-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
-                                <Target className="w-3 h-3 text-white/50" />
-                                <span className="text-xs font-black tracking-tight">{q.answer_text}</span>
+                              <div className="flex items-center justify-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-full shadow-sm">
+                                <Target className="w-3 h-3 text-white/50 shrink-0" />
+                                <span className="text-sm font-black tracking-tight text-center">{q.answer_text}</span>
                               </div>
                             </>
                           )}

@@ -367,7 +367,22 @@ html, body {
   }
 }
 @layer utilities {
-  /* Manually added — used in quiz-generator/page.tsx (compiled output is not regenerated here). */
+  /* Manually added — used in quiz-generator/page.tsx + category-section.tsx (compiled output is not regenerated here). */
+  .-mt-1 {
+    margin-top: calc(var(--spacing) * -1);
+  }
+  .-mr-1 {
+    margin-right: calc(var(--spacing) * -1);
+  }
+  .pt-3 {
+    padding-top: calc(var(--spacing) * 3);
+  }
+  .w-36 {
+    width: calc(var(--spacing) * 36);
+  }
+  .underline {
+    text-decoration-line: underline;
+  }
   .top-16 {
     top: calc(var(--spacing) * 16);
   }
