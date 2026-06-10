@@ -27,6 +27,7 @@ import {
   X,
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
+import { MonthPicker } from "./month-picker";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor } from "@/lib/event-type-colors";
@@ -382,13 +383,7 @@ export default function EventsClient({
               className="flex-1 min-w-0 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
             />
           </div>
-          <input
-            type="month"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-            title="Filter by month"
-            className="h-11 w-[9rem] px-2 rounded-xl border border-[#E6DFC8] focus:border-[#5C4033] text-xs font-bold text-[#1F1F1A] bg-transparent outline-none transition-colors shrink-0"
-          />
+          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
           {isSearching && (
             <button
               type="button"
