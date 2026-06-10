@@ -2,9 +2,15 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ExternalLink, Copy, Check, RefreshCw } from "lucide-react";
+import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ExternalLink, Copy, Check, RefreshCw, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { SpotifyPlayer } from "@/components/spotify-player";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -531,60 +537,68 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="flex items-start gap-4">
-                          <span className="text-[10px] font-black text-[#5C4033]/20 mt-1 shrink-0">Q{q.question_no ?? idx + 1}</span>
-                          <div className="space-y-3 flex-1 min-w-0">
-                            {isHigherOrLower && q.hint_year ? (
-                              <>
-                                <p className="text-[10px] font-black text-amber-700 leading-tight">
-                                  Higher or Lower than {q.hint_year}?
-                                </p>
-                                <p className="text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-1.5 w-fit">
-                                  {q.release_year}
-                                </p>
-                              </>
-                            ) : (
-                              <>
-                                {q.image_url ? (
-                                  /* eslint-disable-next-line @next/next/no-img-element */
-                                  <img
-                                    src={q.image_url}
-                                    alt={q.answer_text}
-                                    className="w-full h-40 object-cover rounded-xl"
-                                  />
-                                ) : (
-                                  (!includeSpotify || !q.spotify_track_id) && (
-                                    <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
-                                      {q.question_text}
-                                    </p>
-                                  )
-                                )}
-                                <div className="flex items-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
-                                  <Target className="w-3 h-3 text-white/50" />
-                                  <span className="text-xs font-black tracking-tight">{q.answer_text}</span>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-2 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => startEditing(q)}
-                              className="h-9 w-9 rounded-xl bg-[#F7F4EA] text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => deleteQuestion(q.id)}
-                              disabled={isPending}
-                              className="h-9 w-9 rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-[10px] font-black text-[#5C4033]/20 shrink-0">Q{q.question_no ?? idx + 1}</span>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Question actions"
+                                aria-label="Question actions"
+                                className="h-8 w-8 -mr-1 rounded-xl text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033] shrink-0"
+                              >
+                                <MoreVertical className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-36">
+                              <DropdownMenuItem onClick={() => startEditing(q)}>
+                                <Edit2 className="w-4 h-4" />
+                                Edit
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                variant="destructive"
+                                disabled={isPending}
+                                onClick={() => deleteQuestion(q.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
+                        <div className="space-y-3">
+                          {isHigherOrLower && q.hint_year ? (
+                            <>
+                              <p className="text-[10px] font-black text-amber-700 leading-tight">
+                                Higher or Lower than {q.hint_year}?
+                              </p>
+                              <p className="text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-1.5 w-fit">
+                                {q.release_year}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              {q.image_url ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={q.image_url}
+                                  alt={q.answer_text}
+                                  className="w-full h-40 object-cover rounded-xl"
+                                />
+                              ) : (
+                                (!includeSpotify || !q.spotify_track_id) && (
+                                  <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
+                                    {q.question_text}
+                                  </p>
+                                )
+                              )}
+                              <div className="flex items-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
+                                <Target className="w-3 h-3 text-white/50" />
+                                <span className="text-xs font-black tracking-tight">{q.answer_text}</span>
+                              </div>
+                            </>
+                          )}
                         </div>
                         {includeSpotify && q.spotify_track_id && (
                           <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
