@@ -5549,5 +5549,10 @@ html, body {
   .top-0\.5  { top:  0.125rem; }
   .translate-x-0 { transform: translateX(0px); }
   .translate-x-5 { transform: translateX(1.25rem); }
-
+.bg-\[\#1a2008\]\/85 {
+    background-color: color-mix(in oklab, #1a2008 85%, transparent);
+}
+.border-\[\#FDCC4B\]\/10 {
+    border-color: color-mix(in oklab, #FDCC4B 10%, transparent);
+}
 }

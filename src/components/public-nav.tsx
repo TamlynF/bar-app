@@ -25,7 +25,6 @@ import { cn } from "@/lib/utils";
  */
 export function PublicNav({ currentPath }: { currentPath?: string }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const expandedValue: "true" | "false" = menuOpen ? "true" : "false";
 
   // Primary — always visible as text links
   const primaryLinks = [
@@ -108,7 +107,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
               <button
                 type="button"
                 aria-label={menuOpen ? "Close menu" : "Open menu"}
-                aria-expanded={expandedValue}
+                aria-expanded={menuOpen}
                 aria-controls="public-nav-drawer"
                 onClick={() => setMenuOpen((o) => !o)}
                 className="sm:hidden inline-flex items-center justify-center w-11 h-11 ml-0.5 rounded-full text-stone-300 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
