@@ -1,6 +1,5 @@
 export const dynamic = "force-dynamic";
 
-import React from "react";
 import Link from "next/link";
 import {
   Trophy,
@@ -11,6 +10,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { badgeClassFromColor, swatchClassFromColor } from "@/lib/event-type-colors";
 
 const eventBookingItems = [
   {
@@ -43,25 +43,49 @@ const eventBookingItems = [
   },
 ];
 
+function toTitleCase(str: string) {
+  return str.split(/[\s\-_]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+}
+
+type EventTypeRow = { type: string; sub_type: string; badge_color?: string | null; type_color?: string | null };
+
 export default async function EventsHubPage() {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  // Fetch all bookable events
-  const { data: bookableEvents, error: evError } = await supabase
+  // Fetch upcoming bookable events with their event type metadata for grouping
+  const { data: bookableEvents } = await supabase
     .from("events")
-    .select("id, date, title, event_types!inner(sub_type, type)")
+    .select("id, date, event_types!inner(type, sub_type, badge_color, type_color)")
     .eq("is_active", true)
     .eq("is_bookable", true)
     .gte("date", today)
     .order("date", { ascending: true })
-    .limit(20);
+    .limit(200);
 
-  if (evError) console.error("Failed to fetch bookable events:", evError);
-  const generalEvents = bookableEvents ?? [];
+  // Group by type + sub_type
+  type GroupEntry = { type: string; subType: string; badgeColor: string | null; typeColor: string | null; count: number };
+  const groupMap = new Map<string, GroupEntry>();
+  for (const ev of bookableEvents ?? []) {
+    const et = (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) as EventTypeRow | null;
+    if (!et) continue;
+    const key = `${et.type}__${et.sub_type}`;
+    if (!groupMap.has(key)) {
+      groupMap.set(key, {
+        type: et.type,
+        subType: et.sub_type,
+        badgeColor: et.badge_color ?? null,
+        typeColor: et.type_color ?? null,
+        count: 0,
+      });
+    }
+    groupMap.get(key)!.count++;
+  }
+  const generalGroups = Array.from(groupMap.values());
 
   return (
     <div className="p-2 sm:p-8 space-y-6">
+      {/* Specialised booking sections */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {eventBookingItems.map((item) => (
           <Link
@@ -87,34 +111,38 @@ export default async function EventsHubPage() {
         ))}
       </div>
 
-      {/* General Bookable Events */}
-      {generalEvents.length > 0 && (
+      {/* General event type groups */}
+      {generalGroups.length > 0 && (
         <div className="space-y-3">
           <h2 className="text-[11px] font-black uppercase tracking-wide text-[#5F624F] px-1">
             General Events
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {generalEvents.map((ev) => {
-              const dateStr = new Date(ev.date + "T00:00:00").toLocaleDateString("en-GB", {
-                weekday: "short", day: "numeric", month: "short",
-              });
+            {generalGroups.map((group) => {
+              const swatchClass = swatchClassFromColor(group.badgeColor);
+              const badgeClasses = badgeClassFromColor(group.badgeColor);
               return (
                 <Link
-                  key={ev.id}
-                  href={`/event-bookings/event/${ev.id}`}
+                  key={`${group.type}__${group.subType}`}
+                  href={`/event-bookings/general/${encodeURIComponent(group.type)}/${encodeURIComponent(group.subType)}`}
                   className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#5C4033] hover:shadow-md transition-all active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-2xl bg-[#F7F4EA] text-[#5C4033] flex items-center justify-center shrink-0 transition-transform group-hover:scale-110">
-                      <CalendarDays className="w-6 h-6" />
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${swatchClass}`}>
+                      <CalendarDays className="w-6 h-6 text-[#5C4033]" />
                     </div>
                     <div className="flex flex-col text-left min-w-0">
                       <span className="font-black text-[#1F1F1A] uppercase tracking-tight leading-none truncate">
-                        {ev.title || "Event"}
+                        {toTitleCase(group.subType)}
                       </span>
-                      <span className="text-[11px] text-[#5F624F] font-bold opacity-60 uppercase mt-1.5 tracking-wider">
-                        {dateStr}
-                      </span>
+                      <div className="flex items-center gap-1.5 mt-1.5">
+                        <span className="text-[11px] text-[#5F624F] font-bold opacity-60 uppercase tracking-wider">
+                          {toTitleCase(group.type)}
+                        </span>
+                        <span className={`text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded ${badgeClasses}`}>
+                          {group.count} upcoming
+                        </span>
+                      </div>
                     </div>
                   </div>
                   <ChevronRight className="w-5 h-5 text-[#E6DFC8] group-hover:text-[#5C4033] transition-colors" />

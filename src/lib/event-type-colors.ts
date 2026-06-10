@@ -41,3 +41,8 @@ export function badgeClassFromColor(color: string | null | undefined): string {
 export function swatchHexFromColor(color: string | null | undefined): string | undefined {
   return color ? SWATCH_HEX[color] : undefined;
 }
+
+export function swatchClassFromColor(color: string | null | undefined): string {
+  const found = EVENT_TYPE_COLORS.find(c => c.key === color);
+  return found ? found.swatchClass : "bg-[#F7F4EA]";
+}
