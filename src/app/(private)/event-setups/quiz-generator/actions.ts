@@ -850,7 +850,7 @@ export async function saveMusicSnippetsAction(
       // Direction matches the truth: "Higher" when release > hint, else "Lower".
       const dir = s.year > s.hint_year ? 'higher' : 'lower'
       return {
-        question_text: `${songIdentity} is ${dir} than ${s.hint_year}?`,
+        question_text: `${songIdentity} is higher or lower than ${s.hint_year}?`,
         answer_text: dir === 'higher' ? 'Higher' : 'Lower',
         answer_text_ext: songIdentity,
         category: categoryName,

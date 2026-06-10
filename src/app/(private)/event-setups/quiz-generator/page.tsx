@@ -928,11 +928,11 @@ export default function QuizGeneratorPage() {
                 >
                   <div className="flex items-start gap-2.5 px-3 py-2.5">
                     <div className="flex-1 min-w-0 space-y-2">
-                      <p className="text-[11px] font-bold text-[#1F1F1A] leading-snug">
+                      <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
                         {q.question}
                       </p>
                       <div className="px-2.5 py-1.5 rounded-md text-center bg-[#F7F4EA]">
-                        <p className="text-[10px] font-black text-[#5C4033] leading-tight">
+                        <p className="text-xs font-black text-[#5C4033] leading-tight">
                           {q.answer}
                         </p>
                       </div>
@@ -1021,11 +1021,11 @@ export default function QuizGeneratorPage() {
                     <div className="flex-1 min-w-0">
                       {isHigherOrLower && song.hint_year ? (
                         <div className="space-y-2">
-                          <p className="text-[11px] text-[#1F1F1A] leading-snug">
+                          <p className="text-sm text-[#1F1F1A] leading-snug">
                             <span className="font-bold italic">{song.artist} - {song.title}</span> higher or lower than <span className="font-bold text-orange-600">{song.hint_year}</span>?
                           </p>
                           <div className="px-2.5 py-1.5 rounded-md text-center bg-[#F7F4EA]">
-                            <p className="text-[10px] font-black text-[#5C4033] leading-tight">
+                            <p className="text-xs font-black text-[#5C4033] leading-tight">
                               {song.year > song.hint_year ? 'Higher' : 'Lower'} - <span className={cn(
                                 "font-bold italic",
                                 song.year > song.hint_year ? "text-green-600" : "text-red-600"
@@ -1035,10 +1035,10 @@ export default function QuizGeneratorPage() {
                         </div>
                       ) : (
                         <>
-                          <p className="text-[11px] font-bold text-[#1F1F1A] leading-tight tracking-tight truncate">
+                          <p className="text-sm font-bold text-[#1F1F1A] leading-tight tracking-tight truncate">
                             [{song.year}] {song.artist} — {song.title}
                           </p>
-                          <p className="text-[10px] text-[#5F624F] font-medium mt-0.5 leading-tight line-clamp-1">
+                          <p className="text-xs text-[#5F624F] font-medium mt-0.5 leading-tight line-clamp-1">
                             {song.intro_description}
                           </p>
                         </>
@@ -1149,7 +1149,7 @@ export default function QuizGeneratorPage() {
                     </div>
                   )}
                   <div className="p-2 flex items-center justify-between gap-1.5">
-                    <p className="text-[10px] font-black text-[#5C4033] leading-tight flex-1 min-w-0 truncate uppercase tracking-tight">
+                    <p className="text-xs font-black text-[#5C4033] leading-tight flex-1 min-w-0 truncate uppercase tracking-tight">
                       {item.answer}
                     </p>
                     <div className={cn(
