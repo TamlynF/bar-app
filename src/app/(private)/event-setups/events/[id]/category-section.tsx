@@ -68,6 +68,8 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
   const isHigherOrLower = includeSpotify && !!isHigherLower;
+  // Spotify (non higher/lower) rounds answer by the track itself — no question text to edit.
+  const hideQuestionText = !!includeSpotify && !isHigherLower;
   const count = questions.length;
   const isComplete = count >= question_count;
   const hasAny = count > 0;
@@ -156,7 +158,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
   };
 
   const saveEdit = async (id: string) => {
-    if ((!isPicture && !editForm.question) || !editForm.answer) {
+    if ((!isPicture && !hideQuestionText && !editForm.question) || !editForm.answer) {
       toast.error("Fields cannot be empty");
       return;
     }
@@ -489,7 +491,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                             </label>
                           </div>
                         )}
-                        {!isPicture && (
+                        {!isPicture && !hideQuestionText && (
                           <div className="space-y-1.5">
                             <label className="text-[10px] font-black uppercase text-[#5F624F] tracking-wide ml-1">Question</label>
                             <textarea

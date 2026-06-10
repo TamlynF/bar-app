@@ -278,8 +278,11 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
   if (!connected) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 bg-[#282828] rounded-lg">
-        <Music className="w-3.5 h-3.5 text-white/30" />
-        <span className="text-[9px] text-white/40">Connect Spotify to play</span>
+        <Music className="w-3.5 h-3.5 text-white/30 shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className={cn("font-bold text-white/70 truncate", compact ? "text-[10px]" : "text-[11px]")}>{title}</p>
+          <span className="text-[9px] text-white/40">Connect Spotify to play</span>
+        </div>
       </div>
     )
   }
