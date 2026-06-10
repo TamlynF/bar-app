@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer } from "lucide-react";
+import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SpotifyPlayer } from "@/components/spotify-player";
@@ -69,6 +69,7 @@ export default function CategorySection({ eventId, category_name, question_count
   const [open, setOpen] = useState(!!autoOpen);
   const sectionRef = useRef<HTMLElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [spotifyConnected, setSpotifyConnected] = useState(false);
 
   useEffect(() => {
     if (autoOpen && sectionRef.current) {
@@ -77,6 +78,16 @@ export default function CategorySection({ eventId, category_name, question_count
       }, 300);
     }
   }, [autoOpen]);
+
+  // Detect existing Spotify connection (cookie set by the OAuth callback, or the
+  // return redirect flag) so the connect prompt only shows when needed.
+  useEffect(() => {
+    const hasCookie = document.cookie.includes('spotify_access_token');
+    const urlParams = new URLSearchParams(window.location.search);
+    if (hasCookie || urlParams.get('spotify_connected') === 'true') {
+      setSpotifyConnected(true);
+    }
+  }, []);
   const [editForm, setEditForm] = useState({ question: "", answer: "", questionNo: 1 });
   const [newImageFile, setNewImageFile] = useState<File | null>(null);
   const [newImagePreview, setNewImagePreview] = useState<string | null>(null);
@@ -284,6 +295,18 @@ export default function CategorySection({ eventId, category_name, question_count
       {/* Questions body */}
       {open && (
         <>
+          {includeSpotify && !spotifyConnected && (
+            <div className="px-5 pt-3">
+              <a
+                href={`/api/spotify/login?return=${encodeURIComponent(`/event-setups/events/${eventId}`)}`}
+                style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
+                className="flex items-center justify-center gap-2 w-full h-10 rounded-xl bg-(--spotify-bg) text-white font-black uppercase text-[10px] tracking-wide hover:opacity-90 transition-opacity"
+              >
+                <Music className="w-3.5 h-3.5" />
+                Connect Spotify
+              </a>
+            </div>
+          )}
           {isPicture && count > 0 && (
             <div className="px-5 pt-3">
               <Button
