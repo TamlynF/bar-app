@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target } from "lucide-react";
+import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SpotifyPlayer } from "@/components/spotify-player";
@@ -35,6 +35,29 @@ type Props = {
   isPicture?: boolean;
   autoOpen?: boolean;
 };
+
+const printStyles = `
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #000; }
+  .sheet { width: 100%; page-break-inside: avoid; }
+  .sheet > *:last-child { margin-bottom: 0; }
+  .hdr { margin-bottom: 10px; font-weight: 600; }
+  .hdr .fill { display: inline-block; min-width: 280px; border-bottom: 1px solid #000; }
+  .label { font-weight: 700; margin: 8px 0 6px; text-align: center; }
+  .label .qtext { font-weight: 400; }
+  table.grid { width: 100%; border-collapse: collapse; table-layout: fixed; page-break-inside: avoid; }
+  table.grid tr, table.grid td { page-break-inside: avoid; }
+  table.grid td { width: 33.33%; vertical-align: top; padding: 6px 8px; }
+  table.questions { margin-bottom: 22px; }
+  table.questions td { border: 1px solid #000; height: 140px; }
+  table.answers td { border: none; height: 44px; }
+  .qn { font-weight: 700; }
+  .imgwrap { margin-top: 6px; text-align: center; }
+  .imgwrap img { max-width: 100%; max-height: 108px; object-fit: contain; }
+  .answer { margin-top: 16px; height: 1.3em; border-bottom: 1px solid #000; }
+  @page { size: A4; margin: 1.2cm; }
+`;
 
 export default function CategorySection({ eventId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, autoOpen }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
@@ -164,6 +187,67 @@ export default function CategorySection({ eventId, category_name, question_count
     }
   };
 
+  const handlePrintPictureSheet = () => {
+    const escapeHtml = (s: string) =>
+      s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+
+    const sorted = [...questions].sort((a, b) => (a.question_no ?? 0) - (b.question_no ?? 0));
+    const firstQ = questions.find((q) => q.question_text)?.question_text ?? "";
+    const cols = 3;
+    const total = 9; // fixed 3×3 grid to match the Word layout / fit one page
+    if (sorted.length > total) {
+      toast.info("Sheet fits a 3×3 grid — printing the first 9 questions");
+    }
+    // Always render exactly 9 slots; fill from the questions, leave the rest blank.
+    const cells = Array.from({ length: total }, (_, i) => {
+      const q = sorted[i];
+      return { no: q?.question_no ?? i + 1, img: q?.image_url ?? "" };
+    });
+
+    const buildRows = (render: (c: { no: number; img: string }) => string) => {
+      let html = "";
+      for (let r = 0; r < cells.length; r += cols) {
+        const row = cells.slice(r, r + cols);
+        html += `<tr>${row.map(render).join("")}</tr>`;
+      }
+      return html;
+    };
+
+    const questionRows = buildRows((c) => `
+      <td>
+        <span class="qn">Q${c.no}</span>
+        ${c.img ? `<div class="imgwrap"><img src="${escapeHtml(c.img)}" alt="" /></div>` : ""}
+      </td>`);
+
+    const answerRows = buildRows((c) => `
+      <td>
+        <span class="qn">Q${c.no}:</span>
+        <div class="answer"></div>
+      </td>`);
+
+    const win = window.open("", "_blank", "width=900,height=1200");
+    if (!win) {
+      toast.error("Allow pop-ups to print the sheet");
+      return;
+    }
+    win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(category_name)} — Quiz Sheet</title>
+      <style>${printStyles}</style></head>
+      <body>
+        <div class="sheet">
+          <div class="hdr">Team Name:&nbsp;<span class="fill"></span></div>
+          <p class="label">Question: <span class="qtext">${escapeHtml(firstQ)}</span></p>
+          <table class="grid questions"><tbody>${questionRows}</tbody></table>
+          <p class="label">Answers:</p>
+          <table class="grid answers"><tbody>${answerRows}</tbody></table>
+        </div>
+        <script>
+          window.onload = function () { window.focus(); window.print(); };
+          window.onafterprint = function () { window.close(); };
+        </script>
+      </body></html>`);
+    win.document.close();
+  };
+
   return (
     <section ref={sectionRef} className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
       {/* Category header */}
@@ -200,6 +284,19 @@ export default function CategorySection({ eventId, category_name, question_count
       {/* Questions body */}
       {open && (
         <>
+          {isPicture && count > 0 && (
+            <div className="px-5 pt-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handlePrintPictureSheet}
+                className="w-full h-10 rounded-xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase text-[10px] tracking-wide hover:bg-[#F7F4EA]"
+              >
+                <Printer className="w-3.5 h-3.5 mr-2" />
+                Print Picture Sheet
+              </Button>
+            </div>
+          )}
           {isPicture && (() => {
             const firstQ = questions.find((q) => q.question_text);
             return firstQ ? (
