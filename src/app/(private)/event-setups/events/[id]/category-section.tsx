@@ -593,6 +593,9 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                                   </p>
                                 )
                               )}
+                              {hideQuestionText && q.spotify_track_id && (
+                                <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
+                              )}
                               <div className="flex items-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
                                 <Target className="w-3 h-3 text-white/50" />
                                 <span className="text-xs font-black tracking-tight">{q.answer_text}</span>
@@ -600,7 +603,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                             </>
                           )}
                         </div>
-                        {includeSpotify && q.spotify_track_id && (
+                        {includeSpotify && q.spotify_track_id && !hideQuestionText && (
                           <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
                         )}
                       </div>

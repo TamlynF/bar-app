@@ -88,9 +88,20 @@ const css = readFileSync(CSS, "utf8");
 const defined = new Set();
 const selRe = /\.((?:\\.|[-a-zA-Z0-9\/\[\]().#%,:*+!&'"<>=._])+)(?=[\s,{>~+]|::|$)/gm;
 let sm;
+// classFromRaw: take chars until first UNESCAPED ":" or "(" (pseudo boundary).
+// Class-internal colons/parens are always backslash-escaped in this file.
+function classFromRaw(raw) {
+  let out = "";
+  for (let i = 0; i < raw.length; i++) {
+    if (raw[i] === "\\") { out += raw[i + 1]; i++; continue; }
+    if (raw[i] === ":" || raw[i] === "(") break;
+    out += raw[i];
+  }
+  return out;
+}
 while ((sm = selRe.exec(css))) {
-  const unesc = sm[1].replace(/\\(.)/g, "$1");
-  defined.add(unesc);
+  defined.add(sm[1].replace(/\\(.)/g, "$1")); // full (nested-form classes)
+  defined.add(classFromRaw(sm[1]));           // class only (flat pseudo form)
 }
 
 // ---- 3. Strip variant prefixes from used tokens ----
