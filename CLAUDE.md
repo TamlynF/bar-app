@@ -150,6 +150,8 @@ If you find yourself styling a public page with espresso/cream tones, or an admi
 ## Visual standards (summary — full version in `STYLE_GUIDE.md`)
 
 - **Touch targets ≥ 44×44px** on anything tappable on mobile (WCAG)
+- **Icon-only buttons/links need `aria-label` or `title`** — a `<button>`/`<a>` containing only a Lucide icon must have an accessible name, or Edge DevTools fires `axe/name-role-value` ("Buttons must have discernible text"). Same class of Edge DevTools warning as `no-inline-styles`. See STYLE_GUIDE Accessibility.
+- **Every form element needs a label** — `<input>`/`<select>`/`<textarea>`, including checkboxes, need a `<label htmlFor>` or `aria-label`. A `<span>` sitting next to the input is not a label. Missing → Edge DevTools `axe/forms` ("Form elements must have labels"). See STYLE_GUIDE Accessibility.
 - **Tailwind spacing scale only** — no arbitrary `p-[13px]` values
 - **Type scale:** Tailwind defaults. Display headings get `font-black uppercase tracking-tight` or `tracking-tighter`. Eyebrows/labels get `text-[10px] font-black uppercase tracking-widest`.
 - **Colour usage:** Public pages use the olive/gold palette plus deep burgundy and a neon accent (see STYLE_GUIDE). Admin pages stay on the espresso/cream palette.

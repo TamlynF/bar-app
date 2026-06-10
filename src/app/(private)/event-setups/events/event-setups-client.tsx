@@ -489,6 +489,7 @@ export default function EventsClient({
                               type="button"
                               onClick={() => toggleSubType(subKey)}
                               className="shrink-0"
+                              aria-label={subOpen ? "Collapse events" : "Expand events"}
                             >
                               <ChevronDown className={cn(
                                 "w-3.5 h-3.5 transition-transform duration-200",
@@ -876,7 +877,7 @@ export default function EventsClient({
                                             {field.always ? (
                                               <span className="text-[10px] font-black uppercase tracking-wide text-green-600">Always On</span>
                                             ) : (
-                                              <input type="checkbox" checked={field.enabled} readOnly className="w-4 h-4 rounded accent-[#5C4033] pointer-events-none" />
+                                              <input type="checkbox" checked={field.enabled} readOnly aria-label={field.label} className="w-4 h-4 rounded accent-[#5C4033] pointer-events-none" />
                                             )}
                                           </div>
                                         ))}

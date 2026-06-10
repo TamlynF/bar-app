@@ -228,8 +228,9 @@ Always provide one:
 - Visible focus rings (don't strip without replacing)
 - Semantic HTML (`<button>`, `<a>`, `<nav>`)
 - `alt=""` for decorative, meaningful alt otherwise
-- Labels on every input (visible or `sr-only`)
+- Labels on every input (visible or `sr-only`) — every form element (`<input>`, `<select>`, `<textarea>`), **including checkboxes/radios**, needs a programmatic label: a `<label htmlFor>`, an `aria-label`, or an `aria-labelledby`. A nearby `<span>` that merely sits next to the input does **not** count. Without one, Edge DevTools fires `axe/forms` ("Form elements must have labels").
 - WCAG AA contrast: 4.5:1 body, 3:1 large text
+- **Icon-only buttons/links must have discernible text** — a `<button>`/`<a>` whose only child is a Lucide icon (e.g. `<ChevronDown />`, `<Plus />`, `<X />`) needs an `aria-label` or `title` describing the action. Without one, Edge DevTools fires `axe/name-role-value` ("Buttons must have discernible text"). The icon's `className` is not a label. Example: `<button aria-label="Toggle section">`.
 
 ### Performance
 - Lighthouse mobile 90+ on every public page.
