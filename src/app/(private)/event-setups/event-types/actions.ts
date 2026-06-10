@@ -15,7 +15,9 @@ export async function saveEventTypeAction(formData: FormData) {
   const information = formData.get("information")?.toString() || null;
   const default_title = formData.get("default_title")?.toString() || null;
   const type_color = formData.get("type_color")?.toString() || null;
-  const is_karaoke = formData.get("is_karaoke") === "on";
+  const is_karaoke   = formData.get("is_karaoke")   === "on";
+  const is_private   = formData.get("is_private")   === "on";
+  const is_music_act = formData.get("is_music_act") === "on";
 
   if (!type || !sub_type) {
     return { error: "Primary type and Sub-type are required." };
@@ -25,14 +27,14 @@ export async function saveEventTypeAction(formData: FormData) {
     if (id) {
       const { error } = await supabase
         .from("event_types")
-        .update({ type, sub_type, badge_color, information, default_title, type_color, is_karaoke })
+        .update({ type, sub_type, badge_color, information, default_title, type_color, is_karaoke, is_private, is_music_act })
         .eq("id", id);
 
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from("event_types")
-        .insert({ type, sub_type, badge_color, information, default_title, type_color, is_karaoke });
+        .insert({ type, sub_type, badge_color, information, default_title, type_color, is_karaoke, is_private, is_music_act });
         
       if (error) throw error;
     }
@@ -45,12 +47,20 @@ export async function saveEventTypeAction(formData: FormData) {
   }
 }
 
-export async function renameEventTypeGroupAction(oldType: string, newType: string, typeColor?: string | null) {
+export async function renameEventTypeGroupAction(
+  oldType: string,
+  newType: string,
+  typeColor?: string | null,
+  isPrivate?: boolean,
+  isMusicAct?: boolean,
+) {
   const supabase = await createClient();
 
   try {
     const updateData: Record<string, unknown> = { type: newType.toLowerCase() };
     if (typeColor !== undefined) updateData.type_color = typeColor || null;
+    if (isPrivate !== undefined) updateData.is_private = isPrivate;
+    if (isMusicAct !== undefined) updateData.is_music_act = isMusicAct;
 
     const { error } = await supabase
       .from("event_types")

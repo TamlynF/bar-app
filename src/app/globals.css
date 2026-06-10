@@ -1365,6 +1365,9 @@ html, body {
       border-color: color-mix(in oklab, var(--color-green-500) 50%, transparent);
     }
   }
+  .border-green-600 {
+    border-color: var(--color-green-600);
+  }
   .border-input {
     border-color: var(--input);
   }
@@ -1491,6 +1494,12 @@ html, body {
    .border-yellow-500 {
     border-color: var(--color-yellow-500);
   }
+  .border-\[\#5F624F\]\/30 {
+    border-color: color-mix(in oklab, #5F624F 30%, transparent);
+}
+  .bg-\[\#5F624F\]\/20 {
+    background-color: color-mix(in oklab, #5F624F 20%, transparent);
+}
   .bg-\[\#3D4A2A\] {
     background-color: #3D4A2A;
 }
@@ -5534,5 +5543,11 @@ html, body {
 
   /* Book pill hover (gold) — was missing */
   .hover\:bg-\[\#FDCC4B\]\/90:hover { background-color: color-mix(in oklab, #FDCC4B 90%, transparent); }
+
+  /* Toggle thumb positioning */
+  .left-0\.5 { left: 0.125rem; }
+  .top-0\.5  { top:  0.125rem; }
+  .translate-x-0 { transform: translateX(0px); }
+  .translate-x-5 { transform: translateX(1.25rem); }
 
 }

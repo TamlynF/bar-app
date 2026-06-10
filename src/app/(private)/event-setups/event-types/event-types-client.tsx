@@ -56,6 +56,8 @@ export type EventTypeRecord = {
   type_color?: string | null;
   default_title?: string | null;
   is_karaoke?: boolean | null;
+  is_private?: boolean | null;
+  is_music_act?: boolean | null;
   event_information: EventInfo[];
 };
 
@@ -89,6 +91,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [selectedTypeColor, setSelectedTypeColor] = useState<string | null>(null);
   const [defaultTitleInput, setDefaultTitleInput] = useState("");
   const [isKaraokeToggle, setIsKaraokeToggle] = useState(false);
+  const [isPrivateToggle, setIsPrivateToggle] = useState(false);
+  const [isMusicActToggle, setIsMusicActToggle] = useState(false);
   const [infoTitleInput, setInfoTitleInput] = useState("");
 
   const { groupedEventTypes, uniqueTypes } = useMemo(() => {
@@ -267,7 +271,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       const oldType = editingType.type.toLowerCase();
 
       startTransition(async () => {
-        const result = await renameEventTypeGroupAction(oldType, formattedType, selectedTypeColor);
+        const result = await renameEventTypeGroupAction(oldType, formattedType, selectedTypeColor, isPrivateToggle, isMusicActToggle);
         if (result?.error) {
           setTypeSheetError(result.error);
         } else {
@@ -368,6 +372,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setSelectedColor(item.badge_color ?? null);
     setDefaultTitleInput(item.default_title ?? "");
     setIsKaraokeToggle(item.is_karaoke ?? false);
+    setIsPrivateToggle(item.is_private ?? false);
+    setIsMusicActToggle(item.is_music_act ?? false);
     const groupItems = initialEventTypes.filter(
       i => i.type.toLowerCase() === item.type.toLowerCase()
     );
@@ -389,6 +395,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setSelectedColor(items[0].badge_color ?? null);
     setDefaultTitleInput(items[0].default_title ?? "");
     setIsKaraokeToggle(items[0].is_karaoke ?? false);
+    setIsPrivateToggle(items[0].is_private ?? false);
+    setIsMusicActToggle(items[0].is_music_act ?? false);
     setSelectedTypeColor(items[0].type_color ?? null);
     setIsTypeSheetOpen(true);
   };
@@ -405,10 +413,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setSubTypeInput("");
     setSelectedColor(null);
     setDefaultTitleInput("");
-    setIsKaraokeToggle(false);
     const groupItems = initialEventTypes.filter(
       i => i.type.toLowerCase() === typeKey.toLowerCase()
     );
+    setIsKaraokeToggle(groupItems[0]?.is_karaoke ?? false);
+    setIsPrivateToggle(groupItems[0]?.is_private ?? false);
+    setIsMusicActToggle(groupItems[0]?.is_music_act ?? false);
     setSelectedTypeColor(groupItems[0]?.type_color ?? null);
     setIsTypeSheetOpen(true);
   };
@@ -657,6 +667,22 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 </div>
                               )}
 
+                              {/* is_private / is_music_act indicators */}
+                              {(item.is_private || item.is_music_act) && (
+                                <div className="flex flex-wrap gap-2">
+                                  {item.is_private && (
+                                    <span className="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-lg bg-purple-50 text-purple-700 border border-purple-200">
+                                      Private Hire
+                                    </span>
+                                  )}
+                                  {item.is_music_act && (
+                                    <span className="text-[10px] font-black uppercase tracking-wide px-2.5 py-1 rounded-lg bg-sky-50 text-sky-700 border border-sky-200">
+                                      Music Act
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+
                               {/* Badges container */}
                               <div className="bg-white border border-[#E6DFC8] rounded-lg overflow-hidden">
                                 <div className="flex items-center justify-between px-3 py-2 border-b border-[#E6DFC8]/50 bg-[#F7F4EA]/50">
@@ -772,6 +798,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           setSubTypeInput("");
           setSelectedTypeColor(null);
           setDefaultTitleInput("");
+          setIsPrivateToggle(false);
+          setIsMusicActToggle(false);
         }
       }}>
         <SheetContent
@@ -930,6 +958,70 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     )}
                   </div>
                 )}
+
+                {/* Private Hire toggle — type mode only */}
+                {sheetMode === 'type' && (
+                  <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
+                    <input type="hidden" name="is_private" value={isPrivateToggle ? "on" : ""} />
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
+                      <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">Private Hire</span>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wide",
+                        isPrivateToggle ? "text-green-600" : "text-[#5F624F]"
+                      )}>
+                        {isPrivateToggle ? "On" : "Off"}
+                      </span>
+                      <button
+                        type="button"
+                        title="Toggle private hire"
+                        onClick={() => setIsPrivateToggle(!isPrivateToggle)}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative shrink-0 border",
+                          isPrivateToggle ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30"
+                        )}
+                      >
+                        <span className={cn(
+                          "absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
+                          isPrivateToggle ? "translate-x-5" : "translate-x-0"
+                        )} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Music Act toggle — type mode only */}
+                {sheetMode === 'type' && (
+                  <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
+                    <input type="hidden" name="is_music_act" value={isMusicActToggle ? "on" : ""} />
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
+                      <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">Music Act</span>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wide",
+                        isMusicActToggle ? "text-green-600" : "text-[#5F624F]"
+                      )}>
+                        {isMusicActToggle ? "On" : "Off"}
+                      </span>
+                      <button
+                        type="button"
+                        title="Toggle music act"
+                        onClick={() => setIsMusicActToggle(!isMusicActToggle)}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative shrink-0 border",
+                          isMusicActToggle ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30"
+                        )}
+                      >
+                        <span className={cn(
+                          "absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
+                          isMusicActToggle ? "translate-x-5" : "translate-x-0"
+                        )} />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* ===== SUB-CATEGORY SECTION ===== */}
@@ -1071,8 +1163,68 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         )}
                       >
                         <span className={cn(
-                          "absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
-                          isKaraokeToggle ? "translate-x-[21px]" : "translate-x-0.5"
+                          "absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
+                          isKaraokeToggle ? "translate-x-5" : "translate-x-0"
+                        )} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Private Hire toggle */}
+                  <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
+                    <input type="hidden" name="is_private" value={isPrivateToggle ? "on" : ""} />
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
+                      <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">Private Hire</span>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wide",
+                        isPrivateToggle ? "text-green-600" : "text-[#5F624F]"
+                      )}>
+                        {isPrivateToggle ? "On" : "Off"}
+                      </span>
+                      <button
+                        type="button"
+                        title="Toggle private hire"
+                        onClick={() => setIsPrivateToggle(!isPrivateToggle)}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative shrink-0 border",
+                          isPrivateToggle ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30"
+                        )}
+                      >
+                        <span className={cn(
+                          "absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
+                          isPrivateToggle ? "translate-x-5" : "translate-x-0"
+                        )} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Music Act toggle */}
+                  <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
+                    <input type="hidden" name="is_music_act" value={isMusicActToggle ? "on" : ""} />
+                    <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
+                      <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">Music Act</span>
+                    </div>
+                    <div className="flex items-center gap-2 ml-auto">
+                      <span className={cn(
+                        "text-[10px] font-black uppercase tracking-wide",
+                        isMusicActToggle ? "text-green-600" : "text-[#5F624F]"
+                      )}>
+                        {isMusicActToggle ? "On" : "Off"}
+                      </span>
+                      <button
+                        type="button"
+                        title="Toggle music act"
+                        onClick={() => setIsMusicActToggle(!isMusicActToggle)}
+                        className={cn(
+                          "w-11 h-6 rounded-full transition-colors relative shrink-0 border",
+                          isMusicActToggle ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30"
+                        )}
+                      >
+                        <span className={cn(
+                          "absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
+                          isMusicActToggle ? "translate-x-5" : "translate-x-0"
                         )} />
                       </button>
                     </div>
