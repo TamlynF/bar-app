@@ -405,6 +405,7 @@ export async function updatePastQuestionAction(
     console.error("Update error:", error);
     throw new Error("Failed to update question.");
   }
+  revalidatePath('/event-setups/events/[id]', 'page');
   return { success: true, image_url: newImageUrl };
 }
 
@@ -445,6 +446,7 @@ export async function deletePastQuestionAction(id: string) {
     console.error("Delete error:", error);
     throw new Error("Failed to delete question.");
   }
+  revalidatePath('/event-setups/events/[id]', 'page');
   return { success: true };
 }
 
@@ -631,10 +633,10 @@ export async function generateMusicSnippetsAction(
       supabase
         .from('past_quiz_questions')
         .select('answer_text')
-        .eq('events_id', eventId)
+        //.eq('events_id', eventId)
         .eq('quiz_category_configs_id', categoryConfigId)
         .order('created_at', { ascending: false })
-        .limit(10),
+        .limit(100),
       supabase
         .from('generated_quiz_questions')
         .select('content_text')
@@ -787,7 +789,8 @@ export async function saveMusicSnippetsAction(
   songs: { artist: string; title: string; year: number; spotify_track_id: string | null; hint_year?: number }[],
   eventId: number,
   categoryName: string,
-  categoryConfigId: number
+  categoryConfigId: number,
+  topic: string = ''
 ) {
   const supabase = await createClient()
 
@@ -817,7 +820,7 @@ export async function saveMusicSnippetsAction(
       : `[${s.year}] Name the artist and song`,
     answer_text: `${s.artist} - ${s.title}`,
     category: categoryName,
-    topic: categoryName,
+    topic: topic.trim() || null,
     release_year: s.year,
     spotify_track_id: s.spotify_track_id,
     hint_year: s.hint_year || null,
@@ -924,6 +927,7 @@ export async function syncCategoryPlaylistAction(
 
     await replacePlaylistTracks(playlistId, uris)
 
+    revalidatePath('/event-setups/events/[id]', 'page')
     return { ok: true, playlistUrl: playlistUrl ?? undefined }
   } catch (err) {
     if (err instanceof SpotifyScopeError) return { ok: false, needsConnect: true, error: 'reconnect' }
@@ -989,18 +993,28 @@ export async function generatePictureRoundAction(
   if (!apiKey) return { error: 'API Key is missing.' }
 
   try {
-    // Fetch existing answers for this event+category to avoid duplicates
+    // Build the exclusion list for this event+category: approved answers plus
+    // every answer already generated (the draft log), so regenerating never
+    // repeats — even before approval and across reloads.
+    const supabase = await createClient()
     let existingAnswers: string[] = []
     if (eventId && categoryConfigId) {
-      const supabase = await createClient()
-      const { data: existing } = await supabase
-        .from('past_quiz_questions')
-        .select('answer_text')
-        .eq('events_id', eventId)
-        .eq('quiz_category_configs_id', categoryConfigId)
-      if (existing) {
-        existingAnswers = existing.map(q => q.answer_text)
-      }
+      const [{ data: approved }, { data: generated }] = await Promise.all([
+        supabase
+          .from('past_quiz_questions')
+          .select('answer_text')
+          .eq('events_id', eventId)
+          .eq('quiz_category_configs_id', categoryConfigId),
+        supabase
+          .from('generated_quiz_questions')
+          .select('content_text')
+          .eq('events_id', eventId)
+          .eq('quiz_category_configs_id', categoryConfigId),
+      ])
+      existingAnswers = [
+        ...(approved?.map(q => q.answer_text) ?? []),
+        ...(generated?.map(g => g.content_text) ?? []),
+      ]
     }
     if (excludeAnswers?.length) {
       existingAnswers = [...existingAnswers, ...excludeAnswers]
@@ -1057,6 +1071,19 @@ Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border C
       const batch = answers.slice(i, i + 3)
       const images = await Promise.all(batch.map((a) => generateImageForAnswer(a)))
       batch.forEach((answer, j) => items.push({ answer, imageUrl: images[j] }))
+    }
+
+    // Persist generated answers so future regenerations exclude them (mirrors the
+    // standard quiz / music flow). content_text matches the saved answer_text.
+    if (eventId && categoryConfigId && items.length) {
+      const { error: logError } = await supabase
+        .from('generated_quiz_questions')
+        .insert(items.map(it => ({
+          events_id: eventId,
+          quiz_category_configs_id: categoryConfigId,
+          content_text: it.answer,
+        })))
+      if (logError) console.error('Failed to log generated picture answers:', logError)
     }
 
     return { items }

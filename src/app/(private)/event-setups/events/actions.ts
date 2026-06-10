@@ -58,6 +58,7 @@ export async function saveEventAction(formData: FormData) {
 
   try {
     if (id) {
+      const { data: prevEvent } = await supabase.from("events").select("is_active").eq("id", id).maybeSingle();
       const bookingPageUrl = computeBookingUrl(id);
       const { error } = await supabase.from("events").update({
         ...payload,
@@ -66,6 +67,13 @@ export async function saveEventAction(formData: FormData) {
         updated_at: new Date().toISOString(),
       }).eq("id", id);
       if (error) throw error;
+
+      // When an event becomes inactive and its date has passed, purge its draft
+      // exclusion log (generated_quiz_questions) for this event.
+      const today = new Date().toISOString().split("T")[0];
+      if (payload.is_active === false && prevEvent?.is_active !== false && date < today) {
+        await supabase.from("generated_quiz_questions").delete().eq("events_id", parseInt(id, 10));
+      }
     } else {
       // INSERT first to get the generated ID, then compute and store the URL
       const { data: inserted, error: insertError } = await supabase.from("events").insert({

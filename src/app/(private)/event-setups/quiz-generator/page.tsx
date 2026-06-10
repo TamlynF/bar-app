@@ -396,7 +396,8 @@ export default function QuizGeneratorPage() {
           })),
           parseInt(selectedEventId),
           category,
-          selectedCategoryConfig!.id
+          selectedCategoryConfig!.id,
+          topic
         )
         const eventName = upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'Event'
         toast.success(`Approved ${selectedData.length} songs for ${eventName}!`)
