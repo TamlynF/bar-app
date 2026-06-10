@@ -19,6 +19,7 @@ import {
   generatePictureRoundAction,
   savePictureRoundAction,
   cleanupGeneratedQuestionsForInactiveEventAction,
+  syncCategoryPlaylistAction,
 } from '@/app/(private)/event-setups/quiz-generator/actions'
 
 import type {
@@ -385,7 +386,7 @@ export default function QuizGeneratorPage() {
       if (selectedData.length === 0) return
       setIsSaving(true)
       try {
-        await saveMusicSnippetsAction(
+        const result = await saveMusicSnippetsAction(
           selectedData.map(s => ({
             artist: s.artist,
             title: s.title,
@@ -399,6 +400,9 @@ export default function QuizGeneratorPage() {
         )
         const eventName = upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'Event'
         toast.success(`Approved ${selectedData.length} songs for ${eventName}!`)
+        if (result?.needsConnect) {
+          toast.warning("Connect Spotify on the event page to build the playlist.")
+        }
         setMusicSnippets([])
         setSelectedSnippetIndices(new Set())
         loadEventHistory(selectedEventId)
@@ -1240,7 +1244,10 @@ export default function QuizGeneratorPage() {
                         await deletePastQuestionAction(snippet.id)
                         toast.success("Song removed")
                         loadEventHistory(selectedEventId)
-                        if (selectedCategoryConfig) getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {})
+                        if (selectedCategoryConfig) {
+                          getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {})
+                          syncCategoryPlaylistAction(parseInt(selectedEventId), selectedCategoryConfig.id).catch(() => {})
+                        }
                       }
                     }}
                     className="h-7 w-7 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 shrink-0"

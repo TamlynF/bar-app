@@ -3,6 +3,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { revalidatePath } from 'next/cache'
+import { format } from 'date-fns'
+import {
+  getUserSpotifyToken,
+  getCurrentUserId,
+  createPublicPlaylist,
+  replacePlaylistTracks,
+  SpotifyScopeError,
+  SpotifyNotConnectedError,
+} from '@/lib/spotify'
 
 export type QuizQuestion = {
   question: string;
@@ -833,7 +842,95 @@ export async function saveMusicSnippetsAction(
 
   revalidatePath('/event-setups/quiz-generator')
   revalidatePath('/event-setups/quiz-history')
-  return { success: true }
+
+  // Create/refresh the Spotify playlist for this music round (best-effort).
+  const playlist = await syncCategoryPlaylistAction(eventId, categoryConfigId)
+  return { success: true, ...playlist }
+}
+
+export type PlaylistSyncResult = {
+  ok: boolean
+  playlistUrl?: string
+  needsConnect?: boolean
+  error?: string
+}
+
+/**
+ * Makes the event+category's Spotify playlist exactly match the saved music
+ * snippets (creates it on first use). The single primitive for create / add /
+ * remove — callers just re-run it after any change. Never throws: returns a
+ * status object so callers can save data even when Spotify isn't usable.
+ */
+export async function syncCategoryPlaylistAction(
+  eventId: number,
+  categoryConfigId: number
+): Promise<PlaylistSyncResult> {
+  try {
+    const token = await getUserSpotifyToken()
+    if (!token) return { ok: false, needsConnect: true }
+
+    const supabase = await createClient()
+
+    const [{ data: event }, { data: config }, { data: snippets }] = await Promise.all([
+      supabase.from('events').select('date').eq('id', eventId).single(),
+      supabase.from('quiz_category_configs').select('order_no, category_name').eq('id', categoryConfigId).single(),
+      supabase
+        .from('past_quiz_questions')
+        .select('spotify_track_id, question_no')
+        .eq('events_id', eventId)
+        .eq('quiz_category_configs_id', categoryConfigId)
+        .order('question_no', { ascending: true, nullsFirst: false }),
+    ])
+
+    if (!config) return { ok: false, error: 'category_not_found' }
+
+    // Find or create the playlist row.
+    const { data: existing } = await supabase
+      .from('event_category_playlists')
+      .select('playlist_id, playlist_url')
+      .eq('events_id', eventId)
+      .eq('quiz_category_configs_id', categoryConfigId)
+      .maybeSingle()
+
+    let playlistId = existing?.playlist_id ?? null
+    let playlistUrl = existing?.playlist_url ?? null
+
+    if (!playlistId) {
+      const datePart = event?.date ? format(new Date(event.date + 'T00:00:00'), 'd MMMM') : ''
+      const orderPart = config.order_no != null ? `${config.order_no}. ` : ''
+      const title = `${datePart} / ${orderPart}${(config.category_name ?? '').toUpperCase()}`.trim()
+
+      const userId = await getCurrentUserId()
+      const created = await createPublicPlaylist(userId, title)
+      playlistId = created.id
+      playlistUrl = created.url
+
+      await supabase.from('event_category_playlists').upsert(
+        {
+          events_id: eventId,
+          quiz_category_configs_id: categoryConfigId,
+          playlist_id: playlistId,
+          playlist_url: playlistUrl,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'events_id,quiz_category_configs_id' }
+      )
+    }
+
+    const uris = (snippets ?? [])
+      .map((s) => s.spotify_track_id)
+      .filter((id): id is string => !!id)
+      .map((id) => `spotify:track:${id}`)
+
+    await replacePlaylistTracks(playlistId, uris)
+
+    return { ok: true, playlistUrl: playlistUrl ?? undefined }
+  } catch (err) {
+    if (err instanceof SpotifyScopeError) return { ok: false, needsConnect: true, error: 'reconnect' }
+    if (err instanceof SpotifyNotConnectedError) return { ok: false, needsConnect: true }
+    console.error('Playlist sync failed:', err)
+    return { ok: false, error: 'sync_failed' }
+  }
 }
 
 // ─── Picture Round ──────────────────────────────────────────────────────────

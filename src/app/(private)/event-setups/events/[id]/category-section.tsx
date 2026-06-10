@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music } from "lucide-react";
+import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ExternalLink, Copy, Check, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { SpotifyPlayer } from "@/components/spotify-player";
@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import {
   updatePastQuestionAction,
   deletePastQuestionAction,
+  syncCategoryPlaylistAction,
 } from "@/app/(private)/event-setups/quiz-generator/actions";
 
 type Question = {
@@ -27,12 +28,15 @@ type Question = {
 
 type Props = {
   eventId: number;
+  eventDate?: string;
+  categoryConfigId?: number;
   category_name: string;
   question_count: number;
   questions: Question[];
   orderNo?: number;
   includeSpotify?: boolean;
   isPicture?: boolean;
+  playlistUrl?: string | null;
   autoOpen?: boolean;
 };
 
@@ -59,7 +63,7 @@ const printStyles = `
   @page { size: A4; margin: 1.2cm; }
 `;
 
-export default function CategorySection({ eventId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, autoOpen }: Props) {
+export default function CategorySection({ eventId, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, playlistUrl: initialPlaylistUrl, autoOpen }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
   const isHigherOrLower = includeSpotify && category_name.toLowerCase().includes('higher');
@@ -70,6 +74,39 @@ export default function CategorySection({ eventId, category_name, question_count
   const sectionRef = useRef<HTMLElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [spotifyConnected, setSpotifyConnected] = useState(false);
+  const [playlistUrl, setPlaylistUrl] = useState<string | null>(initialPlaylistUrl ?? null);
+  const [playlistCopied, setPlaylistCopied] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // Resolve the category config id (prop, or fall back to a saved question's).
+  const configId = categoryConfigId ?? questions.find((q) => q.quiz_category_configs_id != null)?.quiz_category_configs_id ?? null;
+
+  const handleSyncPlaylist = async () => {
+    if (configId == null) return;
+    setIsSyncing(true);
+    try {
+      const result = await syncCategoryPlaylistAction(eventId, configId);
+      if (result.needsConnect) {
+        toast.warning("Reconnect Spotify to build the playlist (new permission needed).");
+      } else if (result.ok) {
+        if (result.playlistUrl) setPlaylistUrl(result.playlistUrl);
+        toast.success("Playlist synced");
+      } else {
+        toast.error("Could not sync the playlist");
+      }
+    } catch {
+      toast.error("Could not sync the playlist");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleCopyPlaylist = () => {
+    if (!playlistUrl) return;
+    navigator.clipboard.writeText(playlistUrl);
+    setPlaylistCopied(true);
+    setTimeout(() => setPlaylistCopied(false), 2000);
+  };
 
   useEffect(() => {
     if (autoOpen && sectionRef.current) {
@@ -191,6 +228,10 @@ export default function CategorySection({ eventId, category_name, question_count
       await deletePastQuestionAction(id);
       setQuestions((prev) => prev.filter((q) => q.id !== id));
       toast.success("Question deleted");
+      // Keep the Spotify playlist in sync after removing a song (best-effort).
+      if (includeSpotify && configId != null) {
+        syncCategoryPlaylistAction(eventId, configId).catch(() => {});
+      }
     } catch {
       toast.error("Delete failed");
     } finally {
@@ -305,6 +346,73 @@ export default function CategorySection({ eventId, category_name, question_count
                 <Music className="w-3.5 h-3.5" />
                 Connect Spotify
               </a>
+            </div>
+          )}
+          {includeSpotify && (playlistUrl || spotifyConnected) && (
+            <div className="px-5 pt-3">
+              {playlistUrl ? (
+                spotifyConnected ? (
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={playlistUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
+                      className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-(--spotify-bg) text-white font-black uppercase text-[10px] tracking-wide hover:opacity-90 transition-opacity"
+                    >
+                      <Music className="w-3.5 h-3.5" />
+                      Open Spotify Playlist
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleSyncPlaylist}
+                      disabled={isSyncing}
+                      title="Sync playlist with saved songs"
+                      className="h-10 w-10 rounded-xl border-2 border-[#E6DFC8] text-[#5C4033] hover:bg-[#F7F4EA] shrink-0"
+                    >
+                      {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA] p-2.5 space-y-1.5">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+                      Spotify playlist — copy into a browser or the Spotify app
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <a
+                        href={playlistUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 min-w-0 truncate text-[11px] font-bold text-[#5C4033] underline"
+                      >
+                        {playlistUrl}
+                      </a>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={handleCopyPlaylist}
+                        title="Copy playlist URL"
+                        className="h-9 w-9 rounded-lg border-2 border-[#E6DFC8] text-[#5C4033] hover:bg-white shrink-0"
+                      >
+                        {playlistCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                      </Button>
+                    </div>
+                  </div>
+                )
+              ) : (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleSyncPlaylist}
+                  disabled={isSyncing || configId == null}
+                  className="w-full h-10 rounded-xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase text-[10px] tracking-wide hover:bg-[#F7F4EA]"
+                >
+                  {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Music className="w-3.5 h-3.5 mr-2" />}
+                  Create Spotify Playlist
+                </Button>
+              )}
             </div>
           )}
           {isPicture && count > 0 && (

@@ -14,6 +14,7 @@ export async function GET(request: NextRequest) {
     'user-read-private',
     'user-modify-playback-state',
     'user-read-playback-state',
+    'playlist-modify-public',
   ].join(' ')
 
   const params = new URLSearchParams({

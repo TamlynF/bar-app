@@ -69,6 +69,7 @@ export default async function EventQuizQuestionsPage({
     { data: event, error: eventError },
     { data: categories },
     { data: questions },
+    { data: playlists },
   ] = await Promise.all([
     supabase.from("events").select("id, title, date").eq("id", id).single(),
     supabase
@@ -82,12 +83,19 @@ export default async function EventQuizQuestionsPage({
       .eq("events_id", id)
       .order("question_no", { ascending: true, nullsFirst: false })
       .order("created_at"),
+    supabase
+      .from("event_category_playlists")
+      .select("quiz_category_configs_id, playlist_url")
+      .eq("events_id", id),
   ]);
 
   if (eventError || !event) notFound();
 
   const cats: Category[] = categories ?? [];
   const qs: Question[] = questions ?? [];
+  const playlistByCategory = new Map<number, string>(
+    (playlists ?? []).map((p) => [p.quiz_category_configs_id, p.playlist_url])
+  );
 
   const byCategory = cats.map((cat) => ({
     ...cat,
@@ -130,12 +138,15 @@ export default async function EventQuizQuestionsPage({
           <CategorySection
             key={cat.id}
             eventId={event.id}
+            eventDate={event.date}
+            categoryConfigId={cat.id}
             category_name={cat.category_name}
             question_count={cat.question_count}
             questions={cat.questions}
             orderNo={cat.order_no}
             includeSpotify={cat.include_spotify}
             isPicture={cat.is_picture}
+            playlistUrl={playlistByCategory.get(cat.id) ?? null}
             autoOpen={focusCategory === cat.category_name}
           />
         ))}
