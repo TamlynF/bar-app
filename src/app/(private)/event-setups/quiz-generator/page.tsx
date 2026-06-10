@@ -205,10 +205,18 @@ export default function QuizGeneratorPage() {
     });
   }, [categories, eventHistory]);
 
-  const currentCategoryIsFull = useMemo(() => {
-    const stats = categoryStats.find(s => s.category_name === category);
-    return stats?.isFull || false;
+  const currentCategoryStat = useMemo(() => {
+    return categoryStats.find(s => s.category_name === category) || null;
   }, [category, categoryStats]);
+
+  const currentCategoryIsFull = currentCategoryStat?.isFull ?? false;
+
+  // Approving must not push the saved count over the category's question_count.
+  // Returns true when (already-saved + currently-selected) exceeds the target.
+  const approveExceedsCapacity = (selectedCount: number) => {
+    if (!currentCategoryStat) return false;
+    return currentCategoryStat.currentCount + selectedCount > currentCategoryStat.question_count;
+  };
 
   const selectedCategoryConfig = useMemo(() => {
     return categories.find(c => c.category_name === category) || null
@@ -413,7 +421,6 @@ export default function QuizGeneratorPage() {
       toast.success(`Approved ${selectedData.length} items for ${eventName}!`)
       setQuestions([])
       setSelectedIndices(new Set())
-      setTopic('')
       loadEventHistory(selectedEventId);
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to save to database.'
@@ -473,6 +480,26 @@ export default function QuizGeneratorPage() {
     if (!filterCategory) return questions;
     return questions.filter(q => q.category.toLowerCase() === filterCategory.toLowerCase());
   }, [questions, filterCategory]);
+
+  // --- Select all / clear toggles for each draft type ---
+  const allQuestionsSelected = filteredQuestions.length > 0
+    && filteredQuestions.every(q => selectedIndices.has(questions.indexOf(q)));
+  const toggleSelectAllQuestions = () => {
+    const targetIdx = filteredQuestions.map(q => questions.indexOf(q));
+    const next = new Set(selectedIndices);
+    targetIdx.forEach(i => (allQuestionsSelected ? next.delete(i) : next.add(i)));
+    setSelectedIndices(next);
+  };
+
+  const allSnippetsSelected = musicSnippets.length > 0 && selectedSnippetIndices.size === musicSnippets.length;
+  const toggleSelectAllSnippets = () => {
+    setSelectedSnippetIndices(allSnippetsSelected ? new Set() : new Set(musicSnippets.map((_, i) => i)));
+  };
+
+  const allPicturesSelected = pictureItems.length > 0 && selectedPictureIndices.size === pictureItems.length;
+  const toggleSelectAllPictures = () => {
+    setSelectedPictureIndices(allPicturesSelected ? new Set() : new Set(pictureItems.map((_, i) => i)));
+  };
 
   // Questions specifically for the viewing category detail popup
   const savedQuestionsForCategory = useMemo(() => {
@@ -737,7 +764,7 @@ export default function QuizGeneratorPage() {
         {formOpen && (
           <div className="p-4 space-y-4 border-t border-[#E6DFC8]">
             {/* Event & Category — same row */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">Event</Label>
                 <div className="relative">
@@ -781,7 +808,7 @@ export default function QuizGeneratorPage() {
                   )} />
                 </div>
               </div>
-            </div>
+            </div> */}
 
             {/* Topic */}
             <div className="space-y-1.5">
@@ -840,6 +867,15 @@ export default function QuizGeneratorPage() {
               )}
             </Button>
 
+            {currentCategoryStat && (
+              <p className="text-center text-[11px] font-black uppercase tracking-wider">
+                <span className="text-[#5F624F]">Saved </span>
+                <span className={cn("tabular-nums", currentCategoryIsFull ? "text-red-600" : "text-[#5C4033]")}>
+                  {currentCategoryStat.currentCount}/{currentCategoryStat.question_count}
+                </span>
+              </p>
+            )}
+
             {currentCategoryIsFull && (
               <p className="text-[10px] font-black text-red-600 uppercase tracking-wide ml-0.5 animate-in fade-in slide-in-from-top-1">
                 <AlertCircle className="inline w-2.5 h-2.5 mr-0.5 -mt-0.5" />
@@ -881,20 +917,34 @@ export default function QuizGeneratorPage() {
                 {selectedIndices.size}
               </div>
               <span className="text-[#5C4033] text-[10px] font-black uppercase tracking-wider leading-none">Draft Items</span>
-            </div>
-            <Button
-              variant="default"
-              onClick={handleSave}
-              disabled={isSaving || selectedIndices.size === 0}
-              className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
-            >
-              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
-                <span className="flex items-center gap-1">
-                  <Check className="w-3 h-3" />
-                  Approve
+              {approveExceedsCapacity(selectedIndices.size) && (
+                <span className="text-red-600 text-[10px] font-black uppercase tracking-wider leading-none">
+                  Over limit · {currentCategoryStat!.currentCount + selectedIndices.size}/{currentCategoryStat!.question_count}
                 </span>
               )}
-            </Button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={toggleSelectAllQuestions}
+                className="h-8 px-3 font-black uppercase text-[10px] tracking-wider rounded-md border border-[#E6DFC8] text-[#5C4033] hover:bg-[#F7F4EA] active:scale-95 transition-transform"
+              >
+                {allQuestionsSelected ? "Clear" : "Select all"}
+              </button>
+              <Button
+                variant="default"
+                onClick={handleSave}
+                disabled={isSaving || selectedIndices.size === 0 || approveExceedsCapacity(selectedIndices.size)}
+                className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
+              >
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
+                  <span className="flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Approve
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* DRAFT CARDS GRID */}
@@ -956,20 +1006,34 @@ export default function QuizGeneratorPage() {
                 {selectedSnippetIndices.size}
               </div>
               <span className="text-[#5C4033] text-[10px] font-black uppercase tracking-wider leading-none">Songs</span>
-            </div>
-            <Button
-              variant="default"
-              onClick={handleSave}
-              disabled={isSaving || selectedSnippetIndices.size === 0}
-              className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
-            >
-              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
-                <span className="flex items-center gap-1">
-                  <Check className="w-3 h-3" />
-                  Approve
+              {approveExceedsCapacity(selectedSnippetIndices.size) && (
+                <span className="text-red-600 text-[10px] font-black uppercase tracking-wider leading-none">
+                  Over limit · {currentCategoryStat!.currentCount + selectedSnippetIndices.size}/{currentCategoryStat!.question_count}
                 </span>
               )}
-            </Button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={toggleSelectAllSnippets}
+                className="h-8 px-3 font-black uppercase text-[10px] tracking-wider rounded-md border border-[#E6DFC8] text-[#5C4033] hover:bg-[#F7F4EA] active:scale-95 transition-transform"
+              >
+                {allSnippetsSelected ? "Clear" : "Select all"}
+              </button>
+              <Button
+                variant="default"
+                onClick={handleSave}
+                disabled={isSaving || selectedSnippetIndices.size === 0 || approveExceedsCapacity(selectedSnippetIndices.size)}
+                className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
+              >
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
+                  <span className="flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Approve
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* SONG CARDS */}
@@ -1066,20 +1130,34 @@ export default function QuizGeneratorPage() {
                 {selectedPictureIndices.size}
               </div>
               <span className="text-[#5C4033] text-[10px] font-black uppercase tracking-wider leading-none">Images</span>
-            </div>
-            <Button
-              variant="default"
-              onClick={handleSave}
-              disabled={isSaving || selectedPictureIndices.size === 0}
-              className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
-            >
-              {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
-                <span className="flex items-center gap-1">
-                  <Check className="w-3 h-3" />
-                  Approve
+              {approveExceedsCapacity(selectedPictureIndices.size) && (
+                <span className="text-red-600 text-[10px] font-black uppercase tracking-wider leading-none">
+                  Over limit · {currentCategoryStat!.currentCount + selectedPictureIndices.size}/{currentCategoryStat!.question_count}
                 </span>
               )}
-            </Button>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={toggleSelectAllPictures}
+                className="h-8 px-3 font-black uppercase text-[10px] tracking-wider rounded-md border border-[#E6DFC8] text-[#5C4033] hover:bg-[#F7F4EA] active:scale-95 transition-transform"
+              >
+                {allPicturesSelected ? "Clear" : "Select all"}
+              </button>
+              <Button
+                variant="default"
+                onClick={handleSave}
+                disabled={isSaving || selectedPictureIndices.size === 0 || approveExceedsCapacity(selectedPictureIndices.size)}
+                className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
+              >
+                {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
+                  <span className="flex items-center gap-1">
+                    <Check className="w-3 h-3" />
+                    Approve
+                  </span>
+                )}
+              </Button>
+            </div>
           </div>
 
           {/* Picture cards grid */}

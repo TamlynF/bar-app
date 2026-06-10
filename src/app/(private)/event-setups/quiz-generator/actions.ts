@@ -104,10 +104,10 @@ export async function generateQuizAction(
     supabase
       .from('past_quiz_questions')
       .select('question_text')
-      .eq('events_id', eventId)
+      //.eq('events_id', eventId)
       .eq('quiz_category_configs_id', categoryConfigId)
       .order('created_at', { ascending: false })
-      .limit(10),
+      .limit(100),
     supabase
       .from('generated_quiz_questions')
       .select('content_text')
