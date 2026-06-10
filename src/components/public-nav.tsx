@@ -43,7 +43,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1a2008]/85 backdrop-blur-xl border-b border-[#FDCC4B]/10">
-        <div className="max-w-5xl mx-auto flex items-center justify-between px-3 sm:px-4 py-2 gap-2">
+        <div className="max-w-5xl mx-auto flex items-center justify-between px-3 sm:px-4 py-2 gap-2 pt-safe-top">
           {/* Logo — square df mark, links home */}
           <Link
             href="/"
@@ -111,7 +111,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
                 aria-expanded={expandedValue}
                 aria-controls="public-nav-drawer"
                 onClick={() => setMenuOpen((o) => !o)}
-                className="sm:hidden inline-flex items-center justify-center w-9 h-9 ml-0.5 rounded-full text-stone-300 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
+                className="sm:hidden inline-flex items-center justify-center w-11 h-11 ml-0.5 rounded-full text-stone-300 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
               >
                 {menuOpen ? <X className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
               </button>
@@ -146,8 +146,8 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
         )}
       </nav>
 
-      {/* Spacer so content doesn't sit under the fixed nav */}
-      <div className="h-14 sm:h-16" aria-hidden="true" />
+      {/* Spacer so content doesn't sit under the fixed nav (includes safe-area-inset-top) */}
+      <div className="h-14 sm:h-16 pt-safe-top" aria-hidden="true" />
     </>
   );
 }
