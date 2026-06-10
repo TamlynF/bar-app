@@ -22,7 +22,7 @@ export async function getBookings(type: string, subType: string, selectedDate: s
           status,
           special_requests,
           booking_created_at: created_at,
-          contacts(
+          contacts!bookings_contact_id_fkey(
             full_name,
             email,
             country_code,

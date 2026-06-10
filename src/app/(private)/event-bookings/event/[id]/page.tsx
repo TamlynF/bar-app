@@ -94,7 +94,7 @@ export default async function EventDetailPage({
       .from("bookings")
       .select(
         `id, group_name, group_size, status, payment_status, paid_amount, total_amount, special_requests, created_at,
-        contacts(full_name, email, country_code, phone_no),
+        contacts!bookings_contact_id_fkey(full_name, email, country_code, phone_no),
         booking_table_mappings(tables(id, name, max_capacity))`
       )
       .eq("event_id", eventId)

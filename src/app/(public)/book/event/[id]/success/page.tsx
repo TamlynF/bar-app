@@ -19,7 +19,7 @@ async function confirmAndNotify(bookingId: string) {
     .from("bookings")
     .select(`
       id, status, payment_status, group_name, group_size, total_amount, square_order_id,
-      contacts(full_name, email),
+      contacts!bookings_contact_id_fkey(full_name, email),
       events!bookings_event_id_fkey(date, title)
     `)
     .eq("id", bookingId)

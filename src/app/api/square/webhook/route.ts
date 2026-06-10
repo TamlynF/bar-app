@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       .from("bookings")
       .select(`
         id, status, payment_status, group_size, total_amount,
-        contacts(full_name, email),
+        contacts!bookings_contact_id_fkey(full_name, email),
         events!bookings_event_id_fkey(date, title)
       `)
       .eq("square_order_id", orderId)

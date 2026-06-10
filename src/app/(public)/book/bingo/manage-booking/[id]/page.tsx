@@ -27,7 +27,7 @@ export default async function ManageBingoBookingPage({
       group_size,
       special_requests,
       square_order_id,
-      contacts(full_name, email),
+      contacts!bookings_contact_id_fkey(full_name, email),
       events!bookings_event_id_fkey(event_date: date, event_title: title),
       booking_table_mappings(
         tables(id, name, max_capacity)
