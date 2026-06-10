@@ -1929,6 +1929,9 @@ html, body {
   .bg-\[\#FDCC4B\] {
     background-color: #FDCC4B;
   }
+  .bg-\[\#5C4033\]\/5 {
+    background-color: color-mix(in oklab, #5C4033 5%, transparent);
+ }
   .bg-linear-to-b {
     --tw-gradient-position: to bottom;
     @supports (background-image: linear-gradient(in lab, red, red)) {

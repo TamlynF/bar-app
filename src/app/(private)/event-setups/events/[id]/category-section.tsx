@@ -24,6 +24,7 @@ type Question = {
   id: string;
   question_text: string;
   answer_text: string;
+  answer_text_ext?: string | null;
   quiz_category_configs_id: number | null;
   question_no?: number | null;
   spotify_track_id?: string | null;
@@ -430,7 +431,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                 type="button"
                 variant="outline"
                 onClick={handlePrintPictureSheet}
-                className="w-full h-10 rounded-xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase text-[10px] tracking-wide hover:bg-[#F7F4EA]"
+                className="bg-slate-100 w-full h-10 rounded-xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase text-[10px] tracking-wide hover:bg-[#F7F4EA]"
               >
                 <Printer className="w-3.5 h-3.5 mr-2" />
                 Print Picture Sheet
@@ -447,7 +448,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
               </div>
             ) : null;
           })()}
-          <div className="p-3 space-y-3">
+          <div className="bg-amber-50 p-3 space-y-3">
             {count === 0 ? (
               <div className="py-8 text-center">
                 <BookOpen className="w-6 h-6 text-[#5F624F] opacity-20 mx-auto mb-2" />
@@ -571,11 +572,16 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                           {isHigherOrLower && q.hint_year ? (
                             <>
                               <p className="text-[10px] font-black text-amber-700 leading-tight">
-                                Higher or Lower than {q.hint_year}?
+                                Is {(q.release_year ?? 0) > q.hint_year ? 'higher' : 'lower'} than {q.hint_year}?
                               </p>
-                              <p className="text-[11px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl px-3 py-1.5 w-fit">
-                                {q.release_year}
+                              <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
+                                {q.answer_text_ext ?? q.answer_text}
                               </p>
+                              <div className="flex items-center gap-2 bg-[#5C4033] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
+                                <Target className="w-3 h-3 text-white/50" />
+                                <span className="text-xs font-black tracking-tight">{q.answer_text}</span>
+                                <span className="text-[10px] font-black text-white/50 tabular-nums">{q.release_year}</span>
+                              </div>
                             </>
                           ) : (
                             <>
@@ -604,7 +610,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                           )}
                         </div>
                         {includeSpotify && q.spotify_track_id && !hideQuestionText && (
-                          <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
+                          <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text_ext ?? q.answer_text} compact />
                         )}
                       </div>
                     )}

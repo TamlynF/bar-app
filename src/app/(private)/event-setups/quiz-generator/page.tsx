@@ -768,53 +768,6 @@ export default function QuizGeneratorPage() {
         {/* Collapsible body */}
         {formOpen && (
           <div className="p-4 space-y-4 border-t border-[#E6DFC8]">
-            {/* Event & Category — same row */}
-            {/* <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">Event</Label>
-                <div className="relative">
-                  <select
-                    title='Event'
-                    value={selectedEventId}
-                    onChange={handleEventChange}
-                    className="w-full h-11 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] pl-3 pr-8 text-xs font-bold text-[#5C4033] appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none focus:border-[#5C4033] transition-all uppercase"
-                  >
-                    {upcomingEvents.map(event => (
-                      <option key={event.id} value={event.id}>{format(new Date(event.date), "dd MMM yyyy")}</option>
-                    ))}
-                  </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#5C4033] opacity-40 pointer-events-none" />
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">Category</Label>
-                <div className="relative">
-                  <select
-                    title='Category'
-                    value={category}
-                    onChange={handleCategoryChange}
-                    className={cn(
-                      "w-full h-11 rounded-xl border pl-3 pr-8 text-xs font-bold appearance-none [-webkit-appearance:none] [-moz-appearance:none] outline-none transition-all uppercase",
-                      currentCategoryIsFull
-                        ? "border-red-200 bg-red-50 text-red-600"
-                        : "border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] focus:border-[#5C4033]"
-                    )}
-                  >
-                    {categories.map(opt => (
-                      <option key={opt.id} value={opt.category_name}>
-                        {opt.order_no != null ? `${opt.order_no}. ` : ''}{opt.category_name}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown className={cn(
-                    "absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 pointer-events-none",
-                    currentCategoryIsFull ? "text-red-400" : "text-[#5F624F] opacity-40"
-                  )} />
-                </div>
-              </div>
-            </div> */}
-
             {/* Topic */}
             <div className="space-y-1.5">
               <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">
@@ -1072,7 +1025,7 @@ export default function QuizGeneratorPage() {
                       {isHigherOrLower && song.hint_year ? (
                         <>
                           <p className="text-[10px] font-black text-amber-700 leading-tight">
-                            Higher or Lower than {song.hint_year}?
+                            Is {song.year > song.hint_year ? 'higher' : 'lower'} than {song.hint_year}?
                           </p>
                           <p className="text-[11px] font-bold text-[#1F1F1A] leading-tight tracking-tight truncate mt-0.5">
                             {song.artist} — {song.title}
@@ -1229,11 +1182,11 @@ export default function QuizGeneratorPage() {
                   <div className="flex-1 min-w-0">
                     {isHigherOrLower && snippet.hint_year && (
                       <p className="text-[10px] font-black text-amber-700 leading-tight">
-                        Higher or Lower than {snippet.hint_year}?
+                        Is {(snippet.release_year ?? 0) > snippet.hint_year ? 'higher' : 'lower'} than {snippet.hint_year}?
                       </p>
                     )}
                     <p className="text-[10px] font-bold text-[#1F1F1A] tracking-tight truncate">
-                      {snippet.answer_text}
+                      {snippet.answer_text_ext ?? snippet.answer_text}
                     </p>
                   </div>
                   <Button
@@ -1258,7 +1211,7 @@ export default function QuizGeneratorPage() {
                 </div>
                 {snippet.spotify_track_id && (
                   <div className="px-3 pb-2">
-                    <SpotifyPlayer trackId={snippet.spotify_track_id} title={snippet.answer_text} compact />
+                    <SpotifyPlayer trackId={snippet.spotify_track_id} title={snippet.answer_text_ext ?? snippet.answer_text} compact />
                   </div>
                 )}
               </div>

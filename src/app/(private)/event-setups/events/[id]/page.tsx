@@ -28,6 +28,7 @@ type Question = {
   id: string;
   question_text: string;
   answer_text: string;
+  answer_text_ext?: string | null;
   quiz_category_configs_id: number | null;
   question_no?: number | null;
   spotify_track_id: string | null;
@@ -80,7 +81,7 @@ export default async function EventQuizQuestionsPage({
       .order("order_no", { ascending: true }),
     supabase
       .from("past_quiz_questions")
-      .select("id, question_text, answer_text, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_url")
+      .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_url")
       .eq("events_id", id)
       .order("question_no", { ascending: true, nullsFirst: false })
       .order("created_at"),

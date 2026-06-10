@@ -31,6 +31,7 @@ export type MusicSnippetCandidate = {
 export type SavedMusicSnippet = {
   id: string
   answer_text: string
+  answer_text_ext?: string | null
   release_year: number | null
   spotify_track_id: string | null
   hint_year: number | null
@@ -40,6 +41,7 @@ export type PastQuestionRecord = {
   id: string;
   question_text: string;
   answer_text: string;
+  answer_text_ext?: string | null;
   category: string;
   asked_on: string;
   events_id: number | null;
@@ -618,7 +620,7 @@ async function searchSpotifyTrack(
  * Generates music snippet suggestions via Gemini, then auto-searches Spotify for each.
  */
 export async function generateMusicSnippetsAction(
-  numberOfSongs: number = 15,
+  numberOfSongs: number = 10,
   categoryName: string = 'Music Snippets',
   topic: string = '',
   difficulty: string = 'Medium',
@@ -633,7 +635,7 @@ export async function generateMusicSnippetsAction(
     const [{ data: approved }, { data: generated }, { data: config }] = await Promise.all([
       supabase
         .from('past_quiz_questions')
-        .select('answer_text')
+        .select('answer_text, answer_text_ext')
         //.eq('events_id', eventId)
         .eq('quiz_category_configs_id', categoryConfigId)
         .order('created_at', { ascending: false })
@@ -650,10 +652,14 @@ export async function generateMusicSnippetsAction(
         .maybeSingle(),
     ])
 
+    const isHigherOrLower = config?.is_higher_lower ?? false
+
+    // For Higher/Lower rounds the song identity lives in answer_text_ext
+    // (answer_text holds "Higher"/"Lower"); other rounds keep it in answer_text.
     const combinedExclusions = [
-      ...(approved?.map((q) => q.answer_text) ?? []),
+      ...(approved?.map((q) => (isHigherOrLower ? q.answer_text_ext : q.answer_text)) ?? []),
       ...(generated?.map((g) => g.content_text) ?? []),
-    ]
+    ].filter((v): v is string => !!v)
     const existingList = combinedExclusions.length
       ? combinedExclusions.join(' | ')
       : 'None.'
@@ -665,8 +671,6 @@ export async function generateMusicSnippetsAction(
 
     const model = 'gemini-2.5-flash'
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
-
-    const isHigherOrLower = config?.is_higher_lower ?? false
 
     const topicLine = topic.trim()
       ? `- Focus on this theme/genre: "${topic.trim()}".`
@@ -680,13 +684,13 @@ export async function generateMusicSnippetsAction(
 
     const prompt = isHigherOrLower
       ? `You are a music expert for a pub quiz "Higher or Lower" round at "Don Fenticas".
-Generate exactly ${numberOfSongs} songs for a "Higher or Lower" game where teams guess if the song's release year is higher or lower than a given hint year.
+Generate exactly ${numberOfSongs} songs for an alternating "Higher or Lower" round. Each question states ONE true direction in the form "{artist} - {title} is higher than {hint_year}?" or "{artist} - {title} is lower than {hint_year}?", and the correct answers alternate Higher, Lower, Higher, Lower across the round.
 
 Requirements:
 - Songs from 1970 to present day.
 - Well-known, recognizable songs that a British pub audience would know.
-- For each song, provide a hint_year that is within 3 to 5 years of the actual release year. The hint_year should be randomly higher or lower than the actual year to create variety.
-- The songs should have a good mix of decades.
+- For each song, provide a hint_year that is within 3 to 5 years of the actual release year. It must NEVER equal the release year.
+- Pick songs that work well as an alternating round (a good mix of decades).
 ${topicLine}
 ${difficultyLine}
 - Avoid these previously used songs: [${existingList}]
@@ -755,6 +759,19 @@ ${difficultyLine}
     const rawSongs = JSON.parse(content) as { artist: string; title: string; year: number; intro_description: string; hint_year?: number }[]
     rawSongs.sort((a, b) => a.year - b.year)
 
+    // Higher/Lower: force the correct answer to alternate (Higher, Lower, …) by
+    // placing hint_year on the matching side of the release year. Reuse the AI's
+    // offset magnitude when sensible (clamped to 3–5), guaranteeing release ≠ hint
+    // and a believable 3–5 year gap.
+    if (isHigherOrLower) {
+      rawSongs.forEach((s, i) => {
+        const wantHigher = i % 2 === 0 // even → answer "Higher" (release > hint)
+        const aiGap = s.hint_year != null ? Math.abs(s.year - s.hint_year) : 0
+        const offset = Math.min(Math.max(aiGap || (3 + Math.floor(Math.random() * 3)), 3), 5)
+        s.hint_year = wantHigher ? s.year - offset : s.year + offset
+      })
+    }
+
     // Auto-search Spotify for each song
     const spotifyToken = await getSpotifyAccessToken()
     const songs: MusicSnippetCandidate[] = await Promise.all(
@@ -769,7 +786,9 @@ ${difficultyLine}
 
     // Persist generated songs immediately so they're excluded on future
     // regenerations — even before approval and across page reloads.
-    // content_text matches the `artist - title` answer_text saved on approval.
+    // content_text is the `artist - title` identity: it matches answer_text for
+    // non-HL rounds and answer_text_ext for Higher/Lower rounds (both used by the
+    // exclusion list above).
     if (songs.length) {
       const { error: logError } = await supabase
         .from('generated_quiz_questions')
@@ -825,25 +844,49 @@ export async function saveMusicSnippetsAction(
     .maybeSingle()
   const isHigherOrLower = config?.is_higher_lower ?? false
   const baseNo = await getMaxQuestionNo(supabase, eventId, categoryConfigId)
-  const insertData = songs.map((s, i) => ({
-    question_text: isHigherOrLower && s.hint_year
-      ? `Higher or Lower than ${s.hint_year}?`
-      : `[${s.year}] Name the artist and song`,
-    answer_text: `${s.artist} - ${s.title}`,
-    category: categoryName,
-    topic: topic.trim() || null,
-    release_year: s.year,
-    spotify_track_id: s.spotify_track_id,
-    hint_year: s.hint_year || null,
-    asked_on: askedOn,
-    events_id: eventId,
-    quiz_category_configs_id: categoryConfigId,
-    question_no: baseNo + i + 1,
-    created_by: currentEmployeeId,
-    created_at: now,
-    updated_by: currentEmployeeId,
-    updated_at: now,
-  }))
+  const insertData = songs.map((s, i) => {
+    const songIdentity = `${s.artist} - ${s.title}`
+    if (isHigherOrLower && s.hint_year) {
+      // Direction matches the truth: "Higher" when release > hint, else "Lower".
+      const dir = s.year > s.hint_year ? 'higher' : 'lower'
+      return {
+        question_text: `${songIdentity} is ${dir} than ${s.hint_year}?`,
+        answer_text: dir === 'higher' ? 'Higher' : 'Lower',
+        answer_text_ext: songIdentity,
+        category: categoryName,
+        topic: topic.trim() || null,
+        release_year: s.year,
+        spotify_track_id: s.spotify_track_id,
+        hint_year: s.hint_year,
+        asked_on: askedOn,
+        events_id: eventId,
+        quiz_category_configs_id: categoryConfigId,
+        question_no: baseNo + i + 1,
+        created_by: currentEmployeeId,
+        created_at: now,
+        updated_by: currentEmployeeId,
+        updated_at: now,
+      }
+    }
+    return {
+      question_text: `[${s.year}] Name the artist and song`,
+      answer_text: songIdentity,
+      answer_text_ext: null,
+      category: categoryName,
+      topic: topic.trim() || null,
+      release_year: s.year,
+      spotify_track_id: s.spotify_track_id,
+      hint_year: s.hint_year || null,
+      asked_on: askedOn,
+      events_id: eventId,
+      quiz_category_configs_id: categoryConfigId,
+      question_no: baseNo + i + 1,
+      created_by: currentEmployeeId,
+      created_at: now,
+      updated_by: currentEmployeeId,
+      updated_at: now,
+    }
+  })
 
   const { error } = await supabase
     .from('past_quiz_questions')
@@ -1201,7 +1244,7 @@ export async function getMusicSnippetsForEventAction(
 
   const { data, error } = await supabase
     .from('past_quiz_questions')
-    .select('id, answer_text, release_year, spotify_track_id, hint_year')
+    .select('id, answer_text, answer_text_ext, release_year, spotify_track_id, hint_year')
     .eq('events_id', eventId)
     .eq('quiz_category_configs_id', categoryConfigId)
     .order('release_year', { ascending: true })
