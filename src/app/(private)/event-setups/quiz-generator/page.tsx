@@ -1018,23 +1018,25 @@ export default function QuizGeneratorPage() {
                       setSelectedSnippetIndices(next)
                     }}
                   >
-                    <span className="shrink-0 bg-[#5C4033] text-white text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider">
-                      {song.year}
-                    </span>
                     <div className="flex-1 min-w-0">
                       {isHigherOrLower && song.hint_year ? (
-                        <>
-                          <p className="text-[10px] font-black text-amber-700 leading-tight">
-                            Is {song.year > song.hint_year ? 'higher' : 'lower'} than {song.hint_year}?
+                        <div className="space-y-2">
+                          <p className="text-[11px] text-[#1F1F1A] leading-snug">
+                            <span className="font-bold italic">{song.artist} - {song.title}</span> higher or lower than <span className="font-bold text-orange-600">{song.hint_year}</span>?
                           </p>
-                          <p className="text-[11px] font-bold text-[#1F1F1A] leading-tight tracking-tight truncate mt-0.5">
-                            {song.artist} — {song.title}
-                          </p>
-                        </>
+                          <div className="px-2.5 py-1.5 rounded-md text-center bg-[#F7F4EA]">
+                            <p className="text-[10px] font-black text-[#5C4033] leading-tight">
+                              {song.year > song.hint_year ? 'Higher' : 'Lower'} - <span className={cn(
+                                "font-bold italic",
+                                song.year > song.hint_year ? "text-green-600" : "text-red-600"
+                              )}>{song.year}</span>
+                            </p>
+                          </div>
+                        </div>
                       ) : (
                         <>
                           <p className="text-[11px] font-bold text-[#1F1F1A] leading-tight tracking-tight truncate">
-                            {song.artist} — {song.title}
+                            [{song.year}] {song.artist} — {song.title}
                           </p>
                           <p className="text-[10px] text-[#5F624F] font-medium mt-0.5 leading-tight line-clamp-1">
                             {song.intro_description}
