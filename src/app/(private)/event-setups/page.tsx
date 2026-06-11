@@ -34,13 +34,13 @@ const eventItems = [
     icon: Component,
     color: "bg-indigo-500/10 text-indigo-600",
   },
-  {
+/*   {
     title: "Quiz AI",
     description: "Generate quiz questions with AI",
     href: "/event-setups/quiz-generator",
     icon: Brain,
     color: "bg-purple-500/10 text-purple-600",
-  },
+  }, */
       {
       title: "Quiz History",
       description: "List of all past quiz questions",

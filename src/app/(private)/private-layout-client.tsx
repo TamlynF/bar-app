@@ -85,7 +85,7 @@ export default function PrivateLayoutClient({
     const eventsNavSubItems = [
         { label: "Event List", href: "/event-setups/events", icon: CalendarDays },
         { label: "Event Categories", href: "/event-setups/event-types", icon: Component },
-        { label: "Quiz Generator", href: "/event-setups/quiz-generator", icon: Brain },
+        // { label: "Quiz Generator", href: "/event-setups/quiz-generator", icon: Brain },
         { label: "Quiz History", href: "/event-setups/quiz-history", icon: Grid2X2 },
         { label: "Quiz Rules", href: "/event-setups/quiz-categories", icon: Dices },
     ]

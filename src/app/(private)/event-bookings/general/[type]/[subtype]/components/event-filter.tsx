@@ -12,7 +12,7 @@ interface EventItem {
 }
 
 function formatEventLabel(e: EventItem) {
-  const dateStr = format(parseISO(e.date), "eeee, do MMMM yyyy");
+  const dateStr = format(parseISO(e.date), "eee, do MMM yy");
   return e.title ? `${dateStr} — ${e.title}` : dateStr;
 }
 

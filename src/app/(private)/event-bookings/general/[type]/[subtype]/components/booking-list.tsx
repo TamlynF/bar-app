@@ -53,9 +53,14 @@ function statusBadge(status?: string | null) {
   }
 }
 
-export default function BookingList({ bookings }: { bookings: GeneralBooking[] }) {
-  const [activeTab, setActiveTab] = useState("All");
+export default function BookingList({ bookings, activeStatus }: { bookings: GeneralBooking[]; activeStatus?: string }) {
+  const [internalTab, setInternalTab] = useState("All");
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  // When `activeStatus` is supplied the filter is controlled by the parent (the
+  // stats bar) and the internal tab row is hidden. Otherwise BookingList owns it.
+  const controlled = activeStatus !== undefined;
+  const effectiveStatus = (controlled ? activeStatus! : internalTab).toLowerCase();
 
   const tabCounts = Object.fromEntries(
     STATUS_TABS.map(t => [
@@ -68,9 +73,9 @@ export default function BookingList({ bookings }: { bookings: GeneralBooking[] }
 
   const visibleTabs = STATUS_TABS.filter(t => t === "All" || tabCounts[t] > 0);
 
-  const filtered = activeTab === "All"
+  const filtered = effectiveStatus === "all"
     ? bookings
-    : bookings.filter(b => b.status?.toLowerCase() === activeTab.toLowerCase());
+    : bookings.filter(b => b.status?.toLowerCase() === effectiveStatus);
 
   if (bookings.length === 0) {
     return (
@@ -84,33 +89,35 @@ export default function BookingList({ bookings }: { bookings: GeneralBooking[] }
 
   return (
     <div className="space-y-3">
-      {/* Status tabs */}
-      <div className="flex flex-wrap gap-1.5">
-        {visibleTabs.map(tab => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide transition-colors",
-              activeTab === tab
-                ? "bg-[#5C4033] text-white"
-                : "bg-[#F7F4EA] text-[#5F624F] hover:bg-[#E6DFC8]"
-            )}
-          >
-            {tab}
-            {tabCounts[tab] > 0 && (
-              <span className="ml-1 opacity-60">({tabCounts[tab]})</span>
-            )}
-          </button>
-        ))}
-      </div>
+      {/* Status tabs — hidden when filtering is controlled by the stats bar */}
+      {!controlled && (
+        <div className="flex flex-wrap gap-1.5">
+          {visibleTabs.map(tab => (
+            <button
+              key={tab}
+              type="button"
+              onClick={() => setInternalTab(tab)}
+              className={cn(
+                "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide transition-colors",
+                internalTab === tab
+                  ? "bg-[#5C4033] text-white"
+                  : "bg-[#F7F4EA] text-[#5F624F] hover:bg-[#E6DFC8]"
+              )}
+            >
+              {tab}
+              {tabCounts[tab] > 0 && (
+                <span className="ml-1 opacity-60">({tabCounts[tab]})</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* List */}
       {filtered.length === 0 ? (
         <div className="bg-white border border-[#E6DFC8] rounded-2xl p-6 text-center">
           <p className="text-[11px] font-bold text-[#5F624F] uppercase tracking-wide opacity-60">
-            No {activeTab.toLowerCase()} bookings
+            No {effectiveStatus === "all" ? "" : effectiveStatus} bookings
           </p>
         </div>
       ) : (

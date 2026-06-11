@@ -84,7 +84,7 @@ export default async function EventsHubPage() {
   const generalGroups = Array.from(groupMap.values());
 
   return (
-    <div className="p-2 sm:p-8 space-y-6">
+    <div className="p-2 sm:p-8 space-y-4">
       {/* Specialised booking sections */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {eventBookingItems.map((item) => (
