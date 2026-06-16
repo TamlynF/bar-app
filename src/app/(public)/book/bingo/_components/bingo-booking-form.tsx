@@ -19,10 +19,12 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { COUNTRY_CODES } from "@/lib/country-codes";
+import { formatTime } from "@/lib/events-display";
 
 export interface BingoEvent {
   id: number;
   date: string;
+  start_time: string | null;
   payment_amount: number | null;
   is_fully_booked: boolean;
 }
@@ -40,13 +42,19 @@ function formatEventDate(dateStr: string) {
   });
 }
 
+/** Dropdown label: date, plus the start time when present (disambiguates same-day events). */
+function eventOptionLabel(ev: BingoEvent) {
+  const time = formatTime(ev.start_time);
+  return time ? `${formatEventDate(ev.date)} · ${time}` : formatEventDate(ev.date);
+}
+
 export default function BingoBookingForm({ events }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
 
   const [formData, setFormData] = useState({
-    eventDate: events[0]?.date ?? "",
+    eventId: String(events[0]?.id ?? ""),
     fullName: "",
     email: "",
     countryCode: "+44",
@@ -56,7 +64,10 @@ export default function BingoBookingForm({ events }: Props) {
     specialRequests: "",
   });
 
-  const selectedEvent = events.find((e) => e.date === formData.eventDate) ?? events[0];
+  // Resolve the chosen event by id (unique) — two events can share a date.
+  const selectedEvent =
+    events.find((e) => String(e.id) === formData.eventId) ?? events[0];
+  const selectedDate = selectedEvent?.date ?? "";
   const fullyBooked = selectedEvent?.is_fully_booked ?? false;
   const hasPricing = !!selectedEvent?.payment_amount && selectedEvent.payment_amount > 0;
   const pricePerPerson = hasPricing ? selectedEvent!.payment_amount! : 0;
@@ -96,14 +107,14 @@ export default function BingoBookingForm({ events }: Props) {
         </h2>
         <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
           Your spot has been reserved for{" "}
-          <span className="font-black text-white">{formatEventDate(formData.eventDate)}</span>.
+          <span className="font-black text-white">{formatEventDate(selectedDate)}</span>.
           A confirmation email is on its way.
         </p>
         <Button
           onClick={() => {
             setBooked(false);
             setFormData({
-              eventDate: events[0]?.date ?? "",
+              eventId: String(events[0]?.id ?? ""),
               fullName: "",
               email: "",
               countryCode: "+44",
@@ -138,7 +149,7 @@ export default function BingoBookingForm({ events }: Props) {
           Fully Booked
         </h2>
         <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
-          Sorry, we are fully booked for {formatEventDate(formData.eventDate)}. Please keep an eye on our Instagram page{' '}
+          Sorry, we are fully booked for {formatEventDate(selectedDate)}. Please keep an eye on our Instagram page{' '}
           <a
             href="https://www.instagram.com/donfenticas"
             target="_blank"
@@ -154,7 +165,7 @@ export default function BingoBookingForm({ events }: Props) {
           <Button
             onClick={() => {
               const available = events.find(e => !e.is_fully_booked);
-              if (available) setFormData(prev => ({ ...prev, eventDate: available.date }));
+              if (available) setFormData(prev => ({ ...prev, eventId: String(available.id) }));
             }}
             className="w-full bg-white text-[#26300D] font-black h-14 rounded-2xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
           >
@@ -179,15 +190,15 @@ export default function BingoBookingForm({ events }: Props) {
             </div>
             <select
               title="Event Date"
-              name="eventDate"
-              value={formData.eventDate}
+              name="eventId"
+              value={formData.eventId}
               onChange={handleInputChange}
               required
               className={cn(inputBaseClasses, "appearance-none pr-10 cursor-pointer")}
             >
               {events.map((ev) => (
-                <option key={ev.date} value={ev.date}>
-                  {formatEventDate(ev.date)}
+                <option key={ev.id} value={ev.id}>
+                  {eventOptionLabel(ev)}
                 </option>
               ))}
             </select>
@@ -274,7 +285,7 @@ export default function BingoBookingForm({ events }: Props) {
           />
         </div>
       </div>
-      <input type="hidden" name="event_date" value={formData.eventDate} />
+      <input type="hidden" name="event_id" value={formData.eventId} />
       <input type="hidden" name="full_name" value={formData.fullName} />
       <input type="hidden" name="group_name" value={formData.groupName.trim() || formData.fullName} />
       <input type="hidden" name="group_size" value={formData.groupSize} />

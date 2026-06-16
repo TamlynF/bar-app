@@ -35,7 +35,7 @@ export default async function QuizBookingPage({
   const [{ data: rawEvents }, { data: infoItems }, { data: subtypeRow }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, date, payment_amount, is_fully_booked, event_subtypes!inner(is_quiz)")
+      .select("id, date, start_time, payment_amount, is_fully_booked, event_subtypes!inner(is_quiz)")
       .eq("event_subtypes.is_quiz", true)
       .eq("is_active", true)
       .gte("date", today)
@@ -63,6 +63,7 @@ export default async function QuizBookingPage({
   const events: QuizEvent[] = (rawEvents ?? []).map((e) => ({
     id: e.id as number,
     date: e.date as string,
+    start_time: (e.start_time as string | null) ?? null,
     payment_amount: e.payment_amount as number | null,
     is_fully_booked: (e.is_fully_booked as boolean) ?? false,
   }));
@@ -143,7 +144,7 @@ export default async function QuizBookingPage({
               key={index}
               className={cn(
                 "flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 hover:border-white/20",
-                "flex-none sm:flex-1 sm:min-w-[150px]"
+                "flex-none sm:flex-1 sm:min-w-37.5"
               )}
             >
               <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />

@@ -4,10 +4,9 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
-import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 
 interface BookingFormData {
-  quiz_date: string;
+  event_id: number;
   name: string;
   team_name: string;
   team_size: number;
@@ -26,21 +25,24 @@ export async function checkTeamName(teamName: string, quizDate: string, excludeB
   
   const supabase = await createClient();
 
-  // 1. Resolve the event ID associated with the chosen date
-  const { data: eventData } = await supabase
+  // 1. Resolve the event ID(s) for the chosen date. There can be more than one
+  //    event on a date (e.g. two sessions), so check team-name uniqueness across
+  //    all of them — and never use .maybeSingle() here (it errors on >1 row).
+  const { data: eventRows } = await supabase
     .from('events')
     .select('id')
-    .eq('date', quizDate)
-    .maybeSingle();
+    .eq('date', quizDate);
 
-  // If the event doesn't exist yet, the name is available by default
-  if (!eventData) return { isAvailable: true };
+  const eventIds = (eventRows ?? []).map((e) => e.id);
+
+  // If no event exists yet for that date, the name is available by default
+  if (eventIds.length === 0) return { isAvailable: true };
 
   // 2. Query for active bookings with the same name (ignoring case and cancelled entries)
   let query = supabase
     .from("bookings")
     .select("id")
-    .eq("event_id", eventData.id)
+    .in("event_id", eventIds)
     .ilike("group_name", teamName.trim())
     .not("status", "eq", "cancelled");
 
@@ -49,7 +51,7 @@ export async function checkTeamName(teamName: string, quizDate: string, excludeB
     query = query.neq("id", excludeBookingId);
   }
 
-  const { data: duplicateTeam } = await query.maybeSingle();
+  const { data: duplicateTeam } = await query.limit(1).maybeSingle();
 
   return { isAvailable: !duplicateTeam };
 }
@@ -102,49 +104,26 @@ export async function checkQuizAvailability(quizDate: string, teamSize: number):
   return { available: !!availableTable };
 }
 
-export async function createBooking(formData: BookingFormData, type: string, subType: string) {
+export async function createBooking(formData: BookingFormData) {
   console.log(formData);
   const supabase = await createClient();
 
   try {
-    const { isAvailable } = await checkTeamName(formData.team_name, formData.quiz_date);
-    if (!isAvailable) throw new Error('This team name was just reserved by another user. Please choose a different name.');    
-
-    let eventId;
-    const { data: eventData } = await supabase
+    // Resolve the chosen event by its unique id (the form sends event_id). Two
+    // events can share a date, so we must target the exact one, not look up by date.
+    const { data: eventRow, error: eventLookupError } = await supabase
       .from('events')
-      .select('id')
-      .eq('date', formData.quiz_date)
-      .maybeSingle();
+      .select('id, date')
+      .eq('id', formData.event_id)
+      .single();
 
-    if (eventData) {
-      eventId = eventData.id;
-    } else {
-      // Lazy initialization of the event taxonomy + event if the date is new
-      const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, type, subType);
+    if (eventLookupError || !eventRow) throw new Error("Failed to resolve event context.");
 
-      // 3. Handle Event (Find existing for this date or create new)
-      const { data: newEvent, error: eventError } = await supabase
-        .from("events")
-        .insert([{
-            date: formData.quiz_date,
-            title: "Quiz Night",
-            tagline: "Thursday Night Quiz Night",
-            event_types_id: eventTypeId,
-            event_subtypes_id: eventSubtypeId
-        }])
-        .select("id")
-        .single();
+    const eventId = eventRow.id;
+    const quizDate = eventRow.date as string;
 
-      if (eventError) {
-        console.error("Event insert error:", eventError);
-        throw new Error('Failed to setup event.');
-        return { success: false, eventError: "Failed to setup event." };
-      }
-      eventId = newEvent?.id;
-    }
-    console.log("event id: " + eventId);
-    if (!eventId) throw new Error("Failed to resolve event context.");
+    const { isAvailable } = await checkTeamName(formData.team_name, quizDate);
+    if (!isAvailable) throw new Error('This team name was just reserved by another user. Please choose a different name.');
 
     // TABLE ALLOCATION LOGIC
     const { data: conflictingBookings, error: bookingsError } = await supabase
@@ -261,7 +240,7 @@ export async function createBooking(formData: BookingFormData, type: string, sub
     // 9. Send the confirmation or waitlist email.
     // A failed email must NOT discard an already-saved booking, so swallow errors here.
     try {
-      await sendBookingEmail(newBooking.id, formData.email, formData.name, formData.quiz_date, formData.team_name, formData.team_size, status);
+      await sendBookingEmail(newBooking.id, formData.email, formData.name, quizDate, formData.team_name, formData.team_size, status);
     } catch (emailError) {
       console.error("Booking saved but confirmation email failed:", emailError);
     }

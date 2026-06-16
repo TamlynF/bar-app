@@ -17,6 +17,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatTime } from "@/lib/events-display";
 
 interface BookingResponse {
   success: boolean;
@@ -29,6 +30,7 @@ interface BookingResponse {
 export interface QuizEvent {
   id: number;
   date: string;
+  start_time: string | null;
   payment_amount: number | null;
   is_fully_booked: boolean;
 }
@@ -46,6 +48,12 @@ function formatEventDate(dateStr: string) {
   });
 }
 
+/** Dropdown label: long date, plus the start time when present (disambiguates same-day events). */
+function eventOptionLabel(ev: QuizEvent) {
+  const time = formatTime(ev.start_time);
+  return time ? `${formatEventDate(ev.date)} · ${time}` : formatEventDate(ev.date);
+}
+
 export default function BookingForm({ events }: Props) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -55,7 +63,7 @@ export default function BookingForm({ events }: Props) {
   const [teamNameError, setTeamNameError] = useState("");
 
   const [formData, setFormData] = useState({
-    quizDate: events[0]?.date ?? "",
+    quizEventId: String(events[0]?.id ?? ""),
     name: "",
     teamName: "",
     teamSize: "4",
@@ -63,6 +71,12 @@ export default function BookingForm({ events }: Props) {
     phone: "",
     specialRequests: "",
   });
+
+  // Resolve the chosen event by id (unique), not by date — two events can share a date.
+  const selectedEvent =
+    events.find((e) => String(e.id) === formData.quizEventId) ?? events[0];
+  const selectedDate = selectedEvent?.date ?? "";
+  const fullyBooked = selectedEvent?.is_fully_booked ?? false;
 
   useEffect(() => {
     const validateTeam = async () => {
@@ -73,7 +87,7 @@ export default function BookingForm({ events }: Props) {
 
       setIsCheckingTeam(true);
       try {
-        const { isAvailable } = await checkTeamName(formData.teamName, formData.quizDate);
+        const { isAvailable } = await checkTeamName(formData.teamName, selectedDate);
         if (!isAvailable) {
           setTeamNameError("This team name is already taken for the selected date.");
         } else {
@@ -88,11 +102,7 @@ export default function BookingForm({ events }: Props) {
 
     const timer = setTimeout(validateTeam, 500);
     return () => clearTimeout(timer);
-  }, [formData.teamName, formData.quizDate]);
-
-  // Check fully booked from event data
-  const selectedEvent = events.find((e) => e.date === formData.quizDate);
-  const fullyBooked = selectedEvent?.is_fully_booked ?? false;
+  }, [formData.teamName, selectedDate]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -104,7 +114,7 @@ export default function BookingForm({ events }: Props) {
 
     if (teamNameError) return;
 
-    if (!formData.quizDate) {
+    if (!formData.quizEventId) {
       setDateError("Please select a date.");
       return;
     }
@@ -114,14 +124,14 @@ export default function BookingForm({ events }: Props) {
 
     try {
       const response: BookingResponse = await createBooking({
-        quiz_date: formData.quizDate,
+        event_id: Number(formData.quizEventId),
         name: formData.name,
         team_name: formData.teamName,
         team_size: parseInt(formData.teamSize, 10),
         email: formData.email,
         phone: formData.phone,
         special_requests: formData.specialRequests,
-      }, "games", "quiz");
+      });
 
       if (response.success) {
         setIsSuccess(true);
@@ -152,8 +162,8 @@ export default function BookingForm({ events }: Props) {
         </h2>
         <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
           {isWaitlisted
-            ? `We're full for ${formatEventDate(formData.quizDate)}, but you're next in line. Check your email for details.`
-            : `Great news! Team "${formData.teamName}" is booked for ${formatEventDate(formData.quizDate)}. Check your email for your unique link.`
+            ? `We're full for ${formatEventDate(selectedDate)}, but you're next in line. Check your email for details.`
+            : `Great news! Team "${formData.teamName}" is booked for ${formatEventDate(selectedDate)}. Check your email for your unique link.`
           }
         </p>
         <Button
@@ -161,7 +171,7 @@ export default function BookingForm({ events }: Props) {
             setIsSuccess(false);
             setIsWaitlisted(false);
             setFormData({
-              quizDate: events[0]?.date ?? "",
+              quizEventId: String(events[0]?.id ?? ""),
               name: "",
               teamName: "",
               teamSize: "4",
@@ -190,7 +200,7 @@ export default function BookingForm({ events }: Props) {
           Fully Booked
         </h2>
         <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
-          Sorry, we are fully booked for {formatEventDate(formData.quizDate)}. Please keep an eye on our Instagram page{' '}
+          Sorry, we are fully booked for {formatEventDate(selectedDate)}. Please keep an eye on our Instagram page{' '}
           <a
             href="https://www.instagram.com/donfenticas"
             target="_blank"
@@ -206,7 +216,7 @@ export default function BookingForm({ events }: Props) {
           <Button
             onClick={() => {
               const available = events.find(e => !e.is_fully_booked);
-              if (available) setFormData(prev => ({ ...prev, quizDate: available.date }));
+              if (available) setFormData(prev => ({ ...prev, quizEventId: String(available.id) }));
             }}
             className="w-full bg-white text-[#26300D] font-black h-14 rounded-2xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
           >
@@ -236,15 +246,15 @@ export default function BookingForm({ events }: Props) {
             </div>
             <select
               id="quizDate"
-              name="quizDate"
-              value={formData.quizDate}
+              name="quizEventId"
+              value={formData.quizEventId}
               onChange={handleInputChange}
               required
               className={cn(inputBaseClasses, "appearance-none pr-10 cursor-pointer")}
             >
               {events.map((ev) => (
-                <option key={ev.date} value={ev.date}>
-                  {formatEventDate(ev.date)}
+                <option key={ev.id} value={ev.id}>
+                  {eventOptionLabel(ev)}
                 </option>
               ))}
             </select>

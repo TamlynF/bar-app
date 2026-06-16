@@ -6,7 +6,6 @@ import { randomUUID } from "crypto";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
-import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -20,7 +19,7 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 export async function createBingoBooking(formData: FormData) {
   const supabase = await createClient();
 
-  const eventDate = formData.get("event_date") as string;
+  const eventId = Number(formData.get("event_id"));
   const fullName = formData.get("full_name") as string;
   const email = formData.get("email") as string;
   const countryCode = (formData.get("country_code") as string) || null;
@@ -29,44 +28,25 @@ export async function createBingoBooking(formData: FormData) {
   const specialRequests = (formData.get("special_requests") as string) || null;
   const groupName = (formData.get("group_name") as string) || fullName;
 
-  if (!eventDate || !fullName || !email || !groupSize || groupSize < 1) {
+  if (!eventId || !fullName || !email || !groupSize || groupSize < 1) {
     return { error: "Please fill in all required fields." };
   }
 
   try {
-    // 1. Resolve bingo event type + subtype
-    const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "games", "bingo");
-
-    // 2. Resolve event for this date
-    let eventId: number;
-    let paymentAmount: number;
-    const { data: existingEvent } = await supabase
+    // Resolve the chosen event by its unique id (the form sends event_id). Two
+    // events can share a date, so we target the exact one rather than look up by date.
+    const { data: eventRow, error: eventLookupError } = await supabase
       .from("events")
-      .select("id, payment_amount")
-      .eq("date", eventDate)
-      .eq("event_subtypes_id", eventSubtypeId)
-      .maybeSingle();
+      .select("id, date, payment_amount")
+      .eq("id", eventId)
+      .single();
 
-    if (existingEvent) {
-      eventId = existingEvent.id;
-      paymentAmount = Math.round(existingEvent.payment_amount * 100);
-    } else {
-      const { data: newEvent, error: eventError } = await supabase
-        .from("events")
-        .insert([{
-          date: eventDate,
-          title: "Music Bingo",
-          tagline: "Live Music Bingo Night",
-          event_types_id: eventTypeId,
-          event_subtypes_id: eventSubtypeId,
-          payment_amount: 0,
-        }])
-        .select("id")
-        .single();
-      if (eventError || !newEvent) throw new Error("Failed to setup event.");
-      eventId = newEvent.id;
-      paymentAmount = 0;
+    if (eventLookupError || !eventRow) {
+      return { error: "We couldn't find that event. Please pick another date." };
     }
+
+    const eventDate = eventRow.date as string;
+    const paymentAmount = Math.round((eventRow.payment_amount ?? 0) * 100);
 
     // 3. Table allocation — same logic as quiz booking
     const { data: confirmedBookings } = await supabase
