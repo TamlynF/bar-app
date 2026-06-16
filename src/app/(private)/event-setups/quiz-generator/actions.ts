@@ -460,9 +460,8 @@ export async function getQuizEventsAction(): Promise<QuizEventSummary[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
       .from('events')
-      .select('id, title, date, event_types!inner(type, sub_type)')
-      .eq('event_types.type', 'games')
-      .eq('event_types.sub_type', 'quiz')
+      .select('id, title, date, event_subtypes!inner(is_quiz)')
+      .eq('event_subtypes.is_quiz', true)
       .order('date', { ascending: false });
   
     if (error) {
@@ -480,9 +479,8 @@ export async function getUpcomingQuizzesAction(): Promise<QuizEventSummary[]> {
   const today = new Date().toISOString().split('T')[0];
   const { data, error } = await supabase
     .from('events')
-    .select('id, title, date, event_types!inner(type, sub_type)')
-    .eq('event_types.type', 'games')
-    .eq('event_types.sub_type', 'quiz')
+    .select('id, title, date, event_subtypes!inner(is_quiz)')
+    .eq('event_subtypes.is_quiz', true)
     .gte('date', today)
     .order('date', { ascending: true });
 

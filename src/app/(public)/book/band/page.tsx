@@ -26,10 +26,9 @@ export default async function BandBookingPage() {
   const supabase = await createClient();
 
   const { data: infoItems } = await supabase
-    .from("event_information")
-    .select(`icon, title, event_types!inner(type, sub_type)`)
-    .eq("event_types.type", "entertainment")
-    .eq("event_types.sub_type", "band");
+    .from("event_subtype_badges")
+    .select(`icon, title, event_subtypes!inner(name)`)
+    .eq("event_subtypes.name", "band");
 
   const dbBadges = (infoItems || []).map((item) => ({
     icon: ICON_MAP[item.icon || ""] || Info,

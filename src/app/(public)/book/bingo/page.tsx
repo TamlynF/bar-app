@@ -31,29 +31,29 @@ export default async function BingoBookingPage({
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  const [{ data: rawEvents }, { data: infoItems }, { data: eventTypeRow }] = await Promise.all([
+  const [{ data: rawEvents }, { data: infoItems }, { data: subtypeRow }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, date, payment_amount, is_fully_booked, event_types!inner(type, sub_type)")
-      .eq("event_types.type", "games")
-      .eq("event_types.sub_type", "bingo")
+      .select("id, date, payment_amount, is_fully_booked, event_types!inner(name), event_subtypes!inner(name)")
+      .eq("event_types.name", "games")
+      .eq("event_subtypes.name", "bingo")
       .eq("is_active", true)
       .gte("date", today)
       .order("date", { ascending: true }),
     supabase
-      .from("event_information")
-      .select(`icon, title, event_types!inner(type, sub_type)`)
-      .eq("event_types.type", "games")
-      .eq("event_types.sub_type", "bingo"),
+      .from("event_subtype_badges")
+      .select(`icon, title, event_subtypes!inner(name)`)
+      .eq("event_subtypes.name", "bingo"),
     supabase
-      .from("event_types")
-      .select("information")
-      .eq("type", "games")
-      .eq("sub_type", "bingo")
+      .from("event_subtypes")
+      .select("tagline, event_types!inner(name)")
+      .eq("name", "bingo")
+      .eq("event_types.name", "games")
+      .limit(1)
       .maybeSingle(),
   ]);
 
-  const tagline = (eventTypeRow?.information as string | null) || "Bingo with a beat. Guess the song, fill your card, win the night.";
+  const tagline = (subtypeRow?.tagline as string | null) || "Bingo with a beat. Guess the song, fill your card, win the night.";
 
   const events: BingoEvent[] = (rawEvents ?? []).map((e) => ({
     id: e.id as number,

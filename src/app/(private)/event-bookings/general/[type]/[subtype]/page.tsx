@@ -42,9 +42,13 @@ export default async function GeneralEventBookingsPage({
 
   const bookings = rawBookings as unknown as GeneralBooking[];
 
-  const et = eventDetails
-    ? (Array.isArray(eventDetails.event_types) ? eventDetails.event_types[0] : eventDetails.event_types) as { type: string; sub_type: string; badge_color?: string | null } | null
+  const etType = eventDetails
+    ? (Array.isArray(eventDetails.event_types) ? eventDetails.event_types[0] : eventDetails.event_types) as { name: string } | null
     : null;
+  const etSub = eventDetails
+    ? (Array.isArray(eventDetails.event_subtypes) ? eventDetails.event_subtypes[0] : eventDetails.event_subtypes) as { name: string; color?: string | null } | null
+    : null;
+  const et = (etType || etSub) ? { type: etType?.name ?? "", sub_type: etSub?.name ?? "", badge_color: etSub?.color ?? null } : null;
 
   const hostName = eventDetails?.host && !Array.isArray(eventDetails.host)
     ? (eventDetails.host as { full_name: string }).full_name

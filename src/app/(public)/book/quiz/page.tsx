@@ -32,36 +32,33 @@ export default async function QuizBookingPage({
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  const [{ data: rawEvents }, { data: infoItems }, { data: eventTypeRow }] = await Promise.all([
+  const [{ data: rawEvents }, { data: infoItems }, { data: subtypeRow }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, date, payment_amount, is_fully_booked, event_types!inner(type, sub_type)")
-      .eq("event_types.type", "games")
-      .eq("event_types.sub_type", "quiz")
+      .select("id, date, payment_amount, is_fully_booked, event_subtypes!inner(is_quiz)")
+      .eq("event_subtypes.is_quiz", true)
       .eq("is_active", true)
       .gte("date", today)
       .order("date", { ascending: true }),
     supabase
-      .from("event_information")
+      .from("event_subtype_badges")
       .select(`
         icon,
         title,
-        event_types!inner (
-          type,
-          sub_type
+        event_subtypes!inner (
+          is_quiz
         )
       `)
-      .eq("event_types.type", "games")
-      .eq("event_types.sub_type", "quiz"),
+      .eq("event_subtypes.is_quiz", true),
     supabase
-      .from("event_types")
-      .select("information")
-      .eq("type", "games")
-      .eq("sub_type", "quiz")
+      .from("event_subtypes")
+      .select("tagline")
+      .eq("is_quiz", true)
+      .limit(1)
       .maybeSingle(),
   ]);
 
-  const tagline = (eventTypeRow?.information as string | null) || "Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.";
+  const tagline = (subtypeRow?.tagline as string | null) || "Eight rounds. Countless bragging rights. One winning team. Welcome to Quiz Night at Don Fenticas.";
 
   const events: QuizEvent[] = (rawEvents ?? []).map((e) => ({
     id: e.id as number,

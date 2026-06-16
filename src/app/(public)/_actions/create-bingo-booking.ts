@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
+import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -33,26 +34,8 @@ export async function createBingoBooking(formData: FormData) {
   }
 
   try {
-    // 1. Resolve bingo event type
-    let eventTypeId: number;
-    const { data: existingType } = await supabase
-      .from("event_types")
-      .select("id")
-      .eq("type", "games")
-      .eq("sub_type", "bingo")
-      .maybeSingle();
-
-    if (existingType) {
-      eventTypeId = existingType.id;
-    } else {
-      const { data: newType, error: typeError } = await supabase
-        .from("event_types")
-        .insert([{ type: "games", sub_type: "bingo" }])
-        .select("id")
-        .single();
-      if (typeError || !newType) throw new Error("Failed to setup event type.");
-      eventTypeId = newType.id;
-    }
+    // 1. Resolve bingo event type + subtype
+    const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "games", "bingo");
 
     // 2. Resolve event for this date
     let eventId: number;
@@ -61,7 +44,7 @@ export async function createBingoBooking(formData: FormData) {
       .from("events")
       .select("id, payment_amount")
       .eq("date", eventDate)
-      .eq("event_types_id", eventTypeId)
+      .eq("event_subtypes_id", eventSubtypeId)
       .maybeSingle();
 
     if (existingEvent) {
@@ -73,8 +56,9 @@ export async function createBingoBooking(formData: FormData) {
         .insert([{
           date: eventDate,
           title: "Music Bingo",
-          description: "Live Music Bingo Night",
+          tagline: "Live Music Bingo Night",
           event_types_id: eventTypeId,
+          event_subtypes_id: eventSubtypeId,
           payment_amount: 0,
         }])
         .select("id")

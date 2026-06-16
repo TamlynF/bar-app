@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 
 interface BookingFormData {
   quiz_date: string;
@@ -63,10 +64,9 @@ export async function checkQuizAvailability(quizDate: string, teamSize: number):
   // Find the event for this date
   const { data: eventData } = await supabase
     .from('events')
-    .select('id, event_types!inner(type, sub_type)')
+    .select('id, event_subtypes!inner(is_quiz)')
     .eq('date', quizDate)
-    .eq('event_types.type', 'games')
-    .eq('event_types.sub_type', 'quiz')
+    .eq('event_subtypes.is_quiz', true)
     .maybeSingle();
 
   // No event yet = available (it'll be created on booking)
@@ -120,31 +120,8 @@ export async function createBooking(formData: BookingFormData, type: string, sub
     if (eventData) {
       eventId = eventData.id;
     } else {
-      // Lazy initialization of Event Types and Events if the date is new
-      let eventTypeId;
-      const { data: existingEventType } = await supabase
-        .from("event_types")
-        .select("id")
-        .eq("type", type)
-        .eq("sub_type", subType)
-        .maybeSingle();
-
-      if (existingEventType) {
-        eventTypeId = existingEventType.id;
-      } else {
-        const { data: newEventType, error: typeError } = await supabase
-          .from("event_types")
-          .insert([{ type: type, sub_type: subType }])
-          .select("id")
-          .single();
-
-        if (typeError) {
-          console.error("Event type insert error:", typeError);
-          throw new Error('Failed to setup event type.');
-          //return { success: false, eventError: "Failed to setup event type." };
-        }
-        eventTypeId = newEventType?.id;
-      }
+      // Lazy initialization of the event taxonomy + event if the date is new
+      const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, type, subType);
 
       // 3. Handle Event (Find existing for this date or create new)
       const { data: newEvent, error: eventError } = await supabase
@@ -152,8 +129,9 @@ export async function createBooking(formData: BookingFormData, type: string, sub
         .insert([{
             date: formData.quiz_date,
             title: "Quiz Night",
-            description: "Thursday Night Quiz Night",
-            event_types_id: eventTypeId
+            tagline: "Thursday Night Quiz Night",
+            event_types_id: eventTypeId,
+            event_subtypes_id: eventSubtypeId
         }])
         .select("id")
         .single();

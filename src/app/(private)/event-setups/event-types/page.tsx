@@ -8,9 +8,12 @@ export default async function EventTypesPage() {
     .from("event_types")
     .select(`
       *,
-      event_information (*)
+      event_subtypes (
+        *,
+        event_subtype_badges (*)
+      )
     `)
-    .order("created_at", { ascending: false });
+    .order("name", { ascending: true });
 
   if (error) {
     console.error("Error fetching event types:", error);

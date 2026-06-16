@@ -191,7 +191,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       if (selectedBooking.events?.event_types) {
         const events = await getQuizEvents(
           selectedBooking.events.event_types.category || "games",
-          selectedBooking.events.event_types.sub_type || "quiz"
+          selectedBooking.events.event_subtypes?.sub_type || "quiz"
         );
         setAvailableEvents(events as unknown as SelectableEvent[]);
       }

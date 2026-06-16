@@ -19,7 +19,8 @@ type EventRow = {
   end_time: string | null;
   title: string | null;
   host_employee_id: number | null;
-  event_types: EventTypeRow | EventTypeRow[];
+  event_types: { name: string } | { name: string }[];
+  event_subtypes: { name: string; color: string | null } | { name: string; color: string | null }[];
   employees: { full_name: string } | null;
 };
 
@@ -45,7 +46,10 @@ type BookingRow = {
 };
 
 function getEventType(ev: EventRow): EventTypeRow {
-  return (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) ?? null;
+  const t = Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types;
+  const s = Array.isArray(ev.event_subtypes) ? ev.event_subtypes[0] : ev.event_subtypes;
+  if (!t && !s) return null;
+  return { type: t?.name ?? "", sub_type: s?.name ?? "", badge_color: s?.color ?? null };
 }
 
 function badgeClass(et: EventTypeRow): string {
@@ -86,7 +90,7 @@ export default async function EventDetailPage({
     supabase
       .from("events")
       .select(
-        "id, date, start_time, end_time, title, host_employee_id, event_types(type, sub_type, badge_color), employees!host_employee_id(full_name)"
+        "id, date, start_time, end_time, title, host_employee_id, event_types(name), event_subtypes(name, color), employees!host_employee_id(full_name)"
       )
       .eq("id", eventId)
       .single(),

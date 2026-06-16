@@ -29,6 +29,9 @@ export interface ScoreRow {
 
 export interface EventType {
   category?: string;
+}
+
+export interface EventSubtype {
   sub_type?: string;
 }
 
@@ -40,6 +43,7 @@ export interface EventRow {
   event_description?: string;
   event_payment_amount?: number;
   event_types?: EventType;
+  event_subtypes?: EventSubtype;
 }
 
 export interface ContactRow {

@@ -33,11 +33,13 @@ export async function getBookings(type: string, subType: string, selectedDate: s
             event_start_time: start_time,
             event_end_time: end_time,
             event_title: title,
-            event_description: description,
+            event_description: tagline,
             event_payment_amount: payment_amount,
             event_types!inner(
-              category: type,
-              sub_type
+              category: name
+            ),
+            event_subtypes!inner(
+              sub_type: name
             )
           ),
           booking_table_mappings(
@@ -59,8 +61,8 @@ export async function getBookings(type: string, subType: string, selectedDate: s
           updated_by_contact_id,
           updated_by_contact:contacts!updated_by_contact_id(full_name)
         `)
-      .ilike("events.event_types.type", type)
-      .ilike("events.event_types.sub_type", subType)
+      .ilike("events.event_types.name", type)
+      .ilike("events.event_subtypes.name", subType)
       .order('date', { referencedTable: 'events', ascending: false })
       .order('group_name', { ascending: true });
 
@@ -176,18 +178,19 @@ export async function getEventDetails(date: string, type: string, subType: strin
         start_time,
         end_time,
         title,
-        description,
+        tagline,
         payment_amount,
         host:employees!events_host_employee_id_fkey(full_name),
-        event_types!inner(category: type, sub_type)
+        event_types!inner(category: name),
+        event_subtypes!inner(sub_type: name)
       `);
     if (eventId) {
       query = query.eq("id", eventId);
     } else {
       query = query
         .eq("date", date)
-        .ilike("event_types.type", type)
-        .ilike("event_types.sub_type", subType);
+        .ilike("event_types.name", type)
+        .ilike("event_subtypes.name", subType);
     }
     const { data, error } = await query.maybeSingle();
     if (error) return null;
@@ -217,9 +220,9 @@ export async function getQuizEvents(type: string, subType: string) {
     const supabase = await createClient();
     const { data: events, error } = await supabase
       .from("events")
-      .select("id, date, title, event_types!inner(category: type, sub_type)")
-      .ilike("event_types.type", type)
-      .ilike("event_types.sub_type", subType)
+      .select("id, date, title, event_types!inner(category: name), event_subtypes!inner(sub_type: name)")
+      .ilike("event_types.name", type)
+      .ilike("event_subtypes.name", subType)
 
 
     

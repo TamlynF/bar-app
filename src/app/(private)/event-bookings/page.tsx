@@ -47,16 +47,17 @@ function toTitleCase(str: string) {
   return str.split(/[\s\-_]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
 }
 
-type EventTypeRow = { type: string; sub_type: string; badge_color?: string | null; type_color?: string | null };
+type TypeRow = { name: string; color?: string | null };
+type SubtypeRow = { name: string; color?: string | null };
 
 export default async function EventsHubPage() {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  // Fetch upcoming bookable events with their event type metadata for grouping
+  // Fetch upcoming bookable events with their taxonomy metadata for grouping
   const { data: bookableEvents } = await supabase
     .from("events")
-    .select("id, date, event_types!inner(type, sub_type, badge_color, type_color)")
+    .select("id, date, event_types!inner(name, color), event_subtypes!inner(name, color)")
     .eq("is_active", true)
     .eq("is_bookable", true)
     .gte("date", today)
@@ -67,15 +68,16 @@ export default async function EventsHubPage() {
   type GroupEntry = { type: string; subType: string; badgeColor: string | null; typeColor: string | null; count: number };
   const groupMap = new Map<string, GroupEntry>();
   for (const ev of bookableEvents ?? []) {
-    const et = (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) as EventTypeRow | null;
-    if (!et) continue;
-    const key = `${et.type}__${et.sub_type}`;
+    const t = (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) as TypeRow | null;
+    const s = (Array.isArray(ev.event_subtypes) ? ev.event_subtypes[0] : ev.event_subtypes) as SubtypeRow | null;
+    if (!t || !s) continue;
+    const key = `${t.name}__${s.name}`;
     if (!groupMap.has(key)) {
       groupMap.set(key, {
-        type: et.type,
-        subType: et.sub_type,
-        badgeColor: et.badge_color ?? null,
-        typeColor: et.type_color ?? null,
+        type: t.name,
+        subType: s.name,
+        badgeColor: s.color ?? null,
+        typeColor: t.color ?? null,
         count: 0,
       });
     }

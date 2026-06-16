@@ -40,7 +40,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
 
   const { data: event } = await supabase
     .from("events")
-    .select("id, date, start_time, end_time, title, description, payment_amount, seating_required, is_fully_booked, is_bookable, booking_config, event_types_id")
+    .select("id, date, start_time, end_time, title, tagline, payment_amount, seating_required, is_fully_booked, is_bookable, booking_config, event_subtypes_id")
     .eq("id", id)
     .eq("is_active", true)
     .eq("is_bookable", true)
@@ -49,21 +49,21 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
 
   if (!event) notFound();
 
-  // Fetch event type info + badges
-  const [{ data: eventType }, { data: infoItems }] = await Promise.all([
+  // Fetch subtype info + badges
+  const [{ data: subtype }, { data: infoItems }] = await Promise.all([
     supabase
-      .from("event_types")
-      .select("type, sub_type, information, badge_color")
-      .eq("id", event.event_types_id)
+      .from("event_subtypes")
+      .select("name, tagline, color")
+      .eq("id", event.event_subtypes_id)
       .maybeSingle(),
     supabase
-      .from("event_information")
+      .from("event_subtype_badges")
       .select("icon, title")
-      .eq("event_types_id", event.event_types_id),
+      .eq("event_subtypes_id", event.event_subtypes_id),
   ]);
 
   const config = (event.booking_config as Record<string, unknown>) ?? {};
-  const tagline = (config.custom_tagline as string) || (eventType?.information as string) || event.description || "";
+  const tagline = (config.custom_tagline as string) || (subtype?.tagline as string) || event.tagline || "";
   const eventTitle = event.title || "Event";
 
   const dbBadges = (infoItems || []).map((item) => ({

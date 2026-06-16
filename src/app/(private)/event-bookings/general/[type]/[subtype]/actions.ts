@@ -6,9 +6,9 @@ export async function getEventsForType(type: string, subType: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("events")
-    .select("id, date, title, event_types!inner(type, sub_type)")
-    .ilike("event_types.type", type)
-    .ilike("event_types.sub_type", subType)
+    .select("id, date, title, event_types!inner(name), event_subtypes!inner(name)")
+    .ilike("event_types.name", type)
+    .ilike("event_subtypes.name", subType)
     .order("date", { ascending: false });
   return (data ?? []).map(e => ({
     id: String(e.id),
@@ -43,14 +43,15 @@ export async function getBookingsForType(
         event_end_time: end_time,
         event_title: title,
         event_payment_amount: payment_amount,
-        event_types!inner(category: type, sub_type)
+        event_types!inner(category: name),
+        event_subtypes!inner(sub_type: name)
       ),
       booking_table_mappings(
         tables(tables_id: id, tables_name: name, tables_capacity: max_capacity)
       )
     `)
-    .ilike("events.event_types.type", type)
-    .ilike("events.event_types.sub_type", subType)
+    .ilike("events.event_types.name", type)
+    .ilike("events.event_subtypes.name", subType)
     .order("date", { referencedTable: "events", ascending: false })
     .order("group_name", { ascending: true });
 
@@ -74,10 +75,11 @@ export async function getEventDetailsForType(eventId: string) {
       start_time,
       end_time,
       title,
-      description,
+      tagline,
       payment_amount,
       host:employees!events_host_employee_id_fkey(full_name),
-      event_types!inner(type, sub_type, badge_color)
+      event_types!inner(name),
+      event_subtypes!inner(name, color)
     `)
     .eq("id", eventId)
     .maybeSingle();

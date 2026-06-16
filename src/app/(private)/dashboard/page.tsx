@@ -119,13 +119,17 @@ export type UpcomingEvent = {
   end_time: string | null;
   title: string | null;
   host_employee_id: number | null;
-  event_types: EventTypeRow | EventTypeRow[];
+  event_types: { name: string } | { name: string }[];
+  event_subtypes: { name: string; color: string | null } | { name: string; color: string | null }[];
   bookings: BookingRow[];
   past_quiz_questions: { id: number }[];
 };
 
 export function getEventType(ev: UpcomingEvent): EventTypeRow {
-  return (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) ?? null;
+  const t = Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types;
+  const s = Array.isArray(ev.event_subtypes) ? ev.event_subtypes[0] : ev.event_subtypes;
+  if (!t && !s) return null;
+  return { type: t?.name ?? "", sub_type: s?.name ?? "", badge_color: s?.color ?? null };
 }
 
 function getSaturdaysInMonth(year: number, month: number): string[] {
@@ -185,10 +189,10 @@ export default async function DashboardPage() {
       .gte("events.date", todayStr),
     supabase
       .from("events")
-      .select("id, event_types!inner(sub_type, type), past_quiz_questions(id)")
+      .select("id, event_subtypes!inner(is_quiz), past_quiz_questions(id)")
       .gte("date", todayStr)
       .eq("is_active", true)
-      .ilike("event_types.sub_type", "%quiz%"),
+      .eq("event_subtypes.is_quiz", true),
   ]);
 
   const [
@@ -224,7 +228,7 @@ export default async function DashboardPage() {
   const { data: rawUpcoming, error: upcomingError } = await supabase
     .from("events")
     .select(
-      "id, date, start_time, end_time, title, host_employee_id, event_types!inner(type, sub_type, badge_color), bookings!bookings_event_id_fkey (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
+      "id, date, start_time, end_time, title, host_employee_id, event_types!inner(name), event_subtypes!inner(name, color), bookings!bookings_event_id_fkey (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
     )
     .gte("date", todayStr)
     .neq("is_active", false)

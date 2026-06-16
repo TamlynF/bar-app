@@ -10,17 +10,19 @@ export async function saveEventAction(formData: FormData) {
   const isBookable = formData.get("is_bookable") === "on";
   const date = formData.get("date")?.toString() ?? "";
   const eventTypesId = parseInt(formData.get("event_types_id")?.toString() || "0", 10);
+  const eventSubtypesId = parseInt(formData.get("event_subtypes_id")?.toString() || "0", 10);
   const manualUrl = formData.get("booking_page_url")?.toString() || null;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
 
   const payload = {
     title: formData.get("title")?.toString() || "",
-    description: formData.get("description")?.toString() || "",
+    tagline: formData.get("tagline")?.toString() || "",
     date,
     start_time: formData.get("start_time")?.toString() || null,
     end_time: formData.get("end_time")?.toString() || null,
     payment_amount: parseFloat(formData.get("payment_amount")?.toString() || "0"),
     event_types_id: eventTypesId,
+    event_subtypes_id: eventSubtypesId,
     host_employee_id: formData.get("host_employee_id") ? parseInt(formData.get("host_employee_id") as string, 10) : null,
     seating_required: formData.get("seating_required") === "on",
     is_active: formData.get("is_active") === "on",
@@ -33,16 +35,16 @@ export async function saveEventAction(formData: FormData) {
     booking_config: JSON.parse(formData.get("booking_config")?.toString() || "{}"),
   };
 
-  // Fetch sub_type to determine the right booking URL path
-  const { data: et } = await supabase.from("event_types").select("sub_type")
-    .eq("id", eventTypesId).maybeSingle();
-  const subType = et?.sub_type?.toLowerCase() ?? "";
+  // Fetch the subtype to determine the right booking URL path
+  const { data: sub } = await supabase.from("event_subtypes").select("name, is_quiz")
+    .eq("id", eventSubtypesId).maybeSingle();
+  const subName = sub?.name?.toLowerCase() ?? "";
 
   function computeBookingUrl(eventId: number | string): string | null {
     if (!isBookable) return null;
     if (manualUrl) return manualUrl;
-    if (subType === "quiz")  return `${siteUrl}/book/quiz?date=${date}`;
-    if (subType === "bingo") return `${siteUrl}/book/bingo?date=${date}`;
+    if (sub?.is_quiz)       return `${siteUrl}/book/quiz?date=${date}`;
+    if (subName === "bingo") return `${siteUrl}/book/bingo?date=${date}`;
     return `${siteUrl}/book/event/${eventId}`;
   }
 

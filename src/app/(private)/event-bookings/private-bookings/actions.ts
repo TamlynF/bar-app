@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
+import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
@@ -39,41 +40,26 @@ export async function updatePrivateHireStatus(
 
   // When confirmed, create an event with the matching private event type
   if (status === "confirmed" && record.selected_date) {
-    const reason = record.reason?.toLowerCase() ?? "";
+    const reason = record.reason?.toLowerCase() || "other";
 
-    let { data: eventType } = await supabase
-      .from("event_types")
-      .select("id")
-      .ilike("type", "private")
-      .ilike("sub_type", reason)
-      .single();
+    const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "private", reason);
 
-    if (!eventType) {
-      const { data: created } = await supabase
-        .from("event_types")
-        .insert({ type: "private", sub_type: reason || "other" })
-        .select("id")
-        .single();
-      eventType = created;
-    }
+    const { data: newEvent } = await supabase.from("events").insert({
+      title: `${record.full_name} — ${record.reason || "Private Hire"}`,
+      date: record.selected_date,
+      start_time: record.selected_start_time,
+      end_time: record.selected_end_time,
+      event_types_id: eventTypeId,
+      event_subtypes_id: eventSubtypeId,
+      payment_amount: record.deposit_amount,
+      is_active: true,
+    }).select("id").single();
 
-    if (eventType) {
-      const { data: newEvent } = await supabase.from("events").insert({
-        title: `${record.full_name} — ${record.reason || "Private Hire"}`,
-        date: record.selected_date,
-        start_time: record.selected_start_time,
-        end_time: record.selected_end_time,
-        event_types_id: eventType.id,
-        payment_amount: record.deposit_amount,
-        is_active: true,
-      }).select("id").single();
-
-      if (newEvent) {
-        await supabase
-          .from("private_hire_requests")
-          .update({ event_id: newEvent.id })
-          .eq("id", id);
-      }
+    if (newEvent) {
+      await supabase
+        .from("private_hire_requests")
+        .update({ event_id: newEvent.id })
+        .eq("id", id);
     }
   }
 

@@ -15,12 +15,14 @@ import { SpecialsSection, type SpecialRow } from "@/components/specials-section"
 
 export const revalidate = 300;
 
+export type TypeJoin = { name: string; color: string | null };
+export type SubtypeJoin = { name: string; color: string | null; is_karaoke: boolean | null };
+
 export type EventTypeJoin = {
-  type: string;
-  sub_type: string;
-  type_color: string | null;
+  type: string | null;
+  sub_type: string | null;
   badge_color: string | null;
-  is_karaoke: boolean | null;
+  is_karaoke: boolean;
 };
 
 export type EventRow = {
@@ -35,7 +37,8 @@ export type EventRow = {
   external_link: string | null;
   booking_page_url: string | null;
   karaoke_request_url: string | null;
-  event_types: EventTypeJoin | EventTypeJoin[];
+  event_types: TypeJoin | TypeJoin[];
+  event_subtypes: SubtypeJoin | SubtypeJoin[];
 };
 
 /** Parse a YYYY-MM-DD date string without timezone shift */
@@ -54,10 +57,17 @@ function formatTime(time: string | null): string | null {
   return `${displayHour}:${minute}${ampm}`;
 }
 
-/** Safely extract the event type from the join (can be array or object) */
+/** Safely extract + normalize the event type/subtype from the joins (can be array or object) */
 function getEventType(event: EventRow): EventTypeJoin | null {
-  if (!event.event_types) return null;
-  return Array.isArray(event.event_types) ? event.event_types[0] : event.event_types;
+  const t = Array.isArray(event.event_types) ? event.event_types[0] : event.event_types;
+  const s = Array.isArray(event.event_subtypes) ? event.event_subtypes[0] : event.event_subtypes;
+  if (!t && !s) return null;
+  return {
+    type: t?.name ?? null,
+    sub_type: s?.name ?? null,
+    badge_color: s?.color ?? null,
+    is_karaoke: s?.is_karaoke ?? false,
+  };
 }
 
 /**
@@ -107,7 +117,7 @@ export default async function HomePage() {
     supabase
       .from("events")
       .select(
-        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(type, sub_type, type_color, badge_color, is_karaoke)"
+        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, is_karaoke)"
       )
       .gte("date", monthStartStr)
       .lte("date", nextMonthEndStr)

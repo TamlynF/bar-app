@@ -9,9 +9,9 @@ export async function getBingoEventList(type: string, subType: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("events")
-    .select("id, date, title, event_types!inner(category: type, sub_type)")
-    .ilike("event_types.type", type)
-    .ilike("event_types.sub_type", subType);
+    .select("id, date, title, event_types!inner(category: name), event_subtypes!inner(sub_type: name)")
+    .ilike("event_types.name", type)
+    .ilike("event_subtypes.name", subType);
   if (error) throw new Error("Failed to fetch bingo events");
   return data ?? [];
 }
@@ -38,14 +38,15 @@ export async function getBingoBookings(selectedDate: string | null, selectedEven
         event_date: date,
         event_title: title,
         event_payment_amount: payment_amount,
-        event_types!inner(category: type, sub_type)
+        event_types!inner(category: name),
+        event_subtypes!inner(sub_type: name)
       ),
       booking_table_mappings(
         tables(tables_id: id, tables_name: name, tables_capacity: max_capacity)
       )
     `)
-    .ilike("events.event_types.type", "games")
-    .ilike("events.event_types.sub_type", "bingo")
+    .ilike("events.event_types.name", "games")
+    .ilike("events.event_subtypes.name", "bingo")
     .order("date", { referencedTable: "events", ascending: false });
 
   if (selectedDate) {
