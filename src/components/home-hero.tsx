@@ -18,7 +18,7 @@ export function HomeHero({
   backdropUrl: string | null;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-white/10 min-h-128 sm:min-h-168 flex flex-col justify-end">
+    <section className="relative overflow-hidden rounded-3xl border border-white/10 min-h-112 sm:min-h-128 flex flex-col justify-end">
       {/* Backdrop */}
       {backdropUrl ? (
         <>
@@ -47,18 +47,20 @@ export function HomeHero({
           </span>
         </div>
 
-        <Image
-          src="/CompanyName.png"
-          alt="Don Fenticas"
-          width={420}
-          height={112}
-          priority
-          className="h-12 sm:h-16 w-auto object-contain drop-shadow-xl mb-5"
-        />
-
-        <h1 className="max-w-2xl text-white font-black uppercase tracking-tighter leading-[0.9] text-[clamp(2.25rem,9vw,5rem)] drop-shadow-lg">
-          {tagline}
+        <h1 className="m-0">
+          <Image
+            src="/CompanyName.png"
+            alt="Don Fenticas — live music bar in Hinckley"
+            width={420}
+            height={112}
+            priority
+            className="h-16 sm:h-24 w-auto object-contain drop-shadow-xl"
+          />
         </h1>
+
+        <p className="mt-4 max-w-md text-stone-200 text-sm sm:text-base font-medium leading-relaxed line-clamp-3 drop-shadow">
+          {tagline}
+        </p>
 
         {/* Theme pills */}
         <div className="mt-6 flex gap-2 overflow-x-auto no-scrollbar">
