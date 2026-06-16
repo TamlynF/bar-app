@@ -12,6 +12,18 @@ html, body {
   overflow-x: hidden;
 }
 
+/* Choreographed hero text reveal (slides up + fades in on load) */
+@keyframes reveal {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.animate-reveal {
+  animation: reveal 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-reveal { animation: none; }
+}
+
 /* ===== Preserved custom: scrollbar / misc ===== */
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {

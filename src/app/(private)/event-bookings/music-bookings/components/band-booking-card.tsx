@@ -15,8 +15,6 @@ import {
   Clock3,
   HelpCircle,
   Loader2,
-  Play,
-  X,
   Save,
   CreditCard,
   ExternalLink,
@@ -25,7 +23,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { VideoFacade } from "@/components/video-facade";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -168,7 +166,6 @@ function formatTime12(t?: string | null): string {
 
 export function BandBookingCard({ request }: { request: BandRequest }) {
   const [open, setOpen] = useState(false);
-  const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   const [selectedDate, setSelectedDate] = useState(request.selected_date || "");
   const [selectedStartTime, setSelectedStartTime] = useState(request.selected_start_time || "");
@@ -559,45 +556,16 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 </div>
               )}
 
-              {/* Videos */}
+              {/* Videos — play inline on the page (facade: loads on click) */}
               {videos.length > 0 && (
                 <div>
                   <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-2">
                     Performance Videos
                   </p>
-                  <div className="flex flex-row flex-wrap gap-1.5">
-                    {videos.map((url, i) => {
-                      const isStorage =
-                        url.includes("supabase.co/storage") || url.includes(".supabase.co");
-                      return isStorage ? (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => setActiveVideo(url)}
-                          className="relative h-16 w-24 shrink-0 rounded-xl overflow-hidden bg-[#5C4033] flex flex-col items-center justify-center gap-1 group active:scale-95 transition-transform"
-                        >
-                          <div className="w-8 h-8 rounded-full bg-[#5C4033]/15 border border-[#C8956D]/40 flex items-center justify-center group-hover:bg-[#C8956D]/30 transition-colors">
-                            <Play className="w-3.5 h-3.5 text-white fill-white translate-x-px" />
-                          </div>
-                          <span className="text-[9px] font-black text-white/70 uppercase tracking-wide">
-                            Video {i + 1}
-                          </span>
-                        </button>
-                      ) : (
-                        <a
-                          key={i}
-                          href={url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="h-16 w-24 shrink-0 rounded-xl flex flex-col items-center justify-center gap-1 bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA] transition-colors"
-                        >
-                          <Link2 className="w-4 h-4" />
-                          <span className="text-[9px] font-black uppercase tracking-wide">
-                            Link {i + 1}
-                          </span>
-                        </a>
-                      );
-                    })}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {videos.map((url, i) => (
+                      <VideoFacade key={i} url={url} title={`Video ${i + 1}`} />
+                    ))}
                   </div>
                 </div>
               )}
@@ -724,29 +692,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           </div>
         </SheetContent>
       </Sheet>
-
-      {/* Video modal */}
-      <Dialog open={!!activeVideo} onOpenChange={(v) => !v && setActiveVideo(null)}>
-        <DialogContent className="bg-black border-0 p-0 max-w-2xl w-full rounded-2xl overflow-hidden">
-          <button
-            title="Close"
-            type="button"
-            onClick={() => setActiveVideo(null)}
-            className="absolute top-3 right-3 z-50 w-8 h-8 rounded-full bg-white/20 border border-white/30 flex items-center justify-center text-white hover:bg-white/30 transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
-          {activeVideo && (
-            <video
-              key={activeVideo}
-              src={activeVideo}
-              autoPlay
-              controls
-              className="w-full max-h-[80vh] object-contain"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

@@ -41,13 +41,13 @@ export function HomeHero({
 
       {/* Foreground */}
       <div className="relative z-10 p-6 sm:p-12">
-        <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-5">
+        <div className="animate-reveal inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-5">
           <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#FDCC4B]">
             Hinckley &middot; Live Music &amp; Late Nights
           </span>
         </div>
 
-        <h1 className="m-0">
+        <h1 className="animate-reveal [animation-delay:80ms] m-0">
           <Image
             src="/CompanyName.png"
             alt="Don Fenticas — live music bar in Hinckley"
@@ -58,12 +58,12 @@ export function HomeHero({
           />
         </h1>
 
-        <p className="mt-4 max-w-md text-stone-200 text-sm sm:text-base font-medium leading-relaxed line-clamp-3 drop-shadow">
+        <p className="animate-reveal [animation-delay:160ms] mt-4 max-w-md text-stone-200 text-sm sm:text-base font-medium leading-relaxed line-clamp-3 drop-shadow">
           {tagline}
         </p>
 
         {/* Theme pills */}
-        <div className="mt-6 flex gap-2 overflow-x-auto no-scrollbar">
+        <div className="animate-reveal [animation-delay:240ms] mt-6 flex gap-2 overflow-x-auto no-scrollbar">
           <span className="pill-neon-orange border shrink-0 text-[9px] font-black uppercase tracking-[0.15em] h-9 px-4 flex items-center justify-center rounded-full backdrop-blur cursor-default">
             Live Music
           </span>
@@ -79,7 +79,7 @@ export function HomeHero({
         </div>
 
         {/* CTAs */}
-        <div className="mt-7 flex flex-wrap gap-3">
+        <div className="animate-reveal [animation-delay:320ms] mt-7 flex flex-wrap gap-3">
           <Link
             href="/book"
             className="inline-flex items-center justify-center gap-2 h-12 px-7 rounded-full bg-[#FDCC4B] text-[#1a2008] text-sm font-black uppercase tracking-wide hover:bg-[#e5b843] active:scale-95 transition-all"
