@@ -2,11 +2,13 @@ import Link from "next/link";
 import { UtensilsCrossed, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
+import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
 import { HighlightedEvents } from "@/components/highlighted-events";
 import { GalleryPeek, type GalleryPeekItem } from "@/components/gallery-peek";
 import { FindUs, type CompanyInfo } from "@/components/find-us";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
+import { SectionHeading } from "@/components/editorial/section-heading";
 import { serializeEvent, type EventRow } from "@/lib/events-display";
 
 export const revalidate = 300;
@@ -41,7 +43,7 @@ export default async function HomePage() {
       .gte("date", todayStr)
       .order("date", { ascending: true })
       .order("start_time", { ascending: true })
-      .limit(3),
+      .limit(6),
     supabase
       .from("specials")
       .select("id, title, description, badges, image_url, start_date, end_date, display_order")
@@ -64,48 +66,76 @@ export default async function HomePage() {
   );
   const backdropUrl = photos[0]?.image_url ?? null;
   const peekItems: GalleryPeekItem[] = photos
-    .slice(0, 6)
+    .slice(0, 8)
     .map((g) => ({ id: g.id, title: g.title, image_url: g.image_url }));
 
   const companyInfo = (info ?? null) as CompanyInfo;
   const description = (info as { description?: string | null } | null)?.description;
   const tagline = description?.trim() || DEFAULT_TAGLINE;
 
+  // Section anchors for the sticky sub-nav (only those with content).
+  const sections = [
+    { id: "whats-on", label: "What's On", show: true },
+    { id: "specials", label: "Specials", show: specials.length > 0 },
+    { id: "gallery", label: "Gallery", show: peekItems.length > 0 },
+    { id: "find-us", label: "Find Us", show: companyInfo != null },
+  ].filter((s) => s.show);
+
   return (
     <main className="min-h-dvh w-full bg-[#1a2008] text-stone-300 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
+      <SmoothScroll />
       <PublicNav currentPath="/" />
 
-      <div className="max-w-3xl mx-auto px-4 pt-4 sm:pt-6 space-y-12 sm:space-y-16">
-        {/* Hero */}
+      <div className="max-w-5xl mx-auto px-4 pt-4 sm:pt-6">
         <HomeHero tagline={tagline} backdropUrl={backdropUrl} />
+      </div>
 
-        {/* Highlighted events */}
-        <HighlightedEvents events={highlightedEvents} todayStr={todayStr} />
+      {/* Sticky section sub-nav (awwwards-style category bar) */}
+      <nav
+        aria-label="Page sections"
+        className="sticky top-14 sm:top-16 z-30 bg-[#1a2008]/85 backdrop-blur-xl border-y border-white/10 mt-6 sm:mt-10"
+      >
+        <div className="max-w-5xl mx-auto px-4 flex gap-2 overflow-x-auto no-scrollbar py-3">
+          {sections.map((s) => (
+            <a
+              key={s.id}
+              href={`#${s.id}`}
+              className="shrink-0 inline-flex items-center h-9 px-4 rounded-full text-[11px] font-black uppercase tracking-wide bg-white/5 text-stone-400 border border-white/10 hover:text-white hover:bg-white/10 transition-colors"
+            >
+              {s.label}
+            </a>
+          ))}
+        </div>
+      </nav>
 
-        {/* Specials */}
+      <div className="max-w-5xl mx-auto px-4 space-y-16 sm:space-y-24 mt-12 sm:mt-16">
+        <HighlightedEvents events={highlightedEvents} />
+
         {specials.length > 0 && <SpecialsSection specials={specials} />}
 
-        {/* Gallery peek */}
         <GalleryPeek items={peekItems} />
 
         {/* Menu teaser */}
-        <Link
-          href="/menu"
-          className="group flex items-center gap-4 bg-white/5 hover:bg-white/15 border border-white/20 hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
-        >
-          <div className="shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center bg-[#FDCC4B]/10 border border-[#FDCC4B]/20">
-            <UtensilsCrossed className="w-6 h-6 text-[#FDCC4B]" aria-hidden="true" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <span className="block text-white font-black text-base uppercase tracking-tight">
-              See the Menu
-            </span>
-            <p className="text-stone-400 text-xs leading-relaxed mt-0.5">
-              Drinks, cocktails &amp; bar snacks — updated regularly.
-            </p>
-          </div>
-          <ArrowRight className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
-        </Link>
+        <section className="scroll-mt-24">
+          <SectionHeading eyebrow="Eat & drink" title="The Menu" action={{ href: "/menu", label: "Full menu" }} />
+          <Link
+            href="/menu"
+            className="group flex items-center gap-4 bg-white/5 hover:bg-white/15 border border-white/20 hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
+          >
+            <div className="shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center bg-[#FDCC4B]/10 border border-[#FDCC4B]/20">
+              <UtensilsCrossed className="w-6 h-6 text-[#FDCC4B]" aria-hidden="true" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <span className="block text-white font-black text-base uppercase tracking-tight">
+                Drinks, Cocktails &amp; Snacks
+              </span>
+              <p className="text-stone-400 text-xs leading-relaxed mt-0.5">
+                Draught, spirits, wine and bar bites — updated regularly.
+              </p>
+            </div>
+            <ArrowRight className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+          </Link>
+        </section>
 
         {/* Find us / hours */}
         <FindUs info={companyInfo} />

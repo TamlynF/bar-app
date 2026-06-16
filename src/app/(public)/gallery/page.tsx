@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { Camera } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
+import { SectionHeading } from "@/components/editorial/section-heading";
 import GalleryGrid from "./gallery-grid";
 
 export const metadata = {
@@ -45,20 +46,7 @@ export default async function GalleryPage() {
 
       <div className="w-full max-w-5xl mx-auto py-6 sm:py-10 px-4 sm:px-6">
         {/* Page header — H1 is "GALLERY", not the bar's name */}
-        <header className="text-center mb-8 sm:mb-10">
-          <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
-            <Camera className="w-3 h-3 text-[#FDCC4B]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
-              Photos &amp; Videos
-            </span>
-          </div>
-          <h1 className="text-white font-black text-3xl sm:text-4xl uppercase tracking-tighter">
-            Gallery
-          </h1>
-          <p className="text-stone-400 text-xs sm:text-sm font-medium mt-2">
-            Moments from the bar &mdash; gigs, nights out, behind the bar
-          </p>
-        </header>
+        <SectionHeading eyebrow="Photos & videos" title="Gallery" />
 
         {/* Gallery */}
         {galleryItems.length === 0 ? (

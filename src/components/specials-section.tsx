@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { format } from "date-fns";
 import { Sparkles } from "lucide-react";
+import { SectionHeading } from "@/components/editorial/section-heading";
+import { Slider } from "@/components/editorial/slider";
 
 export type SpecialRow = {
   id: number;
@@ -30,19 +32,14 @@ export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
   if (specials.length === 0) return null;
 
   return (
-    <section id="specials" className="max-w-5xl mx-auto px-2 sm:px-6 pb-4 sm:pb-14">
-      <div className="flex items-center gap-2.5 mb-4">
-        <span className="text-xs font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
-          Specials
-        </span>
-        <div className="flex-1 h-px bg-[#FDCC4B]/20" />
-      </div>
+    <section id="specials" className="scroll-mt-24">
+      <SectionHeading eyebrow="At the bar" title="Specials" />
 
-      <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-2 px-2 items-start">
+      <Slider ariaLabel="Drink specials and deals">
         {specials.map((s) => (
           <SpecialCard key={s.id} special={s} />
         ))}
-      </div>
+      </Slider>
     </section>
   );
 }

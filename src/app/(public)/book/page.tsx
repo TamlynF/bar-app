@@ -1,8 +1,9 @@
 import React from "react";
 import Link from "next/link";
-import { Trophy, Music, Building2, ArrowRight, Disc3, CalendarDays, Ticket, Sparkles } from "lucide-react";
+import { Trophy, Music, Building2, ArrowRight, Disc3, CalendarDays, Ticket } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
+import { SectionHeading } from "@/components/editorial/section-heading";
 
 export const metadata = {
   title: "Book | Don Fenticas",
@@ -68,113 +69,98 @@ export default async function BookingHubPage() {
   const events = bookableEvents ?? [];
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] flex flex-col items-center px-4 pb-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
+    <main className="min-h-dvh w-full bg-[#26300D] px-4 pb-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{
         __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }`
       }} />
 
       <PublicNav currentPath="/book" />
 
-      {/* Header — H1 is the page's purpose, not the bar name */}
-      <div className="text-center mb-8 sm:mb-10 max-w-md mt-6 sm:mt-10">
-        <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
-          <Sparkles className="w-3 h-3 text-[#FDCC4B]" />
-          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
-            Reservations &amp; Bookings
-          </span>
-        </div>
-        <h1 className="text-white font-black text-3xl sm:text-4xl uppercase tracking-tighter leading-none mb-3">
-          Book Your Experience
-        </h1>
-        <p className="text-stone-400 text-sm font-medium leading-relaxed">
-          Choose how you&apos;d like to book with us.
-        </p>
-      </div>
+      <div className="max-w-5xl mx-auto pt-6 sm:pt-10">
+        {/* Header — H1 is the page's purpose, not the bar name */}
+        <SectionHeading eyebrow="Reservations & bookings" title="Book" />
 
-      {/* Booking Cards */}
-      <div className="w-full max-w-2xl space-y-4">
-        {bookingOptions.map((opt) => (
-          <Link
-            key={opt.href}
-            href={opt.href}
-            className="group flex items-center gap-4 bg-white/5 hover:bg-white/15 border border-white/20 hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
-          >
-            {/* Icon */}
-            <div className={`shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center ${opt.iconClass}`}>
-              <opt.icon className={`w-6 h-6 ${opt.iconColor}`} />
-            </div>
-
-            {/* Text */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <span className="text-white font-black text-base uppercase tracking-tight">{opt.label}</span>
+        {/* Booking Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {bookingOptions.map((opt) => (
+            <Link
+              key={opt.href}
+              href={opt.href}
+              className="group flex flex-col bg-white/5 hover:bg-white/12 border border-white/15 hover:border-white/30 rounded-2xl p-6 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 active:scale-[0.99] min-h-44"
+            >
+              <div className="flex items-start justify-between gap-3 mb-5">
+                <div className={`shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center ${opt.iconClass}`}>
+                  <opt.icon className={`w-6 h-6 ${opt.iconColor}`} />
+                </div>
                 <span className={`text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${opt.badgeClass}`}>
                   {opt.badge}
                 </span>
               </div>
-              <p className="text-stone-400 text-xs leading-relaxed line-clamp-2">{opt.description}</p>
-            </div>
 
-            {/* Arrow */}
-            <ArrowRight className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-stone-400 group-hover:translate-x-0.5 transition-all duration-200" />
-          </Link>
-        ))}
-      </div>
+              <span className="text-white font-black uppercase tracking-tighter leading-[0.95] text-2xl sm:text-3xl">
+                {opt.label}
+              </span>
+              <p className="text-stone-400 text-xs leading-relaxed mt-2 line-clamp-2">{opt.description}</p>
 
-      {/* Upcoming Bookable Events */}
-      {events.length > 0 && (
-        <div className="w-full max-w-2xl mt-10">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="h-px flex-1 bg-white/10" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-stone-500">Upcoming Events</span>
-            <div className="h-px flex-1 bg-white/10" />
-          </div>
-          <div className="space-y-3">
-            {events.map((ev) => {
-              const dateStr = new Date(ev.date + "T00:00:00").toLocaleDateString("en-GB", {
-                weekday: "short", day: "numeric", month: "short",
-              });
-              const isFree = !ev.payment_amount || ev.payment_amount === 0;
-              return (
-                <Link
-                  key={ev.id}
-                  href={`/book/event/${ev.id}`}
-                  className="group flex items-center gap-4 bg-white/5 hover:bg-white/15 border border-white/20 hover:border-white/30 rounded-2xl p-4 sm:p-5 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
-                >
-                  <div className="shrink-0 w-12 h-12 rounded-2xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">
-                    <CalendarDays className="w-5 h-5 text-[#FDCC4B]" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                      <span className="text-white font-black text-sm uppercase tracking-tight truncate">{ev.title || "Event"}</span>
-                      {ev.is_fully_booked ? (
-                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">Full</span>
-                      ) : (
-                        <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#FDCC4B]/10 text-[#FDCC4B] border border-[#FDCC4B]/20">
-                          {isFree ? "Free" : `£${ev.payment_amount!.toFixed(2)}`}
-                        </span>
-                      )}
+              <span className="mt-auto pt-4 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-[#FDCC4B] group-hover:gap-2.5 transition-all">
+                Book now
+                <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+              </span>
+            </Link>
+          ))}
+        </div>
+
+        {/* Upcoming Bookable Events */}
+        {events.length > 0 && (
+          <div className="mt-16 sm:mt-20">
+            <SectionHeading eyebrow="Tickets" title="Upcoming Events" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {events.map((ev) => {
+                const dateStr = new Date(ev.date + "T00:00:00").toLocaleDateString("en-GB", {
+                  weekday: "short", day: "numeric", month: "short",
+                });
+                const isFree = !ev.payment_amount || ev.payment_amount === 0;
+                return (
+                  <Link
+                    key={ev.id}
+                    href={`/book/event/${ev.id}`}
+                    className="group flex items-center gap-4 bg-white/5 hover:bg-white/12 border border-white/15 hover:border-white/30 rounded-2xl p-5 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 active:scale-[0.99]"
+                  >
+                    <div className="shrink-0 w-12 h-12 rounded-2xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">
+                      <CalendarDays className="w-5 h-5 text-[#FDCC4B]" />
                     </div>
-                    <p className="text-stone-500 text-xs font-bold">{dateStr}</p>
-                  </div>
-                  <Ticket className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-[#FDCC4B] transition-colors" />
-                </Link>
-              );
-            })}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <span className="text-white font-black text-sm uppercase tracking-tight truncate">{ev.title || "Event"}</span>
+                        {ev.is_fully_booked ? (
+                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">Full</span>
+                        ) : (
+                          <span className="text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-[#FDCC4B]/10 text-[#FDCC4B] border border-[#FDCC4B]/20">
+                            {isFree ? "Free" : `£${ev.payment_amount!.toFixed(2)}`}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-stone-500 text-xs font-bold">{dateStr}</p>
+                    </div>
+                    <Ticket className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-[#FDCC4B] transition-colors" />
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Footer */}
-      <div className="mt-10 flex flex-col items-center gap-2">
-        <div className="flex items-center gap-3 text-stone-800">
-          <div className="h-px w-6 bg-stone-800/50" />
-          <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
-          <div className="h-px w-6 bg-stone-800/50" />
+        {/* Footer */}
+        <div className="mt-16 flex flex-col items-center gap-2">
+          <div className="flex items-center gap-3 text-stone-800">
+            <div className="h-px w-6 bg-stone-800/50" />
+            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
+            <div className="h-px w-6 bg-stone-800/50" />
+          </div>
+          <p className="text-[8px] text-stone-700 uppercase tracking-widest font-bold opacity-40">
+            Licensed Venue · Please Drink Responsibly
+          </p>
         </div>
-        <p className="text-[8px] text-stone-700 uppercase tracking-widest font-bold opacity-40">
-          Licensed Venue · Please Drink Responsibly
-        </p>
       </div>
     </main>
   );

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { MapPin, Clock, Instagram, Facebook, ArrowRight } from "lucide-react";
+import { SectionHeading } from "@/components/editorial/section-heading";
 
 const DAYS = [
   "sunday",
@@ -47,12 +48,14 @@ export function FindUs({ info }: { info: CompanyInfo }) {
     : null;
 
   return (
-    <section>
-      <span className="text-xs font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
-        Find Us
-      </span>
+    <section id="find-us" className="scroll-mt-24">
+      <SectionHeading
+        eyebrow="Visit"
+        title="Find Us"
+        action={{ href: "/contact", label: "Contact" }}
+      />
 
-      <div className="mt-4 bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
+      <div className="bg-white/5 border border-white/10 rounded-2xl p-5 space-y-4">
         {hasAnyHours && (
           <div className="flex items-center gap-3">
             <div className="shrink-0 w-10 h-10 rounded-xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">

@@ -7,9 +7,9 @@ import {
   Facebook,
   ExternalLink,
   Clock,
-  MessageCircle,
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
+import { SectionHeading } from "@/components/editorial/section-heading";
 
 export const metadata = {
   title: "Contact Us | Don Fenticas",
@@ -55,23 +55,12 @@ export default async function ContactPage() {
 
       <div className="max-w-xl mx-auto px-4 py-6 sm:py-10">
         {/* Page header */}
-        <header className="text-center mb-8 sm:mb-10">
-          <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
-            <MessageCircle className="w-3 h-3 text-[#FDCC4B]" />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
-              Find Us &middot; Get In Touch
-            </span>
-          </div>
-          <h1 className="text-white font-black text-3xl sm:text-4xl uppercase tracking-tighter">
-            About Us
-          </h1>
-
-          {info?.description && (
-            <p className="text-stone-400 text-sm font-medium mt-4 leading-relaxed max-w-md mx-auto">
-              {info.description}
-            </p>
-          )}
-        </header>
+        <SectionHeading eyebrow="Find us · get in touch" title="About Us" />
+        {info?.description && (
+          <p className="text-stone-400 text-sm font-medium -mt-2 mb-8 leading-relaxed">
+            {info.description}
+          </p>
+        )}
 
         {/* Contact details */}
         <section className="space-y-3">

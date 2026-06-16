@@ -33,8 +33,8 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
 
   return (
     <>
-      {/* Thumbnail Grid — 2 columns, natural aspect ratios */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3">
+      {/* Thumbnail Grid — awwwards-style, hover-zoom */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
         {items.map((item) => (
           <button
             key={item.id}
@@ -42,7 +42,7 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
             onClick={() => setSelected(item)}
             className="block w-full text-left group focus:outline-none"
           >
-            <div className="relative rounded-xl overflow-hidden bg-white/5 border border-white/10 hover:border-white/25 transition-all duration-300 hover:shadow-lg hover:shadow-black/20 active:scale-[0.97]">
+            <div className="relative rounded-2xl overflow-hidden bg-white/5 border border-white/10 hover:border-white/30 transition-all duration-300 hover:shadow-2xl hover:shadow-black/30 hover:-translate-y-1 active:scale-[0.98]">
               <div className="relative aspect-square bg-black">
                 {item.media_type === "video" ? (
                   <>
@@ -64,10 +64,11 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
                     src={item.image_url}
                     alt={item.title}
                     fill
-                    className="object-cover"
-                    sizes="50vw"
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    sizes="(max-width: 640px) 50vw, 33vw"
                   />
                 )}
+                <div className="absolute inset-0 bg-linear-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
             </div>
           </button>

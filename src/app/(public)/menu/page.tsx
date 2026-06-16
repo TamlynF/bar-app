@@ -138,7 +138,7 @@ export default async function MenuPage() {
                 Drinks &amp; Snacks
               </span>
             </div>
-            <h1 className="menu-h1 text-white font-black text-3xl sm:text-4xl uppercase tracking-tighter">
+            <h1 className="menu-h1 text-white font-black text-4xl sm:text-6xl uppercase tracking-tighter leading-none">
               Menu
             </h1>
             <p className="menu-subtitle text-[#FDCC4B]/50 text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] mt-2">
