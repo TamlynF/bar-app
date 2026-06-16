@@ -1,0 +1,80 @@
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Deterministic seed for the local TEST database (loaded by `supabase db reset`).
+-- Explicit ids are used so tests can reference rows; identity sequences are reset
+-- at the end so the app's own inserts get fresh, non-colliding ids.
+-- Dates are relative to CURRENT_DATE so seeded events are always "upcoming".
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Company
+insert into public.company_information (id, name, max_capacity, address, email)
+values (1, 'Don Fenticas', 100, '1 Test Street', 'admin@example.com');
+
+-- Staff (auth_user_id is linked at test runtime by Playwright global-setup)
+insert into public.employees (id, full_name, email, start_date, status, role)
+values (1, 'Test Admin', 'test-admin@example.com', CURRENT_DATE, 'active', 'manager');
+
+-- Tables
+insert into public.tables (id, name, max_capacity, available) values
+  (1, 'T1', 6, true),
+  (2, 'T2', 4, true);
+
+-- Quiz config
+insert into public.quiz_category_configs (id, category_name, short_name, question_count, order_no, is_active)
+values (1, 'General Knowledge', 'GK', 5, 1, true);
+
+-- A contact for booking tests
+insert into public.contacts (id, full_name, email, country_code, phone_no)
+values (1, 'Test Punter', 'punter@example.com', '+44', '7000000000');
+
+-- ── Taxonomy ─────────────────────────────────────────────────────────────────
+
+insert into public.event_types (id, name, color, is_karaoke, is_private, is_music_act) values
+  (1, 'games',   'fuchsia', false, false, false),
+  (2, 'music',   'orange',  true,  false, true),
+  (3, 'party',   'yellow',  false, false, false),
+  (4, 'private', 'rose',    false, true,  false);
+
+insert into public.event_subtypes
+  (id, event_types_id, name, color, tagline, default_event_title,
+   is_quiz, is_karaoke, is_private, is_music_act, is_bookable,
+   host_required, seating_required, payment_required, default_payment_amount, default_booking_config)
+values
+  (1, 1, 'quiz',     'fuchsia', 'Eight rounds, one winning team.', 'Quiz Night',
+      true,  false, false, false, true,  false, true,  false, 0,  '{}'::jsonb),
+  (2, 1, 'bingo',    'red',     'Bingo with a beat.',              'Music Bingo',
+      false, false, false, false, true,  false, true,  false, 0,  '{}'::jsonb),
+  (3, 2, 'band',     'orange',  null,                              null,
+      false, false, false, true,  false, false, true,  false, 0,  '{}'::jsonb),
+  (4, 2, 'karaoke',  'blue',    'World famous karaoke.',           'Karaoke Night',
+      false, true,  false, false, false, false, true,  false, 0,  '{}'::jsonb),
+  (5, 4, 'birthday', 'rose',    null,                              null,
+      false, false, true,  false, false, true,  true,  false, 0,  '{}'::jsonb),
+  (6, 2, 'gig',      'teal',    'Live music, ticketed.',           'Live Gig',
+      false, false, false, true,  true,  true,  false, true,  10, '{"collect_phone":true,"collect_group_size":true,"max_group_size":8,"custom_cta_text":"Get Tickets"}'::jsonb);
+
+-- A badge on the quiz subtype
+insert into public.event_subtype_badges (id, event_subtypes_id, icon, title, description)
+values (1, 1, 'Calendar', 'Every Thursday', '8:00PM start');
+
+-- ── Events (all upcoming, mix of bookable/non-bookable) ──────────────────────
+
+insert into public.events
+  (id, date, start_time, end_time, title, tagline, event_types_id, event_subtypes_id,
+   is_active, is_bookable, seating_required, payment_amount, booking_config)
+values
+  (1, CURRENT_DATE + 7,  '20:00+00', '22:00+00', 'Quiz Night',  'Eight rounds, one winning team.', 1, 1, true, true,  true,  0,  '{}'::jsonb),
+  (2, CURRENT_DATE + 8,  '20:00+00', '22:00+00', 'Music Bingo', 'Bingo with a beat.',             1, 2, true, true,  true,  0,  '{}'::jsonb),
+  (3, CURRENT_DATE + 9,  '19:30+00', '23:00+00', 'Live Gig',    'Live music, ticketed.',          2, 6, true, true,  false, 10, '{"collect_phone":true,"collect_group_size":true,"max_group_size":8,"custom_cta_text":"Get Tickets"}'::jsonb),
+  (4, CURRENT_DATE + 10, '21:00+00', '23:30+00', 'The Kinks',   null,                             2, 3, true, false, true,  0,  '{}'::jsonb);
+
+-- ── Reset identity sequences past the seeded ids ─────────────────────────────
+
+select setval(pg_get_serial_sequence('public.event_types', 'id'),       (select max(id) from public.event_types));
+select setval(pg_get_serial_sequence('public.event_subtypes', 'id'),     (select max(id) from public.event_subtypes));
+select setval(pg_get_serial_sequence('public.event_subtype_badges','id'),(select max(id) from public.event_subtype_badges));
+select setval(pg_get_serial_sequence('public.events', 'id'),             (select max(id) from public.events));
+select setval(pg_get_serial_sequence('public.employees', 'id'),          (select max(id) from public.employees));
+select setval(pg_get_serial_sequence('public.tables', 'id'),             (select max(id) from public.tables));
+select setval(pg_get_serial_sequence('public.contacts', 'id'),           (select max(id) from public.contacts));
+select setval(pg_get_serial_sequence('public.quiz_category_configs','id'),(select max(id) from public.quiz_category_configs));
+select setval('public.company_information_id_seq', (select max(id) from public.company_information));

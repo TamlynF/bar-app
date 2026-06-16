@@ -258,8 +258,13 @@ export async function createBooking(formData: BookingFormData, type: string, sub
       }
     }
 
-    // 9. Send the confirmation or waitlist email
-    await sendBookingEmail(newBooking.id, formData.email, formData.name, formData.quiz_date, formData.team_name, formData.team_size, status);
+    // 9. Send the confirmation or waitlist email.
+    // A failed email must NOT discard an already-saved booking, so swallow errors here.
+    try {
+      await sendBookingEmail(newBooking.id, formData.email, formData.name, formData.quiz_date, formData.team_name, formData.team_size, status);
+    } catch (emailError) {
+      console.error("Booking saved but confirmation email failed:", emailError);
+    }
 
     // 10. Update fully booked status
     await updateFullyBookedStatus(supabase, eventId);

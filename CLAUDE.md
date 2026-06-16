@@ -9,13 +9,23 @@ For visual / design decisions, also read `STYLE_GUIDE.md`. The two files togethe
 ## Commands
 
 ```bash
-npm run dev      # Dev server
-npm run build    # Production build (also runs TypeScript check)
-npm run lint     # ESLint
-npm run start    # Start production server
+npm run dev          # Dev server
+npm run build        # Production build (also runs TypeScript check)
+npm run lint         # ESLint
+npm run start        # Start production server
+
+npm test             # Unit tests (Vitest) — pure logic in src/lib
+npm run test:e2e     # End-to-end (Playwright) — runs on phone + desktop viewports
+npm run db:start     # Start local Supabase (Docker, Linux containers) for E2E
+npm run db:reset     # Rebuild local DB from supabase/migrations + supabase/seed.sql
+npm run db:stop      # Stop local Supabase
 ```
 
-There are no tests. Do not add a test framework unless explicitly requested.
+**Testing** (see `TESTING.md` for the full guide):
+- **Unit tests** (Vitest) live beside the code in `src/lib/__tests__/*.test.ts` — pure functions only; don't unit-test Server Components.
+- **E2E tests** (Playwright) live in `e2e/` and run against a **local** Supabase stack (`supabase/` migrations + seed), never production. Every spec runs on both a mobile and a desktop viewport.
+- Always run `npm test` before committing; run the E2E suite when touching booking/event flows.
+- The schema migration in `supabase/migrations/` is a local **test** schema (RLS off) introspected from prod — don't treat it as the production source of truth.
 
 ## Git workflow
 

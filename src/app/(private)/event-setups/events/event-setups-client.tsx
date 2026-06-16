@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import {
   Plus,
   Loader2,
@@ -629,6 +629,9 @@ export default function EventsClient({
                     return subType ? `${subType} Event` : "View Event";
                   })()}
                 </SheetTitle>
+                <SheetDescription className="sr-only">
+                  {isAdding ? "Create a new event." : isEditing ? "Edit this event's details." : "View this event's details."}
+                </SheetDescription>
                 {selected && (
                   <div className="flex items-center gap-1.5 mt-1">
                     <Hash className="w-3 h-3 text-[#5F624F]" />
