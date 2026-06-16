@@ -21,7 +21,7 @@ function makeEvent(overrides: Partial<EventRow> = {}): EventRow {
     booking_page_url: null,
     karaoke_request_url: null,
     event_types: { name: "games", color: "blue" },
-    event_subtypes: { name: "quiz", color: "blue", is_karaoke: false },
+    event_subtypes: { name: "quiz", color: "blue", behavior: "quiz" },
     ...overrides,
   };
 }
@@ -48,20 +48,35 @@ describe("getEventType", () => {
     const et = getEventType(
       makeEvent({
         event_types: { name: "games", color: "blue" },
-        event_subtypes: { name: "bingo", color: "red", is_karaoke: false },
+        event_subtypes: { name: "bingo", color: "red", behavior: "bingo" },
       })
     );
-    expect(et).toMatchObject({ type: "games", sub_type: "bingo", badge_color: "red" });
+    expect(et).toMatchObject({ type: "games", sub_type: "bingo", badge_color: "red", behavior: "bingo" });
   });
 
   it("handles the join returned as an array (Supabase gotcha)", () => {
     const et = getEventType(
       makeEvent({
         event_types: [{ name: "music", color: "purple" }],
-        event_subtypes: [{ name: "karaoke", color: "orange", is_karaoke: true }],
+        event_subtypes: [{ name: "karaoke", color: "orange", behavior: "karaoke" }],
       })
     );
-    expect(et).toMatchObject({ type: "music", sub_type: "karaoke", is_karaoke: true });
+    expect(et).toMatchObject({ type: "music", sub_type: "karaoke", behavior: "karaoke" });
+  });
+
+  it("falls back to 'standard' when behavior is null or unrecognised", () => {
+    const nullBehavior = getEventType(
+      makeEvent({ event_subtypes: { name: "trivia", color: null, behavior: null } })
+    );
+    expect(nullBehavior?.behavior).toBe("standard");
+
+    const bogusBehavior = getEventType(
+      makeEvent({
+        // a value not in EVENT_BEHAVIORS (e.g. a stale row) must not leak through
+        event_subtypes: { name: "trivia", color: null, behavior: "games" },
+      })
+    );
+    expect(bogusBehavior?.behavior).toBe("standard");
   });
 });
 

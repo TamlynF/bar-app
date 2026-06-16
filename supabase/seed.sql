@@ -13,10 +13,15 @@ values (1, 'Don Fenticas', 100, '1 Test Street', 'admin@example.com');
 insert into public.employees (id, full_name, email, start_date, status, role)
 values (1, 'Test Admin', 'test-admin@example.com', CURRENT_DATE, 'active', 'manager');
 
--- Tables
+-- Tables. Enough that the booking E2E (mobile + desktop) can't exhaust an event
+-- and trip the "fully booked" state for the render test.
 insert into public.tables (id, name, max_capacity, available) values
-  (1, 'T1', 6, true),
-  (2, 'T2', 4, true);
+  (1, 'T1', 6,  true),
+  (2, 'T2', 4,  true),
+  (3, 'T3', 6,  true),
+  (4, 'T4', 8,  true),
+  (5, 'T5', 4,  true),
+  (6, 'T6', 10, true);
 
 -- Quiz config
 insert into public.quiz_category_configs (id, category_name, short_name, question_count, order_no, is_active)
@@ -28,29 +33,29 @@ values (1, 'Test Punter', 'punter@example.com', '+44', '7000000000');
 
 -- ── Taxonomy ─────────────────────────────────────────────────────────────────
 
-insert into public.event_types (id, name, color, is_karaoke, is_private, is_music_act) values
-  (1, 'games',   'fuchsia', false, false, false),
-  (2, 'music',   'orange',  true,  false, true),
-  (3, 'party',   'yellow',  false, false, false),
-  (4, 'private', 'rose',    false, true,  false);
+insert into public.event_types (id, name, color) values
+  (1, 'games',   'fuchsia'),
+  (2, 'music',   'orange'),
+  (3, 'party',   'yellow'),
+  (4, 'private', 'rose');
 
 insert into public.event_subtypes
   (id, event_types_id, name, color, tagline, default_event_title,
-   is_quiz, is_karaoke, is_private, is_music_act, is_bookable,
+   behavior, is_bookable,
    host_required, seating_required, payment_required, default_payment_amount, default_booking_config)
 values
   (1, 1, 'quiz',     'fuchsia', 'Eight rounds, one winning team.', 'Quiz Night',
-      true,  false, false, false, true,  false, true,  false, 0,  '{}'::jsonb),
+      'quiz',      true,  false, true,  false, 0,  '{}'::jsonb),
   (2, 1, 'bingo',    'red',     'Bingo with a beat.',              'Music Bingo',
-      false, false, false, false, true,  false, true,  false, 0,  '{}'::jsonb),
+      'bingo',     true,  false, true,  false, 0,  '{}'::jsonb),
   (3, 2, 'band',     'orange',  null,                              null,
-      false, false, false, true,  false, false, true,  false, 0,  '{}'::jsonb),
+      'music_act', false, false, true,  false, 0,  '{}'::jsonb),
   (4, 2, 'karaoke',  'blue',    'World famous karaoke.',           'Karaoke Night',
-      false, true,  false, false, false, false, true,  false, 0,  '{}'::jsonb),
+      'karaoke',   false, false, true,  false, 0,  '{}'::jsonb),
   (5, 4, 'birthday', 'rose',    null,                              null,
-      false, false, true,  false, false, true,  true,  false, 0,  '{}'::jsonb),
+      'private',   false, true,  true,  false, 0,  '{}'::jsonb),
   (6, 2, 'gig',      'teal',    'Live music, ticketed.',           'Live Gig',
-      false, false, false, true,  true,  true,  false, true,  10, '{"collect_phone":true,"collect_group_size":true,"max_group_size":8,"custom_cta_text":"Get Tickets"}'::jsonb);
+      'music_act', true,  true,  false, true,  10, '{"collect_phone":true,"collect_group_size":true,"max_group_size":8,"custom_cta_text":"Get Tickets"}'::jsonb);
 
 -- A badge on the quiz subtype
 insert into public.event_subtype_badges (id, event_subtypes_id, icon, title, description)
@@ -65,7 +70,10 @@ values
   (1, CURRENT_DATE + 7,  '20:00+00', '22:00+00', 'Quiz Night',  'Eight rounds, one winning team.', 1, 1, true, true,  true,  0,  '{}'::jsonb),
   (2, CURRENT_DATE + 8,  '20:00+00', '22:00+00', 'Music Bingo', 'Bingo with a beat.',             1, 2, true, true,  true,  0,  '{}'::jsonb),
   (3, CURRENT_DATE + 9,  '19:30+00', '23:00+00', 'Live Gig',    'Live music, ticketed.',          2, 6, true, true,  false, 10, '{"collect_phone":true,"collect_group_size":true,"max_group_size":8,"custom_cta_text":"Get Tickets"}'::jsonb),
-  (4, CURRENT_DATE + 10, '21:00+00', '23:30+00', 'The Kinks',   null,                             2, 3, true, false, true,  0,  '{}'::jsonb);
+  (4, CURRENT_DATE + 10, '21:00+00', '23:30+00', 'The Kinks',   null,                             2, 3, true, false, true,  0,  '{}'::jsonb),
+  -- Dedicated quiz for the booking happy-path E2E (public-booking.spec.ts), kept
+  -- separate from event 1 so booking it can't affect the render test's event.
+  (5, CURRENT_DATE + 14, '20:00+00', '22:00+00', 'Quiz Night (Booking E2E)', 'Reserved for the booking test.', 1, 1, true, true, true, 0, '{}'::jsonb);
 
 -- ── Reset identity sequences past the seeded ids ─────────────────────────────
 

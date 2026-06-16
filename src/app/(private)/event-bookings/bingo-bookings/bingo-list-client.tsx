@@ -134,7 +134,7 @@ export default function BingoBookingListClient({
       setAvailableTables(tables as unknown as SelectableTable[]);
     }
 
-    const events = await getBingoEventList("games", "bingo");
+    const events = await getBingoEventList();
     setAvailableEvents(
       events.map((e) => ({
         id: String(e.id),
@@ -736,7 +736,7 @@ export default function BingoBookingListClient({
                     <Button
                       onClick={handleSaveDetails}
                       disabled={isPending}
-                      className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-xs shadow-lg active:scale-95 transition-transform"
+                      className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
                     >
                       {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save</>}
                     </Button>
@@ -753,7 +753,7 @@ export default function BingoBookingListClient({
                     <div className="grid grid-cols-2 gap-3">
                       <Button
                         variant="ghost"
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase tracking-widest text-[10px] bg-white"
                         onClick={async (e) => {
                           e.stopPropagation();
                           const ok = await confirm({
@@ -772,7 +772,7 @@ export default function BingoBookingListClient({
                         variant="outline"
                         title="Edit Details"
                         onClick={handleEnterEditMode}
-                        className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                        className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                       >
                         <Pencil className="w-4 h-4 mr-2" />Edit
                       </Button>

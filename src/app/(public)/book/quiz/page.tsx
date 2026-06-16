@@ -35,8 +35,8 @@ export default async function QuizBookingPage({
   const [{ data: rawEvents }, { data: infoItems }, { data: subtypeRow }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, date, start_time, payment_amount, is_fully_booked, event_subtypes!inner(is_quiz)")
-      .eq("event_subtypes.is_quiz", true)
+      .select("id, date, start_time, payment_amount, is_fully_booked, event_subtypes!inner(behavior)")
+      .eq("event_subtypes.behavior", "quiz")
       .eq("is_active", true)
       .gte("date", today)
       .order("date", { ascending: true }),
@@ -46,14 +46,14 @@ export default async function QuizBookingPage({
         icon,
         title,
         event_subtypes!inner (
-          is_quiz
+          behavior
         )
       `)
-      .eq("event_subtypes.is_quiz", true),
+      .eq("event_subtypes.behavior", "quiz"),
     supabase
       .from("event_subtypes")
       .select("tagline")
-      .eq("is_quiz", true)
+      .eq("behavior", "quiz")
       .limit(1)
       .maybeSingle(),
   ]);

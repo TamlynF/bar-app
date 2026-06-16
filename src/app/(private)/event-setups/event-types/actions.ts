@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { isEventBehavior } from "@/lib/event-behavior";
 
 async function currentEmployeeId() {
   const supabase = await createClient();
@@ -20,9 +21,6 @@ export async function saveTypeAction(formData: FormData) {
   const name = formData.get("name")?.toString()?.trim().toLowerCase();
   const description = formData.get("description")?.toString() || null;
   const color = formData.get("color")?.toString() || null;
-  const is_karaoke = formData.get("is_karaoke") === "on";
-  const is_private = formData.get("is_private") === "on";
-  const is_music_act = formData.get("is_music_act") === "on";
 
   if (!name) return { error: "Category name is required." };
 
@@ -32,13 +30,13 @@ export async function saveTypeAction(formData: FormData) {
     if (id) {
       const { error } = await supabase
         .from("event_types")
-        .update({ name, description, color, is_karaoke, is_private, is_music_act, modified_by: empId, modified_at: new Date().toISOString() })
+        .update({ name, description, color, modified_by: empId, modified_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from("event_types")
-        .insert({ name, description, color, is_karaoke, is_private, is_music_act, created_by: empId, modified_by: empId });
+        .insert({ name, description, color, created_by: empId, modified_by: empId });
       if (error) throw error;
     }
     revalidatePath("/event-setups/event-types");
@@ -92,10 +90,7 @@ export async function saveSubtypeAction(formData: FormData) {
   const default_event_title = formData.get("default_event_title")?.toString() || null;
   const tagline = formData.get("tagline")?.toString() || null;
   const color = formData.get("color")?.toString() || null;
-  const is_quiz = formData.get("is_quiz") === "on";
-  const is_karaoke = formData.get("is_karaoke") === "on";
-  const is_private = formData.get("is_private") === "on";
-  const is_music_act = formData.get("is_music_act") === "on";
+  const behavior = formData.get("behavior")?.toString();
   const is_bookable = formData.get("is_bookable") === "on";
   const host_required = formData.get("host_required") === "on";
   const seating_required = formData.get("seating_required") === "on";
@@ -106,6 +101,9 @@ export async function saveSubtypeAction(formData: FormData) {
   if (!event_types_id || !name) {
     return { error: "Category and sub-type name are required." };
   }
+  if (!isEventBehavior(behavior)) {
+    return { error: "A valid behaviour is required." };
+  }
 
   const empId = await currentEmployeeId();
 
@@ -115,10 +113,7 @@ export async function saveSubtypeAction(formData: FormData) {
     default_event_title,
     tagline,
     color,
-    is_quiz,
-    is_karaoke,
-    is_private,
-    is_music_act,
+    behavior,
     is_bookable,
     host_required,
     seating_required,

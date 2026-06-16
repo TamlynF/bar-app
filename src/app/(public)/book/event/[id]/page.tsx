@@ -148,7 +148,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
                 key={index}
                 className={cn(
                   "flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 hover:border-white/20",
-                  "flex-none sm:flex-1 sm:min-w-[150px]"
+                  "flex-none sm:flex-1 sm:min-w-37.5"
                 )}
               >
                 <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />

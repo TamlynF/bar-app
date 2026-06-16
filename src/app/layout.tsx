@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
-import { LocatorInit } from "@/components/dev/locator-init";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bookingsdonfenticas.co.uk";
 
@@ -66,7 +65,6 @@ export default function RootLayout({
         className="antialiased min-h-screen"
       >
         {children}
-        {process.env.NODE_ENV === "development" && <LocatorInit />}
       </body>
     </html>
   );

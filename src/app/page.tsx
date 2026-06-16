@@ -37,7 +37,7 @@ export default async function HomePage() {
     supabase
       .from("events")
       .select(
-        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, is_karaoke)"
+        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior)"
       )
       .eq("is_active", true)
       .gte("date", todayStr)

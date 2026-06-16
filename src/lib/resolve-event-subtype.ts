@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { EventBehavior } from "@/lib/event-behavior";
 
 export type ResolvedTaxonomy = {
   eventTypeId: number;
@@ -12,13 +13,14 @@ export type ResolvedTaxonomy = {
  * schema requires every event to reference both an `event_types` row and an
  * `event_subtypes` row, so this guarantees both exist and returns their ids.
  *
- * When a subtype is created on the fly it inherits the parent type's
- * `is_music_act` / `is_karaoke` / `is_private` flags, matching the admin UI.
+ * When a subtype is created on the fly it is stamped with the given `behavior`
+ * discriminator (defaults to "standard").
  */
 export async function resolveEventSubtype(
   supabase: SupabaseClient,
   typeName: string,
   subtypeName: string,
+  behavior: EventBehavior = "standard",
 ): Promise<ResolvedTaxonomy> {
   const type = (typeName || "").trim().toLowerCase();
   const sub = (subtypeName || "other").trim().toLowerCase();
@@ -55,21 +57,12 @@ export async function resolveEventSubtype(
     return { eventTypeId: eventTypeId!, eventSubtypeId: existingSub.id };
   }
 
-  // Inherit flags from the parent type when creating a new subtype.
-  const { data: parent } = await supabase
-    .from("event_types")
-    .select("is_music_act, is_karaoke, is_private")
-    .eq("id", eventTypeId)
-    .maybeSingle();
-
   const { data: createdSub, error: subErr } = await supabase
     .from("event_subtypes")
     .insert({
       event_types_id: eventTypeId,
       name: sub,
-      is_music_act: parent?.is_music_act ?? false,
-      is_karaoke: parent?.is_karaoke ?? false,
-      is_private: parent?.is_private ?? false,
+      behavior,
     })
     .select("id")
     .single();

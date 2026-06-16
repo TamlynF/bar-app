@@ -29,6 +29,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { EVENT_TYPE_COLORS, badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
 import { BookingConfigEditor } from "@/components/booking-config-editor";
 import type { BookingConfig } from "@/lib/booking-config";
+import { BEHAVIOR_OPTIONS, BEHAVIOR_LABELS, type EventBehavior } from "@/lib/event-behavior";
 
 const ICON_OPTIONS = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
@@ -50,10 +51,7 @@ export type Subtype = {
   default_event_title: string | null;
   tagline: string | null;
   color: string | null;
-  is_quiz: boolean;
-  is_karaoke: boolean;
-  is_private: boolean;
-  is_music_act: boolean;
+  behavior: EventBehavior;
   is_bookable: boolean;
   host_required: boolean;
   seating_required: boolean;
@@ -68,9 +66,6 @@ export type EventTypeRecord = {
   name: string;
   description: string | null;
   color: string | null;
-  is_karaoke: boolean;
-  is_private: boolean;
-  is_music_act: boolean;
   event_subtypes: Subtype[];
 };
 
@@ -83,9 +78,6 @@ type TypeForm = {
   name: string;
   description: string;
   color: string | null;
-  is_karaoke: boolean;
-  is_private: boolean;
-  is_music_act: boolean;
 };
 
 type SubtypeForm = {
@@ -95,10 +87,7 @@ type SubtypeForm = {
   default_event_title: string;
   tagline: string;
   color: string | null;
-  is_quiz: boolean;
-  is_karaoke: boolean;
-  is_private: boolean;
-  is_music_act: boolean;
+  behavior: EventBehavior;
   is_bookable: boolean;
   host_required: boolean;
   seating_required: boolean;
@@ -131,18 +120,17 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
   // ---- Open helpers ----
   const openNewType = () =>
-    setTypeForm({ name: "", description: "", color: null, is_karaoke: false, is_private: false, is_music_act: false });
+    setTypeForm({ name: "", description: "", color: null });
 
   const openEditType = (t: EventTypeRecord) =>
     setTypeForm({
       id: t.id, name: toTitleCase(t.name), description: t.description ?? "", color: t.color ?? null,
-      is_karaoke: t.is_karaoke, is_private: t.is_private, is_music_act: t.is_music_act,
     });
 
   const openNewSubtype = (t: EventTypeRecord) =>
     setSubtypeForm({
       event_types_id: t.id, name: "", default_event_title: "", tagline: "", color: null,
-      is_quiz: false, is_karaoke: t.is_karaoke, is_private: t.is_private, is_music_act: t.is_music_act,
+      behavior: "standard",
       is_bookable: false, host_required: false, seating_required: true, payment_required: false,
       default_payment_amount: "", default_booking_config: {},
     });
@@ -151,7 +139,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setSubtypeForm({
       id: s.id, event_types_id: s.event_types_id, name: toTitleCase(s.name),
       default_event_title: s.default_event_title ?? "", tagline: s.tagline ?? "", color: s.color ?? null,
-      is_quiz: s.is_quiz, is_karaoke: s.is_karaoke, is_private: s.is_private, is_music_act: s.is_music_act,
+      behavior: s.behavior,
       is_bookable: s.is_bookable, host_required: s.host_required, seating_required: s.seating_required,
       payment_required: s.payment_required, default_payment_amount: s.default_payment_amount != null ? String(s.default_payment_amount) : "",
       default_booking_config: s.default_booking_config ?? {},
@@ -166,9 +154,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     fd.set("name", typeForm.name);
     fd.set("description", typeForm.description);
     fd.set("color", typeForm.color ?? "");
-    if (typeForm.is_karaoke) fd.set("is_karaoke", "on");
-    if (typeForm.is_private) fd.set("is_private", "on");
-    if (typeForm.is_music_act) fd.set("is_music_act", "on");
     setError(null);
     startTransition(async () => {
       const res = await saveTypeAction(fd);
@@ -186,10 +171,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     fd.set("default_event_title", subtypeForm.default_event_title);
     fd.set("tagline", subtypeForm.tagline);
     fd.set("color", subtypeForm.color ?? "");
-    if (subtypeForm.is_quiz) fd.set("is_quiz", "on");
-    if (subtypeForm.is_karaoke) fd.set("is_karaoke", "on");
-    if (subtypeForm.is_private) fd.set("is_private", "on");
-    if (subtypeForm.is_music_act) fd.set("is_music_act", "on");
+    fd.set("behavior", subtypeForm.behavior);
     if (subtypeForm.is_bookable) fd.set("is_bookable", "on");
     if (subtypeForm.host_required) fd.set("host_required", "on");
     if (subtypeForm.seating_required) fd.set("seating_required", "on");
@@ -375,10 +357,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                               {/* Flag chips */}
                               <div className="flex flex-wrap gap-1.5">
-                                {s.is_quiz && <Chip label="Quiz" />}
-                                {s.is_karaoke && <Chip label="Karaoke" />}
-                                {s.is_music_act && <Chip label="Music Act" />}
-                                {s.is_private && <Chip label="Private Hire" />}
+                                <Chip label={BEHAVIOR_LABELS[s.behavior]} />
                                 {s.is_bookable && <Chip label="Bookable" />}
                                 {s.host_required && <Chip label="Host Required" />}
                                 {s.seating_required && <Chip label="Seating" />}
@@ -449,9 +428,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 <TextField label="Name" required value={typeForm.name} placeholder="e.g. Music, Games..." onChange={(v) => setTypeForm({ ...typeForm, name: v })} />
                 <TextAreaField label="Description" value={typeForm.description} placeholder="Internal description (optional)" onChange={(v) => setTypeForm({ ...typeForm, description: v })} />
                 <ColorField label="Colour" value={typeForm.color} onChange={(c) => setTypeForm({ ...typeForm, color: c })} />
-                <SwitchField label="Karaoke" value={typeForm.is_karaoke} onChange={(v) => setTypeForm({ ...typeForm, is_karaoke: v })} />
-                <SwitchField label="Private Hire" value={typeForm.is_private} onChange={(v) => setTypeForm({ ...typeForm, is_private: v })} />
-                <SwitchField label="Music Act" value={typeForm.is_music_act} onChange={(v) => setTypeForm({ ...typeForm, is_music_act: v })} />
               </div>
             )}
             {error && <ErrorBox message={error} />}
@@ -481,10 +457,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                 <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
                   <SectionLabel>Behaviour</SectionLabel>
-                  <SwitchField label="Quiz" value={subtypeForm.is_quiz} onChange={(v) => setSubtypeForm({ ...subtypeForm, is_quiz: v })} />
-                  <SwitchField label="Karaoke" value={subtypeForm.is_karaoke} onChange={(v) => setSubtypeForm({ ...subtypeForm, is_karaoke: v })} />
-                  <SwitchField label="Music Act" value={subtypeForm.is_music_act} onChange={(v) => setSubtypeForm({ ...subtypeForm, is_music_act: v })} />
-                  <SwitchField label="Private Hire" value={subtypeForm.is_private} onChange={(v) => setSubtypeForm({ ...subtypeForm, is_private: v })} />
+                  <BehaviorSelector value={subtypeForm.behavior} onChange={(v) => setSubtypeForm({ ...subtypeForm, behavior: v })} />
                 </div>
 
                 <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
@@ -627,6 +600,31 @@ function SwitchField({ label, value, onChange }: { label: string; value: boolean
         <button type="button" title={`Toggle ${label}`} onClick={() => onChange(!value)} className={cn("w-11 h-6 rounded-full transition-colors relative shrink-0 border", value ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30")}>
           <span className={cn("absolute left-0.5 top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform", value ? "translate-x-5" : "translate-x-0")} />
         </button>
+      </div>
+    </div>
+  );
+}
+
+function BehaviorSelector({ value, onChange }: { value: EventBehavior; onChange: (v: EventBehavior) => void }) {
+  return (
+    <div className="px-4 sm:px-5 py-3 sm:py-4 space-y-2.5">
+      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">Pick one — what kind of night this is</span>
+      <div className="flex flex-wrap gap-2">
+        {BEHAVIOR_OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-wide transition-all active:scale-95",
+              value === o.value
+                ? "bg-[#5C4033] text-white border-[#5C4033] shadow-md"
+                : "bg-white text-[#5F624F] border-[#E6DFC8] hover:border-[#5C4033]/30"
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
       </div>
     </div>
   );

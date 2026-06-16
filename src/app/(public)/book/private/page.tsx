@@ -27,8 +27,8 @@ export default async function PrivateHirePage() {
 
   const { data: infoItems } = await supabase
     .from("event_subtype_badges")
-    .select(`icon, title, event_subtypes!inner(event_types!inner(name))`)
-    .eq("event_subtypes.event_types.name", "private");
+    .select(`icon, title, event_subtypes!inner(behavior)`)
+    .eq("event_subtypes.behavior", "private");
 
   const dbBadges = (infoItems || []).map((item) => ({
     icon: ICON_MAP[item.icon || ""] || Info,
@@ -93,7 +93,7 @@ export default async function PrivateHirePage() {
               key={index}
               className={cn(
                 "flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 hover:border-white/20",
-                "flex-none sm:flex-1 sm:min-w-[150px]"
+                "flex-none sm:flex-1 sm:min-w-37.5"
               )}
             >
               <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />

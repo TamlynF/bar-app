@@ -66,9 +66,9 @@ export async function checkQuizAvailability(quizDate: string, teamSize: number):
   // Find the event for this date
   const { data: eventData } = await supabase
     .from('events')
-    .select('id, event_subtypes!inner(is_quiz)')
+    .select('id, event_subtypes!inner(behavior)')
     .eq('date', quizDate)
-    .eq('event_subtypes.is_quiz', true)
+    .eq('event_subtypes.behavior', 'quiz')
     .maybeSingle();
 
   // No event yet = available (it'll be created on booking)

@@ -16,8 +16,8 @@ export default function TonightCard({
   }) {
   console.log("TonightCard event:", event);
   const et = event.eventType ?? null;
-  const isQuiz = et?.sub_type?.toLowerCase().includes("quiz") || et?.type?.toLowerCase().includes("quiz");
-  const isBingo = et?.sub_type?.toLowerCase().includes("bingo") || et?.type?.toLowerCase().includes("bingo");
+  const isQuiz = et?.behavior === "quiz";
+  const isBingo = et?.behavior === "bingo";
   const confirmedTeams = isQuiz
     ? event.quizDetails?.tablesAssigned                                                                                                                                                                                      
     : isBingo

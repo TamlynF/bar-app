@@ -19,6 +19,7 @@ import {
   MessageSquare
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import type { EventBehavior } from "@/lib/event-behavior"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import styles from "./events-hub-client.module.css"
@@ -26,6 +27,7 @@ import styles from "./events-hub-client.module.css"
 export interface EventTypeInfo {
   type: string;
   sub_type: string;
+  behavior: EventBehavior;
 }
 
 export interface BookingInfo {
@@ -89,7 +91,7 @@ export default function EventsHubClient({
   }
 
   // Aggregate stats for events
-  const allQuizEvents = initialEvents.filter(e => e.event_types?.sub_type === 'quiz')
+  const allQuizEvents = initialEvents.filter(e => e.event_types?.behavior === 'quiz')
   
   // Categorize Quiz Events
   const today = new Date().toISOString().split('T')[0]
@@ -101,8 +103,8 @@ export default function EventsHubClient({
     }
   }, [allQuizEvents, today])
 
-  const liveMusic = initialEvents.filter(e => e.event_types?.type === 'music')
-  const privateHire = initialEvents.filter(e => e.event_types?.type === 'private')
+  const liveMusic = initialEvents.filter(e => e.event_types?.behavior === 'music_act')
+  const privateHire = initialEvents.filter(e => e.event_types?.behavior === 'private')
 
   const totalGuests = initialEvents.reduce((acc, e) => 
     acc + e.bookings.reduce((bAcc, b) => bAcc + (b.status === 'confirmed' ? b.group_size : 0), 0), 0

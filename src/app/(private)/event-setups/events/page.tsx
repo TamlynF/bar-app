@@ -12,7 +12,7 @@ export default async function EventsPage({
   const [{ data: events }, { data: eventTypes }, { data: eventSubtypes }, { data: employees }, { data: quizCategories }, { data: quizQuestions }, { data: bookings }] = await Promise.all([
     supabase.from("events").select("*").order("date", { ascending: false }),
     supabase.from("event_types").select("id, name, color").order("name"),
-    supabase.from("event_subtypes").select("id, event_types_id, name, color, default_event_title, tagline, is_quiz, is_karaoke, host_required, seating_required, is_bookable, payment_required, default_payment_amount, default_booking_config").order("name"),
+    supabase.from("event_subtypes").select("id, event_types_id, name, color, default_event_title, tagline, behavior, host_required, seating_required, is_bookable, payment_required, default_payment_amount, default_booking_config").order("name"),
     supabase.from("employees").select("id, full_name").order("full_name", { ascending: true }),
     supabase.from("quiz_category_configs").select("id, category_name, question_count, short_name, order_no").eq("is_active", true).order("order_no"),
     supabase.from("past_quiz_questions").select("id, events_id, quiz_category_configs_id").not("events_id", "is", null),

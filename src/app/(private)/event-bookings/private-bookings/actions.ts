@@ -42,7 +42,7 @@ export async function updatePrivateHireStatus(
   if (status === "confirmed" && record.selected_date) {
     const reason = record.reason?.toLowerCase() || "other";
 
-    const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "private", reason);
+    const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "private", reason, "private");
 
     const { data: newEvent } = await supabase.from("events").insert({
       title: `${record.full_name} — ${record.reason || "Private Hire"}`,

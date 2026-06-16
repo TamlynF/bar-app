@@ -33,6 +33,7 @@ import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor } from "@/lib/event-type-colors";
 import { BookingConfigEditor } from "@/components/booking-config-editor";
 import type { BookingConfig } from "@/lib/booking-config";
+import type { EventBehavior } from "@/lib/event-behavior";
 
 export type { BookingConfig };
 
@@ -49,8 +50,7 @@ export type EventSubtype = {
   color: string | null;
   default_event_title: string | null;
   tagline: string | null;
-  is_quiz: boolean;
-  is_karaoke: boolean;
+  behavior: EventBehavior;
   host_required: boolean;
   seating_required: boolean;
   is_bookable: boolean;
@@ -351,7 +351,7 @@ export default function EventsClient({
   const quizIncompleteBase = filter === "quiz-incomplete"
     ? initialEvents.filter((e) => {
         const sub = subtypeById.get(e.event_subtypes_id);
-        if (!sub?.is_quiz) return false;
+        if (sub?.behavior !== "quiz") return false;
         if (!e.date || e.date < todayStr) return false;
         const { total, target } = getQuizStatus(e.id, quizCategories, quizQuestions);
         return total < target;
@@ -511,7 +511,7 @@ export default function EventsClient({
                               {sg.events.map((event) => {
                                 const hasPricing = !!event.payment_amount && event.payment_amount > 0;
                                 const host = employees.find((emp) => emp.id === event.host_employee_id);
-                                const isQuiz = !!sg.subtype.is_quiz;
+                                const isQuiz = sg.subtype.behavior === "quiz";
                                 const quizStat = isQuiz ? getQuizStatus(event.id, quizCategories, quizQuestions) : null;
                                 const bStats = getBookingStats(event.id, bookings);
                                 const inactive = event.is_active === false;
@@ -659,7 +659,7 @@ export default function EventsClient({
               const type = typeById.get(selected.event_types_id);
               const hasPricing = !!selected.payment_amount && selected.payment_amount > 0;
               const host = employees.find((e) => e.id === selected.host_employee_id);
-              const isQuiz = !!sub?.is_quiz;
+              const isQuiz = sub?.behavior === "quiz";
               const bk = getBookingStats(selected.id, bookings);
               return (
                 <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
@@ -679,7 +679,7 @@ export default function EventsClient({
                         <DetailCell label="Seating Required" value={selected.seating_required ? "Yes" : "No"} />
                         {selected.tagline && <DetailCell label="Tagline" value={selected.tagline} />}
                         {selected.external_link && <DetailCell label="External Link" value={selected.external_link} />}
-                        {sub?.is_karaoke && selected.karaoke_request_url && <DetailCell label="Karaoke Request URL" value={selected.karaoke_request_url} />}
+                        {sub?.behavior === "karaoke" && selected.karaoke_request_url && <DetailCell label="Karaoke Request URL" value={selected.karaoke_request_url} />}
                       </>
                     )}
                   </div>
@@ -761,7 +761,7 @@ export default function EventsClient({
                       <>
                         <DetailCell label="Public Booking" value={selected.is_bookable ? "Enabled" : "Disabled"} />
 
-                        {selected.is_bookable && !sub?.is_quiz && sub?.name?.toLowerCase() !== "bingo" && (() => {
+                        {selected.is_bookable && sub?.behavior !== "quiz" && sub?.behavior !== "bingo" && (() => {
                           const cfg = selected.booking_config ?? {};
                           return (
                             <div className="border-t border-[#E6DFC8]">
@@ -1005,7 +1005,7 @@ export default function EventsClient({
                   </FormRow>
 
                   {/* Karaoke Song Request Link — only when subtype is karaoke */}
-                  {selectedSubtype?.is_karaoke && (
+                  {selectedSubtype?.behavior === "karaoke" && (
                     <FormRow label="Singa Link">
                       <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." defaultValue={formDefault?.karaoke_request_url ?? ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
                     </FormRow>

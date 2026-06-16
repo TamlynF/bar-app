@@ -5,13 +5,12 @@ import { squareClient } from "@/lib/square";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 
-export async function getBingoEventList(type: string, subType: string) {
+export async function getBingoEventList() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("events")
-    .select("id, date, title, event_types!inner(category: name), event_subtypes!inner(sub_type: name)")
-    .ilike("event_types.name", type)
-    .ilike("event_subtypes.name", subType);
+    .select("id, date, title, event_subtypes!inner(behavior)")
+    .eq("event_subtypes.behavior", "bingo");
   if (error) throw new Error("Failed to fetch bingo events");
   return data ?? [];
 }
@@ -45,8 +44,7 @@ export async function getBingoBookings(selectedDate: string | null, selectedEven
         tables(tables_id: id, tables_name: name, tables_capacity: max_capacity)
       )
     `)
-    .ilike("events.event_types.name", "games")
-    .ilike("events.event_subtypes.name", "bingo")
+    .eq("events.event_subtypes.behavior", "bingo")
     .order("date", { referencedTable: "events", ascending: false });
 
   if (selectedDate) {

@@ -6,6 +6,13 @@ import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 export default (phase: string): NextConfig => {
   const isDev = phase === PHASE_DEVELOPMENT_SERVER;
 
+  // Kept for parity with the dev-server detection above; no dev-only config
+  // is currently applied. (LocatorJS click-to-source was removed: @locator
+  // 0.5.1 embeds the file's Windows path unescaped and re-parses it, so every
+  // file under C:\… throws "Bad character escape sequence" and the loader
+  // silently falls back to untransformed source — i.e. it never worked here.)
+  void isDev;
+
   const nextConfig: NextConfig = {
     reactCompiler: true,
     experimental: {
@@ -25,24 +32,6 @@ export default (phase: string): NextConfig => {
       "192.168.0.*",
       "172.21.240.1",
     ],
-    // LocatorJS: inject data-locatorjs-id attributes for click-to-source.
-    // Dev-only so it never runs during `next build` (no attributes in prod
-    // HTML, no build cost). Runs as a source transform before SWC, so the
-    // React Compiler / SWC pipeline is untouched.
-    ...(isDev && {
-      turbopack: {
-        rules: {
-          "**/*.{tsx,jsx}": {
-            loaders: [
-              {
-                loader: "@locator/webpack-loader",
-                options: { env: "development" },
-              },
-            ],
-          },
-        },
-      },
-    }),
   };
 
   return nextConfig;

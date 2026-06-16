@@ -1,4 +1,5 @@
 import { swatchHexFromColor } from "@/lib/event-type-colors";
+import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
 
 /**
  * Shared event-display helpers used by the public home page (highlighted
@@ -11,14 +12,14 @@ export type TypeJoin = { name: string; color: string | null };
 export type SubtypeJoin = {
   name: string;
   color: string | null;
-  is_karaoke: boolean | null;
+  behavior: string | null;
 };
 
 export type EventTypeJoin = {
   type: string | null;
   sub_type: string | null;
   badge_color: string | null;
-  is_karaoke: boolean;
+  behavior: EventBehavior;
 };
 
 export type EventRow = {
@@ -62,7 +63,7 @@ export function getEventType(event: EventRow): EventTypeJoin | null {
     type: t?.name ?? null,
     sub_type: s?.name ?? null,
     badge_color: s?.color ?? null,
-    is_karaoke: s?.is_karaoke ?? false,
+    behavior: isEventBehavior(s?.behavior) ? s.behavior : "standard",
   };
 }
 
@@ -129,7 +130,7 @@ export function serializeEvent(e: EventRow): SerializedEvent {
     bookingPageUrl: e.booking_page_url ?? null,
     color: eventBadgeColor(e),
     subType: getEventType(e)?.sub_type ?? null,
-    isKaraoke: getEventType(e)?.is_karaoke ?? false,
+    isKaraoke: getEventType(e)?.behavior === "karaoke",
     karaokeRequestUrl: e.karaoke_request_url ?? null,
   };
 }

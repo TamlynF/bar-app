@@ -34,21 +34,19 @@ export default async function BingoBookingPage({
   const [{ data: rawEvents }, { data: infoItems }, { data: subtypeRow }] = await Promise.all([
     supabase
       .from("events")
-      .select("id, date, start_time, payment_amount, is_fully_booked, event_types!inner(name), event_subtypes!inner(name)")
-      .eq("event_types.name", "games")
-      .eq("event_subtypes.name", "bingo")
+      .select("id, date, start_time, payment_amount, is_fully_booked, event_subtypes!inner(behavior)")
+      .eq("event_subtypes.behavior", "bingo")
       .eq("is_active", true)
       .gte("date", today)
       .order("date", { ascending: true }),
     supabase
       .from("event_subtype_badges")
-      .select(`icon, title, event_subtypes!inner(name)`)
-      .eq("event_subtypes.name", "bingo"),
+      .select(`icon, title, event_subtypes!inner(behavior)`)
+      .eq("event_subtypes.behavior", "bingo"),
     supabase
       .from("event_subtypes")
-      .select("tagline, event_types!inner(name)")
-      .eq("name", "bingo")
-      .eq("event_types.name", "games")
+      .select("tagline")
+      .eq("behavior", "bingo")
       .limit(1)
       .maybeSingle(),
   ]);

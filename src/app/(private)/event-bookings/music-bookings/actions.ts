@@ -74,7 +74,7 @@ export async function updateBandStatus(
     const bandSubType = record.type?.toLowerCase() || "other";
 
     // Resolve the music event type + subtype, creating both if missing
-    const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "music", bandSubType);
+    const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "music", bandSubType, "music_act");
 
     const { data: newEvent } = await supabase
       .from("events")

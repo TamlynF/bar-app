@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { publicBookingUrl } from "@/lib/booking-links";
+import { isEventBehavior } from "@/lib/event-behavior";
 
 export async function saveEventAction(formData: FormData) {
   const supabase = await createClient();
@@ -36,16 +38,12 @@ export async function saveEventAction(formData: FormData) {
   };
 
   // Fetch the subtype to determine the right booking URL path
-  const { data: sub } = await supabase.from("event_subtypes").select("name, is_quiz")
+  const { data: sub } = await supabase.from("event_subtypes").select("behavior")
     .eq("id", eventSubtypesId).maybeSingle();
-  const subName = sub?.name?.toLowerCase() ?? "";
+  const behavior = isEventBehavior(sub?.behavior) ? sub.behavior : null;
 
   function computeBookingUrl(eventId: number | string): string | null {
-    if (!isBookable) return null;
-    if (manualUrl) return manualUrl;
-    if (sub?.is_quiz)       return `${siteUrl}/book/quiz?date=${date}`;
-    if (subName === "bingo") return `${siteUrl}/book/bingo?date=${date}`;
-    return `${siteUrl}/book/event/${eventId}`;
+    return publicBookingUrl({ behavior, isBookable, manualUrl, siteUrl, date, eventId });
   }
 
   // Resolve current logged-in user to an employee id

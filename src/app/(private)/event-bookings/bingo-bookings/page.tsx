@@ -57,7 +57,7 @@ export default async function BingoBookingsPage({
   const subType = "bingo";
 
   // 1. Fetch bingo events for the filter dropdown
-  const bingoEventsRaw = await getBingoEventList(type, subType);
+  const bingoEventsRaw = await getBingoEventList();
   const bingoEvents = bingoEventsRaw.map((e) => ({
     id: String(e.id),
     date: String(e.date),

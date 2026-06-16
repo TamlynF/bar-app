@@ -36,26 +36,23 @@ describe("resolveEventSubtype", () => {
     expect(inserts).toHaveLength(0);
   });
 
-  it("creates the type and subtype when missing, inheriting parent flags", async () => {
+  it("creates the type and subtype when missing, stamping the given behavior", async () => {
     const { client, inserts } = makeSupabase([
       { data: null },                                   // type lookup → miss
       { data: { id: 2 } },                              // type insert
       { data: null },                                   // subtype lookup → miss
-      { data: { is_music_act: true, is_karaoke: false, is_private: false } }, // parent flags
       { data: { id: 20 } },                             // subtype insert
     ]);
-    const result = await resolveEventSubtype(client, "music", "DJ");
+    const result = await resolveEventSubtype(client, "music", "DJ", "music_act");
     expect(result).toEqual({ eventTypeId: 2, eventSubtypeId: 20 });
 
-    // Name is normalised to lower-case, and the new subtype inherits is_music_act.
+    // Name is normalised to lower-case, and the new subtype carries the behavior.
     expect(inserts[0]).toEqual({ table: "event_types", payload: { name: "music" } });
     expect(inserts[1].table).toBe("event_subtypes");
     expect(inserts[1].payload).toMatchObject({
       event_types_id: 2,
       name: "dj",
-      is_music_act: true,
-      is_karaoke: false,
-      is_private: false,
+      behavior: "music_act",
     });
   });
 });

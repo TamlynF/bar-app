@@ -19,6 +19,8 @@ import {
   Zap,
 } from "lucide-react";
 
+import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
+import { adminBookingsHref } from "@/lib/booking-links";
 import SectionLabel from "./components/section-label";
 import { EventRowListClient } from "./components/event-row-list-client";
 import TonightCard from "./components/tonight-card";
@@ -29,7 +31,7 @@ import LeaderboardCard, { type LeaderboardEntry } from "./components/leaderboard
 export const dynamic = "force-dynamic";
 
 type TableCapacityGroup = { capacity: number; assigned: number; total: number };
-export type EventTypeRow = { type: string; sub_type: string; badge_color?: string | null } | null;
+export type EventTypeRow = { type: string; sub_type: string; badge_color?: string | null; behavior: EventBehavior } | null;
 type BookingRow = { id: number; group_size: number; status: string; group_name: string | null; total_amount: number | null; paid_amount: number | null };
 type PrivateHireRow = {
   id: string;
@@ -120,7 +122,7 @@ export type UpcomingEvent = {
   title: string | null;
   host_employee_id: number | null;
   event_types: { name: string } | { name: string }[];
-  event_subtypes: { name: string; color: string | null } | { name: string; color: string | null }[];
+  event_subtypes: { name: string; color: string | null; behavior: string | null } | { name: string; color: string | null; behavior: string | null }[];
   bookings: BookingRow[];
   past_quiz_questions: { id: number }[];
 };
@@ -129,7 +131,12 @@ export function getEventType(ev: UpcomingEvent): EventTypeRow {
   const t = Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types;
   const s = Array.isArray(ev.event_subtypes) ? ev.event_subtypes[0] : ev.event_subtypes;
   if (!t && !s) return null;
-  return { type: t?.name ?? "", sub_type: s?.name ?? "", badge_color: s?.color ?? null };
+  return {
+    type: t?.name ?? "",
+    sub_type: s?.name ?? "",
+    badge_color: s?.color ?? null,
+    behavior: isEventBehavior(s?.behavior) ? s.behavior : "standard",
+  };
 }
 
 function getSaturdaysInMonth(year: number, month: number): string[] {
@@ -144,14 +151,7 @@ function getSaturdaysInMonth(year: number, month: number): string[] {
 
 export function getBookingsHref(et: EventTypeRow, eventId?: number): string {
   if (!et) return "/event-bookings";
-  const s = et.sub_type?.toLowerCase() ?? "";
-  const t = et.type?.toLowerCase() ?? "";
-  if (s.includes("bingo") || t.includes("bingo")) return "/event-bookings/bingo-bookings";
-  if (s.includes("quiz") || t.includes("quiz")) return "/event-bookings/quiz-bookings";
-  if (t.includes("music") || t.includes("band") || t.includes("live")) return "/event-bookings/music-bookings";
-  if (t.includes("private")) return "/event-bookings/private-bookings";
-  if (eventId) return `/event-bookings/event/${eventId}`;
-  return "/event-bookings";
+  return adminBookingsHref(et.behavior, eventId);
 }
 
 export default async function DashboardPage() {
@@ -189,10 +189,10 @@ export default async function DashboardPage() {
       .gte("events.date", todayStr),
     supabase
       .from("events")
-      .select("id, event_subtypes!inner(is_quiz), past_quiz_questions(id)")
+      .select("id, event_subtypes!inner(behavior), past_quiz_questions(id)")
       .gte("date", todayStr)
       .eq("is_active", true)
-      .eq("event_subtypes.is_quiz", true),
+      .eq("event_subtypes.behavior", "quiz"),
   ]);
 
   const [
@@ -228,7 +228,7 @@ export default async function DashboardPage() {
   const { data: rawUpcoming, error: upcomingError } = await supabase
     .from("events")
     .select(
-      "id, date, start_time, end_time, title, host_employee_id, event_types!inner(name), event_subtypes!inner(name, color), bookings!bookings_event_id_fkey (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
+      "id, date, start_time, end_time, title, host_employee_id, event_types!inner(name), event_subtypes!inner(name, color, behavior), bookings!bookings_event_id_fkey (id, group_size, status, team_id, total_amount, paid_amount), past_quiz_questions(id)"
     )
     .gte("date", todayStr)
     .neq("is_active", false)
@@ -369,21 +369,10 @@ export default async function DashboardPage() {
     const confirmedBookings = ev.bookings.filter((b) => b.status === "confirmed");
     const confirmedGuests = confirmedBookings.reduce((s, b) => s + (b.group_size ?? 0), 0);
 
-    const isQuiz =
-      et?.sub_type?.toLowerCase().includes("quiz") ||
-      et?.type?.toLowerCase().includes("quiz");
-
-    const isBingo =
-      et?.sub_type?.toLowerCase().includes("bingo") ||
-      et?.type?.toLowerCase().includes("bingo");
-
-    const isPrivate =
-      et?.sub_type?.toLowerCase().includes("private") ||
-      et?.type?.toLowerCase().includes("private");
-
-    const isMusic =
-      et?.sub_type?.toLowerCase().includes("music") ||
-      et?.type?.toLowerCase().includes("music");
+    const isQuiz = et?.behavior === "quiz";
+    const isBingo = et?.behavior === "bingo";
+    const isPrivate = et?.behavior === "private";
+    const isMusic = et?.behavior === "music_act";
 
     const bingoDetails: BingoDetails | undefined = isBingo ? (() => {
       const totalPaid = confirmedBookings.reduce((s, b) => s + (b.paid_amount ?? 0), 0);

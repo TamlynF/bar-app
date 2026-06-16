@@ -6,6 +6,11 @@ test.describe("public quiz booking — happy path", () => {
   test("books a table and shows the confirmation screen", async ({ page }, testInfo) => {
     await page.goto("/book/quiz");
 
+    // Book against the seeded event reserved for this test (id 5) rather than the
+    // earliest quiz the render test (public-quiz.spec.ts) relies on, so filling
+    // tables here can never trip that test's "fully booked" state.
+    await page.getByRole("combobox", { name: /select date/i }).selectOption("5");
+
     // Unique per project + run so parallel mobile/desktop runs (and reruns)
     // don't collide on the per-date team-name uniqueness check.
     const stamp = `${testInfo.project.name}-${Date.now()}`;
