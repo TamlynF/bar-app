@@ -28,6 +28,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
 
   // Primary — always visible as text links
   const primaryLinks = [
+    { href: "/whats-on", label: "What's On" },
     { href: "/menu", label: "Menu" },
     { href: "/gallery", label: "Gallery" },
     { href: "/contact", label: "Contact" },
@@ -68,7 +69,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "inline-flex items-center text-[10px] sm:text-xs font-bold uppercase tracking-tight sm:tracking-wide px-2 sm:px-3 py-1.5 rounded-full transition-colors",
+                  "inline-flex items-center text-[10px] sm:text-xs font-bold uppercase tracking-tight sm:tracking-wide px-1.5 sm:px-3 py-1.5 rounded-full transition-colors whitespace-nowrap",
                   currentPath === link.href
                     ? "text-[#FDCC4B] bg-white/5"
                     : "text-stone-400 hover:text-white hover:bg-white/5"

@@ -73,7 +73,9 @@
       "Bash(echo \"MISSING: $cls\")",
       "Bash(echo \"MISSING VAR: --color-$shade\")",
       "mcp__claude_ai_Figma__whoami",
-      "Read(//c/Users/tamly/AppData/Roaming/Code/User/profiles/-9def7b0/**)"
+      "Read(//c/Users/tamly/AppData/Roaming/Code/User/profiles/-9def7b0/**)",
+      "Bash(Get-ChildItem -Path \"C:\\\\DFRepo\\\\bar-app\" -Recurse -Directory -Filter \"\\(public\\)\")",
+      "Bash(Select-Object -First 5)"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills",
