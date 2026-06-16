@@ -375,6 +375,7 @@ export default function BandBookingForm() {
                         href={urlBuilder(socialLinks[key])}
                         target="_blank"
                         rel="noopener noreferrer"
+                        aria-label={`Open ${label} link in a new tab`}
                         className="shrink-0 w-10 self-stretch flex items-center justify-center text-stone-500 hover:text-[#FDCC4B] transition-colors border-l border-white/10"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -469,7 +470,7 @@ export default function BandBookingForm() {
                   </div>
                   {preferredDates.length > 1 && (
                     <button title="Remove Date" type="button" onClick={() => removeDate(i)}
-                      className="shrink-0 w-10 h-10 mt-[2px] rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-stone-500 hover:text-red-400 hover:border-red-400/30 transition-all">
+                      className="shrink-0 w-10 h-10 mt-0.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-stone-500 hover:text-red-400 hover:border-red-400/30 transition-all">
                       <X className="w-3.5 h-3.5" />
                     </button>
                   )}

@@ -191,12 +191,12 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
           onOpenAutoFocus={(e) => e.preventDefault()}
           className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px]
-            sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
+            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-[2rem]">
+          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
@@ -219,10 +219,10 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
               <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
                 <div className="rounded-2xl overflow-hidden border-2 border-[#E6DFC8]">
                   {selected.media_type === "video" ? (
-                    <video src={selected.image_url} className="w-full max-h-[300px] object-cover" controls muted />
+                    <video src={selected.image_url} className="w-full max-h-75 object-cover" controls muted />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={selected.image_url} alt={selected.title} className="w-full max-h-[300px] object-cover" />
+                    <img src={selected.image_url} alt={selected.title} className="w-full max-h-75 object-cover" />
                   )}
                 </div>
                 <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
@@ -250,10 +250,10 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                   {(imageUrl || formDefault?.image_url) ? (
                     <div className="relative rounded-xl overflow-hidden">
                       {mediaType === "video" ? (
-                        <video src={imageUrl || formDefault?.image_url || ""} className="w-full max-h-[200px] object-cover rounded-xl" controls muted />
+                        <video src={imageUrl || formDefault?.image_url || ""} className="w-full max-h-50 object-cover rounded-xl" controls muted />
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={imageUrl || formDefault?.image_url || ""} alt="Preview" className="w-full max-h-[200px] object-cover rounded-xl" />
+                        <img src={imageUrl || formDefault?.image_url || ""} alt="Preview" className="w-full max-h-50 object-cover rounded-xl" />
                       )}
                       <button
                         type="button"
@@ -331,7 +331,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-[2rem]">
+          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="ghost" onClick={handleDelete} disabled={isPending}

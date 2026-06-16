@@ -127,7 +127,7 @@ export default async function MenuPage() {
       </div>
 
       {/* Menu frame — the bordered page (kept for the print aesthetic) */}
-      <div className="menu-frame max-w-4xl mx-auto my-4 sm:my-8 mx-3 sm:mx-auto rounded-sm border-[5px] border-[#4a5a28] relative">
+      <div className="menu-frame max-w-4xl my-4 sm:my-8 mx-3 sm:mx-auto rounded-sm border-[5px] border-[#4a5a28] relative">
         <div className="menu-inner border-2 border-[#B8962E] bg-[#2a3612] p-4 sm:p-8">
 
           {/* Page header — H1 is "MENU", not the bar's name */}
@@ -200,7 +200,7 @@ function CategoryBlock({ category }: { category: MenuCategory }) {
         {category.menu_items.map((item) => (
           <div
             key={item.id}
-            className="menu-row flex items-baseline justify-between py-[3px] sm:py-1 gap-2"
+            className="menu-row flex items-baseline justify-between py-0.75 sm:py-1 gap-2"
           >
             <span className="menu-row-name text-white text-[11px] sm:text-xs font-medium leading-tight flex-1 min-w-0">
               {item.name}

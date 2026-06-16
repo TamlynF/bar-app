@@ -71,7 +71,7 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="p-0 w-screen max-w-[320px] shadow-2xl rounded-2xl overflow-hidden z-9999"
+          className="p-0 w-screen max-w-80 shadow-2xl rounded-2xl overflow-hidden z-9999"
           align="start"
           sideOffset={8}
         >

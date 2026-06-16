@@ -103,7 +103,7 @@ export default async function BingoBookingPage({
 
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
-          <div className="w-full max-w-[180px] sm:max-w-xs transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98]">
+          <div className="w-full max-w-45 sm:max-w-xs transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98]">
             <Image
               src="/CompanyName.png"
               alt="Don Fenticas"

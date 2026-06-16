@@ -311,7 +311,7 @@ export default function CancelButton({
                 id="specialRequests"
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
-                className={`${inputBaseClasses} min-h-[100px] py-3 text-sm resize-none`}
+                className={`${inputBaseClasses} min-h-25 py-3 text-sm resize-none`}
                 placeholder="Dietary requirements, table preference..."
               />
             </div>

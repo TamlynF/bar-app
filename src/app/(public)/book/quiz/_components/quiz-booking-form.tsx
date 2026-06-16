@@ -357,7 +357,7 @@ export default function BookingForm({ events }: Props) {
             name="specialRequests"
             value={formData.specialRequests}
             onChange={handleInputChange}
-            className={`${inputBaseClasses} min-h-[100px] py-3 text-sm resize-none`}
+            className={`${inputBaseClasses} min-h-25 py-3 text-sm resize-none`}
             placeholder="Dietary requirements, table preference..."
           />
         </div>

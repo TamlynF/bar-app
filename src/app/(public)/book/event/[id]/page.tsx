@@ -111,10 +111,10 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
             <img
               src={config.booking_image_url as string}
               alt={eventTitle}
-              className="w-full max-w-[240px] h-auto rounded-2xl object-cover"
+              className="w-full max-w-60 h-auto rounded-2xl object-cover"
             />
           ) : (
-            <div className="w-full max-w-[180px] sm:max-w-xs">
+            <div className="w-full max-w-45 sm:max-w-xs">
               <Image
                 src="/CompanyName.png"
                 alt="Don Fenticas"

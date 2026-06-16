@@ -194,7 +194,7 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
               onChange={(e) => setSpecialRequests(e.target.value)}
               rows={4}
               placeholder="Dietary requirements, accessibility needs..."
-              className={cn(inputBaseClasses, "min-h-[120px]")}
+              className={cn(inputBaseClasses, "min-h-30")}
               autoFocus
             />
           </div>

@@ -22,7 +22,7 @@ function ToggleRow({ label, value, onChange }: { label: string; value: boolean; 
         >
           <span className={cn(
             "absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform",
-            value ? "translate-x-[21px]" : "translate-x-0.5"
+            value ? "translate-x-5.25" : "translate-x-0.5"
           )} />
         </button>
       </div>

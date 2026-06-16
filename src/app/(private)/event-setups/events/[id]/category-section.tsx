@@ -505,7 +505,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                               title="Edit question"
                               value={editForm.question}
                               onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                              className="w-full text-xs leading-relaxed min-h-[120px] p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
+                              className="w-full text-xs leading-relaxed min-h-30 p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
                             />
                           </div>
                         )}

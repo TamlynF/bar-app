@@ -159,7 +159,7 @@ export default async function EventDetailPage({
 
       {/* Event detail card */}
       <div className="bg-white border border-[#E6DFC8] rounded-2xl p-5 space-y-4">
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-[12px]">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 text-xs">
           <div className="flex items-center gap-2 text-[#5F624F]">
             <CalendarDays className="w-4 h-4 shrink-0 opacity-60" />
             <span className="font-medium">{format(parsed, "EEE d MMM yyyy")}</span>

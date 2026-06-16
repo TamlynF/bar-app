@@ -305,7 +305,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-[#5F624F]" onClick={(e) => e.stopPropagation()}><MoreVertical className="w-4 h-4" /></Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="z-9999 border-[#E6DFC8] shadow-lg min-w-[200px]" style={{ ["--popover" as string]: "#ffffff", ["--accent" as string]: "#F7F4EA" }}>
+                      <DropdownMenuContent align="end" className="z-9999 border-[#E6DFC8] shadow-lg min-w-50" style={{ ["--popover" as string]: "#ffffff", ["--accent" as string]: "#F7F4EA" }}>
                         <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => openNewSubtype(t)}><Plus className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Add Sub-Type</DropdownMenuItem>
                         <DropdownMenuSeparator className="bg-[#E6DFC8]" />
                         <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => openEditType(t)}><Edit2 className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Edit Category</DropdownMenuItem>
@@ -337,7 +337,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         >
                           <div className="px-3 sm:px-4 py-2.5 flex items-center gap-2 sm:gap-3">
                             <button type="button" onClick={() => setExpandedSubtype(isExpanded ? null : s.id)} className="flex-1 min-w-0 text-left flex items-center gap-2">
-                              <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-md border shrink-0 truncate max-w-[140px] sm:max-w-[200px]", badgeClassFromColor(s.color))}>
+                              <span className={cn("text-[11px] font-bold px-2 py-0.5 rounded-md border shrink-0 truncate max-w-35 sm:max-w-50", badgeClassFromColor(s.color))}>
                                 {toTitleCase(s.name)}
                               </span>
                               <span className="text-[10px] text-[#5F624F] shrink-0">{badges.length} {badges.length === 1 ? "badge" : "badges"}</span>
@@ -353,7 +353,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 <DropdownMenuTrigger asChild>
                                   <Button variant="ghost" size="icon" className="h-8 w-8 text-[#5F624F]"><MoreVertical className="w-4 h-4" /></Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="z-9999 border-[#E6DFC8] shadow-lg min-w-[180px]" style={{ ["--popover" as string]: "#ffffff", ["--accent" as string]: "#F7F4EA" }}>
+                                <DropdownMenuContent align="end" className="z-9999 border-[#E6DFC8] shadow-lg min-w-45" style={{ ["--popover" as string]: "#ffffff", ["--accent" as string]: "#F7F4EA" }}>
                                   <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => setBadgeForm({ event_subtypes_id: s.id, title: "", description: "", icon: "" })}><Plus className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Add Badge</DropdownMenuItem>
                                   <DropdownMenuSeparator className="bg-[#E6DFC8]" />
                                   <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => openEditSubtype(s)}><Edit2 className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Edit</DropdownMenuItem>
@@ -409,7 +409,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                             <DropdownMenuTrigger asChild>
                                               <Button variant="ghost" size="icon" className="h-7 w-7 text-[#5F624F]"><MoreVertical className="w-3 h-3" /></Button>
                                             </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end" className="z-9999 border-[#E6DFC8] shadow-lg min-w-[160px]" style={{ ["--popover" as string]: "#ffffff", ["--accent" as string]: "#F7F4EA" }}>
+                                            <DropdownMenuContent align="end" className="z-9999 border-[#E6DFC8] shadow-lg min-w-40" style={{ ["--popover" as string]: "#ffffff", ["--accent" as string]: "#F7F4EA" }}>
                                               <DropdownMenuItem className="py-3 text-[13px] text-[#5F624F] font-medium" onClick={() => setBadgeForm({ id: info.id, event_subtypes_id: s.id, title: info.title, description: info.description ?? "", icon: info.icon ?? "" })}><Edit2 className="w-4 h-4 mr-3 text-[#5C4033] stroke-[2.5]" /> Edit</DropdownMenuItem>
                                               <DropdownMenuSeparator className="bg-[#E6DFC8]" />
                                               <DropdownMenuItem className="py-3 text-[13px] text-red-600 font-medium focus:text-red-600" onClick={() => removeBadge(info.id)}><Trash2 className="w-4 h-4 mr-3 text-red-500 stroke-[2.5]" /> Delete</DropdownMenuItem>
@@ -554,11 +554,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
 // ===== Shared bits =====
 
-const SHEET_CLASS = "bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh] flex flex-col outline-none shadow-2xl sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px] sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6 sm:border-2 sm:border-[#E6DFC8]";
+const SHEET_CLASS = "bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh] flex flex-col outline-none shadow-2xl sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140 sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6 sm:border-2 sm:border-[#E6DFC8]";
 
 function SheetHeader({ title, description }: { title: string; description: string }) {
   return (
-    <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-[2rem]">
+    <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
       <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight">{title}</SheetTitle>
       <SheetDescription className="text-xs text-[#5F624F] mt-1">{description}</SheetDescription>
     </div>
@@ -567,10 +567,10 @@ function SheetHeader({ title, description }: { title: string; description: strin
 
 function SheetFooter({ onCancel, onSave, pending, saveLabel }: { onCancel: () => void; onSave: () => void; pending: boolean; saveLabel: string }) {
   return (
-    <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-[2rem]">
+    <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
       <div className="grid grid-cols-2 gap-3">
         <Button type="button" variant="ghost" onClick={onCancel} disabled={pending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white hover:bg-[#F7F4EA]">Cancel</Button>
-        <Button type="button" disabled={pending} onClick={onSave} className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95">
+        <Button type="button" disabled={pending} onClick={onSave} className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
           {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : saveLabel}
         </Button>
       </div>

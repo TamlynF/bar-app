@@ -296,7 +296,7 @@ export default function PrivateHireForm() {
                   onChange={(e) => setAdditionalReqs(e.target.value)}
                   placeholder=""
                   rows={4}
-                  className={`${inputClass} min-h-[100px] py-3 resize-none`}
+                  className={`${inputClass} min-h-25 py-3 resize-none`}
                 />
               </div>
             </div>
@@ -304,7 +304,7 @@ export default function PrivateHireForm() {
             {/* Deposit notice */}
             <div className="flex items-start gap-3 bg-[#FDCC4B]/8 border border-[#FDCC4B]/20 rounded-2xl px-4 py-3.5 mt-2">
               <Info className="w-4 h-4 text-[#FDCC4B] shrink-0 mt-0.5" />
-              <p className="text-[12px] text-stone-300 font-medium leading-relaxed">
+              <p className="text-xs text-stone-300 font-medium leading-relaxed">
                 <span className="font-black text-[#FDCC4B]">Deposit required.</span> Once we&apos;ve reviewed your enquiry, we&apos;ll be in touch to confirm availability and share deposit payment details to secure your booking.
               </p>
             </div>

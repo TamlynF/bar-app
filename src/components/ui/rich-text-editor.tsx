@@ -219,7 +219,7 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
       {/* Editor area */}
       <EditorContent
         editor={editor}
-        className="rich-editor min-h-[120px] px-3 py-2 text-sm text-[#1F1F1A] leading-snug outline-none bg-white rounded-b-2xl overflow-y-auto"
+        className="rich-editor min-h-30 px-3 py-2 text-sm text-[#1F1F1A] leading-snug outline-none bg-white rounded-b-2xl overflow-y-auto"
       />
     </div>
   );

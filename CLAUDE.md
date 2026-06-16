@@ -49,6 +49,8 @@ Always run `npm run build` successfully before committing.
   1. **Preferred:** Set a CSS custom property via `style` and consume it via Tailwind arbitrary value — e.g. `style={{ "--badge-color": color } as React.CSSProperties}` + `className="bg-[var(--badge-color)]"`. This keeps the actual styling in classes.
   2. **Acceptable:** Use `style` only for CSS custom properties (`--var-name`), never for standard CSS properties like `backgroundColor`, `color`, `borderColor`, `minWidth`, etc.
   3. When refactoring existing inline styles, convert `style={{ backgroundColor: x, color: y }}` → `style={{ "--c": x, "--bg": y } as React.CSSProperties}` + Tailwind `text-[var(--c)] bg-[var(--bg)]`.
+
+  Also **prefer the canonical scale token over an arbitrary px value** when the value is on the scale (`min-w-50` not `min-w-[200px]`) — see the "Prefer canonical Tailwind classes" rule under Visual standards below.
 - **Component library:** shadcn/ui (new-york style), components live in `src/components/ui/`. Owned by us — edit freely.
 - **Primitives:** Radix UI (via shadcn)
 - **Icons:** Lucide React only
@@ -162,7 +164,7 @@ If you find yourself styling a public page with espresso/cream tones, or an admi
 - **Touch targets ≥ 44×44px** on anything tappable on mobile (WCAG)
 - **Icon-only buttons/links need `aria-label` or `title`** — a `<button>`/`<a>` containing only a Lucide icon must have an accessible name, or Edge DevTools fires `axe/name-role-value` ("Buttons must have discernible text"). Same class of Edge DevTools warning as `no-inline-styles`. See STYLE_GUIDE Accessibility.
 - **Every form element needs a label** — `<input>`/`<select>`/`<textarea>`, including checkboxes, need a `<label htmlFor>` or `aria-label`. A `<span>` sitting next to the input is not a label. Missing → Edge DevTools `axe/forms` ("Form elements must have labels"). See STYLE_GUIDE Accessibility.
-- **Tailwind spacing scale only** — no arbitrary `p-[13px]` values
+- **Prefer canonical Tailwind classes over arbitrary values.** If a value sits on the spacing/size scale, use the token, not the bracket form: `min-w-50` not `min-w-[200px]`, `gap-2` not `gap-[8px]`, `p-4` not `p-[16px]`, `text-sm` not `text-[14px]`, `w-px` not `w-[1px]`. (Scale token `N` = `N × 0.25rem` = `N × 4px` at the 16px root, so `px ÷ 4` gives the token.) This is exactly what the IntelliSense `suggestCanonicalClasses` hint flags. Arbitrary `[...]` is **reserved** for: values with no canonical token (`text-[10px]`, `text-[13px]`), non-spacing units (`h-[85vh]`, `w-[90%]`), custom palette hex (`border-[#E6DFC8]`), and dynamic CSS vars (`bg-[var(--badge-color)]`). Don't invent off-scale px values just to use a bracket.
 - **Type scale:** Tailwind defaults. Display headings get `font-black uppercase tracking-tight` or `tracking-tighter`. Eyebrows/labels get `text-[10px] font-black uppercase tracking-widest`.
 - **Colour usage:** Public pages use the olive/gold palette plus deep burgundy and a neon accent (see STYLE_GUIDE). Admin pages stay on the espresso/cream palette.
 - **Card radii:** `rounded-2xl` (cards) and `rounded-3xl` (sheets) are the defaults. Don't introduce new radius values without a reason.

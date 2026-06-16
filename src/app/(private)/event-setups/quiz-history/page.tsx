@@ -89,7 +89,7 @@ export default async function QuizArchivePage({
               <details 
                 key={category} 
                 className={cn(
-                  "group border rounded-[2rem] overflow-hidden shadow-sm transition-all duration-300",
+                  "group border rounded-4xl overflow-hidden shadow-sm transition-all duration-300",
                   theme.bg,                  
                   theme.border
                 )}
@@ -129,7 +129,7 @@ export default async function QuizArchivePage({
                               <div className="mt-1 p-1 bg-[#F7F4EA] rounded-lg">
                                 <MessageSquareQuote className="w-4 h-4 text-[#5C4033] opacity-40" />
                               </div>
-                              <p className="text-[14px] font-bold text-[#1F1F1A] leading-snug tracking-tight">
+                              <p className="text-sm font-bold text-[#1F1F1A] leading-snug tracking-tight">
                                 {record.question_text}
                               </p>
                             </div>

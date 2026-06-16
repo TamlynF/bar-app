@@ -54,7 +54,7 @@ export function useConfirm() {
             {options.title}
           </h2>
           {options.description && (
-            <p className="text-[12px] text-[#5F624F] font-medium leading-relaxed">
+            <p className="text-xs text-[#5F624F] font-medium leading-relaxed">
               {options.description}
             </p>
           )}

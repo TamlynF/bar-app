@@ -36,7 +36,7 @@ export default function QuizHistoryFilter({
   }
 
   return (
-    <div className="flex items-center gap-2 bg-white border-2 border-[#E6DFC8] p-1 rounded-2xl shadow-sm min-w-[280px]">
+    <div className="flex items-center gap-2 bg-white border-2 border-[#E6DFC8] p-1 rounded-2xl shadow-sm min-w-70">
       <div className="p-2 bg-[#F7F4EA] rounded-xl">
         <Filter className="w-4 h-4 text-[#5C4033]" />
       </div>

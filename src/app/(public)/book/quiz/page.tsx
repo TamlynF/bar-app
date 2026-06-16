@@ -119,7 +119,7 @@ export default async function QuizBookingPage({
             - Added 'priority' for LCP optimization.
         */}
         <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
-          <div className="w-full max-w-[200px] sm:max-w-md transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98] relative aspect-600/260">
+          <div className="w-full max-w-50 sm:max-w-md transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98] relative aspect-600/260">
             <Image
               src="/DF X PJ Quiz Night.png"
               alt="Don Fenticas x Papa Johns Quiz Night"

@@ -717,7 +717,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                         value={editForm.special_requests} 
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({...prev, special_requests: e.target.value}))}
                         placeholder="Dietary requirements, table preference..."
-                        className="min-h-[140px] rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033] resize-none"
+                        className="min-h-35 rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033] resize-none"
                       />
                     </div>
                   </div>

@@ -610,7 +610,7 @@ export default function QuizGeneratorPage() {
               >
                 {savedQuestionsForCategory.length === 0 ? (
                   <div className="py-20 text-center flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 bg-white border-2 border-dashed border-[#E6DFC8] rounded-[2rem] flex items-center justify-center text-[#E6DFC8]">
+                    <div className="w-16 h-16 bg-white border-2 border-dashed border-[#E6DFC8] rounded-4xl flex items-center justify-center text-[#E6DFC8]">
                       <Plus className="w-8 h-8" />
                     </div>
                     <p className="text-sm font-black text-[#1F1F1A] uppercase tracking-tight">No questions assigned yet</p>
@@ -633,7 +633,7 @@ export default function QuizGeneratorPage() {
                                     title="Edit Question Text"
                                     value={editForm.question}
                                     onChange={(e) => setEditForm({...editForm, question: e.target.value})}
-                                    className="w-full text-sm font-semibold min-h-[80px] p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
+                                    className="w-full text-sm font-semibold min-h-20 p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
                                   />
                                </div>
                                <div className="space-y-1.5">

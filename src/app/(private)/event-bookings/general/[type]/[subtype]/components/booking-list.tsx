@@ -162,7 +162,7 @@ export default function BookingList({ bookings, activeStatus }: { bookings: Gene
                   )}
 
                   {tables && (
-                    <span className="hidden sm:block text-[10px] font-bold text-[#5F624F] opacity-60 shrink-0 max-w-[80px] truncate">
+                    <span className="hidden sm:block text-[10px] font-bold text-[#5F624F] opacity-60 shrink-0 max-w-20 truncate">
                       {tables}
                     </span>
                   )}

@@ -252,11 +252,11 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
               </div>
               <div className="space-y-2">
                 <Label className={fieldLabel}>Description</Label>
-                <Textarea value={form.description} onChange={(e) => update("description", e.target.value)} className="rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-bold p-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033] resize-none min-h-[80px]" placeholder="A short description of your venue" />
+                <Textarea value={form.description} onChange={(e) => update("description", e.target.value)} className="rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-bold p-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033] resize-none min-h-20" placeholder="A short description of your venue" />
               </div>
               <div className="space-y-2">
                 <Label className={fieldLabel}>Address</Label>
-                <Textarea value={form.address} onChange={(e) => update("address", e.target.value)} className="rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-bold p-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033] resize-none min-h-[80px]" placeholder="Full address" />
+                <Textarea value={form.address} onChange={(e) => update("address", e.target.value)} className="rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-bold p-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033] resize-none min-h-20" placeholder="Full address" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">

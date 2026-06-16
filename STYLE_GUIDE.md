@@ -191,6 +191,10 @@ Status colours: use semantic Tailwind shades:
 
 ## Cross-surface rules
 
+### Tailwind class form — canonical over arbitrary
+- Use the canonical scale token when a value is on the spacing/size scale: `min-w-50` not `min-w-[200px]`, `gap-2` not `gap-[8px]`, `text-sm` not `text-[14px]`. (`px ÷ 4` = the token.) This is what the IntelliSense `suggestCanonicalClasses` hint flags.
+- Bracket values like `text-[10px]`, `tracking-[0.2em]`, and `h-[85vh]` used in this guide are **intentional exceptions** — they have no canonical token (off-grid px, or non-spacing units). Leave them as-is; don't "correct" them. Reserve `[...]` for: no-canonical values, non-spacing units (`vh`/`%`), custom palette hex (`border-[#E6DFC8]`), and dynamic CSS vars.
+
 ### Touch targets
 - Minimum 44×44px on mobile (`h-11` / `h-12`). `h-9`/`h-10` fine on desktop only.
 

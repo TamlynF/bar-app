@@ -27,9 +27,9 @@ export default function TonightCard({
 
 
   return (
-    <div className="bg-white border-2 border-[#E6DFC8] rounded-[2rem] overflow-hidden shadow-sm rounded-t-[2rem]">
-      <Link href={event.href} className="block rounded-[2rem]">
-        <div className="bg-[#5C4033] px-6 py-3 sm:py-5 text-white flex items-start justify-between gap-2 sm:gap-4 rounded-t-[2rem]">
+    <div className="bg-white border-2 border-[#E6DFC8] rounded-4xl overflow-hidden shadow-sm rounded-t-4xl">
+      <Link href={event.href} className="block rounded-4xl">
+        <div className="bg-[#5C4033] px-6 py-3 sm:py-5 text-white flex items-start justify-between gap-2 sm:gap-4 rounded-t-4xl">
           <div className="min-w-0">
             <span className="bg-[#C8956D] text-[#5C4033] text-[9px] font-black px-2 py-0.5 rounded-sm uppercase tracking-wide">
               Tonight

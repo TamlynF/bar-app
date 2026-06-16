@@ -185,12 +185,12 @@ export default function TablesClient({
           onOpenAutoFocus={(e) => e.preventDefault()}
           className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px]
-            sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
+            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sticky header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-[2rem]">
+          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
             <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
               {isAdding ? "New Table" : isEditing ? "Edit Table" : (selected?.name ?? "")}
             </SheetTitle>
@@ -339,7 +339,7 @@ export default function TablesClient({
           </div>
 
           {/* Sticky footer */}
-          <div className="shrink-0 p-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-[2rem]">
+          <div className="shrink-0 p-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
 
             {/* View mode */}
             {!showForm && selected && (

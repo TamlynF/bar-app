@@ -467,7 +467,7 @@ export default function EventsClient({
                 <button
                   type="button"
                   onClick={() => toggleType(tg.type.id)}
-                  className="w-full flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3.5 gap-2.5 min-h-[44px]"
+                  className="w-full flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3.5 gap-2.5 min-h-11"
                 >
                   <span className="text-sm font-black uppercase tracking-tight text-[#5C4033] truncate flex-1 text-left">
                     {toTitleCase(tg.type.name)} <span className="text-[#5F624F] text-xs font-bold">({tg.count})</span>
@@ -485,7 +485,7 @@ export default function EventsClient({
                           "rounded-xl border overflow-hidden",
                           badgeClassFromColor(color).split(" ").filter((c) => c.startsWith("border")).join(" ")
                         )}>
-                          <div className={cn("flex items-center gap-2 px-3 sm:px-4 py-2 min-h-[40px]", badgeClassFromColor(color))}>
+                          <div className={cn("flex items-center gap-2 px-3 sm:px-4 py-2 min-h-10", badgeClassFromColor(color))}>
                             <button type="button" onClick={() => toggleSubType(sg.subtype.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left">
                               <span className="text-[11px] font-black uppercase tracking-wide">{toTitleCase(sg.subtype.name)}</span>
                               <span className="text-[10px] font-bold opacity-60">({sg.events.length})</span>
@@ -614,12 +614,12 @@ export default function EventsClient({
           onOpenAutoFocus={(e) => e.preventDefault()}
            className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px]
-            sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
+            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sheet header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-[2rem]">
+          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
@@ -916,9 +916,9 @@ export default function EventsClient({
                   {/* Time */}
                   <FormRow label="Time">
                     <div className="flex items-center gap-2 flex-1 justify-end">
-                      <input title="Start time" name="start_time" type="time" defaultValue={formDefault?.start_time ? formatTime(formDefault.start_time) : ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-[5.5rem] text-right" />
+                      <input title="Start time" name="start_time" type="time" defaultValue={formDefault?.start_time ? formatTime(formDefault.start_time) : ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-22 text-right" />
                       <span className="text-[#5F624F]/50 text-xs">-</span>
-                      <input title="End time" name="end_time" type="time" defaultValue={formDefault?.end_time ? formatTime(formDefault.end_time) : ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-[5.5rem] text-right" />
+                      <input title="End time" name="end_time" type="time" defaultValue={formDefault?.end_time ? formatTime(formDefault.end_time) : ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-22 text-right" />
                     </div>
                   </FormRow>
 
@@ -1027,7 +1027,7 @@ export default function EventsClient({
                     <div className="flex items-center gap-2">
                       <span className={cn("text-[10px] font-black uppercase tracking-wide", formIsBookable ? "text-green-600" : "text-[#5F624F]")}>{formIsBookable ? "On" : "Off"}</span>
                       <button type="button" title="Toggle public booking" onClick={() => setFormIsBookable(!formIsBookable)} className={cn("w-11 h-6 rounded-full transition-colors relative shrink-0 border", formIsBookable ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30")}>
-                        <span className={cn("absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform", formIsBookable ? "translate-x-[21px]" : "translate-x-0.5")} />
+                        <span className={cn("absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform", formIsBookable ? "translate-x-5.25" : "translate-x-0.5")} />
                       </button>
                     </div>
                   </FormRow>
@@ -1048,14 +1048,14 @@ export default function EventsClient({
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-[2rem]">
+          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
                 <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-wide text-[10px] bg-white hover:bg-red-50 hover:border-red-200">
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                   Delete
                 </Button>
-                <Button onClick={openEdit} className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95">
+                <Button onClick={openEdit} className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
                   <Pencil className="w-4 h-4 mr-2" />Edit
                 </Button>
               </div>
@@ -1066,7 +1066,7 @@ export default function EventsClient({
                 <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white">
                   Cancel
                 </Button>
-                <Button type="button" disabled={isPending} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95">
+                <Button type="button" disabled={isPending} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Save</>}
                 </Button>
               </div>

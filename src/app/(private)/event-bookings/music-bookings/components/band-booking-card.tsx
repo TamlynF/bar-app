@@ -307,12 +307,12 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           onOpenAutoFocus={(e) => e.preventDefault()}
           className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px]
-            sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
+            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sheet header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-[2rem]">
+          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="text-lg font-black text-[#1F1F1A] uppercase tracking-tight leading-tight truncate">
@@ -411,6 +411,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                             <label className="text-[9px] font-bold text-[#5F624F] uppercase block mb-1">Start</label>
                             <input
                               type="time"
+                              aria-label="Performance start time"
                               value={selectedStartTime}
                               onChange={(e) => setSelectedStartTime(e.target.value)}
                               className="w-full px-3 py-2 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] text-sm font-bold text-[#1F1F1A] focus:outline-none focus:border-[#5C4033]/30"
@@ -420,6 +421,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                             <label className="text-[9px] font-bold text-[#5F624F] uppercase block mb-1">End</label>
                             <input
                               type="time"
+                              aria-label="Performance end time"
                               value={selectedEndTime}
                               onChange={(e) => setSelectedEndTime(e.target.value)}
                               className="w-full px-3 py-2 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] text-sm font-bold text-[#1F1F1A] focus:outline-none focus:border-[#5C4033]/30"
@@ -622,7 +624,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-[2rem]">
+          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
             {/* Action area — pending only */}
             {status === "pending" && (
               <div className="space-y-3">

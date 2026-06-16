@@ -230,7 +230,7 @@ export default async function QuizBookingsPage({
                     tableStatusByCapacity.map((g) => (
                       <div
                         key={g.capacity}
-                        className="flex flex-col items-center justify-center bg-[#F7F4EA] rounded-xl px-3 py-2 min-w-[56px]"
+                        className="flex flex-col items-center justify-center bg-[#F7F4EA] rounded-xl px-3 py-2 min-w-14"
                       >
                         <span className="text-[9px] font-bold uppercase tracking-wide text-[#5F624F] opacity-60">
                           Cap {g.capacity}
@@ -317,11 +317,11 @@ export default async function QuizBookingsPage({
 
           </div>
         ) : (
-          <div className="bg-white border-2 border-dashed border-[#E6DFC8] rounded-[2rem] p-6 flex flex-col items-center justify-center text-center gap-3 shadow-sm">
+          <div className="bg-white border-2 border-dashed border-[#E6DFC8] rounded-4xl p-6 flex flex-col items-center justify-center text-center gap-3 shadow-sm">
             <div className="p-3 bg-[#F7F4EA] rounded-2xl">
               <CalendarDays className="w-6 h-6 text-[#5C4033] opacity-30" />
             </div>
-            <p className="text-[10px] font-bold uppercase text-[#5F624F] tracking-wide opacity-60 max-w-[200px] leading-relaxed">
+            <p className="text-[10px] font-bold uppercase text-[#5F624F] tracking-wide opacity-60 max-w-50 leading-relaxed">
               Select a date to see event details
             </p>
           </div>

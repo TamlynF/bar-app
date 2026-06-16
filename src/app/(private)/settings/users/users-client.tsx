@@ -299,12 +299,12 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
           onOpenAutoFocus={(e) => e.preventDefault()}
           className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-[560px]
-            sm:h-auto sm:max-h-[80vh] sm:rounded-[2rem] sm:bottom-6
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
+            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sheet header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-[2rem]">
+          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
@@ -493,7 +493,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                         title="Country Code"
                         name="country_code"
                         defaultValue={formDefault?.country_code ?? "+44"}
-                        className="text-base sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer w-[4.5rem] text-right"
+                        className="text-base sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer w-18 text-right"
                       >
                         {COUNTRY_CODES.map((c) => (
                           <option key={c.iso + c.code} value={c.code}>{c.iso} {c.code}</option>
@@ -534,7 +534,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-[2rem]">
+          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
                 <Button
@@ -548,7 +548,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit
                 </Button>
@@ -574,7 +574,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                   type="submit"
                   form="employee-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending
                     ? <Loader2 className="w-4 h-4 animate-spin" />

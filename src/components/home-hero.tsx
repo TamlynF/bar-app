@@ -18,7 +18,7 @@ export function HomeHero({
   backdropUrl: string | null;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-white/10 min-h-[32rem] sm:min-h-[42rem] flex flex-col justify-end">
+    <section className="relative overflow-hidden rounded-3xl border border-white/10 min-h-128 sm:min-h-168 flex flex-col justify-end">
       {/* Backdrop */}
       {backdropUrl ? (
         <>
