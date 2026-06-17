@@ -187,9 +187,6 @@ export default function EventsClient({
   const [quizOpen, setQuizOpen] = useState(true);
   const [bookingsOpen, setBookingsOpen] = useState(true);
   const [bookingSettingsOpen, setBookingSettingsOpen] = useState(false);
-  const [bookingCustomOpen, setBookingCustomOpen] = useState(false);
-  const [pageFieldsOpen, setPageFieldsOpen] = useState(true);
-  const [pageCustomOpen, setPageCustomOpen] = useState(true);
 
   // ---- Lookups ----
   const typeById = new Map(eventTypes.map((t) => [t.id, t]));
@@ -761,72 +758,6 @@ export default function EventsClient({
                       <>
                         <DetailCell label="Public Booking" value={selected.is_bookable ? "Enabled" : "Disabled"} />
 
-                        {selected.is_bookable && sub?.behavior !== "quiz" && sub?.behavior !== "bingo" && (() => {
-                          const cfg = selected.booking_config ?? {};
-                          return (
-                            <div className="border-t border-[#E6DFC8]">
-                              <button type="button" onClick={() => setBookingCustomOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#E6DFC8]/60 hover:bg-[#E6DFC8]/80 transition-colors text-left">
-                                <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Booking Page Customizations</span>
-                                <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingCustomOpen && "rotate-180")} />
-                              </button>
-                              {bookingCustomOpen && (
-                                <div className="space-y-0">
-                                  <div className="border-t border-[#E6DFC8]">
-                                    <button type="button" onClick={() => setPageFieldsOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-2.5 bg-[#F7F4EA]/50 hover:bg-[#F7F4EA] transition-colors text-left">
-                                      <span className="text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Page Fields</span>
-                                      <ChevronDown className={cn("w-3.5 h-3.5 text-[#5F624F] transition-transform duration-200", pageFieldsOpen && "rotate-180")} />
-                                    </button>
-                                    {pageFieldsOpen && (
-                                      <div className="divide-y divide-[#E6DFC8]/50">
-                                        {[
-                                          { label: "Name", enabled: true, always: true },
-                                          { label: "Email", enabled: true, always: true },
-                                          { label: "Phone Number", enabled: cfg.collect_phone !== false },
-                                          { label: "Group Size", enabled: cfg.collect_group_size !== false },
-                                          { label: "Group Name", enabled: !!cfg.collect_group_name },
-                                          { label: "Special Requests", enabled: cfg.collect_special_requests !== false },
-                                        ].map(field => (
-                                          <div key={field.label} className="flex items-center justify-between px-4 sm:px-5 py-2">
-                                            <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">{field.label}</span>
-                                            {field.always ? (
-                                              <span className="text-[10px] font-black uppercase tracking-wide text-green-600">Always On</span>
-                                            ) : (
-                                              <input type="checkbox" checked={field.enabled} readOnly aria-label={field.label} className="w-4 h-4 rounded accent-[#5C4033] pointer-events-none" />
-                                            )}
-                                          </div>
-                                        ))}
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  <div className="border-t border-[#E6DFC8]">
-                                    <button type="button" onClick={() => setPageCustomOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-2.5 bg-[#F7F4EA]/50 hover:bg-[#F7F4EA] transition-colors text-left">
-                                      <span className="text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Page Customizations</span>
-                                      <ChevronDown className={cn("w-3.5 h-3.5 text-[#5F624F] transition-transform duration-200", pageCustomOpen && "rotate-180")} />
-                                    </button>
-                                    {pageCustomOpen && (
-                                      <div>
-                                        {cfg.collect_group_name && <DetailCell label="Group Name Label" value={cfg.group_name_label || "—"} />}
-                                        {cfg.collect_group_size !== false && (
-                                          <>
-                                            <DetailCell label="Min Group Size" value={cfg.min_group_size != null ? String(cfg.min_group_size) : "—"} />
-                                            <DetailCell label="Max Group Size" value={cfg.max_group_size != null ? String(cfg.max_group_size) : "—"} />
-                                            <DetailCell label="Size Options" value={cfg.group_size_options?.length ? cfg.group_size_options.join(", ") : "—"} />
-                                          </>
-                                        )}
-                                        <DetailCell label="Button Text" value={cfg.custom_cta_text || "—"} />
-                                        <DetailCell label="Tagline" value={cfg.custom_tagline || "—"} />
-                                        <DetailCell label="Confirmation Msg" value={cfg.confirmation_message || "—"} />
-                                        <DetailCell label="Booking Image" value={cfg.booking_image_url || "—"} />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-
                         {selected.is_bookable && (
                           <div className="px-4 sm:px-5 py-3 border-t border-[#E6DFC8]">
                             <div className="flex items-center gap-1.5 mb-2">
@@ -851,6 +782,10 @@ export default function EventsClient({
                       </>
                     )}
                   </div>
+
+                  {selected.is_bookable && (
+                    <BookingConfigEditor value={selected.booking_config ?? {}} readOnly />
+                  )}
 
                   {formError && <ErrorBox message={formError} />}
                 </div>

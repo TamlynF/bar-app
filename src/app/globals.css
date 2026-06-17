@@ -412,6 +412,9 @@ html, body {
 .border-\[\#FDCC4B\]\/10 {
     border-color: color-mix(in oklab, #FDCC4B 10%, transparent);
 }
+.bg-\[\#5F624F\]\/30 {
+    background-color: color-mix(in oklab, #5F624F 30%, transparent);
+}
 
   /* ════════════════════════════════════════════════════════════════
      Audit pass: utilities used in source but previously missing.

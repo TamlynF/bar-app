@@ -364,6 +364,11 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                                 {s.payment_required && <Chip label={`Payment £${(s.default_payment_amount ?? 0).toFixed(2)}`} />}
                               </div>
 
+                              {/* Default booking config (read-only) */}
+                              {s.is_bookable && (
+                                <BookingConfigEditor value={s.default_booking_config ?? {}} readOnly />
+                              )}
+
                               {/* Badges */}
                               <div className="bg-white border border-[#E6DFC8] rounded-lg overflow-hidden">
                                 <div className="flex items-center justify-between px-3 py-2 border-b border-[#E6DFC8]/50 bg-[#F7F4EA]/50">

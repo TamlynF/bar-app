@@ -340,7 +340,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                   Delete
                 </Button>
                 <Button onClick={() => { setFormError(null); setImageUrl(selected.image_url); setMediaType(selected.media_type === "video" ? "video" : "image"); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95">
+                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
                   <Pencil className="w-4 h-4 mr-2" /> Edit
                 </Button>
               </div>
@@ -359,7 +359,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                     const form = document.getElementById('gallery-form') as HTMLFormElement | null;
                     if (form) form.requestSubmit();
                   }}
-                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95">
+                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Save</>}
                 </Button>
               </div>

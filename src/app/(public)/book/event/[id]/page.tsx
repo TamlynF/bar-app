@@ -10,6 +10,7 @@ import {
   Sparkles, AlertCircle, Beer, Info, Speaker, User
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Banknote, Calendar, Users, Trophy, Wine,
@@ -62,8 +63,9 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
       .eq("event_subtypes_id", event.event_subtypes_id),
   ]);
 
-  const config = (event.booking_config as Record<string, unknown>) ?? {};
-  const tagline = (config.custom_tagline as string) || (subtype?.tagline as string) || event.tagline || "";
+  const config = (event.booking_config as BookingConfig) ?? {};
+  const cfg = normalizeBookingConfig(config);
+  const tagline = cfg.tag_line || (subtype?.tagline as string) || event.tagline || "";
   const eventTitle = event.title || "Event";
 
   const dbBadges = (infoItems || []).map((item) => ({
@@ -86,7 +88,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
   });
 
   return (
-    <main className="min-h-dvh w-full overflow-x-hidden bg-[#26300D] text-stone-300 flex flex-col selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
+    <main className="relative min-h-dvh w-full overflow-x-hidden bg-[#26300D] text-stone-300 flex flex-col selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
       <style dangerouslySetInnerHTML={{ __html: `
         html, body {
           background-color: #26300D !important;
@@ -102,14 +104,31 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-      <div className="flex-1 w-full max-w-3xl mx-auto py-4 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
+      {/* Ambient backdrop — a blurred copy of the booking image bleeds its colours
+          into the olive background and fades out, so the banner blends into the page
+          instead of sitting as a hard rectangle. Only when a custom image is set. */}
+      {cfg.booking_image_url && (
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-[60vh] overflow-hidden mask-[linear-gradient(to_bottom,black_0%,transparent_90%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_90%)]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={cfg.booking_image_url}
+            alt=""
+            className="w-full h-full object-cover scale-150 blur-3xl opacity-30"
+          />
+        </div>
+      )}
+
+      <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto py-4 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
 
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
-          {config.booking_image_url ? (
+          {cfg.booking_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={config.booking_image_url as string}
+              src={cfg.booking_image_url}
               alt={eventTitle}
               className="w-full max-w-60 h-auto rounded-2xl object-cover"
             />

@@ -55,7 +55,7 @@ values
   (5, 4, 'birthday', 'rose',    null,                              null,
       'private',   false, true,  true,  false, 0,  '{}'::jsonb),
   (6, 2, 'gig',      'teal',    'Live music, ticketed.',           'Live Gig',
-      'music_act', true,  true,  false, true,  10, '{"collect_phone":true,"collect_group_size":true,"max_group_size":8,"custom_cta_text":"Get Tickets"}'::jsonb);
+      'music_act', true,  true,  false, true,  10, '{"fields":{"phone":{"visible":true,"label":"Phone Number","required":false},"group_size":{"visible":true,"label":"Number of People","required":true,"min":1,"max":8}}}'::jsonb);
 
 -- A badge on the quiz subtype
 insert into public.event_subtype_badges (id, event_subtypes_id, icon, title, description)
@@ -69,7 +69,7 @@ insert into public.events
 values
   (1, CURRENT_DATE + 7,  '20:00+00', '22:00+00', 'Quiz Night',  'Eight rounds, one winning team.', 1, 1, true, true,  true,  0,  '{}'::jsonb),
   (2, CURRENT_DATE + 8,  '20:00+00', '22:00+00', 'Music Bingo', 'Bingo with a beat.',             1, 2, true, true,  true,  0,  '{}'::jsonb),
-  (3, CURRENT_DATE + 9,  '19:30+00', '23:00+00', 'Live Gig',    'Live music, ticketed.',          2, 6, true, true,  false, 10, '{"collect_phone":true,"collect_group_size":true,"max_group_size":8,"custom_cta_text":"Get Tickets"}'::jsonb),
+  (3, CURRENT_DATE + 9,  '19:30+00', '23:00+00', 'Live Gig',    'Live music, ticketed.',          2, 6, true, true,  false, 10, '{"fields":{"phone":{"visible":true,"label":"Phone Number","required":false},"group_size":{"visible":true,"label":"Number of People","required":true,"min":1,"max":8}}}'::jsonb),
   (4, CURRENT_DATE + 10, '21:00+00', '23:30+00', 'The Kinks',   null,                             2, 3, true, false, true,  0,  '{}'::jsonb),
   -- Dedicated quiz for the booking happy-path E2E (public-booking.spec.ts), kept
   -- separate from event 1 so booking it can't affect the render test's event.

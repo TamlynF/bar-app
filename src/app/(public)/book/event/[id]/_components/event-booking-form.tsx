@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { COUNTRY_CODES } from "@/lib/country-codes";
+import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 
 interface EventData {
   id: number;
@@ -30,7 +31,7 @@ interface EventData {
 
 interface Props {
   event: EventData;
-  config: Record<string, unknown>;
+  config: BookingConfig;
 }
 
 function formatEventDate(dateStr: string) {
@@ -47,16 +48,12 @@ export default function EventBookingForm({ event, config }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
 
-  const collectGroupName = !!config.collect_group_name;
-  const groupNameLabel = (config.group_name_label as string) || "Group Name";
-  const collectPhone = config.collect_phone !== false;
-  const collectGroupSize = config.collect_group_size !== false;
-  const collectSpecialRequests = config.collect_special_requests !== false;
-  const maxGroupSize = (config.max_group_size as number) || 10;
-  const groupSizeOptions = (config.group_size_options as number[]) || Array.from({ length: maxGroupSize }, (_, i) => i + 1);
-  const ctaText = (config.custom_cta_text as string) || "Confirm Booking";
-  const confirmationMessage = (config.confirmation_message as string) || "A confirmation email is on its way.";
-
+  const cfg = normalizeBookingConfig(config);
+  const f = cfg.fields;
+  const groupSizeOptions = Array.from(
+    { length: Math.max(1, f.group_size.max - f.group_size.min + 1) },
+    (_, i) => f.group_size.min + i
+  );
   const hasPricing = !!event.payment_amount && event.payment_amount > 0;
   const pricePerPerson = hasPricing ? event.payment_amount! : 0;
 
@@ -105,7 +102,7 @@ export default function EventBookingForm({ event, config }: Props) {
           You&apos;re Booked!
         </h2>
         <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
-          {confirmationMessage}
+          A confirmation email is on its way.
         </p>
         <p className="text-stone-500 text-xs mb-6">
           <span className="font-black text-white">{event.title}</span> — {formatEventDate(event.date)}
@@ -149,43 +146,16 @@ export default function EventBookingForm({ event, config }: Props) {
       {/* Hidden fields */}
       <input type="hidden" name="event_id" value={event.id} />
       <input type="hidden" name="full_name" value={formData.fullName} />
-      <input type="hidden" name="group_name" value={collectGroupName ? (formData.groupName.trim() || formData.fullName) : formData.fullName} />
+      <input type="hidden" name="group_name" value={f.group_name.visible ? (formData.groupName.trim() || formData.fullName) : formData.fullName} />
       <input type="hidden" name="group_size" value={formData.groupSize} />
       <input type="hidden" name="country_code" value={formData.countryCode} />
       <input type="hidden" name="phone_no" value={formData.phoneNo} />
       <input type="hidden" name="special_requests" value={formData.specialRequests} />
 
-      {/* Group Size */}
-      {collectGroupSize && (
-        <div className="space-y-1">
-          <label className={labelClasses}>
-            Number of People <span className="text-red-500">*</span>
-          </label>
-          <div className="relative group">
-            <div className={iconContainerClasses}>
-              <Users className={iconClasses} />
-            </div>
-            <select
-              title="Number of People"
-              name="groupSize"
-              required
-              value={formData.groupSize}
-              onChange={handleInputChange}
-              className={cn(inputBaseClasses, "appearance-none pr-10 cursor-pointer")}
-            >
-              {groupSizeOptions.map((n) => (
-                <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>
-              ))}
-            </select>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 rotate-90 pointer-events-none" />
-          </div>
-        </div>
-      )}
-
       {/* Name */}
       <div className="space-y-1">
         <label className={labelClasses}>
-          Your Name <span className="text-red-500">*</span>
+          {f.name.label} <span className="text-red-500">*</span>
         </label>
         <div className="relative group">
           <div className={iconContainerClasses}>
@@ -203,30 +173,10 @@ export default function EventBookingForm({ event, config }: Props) {
         </div>
       </div>
 
-      {/* Group Name (optional per config) */}
-      {collectGroupName && (
-        <div className="space-y-1">
-          <label className={labelClasses}>{groupNameLabel}</label>
-          <div className="relative group">
-            <div className={iconContainerClasses}>
-              <Tag className={iconClasses} />
-            </div>
-            <input
-              type="text"
-              name="groupName"
-              value={formData.groupName}
-              onChange={handleInputChange}
-              className={inputBaseClasses}
-              placeholder={formData.fullName || "Defaults to your name"}
-            />
-          </div>
-        </div>
-      )}
-
       {/* Email */}
       <div className="space-y-1">
         <label className={labelClasses}>
-          Email Address <span className="text-red-500">*</span>
+          {f.email.label} <span className="text-red-500">*</span>
         </label>
         <div className="relative group">
           <div className={iconContainerClasses}>
@@ -245,9 +195,11 @@ export default function EventBookingForm({ event, config }: Props) {
       </div>
 
       {/* Phone (optional per config) */}
-      {collectPhone && (
+      {f.phone.visible && (
         <div className="space-y-1">
-          <label className={labelClasses}>Phone Number</label>
+          <label className={labelClasses}>
+            {f.phone.label} {f.phone.required && <span className="text-red-500">*</span>}
+          </label>
           <div className="flex gap-2">
             <div className="relative group shrink-0 w-24">
               <div className={iconContainerClasses}>
@@ -274,12 +226,63 @@ export default function EventBookingForm({ event, config }: Props) {
               <input
                 type="tel"
                 name="phoneNo"
+                required={f.phone.required}
                 value={formData.phoneNo}
                 onChange={handleInputChange}
                 className={inputBaseClasses}
                 placeholder="7123 456789"
               />
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Group Name (optional per config) */}
+      {f.group_name.visible && (
+        <div className="space-y-1">
+          <label className={labelClasses}>
+            {f.group_name.label} {f.group_name.required && <span className="text-red-500">*</span>}
+          </label>
+          <div className="relative group">
+            <div className={iconContainerClasses}>
+              <Tag className={iconClasses} />
+            </div>
+            <input
+              type="text"
+              name="groupName"
+              required={f.group_name.required}
+              value={formData.groupName}
+              onChange={handleInputChange}
+              className={inputBaseClasses}
+              placeholder={formData.fullName || "Defaults to your name"}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Group Size */}
+      {f.group_size.visible && (
+        <div className="space-y-1">
+          <label className={labelClasses}>
+            {f.group_size.label} {f.group_size.required && <span className="text-red-500">*</span>}
+          </label>
+          <div className="relative group">
+            <div className={iconContainerClasses}>
+              <Users className={iconClasses} />
+            </div>
+            <select
+              title={f.group_size.label}
+              name="groupSize"
+              required={f.group_size.required}
+              value={formData.groupSize}
+              onChange={handleInputChange}
+              className={cn(inputBaseClasses, "appearance-none pr-10 cursor-pointer")}
+            >
+              {groupSizeOptions.map((n) => (
+                <option key={n} value={n}>{n} {n === 1 ? "person" : "people"}</option>
+              ))}
+            </select>
+            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 rotate-90 pointer-events-none" />
           </div>
         </div>
       )}
@@ -298,15 +301,18 @@ export default function EventBookingForm({ event, config }: Props) {
       )}
 
       {/* Special Requests */}
-      {collectSpecialRequests && (
+      {f.special_requests.visible && (
         <div className="space-y-1">
-          <label className={labelClasses}>Additional Requests (Optional)</label>
+          <label className={labelClasses}>
+            {f.special_requests.label} {f.special_requests.required ? <span className="text-red-500">*</span> : "(Optional)"}
+          </label>
           <div className="relative group">
             <div className={iconContainerClasses}>
               <MessageSquareQuote className={iconClasses} />
             </div>
             <textarea
               name="specialRequests"
+              required={f.special_requests.required}
               value={formData.specialRequests}
               onChange={handleInputChange}
               className={`${inputBaseClasses} min-h-25 py-3 text-sm resize-none`}
@@ -334,7 +340,7 @@ export default function EventBookingForm({ event, config }: Props) {
           ) : hasPricing ? (
             <span className="flex items-center">Pay & Book — £{total.toFixed(2)} <ChevronRight className="ml-2 w-6 h-6" /></span>
           ) : (
-            <span className="flex items-center">{ctaText} <ChevronRight className="ml-2 w-6 h-6" /></span>
+            <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 w-6 h-6" /></span>
           )}
         </button>
       </div>
