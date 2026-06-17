@@ -278,14 +278,14 @@ export default async function EventDetailPage({
                   </div>
 
                   {/* Table */}
-                  <div className="shrink-0 hidden sm:block min-w-[5rem] text-right">
+                  <div className="shrink-0 hidden sm:block min-w-20 text-right">
                     <p className="text-[11px] font-black text-[#1F1F1A]">{tables || "–"}</p>
                     <p className="text-[9px] text-[#5F624F] font-bold uppercase tracking-wider">table</p>
                   </div>
 
                   {/* Paid / Total */}
                   {(b.paid_amount !== null || b.total_amount !== null) && (
-                    <div className="shrink-0 hidden sm:block text-right min-w-[5rem]">
+                    <div className="shrink-0 hidden sm:block text-right min-w-20">
                       <p className="text-[11px] font-black text-[#1F1F1A]">
                         £{(b.paid_amount ?? 0).toFixed(2)}
                         <span className="text-[#5F624F] font-medium"> / £{(b.total_amount ?? 0).toFixed(2)}</span>

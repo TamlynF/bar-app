@@ -4,9 +4,19 @@ import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
+import { planPrivateEventSync } from "@/lib/private-event-sync";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
+
+/** Resolve the employee id of the signed-in admin, for created_by/updated_by stamps. */
+async function currentEmployeeId(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return null;
+  const { data: emp } = await supabase.from("employees").select("id").eq("email", user.email).maybeSingle();
+  return emp?.id ?? null;
+}
 
 export async function getPrivateHireById(id: string) {
   const supabase = await createClient();
@@ -25,12 +35,13 @@ export async function updatePrivateHireStatus(
   adminNotes?: string
 ) {
   const supabase = await createClient();
+  const empId = await currentEmployeeId();
 
   const { data: record, error } = await supabase
     .from("private_hire_requests")
-    .update({ status, admin_notes: adminNotes || null })
+    .update({ status, admin_notes: adminNotes || null, updated_by: empId })
     .eq("id", id)
-    .select("full_name, email, reason_for_hire, reason, selected_date, selected_start_time, selected_end_time, deposit_amount")
+    .select("full_name, email, reason_for_hire, reason, selected_date, selected_start_time, selected_end_time, deposit_amount, event_id")
     .single();
 
   if (error || !record) {
@@ -38,13 +49,18 @@ export async function updatePrivateHireStatus(
     throw new Error("Failed to update status.");
   }
 
-  // When confirmed, create an event with the matching private event type
-  if (status === "confirmed" && record.selected_date) {
-    const reason = record.reason?.toLowerCase() || "other";
+  // Decide how this status change affects the request's linked `events` row.
+  const plan = planPrivateEventSync({
+    status,
+    selectedDate: record.selected_date,
+    eventId: record.event_id,
+  });
 
+  if (plan.action === "insert" || plan.action === "update") {
+    const reason = record.reason?.toLowerCase() || "other";
     const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "private", reason, "private");
 
-    const { data: newEvent } = await supabase.from("events").insert({
+    const eventFields = {
       title: `${record.full_name} — ${record.reason || "Private Hire"}`,
       date: record.selected_date,
       start_time: record.selected_start_time,
@@ -53,14 +69,23 @@ export async function updatePrivateHireStatus(
       event_subtypes_id: eventSubtypeId,
       payment_amount: record.deposit_amount,
       is_active: true,
-    }).select("id").single();
+    };
 
-    if (newEvent) {
-      await supabase
-        .from("private_hire_requests")
-        .update({ event_id: newEvent.id })
-        .eq("id", id);
+    if (plan.action === "update") {
+      // Keep the existing linked event in sync — never create a duplicate.
+      await supabase.from("events").update(eventFields).eq("id", plan.eventId);
+    } else {
+      const { data: newEvent } = await supabase.from("events").insert(eventFields).select("id").single();
+      if (newEvent) {
+        await supabase
+          .from("private_hire_requests")
+          .update({ event_id: newEvent.id })
+          .eq("id", id);
+      }
     }
+  } else if (plan.action === "deactivate") {
+    // Rejecting takes the linked event off the schedule.
+    await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
   }
 
   await sendOutcomeEmail(record.full_name, record.email, status, adminNotes);
