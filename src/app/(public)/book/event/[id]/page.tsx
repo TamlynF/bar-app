@@ -2,6 +2,7 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import EventBookingForm from "./_components/event-booking-form";
+import ImageThemer from "./_components/image-themer";
 import Image from "next/image";
 import {
   Banknote, Calendar, Users, Trophy, Wine,
@@ -104,21 +105,37 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-      {/* Ambient backdrop — a blurred copy of the booking image bleeds its colours
-          into the olive background and fades out, so the banner blends into the page
-          instead of sitting as a hard rectangle. Only when a custom image is set. */}
+      {/* Dynamic theme — the booking image's dominant colour is sampled client-side
+          into the `--ev-theme` CSS variable and bled across the page via gradients,
+          so the whole surface picks up the image's colour. Falls back to the olive
+          theme when there's no image or no readable vibrant colour. */}
       {cfg.booking_image_url && (
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 top-0 h-[60vh] overflow-hidden mask-[linear-gradient(to_bottom,black_0%,transparent_90%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_90%)]"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={cfg.booking_image_url}
-            alt=""
-            className="w-full h-full object-cover scale-150 blur-3xl opacity-30"
+        <>
+          <ImageThemer imageUrl={cfg.booking_image_url} />
+
+          {/* Colour wash — a strong field of the image's colour behind the banner and
+              header that carries a little way behind the top of the form before
+              resolving into the olive base, so the theme bleeds into the form softly. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-[85vh] z-0 opacity-70 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_20%,transparent_58%)]"
           />
-        </div>
+
+          {/* Blurred copy of the banner — carries the real image colours/texture down
+              past its own bottom edge, so the banner melts into the field instead of
+              cutting off on a hard line. */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-0 h-[60vh] z-0 overflow-hidden mask-[linear-gradient(to_bottom,black_0%,transparent_85%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_85%)]"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={cfg.booking_image_url}
+              alt=""
+              className="w-full h-full object-cover scale-150 blur-3xl opacity-45"
+            />
+          </div>
+        </>
       )}
 
       <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto py-4 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
@@ -130,7 +147,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
             <img
               src={cfg.booking_image_url}
               alt={eventTitle}
-              className="w-full max-w-60 h-auto rounded-2xl object-cover"
+              className="w-full h-auto object-contain -mt-2 mask-[linear-gradient(to_bottom,black_90%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_90%,transparent_100%)]"
             />
           ) : (
             <div className="w-full max-w-45 sm:max-w-xs">
@@ -180,6 +197,10 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         {/* Booking Form Card */}
         <div className="bg-white/3 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5 mb-12">
           <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#fdcc4b]/10 blur-[100px] rounded-full pointer-events-none" />
+          {/* Image-colour glow, complements the gold one and ties the card to the theme */}
+          {cfg.booking_image_url && (
+            <div className="absolute -bottom-28 -right-28 w-64 h-64 rounded-full blur-[100px] opacity-12 bg-(--ev-theme) pointer-events-none" />
+          )}
 
           <div className="mb-8 text-center relative z-10">
             <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">Book Your Spot</h3>

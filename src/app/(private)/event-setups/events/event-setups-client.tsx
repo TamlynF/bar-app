@@ -187,6 +187,7 @@ export default function EventsClient({
   const [quizOpen, setQuizOpen] = useState(true);
   const [bookingsOpen, setBookingsOpen] = useState(true);
   const [bookingSettingsOpen, setBookingSettingsOpen] = useState(false);
+  const [bookingPageOpen, setBookingPageOpen] = useState(false);
 
   // ---- Lookups ----
   const typeById = new Map(eventTypes.map((t) => [t.id, t]));
@@ -668,12 +669,13 @@ export default function EventsClient({
                     {detailsOpen && (
                       <>
                         <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
-                        <DetailCell label="Category" value={[toTitleCase(type?.name), toTitleCase(sub?.name)].filter(Boolean).join(" - ") || "—"} />
                         <DetailCell label="Date" value={formatDate(selected.date)} />
                         <DetailCell label="Time" value={selected.start_time || selected.end_time ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}` : "—"} />
-                        {sub?.host_required && <DetailCell label="Host" value={host?.full_name ?? "—"} />}
-                        <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
-                        <DetailCell label="Seating Required" value={selected.seating_required ? "Yes" : "No"} />
+                        {(sub?.host_required || selected.host_employee_id != null) && <DetailCell label="Host" value={host?.full_name ?? "—"} />}
+                        {(sub?.payment_required || hasPricing) && (
+                          <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
+                        )}
+                        {(sub?.seating_required || selected.seating_required) && <DetailCell label="Seating Required" value={selected.seating_required ? "Yes" : "No"} />}
                         {selected.tagline && <DetailCell label="Tagline" value={selected.tagline} />}
                         {selected.external_link && <DetailCell label="External Link" value={selected.external_link} />}
                         {sub?.behavior === "karaoke" && selected.karaoke_request_url && <DetailCell label="Karaoke Request URL" value={selected.karaoke_request_url} />}
@@ -779,13 +781,23 @@ export default function EventsClient({
                             </div>
                           </div>
                         )}
+
+                        {selected.is_bookable && (
+                          <div className="border-t border-[#E6DFC8]">
+                            <button type="button" onClick={() => setBookingPageOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#E6DFC8]/60 hover:bg-[#E6DFC8]/80 transition-colors text-left">
+                              <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Booking Page</span>
+                              <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingPageOpen && "rotate-180")} />
+                            </button>
+                            {bookingPageOpen && (
+                              <div className="p-3 sm:p-4 bg-[#F7F4EA]/40">
+                                <BookingConfigEditor value={selected.booking_config ?? {}} readOnly />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </>
                     )}
                   </div>
-
-                  {selected.is_bookable && (
-                    <BookingConfigEditor value={selected.booking_config ?? {}} readOnly />
-                  )}
 
                   {formError && <ErrorBox message={formError} />}
                 </div>
