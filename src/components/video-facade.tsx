@@ -80,7 +80,29 @@ export function VideoFacade({
       aria-label={`Play ${title}`}
       className={`group relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#1F1F1A] active:scale-[0.99] transition-transform ${className}`}
     >
-      <span className="grid h-14 w-14 place-items-center rounded-full bg-white/90 text-[#1F1F1A] group-hover:scale-110 transition-transform">
+      {/* Poster: YouTube thumbnail, or the video's first frame for direct files. */}
+      {ytId ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`https://img.youtube.com/vi/${ytId}/hqdefault.jpg`}
+          alt=""
+          loading="lazy"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      ) : (
+        <video
+          src={`${url}#t=0.1`}
+          muted
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+          tabIndex={-1}
+          className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+      {/* Dim so the white play control stays legible over any poster. */}
+      <span className="absolute inset-0 bg-black/25 group-hover:bg-black/15 transition-colors" />
+      <span className="relative grid h-14 w-14 place-items-center rounded-full bg-white/90 text-[#1F1F1A] group-hover:scale-110 transition-transform">
         <Play className="w-5 h-5 ml-0.5" fill="currentColor" aria-hidden="true" />
       </span>
       <span className="absolute bottom-0 inset-x-0 p-3 bg-linear-to-t from-black/70 to-transparent text-left">

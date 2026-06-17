@@ -642,7 +642,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {/* Linked Event navigation */}
               {request.event_id && (
                 <Link
-                  href={`/event-setups/events/${request.event_id}`}
+                  href={`/event-setups/events?open=${request.event_id}`}
                   className="flex items-center justify-between gap-3 bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3.5 hover:bg-[#F7F4EA] transition-colors group"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
