@@ -35,11 +35,6 @@ const STATUS_CONFIG: Record<
     badge: "bg-green-50 text-green-700 border-green-200",
     icon: CheckCircle,
   },
-  waitlisted: {
-    label: "Waitlisted",
-    badge: "bg-orange-50 text-orange-700 border-orange-200",
-    icon: Clock,
-  },
   cancelled: {
     label: "Cancelled",
     badge: "bg-red-50 text-red-700 border-red-200",

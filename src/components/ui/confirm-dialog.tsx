@@ -1,11 +1,13 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import styles from "./confirm-dialog.module.css";
 
 interface ConfirmOptions {
   title: string;
   description?: string;
+  /** Optional rich content rendered below the description (e.g. an email preview). */
+  content?: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "destructive" | "default";
@@ -59,6 +61,9 @@ export function useConfirm() {
             </p>
           )}
         </div>
+        {options.content && (
+          <div className="px-6 pb-2 max-h-[45vh] overflow-y-auto">{options.content}</div>
+        )}
         <div className="px-6 pb-6 flex flex-row gap-2">
           <button
             type="button"

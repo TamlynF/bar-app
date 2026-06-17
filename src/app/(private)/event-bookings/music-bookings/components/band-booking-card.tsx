@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { updateBandStatus, updateBandBookingFields } from "../actions";
+import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking } from "../actions";
 import type { BandStatus } from "../actions";
 import {
   ChevronRight,
@@ -13,7 +13,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock3,
-  HelpCircle,
   Loader2,
   Save,
   CreditCard,
@@ -23,11 +22,18 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { VideoFacade } from "@/components/video-facade";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
+import { addHoursToTime, toHHMM, type ClashEvent } from "@/lib/event-clash";
+import { buildRescheduleEmail } from "@/lib/band-emails";
+
+const DEFAULT_START_TIME = "22:00"; // 10pm
 
 interface SocialLinks {
   instagram?: string;
@@ -108,16 +114,6 @@ export const statusTheme: Record<
     icon: <Clock3 className="w-5 h-5" />,
     label: "Pending",
   },
-  waitlisted: {
-    bg: "bg-orange-50",
-    text: "text-orange-700",
-    border: "border-orange-200",
-    dot: "bg-orange-500",
-    ring: "ring-orange-500/40",
-    cardBorder: "border-orange-500/50",
-    icon: <HelpCircle className="w-5 h-5" />,
-    label: "Waitlisted",
-  },
   cancelled: {
     bg: "bg-red-50",
     text: "text-red-700",
@@ -165,16 +161,20 @@ function formatTime12(t?: string | null): string {
 }
 
 export function BandBookingCard({ request }: { request: BandRequest }) {
+  const { confirm, ConfirmDialogUI } = useConfirm();
   const [open, setOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   const [selectedDate, setSelectedDate] = useState(request.selected_date || "");
-  const [selectedStartTime, setSelectedStartTime] = useState(request.selected_start_time || "");
-  const [selectedEndTime, setSelectedEndTime] = useState(request.selected_end_time || "");
+  const [selectedStartTime, setSelectedStartTime] = useState(toHHMM(request.selected_start_time));
+  const [selectedEndTime, setSelectedEndTime] = useState(toHHMM(request.selected_end_time));
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [clashes, setClashes] = useState<ClashEvent[]>([]);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   const status = normStatus(request.status);
   const theme = statusTheme[status] || statusTheme.pending;
+  const editable = status !== "cancelled";
 
   const socials = request.social_links
     ? Object.entries(request.social_links).filter(([, v]) => v)
@@ -185,16 +185,61 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const needsPayment =
     (request.payment_amount ?? 0) > 0 && request.payment_status === "unpaid";
 
+  // Original (normalised) values, to detect whether date/time actually changed.
+  const origDate = request.selected_date || "";
+  const origStart = toHHMM(request.selected_start_time);
+  const origEnd = toHHMM(request.selected_end_time);
+  const dateTimeChanged =
+    selectedDate !== origDate || selectedStartTime !== origStart || selectedEndTime !== origEnd;
+
+  // Picking a date defaults the start to 10pm (if unset); changing the start always
+  // re-derives the end as start + 2 hours.
+  const applyDate = (d: string) => {
+    setSelectedDate(d);
+    setClashes([]);
+    if (d && !selectedStartTime) {
+      setSelectedStartTime(DEFAULT_START_TIME);
+      setSelectedEndTime(addHoursToTime(DEFAULT_START_TIME, 2));
+    }
+  };
+  const applyStart = (v: string) => {
+    setSelectedStartTime(v);
+    setSelectedEndTime(v ? addHoursToTime(v, 2) : "");
+    setClashes([]);
+  };
+
+  // Look up active events that overlap the chosen slot (excluding this booking's own
+  // linked event). Returns the clashes and stores them for display.
+  async function findClashes(): Promise<ClashEvent[]> {
+    if (!selectedDate) {
+      setClashes([]);
+      return [];
+    }
+    const list = await getClashingEvents(
+      selectedDate,
+      selectedStartTime || null,
+      selectedEndTime || null,
+      request.event_id
+    );
+    setClashes(list);
+    return list;
+  }
+
   function handleAction(newStatus: BandStatus) {
     setError(null);
+    setClashes([]);
     startTransition(async () => {
       try {
+        // Confirming places an event — block it if the slot clashes.
+        if (newStatus === "confirmed") {
+          const c = await findClashes();
+          if (c.length) {
+            setError("This time slot is full.");
+            return;
+          }
+        }
         // Save date/time fields first if they changed
-        if (
-          selectedDate !== (request.selected_date || "") ||
-          selectedStartTime !== (request.selected_start_time || "") ||
-          selectedEndTime !== (request.selected_end_time || "")
-        ) {
+        if (dateTimeChanged) {
           await updateBandBookingFields(request.id, {
             selected_date: selectedDate || null,
             selected_start_time: selectedStartTime || null,
@@ -209,19 +254,73 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     });
   }
 
-  function handleSaveFields() {
+  // Saving a CONFIRMED booking: if the date/time changed, confirm with the admin
+  // (showing the email preview) that the booking will move back to pending, the
+  // linked event will be taken off the schedule, and the band will be emailed.
+  function handleConfirmedSave() {
     setError(null);
+    setClashes([]);
     startTransition(async () => {
       try {
-        await updateBandBookingFields(request.id, {
+        const c = await findClashes();
+        if (c.length) {
+          setError("This time slot is full.");
+          return;
+        }
+
+        if (!dateTimeChanged) {
+          await updateBandBookingFields(request.id, { admin_notes: adminNotes || null });
+          toast.success("Changes saved");
+          return;
+        }
+
+        const preview = buildRescheduleEmail({
+          name: request.booker_name,
+          groupName: request.group_name,
+          date: selectedDate || null,
+          startTime: selectedStartTime || null,
+          endTime: selectedEndTime || null,
+        });
+
+        const ok = await confirm({
+          title: "Update slot & notify band",
+          description:
+            "This moves the booking back to Pending, takes the linked event off the schedule, and emails the band to re-confirm. Preview:",
+          confirmLabel: "Update & Email",
+          content: (
+            <div className="rounded-xl border border-[#E6DFC8] bg-white p-3 text-left space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+                To: {request.email}
+              </p>
+              <p className="text-xs font-black text-[#1F1F1A]">{preview.subject}</p>
+              <p className="text-xs text-[#5F624F]">{preview.greeting}</p>
+              {preview.body.map((p, i) => (
+                <p key={i} className="text-xs text-[#5F624F] leading-relaxed">{p}</p>
+              ))}
+              {preview.dateLabel && (
+                <div className="mt-1 rounded-lg bg-[#F7F4EA] border border-[#E6DFC8] px-3 py-2">
+                  <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">New Slot</p>
+                  <p className="text-sm font-black text-[#1F1F1A]">{preview.dateLabel}</p>
+                  {preview.timeLabel && (
+                    <p className="text-xs font-bold text-[#5F624F]">{preview.timeLabel}</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ),
+        });
+        if (!ok) return;
+
+        await rescheduleConfirmedBooking(request.id, {
           selected_date: selectedDate || null,
           selected_start_time: selectedStartTime || null,
           selected_end_time: selectedEndTime || null,
           admin_notes: adminNotes || null,
         });
-        toast.success("Changes saved");
+        toast.success("Booking updated — band notified");
+        setOpen(false);
       } catch {
-        setError("Failed to save. Please try again.");
+        setError("Failed to update. Please try again.");
       }
     });
   }
@@ -348,25 +447,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     <SheetRow label="Type" value={toTitleCase(request.type)} />
                     <SheetRow label="Genre" value={toTitleCase(request.genre)} />
 
-                    {/* Selected date/time */}
-                    {selectedDate && (
-                      <SheetRow
-                        label="Selected Date"
-                        value={format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")}
-                      />
-                    )}
-                    {(selectedStartTime || selectedEndTime) && (
-                      <SheetRow
-                        label="Time"
-                        value={
-                          [formatTime12(selectedStartTime), formatTime12(selectedEndTime)]
-                            .filter(Boolean)
-                            .join(" – ") || "—"
-                        }
-                      />
-                    )}
-
-                    {/* Preferred dates with selection */}
+                    {/* Preferred dates — applicant's choices, shown above the selected slot */}
                     {dates.length > 0 && (
                       <div className="py-3 border-b border-[#E6DFC8] last:border-0">
                         <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] block mb-2">
@@ -379,14 +460,14 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                               <button
                                 key={i}
                                 type="button"
-                                onClick={() => {
-                                  setSelectedDate(isSelected ? "" : d);
-                                }}
+                                disabled={!editable}
+                                onClick={() => applyDate(isSelected ? "" : d)}
                                 className={cn(
                                   "px-3 py-1.5 rounded-xl text-xs font-bold border transition-all",
                                   isSelected
                                     ? "bg-[#5C4033] text-white border-[#5C4033]"
-                                    : "bg-white border-[#E6DFC8] text-[#1F1F1A] hover:border-[#5C4033]/30"
+                                    : "bg-white border-[#E6DFC8] text-[#1F1F1A] hover:border-[#5C4033]/30",
+                                  !editable && "opacity-60 cursor-not-allowed"
                                 )}
                               >
                                 {format(new Date(d + "T00:00:00"), "EEE, d MMM")}
@@ -397,12 +478,49 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                       </div>
                     )}
 
-                    {/* Time inputs when a date is selected */}
-                    {selectedDate && (
-                      <div className="py-3 border-b border-[#E6DFC8] last:border-0">
-                        <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] block mb-2">
-                          Performance Time
-                        </span>
+                    {/* Selected date — calendar popover when editable, read-only otherwise */}
+                    <div className="py-3 border-b border-[#E6DFC8] last:border-0">
+                      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] block mb-2">
+                        Selected Date
+                      </span>
+                      {editable ? (
+                        <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              className="w-full inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] text-sm font-bold text-[#1F1F1A] hover:border-[#5C4033]/30 transition-colors"
+                            >
+                              <CalendarDays className="w-4 h-4 text-[#5F624F]/60 shrink-0" />
+                              {selectedDate
+                                ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
+                                : "Pick a date"}
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="start" className="w-auto p-0 bg-white border-2 border-[#E6DFC8] rounded-2xl">
+                            <Calendar
+                              mode="single"
+                              selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
+                              onSelect={(d) => {
+                                if (d) applyDate(format(d, "yyyy-MM-dd"));
+                                setDatePickerOpen(false);
+                              }}
+                              autoFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <p className="text-sm font-bold text-[#1F1F1A]">
+                          {selectedDate ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy") : "—"}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Performance time — defaults to 10pm / start + 2h */}
+                    <div className="py-3 border-b border-[#E6DFC8] last:border-0">
+                      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] block mb-2">
+                        Performance Time
+                      </span>
+                      {editable ? (
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[9px] font-bold text-[#5F624F] uppercase block mb-1">Start</label>
@@ -410,7 +528,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                               type="time"
                               aria-label="Performance start time"
                               value={selectedStartTime}
-                              onChange={(e) => setSelectedStartTime(e.target.value)}
+                              onChange={(e) => applyStart(e.target.value)}
                               className="w-full px-3 py-2 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] text-sm font-bold text-[#1F1F1A] focus:outline-none focus:border-[#5C4033]/30"
                             />
                           </div>
@@ -420,13 +538,20 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                               type="time"
                               aria-label="Performance end time"
                               value={selectedEndTime}
-                              onChange={(e) => setSelectedEndTime(e.target.value)}
+                              onChange={(e) => {
+                                setSelectedEndTime(e.target.value);
+                                setClashes([]);
+                              }}
                               className="w-full px-3 py-2 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] text-sm font-bold text-[#1F1F1A] focus:outline-none focus:border-[#5C4033]/30"
                             />
                           </div>
                         </div>
-                      </div>
-                    )}
+                      ) : (
+                        <p className="text-sm font-bold text-[#1F1F1A]">
+                          {[formatTime12(selectedStartTime), formatTime12(selectedEndTime)].filter(Boolean).join(" – ") || "—"}
+                        </p>
+                      )}
+                    </div>
 
                     {/* Notes from applicant */}
                     {request.notes && (
@@ -618,6 +743,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   </div>
                 )}
 
+                <ClashList clashes={clashes} />
                 {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
 
                 <div className="flex gap-2">
@@ -636,19 +762,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleAction("waitlisted")}
-                    disabled={isPending}
-                    className="flex-1 flex items-center justify-center gap-2 bg-orange-50 hover:bg-orange-100 text-orange-700 border border-orange-200 font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
-                  >
-                    {isPending ? (
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    ) : (
-                      <HelpCircle className="w-3.5 h-3.5" />
-                    )}
-                    Waitlist
-                  </button>
-                  <button
-                    type="button"
                     onClick={() => handleAction("cancelled")}
                     disabled={isPending}
                     className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
@@ -664,34 +777,67 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               </div>
             )}
 
-            {/* Save button for non-pending (confirmed/waitlisted) — to update dates/notes */}
-            {(status === "confirmed" || status === "waitlisted") && (
-              <div className="flex gap-2">
+            {/* Confirmed — save (reschedule) or move the booking to pending / cancelled */}
+            {status === "confirmed" && (
+              <div className="space-y-3">
+                <ClashList clashes={clashes} />
+                {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
                 <button
                   type="button"
-                  onClick={handleSaveFields}
+                  onClick={handleConfirmedSave}
                   disabled={isPending}
-                  className="flex-1 flex items-center justify-center gap-2 bg-[#5C4033] hover:bg-[#4a3529] text-white font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
+                  className="w-full flex items-center justify-center gap-2 bg-[#5C4033] hover:bg-[#4a3529] text-white font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
                 >
                   {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                   Save Changes
                 </button>
-                {status === "confirmed" && (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleAction("pending")}
+                    disabled={isPending}
+                    className="flex-1 flex items-center justify-center gap-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
+                  >
+                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock3 className="w-3.5 h-3.5" />}
+                    Set Pending
+                  </button>
                   <button
                     type="button"
                     onClick={() => handleAction("cancelled")}
                     disabled={isPending}
-                    className="flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs uppercase tracking-wider rounded-2xl py-3 px-5 transition-all disabled:opacity-50"
+                    className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
                   >
                     {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
                     Cancel
                   </button>
-                )}
+                </div>
               </div>
             )}
           </div>
+          {ConfirmDialogUI}
         </SheetContent>
       </Sheet>
     </>
+  );
+}
+
+function ClashList({ clashes }: { clashes: ClashEvent[] }) {
+  if (clashes.length === 0) return null;
+  return (
+    <div className="p-3 bg-red-50 border border-red-200 rounded-xl space-y-1.5">
+      <div className="flex items-center gap-2">
+        <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
+        <p className="text-[10px] font-black uppercase text-red-700 tracking-tight">
+          Time slot full — conflicts with:
+        </p>
+      </div>
+      <ul className="list-disc pl-6 space-y-0.5">
+        {clashes.map((c) => (
+          <li key={c.id} className="text-[11px] font-bold text-red-700">
+            {c.title} ({c.start} – {c.end})
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

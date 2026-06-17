@@ -46,9 +46,8 @@ export default function BandBookingListClient({
         // Sort: pending first, then by created_at desc
         const statusOrder: Record<string, number> = {
           pending: 0,
-          waitlisted: 1,
-          confirmed: 2,
-          cancelled: 3,
+          confirmed: 1,
+          cancelled: 2,
         };
         const sa = statusOrder[normStatus(a.status)] ?? 4;
         const sb = statusOrder[normStatus(b.status)] ?? 4;
@@ -66,9 +65,6 @@ export default function BandBookingListClient({
       ),
       pending: getCount(
         initialRequests.filter((r) => normStatus(r.status) === "pending")
-      ),
-      waitlisted: getCount(
-        initialRequests.filter((r) => normStatus(r.status) === "waitlisted")
       ),
       cancelled: getCount(
         initialRequests.filter((r) => normStatus(r.status) === "cancelled")
@@ -104,13 +100,6 @@ export default function BandBookingListClient({
                 label="Confirmed"
                 isActive={activeStatusFilters.has("confirmed")}
                 onClick={() => toggleStatusFilter("confirmed")}
-              />
-              <StatusCircle
-                count={stats.waitlisted}
-                status="waitlisted"
-                label="Waitlisted"
-                isActive={activeStatusFilters.has("waitlisted")}
-                onClick={() => toggleStatusFilter("waitlisted")}
               />
               <StatusCircle
                 count={stats.cancelled}

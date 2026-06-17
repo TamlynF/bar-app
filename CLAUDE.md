@@ -207,8 +207,8 @@ The booking pages share a public dark theme but each has its own logic:
 | `events` / `event_types` | Schedule; events lazily created on first booking for a date |
 | `booking_table_mappings` | Seating assignment for confirmed bookings |
 | `tables` | Physical tables with `max_capacity` |
-| `band_booking_requests` | Stage applications — `pending_review`, `approved`, `rejected` |
-| `private_hire_requests` | Private hire enquiries — same flow |
+| `band_booking_requests` | Stage applications — status: `pending`, `confirmed`, `cancelled`. `confirmed` (with a date) places an active `events` row; any other status deactivates the linked event. Separate `payment_status` (`unpaid`/`paid`) tracks the fee |
+| `private_hire_requests` | Private hire enquiries — status: `pending_review`, `confirmed`, `rejected` (note: a different set from `band_booking_requests`) |
 | `quiz_category_configs` | Quiz rounds + question count targets |
 | `past_quiz_questions` | Archive (fed back to Gemini to avoid repeats) |
 | `gallery_images` | Media on the public gallery and homepage |

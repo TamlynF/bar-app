@@ -75,6 +75,15 @@ values
   -- separate from event 1 so booking it can't affect the render test's event.
   (5, CURRENT_DATE + 14, '20:00+00', '22:00+00', 'Quiz Night (Booking E2E)', 'Reserved for the booking test.', 1, 1, true, true, true, 0, '{}'::jsonb);
 
+-- ── Band applications (review queue) ─────────────────────────────────────────
+
+insert into public.band_booking_requests
+  (id, booker_name, email, phone_no, type, genre, group_name, status, preferred_dates, notes)
+values
+  ('b0000000-0000-0000-0000-000000000001', 'PW Band Booker', 'pwband@example.com', '+44 7700 900123',
+   'band', 'rock', 'The Test Band', 'pending',
+   ARRAY[(CURRENT_DATE + 21), (CURRENT_DATE + 28)]::date[], 'Flexible on set length.');
+
 -- ── Reset identity sequences past the seeded ids ─────────────────────────────
 
 select setval(pg_get_serial_sequence('public.event_types', 'id'),       (select max(id) from public.event_types));

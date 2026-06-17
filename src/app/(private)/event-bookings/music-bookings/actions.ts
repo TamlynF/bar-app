@@ -4,11 +4,14 @@ import { createClient } from "@/lib/supabase/server";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
+import { planBandEventSync, type BandStatus as BandStatusType } from "@/lib/band-event-sync";
+import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
+import { buildRescheduleEmail } from "@/lib/band-emails";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
-export type BandStatus = "pending" | "confirmed" | "waitlisted" | "cancelled";
+export type BandStatus = BandStatusType;
 
 export async function getBandBookingById(id: string) {
   const supabase = await createClient();
@@ -49,6 +52,76 @@ export async function updateBandBookingFields(
   revalidatePath("/dashboard");
 }
 
+/**
+ * Returns the active events on `date` whose time window overlaps [startTime, endTime).
+ * `excludeEventId` skips the booking's own linked event so it never clashes with itself.
+ */
+export async function getClashingEvents(
+  date: string,
+  startTime: string | null,
+  endTime: string | null,
+  excludeEventId?: number | null
+): Promise<ClashEvent[]> {
+  if (!date) return [];
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("events")
+    .select("id, title, start_time, end_time")
+    .eq("date", date)
+    .eq("is_active", true);
+  if (excludeEventId != null) query = query.neq("id", excludeEventId);
+
+  const { data } = await query;
+  return findEventClashes({ start: startTime, end: endTime }, (data ?? []) as ClashEventInput[]);
+}
+
+/**
+ * Used when an admin edits the date/time of an already-confirmed booking. The
+ * booking drops back to "pending", its linked event is deactivated, and the band
+ * is emailed to re-confirm the new slot.
+ */
+export async function rescheduleConfirmedBooking(
+  id: string,
+  fields: {
+    selected_date: string | null;
+    selected_start_time: string | null;
+    selected_end_time: string | null;
+    admin_notes?: string | null;
+  }
+) {
+  const supabase = await createClient();
+
+  const { data: record, error } = await supabase
+    .from("band_booking_requests")
+    .update({ ...fields, status: "pending" })
+    .eq("id", id)
+    .select("booker_name, email, group_name, selected_date, selected_start_time, selected_end_time, event_id")
+    .single();
+
+  if (error || !record) throw new Error("Failed to update booking.");
+
+  // Back to pending → take the linked event off the schedule.
+  const plan = planBandEventSync({ status: "pending", selectedDate: record.selected_date, eventId: record.event_id });
+  if (plan.action === "deactivate") {
+    await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
+  }
+
+  await sendRescheduleEmail(
+    record.booker_name,
+    record.email,
+    record.group_name,
+    record.selected_date,
+    record.selected_start_time,
+    record.selected_end_time
+  );
+
+  revalidatePath("/event-bookings/music-bookings");
+  revalidatePath("/dashboard");
+  revalidatePath("/event-setups/events");
+  revalidatePath("/");
+}
+
 export async function updateBandStatus(
   id: string,
   status: BandStatus,
@@ -61,7 +134,7 @@ export async function updateBandStatus(
     .update({ status, admin_notes: adminNotes || null })
     .eq("id", id)
     .select(
-      "booker_name, email, type, genre, group_name, selected_date, selected_start_time, selected_end_time, payment_amount"
+      "booker_name, email, type, genre, group_name, selected_date, selected_start_time, selected_end_time, payment_amount, event_id"
     )
     .single();
 
@@ -69,34 +142,50 @@ export async function updateBandStatus(
     throw new Error("Failed to update status.");
   }
 
-  // When confirmed, create an event with the matching music event type
-  if (status === "confirmed" && record.selected_date) {
+  // Decide how this status change affects the booking's linked `events` row.
+  const plan = planBandEventSync({
+    status,
+    selectedDate: record.selected_date,
+    eventId: record.event_id,
+  });
+
+  if (plan.action === "insert" || plan.action === "update") {
     const bandSubType = record.type?.toLowerCase() || "other";
 
     // Resolve the music event type + subtype, creating both if missing
     const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "music", bandSubType, "music_act");
 
-    const { data: newEvent } = await supabase
-      .from("events")
-      .insert({
-        title: record.group_name || record.booker_name,
-        date: record.selected_date,
-        start_time: record.selected_start_time,
-        end_time: record.selected_end_time,
-        event_types_id: eventTypeId,
-        event_subtypes_id: eventSubtypeId,
-        payment_amount: record.payment_amount,
-        is_active: true,
-      })
-      .select("id")
-      .single();
+    const eventFields = {
+      title: record.group_name || record.booker_name,
+      date: record.selected_date,
+      start_time: record.selected_start_time,
+      end_time: record.selected_end_time,
+      event_types_id: eventTypeId,
+      event_subtypes_id: eventSubtypeId,
+      payment_amount: record.payment_amount,
+      is_active: true,
+    };
 
-    if (newEvent) {
-      await supabase
-        .from("band_booking_requests")
-        .update({ event_id: newEvent.id })
-        .eq("id", id);
+    if (plan.action === "update") {
+      // Keep the existing linked event in sync with the (possibly changed) date/time.
+      await supabase.from("events").update(eventFields).eq("id", plan.eventId);
+    } else {
+      const { data: newEvent } = await supabase
+        .from("events")
+        .insert(eventFields)
+        .select("id")
+        .single();
+
+      if (newEvent) {
+        await supabase
+          .from("band_booking_requests")
+          .update({ event_id: newEvent.id })
+          .eq("id", id);
+      }
     }
+  } else if (plan.action === "deactivate") {
+    // Cancelling a confirmed booking takes its linked event off the schedule.
+    await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
   }
 
   // Send outcome email for confirmed or cancelled
@@ -136,6 +225,44 @@ function formatDateLong(d?: string | null): string {
     month: "long",
     year: "numeric",
   });
+}
+
+async function sendRescheduleEmail(
+  name: string,
+  email: string,
+  groupName: string | null,
+  date: string | null,
+  startTime: string | null,
+  endTime: string | null
+) {
+  const e = buildRescheduleEmail({ name, groupName, date, startTime, endTime });
+
+  const html = `
+    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F4EA;border-radius:16px;overflow:hidden;">
+      <div style="background:#5C4033;padding:32px 24px;text-align:center;">
+        <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
+          ${e.heading}
+        </h1>
+        ${groupName ? `<p style="margin:8px 0 0;color:#E6DFC8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
+      </div>
+      <div style="padding:32px 24px;">
+        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.greeting}</p>
+        ${e.body.map((p) => `<p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
+        ${e.dateLabel ? `
+        <div style="background:#fff;border:2px solid #E6DFC8;border-radius:12px;padding:20px;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">New Performance Slot</p>
+          <p style="margin:0;font-size:18px;font-weight:900;color:#1F1F1A;">${e.dateLabel}</p>
+          ${e.timeLabel ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5F624F;">${e.timeLabel}</p>` : ""}
+        </div>` : ""}
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
+        <p style="margin:0;font-size:11px;color:#5F624F;">
+          Don Fenticas — Unit 1, Regent St, Hinckley LE10 0BB
+        </p>
+      </div>
+    </div>`;
+
+  await resend.emails.send({ from: FROM, to: email, subject: e.subject, html });
 }
 
 async function sendOutcomeEmail(
