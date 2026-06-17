@@ -2,7 +2,6 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { getPrivateHireById } from "../actions";
 import PrivateHireDetailClient from "./private-hire-detail-client";
-import BackButton from "@/components/ui/back-button";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import {
   CheckCircle,
@@ -93,9 +92,10 @@ export default async function PrivateHireDetailPage({
     (request as Record<string, unknown>).preferred_date as string | null;
   const displayStartTime =
     (request as Record<string, unknown>).selected_start_time as string | null ??
-    (request as Record<string, unknown>).preferred_time as string | null;
+    (request as Record<string, unknown>).preferred_start_time as string | null;
   const displayEndTime =
-    (request as Record<string, unknown>).selected_end_time as string | null;
+    (request as Record<string, unknown>).selected_end_time as string | null ??
+    (request as Record<string, unknown>).preferred_end_time as string | null;
   const depositAmount =
     (request as Record<string, unknown>).deposit_amount as number | null;
   const paidAmount =

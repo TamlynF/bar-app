@@ -71,25 +71,6 @@ export default async function GeneralEventBookingsPage({
     <div className="flex-1 bg-background min-h-screen">
       <div className="p-2 md:p-8 max-w-7xl mx-auto space-y-4">
 
-        {/* Back + title */}
-        {/* <div>
-          <Link
-            href="/event-bookings"
-            className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#1F1F1A] transition-colors mb-3"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            Event Bookings
-          </Link>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-xl font-black text-[#1F1F1A] uppercase tracking-tight leading-tight">
-              {toTitleCase(subtype)}
-            </h1>
-            <span className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] opacity-50">
-              {toTitleCase(type)}
-            </span>
-          </div>
-        </div> */}
-
         {/* Event selector */}
         <div className="w-full bg-white rounded-2xl border border-[#E6DFC8] shadow-sm p-1.5">
           <EventTypeFilter
