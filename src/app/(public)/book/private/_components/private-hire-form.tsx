@@ -2,6 +2,7 @@
 
 import React, { useState, useTransition } from "react";
 import { createPrivateHire } from "@/app/(public)/_actions/create-private-hire";
+import { privateHireSubtypeLabel, type PrivateHireSubtype } from "@/lib/private-hire-subtype";
 import {
   CheckCircle2, ArrowLeft, ChevronRight, Calendar, Clock, Users, Info,
   User, Mail, Phone, MessageSquareQuote, Tag,
@@ -19,7 +20,7 @@ const STEPS = [
   { number: 3, title: "Final Details", subtitle: "Anything else we should know?" },
 ];
 
-export default function PrivateHireForm() {
+export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSubtype[] }) {
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,8 +34,21 @@ export default function PrivateHireForm() {
   const [preferredDate, setPreferredDate] = useState("");
   const [preferredStartTime, setPreferredStartTime] = useState("");
   const [preferredEndTime, setPreferredEndTime] = useState("");
-  const [reason, setReason] = useState("");
+  const [eventSubtypeId, setEventSubtypeId] = useState("");
   const [additionalReqs, setAdditionalReqs] = useState("");
+
+  const selectedSubtype = subtypes.find((s) => String(s.id) === eventSubtypeId);
+
+  // Whether the current step's required fields are all filled — drives the Next button.
+  const guestCountNum = parseInt(guestCount, 10);
+  const step1Valid = fullName.trim() !== "" && email.trim() !== "" && email.includes("@");
+  const step2Valid =
+    !isNaN(guestCountNum) && guestCountNum >= 1 &&
+    preferredDate !== "" &&
+    preferredStartTime !== "" &&
+    preferredEndTime !== "" &&
+    eventSubtypeId !== "";
+  const canProceed = step === 1 ? step1Valid : step === 2 ? step2Valid : true;
 
   function handleNext() {
     setStepError(null);
@@ -45,7 +59,7 @@ export default function PrivateHireForm() {
     if (step === 2) {
       const count = parseInt(guestCount, 10);
       if (isNaN(count) || count < 1) { setStepError("Please enter a valid number of guests."); return; }
-      if (!reason) { setStepError("Please select a reason for hire."); return; }
+      if (!eventSubtypeId) { setStepError("Please select a reason for hire."); return; }
     }
     setStep((s) => s + 1);
   }
@@ -69,7 +83,8 @@ export default function PrivateHireForm() {
           preferred_date: preferredDate || undefined,
           preferred_start_time: preferredStartTime || undefined,
           preferred_end_time: preferredEndTime || undefined,
-          reason_for_hire: reason,
+          event_subtypes_id: selectedSubtype ? selectedSubtype.id : null,
+          reason_for_hire: privateHireSubtypeLabel(selectedSubtype, "Private Hire"),
           additional_requirements: additionalReqs || undefined,
         });
         setSubmitted(true);
@@ -258,22 +273,16 @@ export default function PrivateHireForm() {
                 </div>
                 <select
                   title="Reason for Hire"
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  value={eventSubtypeId}
+                  onChange={(e) => setEventSubtypeId(e.target.value)}
                   className={`${inputClass} appearance-none pr-10 cursor-pointer`}
                 >
                   <option value="">Select a reason</option>
-                  <option value="Birthday">Birthday</option>
-                  <option value="Retirement">Retirement</option>
-                  <option value="Corporate Event">Corporate Event</option>
-                  <option value="Anniversary">Anniversary</option>
-                  <option value="Engagement">Engagement</option>
-                  <option value="Wedding Reception">Wedding Reception</option>
-                  <option value="Graduation">Graduation</option>
-                  <option value="Fundraiser">Fundraiser</option>
-                  <option value="Leaving Party">Leaving Party</option>
-                  <option value="Christmas Party">Christmas Party</option>
-                  <option value="Other">Other</option>
+                  {subtypes.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {privateHireSubtypeLabel(s)}
+                    </option>
+                  ))}
                 </select>
                 <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 rotate-90 pointer-events-none" />
               </div>
@@ -302,12 +311,12 @@ export default function PrivateHireForm() {
             </div>
 
             {/* Deposit notice */}
-            <div className="flex items-start gap-3 bg-[#FDCC4B]/8 border border-[#FDCC4B]/20 rounded-2xl px-4 py-3.5 mt-2">
+            {/* <div className="flex items-start gap-3 bg-[#FDCC4B]/8 border border-[#FDCC4B]/20 rounded-2xl px-4 py-3.5 mt-2">
               <Info className="w-4 h-4 text-[#FDCC4B] shrink-0 mt-0.5" />
               <p className="text-xs text-stone-300 font-medium leading-relaxed">
                 <span className="font-black text-[#FDCC4B]">Deposit required.</span> Once we&apos;ve reviewed your enquiry, we&apos;ll be in touch to confirm availability and share deposit payment details to secure your booking.
               </p>
-            </div>
+            </div> */}
           </>
         )}
 
@@ -344,7 +353,8 @@ export default function PrivateHireForm() {
             key="next"
             type="button"
             onClick={handleNext}
-            className="flex-1 flex items-center justify-center gap-2 h-16 bg-[#fdcc4b] text-[#26300D] font-black text-lg uppercase tracking-widest rounded-2xl transition-all hover:bg-[#e5b843] active:scale-95 shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)]"
+            disabled={!canProceed}
+            className="flex-1 flex items-center justify-center gap-2 h-16 bg-[#fdcc4b] text-[#26300D] font-black text-lg uppercase tracking-widest rounded-2xl transition-all hover:bg-[#e5b843] active:scale-95 shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#fdcc4b] disabled:active:scale-100"
           >
             Next
             <ChevronRight className="w-4 h-4" />

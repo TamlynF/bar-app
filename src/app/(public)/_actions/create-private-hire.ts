@@ -16,6 +16,7 @@ export interface PrivateHireData {
   preferred_date?: string;
   preferred_start_time?: string;
   preferred_end_time?: string;
+  event_subtypes_id: number | null;
   reason_for_hire: string;
   additional_requirements?: string;
 }
@@ -34,10 +35,10 @@ export async function createPrivateHire(data: PrivateHireData) {
         preferred_date: data.preferred_date || null,
         preferred_start_time: data.preferred_start_time || null,
         preferred_end_time: data.preferred_end_time || null,
+        event_subtypes_id: data.event_subtypes_id,
         reason_for_hire: data.reason_for_hire,
-        reason: data.reason_for_hire,
         additional_requirements: data.additional_requirements || null,
-        status: "pending_review",
+        status: "pending",
       },
     ])
     .select("id")

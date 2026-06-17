@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 
 import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
+import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import { adminBookingsHref } from "@/lib/booking-links";
 import SectionLabel from "./components/section-label";
 import { EventRowListClient } from "./components/event-row-list-client";
@@ -41,6 +42,7 @@ type PrivateHireRow = {
   selected_end_time: string | null;
   reason_for_hire: string;
   reason: string | null;
+  event_subtypes: { name: string; default_event_title: string | null } | { name: string; default_event_title: string | null }[] | null;
   full_name: string;
   email: string;
   phone_no: string | null;
@@ -174,7 +176,7 @@ export default async function DashboardPage() {
     supabase
       .from("private_hire_requests")
       .select("*", { count: "exact", head: true })
-      .eq("status", "pending_review")
+      .eq("status", "pending")
       .gte("preferred_date", firstDayOfMonth),
     supabase
       .from("band_booking_requests")
@@ -246,7 +248,7 @@ export default async function DashboardPage() {
     supabase.from("tables").select("id, max_capacity").eq("available", true),
     supabase
       .from("private_hire_requests")
-      .select("id, event_id, selected_date, selected_start_time, selected_end_time, reason_for_hire, reason, full_name, email, phone_no, guest_count, deposit_amount, paid_amount")
+      .select("id, event_id, selected_date, selected_start_time, selected_end_time, reason_for_hire, reason, event_subtypes:event_subtypes_id ( name, default_event_title ), full_name, email, phone_no, guest_count, deposit_amount, paid_amount")
       .eq("status", "confirmed")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
@@ -422,7 +424,7 @@ export default async function DashboardPage() {
       outstanding: ph.deposit_amount !== null && ph.paid_amount !== null
         ? Math.max(0, ph.deposit_amount - ph.paid_amount)
         : null,
-      reasonForHire: ph.reason || ph.reason_for_hire,
+      reasonForHire: privateHireSubtypeLabel(unwrapSubtype(ph.event_subtypes), ph.reason_for_hire),
     } : undefined;
 
     const bb = bandByEventId.get(ev.id);
@@ -506,7 +508,7 @@ export default async function DashboardPage() {
               icon={Building2}
               label="Private Hires"
               count={pendingPrivate ?? 0}
-              href="/event-bookings/private-bookings?status=pending_review"
+              href="/event-bookings/private-bookings?status=pending"
               activeColor="text-blue-600"
               activeBg="bg-blue-50"
               activeDot="bg-blue-500"

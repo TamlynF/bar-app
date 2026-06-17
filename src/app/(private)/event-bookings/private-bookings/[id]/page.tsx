@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getPrivateHireById } from "../actions";
 import PrivateHireDetailClient from "./private-hire-detail-client";
 import BackButton from "@/components/ui/back-button";
+import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import {
   CheckCircle,
   XCircle,
@@ -21,7 +22,7 @@ const STATUS_STYLES: Record<
   string,
   { label: string; badge: string; icon: React.ElementType }
 > = {
-  pending_review: {
+  pending: {
     label: "Pending Review",
     badge: "bg-amber-50 text-amber-700 border-amber-200",
     icon: Clock,
@@ -31,8 +32,8 @@ const STATUS_STYLES: Record<
     badge: "bg-green-50 text-green-700 border-green-200",
     icon: CheckCircle,
   },
-  rejected: {
-    label: "Rejected",
+  cancelled: {
+    label: "Cancelled",
     badge: "bg-red-50 text-red-700 border-red-200",
     icon: XCircle,
   },
@@ -82,8 +83,9 @@ export default async function PrivateHireDetailPage({
     notFound();
   }
 
-  const cfg = STATUS_STYLES[request.status] ?? STATUS_STYLES.pending_review;
+  const cfg = STATUS_STYLES[request.status] ?? STATUS_STYLES.pending;
   const StatusIcon = cfg.icon;
+  const reasonLabel = privateHireSubtypeLabel(unwrapSubtype(request.event_subtypes), request.reason_for_hire);
 
   // Resolve date/time — schema has both preferred_* and selected_* variants
   const displayDate =
@@ -111,7 +113,7 @@ export default async function PrivateHireDetailPage({
               <h1 className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tight leading-tight">
                 {request.full_name}
               </h1>
-              <p className="text-sm text-[#5F624F] mt-0.5">{request.reason || request.reason_for_hire}</p>
+              <p className="text-sm text-[#5F624F] mt-0.5">{reasonLabel}</p>
             </div>
             <span
               className={cn(
@@ -158,7 +160,7 @@ export default async function PrivateHireDetailPage({
                   {request.guest_count}
                 </span>
               </div>
-              <DetailRow label="Reason for Hire" value={request.reason || request.reason_for_hire} />
+              <DetailRow label="Reason for Hire" value={reasonLabel} />
               {depositAmount != null && (
                 <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
                   <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
@@ -246,7 +248,7 @@ export default async function PrivateHireDetailPage({
         )}
 
         {/* Admin notes — read-only when resolved */}
-        {request.status !== "pending_review" && request.admin_notes && (
+        {request.status !== "pending" && request.admin_notes && (
           <div className="space-y-2">
             <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
               Admin Notes

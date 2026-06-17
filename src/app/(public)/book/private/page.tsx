@@ -30,6 +30,21 @@ export default async function PrivateHirePage() {
     .select(`icon, title, event_subtypes!inner(behavior)`)
     .eq("event_subtypes.behavior", "private");
 
+  // Private event subtypes the enquiry can be for (behavior 'private' under the
+  // 'private' event type). Offered in the form, labelled by default_event_title.
+  const { data: subtypeRows } = await supabase
+    .from("event_subtypes")
+    .select("id, name, default_event_title, event_types!inner(name)")
+    .eq("behavior", "private")
+    .eq("event_types.name", "private")
+    .order("name");
+
+  const subtypes = (subtypeRows ?? []).map((s) => ({
+    id: s.id as number,
+    name: s.name as string,
+    default_event_title: (s.default_event_title as string | null) ?? null,
+  }));
+
   const dbBadges = (infoItems || []).map((item) => ({
     icon: ICON_MAP[item.icon || ""] || Info,
     text: item.title,
@@ -114,7 +129,7 @@ export default async function PrivateHirePage() {
           </div>
 
           <div className="relative z-10">
-            <PrivateHireForm />
+            <PrivateHireForm subtypes={subtypes} />
           </div>
         </div>
 

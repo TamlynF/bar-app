@@ -56,7 +56,7 @@ export function PendingReviews({ items }: { items: PendingItem[] }) {
           View Band Applications
         </Link>
         <Link
-          href="/event-bookings/private-bookings?status=pending_review"
+          href="/event-bookings/private-bookings?status=pending"
           className="flex-1 text-center text-[10px] font-black uppercase tracking-wide py-2 rounded-xl bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
         >
           View Private Hire

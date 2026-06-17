@@ -4,6 +4,7 @@ import React, { useState, useTransition } from "react";
 import { updatePrivateHireStatus } from "../actions";
 import { ChevronDown, ChevronUp, CheckCircle, XCircle, Clock, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { privateHireSubtypeLabel, unwrapSubtype, type PrivateHireSubtype } from "@/lib/private-hire-subtype";
 
 export interface PrivateHireRequest {
   id: string;
@@ -15,6 +16,8 @@ export interface PrivateHireRequest {
   preferred_time: string | null;
   reason_for_hire: string;
   reason: string | null;
+  event_subtypes_id: number | null;
+  event_subtypes: Pick<PrivateHireSubtype, "name" | "default_event_title"> | Pick<PrivateHireSubtype, "name" | "default_event_title">[] | null;
   additional_requirements: string | null;
   status: string;
   admin_notes: string | null;
@@ -22,9 +25,9 @@ export interface PrivateHireRequest {
 }
 
 const STATUS_STYLES: Record<string, { label: string; class: string; icon: React.ElementType }> = {
-  pending_review: { label: "Pending", class: "bg-amber-500/15 text-amber-600 border-amber-500/20", icon: Clock },
+  pending: { label: "Pending", class: "bg-amber-500/15 text-amber-600 border-amber-500/20", icon: Clock },
   confirmed: { label: "Confirmed", class: "bg-green-500/15 text-green-600 border-green-500/20", icon: CheckCircle },
-  rejected: { label: "Rejected", class: "bg-red-500/15 text-red-600 border-red-500/20", icon: XCircle },
+  cancelled: { label: "Cancelled", class: "bg-red-500/15 text-red-600 border-red-500/20", icon: XCircle },
 };
 
 export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
@@ -33,10 +36,10 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  const statusStyle = STATUS_STYLES[request.status] ?? STATUS_STYLES.pending_review;
+  const statusStyle = STATUS_STYLES[request.status] ?? STATUS_STYLES.pending;
   const StatusIcon = statusStyle.icon;
 
-  function handleAction(status: "confirmed" | "rejected") {
+  function handleAction(status: "confirmed" | "cancelled") {
     setError(null);
     startTransition(async () => {
       try {
@@ -101,7 +104,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
 
           <div>
             <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Reason for Hire</p>
-            <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] rounded-xl px-4 py-3">{request.reason || request.reason_for_hire}</p>
+            <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] rounded-xl px-4 py-3">{privateHireSubtypeLabel(unwrapSubtype(request.event_subtypes), request.reason_for_hire)}</p>
           </div>
 
           {request.additional_requirements && (
@@ -117,7 +120,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           </div>
 
           {/* Actions */}
-          {request.status === "pending_review" && (
+          {request.status === "pending" && (
             <div className="space-y-3 pt-2 border-t border-[#E6DFC8]">
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1.5">
@@ -145,17 +148,17 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleAction("rejected")}
+                  onClick={() => handleAction("cancelled")}
                   disabled={isPending}
                   className="flex-1 flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-700 font-black text-xs uppercase tracking-wider rounded-xl py-2.5 transition-all disabled:opacity-50"
                 >
-                  <XCircle className="w-3.5 h-3.5" /> Reject
+                  <XCircle className="w-3.5 h-3.5" /> Cancel
                 </button>
               </div>
             </div>
           )}
 
-          {request.status !== "pending_review" && request.admin_notes && (
+          {request.status !== "pending" && request.admin_notes && (
             <div>
               <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1">Admin Notes</p>
               <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] rounded-xl px-4 py-3">{request.admin_notes}</p>

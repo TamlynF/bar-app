@@ -7,9 +7,9 @@ export const dynamic = "force-dynamic";
 
 const STATUS_FILTERS = [
   { value: "all", label: "All" },
-  { value: "pending_review", label: "Pending" },
+  { value: "pending", label: "Pending" },
   { value: "confirmed", label: "Confirmed" },
-  { value: "rejected", label: "Rejected" },
+  { value: "cancelled", label: "Cancelled" },
 ];
 
 export default async function PrivateBookingsPage({
@@ -22,7 +22,7 @@ export default async function PrivateBookingsPage({
 
   let query = supabase
     .from("private_hire_requests")
-    .select("*")
+    .select("*, event_subtypes:event_subtypes_id ( name, default_event_title )")
     .order("created_at", { ascending: false });
 
   if (filterStatus !== "all") {
@@ -35,9 +35,9 @@ export default async function PrivateBookingsPage({
   const items = (requests ?? []) as PrivateHireRequest[];
 
   const counts = {
-    pending: items.filter((r) => r.status === "pending_review").length,
+    pending: items.filter((r) => r.status === "pending").length,
     confirmed: items.filter((r) => r.status === "confirmed").length,
-    rejected: items.filter((r) => r.status === "rejected").length,
+    cancelled: items.filter((r) => r.status === "cancelled").length,
   };
 
   return (
@@ -57,7 +57,7 @@ export default async function PrivateBookingsPage({
             <CheckCircle className="w-3 h-3" /> {counts.confirmed} Confirmed
           </span>
           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-full text-[10px] font-black uppercase tracking-wider text-red-700">
-            <XCircle className="w-3 h-3" /> {counts.rejected} Rejected
+            <XCircle className="w-3 h-3" /> {counts.cancelled} Cancelled
           </span>
         </div>
       </div>

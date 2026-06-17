@@ -16,9 +16,9 @@ export default function PrivateHireDetailClient({
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   const [error, setError] = useState<string | null>(null);
 
-  if (request.status !== "pending_review") return null;
+  if (request.status !== "pending") return null;
 
-  function handleAction(status: "confirmed" | "rejected") {
+  function handleAction(status: "confirmed" | "cancelled") {
     setError(null);
     startTransition(async () => {
       try {
@@ -63,7 +63,7 @@ export default function PrivateHireDetailClient({
         </button>
         <button
           type="button"
-          onClick={() => handleAction("rejected")}
+          onClick={() => handleAction("cancelled")}
           disabled={isPending}
           className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs uppercase tracking-wider rounded-2xl py-4 transition-all disabled:opacity-50"
         >
@@ -72,7 +72,7 @@ export default function PrivateHireDetailClient({
           ) : (
             <XCircle className="w-4 h-4" />
           )}
-          Reject
+          Cancel
         </button>
       </div>
     </div>

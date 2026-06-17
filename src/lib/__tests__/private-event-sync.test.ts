@@ -21,14 +21,14 @@ describe("planPrivateEventSync", () => {
     });
   });
 
-  describe("rejecting", () => {
-    it("deactivates the linked event when rejected", () => {
-      expect(planPrivateEventSync({ status: "rejected", selectedDate: "2026-07-01", eventId: 42 }))
+  describe("cancelling", () => {
+    it("deactivates the linked event when cancelled", () => {
+      expect(planPrivateEventSync({ status: "cancelled", selectedDate: "2026-07-01", eventId: 42 }))
         .toEqual({ action: "deactivate", eventId: 42 });
     });
 
-    it("does nothing when rejected with no linked event", () => {
-      expect(planPrivateEventSync({ status: "rejected", selectedDate: "2026-07-01", eventId: null }))
+    it("does nothing when cancelled with no linked event", () => {
+      expect(planPrivateEventSync({ status: "cancelled", selectedDate: "2026-07-01", eventId: null }))
         .toEqual({ action: "none" });
     });
   });

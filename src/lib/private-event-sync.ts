@@ -1,9 +1,9 @@
 // Decides how a private-hire request's status change affects its linked `events`
 // row. Kept pure (no Supabase) so the branching can be unit-tested;
 // `updatePrivateHireStatus` executes whatever plan this returns. Mirrors
-// `planBandEventSync` — private hire only has confirmed / rejected outcomes.
+// `planBandEventSync` — private hire only has confirmed / cancelled outcomes.
 
-export type PrivateStatus = "confirmed" | "rejected";
+export type PrivateStatus = "confirmed" | "cancelled";
 
 export type PrivateEventPlan =
   | { action: "none" }
@@ -14,8 +14,8 @@ export type PrivateEventPlan =
 /**
  * - Confirmed + a selected date → create the event, or update the existing linked
  *   one (so re-confirming never creates a duplicate). is_active = true.
- * - Rejected with an existing linked event → deactivate it (is_active = false).
- * - Confirmed without a date, or rejected with no linked event → no event change.
+ * - Cancelled with an existing linked event → deactivate it (is_active = false).
+ * - Confirmed without a date, or cancelled with no linked event → no event change.
  */
 export function planPrivateEventSync(params: {
   status: PrivateStatus;
@@ -29,7 +29,7 @@ export function planPrivateEventSync(params: {
     return eventId ? { action: "update", eventId } : { action: "insert" };
   }
 
-  // Rejected: take the linked event off the schedule if there is one.
+  // Cancelled: take the linked event off the schedule if there is one.
   if (eventId) return { action: "deactivate", eventId };
 
   return { action: "none" };

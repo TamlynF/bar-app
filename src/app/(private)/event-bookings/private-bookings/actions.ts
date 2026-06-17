@@ -5,6 +5,7 @@ import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planPrivateEventSync } from "@/lib/private-event-sync";
+import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
@@ -22,7 +23,7 @@ export async function getPrivateHireById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("private_hire_requests")
-    .select("*")
+    .select("*, event_subtypes:event_subtypes_id ( name, default_event_title )")
     .eq("id", id)
     .single();
   if (error || !data) throw new Error("Private hire request not found");
@@ -31,7 +32,7 @@ export async function getPrivateHireById(id: string) {
 
 export async function updatePrivateHireStatus(
   id: string,
-  status: "confirmed" | "rejected",
+  status: "confirmed" | "cancelled",
   adminNotes?: string
 ) {
   const supabase = await createClient();
@@ -41,7 +42,7 @@ export async function updatePrivateHireStatus(
     .from("private_hire_requests")
     .update({ status, admin_notes: adminNotes || null, updated_by: empId })
     .eq("id", id)
-    .select("full_name, email, reason_for_hire, reason, selected_date, selected_start_time, selected_end_time, deposit_amount, event_id")
+    .select("full_name, email, reason_for_hire, reason, selected_date, selected_start_time, selected_end_time, deposit_amount, event_id, event_subtypes_id, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )")
     .single();
 
   if (error || !record) {
@@ -57,11 +58,27 @@ export async function updatePrivateHireStatus(
   });
 
   if (plan.action === "insert" || plan.action === "update") {
-    const reason = record.reason?.toLowerCase() || "other";
-    const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "private", reason, "private");
+    // Prefer the linked private subtype; fall back to lazily resolving by the
+    // legacy `reason` for rows created before event_subtypes_id existed.
+    const sub = unwrapSubtype(
+      record.event_subtypes as { id: number; name: string; default_event_title: string | null; event_types_id: number } | { id: number; name: string; default_event_title: string | null; event_types_id: number }[] | null
+    );
+
+    let eventTypeId: number;
+    let eventSubtypeId: number;
+    let label: string;
+    if (sub) {
+      eventTypeId = sub.event_types_id;
+      eventSubtypeId = sub.id;
+      label = privateHireSubtypeLabel(sub, record.reason_for_hire || "Private Hire");
+    } else {
+      const reason = record.reason?.toLowerCase() || record.reason_for_hire?.toLowerCase() || "other";
+      ({ eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "private", reason, "private"));
+      label = record.reason || record.reason_for_hire || "Private Hire";
+    }
 
     const eventFields = {
-      title: `${record.full_name} — ${record.reason || "Private Hire"}`,
+      title: `${record.full_name} — ${label}`,
       date: record.selected_date,
       start_time: record.selected_start_time,
       end_time: record.selected_end_time,
@@ -84,7 +101,7 @@ export async function updatePrivateHireStatus(
       }
     }
   } else if (plan.action === "deactivate") {
-    // Rejecting takes the linked event off the schedule.
+    // Canceling takes the linked event off the schedule.
     await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
   }
 
@@ -98,7 +115,7 @@ export async function updatePrivateHireStatus(
 async function sendOutcomeEmail(
   name: string,
   email: string,
-  status: "confirmed" | "rejected",
+  status: "confirmed" | "cancelled",
   notes?: string | null
 ) {
   const isConfirmed = status === "confirmed";
