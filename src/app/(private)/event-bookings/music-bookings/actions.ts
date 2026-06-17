@@ -13,6 +13,15 @@ const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
 export type BandStatus = BandStatusType;
 
+/** Resolve the employee id of the signed-in admin, for created_by/updated_by stamps. */
+async function currentEmployeeId(): Promise<number | null> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) return null;
+  const { data: emp } = await supabase.from("employees").select("id").eq("email", user.email).maybeSingle();
+  return emp?.id ?? null;
+}
+
 export async function getBandBookingById(id: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -41,9 +50,10 @@ export async function updateBandBookingFields(
   }
 ) {
   const supabase = await createClient();
+  const empId = await currentEmployeeId();
   const { error } = await supabase
     .from("band_booking_requests")
-    .update(fields)
+    .update({ ...fields, updated_by: empId })
     .eq("id", id);
 
   if (error) throw new Error("Failed to save changes.");
@@ -91,10 +101,11 @@ export async function rescheduleConfirmedBooking(
   }
 ) {
   const supabase = await createClient();
+  const empId = await currentEmployeeId();
 
   const { data: record, error } = await supabase
     .from("band_booking_requests")
-    .update({ ...fields, status: "pending" })
+    .update({ ...fields, status: "pending", updated_by: empId })
     .eq("id", id)
     .select("booker_name, email, group_name, selected_date, selected_start_time, selected_end_time, event_id")
     .single();
@@ -128,10 +139,11 @@ export async function updateBandStatus(
   adminNotes?: string
 ) {
   const supabase = await createClient();
+  const empId = await currentEmployeeId();
 
   const { data: record, error } = await supabase
     .from("band_booking_requests")
-    .update({ status, admin_notes: adminNotes || null })
+    .update({ status, admin_notes: adminNotes || null, updated_by: empId })
     .eq("id", id)
     .select(
       "booker_name, email, type, genre, group_name, selected_date, selected_start_time, selected_end_time, payment_amount, event_id"
