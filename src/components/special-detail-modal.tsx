@@ -65,20 +65,20 @@ export function SpecialDetailModal({
         aria-modal="true"
         aria-label={special.title}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full sm:max-w-md max-h-[92vh] overflow-y-auto bg-[#26300D] border border-white/10 rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black/60 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
+        className="relative w-full sm:max-w-md max-h-[92vh] overflow-y-auto bg-[#26300D] border border-hairline rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black/60 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close details"
-          className="absolute top-3.5 right-3.5 z-10 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur transition-colors"
+          className="absolute top-3.5 right-3.5 z-10 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-ink flex items-center justify-center backdrop-blur transition-colors"
         >
           <X className="w-4.5 h-4.5" aria-hidden="true" />
         </button>
 
         {/* Image */}
         {special.image_url && (
-          <div className="w-full h-48 border-b border-white/10 overflow-hidden">
+          <div className="w-full h-48 border-b border-hairline overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={special.image_url}
@@ -102,7 +102,7 @@ export function SpecialDetailModal({
             </div>
           )}
 
-          <h3 className="text-white font-black uppercase tracking-tighter leading-[0.95] text-2xl sm:text-3xl">
+          <h3 className="text-ink font-black uppercase tracking-tighter leading-[0.95] text-2xl sm:text-3xl">
             {special.title}
           </h3>
 
@@ -114,12 +114,12 @@ export function SpecialDetailModal({
 
           {/* Runs */}
           {dateRange && (
-            <div className="mt-5 flex items-center gap-3 bg-[#1a2008]/60 border border-white/10 rounded-2xl px-4 py-3">
+            <div className="mt-5 flex items-center gap-3 bg-canvas/60 border border-hairline rounded-2xl px-4 py-3">
               <CalendarDays className="w-4 h-4 text-[#FDCC4B] shrink-0" aria-hidden="true" />
-              <span className="text-stone-400 text-[11px] font-black uppercase tracking-[0.1em]">
+              <span className="text-stone-400 text-[11px] font-black uppercase tracking-widest">
                 Runs
               </span>
-              <span className="ml-auto text-white text-sm font-bold tabular-nums">
+              <span className="ml-auto text-ink text-sm font-bold tabular-nums">
                 {dateRange}
               </span>
             </div>
@@ -139,7 +139,7 @@ export function SpecialDetailModal({
                     "text-center py-2 rounded-lg text-[11px] font-black uppercase tracking-wide border",
                     on
                       ? "text-[#1a2008] bg-[#FDCC4B] border-[#FDCC4B]"
-                      : "text-stone-500 bg-white/5 border-white/10"
+                      : "text-stone-500 bg-canvas-2 border-hairline"
                   )}
                 >
                   {d.label}

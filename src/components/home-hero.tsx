@@ -25,10 +25,10 @@ export function HomeHero({
   isTonight: boolean;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#26300D] px-5 py-10 sm:px-10 sm:py-14 text-center">
+    <section className="relative overflow-hidden rounded-3xl border border-hairline bg-[#26300D] px-5 py-10 sm:px-10 sm:py-14 text-center">
       {/* Glow blurs (STYLE_GUIDE: gold + burgundy, blur, low opacity) */}
       <div className="pointer-events-none absolute -top-24 -left-20 w-120 h-120 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
-      <div className="pointer-events-none absolute top-24 -right-24 w-112 h-112 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute top-24 -right-24 w-md h-md rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
       <div className="relative z-10 flex flex-col items-center">
         {/* Live open pill */}
@@ -51,7 +51,7 @@ export function HomeHero({
           />
         </h1>
 
-        <p className="animate-reveal [animation-delay:160ms] mt-4 max-w-md text-stone-300 text-sm sm:text-base font-medium leading-relaxed">
+        <p className="animate-reveal [animation-delay:160ms] mt-4 max-w-md text-ink-2 text-sm sm:text-base font-medium leading-relaxed">
           {tagline}
         </p>
 
@@ -77,10 +77,10 @@ function FeaturedCard({
     : null;
 
   return (
-    <div className="animate-reveal [animation-delay:240ms] mt-8 w-full max-w-md text-left bg-[#1a2008]/60 border border-white/10 rounded-3xl p-5 shadow-2xl shadow-black/40">
+    <div className="animate-reveal [animation-delay:240ms] mt-8 w-full max-w-md text-left bg-canvas/60 border border-hairline rounded-3xl p-5 shadow-2xl shadow-black/40">
       <div className="flex items-center gap-2">
         <span className="ad-blink w-2 h-2 rounded-full bg-[#FF6B35] shadow-[0_0_10px_#FF6B35]" aria-hidden="true" />
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF6B35]">
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neon">
           {isTonight ? "On tonight" : "Next up"}
         </span>
       </div>

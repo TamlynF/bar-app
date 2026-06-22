@@ -22,7 +22,7 @@ export function EventCard({
     : null;
 
   return (
-    <div className="group relative olive-bg border border-white/10 rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-white/25 hover:shadow-2xl hover:shadow-black/30 flex flex-col min-h-44">
+    <div className="group relative olive-bg border border-hairline rounded-2xl overflow-hidden transition-all duration-300 hover:-translate-y-1 hover:border-white/25 hover:shadow-2xl hover:shadow-black/30 flex flex-col min-h-44">
       {backdropUrl && (
         <>
           <Image
@@ -55,7 +55,7 @@ export function EventCard({
 
         {/* Date */}
         <div className="flex items-baseline gap-2 mb-1">
-          <span className="text-white font-black tabular-nums leading-none text-4xl">
+          <span className="text-ink font-black tabular-nums leading-none text-4xl">
             {format(dateObj, "d")}
           </span>
           <span className="text-stone-400 text-xs font-black uppercase tracking-widest">
@@ -104,7 +104,7 @@ export function EventCard({
               href={event.karaokeRequestUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-white bg-[#FF6B35] px-3 py-1.5 rounded-full hover:bg-[#FF6B35]/90 active:scale-95 transition-all"
+              className="shrink-0 inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wide text-ink bg-[#FF6B35] px-3 py-1.5 rounded-full hover:bg-[#FF6B35]/90 active:scale-95 transition-all"
               aria-label="Request a song to sing on Singa"
             >
               <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />

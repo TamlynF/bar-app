@@ -80,7 +80,7 @@ function ScheduleRow({
 
   return (
     <li
-      className="ad-row ad-rise flex items-center gap-3 sm:gap-4 rounded-2xl border border-white/10 bg-[#26300D] px-4 py-3.5"
+      className="ad-row ad-rise flex items-center gap-3 sm:gap-4 rounded-2xl border border-hairline bg-[#26300D] px-4 py-3.5"
       style={{ "--ev-c": event.color, "--i": index } as React.CSSProperties}
     >
       {/* Date */}
@@ -88,7 +88,7 @@ function ScheduleRow({
         <span className="block text-stone-400 text-[9px] font-black uppercase tracking-widest">
           {format(dateObj, "EEE")}
         </span>
-        <span className="block text-white text-2xl font-black tabular-nums leading-none mt-0.5">
+        <span className="block text-ink text-2xl font-black tabular-nums leading-none mt-0.5">
           {format(dateObj, "d")}
         </span>
       </div>
@@ -125,7 +125,7 @@ function ScheduleRow({
 
       {/* Time */}
       {timeLabel && (
-        <span className="hidden sm:block shrink-0 text-right text-white text-sm font-bold tabular-nums">
+        <span className="hidden sm:block shrink-0 text-right text-ink text-sm font-bold tabular-nums">
           {timeLabel}
         </span>
       )}

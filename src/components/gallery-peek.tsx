@@ -33,7 +33,7 @@ export function GalleryPeek({ items }: { items: GalleryPeekItem[] }) {
             key={item.id}
             href="/gallery"
             className={cn(
-              "group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5",
+              "group relative overflow-hidden rounded-2xl border border-hairline bg-canvas-2",
               i === 0 && "row-span-2",
               i === 3 && "col-span-2"
             )}
@@ -47,7 +47,7 @@ export function GalleryPeek({ items }: { items: GalleryPeekItem[] }) {
             />
             <div className="absolute inset-0 bg-linear-to-t from-black/55 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             {item.title && (
-              <span className="absolute bottom-2 left-3 right-3 text-white text-[10px] font-black uppercase tracking-wide opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="absolute bottom-2 left-3 right-3 text-ink text-[10px] font-black uppercase tracking-wide opacity-0 group-hover:opacity-100 transition-opacity">
                 {item.title}
               </span>
             )}

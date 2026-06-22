@@ -101,7 +101,7 @@ export default async function HomePage() {
   ].filter((s) => s.show);
 
   return (
-    <main className="min-h-dvh w-full bg-[#1a2008] text-stone-300 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
+    <main className="min-h-dvh w-full bg-canvas text-ink-2 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
       <SmoothScroll />
       <PublicNav currentPath="/" />
 
@@ -121,14 +121,14 @@ export default async function HomePage() {
       {/* Sticky section sub-nav (awwwards-style category bar) */}
       <nav
         aria-label="Page sections"
-        className="sticky top-14 sm:top-16 z-30 bg-[#1a2008]/85 backdrop-blur-xl border-y border-white/10"
+        className="sticky top-14 sm:top-16 z-30 bg-canvas/85 backdrop-blur-xl border-y border-hairline"
       >
         <div className="max-w-5xl mx-auto px-4 flex gap-2 overflow-x-auto no-scrollbar py-3">
           {sections.map((s) => (
             <a
               key={s.id}
               href={`#${s.id}`}
-              className="shrink-0 inline-flex items-center h-9 px-4 rounded-full text-[11px] font-black uppercase tracking-wide bg-white/5 text-stone-400 border border-white/10 hover:text-white hover:bg-white/10 transition-colors"
+              className="shrink-0 inline-flex items-center h-9 px-4 rounded-full text-[11px] font-black uppercase tracking-wide bg-canvas-2 text-stone-400 border border-hairline hover:text-ink hover:bg-white/10 transition-colors"
             >
               {s.label}
             </a>
@@ -148,20 +148,20 @@ export default async function HomePage() {
           <SectionHeading eyebrow="Eat & drink" title="The Menu" action={{ href: "/menu", label: "Full menu" }} />
           <Link
             href="/menu"
-            className="group flex items-center gap-4 bg-white/5 hover:bg-white/15 border border-white/20 hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
+            className="group flex items-center gap-4 bg-canvas-2 hover:bg-white/15 border border-hairline hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
           >
             <div className="shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center bg-[#FDCC4B]/10 border border-[#FDCC4B]/20">
               <UtensilsCrossed className="w-6 h-6 text-[#FDCC4B]" aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
-              <span className="block text-white font-black text-base uppercase tracking-tight">
+              <span className="block text-ink font-black text-base uppercase tracking-tight">
                 Drinks, Cocktails &amp; Snacks
               </span>
               <p className="text-stone-400 text-xs leading-relaxed mt-0.5">
                 Draught, spirits, wine and bar bites — updated regularly.
               </p>
             </div>
-            <ArrowRight className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-white group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-ink group-hover:translate-x-0.5 transition-all" />
           </Link>
         </section>
 

@@ -55,7 +55,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
         {/* Left — address + socials */}
-        <div className="bg-white/5 border border-white/10 rounded-2xl p-5">
+        <div className="bg-canvas-2 border border-hairline rounded-2xl p-5">
           {info.address && (
             <div className="flex items-start gap-3">
               <div className="shrink-0 w-10 h-10 rounded-xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">
@@ -65,7 +65,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
                 <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.2em]">
                   Address
                 </p>
-                <p className="text-white text-sm font-bold whitespace-pre-line mt-0.5">
+                <p className="text-ink text-sm font-bold whitespace-pre-line mt-0.5">
                   {info.address}
                 </p>
               </div>
@@ -79,7 +79,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
-                className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-white/5 border border-white/10 text-stone-300 hover:text-white hover:bg-white/10 transition-colors"
+                className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-canvas-2 border border-hairline text-ink-2 hover:text-ink hover:bg-white/10 transition-colors"
               >
                 <Instagram className="w-5 h-5" aria-hidden="true" />
               </a>
@@ -90,7 +90,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Facebook"
-                className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-white/5 border border-white/10 text-stone-300 hover:text-white hover:bg-white/10 transition-colors"
+                className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-canvas-2 border border-hairline text-ink-2 hover:text-ink hover:bg-white/10 transition-colors"
               >
                 <Facebook className="w-5 h-5" aria-hidden="true" />
               </a>
@@ -108,7 +108,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
             )}
             <Link
               href="/contact"
-              className="inline-flex items-center gap-1.5 h-11 px-4 rounded-xl bg-white/5 border border-white/10 text-stone-300 hover:text-white hover:bg-white/10 text-[11px] font-black uppercase tracking-wide transition-colors ml-auto"
+              className="inline-flex items-center gap-1.5 h-11 px-4 rounded-xl bg-canvas-2 border border-hairline text-ink-2 hover:text-ink hover:bg-white/10 text-[11px] font-black uppercase tracking-wide transition-colors ml-auto"
             >
               Contact
               <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
@@ -118,7 +118,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
 
         {/* Right — opening hours */}
         {hasAnyHours ? (
-          <div className="bg-white/5 border border-white/10 rounded-2xl px-5 py-2">
+          <div className="bg-canvas-2 border border-hairline rounded-2xl px-5 py-2">
             {DAYS.map((d) => {
               const h = hours[d.key];
               const open = Boolean(h?.open && h?.close);
@@ -126,22 +126,22 @@ export function FindUs({ info }: { info: CompanyInfo }) {
               return (
                 <div
                   key={d.key}
-                  className="flex items-center gap-3 py-3 border-b border-white/10 last:border-0"
+                  className="flex items-center gap-3 py-3 border-b border-hairline last:border-0"
                 >
                   <span
                     className={
                       isToday
                         ? "text-[#FDCC4B] text-[13px] font-black uppercase tracking-wide"
-                        : "text-white text-[13px] font-bold uppercase tracking-wide"
+                        : "text-ink text-[13px] font-bold uppercase tracking-wide"
                     }
                   >
                     {d.label}
                   </span>
-                  <span className="flex-1 border-b border-dotted border-white/10 self-end mb-1.5" />
+                  <span className="flex-1 border-b border-dotted border-hairline self-end mb-1.5" />
                   <span
                     className={
                       open
-                        ? "text-stone-300 text-[13px] font-bold tabular-nums"
+                        ? "text-ink-2 text-[13px] font-bold tabular-nums"
                         : "text-stone-500 text-[13px] font-bold"
                     }
                   >
@@ -152,7 +152,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
             })}
           </div>
         ) : (
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-5 flex items-center">
+          <div className="bg-canvas-2 border border-hairline rounded-2xl p-5 flex items-center">
             <p className="text-stone-400 text-sm font-medium">
               Opening hours coming soon — give us a call or check our socials.
             </p>

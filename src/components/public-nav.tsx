@@ -42,7 +42,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 bg-[#1a2008]/85 backdrop-blur-xl border-b border-[#FDCC4B]/10">
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-canvas/85 backdrop-blur-xl border-b border-[#FDCC4B]/10">
         <div className="max-w-5xl mx-auto flex items-center justify-between px-3 sm:px-4 py-2 gap-2 pt-safe-top">
           {/* Logo — square df mark, links home */}
           <Link
@@ -71,8 +71,8 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
                 className={cn(
                   "inline-flex items-center text-[10px] sm:text-xs font-bold uppercase tracking-tight sm:tracking-wide px-1.5 sm:px-3 py-1.5 rounded-full transition-colors whitespace-nowrap",
                   currentPath === link.href
-                    ? "text-[#FDCC4B] bg-white/5"
-                    : "text-stone-400 hover:text-white hover:bg-white/5"
+                    ? "text-[#FDCC4B] bg-canvas-2"
+                    : "text-stone-400 hover:text-ink hover:bg-canvas-2"
                 )}
               >
                 {link.label}
@@ -87,8 +87,8 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
                 className={cn(
                   "hidden sm:inline-flex items-center text-xs font-bold uppercase tracking-wide px-3 py-1.5 rounded-full transition-colors",
                   currentPath === link.href
-                    ? "text-[#FDCC4B] bg-white/5"
-                    : "text-stone-500 hover:text-white hover:bg-white/5"
+                    ? "text-[#FDCC4B] bg-canvas-2"
+                    : "text-stone-500 hover:text-ink hover:bg-canvas-2"
                 )}
               >
                 {link.label}
@@ -111,7 +111,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
                 aria-expanded={menuOpen}
                 aria-controls="public-nav-drawer"
                 onClick={() => setMenuOpen((o) => !o)}
-                className="sm:hidden inline-flex items-center justify-center w-11 h-11 ml-0.5 rounded-full text-stone-300 hover:text-white hover:bg-white/5 active:scale-95 transition-colors"
+                className="sm:hidden inline-flex items-center justify-center w-11 h-11 ml-0.5 rounded-full text-ink-2 hover:text-ink hover:bg-canvas-2 active:scale-95 transition-colors"
               >
                 {menuOpen ? <X className="w-5 h-5" /> : <MenuIcon className="w-5 h-5" />}
               </button>
@@ -123,7 +123,7 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
         {menuOpen && secondaryLinks.length > 0 && (
           <div
             id="public-nav-drawer"
-            className="sm:hidden border-t border-[#FDCC4B]/10 bg-[#1a2008]/95 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200"
+            className="sm:hidden border-t border-[#FDCC4B]/10 bg-canvas/95 backdrop-blur-xl animate-in fade-in slide-in-from-top-2 duration-200"
           >
             <div className="max-w-5xl mx-auto px-3 py-2 flex flex-col">
               {secondaryLinks.map((link) => (
@@ -134,8 +134,8 @@ export function PublicNav({ currentPath }: { currentPath?: string }) {
                   className={cn(
                     "px-3 py-3 rounded-xl text-sm font-bold uppercase tracking-wide transition-colors",
                     currentPath === link.href
-                      ? "text-[#FDCC4B] bg-white/5"
-                      : "text-stone-400 hover:text-white hover:bg-white/5"
+                      ? "text-[#FDCC4B] bg-canvas-2"
+                      : "text-stone-400 hover:text-ink hover:bg-canvas-2"
                   )}
                 >
                   {link.label}

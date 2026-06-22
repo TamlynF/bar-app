@@ -113,7 +113,7 @@ function SpecialStub({
         ) : (
           <span />
         )}
-        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.1em] text-[#ffd9b0]">
+        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#ffd9b0]">
           View details
           <ArrowRight
             className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
