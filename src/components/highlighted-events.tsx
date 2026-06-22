@@ -48,7 +48,7 @@ export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
       />
 
       {events.length > 0 ? (
-        <ul className="flex flex-col gap-2.5">
+        <ul className="flex flex-col gap-3">
           {events.map((event, i) => (
             <ScheduleRow key={event.id} event={event} index={i} />
           ))}
@@ -80,7 +80,7 @@ function ScheduleRow({
 
   return (
     <li
-      className="ad-row ad-rise flex items-center gap-3 sm:gap-4 rounded-2xl border border-hairline bg-[#26300D] px-4 py-3.5"
+      className="ad-row ad-rise flex items-center gap-3 sm:gap-4 rounded-3xl border border-hairline bg-canvas-2 px-4 py-4 sm:px-6 sm:py-5"
       style={{ "--ev-c": event.color, "--i": index } as React.CSSProperties}
     >
       {/* Date */}

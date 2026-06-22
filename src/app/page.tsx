@@ -101,21 +101,28 @@ export default async function HomePage() {
   ].filter((s) => s.show);
 
   return (
-    <main className="min-h-dvh w-full bg-canvas text-ink-2 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
+    <main className="relative isolate min-h-dvh w-full bg-canvas text-ink-2 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
       <SmoothScroll />
       <PublicNav currentPath="/" />
 
-      <div className="max-w-5xl mx-auto px-4 pt-4 sm:pt-6">
-        <HomeHero
-          tagline={tagline}
-          openLabel={openLabel}
-          featured={featured}
-          isTonight={isTonight}
-        />
-      </div>
+      {/* Hero band — full-bleed so the ambient glow washes across the whole
+          top of the page (not trapped inside the centred hero column). */}
+      <div className="relative overflow-hidden">
+        <div className="pointer-events-none absolute -top-40 -left-30 w-130 h-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
+        <div className="pointer-events-none absolute top-95 -right-40 w-110 h-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
-      <div className="max-w-5xl mx-auto px-4">
-        <MarqueeTicker />
+        <div className="relative z-10 max-w-5xl mx-auto px-4 pt-4 sm:pt-6">
+          <HomeHero
+            tagline={tagline}
+            openLabel={openLabel}
+            featured={featured}
+            isTonight={isTonight}
+          />
+        </div>
+
+        <div className="relative z-10">
+          <MarqueeTicker />
+        </div>
       </div>
 
       {/* Sticky section sub-nav (awwwards-style category bar) */}

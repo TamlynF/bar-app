@@ -170,7 +170,7 @@ html, body {
 .ad-row:hover {
   transform: translateX(4px);
   border-color: color-mix(in oklab, var(--ev-c, #fdcc4b) 55%, transparent);
-  background-color: color-mix(in oklab, var(--ev-c, #fdcc4b) 8%, #26300d);
+  background-color: color-mix(in oklab, var(--ev-c, #fdcc4b) 8%, var(--canvas-2));
   box-shadow: 0 10px 30px -18px var(--ev-c, #fdcc4b);
 }
 /* Type-icon chip, tinted to the event colour */

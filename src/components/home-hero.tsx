@@ -25,11 +25,7 @@ export function HomeHero({
   isTonight: boolean;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-hairline bg-[#26300D] px-5 py-10 sm:px-10 sm:py-14 text-center">
-      {/* Glow blurs (STYLE_GUIDE: gold + burgundy, blur, low opacity) */}
-      <div className="pointer-events-none absolute -top-24 -left-20 w-120 h-120 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
-      <div className="pointer-events-none absolute top-24 -right-24 w-md h-md rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
-
+    <section className="relative pt-10 pb-4 sm:pt-14 sm:pb-6 text-center">
       <div className="relative z-10 flex flex-col items-center">
         {/* Live open pill */}
         <div className="animate-reveal inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/25 rounded-full px-3.5 py-1.5">
@@ -40,14 +36,14 @@ export function HomeHero({
         </div>
 
         {/* Brand wordmark — lit from above */}
-        <h1 className="animate-reveal [animation-delay:80ms] m-0 mt-6">
+        <h1 className="animate-reveal [animation-delay:80ms] m-0 mt-6 w-full">
           <Image
             src="/CompanyName.png"
             alt="Don Fenticas — live music bar in Hinckley"
             width={560}
             height={150}
             priority
-            className="h-16 sm:h-24 w-auto object-contain drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)]"
+            className="mx-auto h-auto w-[82%] max-w-150 object-contain drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)]"
           />
         </h1>
 
@@ -77,7 +73,7 @@ function FeaturedCard({
     : null;
 
   return (
-    <div className="animate-reveal [animation-delay:240ms] mt-8 w-full max-w-md text-left bg-canvas/60 border border-hairline rounded-3xl p-5 shadow-2xl shadow-black/40">
+    <div className="animate-reveal [animation-delay:240ms] mt-8 w-full max-w-150 text-left bg-canvas-2 border border-hairline rounded-3xl p-6 shadow-2xl shadow-black/40">
       <div className="flex items-center gap-2">
         <span className="ad-blink w-2 h-2 rounded-full bg-[#FF6B35] shadow-[0_0_10px_#FF6B35]" aria-hidden="true" />
         <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neon">
@@ -103,7 +99,7 @@ function FeaturedCard({
             </p>
           )}
           <p
-            className="ev-text font-black uppercase tracking-tight leading-[0.95] text-2xl line-clamp-2 mt-0.5"
+            className="ev-text font-black uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl line-clamp-2 mt-0.5"
             style={{ "--ev-c": event.color } as React.CSSProperties}
           >
             {event.title}
