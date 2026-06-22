@@ -86,6 +86,17 @@ as a known warn, do not chase.**
 
 ## Known render warns (checked, legitimate)
 - `[TOKENS_MISSING]` — app runtime vars, see Tailwind compile section. Expected.
+  (Count drifts with the app: 2026-06-23 driver run listed **15** vars — the same
+  radix popover/dropdown + `--chip-c`/`--ev-theme`/`--spotify-bg`/`--badge-color`/`--bg`
+  family, just more radix dropdown sub-vars. Same nature, not a new kind of warn.)
+- `[FONT_MISSING] "Cambria"` — **benign, accepted (checked 2026-06-23).** Cambria is
+  NOT a brand font. It appears only inside Tailwind's default `.font-serif` fallback
+  stack (`ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`) emitted into
+  the shipped CSS. The validator's font scraper flags it because it isn't in its
+  generic-allowlist, but it's a system serif fallback with nothing to ship. No
+  `@font-face`, no `cfg.extraFonts` needed — leave as a known warn.
+- `[RENDER_SKIPPED]` — the driver auto-skips the render check on a no-change re-sync
+  (nothing to upload). Expected, not a new warn.
 
 ## Re-sync risks (what can go stale)
 - `node_modules/bar-app-ds/` is gitignored-by-location — a fresh clone has no
