@@ -1,0 +1,8 @@
+{
+  "pkg": "bar-app-ds",
+  "globalName": "BarApp",
+  "projectId": "ba6ad8ad-ac14-4122-84b4-6611748705ed",
+  "shape": "package",
+  "cssEntry": "styles.css",
+  "readmeHeader": ".design-sync/conventions.md"
+}
