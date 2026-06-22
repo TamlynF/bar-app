@@ -707,6 +707,27 @@ html, body {
   .group-hover\:bg-\[\#5C4033\]:is(:where(.group):hover *) { background-color: #5C4033; }
   .group-open\:rotate-90:is(:where(.group)[open] *) { rotate: 90deg; }
 
+    /* ── After Dark: surfaces ── */
+  .bg-canvas-2   { background-color: var(--canvas-2); }
+  .bg-canvas\/60 { background-color: color-mix(in oklab, var(--canvas) 60%, transparent); }
+  .bg-canvas\/95 { background-color: color-mix(in oklab, var(--canvas) 95%, transparent); }
+
+  /* ── After Dark: text ── */
+  .text-ink   { color: var(--ink); }
+  .text-neon  { color: var(--neon); }
+
+  /* ── After Dark: borders ── */
+  .border-hairline { border-color: var(--hairline); }
+
+  /* ── After Dark: hover variants ── */
+  .hover\:text-ink:hover     { color: var(--ink); }
+  .hover\:bg-canvas-2:hover  { background-color: var(--canvas-2); }
+
+  /* ── Stone greys used on the home page (built-ins this setup doesn't emit) ── */
+  .text-stone-400 { color: #a8a29e; }
+  .text-stone-500 { color: #78716c; }
+  .hover\:text-stone-400:hover { color: #a8a29e; }
+  
   /* ── sm: variants (≥640px) ── */
   @media (min-width: 640px) {
     .sm\:items-start { align-items: flex-start; }
