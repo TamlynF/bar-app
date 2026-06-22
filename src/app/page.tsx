@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
+import { MarqueeTicker } from "@/components/marquee-ticker";
 import { HighlightedEvents } from "@/components/highlighted-events";
 import { GalleryPeek, type GalleryPeekItem } from "@/components/gallery-peek";
 import { FindUs, type CompanyInfo } from "@/components/find-us";
@@ -37,7 +38,7 @@ export default async function HomePage() {
     supabase
       .from("events")
       .select(
-        "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior)"
+        "id, title, date, start_time, end_time, tagline, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline)"
       )
       .eq("is_active", true)
       .gte("date", todayStr)
@@ -46,7 +47,7 @@ export default async function HomePage() {
       .limit(6),
     supabase
       .from("specials")
-      .select("id, title, description, badges, image_url, start_date, end_date, display_order")
+      .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order")
       .eq("is_active", true)
       .order("display_order", { ascending: true }),
     supabase
@@ -59,12 +60,17 @@ export default async function HomePage() {
   ]);
 
   const highlightedEvents = ((rawEvents ?? []) as EventRow[]).map(serializeEvent);
+  // The soonest event headlines the hero ("on tonight" if it's today); the rest
+  // fill the schedule list below.
+  const featured = highlightedEvents[0] ?? null;
+  const isTonight = featured?.date === todayStr;
+  const scheduleEvents = highlightedEvents.slice(1);
+
   const specials = (rawSpecials ?? []) as SpecialRow[];
 
   const photos = ((rawGallery ?? []) as GalleryRow[]).filter(
     (g) => g.media_type !== "video"
   );
-  const backdropUrl = photos[0]?.image_url ?? null;
   const peekItems: GalleryPeekItem[] = photos
     .slice(0, 8)
     .map((g) => ({ id: g.id, title: g.title, image_url: g.image_url }));
@@ -72,6 +78,19 @@ export default async function HomePage() {
   const companyInfo = (info ?? null) as CompanyInfo;
   const description = (info as { description?: string | null } | null)?.description;
   const tagline = description?.trim() || DEFAULT_TAGLINE;
+
+  // Live "open" pill: today's hours if we have them, else an evergreen line.
+  const todayName = today
+    .toLocaleDateString("en-GB", { weekday: "long" })
+    .toLowerCase();
+  const todayHours = ((companyInfo?.opening_hours ?? {}) as Record<
+    string,
+    { open?: string; close?: string }
+  >)[todayName];
+  const openLabel =
+    todayHours?.open && todayHours?.close
+      ? `Open today · til ${todayHours.close}`
+      : "Live music & late nights";
 
   // Section anchors for the sticky sub-nav (only those with content).
   const sections = [
@@ -87,13 +106,22 @@ export default async function HomePage() {
       <PublicNav currentPath="/" />
 
       <div className="max-w-5xl mx-auto px-4 pt-4 sm:pt-6">
-        <HomeHero tagline={tagline} backdropUrl={backdropUrl} />
+        <HomeHero
+          tagline={tagline}
+          openLabel={openLabel}
+          featured={featured}
+          isTonight={isTonight}
+        />
+      </div>
+
+      <div className="max-w-5xl mx-auto px-4">
+        <MarqueeTicker />
       </div>
 
       {/* Sticky section sub-nav (awwwards-style category bar) */}
       <nav
         aria-label="Page sections"
-        className="sticky top-14 sm:top-16 z-30 bg-[#1a2008]/85 backdrop-blur-xl border-y border-white/10 mt-6 sm:mt-10"
+        className="sticky top-14 sm:top-16 z-30 bg-[#1a2008]/85 backdrop-blur-xl border-y border-white/10"
       >
         <div className="max-w-5xl mx-auto px-4 flex gap-2 overflow-x-auto no-scrollbar py-3">
           {sections.map((s) => (
@@ -109,7 +137,7 @@ export default async function HomePage() {
       </nav>
 
       <div className="max-w-5xl mx-auto px-4 space-y-16 sm:space-y-24 mt-12 sm:mt-16">
-        <HighlightedEvents events={highlightedEvents} />
+        <HighlightedEvents events={scheduleEvents} />
 
         {specials.length > 0 && <SpecialsSection specials={specials} />}
 

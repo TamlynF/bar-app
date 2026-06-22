@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { Sparkles } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 import { SectionHeading } from "@/components/editorial/section-heading";
-import { Slider } from "@/components/editorial/slider";
+import { SpecialDetailModal } from "@/components/special-detail-modal";
 
 export type SpecialRow = {
   id: number;
@@ -14,13 +14,23 @@ export type SpecialRow = {
   image_url: string | null;
   start_date: string | null;
   end_date: string | null;
+  days_of_week: number[];
   display_order: number;
 };
 
-function formatDateRange(
-  start: string | null,
-  end: string | null
-): string | null {
+const DAY_LABELS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+/** Short uppercase day tag for the stub corner, e.g. "TUE" or "FRI · SAT". */
+function dayTag(days: number[]): string | null {
+  if (!days || days.length === 0) return null;
+  return [...days]
+    .sort((a, b) => a - b)
+    .map((d) => DAY_LABELS[d]?.toUpperCase())
+    .filter(Boolean)
+    .join(" · ");
+}
+
+function shortRange(start: string | null, end: string | null): string | null {
   if (!start && !end) return null;
   const fmt = (d: string) => format(new Date(d + "T00:00:00"), "d MMM");
   if (start && end) return `${fmt(start)} – ${fmt(end)}`;
@@ -28,91 +38,89 @@ function formatDateRange(
   return `Until ${fmt(end!)}`;
 }
 
+/**
+ * Home "Specials" — After Dark: burgundy ticket-stubs you can tap for the full
+ * details (run dates, which days it's on, terms). Burgundy flags offers per the
+ * STYLE_GUIDE; the detail modal is the requested "tap for more info" flow.
+ */
 export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
+  const [selected, setSelected] = useState<SpecialRow | null>(null);
+
   if (specials.length === 0) return null;
 
   return (
     <section id="specials" className="scroll-mt-24">
       <SectionHeading eyebrow="At the bar" title="Specials" />
 
-      <Slider ariaLabel="Drink specials and deals">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
         {specials.map((s) => (
-          <SpecialCard key={s.id} special={s} />
+          <SpecialStub key={s.id} special={s} onOpen={() => setSelected(s)} />
         ))}
-      </Slider>
+      </div>
+
+      {selected && (
+        <SpecialDetailModal special={selected} onClose={() => setSelected(null)} />
+      )}
     </section>
   );
 }
 
-function SpecialCard({ special }: { special: SpecialRow }) {
-  const [flipped, setFlipped] = useState(false);
-  const dateRange = formatDateRange(special.start_date, special.end_date);
+function SpecialStub({
+  special,
+  onOpen,
+}: {
+  special: SpecialRow;
+  onOpen: () => void;
+}) {
+  const tag = dayTag(special.days_of_week);
+  const range = shortRange(special.start_date, special.end_date);
 
   return (
     <button
       type="button"
-      onClick={() => setFlipped((f) => !f)}
-      className="shrink-0 snap-start w-56 sm:w-64 min-h-20 sm:min-h-24 rounded-2xl border border-white/10 bg-[#26300D] overflow-hidden text-left cursor-pointer"
+      onClick={onOpen}
+      className="group relative text-left overflow-hidden rounded-2xl bg-[#7A1F1F] text-[#ffeede] p-5 pl-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDCC4B]"
     >
-      {!flipped ? (
-        /* Front — circle thumbnail + info */
-        <div className="flex h-20 sm:h-24 gap-2.5 p-2 items-center animate-in fade-in duration-200">
-          <div className="w-14 h-14 sm:w-16 sm:h-16 shrink-0 rounded-full overflow-hidden border border-white/10 bg-white/5">
-            {special.image_url ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img
-                src={special.image_url}
-                alt={special.title}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <Sparkles className="w-5 h-5 text-[#FDCC4B] opacity-30" />
-              </div>
-            )}
-          </div>
+      {/* Perforated ticket edge */}
+      <span
+        className="ad-stub-perf absolute left-0 top-0 bottom-0 w-3.5"
+        aria-hidden="true"
+      />
 
-          <div className="flex-1 min-w-0 flex flex-col justify-center gap-1">
-            <p className="text-sm font-black text-white leading-tight line-clamp-2">
-              {special.title}
-            </p>
-            {dateRange && (
-              <p className="text-[10px] text-[#FDCC4B] font-bold tabular-nums uppercase tracking-wide">
-                {dateRange}
-              </p>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* Back — description + badges */
-        <div className="flex flex-col p-3 animate-in fade-in duration-200 gap-1.5">
-          {special.description && (
-            <div
-              className="text-[10px] text-stone-300 font-medium leading-snug rich-content rich-content--public"
-              dangerouslySetInnerHTML={{ __html: special.description }}
-            />
-          )}
-
-          {special.badges.length > 0 && (
-            <div className="flex gap-1 flex-wrap">
-              {special.badges.map((b) => (
-                <span
-                  key={b}
-                  className="text-[8px] font-black uppercase tracking-wide text-[#FDCC4B] bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 px-1.5 py-0.5 rounded-full"
-                >
-                  {b}
-                </span>
-              ))}
-            </div>
-          )}
-
-          {!special.description && special.badges.length === 0 && (
-            <p className="text-xs text-stone-500 font-bold uppercase tracking-wide text-center">
-              {special.title}
-            </p>
-          )}
-        </div>
+      {tag && (
+        <span className="absolute top-4 right-4 text-[10px] font-black uppercase tracking-[0.12em] text-[#ffd9b0]/80">
+          {tag}
+        </span>
       )}
+
+      <Sparkles className="w-6 h-6 text-[#FDCC4B]" aria-hidden="true" />
+
+      <h4 className="mt-3 font-black uppercase tracking-tight leading-none text-xl">
+        {special.title}
+      </h4>
+
+      {range && (
+        <p className="mt-2 text-[11px] font-bold tabular-nums uppercase tracking-wide text-[#ffd9b0]">
+          {range}
+        </p>
+      )}
+
+      <div className="mt-4 flex items-center justify-between gap-2">
+        {special.badges[0] ? (
+          <span className="text-[10px] font-black uppercase tracking-wide bg-white/15 px-2.5 py-1 rounded-md">
+            {special.badges[0]}
+          </span>
+        ) : (
+          <span />
+        )}
+        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.1em] text-[#ffd9b0]">
+          View details
+          <ArrowRight
+            className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
+            aria-hidden="true"
+          />
+        </span>
+      </div>
     </button>
   );
 }

@@ -32,6 +32,7 @@ export type SpecialRecord = {
   image_url: string | null;
   start_date: string | null;
   end_date: string | null;
+  days_of_week: number[];
   is_active: boolean;
   display_order: number;
   created_at?: string;
@@ -39,6 +40,24 @@ export type SpecialRecord = {
   created_by?: number | null;
   updated_by?: number | null;
 };
+
+/** ISO weekday numbers (1=Mon … 7=Sun) paired with their short labels. */
+const WEEKDAYS: { value: number; label: string }[] = [
+  { value: 1, label: "Mon" },
+  { value: 2, label: "Tue" },
+  { value: 3, label: "Wed" },
+  { value: 4, label: "Thu" },
+  { value: 5, label: "Fri" },
+  { value: 6, label: "Sat" },
+  { value: 7, label: "Sun" },
+];
+
+function formatDays(days: number[] | null | undefined): string {
+  if (!days || days.length === 0) return "Every day";
+  return WEEKDAYS.filter((d) => days.includes(d.value))
+    .map((d) => d.label)
+    .join(", ");
+}
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "—";
@@ -356,6 +375,10 @@ export default function SpecialsClient({
                     value={formatDate(selected.end_date)}
                   />
                   <DetailCell
+                    label="Days"
+                    value={formatDays(selected.days_of_week)}
+                  />
+                  <DetailCell
                     label="Status"
                     value={selected.is_active ? "Active" : "Inactive"}
                   />
@@ -507,6 +530,39 @@ export default function SpecialsClient({
                       className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none"
                     />
                   </FormRow>
+
+                  <div className="px-4 sm:px-5 py-3">
+                    <div className="flex items-center justify-between gap-2 mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] opacity-60">
+                        Available on
+                      </span>
+                      <span className="text-[10px] font-medium text-[#5F624F] opacity-60">
+                        Leave all unticked for every day
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {WEEKDAYS.map((d) => {
+                        const checked = formDefault?.days_of_week?.includes(d.value);
+                        return (
+                          <label
+                            key={d.value}
+                            className="relative cursor-pointer select-none"
+                          >
+                            <input
+                              type="checkbox"
+                              name="days_of_week"
+                              value={d.value}
+                              defaultChecked={checked}
+                              className="peer sr-only"
+                            />
+                            <span className="inline-flex h-9 min-w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 text-[11px] font-black uppercase tracking-wide text-[#5F624F] transition-colors peer-checked:border-[#5C4033] peer-checked:bg-[#5C4033] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[#5C4033]">
+                              {d.label}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
 
                   <FormRow label="Status">
                     <select

@@ -84,6 +84,18 @@ values
    'band', 'rock', 'The Test Band', 'pending',
    ARRAY[(CURRENT_DATE + 21), (CURRENT_DATE + 28)]::date[], 'Flexible on set length.');
 
+-- ── Specials (drink/food deals shown on the public home page) ────────────────
+-- days_of_week uses ISO weekday numbers (1=Mon … 7=Sun); empty = every day.
+insert into public.specials
+  (title, description, badges, start_date, end_date, days_of_week, is_active, display_order)
+values
+  ('Two-for-Tuesday', '<p>Any two house cocktails for £12, all night. From the house cocktail list at the bar — not with other offers.</p>',
+   ARRAY['Cocktails'], CURRENT_DATE, CURRENT_DATE + 60, ARRAY[2]::smallint[], true, 0),
+  ('Quiz-Night Pints', '<p>£4 selected draught while the rounds run. One per round, be sensible.</p>',
+   ARRAY['Draught'], CURRENT_DATE, null, ARRAY[4]::smallint[], true, 1),
+  ('Last Orders Deal', '<p>Half-price shots in the final hour, Friday &amp; Saturday. Spirits &amp; shots only, subject to availability.</p>',
+   ARRAY['Late'], CURRENT_DATE, null, ARRAY[5,6]::smallint[], true, 2);
+
 -- ── Reset identity sequences past the seeded ids ─────────────────────────────
 
 select setval(pg_get_serial_sequence('public.event_types', 'id'),       (select max(id) from public.event_types));

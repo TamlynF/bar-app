@@ -1,101 +1,131 @@
 import Image from "next/image";
-import Link from "next/link";
-import { CalendarDays, ArrowRight } from "lucide-react";
+import { format } from "date-fns";
+import { Clock } from "lucide-react";
+import { EventCta } from "@/components/editorial/event-cta";
+import { parseDate, type SerializedEvent } from "@/lib/events-display";
 
 /**
- * Public home hero — an immersive, awwwards-style editorial landing moment on
- * the bar's dark olive/gold palette. Oversized headline over a photographic
- * backdrop (first active gallery photo), brand wordmark, theme pills and two
- * CTAs. Falls back to a gold-blur olive panel when there's no photo.
+ * Public home hero — "After Dark" direction. A centred, late-night signage
+ * moment on the dark olive/gold palette: a live "open" pill, the brand
+ * wordmark lit by a gold glow, the tagline, and a featured "on tonight / next
+ * up" card for the soonest event. Soft gold + burgundy blurs sit behind.
  *
- * Per STYLE_GUIDE.md the brand wordmark is allowed here (home hero) + nav only.
+ * Per STYLE_GUIDE.md the brand wordmark is sanctioned here (home hero) + nav
+ * only — this is the one page that gets hero brand treatment.
  */
 export function HomeHero({
   tagline,
-  backdropUrl,
+  openLabel,
+  featured,
+  isTonight,
 }: {
   tagline: string;
-  backdropUrl: string | null;
+  openLabel: string;
+  featured: SerializedEvent | null;
+  isTonight: boolean;
 }) {
   return (
-    <section className="relative overflow-hidden rounded-3xl border border-white/10 min-h-112 sm:min-h-128 flex flex-col justify-end">
-      {/* Backdrop */}
-      {backdropUrl ? (
-        <>
-          <Image
-            src={backdropUrl}
-            alt=""
-            fill
-            priority
-            sizes="(max-width: 768px) 100vw, 768px"
-            className="object-cover"
-          />
-          <div className="absolute inset-0 bg-linear-to-t from-[#1a2008] via-[#1a2008]/80 to-[#1a2008]/30" />
-        </>
-      ) : (
-        <>
-          <div className="absolute inset-0 bg-[#26300D]" />
-          <div className="absolute -top-10 left-0 w-[120%] max-w-2xl h-64 bg-[#FDCC4B]/10 blur-[100px] rounded-[100%] pointer-events-none" />
-        </>
-      )}
+    <section className="relative overflow-hidden rounded-3xl border border-white/10 bg-[#26300D] px-5 py-10 sm:px-10 sm:py-14 text-center">
+      {/* Glow blurs (STYLE_GUIDE: gold + burgundy, blur, low opacity) */}
+      <div className="pointer-events-none absolute -top-24 -left-20 w-120 h-120 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute top-24 -right-24 w-112 h-112 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
-      {/* Foreground */}
-      <div className="relative z-10 p-6 sm:p-12">
-        <div className="animate-reveal inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-5">
-          <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#FDCC4B]">
-            Hinckley &middot; Live Music &amp; Late Nights
+      <div className="relative z-10 flex flex-col items-center">
+        {/* Live open pill */}
+        <div className="animate-reveal inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/25 rounded-full px-3.5 py-1.5">
+          <span className="ad-ping w-1.5 h-1.5 rounded-full bg-[#FDCC4B]" aria-hidden="true" />
+          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FDCC4B]">
+            {openLabel}
           </span>
         </div>
 
-        <h1 className="animate-reveal [animation-delay:80ms] m-0">
+        {/* Brand wordmark — lit from above */}
+        <h1 className="animate-reveal [animation-delay:80ms] m-0 mt-6">
           <Image
             src="/CompanyName.png"
             alt="Don Fenticas — live music bar in Hinckley"
-            width={420}
-            height={112}
+            width={560}
+            height={150}
             priority
-            className="h-16 sm:h-24 w-auto object-contain drop-shadow-xl"
+            className="h-16 sm:h-24 w-auto object-contain drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)]"
           />
         </h1>
 
-        <p className="animate-reveal [animation-delay:160ms] mt-4 max-w-md text-stone-200 text-sm sm:text-base font-medium leading-relaxed line-clamp-3 drop-shadow">
+        <p className="animate-reveal [animation-delay:160ms] mt-4 max-w-md text-stone-300 text-sm sm:text-base font-medium leading-relaxed">
           {tagline}
         </p>
 
-        {/* Theme pills */}
-        <div className="animate-reveal [animation-delay:240ms] mt-6 flex gap-2 overflow-x-auto no-scrollbar">
-          <span className="pill-neon-orange border shrink-0 text-[9px] font-black uppercase tracking-[0.15em] h-9 px-4 flex items-center justify-center rounded-full backdrop-blur cursor-default">
-            Live Music
+        {/* Featured "on tonight / next up" card */}
+        {featured && (
+          <FeaturedCard event={featured} isTonight={isTonight} />
+        )}
+      </div>
+    </section>
+  );
+}
+
+function FeaturedCard({
+  event,
+  isTonight,
+}: {
+  event: SerializedEvent;
+  isTonight: boolean;
+}) {
+  const dateObj = parseDate(event.date);
+  const timeLabel = event.startTimeLabel
+    ? `${event.startTimeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ""}`
+    : null;
+
+  return (
+    <div className="animate-reveal [animation-delay:240ms] mt-8 w-full max-w-md text-left bg-[#1a2008]/60 border border-white/10 rounded-3xl p-5 shadow-2xl shadow-black/40">
+      <div className="flex items-center gap-2">
+        <span className="ad-blink w-2 h-2 rounded-full bg-[#FF6B35] shadow-[0_0_10px_#FF6B35]" aria-hidden="true" />
+        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FF6B35]">
+          {isTonight ? "On tonight" : "Next up"}
+        </span>
+      </div>
+
+      <div className="mt-3 flex items-center gap-4">
+        {/* Gold date chip */}
+        <div className="shrink-0 w-18 h-18 rounded-2xl bg-[#FDCC4B] text-[#1a2008] flex flex-col items-center justify-center shadow-lg shadow-[#FDCC4B]/30">
+          <span className="text-[11px] font-black uppercase tracking-widest">
+            {format(dateObj, "EEE")}
           </span>
-          <span className="pill-neon-pink border shrink-0 text-[9px] font-black uppercase tracking-[0.15em] h-9 px-4 flex items-center justify-center rounded-full backdrop-blur cursor-default">
-            Indie &amp; Rock
-          </span>
-          <span className="pill-neon-cyan border shrink-0 text-[9px] font-black uppercase tracking-[0.15em] h-9 px-4 flex items-center justify-center rounded-full backdrop-blur cursor-default">
-            DJs
-          </span>
-          <span className="pill-neon-lime border shrink-0 text-[9px] font-black uppercase tracking-[0.15em] h-9 px-4 flex items-center justify-center rounded-full backdrop-blur cursor-default">
-            Karaoke
+          <span className="text-3xl font-black tabular-nums leading-none mt-0.5">
+            {format(dateObj, "d")}
           </span>
         </div>
 
-        {/* CTAs */}
-        <div className="animate-reveal [animation-delay:320ms] mt-7 flex flex-wrap gap-3">
-          <Link
-            href="/book"
-            className="inline-flex items-center justify-center gap-2 h-12 px-7 rounded-full bg-[#FDCC4B] text-[#1a2008] text-sm font-black uppercase tracking-wide hover:bg-[#e5b843] active:scale-95 transition-all"
+        <div className="min-w-0 flex-1">
+          {event.subType && (
+            <p className="text-stone-400 text-[9px] font-black uppercase tracking-[0.25em]">
+              {event.subType}
+            </p>
+          )}
+          <p
+            className="ev-text font-black uppercase tracking-tight leading-[0.95] text-2xl line-clamp-2 mt-0.5"
+            style={{ "--ev-c": event.color } as React.CSSProperties}
           >
-            <CalendarDays className="w-4 h-4" aria-hidden="true" />
-            Book
-          </Link>
-          <Link
-            href="/whats-on"
-            className="inline-flex items-center justify-center gap-2 h-12 px-7 rounded-full border border-white/25 bg-white/5 text-white text-sm font-black uppercase tracking-wide hover:bg-white/15 hover:border-white/40 active:scale-95 transition-all"
-          >
-            What&apos;s On
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
-          </Link>
+            {event.title}
+          </p>
+          {(event.tagline || timeLabel) && (
+            <p className="mt-1 flex items-center gap-1.5 text-stone-400 text-xs font-medium">
+              {timeLabel && (
+                <span className="inline-flex items-center gap-1 tabular-nums font-bold">
+                  <Clock className="w-3 h-3 shrink-0" aria-hidden="true" />
+                  {timeLabel}
+                </span>
+              )}
+              {event.tagline && timeLabel && <span aria-hidden="true">·</span>}
+              {event.tagline && <span className="truncate">{event.tagline}</span>}
+            </p>
+          )}
         </div>
       </div>
-    </section>
+
+      <div className="mt-4">
+        <EventCta event={event} size="lg" />
+      </div>
+    </div>
   );
 }

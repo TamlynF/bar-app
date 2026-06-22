@@ -13,6 +13,7 @@ export type SubtypeJoin = {
   name: string;
   color: string | null;
   behavior: string | null;
+  tagline?: string | null;
 };
 
 export type EventTypeJoin = {
@@ -20,6 +21,7 @@ export type EventTypeJoin = {
   sub_type: string | null;
   badge_color: string | null;
   behavior: EventBehavior;
+  tagline: string | null;
 };
 
 export type EventRow = {
@@ -34,6 +36,7 @@ export type EventRow = {
   external_link: string | null;
   booking_page_url: string | null;
   karaoke_request_url: string | null;
+  tagline?: string | null;
   event_types: TypeJoin | TypeJoin[];
   event_subtypes: SubtypeJoin | SubtypeJoin[];
 };
@@ -64,6 +67,7 @@ export function getEventType(event: EventRow): EventTypeJoin | null {
     sub_type: s?.name ?? null,
     badge_color: s?.color ?? null,
     behavior: isEventBehavior(s?.behavior) ? s.behavior : "standard",
+    tagline: s?.tagline ?? null,
   };
 }
 
@@ -112,12 +116,14 @@ export type SerializedEvent = {
   bookingPageUrl: string | null;
   color: string;
   subType: string | null;
+  tagline: string | null;
   isKaraoke: boolean;
   karaokeRequestUrl: string | null;
 };
 
 /** Map a raw events row into the shared serialized shape. */
 export function serializeEvent(e: EventRow): SerializedEvent {
+  const et = getEventType(e);
   return {
     id: e.id,
     title: e.title,
@@ -129,8 +135,9 @@ export function serializeEvent(e: EventRow): SerializedEvent {
     isBookable: e.is_bookable ?? false,
     bookingPageUrl: e.booking_page_url ?? null,
     color: eventBadgeColor(e),
-    subType: getEventType(e)?.sub_type ?? null,
-    isKaraoke: getEventType(e)?.behavior === "karaoke",
+    subType: et?.sub_type ?? null,
+    tagline: e.tagline ?? et?.tagline ?? null,
+    isKaraoke: et?.behavior === "karaoke",
     karaokeRequestUrl: e.karaoke_request_url ?? null,
   };
 }

@@ -13,6 +13,16 @@ export async function saveSpecialAction(formData: FormData) {
     .map((b) => b.trim().toUpperCase())
     .filter(Boolean);
 
+  // ISO weekday numbers (1=Mon … 7=Sun), de-duped and sorted. Empty = every day.
+  const days_of_week = Array.from(
+    new Set(
+      formData
+        .getAll("days_of_week")
+        .map((d) => parseInt(d.toString(), 10))
+        .filter((n) => n >= 1 && n <= 7)
+    )
+  ).sort((a, b) => a - b);
+
   const payload = {
     title: formData.get("title")?.toString() || "",
     description: formData.get("description")?.toString() || null,
@@ -20,6 +30,7 @@ export async function saveSpecialAction(formData: FormData) {
     image_url: formData.get("image_url")?.toString() || null,
     start_date: formData.get("start_date")?.toString() || null,
     end_date: formData.get("end_date")?.toString() || null,
+    days_of_week,
     is_active: formData.get("is_active") !== "false",
     display_order: parseInt(formData.get("display_order")?.toString() || "0", 10),
   };

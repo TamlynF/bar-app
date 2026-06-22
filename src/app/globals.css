@@ -82,6 +82,72 @@ html, body {
   .animate-reveal { animation: none; }
 }
 
+/* ════════════════════════════════════════════════════════════════
+   After Dark — public home redesign (hero pulse, marquee, schedule
+   rows that light up to the event's colour, ticket-stub specials).
+   Kept here because they need keyframes / the dynamic --ev-c var that
+   Tailwind utilities can't express. Motion respects reduced-motion.
+   ════════════════════════════════════════════════════════════════ */
+
+/* Marquee band over the hero */
+@keyframes ad-marquee { to { transform: translateX(-50%); } }
+.ad-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: ad-marquee 30s linear infinite;
+}
+
+/* "Open" pill ping + "on tonight" blink */
+@keyframes ad-ping {
+  0%   { box-shadow: 0 0 0 0 rgba(253, 204, 75, 0.6); }
+  70%  { box-shadow: 0 0 0 9px rgba(253, 204, 75, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(253, 204, 75, 0); }
+}
+.ad-ping { animation: ad-ping 1.8s infinite; }
+
+@keyframes ad-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.ad-blink { animation: ad-blink 1.4s infinite; }
+
+/* Staggered entrance for schedule rows */
+@keyframes ad-rise {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: none; }
+}
+.ad-rise {
+  opacity: 0;
+  animation: ad-rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) forwards;
+  animation-delay: calc(var(--i, 0) * 55ms);
+}
+
+/* Schedule rows: hover nudges right + tints border/glow to the event colour */
+.ad-row {
+  transition: transform 0.22s ease, border-color 0.22s ease, background-color 0.22s ease, box-shadow 0.22s ease;
+}
+.ad-row:hover {
+  transform: translateX(4px);
+  border-color: color-mix(in oklab, var(--ev-c, #fdcc4b) 55%, transparent);
+  background-color: color-mix(in oklab, var(--ev-c, #fdcc4b) 8%, #26300d);
+  box-shadow: 0 10px 30px -18px var(--ev-c, #fdcc4b);
+}
+/* Type-icon chip, tinted to the event colour */
+.ad-kind {
+  color: var(--ev-c, #fdcc4b);
+  background-color: color-mix(in oklab, var(--ev-c, #fdcc4b) 14%, transparent);
+  border-color: color-mix(in oklab, var(--ev-c, #fdcc4b) 32%, transparent);
+}
+
+/* Perforated left edge on the burgundy special "ticket stubs" */
+.ad-stub-perf {
+  background: radial-gradient(circle at -2px 9px, transparent 5px, #1a2008 5px) 0 0 / 14px 18px repeat-y;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ad-marquee-track { animation: none; }
+  .ad-ping, .ad-blink { animation: none; }
+  .ad-rise { opacity: 1; animation: none; }
+  .ad-row:hover { transform: none; }
+}
+
 /* ===== Preserved custom: scrollbar / misc ===== */
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
