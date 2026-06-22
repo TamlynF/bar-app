@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Lenis from "lenis";
+import "lenis/dist/lenis.css";
 
 /**
  * Mounts Lenis smooth-scroll for the public site (an awwwards-style buttery
