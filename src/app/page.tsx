@@ -77,7 +77,7 @@ export default async function HomePage() {
 
   const companyInfo = (info ?? null) as CompanyInfo;
   const description = (info as { description?: string | null } | null)?.description;
-  const tagline = description?.trim() || DEFAULT_TAGLINE;
+  const tagline = DEFAULT_TAGLINE;
 
   // Live "open" pill: today's hours if we have them, else an evergreen line.
   const todayName = today
