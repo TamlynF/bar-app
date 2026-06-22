@@ -65,7 +65,7 @@ export function SpecialDetailModal({
         aria-modal="true"
         aria-label={special.title}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full sm:max-w-md max-h-[92vh] overflow-y-auto bg-[#26300D] border border-hairline rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black/60 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
+        className="relative w-full sm:max-w-md max-h-[92vh] overflow-y-auto bg-[#1b210f] border border-hairline rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black/60 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
       >
         <button
           type="button"

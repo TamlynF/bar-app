@@ -13,6 +13,7 @@ export const Variants = () => (
   <div style={row}>
     <Button>Book now</Button>
     <Button variant="secondary">Details</Button>
+    <Button variant="destructive">Cancel</Button>
     <Button variant="outline">Outline</Button>
     <Button variant="ghost">Ghost</Button>
     <Button variant="link">Learn more</Button>

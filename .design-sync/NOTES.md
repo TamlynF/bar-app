@@ -26,17 +26,29 @@ no `dist/`, no exported package. To make the converter work we build a small
   `node_modules/bar-app-ds/` is NOT committed (it's under node_modules) — recreate
   it on a fresh clone with the esbuild + d.ts + css steps above before building.
 
-## CRITICAL FINDING — no semantic token layer
-The shadcn primitives reference `bg-primary`, `text-primary-foreground`,
-`bg-secondary`, `bg-destructive`, `border-input`, `ring-ring`, etc., but the app
-**defines none of those theme variables** — there is no `@theme`/`:root` token
-block anywhere in `src/app/globals.css`. Consequence:
-- `Input` renders correctly (border/radius/padding don't need colour tokens).
-- `Button` renders **structurally only** — sizing + `outline` border apply, but
-  colour variants have no fill and render as plain text. `destructive` is
-  white-on-nothing (invisible) — that cell was dropped from the Button preview.
-This is the app's real behaviour, not a sync bug. A real DS import would first add
-a proper token layer (or sync the on-brand composites + full `globals.css`).
+## RESOLVED (2026-06-22) — the token layer now exists
+The earlier sync recorded "no semantic token layer". **That has flipped.**
+`src/app/globals.css` now defines a full `:root` block (`--primary` #5C4033 espresso,
+`--secondary`/`--border`/`--input` #E6DFC8, `--destructive` #DC2626, `--background`/
+`--accent` #F7F4EA cream, etc.) re-exported via `@theme inline` as `--color-*`.
+Consequence:
+- `Button` variants now render with **real fill** (default = espresso on cream,
+  secondary = tan, destructive = red, outline = bordered, ghost = transparent, link).
+- The dropped `destructive` cell was **restored** to the Button preview's `Variants`.
+- The tokens are the **admin** palette (espresso/cream), so `variant="default"` is an
+  admin-surface button. Public surface still overrides colour with explicit hex.
+This is the app's real behaviour. conventions.md was rewritten to match.
+
+### How the token layer reaches the compiled CSS (IMPORTANT for re-sync)
+Tailwind v4 only emits a colour utility (`bg-primary`) when its `--color-*` token is
+registered. The POC's `_tw-input.css` therefore **imports the app's real globals.css**
+(`@import "../../src/app/globals.css"`) so the `:root` + `@theme inline` tokens are in
+scope — sourcing from globals.css keeps values in sync (no hardcoded drift). globals.css
+also sets `html/body` to the **public** dark-olive page bg (#14180a); since Button/Input
+are admin-surface primitives, `_tw-input.css` appends `html, body { background-color:
+#F7F4EA; }` so preview cards render on the admin **cream** canvas, not dark olive.
+If you ever see buttons with no fill again: confirm `_tw-input.css` still imports
+globals.css (not the old bare `@import "tailwindcss"`).
 
 ## Tailwind CSS compile
 `styles.css` is compiled via `@tailwindcss/cli` (installed into `.ds-sync`).
@@ -81,6 +93,14 @@ as a known warn, do not chase.**
 - If `src/components/ui/{button,input}.tsx` change upstream, the `poc-src/` copies
   and the hand-written `.d.ts` will drift — re-copy and re-bundle.
 - `.d.ts` props are hand-written, not extracted from source — verify against the
-  real component if the API changes.
-- The whole premise (plain primitives) flips the day the app adds a token layer;
-  at that point re-compile the CSS and the buttons will gain colour.
+  real component if the API changes. (Checked 2026-06-22: upstream button/input
+  variant+size enums unchanged — the only diff vs poc-src is the `@/lib/utils` →
+  `../../src/lib/utils` import-path rewrite, which is intentional. `.d.ts` still current.)
+- The token layer flip already happened (see RESOLVED above). The remaining risk is
+  the **reverse**: if the admin token values in `globals.css` change, re-compiling
+  `_tw-input.css` (which imports globals.css) picks them up automatically — but the
+  hardcoded `#F7F4EA` cream-surface override in `_tw-input.css` would need updating
+  if the admin background token ever changes.
+- The `[TOKENS_MISSING]` warn now lists 9 runtime vars (radix popover/dropdown,
+  `--chip-c`, `--ev-theme`, `--spotify-bg`, `--badge-color`, `--bg`). Still expected
+  app runtime vars — leave as a known warn (see Known render warns).

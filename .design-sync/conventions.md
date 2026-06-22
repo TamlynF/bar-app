@@ -1,55 +1,70 @@
 # Don Fenticas (bar-app) — design-system POC
 
-This is a **proof-of-concept** import of two primitives (`Button`, `Input`) from the
+A **proof-of-concept** import of two primitives (`Button`, `Input`) from the
 `bar-app` Next.js app. Read this before composing UI with them.
 
-## Critical: there is no semantic token layer
+## The token layer (admin espresso/cream)
 
-These shadcn-derived primitives reference colour utilities like `bg-primary`,
+These shadcn-derived primitives reference semantic colour utilities — `bg-primary`,
 `text-primary-foreground`, `bg-secondary`, `bg-destructive`, `bg-accent`,
-`border-input`, and `ring-ring`. **The app defines none of the underlying theme
-variables** (`--primary`, `--secondary`, `--destructive`, …) — there is no
-`@theme` / `:root` token block in its `globals.css`. As a result those colour
-utilities resolve to nothing:
+`border-input`, `ring-ring`. The app's `globals.css` now defines the backing theme
+variables in a `:root` block, re-exported through `@theme inline` as `--color-*`,
+so **these utilities resolve to real colour** and `Button` variants render with fill.
 
-- `Input` looks correct — its styling (border, radius, padding, focus ring shape)
-  does not depend on the missing colour tokens.
-- `Button` renders **structurally only**: sizing and the `outline` border apply,
-  but `default`/`secondary`/`ghost`/`destructive` have **no background fill** and
-  render as plain text. Do not rely on `variant` for colour.
+The token values are the **admin-portal** palette (the working-tool surface), *not*
+the public marketing palette:
 
-## How to colour things instead
+| Token | Value | Meaning |
+|---|---|---|
+| `--primary` / `--ring` | `#5C4033` | espresso |
+| `--primary-foreground` / `--background` / `--accent` | `#F7F4EA` | cream |
+| `--secondary` / `--border` / `--input` | `#E6DFC8` | soft tan border |
+| `--destructive` | `#DC2626` | status red |
+| `--foreground` | `#1F1F1A` | near-black ink |
 
-bar-app styles by **explicit utility classes / hex**, not semantic tokens. It has
-two surfaces, kept visually separate:
+So out of the box `Button` looks like an **admin** button: espresso fill, cream text.
 
-- **Public** ("gritty bar"): deep olive background `#26300D` / `#1a2008`, gold
-  accent `#FDCC4B`, on dark — e.g. `className="bg-[#FDCC4B] text-[#26300D]"`.
-- **Admin portal**: cream background `#F7F4EA`, espresso primary `#5C4033`,
-  soft borders `#E6DFC8`.
+## Two surfaces — pick the colour strategy per surface
 
-When you place a `Button`, give it explicit colour classes for the target surface
-rather than expecting `variant="default"` to supply a fill. Never mix the two
-palettes on one surface.
+bar-app has two intentionally-separate surfaces:
+
+- **Admin portal** — cream canvas `#F7F4EA`, espresso primary `#5C4033`. Here the
+  `variant` props match the surface: use `Button` / `Button variant="secondary"` /
+  `variant="destructive"` as-is; they already carry the right colours.
+- **Public site** ("gritty bar") — deep olive `#26300D`/`#14180a`, gold accent
+  `#FDCC4B`. The token layer is admin-only, so on this surface **override colour with
+  explicit classes** rather than relying on `variant` — e.g.
+  `className="bg-[#FDCC4B] text-[#26300D] hover:bg-[#FDCC4B]/90"`.
+
+Never mix the two palettes on one surface.
 
 ## Components
 
-- **`Button`** — props: `variant` (`default | destructive | outline | secondary
-  | ghost | link`), `size` (`default | xs | sm | lg | icon | icon-xs | icon-sm |
-  icon-lg`), `asChild`, plus all native `<button>` attributes. Sizing/spacing
-  utilities work; colour variants need the token layer (absent here).
-- **`Input`** — all native `<input>` attributes; renders a bordered, rounded
-  field. Safe to use as-is.
+- **`Button`** — `variant`: `default | destructive | outline | secondary | ghost |
+  link`; `size`: `default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg`;
+  `asChild`; plus all native `<button>` attributes. Both axes now render fully
+  (sizing **and** colour).
+- **`Input`** — all native `<input>` attributes; a bordered, rounded field with a
+  focus ring. Safe to use as-is on either surface.
 
-## Build snippet (public surface)
+## Build snippets
+
+Admin surface — variants supply the colour:
 
 ```tsx
 import { Button, Input } from "bar-app-ds";
 
 <form className="flex flex-col gap-3">
-  <Input placeholder="Your name" />
-  <Button className="bg-[#FDCC4B] text-[#26300D] hover:bg-[#FDCC4B]/90">
-    Book now
-  </Button>
+  <Input placeholder="Customer name" />
+  <Button>Save booking</Button>
+  <Button variant="secondary">Cancel</Button>
 </form>
+```
+
+Public surface — override colour to gold-on-olive:
+
+```tsx
+<Button className="bg-[#FDCC4B] text-[#26300D] hover:bg-[#FDCC4B]/90">
+  Book now
+</Button>
 ```
