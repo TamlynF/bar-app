@@ -121,11 +121,6 @@ export default async function MenuPage() {
         <PublicNav currentPath="/menu" />
       </div>
 
-      {/* Print button (screen only) */}
-      <div className="no-print max-w-4xl mx-auto px-4 pt-2 flex justify-end">
-        <PrintButton />
-      </div>
-
       {/* Menu frame — the bordered page (kept for the print aesthetic) */}
       <div className="menu-frame max-w-4xl my-4 sm:my-8 mx-3 sm:mx-auto rounded-sm border-[5px] border-[#4a5a28] relative">
         <div className="menu-inner border-2 border-[#B8962E] bg-[#2a3612] p-4 sm:p-8">
