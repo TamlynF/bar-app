@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import styles from "./confirm-dialog.module.css";
 
 interface ConfirmOptions {
@@ -38,7 +39,9 @@ export function useConfirm() {
 
   const isDestructive = options.variant === "destructive";
 
-  const ConfirmDialogUI = open ? (
+  // Portal to <body> so the dialog escapes any in-tree stacking context and
+  // paints above modal surfaces like a Radix Sheet (which is itself portalled).
+  const ConfirmDialogUI = open && typeof document !== "undefined" ? createPortal(
     <>
       {/* Backdrop */}
       <div
@@ -85,7 +88,8 @@ export function useConfirm() {
           </button>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   ) : null;
 
   return { confirm, ConfirmDialogUI };

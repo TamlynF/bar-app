@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Analytics } from "@vercel/analytics/next";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://bookingsdonfenticas.co.uk";
@@ -65,6 +66,7 @@ export default function RootLayout({
         className="antialiased min-h-screen"
       >
         {children}
+        <Toaster />
       </body>
     </html>
   );
