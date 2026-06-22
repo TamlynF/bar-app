@@ -7,6 +7,64 @@
 @source "../app/login/**/*.{ts,tsx}";
 @source "../components/**/*.{ts,tsx}";
 
+/* ════════════════════════════════════════════════════════════════
+   shadcn/ui design tokens.
+   The ui/ primitives (button, input, dialog, sheet, popover,
+   dropdown-menu, textarea, radio-group, calendar) reference semantic
+   classes — bg-primary, bg-popover, border-input, ring-ring,
+   text-muted-foreground, etc. Tailwind v4 only emits a colour utility
+   when its --color-* token is registered, so these MUST be defined here
+   or the primitives render unthemed.
+
+   These primitives are admin-surface only — values map to the admin
+   espresso/cream palette in STYLE_GUIDE.md. :root holds the raw values;
+   @theme inline re-exports them as --color-* so call sites can still
+   override a single token in a subtree (e.g. style={{ "--popover": … }}).
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  --background: #F7F4EA;            /* admin-bg — cream canvas */
+  --foreground: #1F1F1A;            /* admin-ink */
+  --card: #FFFDF7;                  /* admin-card */
+  --card-foreground: #1F1F1A;
+  --popover: #FFFDF7;
+  --popover-foreground: #1F1F1A;
+  --primary: #5C4033;              /* admin-primary — espresso */
+  --primary-foreground: #F7F4EA;
+  --secondary: #E6DFC8;            /* admin-border tone as a soft surface */
+  --secondary-foreground: #1F1F1A;
+  --muted: #E6DFC8;
+  --muted-foreground: #5F624F;     /* admin-ink-muted */
+  --accent: #F7F4EA;               /* cream hover highlight (admin convention) */
+  --accent-foreground: #1F1F1A;
+  --destructive: #DC2626;          /* status red-600 */
+  --destructive-foreground: #FFFFFF;
+  --border: #E6DFC8;               /* admin-border */
+  --input: #E6DFC8;
+  --ring: #5C4033;                 /* espresso focus ring */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+}
+
 html, body {
   background-color: #1a2008;
   overflow-x: hidden;
