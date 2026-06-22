@@ -61,7 +61,7 @@ export function EventCta({
         title="Karaoke night hasn't started yet"
       >
         <Mic2 className={cn(icon, "shrink-0")} aria-hidden="true" />
-        Not Started
+        Soon
       </span>
     );
   }
