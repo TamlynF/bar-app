@@ -2,19 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
 import { Calendar } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
-import { ScheduleMore } from "@/components/schedule-more";
-import { NextEventHero } from "@/components/next-event-hero";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { type FilterTab } from "@/components/editorial/filter-tabs";
 import { WhatsOnGrid } from "@/components/whats-on-grid";
-import {
-  parseDate,
-  formatTime,
-  getEventType,
-  eventBadgeColor,
-  serializeEvent,
-  type EventRow,
-} from "@/lib/events-display";
+import { parseDate, serializeEvent, type EventRow } from "@/lib/events-display";
 
 export const revalidate = 300;
 
@@ -37,7 +28,7 @@ export default async function WhatsOnPage() {
   const { data: rawEvents } = await supabase
     .from("events")
     .select(
-      "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior)"
+      "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior)"
     )
     .gte("date", monthStartStr)
     .lte("date", nextMonthEndStr)
@@ -52,21 +43,11 @@ export default async function WhatsOnPage() {
   const monthEvents = events.filter((e) => parseDate(e.date) <= monthEnd);
   const serializedMonthEvents = monthEvents.map(serializeEvent);
 
-  // The first event on or after today is the "next upcoming" — promoted to hero.
-  const nextEvent = serializedMonthEvents.find((e) => e.date >= todayStr) ?? null;
-  const isTonight = nextEvent?.date === todayStr;
-
-  const heroSiblings = nextEvent
-    ? serializedMonthEvents.filter(
-        (e) => e.date === nextEvent.date && e.id !== nextEvent.id
-      )
-    : [];
-
-  // Grid buckets: upcoming (after the hero day) + past (before today).
-  const upcoming = serializedMonthEvents.filter(
-    (e) => e.date >= todayStr && (!nextEvent || e.date !== nextEvent.date)
-  );
+  // Grid buckets: upcoming (today onward) + past (before today). The grid marks
+  // the first upcoming event inline as "NEXT UP" — no separate hero.
+  const upcoming = serializedMonthEvents.filter((e) => e.date >= todayStr);
   const past = serializedMonthEvents.filter((e) => e.date < todayStr);
+  const nextEventId = upcoming[0]?.id ?? null;
 
   // Subtype filter tabs, built from upcoming + hero (not past), preserving colour.
   const tabSeen = new Map<string, string>();
@@ -80,48 +61,46 @@ export default async function WhatsOnPage() {
     color,
   }));
 
-  const laterEvents = events
+  // Future months (beyond this month) — same serialized shape so the grid can
+  // render them with the same EventCard, behind a "View {month}" toggle.
+  const later = events
     .filter((e) => parseDate(e.date) > monthEnd)
-    .map((e) => ({
-      id: e.id,
-      title: e.title,
-      date: e.date,
-      startTimeLabel: formatTime(e.start_time),
-      externalLink: e.external_link,
-      color: eventBadgeColor(e),
-      subType: getEventType(e)?.sub_type ?? null,
-    }));
+    .map(serializeEvent);
 
   const thisMonthLabel = format(today, "MMMM");
   const nextMonthLabel = format(addMonths(today, 1), "MMMM");
 
   return (
-    <main className="min-h-dvh w-full bg-[#1a2008] text-stone-300 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
+    <main className="relative isolate min-h-dvh w-full overflow-hidden bg-canvas text-ink-2 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
+      {/* Ambient glow wash across the top — matches the home hero band */}
+      <div className="pointer-events-none absolute -top-40 -left-30 w-130 h-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute top-20 -right-40 w-110 h-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
+
       <PublicNav currentPath="/whats-on" />
 
-      <div className="max-w-5xl mx-auto px-4 py-6 sm:py-10">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 py-6 sm:py-10">
         <SectionHeading eyebrow={`${thisMonthLabel} · The schedule`} title="What's On" />
 
-        {/* Featured "next up" event */}
-        {nextEvent && (
-          <NextEventHero event={nextEvent} isTonight={isTonight} siblings={heroSiblings} />
+        {/* Search + filterable flip-card grid: past (collapsed, above) →
+            "Coming up" (next event marked inline) → next month (collapsed). */}
+        {(serializedMonthEvents.length > 0 || later.length > 0) && (
+          <WhatsOnGrid
+            upcoming={upcoming}
+            past={past}
+            later={later}
+            tabs={tabs}
+            nextEventId={nextEventId}
+            nextMonthLabel={nextMonthLabel}
+          />
         )}
-
-        {/* Filterable card grid + past collapse */}
-        {serializedMonthEvents.length > 0 && (
-          <WhatsOnGrid upcoming={upcoming} past={past} tabs={tabs} />
-        )}
-
-        {/* Next month, revealed on demand */}
-        <ScheduleMore events={laterEvents} nextMonthLabel={nextMonthLabel} />
 
         {events.length === 0 && (
-          <div className="text-center py-16 bg-white/3 border border-white/5 rounded-2xl">
-            <Calendar className="w-8 h-8 text-stone-700 mx-auto mb-3" />
-            <p className="text-stone-500 font-black text-sm uppercase tracking-tight">
+          <div className="text-center py-16 bg-white/3 border border-hairline rounded-2xl">
+            <Calendar className="w-8 h-8 text-ink-2/50 mx-auto mb-3" aria-hidden="true" />
+            <p className="text-ink-2 font-black text-sm uppercase tracking-tight">
               No Events Scheduled Yet
             </p>
-            <p className="text-stone-600 text-xs mt-1">Check back soon</p>
+            <p className="text-ink-2/70 text-xs mt-1">Check back soon</p>
           </div>
         )}
 

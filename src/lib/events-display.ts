@@ -37,6 +37,7 @@ export type EventRow = {
   booking_page_url: string | null;
   karaoke_request_url: string | null;
   tagline?: string | null;
+  payment_amount?: number | null;
   event_types: TypeJoin | TypeJoin[];
   event_subtypes: SubtypeJoin | SubtypeJoin[];
 };
@@ -117,6 +118,8 @@ export type SerializedEvent = {
   color: string;
   subType: string | null;
   tagline: string | null;
+  /** Entry/ticket price in GBP; 0 = free, null when not fetched. */
+  price: number | null;
   isKaraoke: boolean;
   karaokeRequestUrl: string | null;
 };
@@ -137,6 +140,7 @@ export function serializeEvent(e: EventRow): SerializedEvent {
     color: eventBadgeColor(e),
     subType: et?.sub_type ?? null,
     tagline: e.tagline ?? et?.tagline ?? null,
+    price: e.payment_amount ?? null,
     isKaraoke: et?.behavior === "karaoke",
     karaokeRequestUrl: e.karaoke_request_url ?? null,
   };
