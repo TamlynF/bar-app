@@ -30,11 +30,13 @@ export interface GroupedEvent {
   payment_amount: number | null;
   is_fully_booked: boolean;
   seating_required: boolean;
-  booking_config: BookingConfig | null;
 }
 
 interface Props {
   events: GroupedEvent[];
+  /** The shared booking form/page config for the whole group — defined on the
+      owning event_type (per_type) or event_subtype (per_subtype). */
+  config: BookingConfig;
   /** When true, the date dropdown also shows each event's title (events of a
       whole category can share a date but differ by title). */
   showTitleInSelector?: boolean;
@@ -61,7 +63,7 @@ const emptyForm = {
   specialRequests: "",
 };
 
-export default function GroupedBookingForm({ events, showTitleInSelector = false, defaultEventId }: Props) {
+export default function GroupedBookingForm({ events, config, showTitleInSelector = false, defaultEventId }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
@@ -82,10 +84,7 @@ export default function GroupedBookingForm({ events, showTitleInSelector = false
   // Resolve the chosen event by id (unique) — events can share a date.
   const selectedEvent = events.find((e) => String(e.id) === eventId) ?? events[0];
 
-  const cfg = useMemo(
-    () => normalizeBookingConfig(selectedEvent?.booking_config ?? {}),
-    [selectedEvent]
-  );
+  const cfg = useMemo(() => normalizeBookingConfig(config), [config]);
   const f = cfg.fields;
   const groupSizeOptions = useMemo(
     () =>

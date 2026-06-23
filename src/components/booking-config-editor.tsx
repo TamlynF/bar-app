@@ -107,9 +107,10 @@ const FIELD_META: { key: "name" | "email" | "phone" | "group_size" | "group_name
 
 /**
  * Shared editor for a `booking_config` object. Drives the nested per-field shape
- * (see `@/lib/booking-config`). Used for an event's per-event booking config and
- * for an event subtype's `default_booking_config`. Pass `readOnly` to render a
- * non-editable summary (used in the view sheets).
+ * (see `@/lib/booking-config`). Used for whichever level owns the booking page for a
+ * category's `booking_grouping`: `event_types.booking_config` (per_type),
+ * `event_subtypes.booking_config` (per_subtype), or `events.booking_config` (per_event).
+ * Pass `readOnly` to render a non-editable summary (used in the view sheets).
  */
 export function BookingConfigEditor({
   value,

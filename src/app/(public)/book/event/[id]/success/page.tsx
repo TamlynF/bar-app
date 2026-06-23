@@ -194,7 +194,7 @@ function StatusPage({
             </div>
           )}
         </div>
-        <Link href="/book" className="inline-block w-full h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[11px] leading-[3.5rem] text-center shadow-lg">
+        <Link href="/book" className="inline-block w-full h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[11px] leading-14 text-center shadow-lg">
           Back to Bookings
         </Link>
       </div>
@@ -210,7 +210,7 @@ function ErrorPage({ eventId, message }: { eventId: string; message: string }) {
         <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
         <h1 className="text-xl font-black text-[#1F1F1A] uppercase tracking-tight mb-3">Something went wrong</h1>
         <p className="text-sm text-[#5F624F] font-medium mb-6">{message}</p>
-        <Link href={`/book/event/${eventId}`} className="inline-block w-full h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[11px] leading-[3.5rem] text-center">
+        <Link href={`/book/event/${eventId}`} className="inline-block w-full h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-widest text-[11px] leading-14 text-center">
           Try Again
         </Link>
       </div>

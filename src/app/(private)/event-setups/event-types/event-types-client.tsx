@@ -67,7 +67,7 @@ export type Subtype = {
   seating_required: boolean;
   payment_required: boolean;
   default_payment_amount: number | null;
-  default_booking_config: BookingConfig | null;
+  booking_config: BookingConfig | null;
   event_subtype_badges: Badge[];
 } & BookingCardFields;
 
@@ -77,6 +77,8 @@ export type EventTypeRecord = {
   description: string | null;
   color: string | null;
   booking_grouping: BookingGrouping;
+  is_bookable: boolean;
+  booking_config: BookingConfig | null;
   event_subtypes: Subtype[];
 } & BookingCardFields;
 
@@ -98,6 +100,8 @@ type TypeForm = {
   description: string;
   color: string | null;
   booking_grouping: BookingGrouping;
+  is_bookable: boolean;
+  booking_config: BookingConfig;
 } & CardForm;
 
 type SubtypeForm = {
@@ -113,7 +117,7 @@ type SubtypeForm = {
   seating_required: boolean;
   payment_required: boolean;
   default_payment_amount: string;
-  default_booking_config: BookingConfig;
+  booking_config: BookingConfig;
 } & CardForm;
 
 const EMPTY_CARD: CardForm = {
@@ -161,12 +165,13 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
   // ---- Open helpers ----
   const openNewType = () =>
-    setTypeForm({ name: "", description: "", color: null, booking_grouping: "per_event", ...EMPTY_CARD });
+    setTypeForm({ name: "", description: "", color: null, booking_grouping: "per_event", is_bookable: false, booking_config: {}, ...EMPTY_CARD });
 
   const openEditType = (t: EventTypeRecord) =>
     setTypeForm({
       id: t.id, name: toTitleCase(t.name), description: t.description ?? "", color: t.color ?? null,
       booking_grouping: t.booking_grouping ?? "per_event",
+      is_bookable: t.is_bookable, booking_config: t.booking_config ?? {},
       ...cardFromRecord(t),
     });
 
@@ -175,7 +180,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       event_types_id: t.id, name: "", default_event_title: "", tagline: "", color: null,
       behavior: "standard",
       is_bookable: false, host_required: false, seating_required: true, payment_required: false,
-      default_payment_amount: "", default_booking_config: {},
+      default_payment_amount: "", booking_config: {},
       ...EMPTY_CARD,
     });
 
@@ -186,7 +191,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       behavior: s.behavior,
       is_bookable: s.is_bookable, host_required: s.host_required, seating_required: s.seating_required,
       payment_required: s.payment_required, default_payment_amount: s.default_payment_amount != null ? String(s.default_payment_amount) : "",
-      default_booking_config: s.default_booking_config ?? {},
+      booking_config: s.booking_config ?? {},
       ...cardFromRecord(s),
     });
 
@@ -200,6 +205,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     fd.set("description", typeForm.description);
     fd.set("color", typeForm.color ?? "");
     fd.set("booking_grouping", typeForm.booking_grouping);
+    fd.set("is_bookable", typeForm.booking_grouping === "per_type" && typeForm.is_bookable ? "on" : "");
+    fd.set("booking_config", JSON.stringify(typeForm.booking_config));
     appendCardFields(fd, typeForm);
     setError(null);
     startTransition(async () => {
@@ -224,7 +231,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     if (subtypeForm.seating_required) fd.set("seating_required", "on");
     if (subtypeForm.payment_required) fd.set("payment_required", "on");
     fd.set("default_payment_amount", subtypeForm.default_payment_amount || "0");
-    fd.set("default_booking_config", JSON.stringify(subtypeForm.default_booking_config));
+    fd.set("booking_config", JSON.stringify(subtypeForm.booking_config));
     appendCardFields(fd, subtypeForm);
     setError(null);
     startTransition(async () => {
@@ -409,15 +416,15 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                               {/* Flag chips */}
                               <div className="flex flex-wrap gap-1.5">
                                 <Chip label={BEHAVIOR_LABELS[s.behavior]} />
-                                {s.is_bookable && <Chip label="Bookable" />}
+                                {s.is_bookable && t.booking_grouping === "per_subtype" && <Chip label="Bookable" />}
                                 {s.host_required && <Chip label="Host Required" />}
                                 {s.seating_required && <Chip label="Seating" />}
                                 {s.payment_required && <Chip label={`Payment £${(s.default_payment_amount ?? 0).toFixed(2)}`} />}
                               </div>
 
-                              {/* Default booking config (read-only) */}
-                              {s.is_bookable && (
-                                <BookingConfigEditor value={s.default_booking_config ?? {}} readOnly />
+                              {/* Shared booking config (read-only) — only when this category is grouped per sub-type */}
+                              {s.is_bookable && t.booking_grouping === "per_subtype" && (
+                                <BookingConfigEditor value={s.booking_config ?? {}} readOnly />
                               )}
 
                               {/* Badges */}
@@ -489,12 +496,22 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                 <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
                   <SectionLabel>Booking Display</SectionLabel>
-                  <GroupingSelector value={typeForm.booking_grouping} onChange={(v) => setTypeForm({ ...typeForm, booking_grouping: v })} />
+                  {/* Switching away from per_type clears the category-level bookable flag (it can't be edited there). */}
+                  <GroupingSelector value={typeForm.booking_grouping} onChange={(v) => setTypeForm({ ...typeForm, booking_grouping: v, is_bookable: v === "per_type" ? typeForm.is_bookable : false })} />
+                  {/* A per_type category owns one shared booking page for the whole category. */}
+                  {typeForm.booking_grouping === "per_type" && (
+                    <SwitchField label="Bookable" value={typeForm.is_bookable} onChange={(v) => setTypeForm({ ...typeForm, is_bookable: v })} />
+                  )}
                 </div>
 
                 {/* Card branding lives on the category only when it owns the card (per_type). */}
                 {typeForm.booking_grouping === "per_type" && (
                   <BookingCardSection value={typeForm} onChange={(patch) => setTypeForm({ ...typeForm, ...patch })} />
+                )}
+
+                {/* Shared booking page/form config for the whole category (per_type + bookable). */}
+                {typeForm.booking_grouping === "per_type" && typeForm.is_bookable && (
+                  <BookingConfigEditor value={typeForm.booking_config} onChange={(cfg) => setTypeForm({ ...typeForm, booking_config: cfg })} />
                 )}
               </>
             )}
@@ -530,7 +547,10 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
                 <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
                   <SectionLabel>Booking Defaults</SectionLabel>
-                  <SwitchField label="Bookable" value={subtypeForm.is_bookable} onChange={(v) => setSubtypeForm({ ...subtypeForm, is_bookable: v })} />
+                  {/* A sub-type owns a shared booking page only when its category groups per_subtype. */}
+                  {types.find((t) => t.id === subtypeForm.event_types_id)?.booking_grouping === "per_subtype" && (
+                    <SwitchField label="Bookable" value={subtypeForm.is_bookable} onChange={(v) => setSubtypeForm({ ...subtypeForm, is_bookable: v })} />
+                  )}
                   <SwitchField label="Host Required" value={subtypeForm.host_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, host_required: v })} />
                   <SwitchField label="Seating Required" value={subtypeForm.seating_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, seating_required: v })} />
                   <SwitchField label="Payment Required" value={subtypeForm.payment_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, payment_required: v })} />
@@ -539,9 +559,10 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   )}
                 </div>
 
-                {subtypeForm.is_bookable && (
-                  <BookingConfigEditor value={subtypeForm.default_booking_config} onChange={(cfg) => setSubtypeForm({ ...subtypeForm, default_booking_config: cfg })} />
-                )}
+                {subtypeForm.is_bookable &&
+                  types.find((t) => t.id === subtypeForm.event_types_id)?.booking_grouping === "per_subtype" && (
+                    <BookingConfigEditor value={subtypeForm.booking_config} onChange={(cfg) => setSubtypeForm({ ...subtypeForm, booking_config: cfg })} />
+                  )}
 
                 {/* Card branding lives on the sub-type only when its category groups per_subtype and it's bookable. */}
                 {subtypeForm.is_bookable &&

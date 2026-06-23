@@ -1,5 +1,6 @@
-// Booking configuration stored as JSONB on `event_subtypes.default_booking_config`
-// (the default) and `events.booking_config` (the per-event override).
+// Booking configuration stored as JSONB on the row that owns the public booking
+// page for a category's `booking_grouping`: `event_types.booking_config` (per_type),
+// `event_subtypes.booking_config` (per_subtype), or `events.booking_config` (per_event).
 //
 // The shape is intentionally a single blob: it's always read whole to render one
 // booking form, never queried by individual field. Each form field carries its own

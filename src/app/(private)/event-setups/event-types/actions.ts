@@ -35,6 +35,9 @@ export async function saveTypeAction(formData: FormData) {
   const groupingRaw = formData.get("booking_grouping")?.toString();
   const booking_grouping = isBookingGrouping(groupingRaw) ? groupingRaw : "per_event";
   const cardFields = readCardFields(formData);
+  // Only per_type categories own a shared booking page/config; force the flag off otherwise.
+  const is_bookable = booking_grouping === "per_type" && formData.get("is_bookable") === "on";
+  const booking_config = JSON.parse(formData.get("booking_config")?.toString() || "{}");
 
   if (!name) return { error: "Category name is required." };
 
@@ -44,13 +47,13 @@ export async function saveTypeAction(formData: FormData) {
     if (id) {
       const { error } = await supabase
         .from("event_types")
-        .update({ name, description, color, booking_grouping, ...cardFields, modified_by: empId, modified_at: new Date().toISOString() })
+        .update({ name, description, color, booking_grouping, is_bookable, booking_config, ...cardFields, modified_by: empId, modified_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from("event_types")
-        .insert({ name, description, color, booking_grouping, ...cardFields, created_by: empId, modified_by: empId });
+        .insert({ name, description, color, booking_grouping, is_bookable, booking_config, ...cardFields, created_by: empId, modified_by: empId });
       if (error) throw error;
     }
     revalidatePath("/event-setups/event-types");
@@ -110,7 +113,7 @@ export async function saveSubtypeAction(formData: FormData) {
   const seating_required = formData.get("seating_required") === "on";
   const payment_required = formData.get("payment_required") === "on";
   const default_payment_amount = parseFloat(formData.get("default_payment_amount")?.toString() || "0");
-  const default_booking_config = JSON.parse(formData.get("default_booking_config")?.toString() || "{}");
+  const booking_config = JSON.parse(formData.get("booking_config")?.toString() || "{}");
 
   if (!event_types_id || !name) {
     return { error: "Category and sub-type name are required." };
@@ -133,7 +136,7 @@ export async function saveSubtypeAction(formData: FormData) {
     seating_required,
     payment_required,
     default_payment_amount,
-    default_booking_config,
+    booking_config,
     ...readCardFields(formData),
   };
 

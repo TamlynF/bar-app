@@ -42,7 +42,7 @@ insert into public.event_types (id, name, color) values
 insert into public.event_subtypes
   (id, event_types_id, name, color, tagline, default_event_title,
    behavior, is_bookable,
-   host_required, seating_required, payment_required, default_payment_amount, default_booking_config)
+   host_required, seating_required, payment_required, default_payment_amount, booking_config)
 values
   (1, 1, 'quiz',     'fuchsia', 'Eight rounds, one winning team.', 'Quiz Night',
       'quiz',      true,  false, true,  false, 0,  '{}'::jsonb),

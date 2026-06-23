@@ -58,7 +58,7 @@ export type EventSubtype = {
   is_bookable: boolean;
   payment_required: boolean;
   default_payment_amount: number | null;
-  default_booking_config: BookingConfig | null;
+  booking_config: BookingConfig | null;
 };
 
 export type EventRecord = {
@@ -247,7 +247,7 @@ export default function EventsClient({
     setFormPayment(sub?.default_payment_amount != null ? String(sub.default_payment_amount) : "");
     setFormSeating(sub?.seating_required ?? true);
     setFormIsBookable(sub?.is_bookable ?? false);
-    setFormBookingConfig(sub?.default_booking_config ?? {});
+    setFormBookingConfig(sub?.booking_config ?? {});
   };
 
   const openView = (event: EventRecord) => {
@@ -801,7 +801,8 @@ export default function EventsClient({
                           </div>
                         )}
 
-                        {selected.is_bookable && (
+                        {/* Per-event booking config only exists for per_event categories. */}
+                        {selected.is_bookable && type?.booking_grouping === "per_event" && (
                           <div className="border-t border-[#E6DFC8]">
                             <button type="button" onClick={() => setBookingPageOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#E6DFC8]/60 hover:bg-[#E6DFC8]/80 transition-colors text-left">
                               <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Booking Page</span>
@@ -1000,7 +1001,9 @@ export default function EventsClient({
                   </FormRow>
                 </div>
 
-                {formIsBookable && (
+                {/* The event owns its booking page/form config only for per_event categories;
+                    per_type / per_subtype share a config defined on the type / sub-type. */}
+                {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
                   <>
                     <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
                     <BookingConfigEditor value={formBookingConfig} onChange={setFormBookingConfig} />
