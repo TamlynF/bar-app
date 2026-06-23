@@ -25,45 +25,55 @@ describe("adminBookingsHref", () => {
 });
 
 describe("publicBookingUrl", () => {
-  const base = { siteUrl: "https://df.test", date: "2026-06-23", eventId: 5 };
+  const base = {
+    siteUrl: "https://df.test",
+    eventTypesId: 1,
+    eventSubtypesId: 2,
+    eventId: 5,
+  };
 
   it("returns null when the event is not bookable", () => {
     expect(
-      publicBookingUrl({ ...base, behavior: "quiz", isBookable: false, manualUrl: null })
+      publicBookingUrl({ ...base, grouping: "per_event", isBookable: false, manualUrl: null })
     ).toBeNull();
   });
 
   it("returns null when not bookable even if a manual url is set", () => {
     expect(
-      publicBookingUrl({ ...base, behavior: "standard", isBookable: false, manualUrl: "https://x" })
+      publicBookingUrl({ ...base, grouping: "per_event", isBookable: false, manualUrl: "https://x" })
     ).toBeNull();
   });
 
   it("lets a manual override win over the computed url when bookable", () => {
     expect(
-      publicBookingUrl({ ...base, behavior: "quiz", isBookable: true, manualUrl: "https://override.test/x" })
+      publicBookingUrl({ ...base, grouping: "per_type", isBookable: true, manualUrl: "https://override.test/x" })
     ).toBe("https://override.test/x");
   });
 
-  it("builds the date-keyed quiz and bingo pages", () => {
+  it("builds the per_type grouped page keyed to the event id", () => {
     expect(
-      publicBookingUrl({ ...base, behavior: "quiz", isBookable: true, manualUrl: null })
-    ).toBe("https://df.test/book/quiz?date=2026-06-23");
-    expect(
-      publicBookingUrl({ ...base, behavior: "bingo", isBookable: true, manualUrl: null })
-    ).toBe("https://df.test/book/bingo?date=2026-06-23");
+      publicBookingUrl({ ...base, grouping: "per_type", isBookable: true, manualUrl: null })
+    ).toBe("https://df.test/book/group/type/1?id=5");
   });
 
-  it("builds the generic per-event page for other / unknown behaviors", () => {
+  it("builds the per_subtype grouped page keyed to the event id", () => {
     expect(
-      publicBookingUrl({ ...base, behavior: "standard", isBookable: true, manualUrl: null })
+      publicBookingUrl({ ...base, grouping: "per_subtype", isBookable: true, manualUrl: null })
+    ).toBe("https://df.test/book/group/subtype/2?id=5");
+  });
+
+  it("falls back to the per-event page for per_subtype with no subtype", () => {
+    expect(
+      publicBookingUrl({ ...base, grouping: "per_subtype", isBookable: true, manualUrl: null, eventSubtypesId: null })
+    ).toBe("https://df.test/book/event/5");
+  });
+
+  it("builds the per-event page for per_event and for an unknown/null grouping", () => {
+    expect(
+      publicBookingUrl({ ...base, grouping: "per_event", isBookable: true, manualUrl: null })
     ).toBe("https://df.test/book/event/5");
     expect(
-      publicBookingUrl({ ...base, behavior: "music_act", isBookable: true, manualUrl: null })
-    ).toBe("https://df.test/book/event/5");
-    // a null/undefined behavior (e.g. subtype lookup miss) still resolves sanely
-    expect(
-      publicBookingUrl({ ...base, behavior: null, isBookable: true, manualUrl: null })
+      publicBookingUrl({ ...base, grouping: null, isBookable: true, manualUrl: null })
     ).toBe("https://df.test/book/event/5");
   });
 });

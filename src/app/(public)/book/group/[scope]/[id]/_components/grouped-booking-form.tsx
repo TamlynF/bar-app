@@ -38,6 +38,8 @@ interface Props {
   /** When true, the date dropdown also shows each event's title (events of a
       whole category can share a date but differ by title). */
   showTitleInSelector?: boolean;
+  /** Event id (from the `?id=` query) to pre-select; ignored if not in `events`. */
+  defaultEventId?: string;
 }
 
 function formatEventDate(dateStr: string) {
@@ -59,12 +61,16 @@ const emptyForm = {
   specialRequests: "",
 };
 
-export default function GroupedBookingForm({ events, showTitleInSelector = false }: Props) {
+export default function GroupedBookingForm({ events, showTitleInSelector = false, defaultEventId }: Props) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
 
-  const [eventId, setEventId] = useState(String(events[0]?.id ?? ""));
+  const [eventId, setEventId] = useState(
+    events.some((e) => String(e.id) === defaultEventId)
+      ? defaultEventId!
+      : String(events[0]?.id ?? "")
+  );
   const [formData, setFormData] = useState(emptyForm);
 
   function eventOptionLabel(ev: GroupedEvent) {

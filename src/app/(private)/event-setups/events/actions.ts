@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { publicBookingUrl } from "@/lib/booking-links";
-import { isEventBehavior } from "@/lib/event-behavior";
+import { isBookingGrouping } from "@/lib/booking-grouping";
 
 export async function saveEventAction(formData: FormData) {
   const supabase = await createClient();
@@ -41,13 +41,21 @@ export async function saveEventAction(formData: FormData) {
     booking_card_badge: formData.get("booking_card_badge")?.toString() || null,
   };
 
-  // Fetch the subtype to determine the right booking URL path
-  const { data: sub } = await supabase.from("event_subtypes").select("behavior")
-    .eq("id", eventSubtypesId).maybeSingle();
-  const behavior = isEventBehavior(sub?.behavior) ? sub.behavior : null;
+  // Fetch the category's grouping to determine the right booking URL path
+  const { data: type } = await supabase.from("event_types").select("booking_grouping")
+    .eq("id", eventTypesId).maybeSingle();
+  const grouping = isBookingGrouping(type?.booking_grouping) ? type.booking_grouping : "per_event";
 
   function computeBookingUrl(eventId: number | string): string | null {
-    return publicBookingUrl({ behavior, isBookable, manualUrl, siteUrl, date, eventId });
+    return publicBookingUrl({
+      grouping,
+      isBookable,
+      manualUrl,
+      siteUrl,
+      eventTypesId,
+      eventSubtypesId: eventSubtypesId || null,
+      eventId,
+    });
   }
 
   // Resolve current logged-in user to an employee id

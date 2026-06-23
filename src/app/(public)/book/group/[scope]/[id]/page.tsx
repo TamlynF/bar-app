@@ -61,10 +61,13 @@ const toTitleCase = (s: string) =>
 
 export default async function GroupedBookingPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ scope: string; id: string }>;
+  searchParams: Promise<{ id?: string }>;
 }) {
   const { scope, id } = await params;
+  const { id: defaultEventId } = await searchParams;
   if (!isScope(scope)) notFound();
 
   const supabase = await createClient();
@@ -179,7 +182,7 @@ export default async function GroupedBookingPage({
 
           <div className="relative z-10">
             {events.length > 0 ? (
-              <GroupedBookingForm events={events} showTitleInSelector={scope === "type"} />
+              <GroupedBookingForm events={events} showTitleInSelector={scope === "type"} defaultEventId={defaultEventId} />
             ) : (
               <div className="text-center py-8">
                 <p className="text-stone-300 font-black text-lg uppercase tracking-tight mb-2">No Upcoming Events</p>

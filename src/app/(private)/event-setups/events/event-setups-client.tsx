@@ -977,9 +977,10 @@ export default function EventsClient({
                     </FormRow>
                   )}
 
-                  {/* Booking URL */}
+                  {/* Booking URL — optional manual override. Left blank, the URL is
+                      auto-generated from the category's booking grouping on save. */}
                   <FormRow label="Booking URL">
-                    <input name="booking_page_url" type="url" placeholder="Auto-generated on save" defaultValue={formDefault?.booking_page_url ?? ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    <input name="booking_page_url" type="url" placeholder="Auto-generated on save" defaultValue="" className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
                 </div>
 

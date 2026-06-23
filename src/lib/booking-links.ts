@@ -1,4 +1,5 @@
 import type { EventBehavior } from "@/lib/event-behavior";
+import type { BookingGrouping } from "@/lib/booking-grouping";
 
 /**
  * Admin deep-link to an event's bookings, chosen by its sub-type behavior.
@@ -20,24 +21,37 @@ export function adminBookingsHref(behavior: EventBehavior, eventId?: number): st
 }
 
 /**
- * Public booking-page URL for an event.
+ * Public booking-page URL for an event, chosen by its category's grouping
+ * (`event_types.booking_grouping`):
  *
- * Quiz and bingo use their bespoke date-keyed pages; everything else uses the
- * generic /book/event/[id] page. Returns null when the event isn't bookable; a
- * manual override URL wins outright.
+ *   per_type    → /book/group/type/{eventTypesId}?id={eventId}
+ *   per_subtype → /book/group/subtype/{eventSubtypesId}?id={eventId}
+ *                 (falls back to per_event when the event has no subtype)
+ *   per_event   → /book/event/{eventId}
+ *
+ * The `?id=` pre-selects the specific event on the grouped booking page.
+ * Returns null when the event isn't bookable; a manual override URL wins
+ * outright. Pure so it can be unit-tested away from the Server Action.
  */
 export function publicBookingUrl(opts: {
-  behavior: EventBehavior | null | undefined;
+  grouping: BookingGrouping | null | undefined;
   isBookable: boolean;
   manualUrl: string | null;
   siteUrl: string;
-  date: string;
+  eventTypesId: number;
+  eventSubtypesId: number | null;
   eventId: number | string;
 }): string | null {
-  const { behavior, isBookable, manualUrl, siteUrl, date, eventId } = opts;
+  const { grouping, isBookable, manualUrl, siteUrl, eventTypesId, eventSubtypesId, eventId } = opts;
   if (!isBookable) return null;
   if (manualUrl) return manualUrl;
-  if (behavior === "quiz") return `${siteUrl}/book/quiz?date=${date}`;
-  if (behavior === "bingo") return `${siteUrl}/book/bingo?date=${date}`;
+
+  if (grouping === "per_type") {
+    return `${siteUrl}/book/group/type/${eventTypesId}?id=${eventId}`;
+  }
+  if (grouping === "per_subtype" && eventSubtypesId) {
+    return `${siteUrl}/book/group/subtype/${eventSubtypesId}?id=${eventId}`;
+  }
+  // per_event, or per_subtype with no subtype to group by.
   return `${siteUrl}/book/event/${eventId}`;
 }
