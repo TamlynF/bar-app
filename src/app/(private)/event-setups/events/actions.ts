@@ -35,6 +35,10 @@ export async function saveEventAction(formData: FormData) {
     karaoke_request_url: formData.get("karaoke_request_url")?.toString() || null,
     is_bookable: isBookable,
     booking_config: JSON.parse(formData.get("booking_config")?.toString() || "{}"),
+    booking_card_title: formData.get("booking_card_title")?.toString() || null,
+    booking_card_tagline: formData.get("booking_card_tagline")?.toString() || null,
+    booking_card_icon: formData.get("booking_card_icon")?.toString() || null,
+    booking_card_badge: formData.get("booking_card_badge")?.toString() || null,
   };
 
   // Fetch the subtype to determine the right booking URL path

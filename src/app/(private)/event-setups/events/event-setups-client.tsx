@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor } from "@/lib/event-type-colors";
 import { BookingConfigEditor } from "@/components/booking-config-editor";
+import { IconPicker } from "@/components/icon-picker";
 import type { BookingConfig } from "@/lib/booking-config";
 import type { EventBehavior } from "@/lib/event-behavior";
 
@@ -41,6 +42,7 @@ export type EventType = {
   id: number;
   name: string;
   color: string | null;
+  booking_grouping: string | null;
 };
 
 export type EventSubtype = {
@@ -81,6 +83,10 @@ export type EventRecord = {
   is_bookable: boolean | null;
   booking_page_url: string | null;
   booking_config: BookingConfig | null;
+  booking_card_title: string | null;
+  booking_card_tagline: string | null;
+  booking_card_icon: string | null;
+  booking_card_badge: string | null;
 };
 
 function toTitleCase(str?: string | null) {
@@ -175,6 +181,11 @@ export default function EventsClient({
   const [formGroupName, setFormGroupName] = useState<string>("");
   const [formIsBookable, setFormIsBookable] = useState(false);
   const [formBookingConfig, setFormBookingConfig] = useState<BookingConfig>({});
+  // Booking-card branding (shown only for per_event categories when bookable)
+  const [formCardTitle, setFormCardTitle] = useState("");
+  const [formCardTagline, setFormCardTagline] = useState("");
+  const [formCardIcon, setFormCardIcon] = useState<string | null>(null);
+  const [formCardBadge, setFormCardBadge] = useState("");
   // Controlled form fields (so subtype selection can prefill them)
   const [formTypeId, setFormTypeId] = useState<string>("");
   const [formSubtypeId, setFormSubtypeId] = useState<string>("");
@@ -255,6 +266,10 @@ export default function EventsClient({
     setFormSubtypeId(sub ? String(sub.id) : "");
     setFormBookingId("");
     setFormGroupName("");
+    setFormCardTitle("");
+    setFormCardTagline("");
+    setFormCardIcon(null);
+    setFormCardBadge("");
     applySubtypeDefaults(sub);
     setIsAdding(true);
   };
@@ -272,6 +287,10 @@ export default function EventsClient({
     setFormGroupName(selected.group_name ?? "");
     setFormIsBookable(!!selected.is_bookable);
     setFormBookingConfig(selected.booking_config ?? {});
+    setFormCardTitle(selected.booking_card_title ?? "");
+    setFormCardTagline(selected.booking_card_tagline ?? "");
+    setFormCardIcon(selected.booking_card_icon ?? null);
+    setFormCardBadge(selected.booking_card_badge ?? "");
     setIsEditing(true);
   };
 
@@ -985,6 +1004,32 @@ export default function EventsClient({
                     <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
                     <BookingConfigEditor value={formBookingConfig} onChange={setFormBookingConfig} />
                   </>
+                )}
+
+                {/* Booking card branding — only when this category owns the card (per_event) and it's bookable. */}
+                {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
+                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                    <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#E6DFC8]/60">
+                      <span className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Booking Card</span>
+                    </div>
+                    <div className="px-4 sm:px-5 pt-2.5">
+                      <p className="text-[10px] text-[#5F624F] leading-relaxed">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
+                    </div>
+                    <FormRow label="Card Title">
+                      <input name="booking_card_title" placeholder="e.g. Music Bingo" value={formCardTitle} onChange={(e) => setFormCardTitle(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    </FormRow>
+                    <div className="px-4 sm:px-5 py-2.5 sm:py-4">
+                      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 mb-2">
+                        <span className="text-[10px] font-black uppercase tracking-wide">Card Tagline</span>
+                      </div>
+                      <textarea name="booking_card_tagline" placeholder="Short line shown under the title..." rows={2} value={formCardTagline} onChange={(e) => setFormCardTagline(e.target.value)} className="w-full text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none placeholder:text-[#5F624F]/40 resize-none" />
+                    </div>
+                    <FormRow label="Card Badge">
+                      <input name="booking_card_badge" placeholder="e.g. Thursdays, Book Now" value={formCardBadge} onChange={(e) => setFormCardBadge(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    </FormRow>
+                    <input type="hidden" name="booking_card_icon" value={formCardIcon ?? ""} />
+                    <IconPicker label="Card Icon" value={formCardIcon} onChange={setFormCardIcon} />
+                  </div>
                 )}
 
                 {formError && <ErrorBox message={formError} />}

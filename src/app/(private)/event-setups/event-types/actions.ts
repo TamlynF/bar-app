@@ -3,6 +3,17 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { isEventBehavior } from "@/lib/event-behavior";
+import { isBookingGrouping } from "@/lib/booking-grouping";
+
+/** Pull the four booking-card branding fields off a FormData (empty → null). */
+function readCardFields(formData: FormData) {
+  return {
+    booking_card_title: formData.get("booking_card_title")?.toString() || null,
+    booking_card_tagline: formData.get("booking_card_tagline")?.toString() || null,
+    booking_card_icon: formData.get("booking_card_icon")?.toString() || null,
+    booking_card_badge: formData.get("booking_card_badge")?.toString() || null,
+  };
+}
 
 async function currentEmployeeId() {
   const supabase = await createClient();
@@ -21,6 +32,9 @@ export async function saveTypeAction(formData: FormData) {
   const name = formData.get("name")?.toString()?.trim().toLowerCase();
   const description = formData.get("description")?.toString() || null;
   const color = formData.get("color")?.toString() || null;
+  const groupingRaw = formData.get("booking_grouping")?.toString();
+  const booking_grouping = isBookingGrouping(groupingRaw) ? groupingRaw : "per_event";
+  const cardFields = readCardFields(formData);
 
   if (!name) return { error: "Category name is required." };
 
@@ -30,13 +44,13 @@ export async function saveTypeAction(formData: FormData) {
     if (id) {
       const { error } = await supabase
         .from("event_types")
-        .update({ name, description, color, modified_by: empId, modified_at: new Date().toISOString() })
+        .update({ name, description, color, booking_grouping, ...cardFields, modified_by: empId, modified_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from("event_types")
-        .insert({ name, description, color, created_by: empId, modified_by: empId });
+        .insert({ name, description, color, booking_grouping, ...cardFields, created_by: empId, modified_by: empId });
       if (error) throw error;
     }
     revalidatePath("/event-setups/event-types");
@@ -120,6 +134,7 @@ export async function saveSubtypeAction(formData: FormData) {
     payment_required,
     default_payment_amount,
     default_booking_config,
+    ...readCardFields(formData),
   };
 
   try {

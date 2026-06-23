@@ -75,7 +75,8 @@
       "mcp__claude_ai_Figma__whoami",
       "Read(//c/Users/tamly/AppData/Roaming/Code/User/profiles/-9def7b0/**)",
       "Bash(Get-ChildItem -Path \"C:\\\\DFRepo\\\\bar-app\" -Recurse -Directory -Filter \"\\(public\\)\")",
-      "Bash(Select-Object -First 5)"
+      "Bash(Select-Object -First 5)",
+      "PowerShell(npm run build 2>&1)"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills",

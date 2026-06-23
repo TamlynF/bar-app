@@ -3,17 +3,20 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { ALL_SUBTYPES } from "@/lib/booking-grouping";
 
 const GENERAL_PATH = "/event-bookings/general/[type]/[subtype]";
 
 export async function getEventsForType(type: string, subType: string) {
   const supabase = await createClient();
-  const { data } = await supabase
+  // The ALL_SUBTYPES sentinel (per_type grouping) lists every sub-type's events.
+  const allSubtypes = subType === ALL_SUBTYPES;
+  let query = supabase
     .from("events")
     .select("id, date, title, event_types!inner(name), event_subtypes!inner(name)")
-    .ilike("event_types.name", type)
-    .ilike("event_subtypes.name", subType)
-    .order("date", { ascending: false });
+    .ilike("event_types.name", type);
+  if (!allSubtypes) query = query.ilike("event_subtypes.name", subType);
+  const { data } = await query.order("date", { ascending: false });
   return (data ?? []).map(e => ({
     id: String(e.id),
     date: String(e.date),
@@ -27,6 +30,7 @@ export async function getBookingsForType(
   selectedEventId: string | null,
 ) {
   const supabase = await createClient();
+  const allSubtypes = subType === ALL_SUBTYPES;
   let query = supabase
     .from("bookings")
     .select(`
@@ -56,10 +60,10 @@ export async function getBookingsForType(
       )
     `)
     .ilike("events.event_types.name", type)
-    .ilike("events.event_subtypes.name", subType)
     .order("date", { referencedTable: "events", ascending: false })
     .order("group_name", { ascending: true });
 
+  if (!allSubtypes) query = query.ilike("events.event_subtypes.name", subType);
   if (selectedEventId) query = query.eq("event_id", selectedEventId);
 
   const { data, error } = await query;

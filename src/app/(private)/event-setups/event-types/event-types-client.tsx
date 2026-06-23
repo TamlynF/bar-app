@@ -30,6 +30,8 @@ import { EVENT_TYPE_COLORS, badgeClassFromColor, swatchHexFromColor } from "@/li
 import { BookingConfigEditor } from "@/components/booking-config-editor";
 import type { BookingConfig } from "@/lib/booking-config";
 import { BEHAVIOR_OPTIONS, BEHAVIOR_LABELS, type EventBehavior } from "@/lib/event-behavior";
+import { BOOKING_GROUPING_OPTIONS, BOOKING_GROUPING_LABELS, type BookingGrouping } from "@/lib/booking-grouping";
+import { IconPicker } from "@/components/icon-picker";
 
 const ICON_OPTIONS = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
@@ -42,6 +44,14 @@ export type Badge = {
   icon: string | null;
   title: string;
   description: string | null;
+};
+
+/** Booking-card branding fields shared by event_types / event_subtypes / events. */
+export type BookingCardFields = {
+  booking_card_title: string | null;
+  booking_card_tagline: string | null;
+  booking_card_icon: string | null;
+  booking_card_badge: string | null;
 };
 
 export type Subtype = {
@@ -59,26 +69,36 @@ export type Subtype = {
   default_payment_amount: number | null;
   default_booking_config: BookingConfig | null;
   event_subtype_badges: Badge[];
-};
+} & BookingCardFields;
 
 export type EventTypeRecord = {
   id: number;
   name: string;
   description: string | null;
   color: string | null;
+  booking_grouping: BookingGrouping;
   event_subtypes: Subtype[];
-};
+} & BookingCardFields;
 
 const toTitleCase = (str?: string | null) =>
   !str ? "" : str.trim().split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
 // ---- Editable form state shapes ----
+/** Card fields in form state — empty strings instead of nulls. */
+type CardForm = {
+  booking_card_title: string;
+  booking_card_tagline: string;
+  booking_card_icon: string | null;
+  booking_card_badge: string;
+};
+
 type TypeForm = {
   id?: number;
   name: string;
   description: string;
   color: string | null;
-};
+  booking_grouping: BookingGrouping;
+} & CardForm;
 
 type SubtypeForm = {
   id?: number;
@@ -94,6 +114,27 @@ type SubtypeForm = {
   payment_required: boolean;
   default_payment_amount: string;
   default_booking_config: BookingConfig;
+} & CardForm;
+
+const EMPTY_CARD: CardForm = {
+  booking_card_title: "",
+  booking_card_tagline: "",
+  booking_card_icon: null,
+  booking_card_badge: "",
+};
+
+const cardFromRecord = (r: BookingCardFields): CardForm => ({
+  booking_card_title: r.booking_card_title ?? "",
+  booking_card_tagline: r.booking_card_tagline ?? "",
+  booking_card_icon: r.booking_card_icon ?? null,
+  booking_card_badge: r.booking_card_badge ?? "",
+});
+
+const appendCardFields = (fd: FormData, c: CardForm) => {
+  fd.set("booking_card_title", c.booking_card_title);
+  fd.set("booking_card_tagline", c.booking_card_tagline);
+  fd.set("booking_card_icon", c.booking_card_icon ?? "");
+  fd.set("booking_card_badge", c.booking_card_badge);
 };
 
 export default function EventTypesClient({ initialEventTypes = [] }: { initialEventTypes: EventTypeRecord[] }) {
@@ -120,11 +161,13 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
   // ---- Open helpers ----
   const openNewType = () =>
-    setTypeForm({ name: "", description: "", color: null });
+    setTypeForm({ name: "", description: "", color: null, booking_grouping: "per_event", ...EMPTY_CARD });
 
   const openEditType = (t: EventTypeRecord) =>
     setTypeForm({
       id: t.id, name: toTitleCase(t.name), description: t.description ?? "", color: t.color ?? null,
+      booking_grouping: t.booking_grouping ?? "per_event",
+      ...cardFromRecord(t),
     });
 
   const openNewSubtype = (t: EventTypeRecord) =>
@@ -133,6 +176,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       behavior: "standard",
       is_bookable: false, host_required: false, seating_required: true, payment_required: false,
       default_payment_amount: "", default_booking_config: {},
+      ...EMPTY_CARD,
     });
 
   const openEditSubtype = (s: Subtype) =>
@@ -143,6 +187,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       is_bookable: s.is_bookable, host_required: s.host_required, seating_required: s.seating_required,
       payment_required: s.payment_required, default_payment_amount: s.default_payment_amount != null ? String(s.default_payment_amount) : "",
       default_booking_config: s.default_booking_config ?? {},
+      ...cardFromRecord(s),
     });
 
   // ---- Submit handlers ----
@@ -154,6 +199,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     fd.set("name", typeForm.name);
     fd.set("description", typeForm.description);
     fd.set("color", typeForm.color ?? "");
+    fd.set("booking_grouping", typeForm.booking_grouping);
+    appendCardFields(fd, typeForm);
     setError(null);
     startTransition(async () => {
       const res = await saveTypeAction(fd);
@@ -178,6 +225,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     if (subtypeForm.payment_required) fd.set("payment_required", "on");
     fd.set("default_payment_amount", subtypeForm.default_payment_amount || "0");
     fd.set("default_booking_config", JSON.stringify(subtypeForm.default_booking_config));
+    appendCardFields(fd, subtypeForm);
     setError(null);
     startTransition(async () => {
       const res = await saveSubtypeAction(fd);
@@ -271,6 +319,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       {toTitleCase(t.name)}
                     </span>
                     <span className="text-[10px] font-black text-[#5F624F] shrink-0">({subtypes.length})</span>
+                    <span className="hidden sm:inline-flex text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md bg-[#E6DFC8]/60 text-[#5C4033] border border-[#E6DFC8] shrink-0">
+                      {BOOKING_GROUPING_LABELS[t.booking_grouping ?? "per_event"]}
+                    </span>
                   </button>
 
                   <div className="hidden sm:flex items-center gap-1">
@@ -428,12 +479,24 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           <SheetHeader title={typeForm?.id ? "Edit Category" : "New Category"} description="The top-level category for a group of events." />
           <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y space-y-4">
             {typeForm && (
-              <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
-                <SectionLabel>Category</SectionLabel>
-                <TextField label="Name" required value={typeForm.name} placeholder="e.g. Music, Games..." onChange={(v) => setTypeForm({ ...typeForm, name: v })} />
-                <TextAreaField label="Description" value={typeForm.description} placeholder="Internal description (optional)" onChange={(v) => setTypeForm({ ...typeForm, description: v })} />
-                <ColorField label="Colour" value={typeForm.color} onChange={(c) => setTypeForm({ ...typeForm, color: c })} />
-              </div>
+              <>
+                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
+                  <SectionLabel>Category</SectionLabel>
+                  <TextField label="Name" required value={typeForm.name} placeholder="e.g. Music, Games..." onChange={(v) => setTypeForm({ ...typeForm, name: v })} />
+                  <TextAreaField label="Description" value={typeForm.description} placeholder="Internal description (optional)" onChange={(v) => setTypeForm({ ...typeForm, description: v })} />
+                  <ColorField label="Colour" value={typeForm.color} onChange={(c) => setTypeForm({ ...typeForm, color: c })} />
+                </div>
+
+                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
+                  <SectionLabel>Booking Display</SectionLabel>
+                  <GroupingSelector value={typeForm.booking_grouping} onChange={(v) => setTypeForm({ ...typeForm, booking_grouping: v })} />
+                </div>
+
+                {/* Card branding lives on the category only when it owns the card (per_type). */}
+                {typeForm.booking_grouping === "per_type" && (
+                  <BookingCardSection value={typeForm} onChange={(patch) => setTypeForm({ ...typeForm, ...patch })} />
+                )}
+              </>
             )}
             {error && <ErrorBox message={error} />}
             <div className="h-4" />
@@ -479,6 +542,12 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 {subtypeForm.is_bookable && (
                   <BookingConfigEditor value={subtypeForm.default_booking_config} onChange={(cfg) => setSubtypeForm({ ...subtypeForm, default_booking_config: cfg })} />
                 )}
+
+                {/* Card branding lives on the sub-type only when its category groups per_subtype and it's bookable. */}
+                {subtypeForm.is_bookable &&
+                  types.find((t) => t.id === subtypeForm.event_types_id)?.booking_grouping === "per_subtype" && (
+                    <BookingCardSection value={subtypeForm} onChange={(patch) => setSubtypeForm({ ...subtypeForm, ...patch })} />
+                  )}
               </>
             )}
             {error && <ErrorBox message={error} />}
@@ -631,6 +700,51 @@ function BehaviorSelector({ value, onChange }: { value: EventBehavior; onChange:
           </button>
         ))}
       </div>
+    </div>
+  );
+}
+
+function GroupingSelector({ value, onChange }: { value: BookingGrouping; onChange: (v: BookingGrouping) => void }) {
+  return (
+    <div className="px-4 sm:px-5 py-3 sm:py-4 space-y-2.5">
+      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">How this category&apos;s events show on the public booking hub</span>
+      <div className="flex flex-wrap gap-2">
+        {BOOKING_GROUPING_OPTIONS.map((o) => (
+          <button
+            key={o.value}
+            type="button"
+            onClick={() => onChange(o.value)}
+            className={cn(
+              "px-3 py-2 rounded-xl border text-[10px] font-black uppercase tracking-wide transition-all active:scale-95",
+              value === o.value
+                ? "bg-[#5C4033] text-white border-[#5C4033] shadow-md"
+                : "bg-white text-[#5F624F] border-[#E6DFC8] hover:border-[#5C4033]/30"
+            )}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[10px] text-[#5F624F] leading-relaxed">
+        {value === "per_event" && "One card per event — each date links to its own booking page."}
+        {value === "per_subtype" && "One card per sub-type — all dates of a sub-type share one page with a date dropdown."}
+        {value === "per_type" && "One card for the whole category — all its events share one page with a date dropdown."}
+      </p>
+    </div>
+  );
+}
+
+function BookingCardSection({ value, onChange }: { value: CardForm; onChange: (patch: Partial<CardForm>) => void }) {
+  return (
+    <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]">
+      <SectionLabel>Booking Card</SectionLabel>
+      <div className="px-4 sm:px-5 pt-2 -mb-1">
+        <p className="text-[10px] text-[#5F624F] leading-relaxed">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
+      </div>
+      <TextField label="Card Title" value={value.booking_card_title} placeholder="e.g. Music Bingo" onChange={(v) => onChange({ booking_card_title: v })} />
+      <TextAreaField label="Card Tagline" value={value.booking_card_tagline} placeholder="Short line shown under the title..." onChange={(v) => onChange({ booking_card_tagline: v })} />
+      <TextField label="Card Badge" value={value.booking_card_badge} placeholder="e.g. Thursdays, Book Now" onChange={(v) => onChange({ booking_card_badge: v })} />
+      <IconPicker label="Card Icon" value={value.booking_card_icon} onChange={(name) => onChange({ booking_card_icon: name })} />
     </div>
   );
 }

@@ -43,18 +43,18 @@ import {
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
 
-type BookableEvent = { id: number; title: string; date: string };
+type BookingNavItem = { label: string; href: string };
 
 export default function PrivateLayoutClient({
     children,
     employeeName,
     employeeRole,
-    bookableEvents = [],
+    bookingNav = [],
 }: {
     children: React.ReactNode
     employeeName: string
     employeeRole: string
-    bookableEvents?: BookableEvent[]
+    bookingNav?: BookingNavItem[]
 }) {
     const pathname = usePathname()
     const router = useRouter()
@@ -95,9 +95,9 @@ export default function PrivateLayoutClient({
         { label: "Live Music", href: "/event-bookings/music-bookings", icon: Music },
         { label: "Thursday Quiz", href: "/event-bookings/quiz-bookings", icon: Trophy },
         { label: "Private Events", href: "/event-bookings/private-bookings", icon: PartyPopper },
-        ...bookableEvents.map(ev => ({
-            label: ev.title,
-            href: `/event-bookings/event/${ev.id}`,
+        ...bookingNav.map(nav => ({
+            label: nav.label,
+            href: nav.href,
             icon: CalendarDays,
         })),
     ]

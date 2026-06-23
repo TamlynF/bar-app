@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { badgeClassFromColor, swatchClassFromColor } from "@/lib/event-type-colors";
+import { buildAdminBookingGroups, type AdminBookingGroupEvent } from "@/lib/admin-booking-groups";
 
 const eventBookingItems = [
   {
@@ -43,47 +44,23 @@ const eventBookingItems = [
   },
 ];
 
-function toTitleCase(str: string) {
-  return str.split(/[\s\-_]+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
-}
-
-type TypeRow = { name: string; color?: string | null };
-type SubtypeRow = { name: string; color?: string | null };
-
 export default async function EventsHubPage() {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  // Fetch upcoming bookable events with their taxonomy metadata for grouping
+  // Fetch upcoming bookable events with their taxonomy metadata for grouping.
+  // event_subtypes is a left join so events without a sub-type still appear.
   const { data: bookableEvents } = await supabase
     .from("events")
-    .select("id, date, event_types!inner(name, color), event_subtypes!inner(name, color)")
+    .select("id, title, date, event_types!inner(name, color, booking_grouping), event_subtypes(name, color)")
     .eq("is_active", true)
     .eq("is_bookable", true)
     .gte("date", today)
     .order("date", { ascending: true })
     .limit(200);
 
-  // Group by type + sub_type
-  type GroupEntry = { type: string; subType: string; badgeColor: string | null; typeColor: string | null; count: number };
-  const groupMap = new Map<string, GroupEntry>();
-  for (const ev of bookableEvents ?? []) {
-    const t = (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) as TypeRow | null;
-    const s = (Array.isArray(ev.event_subtypes) ? ev.event_subtypes[0] : ev.event_subtypes) as SubtypeRow | null;
-    if (!t || !s) continue;
-    const key = `${t.name}__${s.name}`;
-    if (!groupMap.has(key)) {
-      groupMap.set(key, {
-        type: t.name,
-        subType: s.name,
-        badgeColor: s.color ?? null,
-        typeColor: t.color ?? null,
-        count: 0,
-      });
-    }
-    groupMap.get(key)!.count++;
-  }
-  const generalGroups = Array.from(groupMap.values());
+  // Collapse events per each category's booking_grouping (per_event / per_subtype / per_type).
+  const generalGroups = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[]);
 
   return (
     <div className="p-2 sm:p-8 space-y-4">
@@ -125,8 +102,8 @@ export default async function EventsHubPage() {
               const badgeClasses = badgeClassFromColor(group.badgeColor);
               return (
                 <Link
-                  key={`${group.type}__${group.subType}`}
-                  href={`/event-bookings/general/${encodeURIComponent(group.type)}/${encodeURIComponent(group.subType)}`}
+                  key={group.key}
+                  href={group.href}
                   className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#5C4033] hover:shadow-md transition-all active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-4">
@@ -135,12 +112,14 @@ export default async function EventsHubPage() {
                     </div>
                     <div className="flex flex-col text-left min-w-0">
                       <span className="font-black text-[#1F1F1A] uppercase tracking-tight leading-none truncate">
-                        {toTitleCase(group.subType)}
+                        {group.label}
                       </span>
                       <div className="flex items-center gap-1.5 mt-1.5">
-                        <span className="text-[11px] text-[#5F624F] font-bold opacity-60 uppercase tracking-wider">
-                          {toTitleCase(group.type)}
-                        </span>
+                        {group.typeLabel && (
+                          <span className="text-[11px] text-[#5F624F] font-bold opacity-60 uppercase tracking-wider">
+                            {group.typeLabel}
+                          </span>
+                        )}
                         <span className={`text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded ${badgeClasses}`}>
                           {group.count} upcoming
                         </span>

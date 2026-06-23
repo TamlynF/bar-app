@@ -1,10 +1,15 @@
 import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import PrivateLayoutClient from "./private-layout-client";
+import { buildAdminBookingGroups, type AdminBookingGroupEvent } from "@/lib/admin-booking-groups";
 
 export const viewport: Viewport = {
     themeColor: "#F7F4EA",
 };
+
+// Cap on dynamic booking entries shown in the sidebar, so per_event categories
+// with many upcoming dates don't make the nav unwieldy.
+const MAX_NAV_BOOKINGS = 12;
 
 export default async function PrivateLayout({ children }: { children: React.ReactNode }) {
     const supabase = await createClient();
@@ -14,12 +19,12 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         supabase.auth.getUser(),
         supabase
             .from("events")
-            .select("id, title, date")
+            .select("id, title, date, event_types!inner(name, color, booking_grouping), event_subtypes(name, color)")
             .eq("is_active", true)
             .eq("is_bookable", true)
             .gte("date", today)
             .order("date", { ascending: true })
-            .limit(10),
+            .limit(200),
     ]);
 
     let employeeName = "";
@@ -36,11 +41,10 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         }
     }
 
-    const navEvents = (bookableEvents ?? []).map(e => ({
-        id: e.id as number,
-        title: (e.title as string) || "Event",
-        date: e.date as string,
-    }));
+    // Collapse events per each category's booking_grouping for the sidebar nav.
+    const bookingNav = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[])
+        .slice(0, MAX_NAV_BOOKINGS)
+        .map((g) => ({ label: g.label, href: g.href }));
 
-    return <PrivateLayoutClient employeeName={employeeName} employeeRole={employeeRole} bookableEvents={navEvents}>{children}</PrivateLayoutClient>;
+    return <PrivateLayoutClient employeeName={employeeName} employeeRole={employeeRole} bookingNav={bookingNav}>{children}</PrivateLayoutClient>;
 }

@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import React from "react";
 import { badgeClassFromColor } from "@/lib/event-type-colors";
 import { getEventsForType, getBookingsForType, getEventDetailsForType } from "./actions";
+import { ALL_SUBTYPES } from "@/lib/booking-grouping";
 import EventTypeFilter from "./components/event-filter";
 import { type GeneralBooking } from "./components/booking-list";
 import BookingsSection, { type EventSummary } from "./components/bookings-section";
@@ -33,6 +34,9 @@ export default async function GeneralEventBookingsPage({
   const { type, subtype } = await params;
   const { eventId } = await searchParams;
   const selectedEventId = eventId ?? null;
+  // per_type grouping uses the ALL_SUBTYPES sentinel — label the page by category.
+  const isAllSubtypes = subtype === ALL_SUBTYPES;
+  const filterLabel = isAllSubtypes ? toTitleCase(type) : toTitleCase(subtype);
 
   const [events, rawBookings, eventDetails] = await Promise.all([
     getEventsForType(type, subtype),
@@ -76,7 +80,7 @@ export default async function GeneralEventBookingsPage({
           <EventTypeFilter
             events={events}
             selectedEventId={selectedEventId}
-            label={toTitleCase(subtype)}
+            label={filterLabel}
           />
         </div>
 
