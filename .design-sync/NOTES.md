@@ -112,6 +112,7 @@ as a known warn, do not chase.**
   `_tw-input.css` (which imports globals.css) picks them up automatically — but the
   hardcoded `#F7F4EA` cream-surface override in `_tw-input.css` would need updating
   if the admin background token ever changes.
-- The `[TOKENS_MISSING]` warn now lists 9 runtime vars (radix popover/dropdown,
-  `--chip-c`, `--ev-theme`, `--spotify-bg`, `--badge-color`, `--bg`). Still expected
-  app runtime vars — leave as a known warn (see Known render warns).
+- The `[TOKENS_MISSING]` warn lists app runtime vars (radix popover/dropdown,
+  `--chip-c`, `--ev-theme`, `--spotify-bg`, `--badge-color`, `--bg`). Count drifts
+  with the app — see the authoritative count in **Known render warns** above (15 as
+  of 2026-06-23). Still expected app runtime vars — leave as a known warn.
