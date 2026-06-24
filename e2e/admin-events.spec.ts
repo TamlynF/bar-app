@@ -7,7 +7,9 @@ test.use({ storageState: path.resolve(__dirname, ".auth/admin.json") });
 test.describe("event create form (subtype prefill + conditional fields)", () => {
   test("selecting a subtype prefills defaults and shows/hides the right fields", async ({ page }) => {
     await page.goto("/event-setups/events");
-    await page.getByRole("button", { name: /new event/i }).click();
+    // Icon-only on mobile (name from title), shows "New" text on desktop — target
+    // the stable title attribute so the locator works on both viewports.
+    await page.getByTitle("New Event").click();
 
     const typeSelect = page.locator('select[name="event_types_id"]');
     const subSelect = page.locator('select[name="event_subtypes_id"]');

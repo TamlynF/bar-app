@@ -34,6 +34,7 @@ import { DatePicker, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
+import { validateEventForm } from "@/lib/event-form-validation";
 import { BookingConfigEditor } from "@/components/booking-config-editor";
 import { IconPicker } from "@/components/icon-picker";
 import type { BookingConfig } from "@/lib/booking-config";
@@ -46,6 +47,8 @@ export type EventType = {
   name: string;
   color: string | null;
   booking_grouping: string | null;
+  is_bookable: boolean | null;
+  booking_config: BookingConfig | null;
 };
 
 export type EventSubtype = {
@@ -236,6 +239,7 @@ export default function EventsClient({
   const [formFullyBooked, setFormFullyBooked] = useState<boolean>(false);
   const [formDetailsOpen, setFormDetailsOpen] = useState(true);
   const [formSettingsOpen, setFormSettingsOpen] = useState(true);
+  const [formBookingSettingsOpen, setFormBookingSettingsOpen] = useState(true);
   const [linkCopied, setLinkCopied] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [quizOpen, setQuizOpen] = useState(true);
@@ -276,13 +280,26 @@ export default function EventsClient({
   const isSearching = searchQuery.trim() !== "";
   const isSheetOpen = !!selected || isAdding;
 
-  const applySubtypeDefaults = (sub: EventSubtype | undefined) => {
+  const applySubtypeDefaults = (sub: EventSubtype | undefined, type?: EventType) => {
     setFormTitle(sub?.default_event_title ?? "");
     setFormTagline(sub?.tagline ?? "");
     setFormPayment(sub?.default_payment_amount != null ? String(sub.default_payment_amount) : "");
     setFormSeating(sub?.seating_required ?? true);
-    setFormIsBookable(sub?.is_bookable ?? false);
-    setFormBookingConfig(sub?.booking_config ?? {});
+    // is_bookable / booking_config are inherited from whichever level owns the
+    // booking page for this category's grouping: the type (per_type) or the
+    // sub-type (per_subtype). per_event events own their own config, so they
+    // start blank and are filled in on the event itself.
+    const owner = type ?? (sub ? typeById.get(sub.event_types_id) : undefined);
+    if (owner?.booking_grouping === "per_type") {
+      setFormIsBookable(owner.is_bookable ?? false);
+      setFormBookingConfig(owner.booking_config ?? {});
+    } else if (owner?.booking_grouping === "per_subtype") {
+      setFormIsBookable(sub?.is_bookable ?? false);
+      setFormBookingConfig(sub?.booking_config ?? {});
+    } else {
+      setFormIsBookable(false);
+      setFormBookingConfig({});
+    }
   };
 
   const openView = (event: EventRecord) => {
@@ -297,6 +314,7 @@ export default function EventsClient({
     setIsEditing(false);
     setSelected(null);
     const sub = subtypeId ? subtypeById.get(subtypeId) : undefined;
+    const ownerType = sub ? typeById.get(sub.event_types_id) : (eventTypes[0] ? typeById.get(eventTypes[0].id) : undefined);
     setFormTypeId(sub ? String(sub.event_types_id) : (eventTypes[0]?.id ? String(eventTypes[0].id) : ""));
     setFormSubtypeId(sub ? String(sub.id) : "");
     setFormBookingId("");
@@ -309,7 +327,7 @@ export default function EventsClient({
     setFormFullyBooked(false);
     setFormDetailsOpen(true);
     setFormSettingsOpen(true);
-    applySubtypeDefaults(sub);
+    applySubtypeDefaults(sub, ownerType);
     setIsAdding(true);
   };
 
@@ -342,14 +360,14 @@ export default function EventsClient({
     const subs = subtypesByType.get(Number(typeId)) ?? [];
     const first = subs[0];
     setFormSubtypeId(first ? String(first.id) : "");
-    applySubtypeDefaults(first);
+    applySubtypeDefaults(first, typeById.get(Number(typeId)));
   };
 
   const onSelectSubtype = (subtypeId: string) => {
     setFormSubtypeId(subtypeId);
     const sub = subtypeById.get(Number(subtypeId));
     if (sub) setFormTypeId(String(sub.event_types_id));
-    applySubtypeDefaults(sub);
+    applySubtypeDefaults(sub, sub ? typeById.get(sub.event_types_id) : undefined);
   };
 
   const closeSheet = () => {
@@ -363,17 +381,34 @@ export default function EventsClient({
     setFormError(null);
     // Required fields live inside the collapsible "Details" section, so validate
     // here rather than relying on native `required` (which can't focus a field in
-    // a collapsed/hidden section).
-    const missing =
-      !formData.get("event_types_id") ||
-      !formData.get("event_subtypes_id") ||
-      !(formData.get("title")?.toString().trim()) ||
-      !formData.get("date");
-    if (missing) {
+    // a collapsed/hidden section). Validation logic is shared with the server
+    // action via the pure helper in @/lib/event-form-validation.
+    const date = formData.get("date")?.toString() ?? "";
+    const validation = validateEventForm(
+      {
+        eventTypesId: formData.get("event_types_id") ? Number(formData.get("event_types_id")) : null,
+        eventSubtypesId: formData.get("event_subtypes_id") ? Number(formData.get("event_subtypes_id")) : null,
+        title: formData.get("title")?.toString() ?? "",
+        date,
+        startTime: formData.get("start_time")?.toString() ?? "",
+        endTime: formData.get("end_time")?.toString() ?? "",
+      },
+      initialEvents,
+      formDefault?.id ?? null
+    );
+    if (!validation.ok) {
       setFormDetailsOpen(true);
-      setFormError("Fill in event type, sub-type, title and date.");
+      if (validation.code === "missing_fields") {
+        setFormError("Fill in event type, sub-type, title, date, start time and end time.");
+      } else if (validation.code === "end_before_start") {
+        setFormError("End time must be after the start time.");
+      } else {
+        const c = validation.clash;
+        setFormError(`Clashes with an active event on ${formatDate(date)}: ${c.title} (${c.start}${c.end ? ` - ${c.end}` : ""}).`);
+      }
       return;
     }
+
     startTransition(async () => {
       const result = await saveEventAction(formData);
       if (result?.error) {
@@ -907,8 +942,8 @@ export default function EventsClient({
                           </div>
                         )}
 
-                        {/* Per-event booking config only exists for per_event categories. */}
-                        {selected.is_bookable && type?.booking_grouping === "per_event" && (
+                        {/* Booking page config — shown whenever the event is bookable. */}
+                        {selected.is_bookable && (
                           <div className="border-t border-[#E6DFC8]">
                             <button type="button" onClick={() => setBookingPageOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#E6DFC8]/60 hover:bg-[#E6DFC8]/80 transition-colors text-left">
                               <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Booking Page</span>
@@ -1024,43 +1059,6 @@ export default function EventsClient({
                     <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
 
-                  {/* Group Name & Booking (games only) */}
-                  {selectedTypeForForm?.name === "games" && (() => {
-                    const eventBookings = formDefault ? bookings.filter(b => b.event_id === formDefault.id && b.status !== "cancelled") : [];
-                    return (
-                      <>
-                        <FormRow label="Linked Booking">
-                          <input type="hidden" name="booking_id" value={formBookingId} />
-                          <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-                            <select
-                              title="Linked Booking"
-                              value={formBookingId}
-                              onChange={(e) => {
-                                const bId = e.target.value;
-                                setFormBookingId(bId);
-                                if (bId) {
-                                  const bk = eventBookings.find(b => String(b.id) === bId);
-                                  if (bk?.group_name) setFormGroupName(bk.group_name);
-                                }
-                              }}
-                              className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]"
-                            >
-                              <option value="">No booking</option>
-                              {eventBookings.map(b => (
-                                <option key={b.id} value={b.id}>#{b.id} — {b.group_name || "Unnamed"}</option>
-                              ))}
-                            </select>
-                            <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
-                          </div>
-                        </FormRow>
-                        <FormRow label="Group Name">
-                          <input type="hidden" name="group_name" value={formGroupName} />
-                          <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
-                        </FormRow>
-                      </>
-                    );
-                  })()}
-
                   {/* Tagline */}
                   <div className="px-4 sm:px-5 py-2.5 sm:py-4">
                     <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 mb-2">
@@ -1081,11 +1079,6 @@ export default function EventsClient({
                     </FormRow>
                   )}
 
-                  {/* Booking URL — optional manual override. Left blank, the URL is
-                      auto-generated from the category's booking grouping on save. */}
-                  <FormRow label="Booking URL">
-                    <input name="booking_page_url" type="url" placeholder="Auto-generated on save" defaultValue="" className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
-                  </FormRow>
                 </FormSection>
 
                 <FormSection title="Settings" open={formSettingsOpen} onToggle={() => setFormSettingsOpen((o) => !o)}>
@@ -1097,19 +1090,71 @@ export default function EventsClient({
                     <span className="flex-1" />
                     <FormToggle label="Active" on={formActive} onToggle={() => setFormActive((o) => !o)} />
                   </FormRow>
-                  <FormRow label="Fully Booked">
-                    <span className="flex-1" />
-                    <FormToggle label="Fully booked" on={formFullyBooked} onToggle={() => setFormFullyBooked((o) => !o)} danger />
-                  </FormRow>
+                </FormSection>
+
+                <FormSection title="Public Booking Settings" open={formBookingSettingsOpen} onToggle={() => setFormBookingSettingsOpen((o) => !o)}>
                   <FormRow label="Public Booking">
                     <span className="flex-1" />
                     <FormToggle label="Public booking" on={formIsBookable} onToggle={() => setFormIsBookable((o) => !o)} />
                   </FormRow>
+
+                  {/* fully booked, booking_url, linked booking & group name only apply to a publicly bookable event. */}
+                  {formIsBookable && (
+                    <>
+                      <FormRow label="Fully Booked">
+                        <span className="flex-1" />
+                        <FormToggle label="Fully booked" on={formFullyBooked} onToggle={() => setFormFullyBooked((o) => !o)} danger />
+                      </FormRow>
+
+                      {/* Booking URL — optional manual override. Left blank, the URL is
+                          auto-generated from the category's booking grouping on save. */}
+                      <FormRow label="Booking URL">
+                        <input name="booking_page_url" type="url" placeholder="Auto-generated on save" defaultValue="" className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                      </FormRow>
+
+                      {/* Linked Booking & Group Name (games only) */}
+                      {selectedTypeForForm?.name === "games" && (() => {
+                        const eventBookings = formDefault ? bookings.filter(b => b.event_id === formDefault.id && b.status !== "cancelled") : [];
+                        return (
+                          <>
+                            <FormRow label="Linked Booking">
+                              <input type="hidden" name="booking_id" value={formBookingId} />
+                              <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                                <select
+                                  title="Linked Booking"
+                                  value={formBookingId}
+                                  onChange={(e) => {
+                                    const bId = e.target.value;
+                                    setFormBookingId(bId);
+                                    if (bId) {
+                                      const bk = eventBookings.find(b => String(b.id) === bId);
+                                      if (bk?.group_name) setFormGroupName(bk.group_name);
+                                    }
+                                  }}
+                                  className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]"
+                                >
+                                  <option value="">No booking</option>
+                                  {eventBookings.map(b => (
+                                    <option key={b.id} value={b.id}>#{b.id} — {b.group_name || "Unnamed"}</option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
+                              </div>
+                            </FormRow>
+                            <FormRow label="Group Name">
+                              <input type="hidden" name="group_name" value={formGroupName} />
+                              <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                            </FormRow>
+                          </>
+                        );
+                      })()}
+                    </>
+                  )}
                 </FormSection>
 
-                {/* The event owns its booking page/form config only for per_event categories;
-                    per_type / per_subtype share a config defined on the type / sub-type. */}
-                {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
+                {/* Booking page/form config — editable whenever the event is bookable.
+                    Saved onto this event's own booking_config regardless of grouping. */}
+                {formIsBookable && (
                   <>
                     <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
                     <BookingConfigEditor value={formBookingConfig} onChange={setFormBookingConfig} />
@@ -1265,7 +1310,7 @@ function FormToggle({ on, onToggle, danger, label }: { on: boolean; onToggle: ()
         on ? (danger ? "bg-red-600 border-red-700" : "bg-green-500 border-green-600") : "bg-[#5F624F]/20 border-[#5F624F]/30"
       )}
     >
-      <span className={cn("absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform", on ? "translate-x-5.25" : "translate-x-0.5")} />
+      <span className={cn("absolute top-1/2 left-0 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow transition-transform", on ? "translate-x-5.25" : "translate-x-0.5")} />
     </button>
   );
 }

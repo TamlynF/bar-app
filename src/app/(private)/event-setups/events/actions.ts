@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { publicBookingUrl } from "@/lib/booking-links";
 import { isBookingGrouping } from "@/lib/booking-grouping";
+import { validateEventForm, type EventClashCandidate } from "@/lib/event-form-validation";
 
 export async function saveEventAction(formData: FormData) {
   const supabase = await createClient();
@@ -40,6 +41,41 @@ export async function saveEventAction(formData: FormData) {
     booking_card_icon: formData.get("booking_card_icon")?.toString() || null,
     booking_card_badge: formData.get("booking_card_badge")?.toString() || null,
   };
+
+  // --- Validation (shared with the client form via @/lib/event-form-validation) ---
+  const { data: sameDay } = await supabase
+    .from("events")
+    .select("id, title, start_time, end_time, date, is_active")
+    .eq("date", date);
+
+  const validation = validateEventForm(
+    {
+      eventTypesId: eventTypesId || null,
+      eventSubtypesId: eventSubtypesId || null,
+      title: formData.get("title")?.toString() ?? "",
+      date,
+      startTime: formData.get("start_time")?.toString() ?? "",
+      endTime: formData.get("end_time")?.toString() ?? "",
+    },
+    (sameDay ?? []) as EventClashCandidate[],
+    id ?? null
+  );
+  if (!validation.ok) {
+    if (validation.code === "missing_fields") {
+      return { error: "Fill in event type, sub-type, title, date, start time and end time." };
+    }
+    if (validation.code === "end_before_start") {
+      return { error: "End time must be after the start time." };
+    }
+    const friendlyDate = new Date(date + "T00:00:00").toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+    const c = validation.clash;
+    return { error: `Clashes with an active event on ${friendlyDate}: ${c.title} (${c.start}${c.end ? ` - ${c.end}` : ""}).` };
+  }
 
   // Fetch the category's grouping to determine the right booking URL path
   const { data: type } = await supabase.from("event_types").select("booking_grouping")
