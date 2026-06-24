@@ -348,7 +348,7 @@ export default function PrivateLayoutClient({
 
             {/* 2. Main Content Wrapper */}
             <div className="flex flex-col flex-1 min-w-0">
-                <header className="sticky top-0 z-40 w-full bg-[#F7F4EA]/95 backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
+                <header className="sticky top-0 z-40 w-full bg-white backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
                     <div className="flex items-center max-w-7xl mx-auto min-h-10 relative">
 
                         {/* Mobile Back Button */}
