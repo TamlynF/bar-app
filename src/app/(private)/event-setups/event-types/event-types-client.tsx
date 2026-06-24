@@ -551,9 +551,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   {types.find((t) => t.id === subtypeForm.event_types_id)?.booking_grouping === "per_subtype" && (
                     <SwitchField label="Bookable" value={subtypeForm.is_bookable} onChange={(v) => setSubtypeForm({ ...subtypeForm, is_bookable: v })} />
                   )}
-                  <SwitchField label="Host Required" value={subtypeForm.host_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, host_required: v })} />
-                  <SwitchField label="Seating Required" value={subtypeForm.seating_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, seating_required: v })} />
-                  <SwitchField label="Payment Required" value={subtypeForm.payment_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, payment_required: v })} />
+                  <SwitchField label="Host" value={subtypeForm.host_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, host_required: v })} />
+                  <SwitchField label="Seating" value={subtypeForm.seating_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, seating_required: v })} />
+                  <SwitchField label="Payment" value={subtypeForm.payment_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, payment_required: v })} />
                   {subtypeForm.payment_required && (
                     <NumberField label="Default Amount (£)" value={subtypeForm.default_payment_amount} placeholder="0.00" onChange={(v) => setSubtypeForm({ ...subtypeForm, default_payment_amount: v })} />
                   )}

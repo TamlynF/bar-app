@@ -25,12 +25,15 @@ import {
   Check,
   Search,
   X,
+  Clock,
+  Flame,
+  ArrowDownUp,
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
-import { MonthPicker } from "./month-picker";
+import { DatePicker, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { badgeClassFromColor } from "@/lib/event-type-colors";
+import { badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
 import { BookingConfigEditor } from "@/components/booking-config-editor";
 import { IconPicker } from "@/components/icon-picker";
 import type { BookingConfig } from "@/lib/booking-config";
@@ -109,6 +112,37 @@ function formatTime(timeStr: string | null) {
   return timeStr.substring(0, 5);
 }
 
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const MONTHS_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function parseDate(dateStr: string) {
+  return new Date(dateStr + "T00:00:00");
+}
+function dayNumOf(dateStr: string) {
+  return parseDate(dateStr).getDate();
+}
+function weekdayOf(dateStr: string) {
+  return WEEKDAYS[parseDate(dateStr).getDay()];
+}
+function monthAbbrOf(dateStr: string) {
+  return MONTHS_ABBR[parseDate(dateStr).getMonth()];
+}
+function relativeDayOf(dateStr: string, todayStr: string) {
+  const diff = Math.round((parseDate(dateStr).getTime() - parseDate(todayStr).getTime()) / 86400000);
+  if (diff === 0) return "Today";
+  if (diff === 1) return "Tomorrow";
+  if (diff === -1) return "Yesterday";
+  if (diff > 1 && diff < 7) return WEEKDAYS_LONG[parseDate(dateStr).getDay()];
+  return `${weekdayOf(dateStr)} ${dayNumOf(dateStr)} ${monthAbbrOf(dateStr)}`;
+}
+
+function shortHost(fullName: string) {
+  const parts = fullName.trim().split(/\s+/);
+  const first = parts[0].length > 6 ? parts[0].slice(0, 6) : parts[0];
+  return parts.length > 1 ? `${first} ${parts[parts.length - 1][0]}.` : first;
+}
+
 export type Employee = { id: number; full_name: string };
 
 type QuizCategory = { id: number; category_name: string; question_count: number; short_name?: string; order_no: number };
@@ -170,12 +204,17 @@ export default function EventsClient({
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
-  const [expandedTypes, setExpandedTypes] = useState<Set<number>>(new Set());
-  const [expandedSubTypes, setExpandedSubTypes] = useState<Set<number>>(new Set());
+  const [catFilter, setCatFilter] = useState<number | "all">("all");
+  const [sortSoon, setSortSoon] = useState(true);
+  const [quickFilters, setQuickFilters] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [filterMonth, setFilterMonth] = useState(() => {
+  const [dateRange, setDateRange] = useState<DateRange | null>(() => {
     const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const y = now.getFullYear();
+    const m = now.getMonth();
+    const last = new Date(y, m + 1, 0).getDate();
+    const mm = String(m + 1).padStart(2, "0");
+    return { start: `${y}-${mm}-01`, end: `${y}-${mm}-${String(last).padStart(2, "0")}` };
   });
   const [formBookingId, setFormBookingId] = useState<string>("");
   const [formGroupName, setFormGroupName] = useState<string>("");
@@ -193,6 +232,10 @@ export default function EventsClient({
   const [formTagline, setFormTagline] = useState<string>("");
   const [formPayment, setFormPayment] = useState<string>("");
   const [formSeating, setFormSeating] = useState<boolean>(true);
+  const [formActive, setFormActive] = useState<boolean>(true);
+  const [formFullyBooked, setFormFullyBooked] = useState<boolean>(false);
+  const [formDetailsOpen, setFormDetailsOpen] = useState(true);
+  const [formSettingsOpen, setFormSettingsOpen] = useState(true);
   const [linkCopied, setLinkCopied] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [quizOpen, setQuizOpen] = useState(true);
@@ -223,22 +266,14 @@ export default function EventsClient({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
 
-  const toggleType = (id: number) =>
-    setExpandedTypes((prev) => {
+  const toggleQuickFilter = (key: string) =>
+    setQuickFilters((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) { next.delete(id); } else { next.add(id); }
-      return next;
-    });
-
-  const toggleSubType = (id: number) =>
-    setExpandedSubTypes((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      if (next.has(key)) { next.delete(key); } else { next.add(key); }
       return next;
     });
 
   const isSearching = searchQuery.trim() !== "";
-  const forceOpen = isSearching;
   const isSheetOpen = !!selected || isAdding;
 
   const applySubtypeDefaults = (sub: EventSubtype | undefined) => {
@@ -270,6 +305,10 @@ export default function EventsClient({
     setFormCardTagline("");
     setFormCardIcon(null);
     setFormCardBadge("");
+    setFormActive(true);
+    setFormFullyBooked(false);
+    setFormDetailsOpen(true);
+    setFormSettingsOpen(true);
     applySubtypeDefaults(sub);
     setIsAdding(true);
   };
@@ -283,6 +322,10 @@ export default function EventsClient({
     setFormTagline(selected.tagline ?? "");
     setFormPayment(selected.payment_amount != null ? String(selected.payment_amount) : "");
     setFormSeating(selected.seating_required ?? true);
+    setFormActive(selected.is_active ?? true);
+    setFormFullyBooked(selected.is_fully_booked ?? false);
+    setFormDetailsOpen(true);
+    setFormSettingsOpen(true);
     setFormBookingId(selected.booking_id ? String(selected.booking_id) : "");
     setFormGroupName(selected.group_name ?? "");
     setFormIsBookable(!!selected.is_bookable);
@@ -318,6 +361,19 @@ export default function EventsClient({
 
   const handleSubmit = (formData: FormData) => {
     setFormError(null);
+    // Required fields live inside the collapsible "Details" section, so validate
+    // here rather than relying on native `required` (which can't focus a field in
+    // a collapsed/hidden section).
+    const missing =
+      !formData.get("event_types_id") ||
+      !formData.get("event_subtypes_id") ||
+      !(formData.get("title")?.toString().trim()) ||
+      !formData.get("date");
+    if (missing) {
+      setFormDetailsOpen(true);
+      setFormError("Fill in event type, sub-type, title and date.");
+      return;
+    }
     startTransition(async () => {
       const result = await saveEventAction(formData);
       if (result?.error) {
@@ -358,9 +414,13 @@ export default function EventsClient({
       const hay = `${e.title ?? ""} ${formatDate(e.date)} ${e.date ?? ""} ${host}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
-    if (filterMonth && e.date) {
-      const eventMonth = e.date.slice(0, 7);
-      if (eventMonth !== filterMonth) return false;
+    if (dateRange?.start) {
+      if (!e.date) return false;
+      if (dateRange.end && dateRange.end !== dateRange.start) {
+        if (e.date < dateRange.start || e.date > dateRange.end) return false;
+      } else if (e.date !== dateRange.start) {
+        return false;
+      }
     }
     return true;
   };
@@ -375,34 +435,140 @@ export default function EventsClient({
       })
     : null;
 
-  // --- Two-level grouping: type -> subtype ---
-  type SubGroup = { subtype: EventSubtype; events: EventRecord[] };
-  type TypeGroup = { type: EventType; subGroups: SubGroup[]; count: number };
+  // --- Flat, filterable, date-sorted list ---
+  const baseEvents = filter === "quiz-incomplete" && quizIncompleteBase ? quizIncompleteBase : initialEvents;
 
-  const typeGroupMap = new Map<number, TypeGroup>();
-  for (const t of [...eventTypes].sort((a, b) => a.name.localeCompare(b.name))) {
-    typeGroupMap.set(t.id, { type: t, subGroups: [], count: 0 });
+  const needsQuiz = (e: EventRecord) => {
+    const sub = subtypeById.get(e.event_subtypes_id);
+    if (sub?.behavior !== "quiz") return false;
+    const { total, target } = getQuizStatus(e.id, quizCategories, quizQuestions);
+    return total < target;
+  };
+
+  const QUICK_FILTERS: { key: string; label: string; test: (e: EventRecord) => boolean }[] = [
+    { key: "bookings", label: "Has bookings", test: (e) => getBookingStats(e.id, bookings).confirmedPeople > 0 },
+    { key: "quiz", label: "Needs quiz", test: needsQuiz },
+    { key: "active", label: "Active only", test: (e) => e.is_active !== false },
+  ];
+
+  const passesQuick = (e: EventRecord) =>
+    [...quickFilters].every((k) => QUICK_FILTERS.find((q) => q.key === k)!.test(e));
+
+  // Category chips reflect search + month + quick filters (but not the chosen category).
+  const chipBase = baseEvents.filter((e) => matchesFilters(e) && passesQuick(e));
+  const typeCounts = new Map<number, number>();
+  for (const e of chipBase) typeCounts.set(e.event_types_id, (typeCounts.get(e.event_types_id) ?? 0) + 1);
+  const chipTypes = [...eventTypes]
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((t) => ({ type: t, count: typeCounts.get(t.id) ?? 0 }));
+
+  const visibleEvents = baseEvents
+    .filter((e) => matchesFilters(e) && passesQuick(e) && (catFilter === "all" || e.event_types_id === catFilter))
+    .sort((a, b) => {
+      const cmp = (a.date ?? "").localeCompare(b.date ?? "") || (a.start_time ?? "").localeCompare(b.start_time ?? "");
+      return sortSoon ? cmp : -cmp;
+    });
+
+  const anyFilterActive = isSearching || catFilter !== "all" || quickFilters.size > 0;
+  const clearAllFilters = () => { setCatFilter("all"); setQuickFilters(new Set()); setSearchQuery(""); };
+
+  // Group the (already date-sorted) list into day buckets for sticky day headers.
+  const dayGroups: { date: string; events: EventRecord[] }[] = [];
+  for (const e of visibleEvents) {
+    const last = dayGroups[dayGroups.length - 1];
+    if (last && last.date === e.date) last.events.push(e);
+    else dayGroups.push({ date: e.date, events: [e] });
   }
 
-  for (const sub of [...eventSubtypes].sort((a, b) => a.name.localeCompare(b.name))) {
-    const base = filter === "quiz-incomplete" && quizIncompleteBase ? quizIncompleteBase : initialEvents;
-    const events = base
-      .filter((e) => e.event_subtypes_id === sub.id && matchesFilters(e))
-      .sort((a, b) => (a.date ?? "").localeCompare(b.date ?? "") || (a.start_time ?? "").localeCompare(b.start_time ?? ""));
-    const tg = typeGroupMap.get(sub.event_types_id);
-    if (!tg) continue;
-    if (!isSearching || events.length > 0) {
-      tg.subGroups.push({ subtype: sub, events });
-      tg.count += events.length;
-    }
-  }
+  const renderEventRow = (event: EventRecord) => {
+    const sub = subtypeById.get(event.event_subtypes_id);
+    const type = typeById.get(event.event_types_id);
+    const colorKey = sub?.color ?? type?.color ?? null;
+    const accentHex = swatchHexFromColor(colorKey) ?? "#5C4033";
+    const badgeClass = badgeClassFromColor(colorKey);
+    const host = employees.find((emp) => emp.id === event.host_employee_id);
+    const isQuiz = sub?.behavior === "quiz";
+    const quizStat = isQuiz ? getQuizStatus(event.id, quizCategories, quizQuestions) : null;
+    const bStats = getBookingStats(event.id, bookings);
+    const inactive = event.is_active === false;
+    const hasPricing = !!event.payment_amount && event.payment_amount > 0;
+    const isTonight = event.date === todayStr && !inactive;
 
-  const typeGroups = Array.from(typeGroupMap.values()).filter((tg) => !isSearching || tg.count > 0);
+    return (
+      <button
+        key={event.id}
+        type="button"
+        onClick={() => openView(event)}
+        style={{ "--spine": accentHex } as React.CSSProperties}
+        className={cn(
+          "relative w-full text-left flex items-center gap-3 pl-4 pr-3 py-3 bg-white border rounded-2xl transition active:scale-[0.99] hover:shadow-md",
+          isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#E6DFC8]",
+          inactive && "opacity-60"
+        )}
+      >
+        {/* colour spine */}
+        <span className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-(--spine)" />
 
-  const knownSubtypeIds = new Set(eventSubtypes.map((s) => s.id));
-  const ungrouped = initialEvents.filter(matchesFilters).filter((e) => !knownSubtypeIds.has(e.event_subtypes_id));
+        {isTonight && (
+          <span className="absolute -top-2 left-3 z-1 inline-flex items-center gap-1 h-4.75 px-2 rounded-full bg-[#FF6B35] text-white text-[9px] font-black uppercase tracking-wide shadow">
+            <Flame className="w-2.5 h-2.5" /> Tonight
+          </span>
+        )}
 
-  const visibleEvents = typeGroups.flatMap((tg) => tg.subGroups.flatMap((sg) => sg.events)).concat(ungrouped);
+        {/* date badge */}
+        <div className={cn("w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 border", badgeClass)}>
+          <span className="text-[9px] font-black uppercase tracking-tighter leading-none">{monthAbbrOf(event.date)}</span>
+          <span className="text-base font-black leading-none">{dayNumOf(event.date)}</span>
+        </div>
+
+        {/* middle */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap mb-1">
+            {sub && <span className={cn("text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded", badgeClass)}>{toTitleCase(sub.name)}</span>}
+            {inactive && <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Inactive</span>}
+            {quizStat && !quizStat.allComplete && (
+              <span className="inline-flex items-center gap-0.5">
+                <span className="text-[9px] font-black text-[#5F624F]">Qz</span>
+                {quizStat.someExist
+                  ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                  : <AlertCircle className="w-3.5 h-3.5 text-red-500" />}
+              </span>
+            )}
+          </div>
+          <p className={cn("text-sm font-black leading-tight truncate", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
+            {event.title || "Untitled Event"}
+          </p>
+          <div className="flex items-center gap-2.5 mt-1 text-[11px] text-[#5F624F] font-semibold flex-wrap">
+            <span className="inline-flex items-center gap-1">
+              <Clock className="w-3 h-3" />
+              {formatTime(event.start_time)}{event.end_time ? `–${formatTime(event.end_time)}` : ""}
+            </span>
+            {host && (
+              <span className="inline-flex items-center gap-1.5">
+                <span className="w-4.25 h-4.25 rounded-full text-white text-[8.5px] font-black inline-grid place-items-center bg-(--spine)">
+                  {host.full_name[0]}
+                </span>
+                {shortHost(host.full_name)}
+              </span>
+            )}
+          </div>
+          {event.tagline && <p className="text-[11px] italic text-[#a39d86] truncate mt-1">{event.tagline}</p>}
+        </div>
+
+        {/* right */}
+        <div className="flex flex-col items-end gap-1.5 shrink-0">
+          {(event.is_bookable || bStats.confirmedPeople > 0) && (
+            <span className="inline-flex items-center gap-1 text-xs font-black text-[#5F624F] tabular-nums">
+              <Users className="w-3.5 h-3.5" />{bStats.confirmedPeople}
+            </span>
+          )}
+          {hasPricing && <span className="text-[11px] font-black text-green-700">£{event.payment_amount!.toFixed(2)}</span>}
+          {event.is_fully_booked && <span className="text-[9px] font-black uppercase tracking-wide text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Full</span>}
+          <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40" />
+        </div>
+      </button>
+    );
+  };
 
   const showForm = isAdding || isEditing;
   const formDefault = isEditing ? selected : null;
@@ -411,7 +577,7 @@ export default function EventsClient({
   const formSubtypeOptions = subtypesByType.get(Number(formTypeId)) ?? [];
 
   return (
-    <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl">
+    <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl bg-[#E6DFC8]/80">
 
       {/* Filter notice */}
       {filter === "quiz-incomplete" && (
@@ -425,201 +591,141 @@ export default function EventsClient({
         </div>
       )}
 
-      {/* Header bar */}
-      <div className="bg-white border border-[#E6DFC8] rounded-2xl px-3 py-2.5 sm:px-4 sm:py-3 flex flex-col sm:flex-row gap-2 sm:gap-3 sm:items-center">
-        <button
-          type="button"
-          onClick={() => openAdd()}
-          className="h-11 px-4 rounded-xl bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0 sm:order-last"
-        >
-          <Plus className="w-4 h-4 shrink-0" />
-          <span className="text-[11px] font-black uppercase tracking-wide">New Event</span>
-        </button>
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          <div className="flex items-center gap-2 h-11 px-3 flex-1 min-w-0 rounded-xl border border-[#E6DFC8] focus-within:border-[#5C4033] transition-colors">
-            <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
-            <input
-              type="text"
-              placeholder="Search title, date or host..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 min-w-0 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
-            />
-          </div>
-          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
+      {/* Header bar: search + date + compact New */}
+      <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 h-11 px-3 flex-1 min-w-0 rounded-xl border border-[#E6DFC8] bg-white focus-within:border-[#5C4033] transition-colors">
+          <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
+          <input
+            type="text"
+            placeholder="Search title, date or host..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="flex-1 min-w-0 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+          />
           {isSearching && (
-            <button type="button" onClick={() => setSearchQuery("")} className="shrink-0 p-2 rounded-lg hover:bg-[#E6DFC8] transition-colors" title="Clear search">
-              <X className="w-4 h-4 text-[#5F624F]/50" />
+            <button type="button" onClick={() => setSearchQuery("")} className="shrink-0 -mr-1 p-1 rounded-md hover:bg-[#E6DFC8] transition-colors" title="Clear search">
+              <X className="w-3.5 h-3.5 text-[#5F624F]/50" />
             </button>
           )}
         </div>
+        <DatePicker value={dateRange} onChange={setDateRange} />
+        <button
+          type="button"
+          onClick={() => openAdd()}
+          title="New Event"
+          className="h-11 w-11 sm:w-auto sm:px-4 rounded-xl bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+        >
+          <Plus className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline text-[11px] font-black uppercase tracking-wide">New</span>
+        </button>
       </div>
 
-      {/* Event List */}
+      {/* Filter bar: category chips + sort / quick filters */}
+      <div className="pt-1 pb-1 space-y-2">
+        {/* Category chips */}
+        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={() => setCatFilter("all")}
+            className={cn(
+              "shrink-0 h-7 px-3 rounded-full border text-[10px] font-black uppercase tracking-wide inline-flex items-center gap-1.5 transition-colors",
+              catFilter === "all" ? "bg-[#5C4033] text-white border-[#5C4033]" : "bg-white text-[#5F624F] border-[#E6DFC8]"
+            )}
+          >
+            All <span className="opacity-70">{chipBase.length}</span>
+          </button>
+          {chipTypes.map(({ type, count }) => {
+            const sel = catFilter === type.id;
+            return (
+              <button
+                key={type.id}
+                type="button"
+                onClick={() => setCatFilter(sel ? "all" : type.id)}
+                className={cn(
+                  "shrink-0 h-7 px-3 rounded-full border text-[10px] font-black uppercase tracking-wide inline-flex items-center gap-1.5 transition-colors",
+                  sel ? "bg-[#5C4033] text-white border-[#5C4033]" : cn(badgeClassFromColor(type.color), "rounded-full")
+                )}
+              >
+                {toTitleCase(type.name)} <span className="opacity-70">{count}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Sort + quick filters */}
+        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <button
+            type="button"
+            onClick={() => setSortSoon((s) => !s)}
+            className="shrink-0 h-7 px-2.5 rounded-lg border border-[#E6DFC8] bg-[#EFE8D4] text-[#5C4033] text-[9px] font-black uppercase tracking-wide inline-flex items-center gap-1.5"
+          >
+            <ArrowDownUp className="w-3 h-3" /> {sortSoon ? "Soonest" : "Latest"}
+          </button>
+          <span className="shrink-0 w-px h-4 bg-[#E6DFC8]" />
+          {QUICK_FILTERS.map((q) => {
+            const on = quickFilters.has(q.key);
+            return (
+              <button
+                key={q.key}
+                type="button"
+                onClick={() => toggleQuickFilter(q.key)}
+                className={cn(
+                  "shrink-0 h-7 px-3 rounded-full border text-[9px] font-black uppercase tracking-wide transition-colors",
+                  on ? "bg-[#5C4033] text-white border-[#5C4033]" : "bg-white text-[#5F624F] border-[#E6DFC8]"
+                )}
+              >
+                {q.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Result line */}
+      {anyFilterActive && (
+        <div className="flex items-center gap-1.5 px-1 text-xs text-[#5F624F] font-semibold">
+          <b className="font-black text-[#1F1F1A] text-[13px]">{visibleEvents.length}</b>
+          event{visibleEvents.length === 1 ? "" : "s"}
+          {catFilter !== "all" && (
+            <> in <span className="font-black text-[#5C4033]">{toTitleCase(typeById.get(catFilter)?.name)}</span></>
+          )}
+          <button type="button" onClick={clearAllFilters} className="ml-auto font-black text-[10px] uppercase tracking-wide text-[#5C4033] underline">
+            Clear all
+          </button>
+        </div>
+      )}
+
+      {/* Flat event list */}
       {visibleEvents.length === 0 ? (
         <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
           <CalendarDays className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
           <p className="text-sm font-black text-[#1F1F1A]">
-            {filter === "quiz-incomplete" ? "No upcoming quizzes with incomplete questions" : "No events found"}
+            {filter === "quiz-incomplete" ? "No upcoming quizzes with incomplete questions" : "Nothing matches"}
           </p>
           <p className="text-[11px] text-[#5F624F] mt-1">
             {filter === "quiz-incomplete"
               ? "All quiz questions are complete"
-              : isSearching ? "Try adjusting your search" : "No events in this month"}
+              : anyFilterActive ? "No events with these filters" : "No events for the selected dates"}
           </p>
-          {isSearching && (
-            <button type="button" onClick={() => setSearchQuery("")} className="mt-3 text-[11px] font-black uppercase tracking-wide text-[#5C4033] underline">
-              Clear Search
+          {anyFilterActive && filter !== "quiz-incomplete" && (
+            <button type="button" onClick={clearAllFilters} className="mt-3 text-[11px] font-black uppercase tracking-wide text-[#5C4033] underline">
+              Reset filters
             </button>
           )}
         </div>
       ) : (
-        <div className="space-y-2">
-          {typeGroups.map((tg) => {
-            const typeOpen = expandedTypes.has(tg.type.id) || forceOpen;
-            const subGroupsToShow = tg.subGroups.filter((sg) => sg.events.length > 0);
-            if (isSearching && subGroupsToShow.length === 0) return null;
-            return (
-              <section key={tg.type.id} className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
-                <button
-                  type="button"
-                  onClick={() => toggleType(tg.type.id)}
-                  className="w-full flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3.5 gap-2.5 min-h-11"
-                >
-                  <span className="text-sm font-black uppercase tracking-tight text-[#5C4033] truncate flex-1 text-left">
-                    {toTitleCase(tg.type.name)} <span className="text-[#5F624F] text-xs font-bold">({tg.count})</span>
-                  </span>
-                  <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200 shrink-0", typeOpen && "rotate-180")} />
-                </button>
-
-                {typeOpen && (
-                  <div className="px-3 sm:px-4 py-3 space-y-3">
-                    {subGroupsToShow.map((sg) => {
-                      const subOpen = expandedSubTypes.has(sg.subtype.id) || forceOpen;
-                      const color = sg.subtype.color;
-                      return (
-                        <div key={sg.subtype.id} className={cn(
-                          "rounded-xl border overflow-hidden",
-                          badgeClassFromColor(color).split(" ").filter((c) => c.startsWith("border")).join(" ")
-                        )}>
-                          <div className={cn("flex items-center gap-2 px-3 sm:px-4 py-2 min-h-10", badgeClassFromColor(color))}>
-                            <button type="button" onClick={() => toggleSubType(sg.subtype.id)} className="flex-1 min-w-0 flex items-center gap-2 text-left">
-                              <span className="text-[11px] font-black uppercase tracking-wide">{toTitleCase(sg.subtype.name)}</span>
-                              <span className="text-[10px] font-bold opacity-60">({sg.events.length})</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => openAdd(sg.subtype.id)}
-                              className="w-7 h-7 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center shrink-0"
-                              title={`Create ${toTitleCase(tg.type.name)} - ${toTitleCase(sg.subtype.name)} event`}
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                            <button type="button" onClick={() => toggleSubType(sg.subtype.id)} className="shrink-0" aria-label={subOpen ? "Collapse events" : "Expand events"}>
-                              <ChevronDown className={cn("w-3.5 h-3.5 transition-transform duration-200", subOpen && "rotate-180")} />
-                            </button>
-                          </div>
-
-                          {subOpen && (
-                            <div className={cn("divide-y", (() => {
-                              const borderColor = badgeClassFromColor(color).split(" ").find((c) => c.startsWith("border-") && c !== "border") ?? "";
-                              return borderColor.replace("border-", "divide-");
-                            })())}>
-                              {sg.events.map((event) => {
-                                const hasPricing = !!event.payment_amount && event.payment_amount > 0;
-                                const host = employees.find((emp) => emp.id === event.host_employee_id);
-                                const isQuiz = sg.subtype.behavior === "quiz";
-                                const quizStat = isQuiz ? getQuizStatus(event.id, quizCategories, quizQuestions) : null;
-                                const bStats = getBookingStats(event.id, bookings);
-                                const inactive = event.is_active === false;
-                                const dateObj = new Date(event.date + "T00:00:00");
-                                const monthAbbr = dateObj.toLocaleDateString("en-GB", { month: "short" }).toUpperCase();
-                                const dayNum = dateObj.getDate();
-
-                                return (
-                                  <div
-                                    key={event.id}
-                                    onClick={() => openView(event)}
-                                    className={cn("px-3 sm:px-4 py-3 flex items-center gap-2.5 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]", inactive && "opacity-60")}
-                                  >
-                                    <div className={cn("w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 border", badgeClassFromColor(color))}>
-                                      <span className="text-[9px] font-black uppercase tracking-tighter leading-none">{monthAbbr}</span>
-                                      <span className="text-sm font-black leading-none">{dayNum}</span>
-                                    </div>
-
-                                    <div className="flex-1 min-w-0">
-                                      <div className="flex items-center gap-1.5">
-                                        <p className={cn("text-sm font-black leading-snug truncate flex-1 min-w-0", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
-                                          {event.title || "Untitled Event"}
-                                        </p>
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                          {(bStats.confirmedPeople > 0 || event.is_bookable) && (
-                                            <span className="text-[10px] font-black text-[#5F624F] flex items-center gap-0.5 tabular-nums">
-                                              <Users className="w-3 h-3" />{bStats.confirmedPeople}
-                                            </span>
-                                          )}
-                                          {event.is_fully_booked && <span className="text-[9px] font-black text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Full</span>}
-                                          {inactive && <span className="w-2 h-2 rounded-full bg-red-400 shrink-0" title="Inactive" />}
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-1.5 mt-0.5">
-                                        <p className="text-[11px] text-[#5F624F] truncate flex-1 min-w-0">
-                                          {formatTime(event.start_time)}
-                                          {event.end_time ? ` → ${formatTime(event.end_time)}` : ""}
-                                          {(event.start_time || event.end_time) && host ? " · " : ""}
-                                          {host ? (() => { const parts = host.full_name.split(" "); const first = parts[0].length > 4 ? parts[0].slice(0, 4) : parts[0]; return parts.length > 1 ? `${first} ${parts[parts.length - 1][0]}.` : first; })() : ""}
-                                        </p>
-                                        <div className="flex items-center gap-1.5 shrink-0">
-                                          {quizStat ? (
-                                            <span className="flex items-center gap-0.5">
-                                              <span className="text-[10px] font-black text-[#5F624F]">Qz:</span>
-                                              {quizStat.allComplete
-                                                ? <CheckCircle2 className="w-4 h-4 text-green-600" />
-                                                : quizStat.someExist
-                                                  ? <AlertTriangle className="w-4 h-4 text-amber-500" />
-                                                  : <AlertCircle className="w-4 h-4 text-red-500" />}
-                                            </span>
-                                          ) : hasPricing ? (
-                                            <span className="text-[10px] font-black text-green-700">£{event.payment_amount!.toFixed(2)}</span>
-                                          ) : null}
-                                        </div>
-                                      </div>
-                                    </div>
-
-                                    <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            );
-          })}
-
-          {ungrouped.length > 0 && (
-            <section className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
-              <div className="flex items-center justify-between px-5 py-3.5 bg-[#F7F4EA]">
-                <p className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">Other</p>
-                <span className="text-[10px] font-black text-[#5F624F] bg-white border border-[#E6DFC8] px-2.5 py-1 rounded-lg tabular-nums">{ungrouped.length}</span>
+        <div className="space-y-1.5">
+          {dayGroups.map((group) => (
+            <section key={group.date} className="space-y-1.5">
+              {/* Sticky day separator */}
+              <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#F7F4EA] py-1.5">
+                <span className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">{relativeDayOf(group.date, todayStr)}</span>
+                <span className="flex-1 h-px bg-[#E6DFC8]" />
+                <span className="text-[10px] font-bold text-[#5F624F]">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
               </div>
-              <div className="divide-y divide-[#E6DFC8]/50">
-                {ungrouped.map((event) => (
-                  <div key={event.id} onClick={() => openView(event)} className="px-4 py-3.5 flex items-center gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]">
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-[#1F1F1A] leading-snug">{event.title || "Untitled Event"}</p>
-                      <p className="text-[11px] text-[#5F624F] font-medium mt-0.5">{formatDate(event.date)}</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
-                  </div>
-                ))}
-              </div>
+              {group.events.map((event) => renderEventRow(event))}
             </section>
-          )}
+          ))}
         </div>
       )}
 
@@ -694,7 +800,7 @@ export default function EventsClient({
                         {(sub?.payment_required || hasPricing) && (
                           <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
                         )}
-                        {(sub?.seating_required || selected.seating_required) && <DetailCell label="Seating Required" value={selected.seating_required ? "Yes" : "No"} />}
+                        {(sub?.seating_required || selected.seating_required) && <DetailCell label="Seating" toggle={!!selected.seating_required} />}
                         {selected.tagline && <DetailCell label="Tagline" value={selected.tagline} />}
                         {selected.external_link && <DetailCell label="External Link" value={selected.external_link} />}
                         {sub?.behavior === "karaoke" && selected.karaoke_request_url && <DetailCell label="Karaoke Request URL" value={selected.karaoke_request_url} />}
@@ -742,7 +848,7 @@ export default function EventsClient({
                     </button>
                     {bookingsOpen && (
                       <>
-                        <DetailCell label="Fully Booked" value={selected.is_fully_booked ? "Yes" : "No"} />
+                        <DetailCell label="Fully Booked" toggle={!!selected.is_fully_booked} />
                         {type?.name === "games" && (
                           <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "—"} />
                         )}
@@ -777,7 +883,7 @@ export default function EventsClient({
                     </button>
                     {bookingSettingsOpen && (
                       <>
-                        <DetailCell label="Public Booking" value={selected.is_bookable ? "Enabled" : "Disabled"} />
+                        <DetailCell label="Public Booking" toggle={!!selected.is_bookable} />
 
                         {selected.is_bookable && (
                           <div className="px-4 sm:px-5 py-3 border-t border-[#E6DFC8]">
@@ -828,46 +934,55 @@ export default function EventsClient({
             {showForm && (
               <form id="event-form" action={handleSubmit} className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
+                {/* Boolean fields live in the collapsible Settings section; keep their
+                    hidden inputs at the form root so they submit even when collapsed. */}
+                <input type="hidden" name="seating_required" value={formSeating ? "on" : ""} />
+                <input type="hidden" name="is_active" value={formActive ? "on" : ""} />
+                <input type="hidden" name="is_fully_booked" value={formFullyBooked ? "on" : ""} />
+                <input type="hidden" name="is_bookable" value={formIsBookable ? "on" : ""} />
 
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                <FormSection title="Details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
                   {/* Event Type */}
                   <FormRow label="Event Type" required>
-                    <select
-                      title="Event Type"
-                      name="event_types_id"
-                      required
-                      value={formTypeId}
-                      onChange={(e) => onSelectType(e.target.value)}
-                      className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
-                    >
-                      {eventTypes.map((t) => (
-                        <option key={t.id} value={t.id} className="dir-ltr">{toTitleCase(t.name)}</option>
-                      ))}
-                    </select>
+                    <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                      <select
+                        title="Event Type"
+                        name="event_types_id"
+                        value={formTypeId}
+                        onChange={(e) => onSelectType(e.target.value)}
+                        className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]"
+                      >
+                        {eventTypes.map((t) => (
+                          <option key={t.id} value={t.id}>{toTitleCase(t.name)}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
+                    </div>
                   </FormRow>
 
                   {/* Sub-Type */}
                   <FormRow label="Sub-Type" required>
-                    <select
-                      title="Sub-Type"
-                      name="event_subtypes_id"
-                      required
-                      value={formSubtypeId}
-                      onChange={(e) => onSelectSubtype(e.target.value)}
-                      className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
-                    >
-                      <option value="" disabled className="dir-ltr">Select a sub-type...</option>
-                      {formSubtypeOptions.map((s) => (
-                        <option key={s.id} value={s.id} className="dir-ltr">{toTitleCase(s.name)}</option>
-                      ))}
-                    </select>
+                    <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                      <select
+                        title="Sub-Type"
+                        name="event_subtypes_id"
+                        value={formSubtypeId}
+                        onChange={(e) => onSelectSubtype(e.target.value)}
+                        className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]"
+                      >
+                        <option value="" disabled>Select a sub-type...</option>
+                        {formSubtypeOptions.map((s) => (
+                          <option key={s.id} value={s.id}>{toTitleCase(s.name)}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
+                    </div>
                   </FormRow>
 
                   {/* Title */}
                   <FormRow label="Title" required>
                     <input
                       name="title"
-                      required
                       placeholder="e.g. Music Bingo"
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
@@ -877,7 +992,7 @@ export default function EventsClient({
 
                   {/* Date */}
                   <FormRow label="Date" required>
-                    <input title="Date" name="date" type="date" required defaultValue={formDefault?.date ?? ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none" />
+                    <input title="Date" name="date" type="date" defaultValue={formDefault?.date ?? ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none" />
                   </FormRow>
 
                   {/* Time */}
@@ -892,36 +1007,21 @@ export default function EventsClient({
                   {/* Host — only when subtype requires a host */}
                   {selectedSubtype?.host_required && (
                     <FormRow label="Host">
-                      <select title="Host" name="host_employee_id" defaultValue={formDefault?.host_employee_id ?? ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl">
-                        <option value="" className="dir-ltr">No host</option>
-                        {employees.map((e) => (
-                          <option key={e.id} value={e.id} className="dir-ltr">{e.full_name}</option>
-                        ))}
-                      </select>
+                      <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                        <select title="Host" name="host_employee_id" defaultValue={formDefault?.host_employee_id ?? ""} className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]">
+                          <option value="">No host</option>
+                          {employees.map((e) => (
+                            <option key={e.id} value={e.id}>{e.full_name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
+                      </div>
                     </FormRow>
                   )}
 
                   {/* Payment */}
                   <FormRow label="Payment (£)">
                     <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
-                  </FormRow>
-
-                  {/* Seating */}
-                  <FormRow label="Seating Required">
-                    <span className="flex-1" />
-                    <input title="Seating Required" id="seating_required" name="seating_required" type="checkbox" checked={formSeating} onChange={(e) => setFormSeating(e.target.checked)} className="w-5 h-5 rounded accent-[#5C4033] cursor-pointer" />
-                  </FormRow>
-
-                  {/* Active */}
-                  <FormRow label="Active">
-                    <span className="flex-1" />
-                    <input title="Active" id="is_active" name="is_active" type="checkbox" defaultChecked={formDefault?.is_active ?? true} className="w-5 h-5 rounded accent-[#5C4033] cursor-pointer" />
-                  </FormRow>
-
-                  {/* Fully Booked */}
-                  <FormRow label="Fully Booked">
-                    <span className="flex-1" />
-                    <input title="Fully Booked" id="is_fully_booked" name="is_fully_booked" type="checkbox" defaultChecked={formDefault?.is_fully_booked ?? false} className="w-5 h-5 rounded accent-red-600 cursor-pointer" />
                   </FormRow>
 
                   {/* Group Name & Booking (games only) */}
@@ -931,24 +1031,27 @@ export default function EventsClient({
                       <>
                         <FormRow label="Linked Booking">
                           <input type="hidden" name="booking_id" value={formBookingId} />
-                          <select
-                            title="Linked Booking"
-                            value={formBookingId}
-                            onChange={(e) => {
-                              const bId = e.target.value;
-                              setFormBookingId(bId);
-                              if (bId) {
-                                const bk = eventBookings.find(b => String(b.id) === bId);
-                                if (bk?.group_name) setFormGroupName(bk.group_name);
-                              }
-                            }}
-                            className="text-xs sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
-                          >
-                            <option value="" className="dir-ltr">No booking</option>
-                            {eventBookings.map(b => (
-                              <option key={b.id} value={b.id} className="dir-ltr">#{b.id} — {b.group_name || "Unnamed"}</option>
-                            ))}
-                          </select>
+                          <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                            <select
+                              title="Linked Booking"
+                              value={formBookingId}
+                              onChange={(e) => {
+                                const bId = e.target.value;
+                                setFormBookingId(bId);
+                                if (bId) {
+                                  const bk = eventBookings.find(b => String(b.id) === bId);
+                                  if (bk?.group_name) setFormGroupName(bk.group_name);
+                                }
+                              }}
+                              className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]"
+                            >
+                              <option value="">No booking</option>
+                              {eventBookings.map(b => (
+                                <option key={b.id} value={b.id}>#{b.id} — {b.group_name || "Unnamed"}</option>
+                              ))}
+                            </select>
+                            <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
+                          </div>
                         </FormRow>
                         <FormRow label="Group Name">
                           <input type="hidden" name="group_name" value={formGroupName} />
@@ -983,23 +1086,26 @@ export default function EventsClient({
                   <FormRow label="Booking URL">
                     <input name="booking_page_url" type="url" placeholder="Auto-generated on save" defaultValue="" className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
-                </div>
+                </FormSection>
 
-                {/* Public Booking enable + config */}
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
-                  <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#E6DFC8]/60">
-                    <span className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Public Booking</span>
-                  </div>
-                  <FormRow label="Enable Booking Page">
-                    <input type="hidden" name="is_bookable" value={formIsBookable ? "on" : ""} />
-                    <div className="flex items-center gap-2">
-                      <span className={cn("text-[10px] font-black uppercase tracking-wide", formIsBookable ? "text-green-600" : "text-[#5F624F]")}>{formIsBookable ? "On" : "Off"}</span>
-                      <button type="button" title="Toggle public booking" onClick={() => setFormIsBookable(!formIsBookable)} className={cn("w-11 h-6 rounded-full transition-colors relative shrink-0 border", formIsBookable ? "bg-green-500 border-green-600" : "bg-[#5F624F]/20 border-[#5F624F]/30")}>
-                        <span className={cn("absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform", formIsBookable ? "translate-x-5.25" : "translate-x-0.5")} />
-                      </button>
-                    </div>
+                <FormSection title="Settings" open={formSettingsOpen} onToggle={() => setFormSettingsOpen((o) => !o)}>
+                  <FormRow label="Seating">
+                    <span className="flex-1" />
+                    <FormToggle label="Seating" on={formSeating} onToggle={() => setFormSeating((o) => !o)} />
                   </FormRow>
-                </div>
+                  <FormRow label="Active">
+                    <span className="flex-1" />
+                    <FormToggle label="Active" on={formActive} onToggle={() => setFormActive((o) => !o)} />
+                  </FormRow>
+                  <FormRow label="Fully Booked">
+                    <span className="flex-1" />
+                    <FormToggle label="Fully booked" on={formFullyBooked} onToggle={() => setFormFullyBooked((o) => !o)} danger />
+                  </FormRow>
+                  <FormRow label="Public Booking">
+                    <span className="flex-1" />
+                    <FormToggle label="Public booking" on={formIsBookable} onToggle={() => setFormIsBookable((o) => !o)} />
+                  </FormRow>
+                </FormSection>
 
                 {/* The event owns its booking page/form config only for per_event categories;
                     per_type / per_subtype share a config defined on the type / sub-type. */}
@@ -1087,15 +1193,37 @@ function FormRow({ label, required, children }: { label: string; required?: bool
   );
 }
 
-function DetailCell({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
+function DetailCell({ label, value, icon, toggle, accent }: { label: string; value?: string; icon?: React.ReactNode; toggle?: boolean; accent?: string }) {
   return (
     <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-b border-[#E6DFC8] last:border-0">
       <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
         {icon}
         <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">{label}</span>
       </div>
-      <span className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">{value}</span>
+      {toggle !== undefined ? (
+        <span className="flex-1 flex justify-end">
+          <ToggleSlider on={toggle} />
+        </span>
+      ) : (
+        <span className={cn("text-xs sm:text-sm font-black text-right flex-1 leading-snug", accent ?? "text-[#1F1F1A]")}>{value}</span>
+      )}
     </div>
+  );
+}
+
+/** Read-only iOS-style toggle for displaying boolean fields in the detail sheet. */
+function ToggleSlider({ on, danger }: { on: boolean; danger?: boolean }) {
+  return (
+    <span
+      role="img"
+      aria-label={on ? "On" : "Off"}
+      className={cn(
+        "relative w-9 h-5 rounded-full transition-colors shrink-0",
+        on ? (danger ? "bg-red-600" : "bg-green-600") : "bg-[#5F624F]/25"
+      )}
+    >
+      <span className={cn("absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform", on ? "translate-x-4.5" : "translate-x-0.5")} />
+    </span>
   );
 }
 
@@ -1105,5 +1233,39 @@ function ErrorBox({ message }: { message: string }) {
       <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
       <p className="text-sm text-red-700 font-bold leading-snug">{message}</p>
     </div>
+  );
+}
+
+/** Collapsible section wrapper for the edit/new form. Body stays mounted (hidden
+ * when collapsed) so field values — including uncontrolled inputs — survive a
+ * collapse and remain submittable. */
+function FormSection({ title, open, onToggle, children }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
+  return (
+    <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+      <button type="button" onClick={onToggle} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left">
+        <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">{title}</span>
+        <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+      </button>
+      <div className={cn("divide-y divide-[#E6DFC8]/50", !open && "hidden")}>{children}</div>
+    </div>
+  );
+}
+
+/** Interactive iOS-style toggle for the edit/new form. */
+function FormToggle({ on, onToggle, danger, label }: { on: boolean; onToggle: () => void; danger?: boolean; label: string }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      onClick={onToggle}
+      className={cn(
+        "relative w-11 h-6 rounded-full transition-colors shrink-0 border",
+        on ? (danger ? "bg-red-600 border-red-700" : "bg-green-500 border-green-600") : "bg-[#5F624F]/20 border-[#5F624F]/30"
+      )}
+    >
+      <span className={cn("absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform", on ? "translate-x-5.25" : "translate-x-0.5")} />
+    </button>
   );
 }

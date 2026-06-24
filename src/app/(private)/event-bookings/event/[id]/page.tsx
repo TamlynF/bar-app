@@ -6,7 +6,8 @@ import { ArrowLeft, CalendarDays, Clock, User, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import { badgeClassFromColor, FALLBACK_BADGE } from "@/lib/event-type-colors";
-import { BookingStatusButtons, CopyLinkButton } from "./booking-actions";
+import { CopyLinkButton } from "./booking-actions";
+import { BookingsList, type BookingItem } from "./bookings-list";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ type EventRow = {
   start_time: string | null;
   end_time: string | null;
   title: string | null;
+  payment_amount: number | null;
   host_employee_id: number | null;
   event_types: { name: string } | { name: string }[];
   event_subtypes: { name: string; color: string | null } | { name: string; color: string | null }[];
@@ -62,19 +64,6 @@ function badgeLabel(et: EventTypeRow): string {
   return raw.charAt(0).toUpperCase() + raw.slice(1).replace(/-/g, " ");
 }
 
-function statusBadge(status: string | null) {
-  switch (status) {
-    case "confirmed":
-      return "bg-green-100 text-green-700 border border-green-200";
-    case "waitlisted":
-      return "bg-amber-100 text-amber-700 border border-amber-200";
-    case "cancelled":
-      return "bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]";
-    default:
-      return "bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]";
-  }
-}
-
 export default async function EventDetailPage({
   params,
 }: {
@@ -90,7 +79,7 @@ export default async function EventDetailPage({
     supabase
       .from("events")
       .select(
-        "id, date, start_time, end_time, title, host_employee_id, event_types(name), event_subtypes(name, color), employees!host_employee_id(full_name)"
+        "id, date, start_time, end_time, title, payment_amount, host_employee_id, event_types(name), event_subtypes(name, color), employees!host_employee_id(full_name)"
       )
       .eq("id", eventId)
       .single(),
@@ -128,6 +117,24 @@ export default async function EventDetailPage({
   const parsed = parseISO(event.date);
   const startTime = event.start_time ? event.start_time.substring(0, 5) : null;
   const endTime = event.end_time ? event.end_time.substring(0, 5) : null;
+
+  const eventPrice = event.payment_amount ?? 0;
+  const bookingItems: BookingItem[] = bookings.map((b) => ({
+    id: b.id,
+    groupName: b.group_name ?? "—",
+    size: b.group_size ?? 0,
+    status: b.status ?? "",
+    paid: b.paid_amount ?? 0,
+    total: b.total_amount ?? eventPrice * (b.group_size ?? 0),
+    request: b.special_requests,
+    createdAt: format(parseISO(b.created_at), "EEE d MMM yyyy"),
+    contactName: b.contacts?.full_name ?? null,
+    contactEmail: b.contacts?.email ?? null,
+    contactPhone: b.contacts
+      ? `${b.contacts.country_code ?? ""}${b.contacts.phone_no ?? ""}`.trim() || null
+      : null,
+    tables: b.booking_table_mappings.map((m) => m.tables?.name).filter(Boolean).join(", "),
+  }));
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
@@ -217,7 +224,7 @@ export default async function EventDetailPage({
       </div>
 
       {/* Bookings */}
-      <section className="space-y-2">
+      <section className="space-y-3">
         <h2 className="text-[11px] font-black uppercase tracking-wide text-[#5F624F]">
           Bookings ({bookings.length})
         </h2>
@@ -228,80 +235,15 @@ export default async function EventDetailPage({
             <p className="text-[11px] text-[#5F624F] mt-1">Bookings will appear here once guests register.</p>
           </div>
         ) : (
-          <div className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
-            {bookings.map((b, i) => {
-              const tables = b.booking_table_mappings
-                .map((m) => m.tables?.name)
-                .filter(Boolean)
-                .join(", ");
-
-              return (
-                <div
-                  key={b.id}
-                  className={cn(
-                    "p-4 flex flex-col sm:flex-row sm:items-start gap-3",
-                    i < bookings.length - 1 && "border-b border-[#E6DFC8]"
-                  )}
-                >
-                  {/* Status badge */}
-                  <span className={cn(
-                    "text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md whitespace-nowrap shrink-0 self-start",
-                    statusBadge(b.status)
-                  )}>
-                    {b.status ?? "–"}
-                  </span>
-
-                  {/* Group name + contact */}
-                  <div className="flex-1 min-w-0 space-y-0.5">
-                    <p className="text-sm font-black text-[#1F1F1A] truncate">
-                      {b.group_name ?? "–"}
-                    </p>
-                    {b.contacts?.full_name && (
-                      <p className="text-[11px] text-[#5F624F] font-medium truncate">
-                        {b.contacts.full_name}
-                        {b.contacts.email && (
-                          <span className="opacity-60"> · {b.contacts.email}</span>
-                        )}
-                      </p>
-                    )}
-                    {b.special_requests && (
-                      <p className="text-[10px] text-[#5F624F] italic opacity-70 truncate">
-                        {b.special_requests}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Size */}
-                  <div className="shrink-0 text-center hidden sm:block">
-                    <p className="text-sm font-black text-[#1F1F1A] tabular-nums">{b.group_size ?? "–"}</p>
-                    <p className="text-[9px] text-[#5F624F] font-bold uppercase tracking-wider">guests</p>
-                  </div>
-
-                  {/* Table */}
-                  <div className="shrink-0 hidden sm:block min-w-20 text-right">
-                    <p className="text-[11px] font-black text-[#1F1F1A]">{tables || "–"}</p>
-                    <p className="text-[9px] text-[#5F624F] font-bold uppercase tracking-wider">table</p>
-                  </div>
-
-                  {/* Paid / Total */}
-                  {(b.paid_amount !== null || b.total_amount !== null) && (
-                    <div className="shrink-0 hidden sm:block text-right min-w-20">
-                      <p className="text-[11px] font-black text-[#1F1F1A]">
-                        £{(b.paid_amount ?? 0).toFixed(2)}
-                        <span className="text-[#5F624F] font-medium"> / £{(b.total_amount ?? 0).toFixed(2)}</span>
-                      </p>
-                      <p className="text-[9px] text-[#5F624F] font-bold uppercase tracking-wider">paid</p>
-                    </div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="shrink-0">
-                    <BookingStatusButtons bookingId={b.id} currentStatus={b.status} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <BookingsList
+            items={bookingItems}
+            event={{
+              title: event.title ?? "Untitled Event",
+              dateLabel: format(parsed, "EEE d MMM yyyy"),
+              startTime,
+              price: eventPrice,
+            }}
+          />
         )}
       </section>
     </div>
