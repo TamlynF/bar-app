@@ -38,12 +38,22 @@ import {
     Building2,
     UtensilsCrossed,
     Image as ImageIcon,
-    Camera
+    Camera,
+    Globe,
+    MoreHorizontal,
+    X
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
 
 type BookingNavItem = { label: string; href: string };
+type SubItem = { label: string; href: string; icon: React.ComponentType<{ className?: string }> };
+type NavGroup = {
+    label: string
+    href: string | null
+    icon: React.ComponentType<{ className?: string }>
+    subItems: SubItem[] | null
+};
 
 export default function PrivateLayoutClient({
     children,
@@ -60,9 +70,8 @@ export default function PrivateLayoutClient({
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const searchParams = useSearchParams()
-    const [eventsOpen, setEventsOpen] = useState(() => !!pathname?.startsWith("/event-bookings"))
-    const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname?.startsWith("/event-setups"))
-    const [settingsOpen, setSettingsOpen] = useState(() => !!pathname?.startsWith("/settings"))
+
+    const normalizedPathname = pathname?.replace(/\/$/, "") || ""
 
     const initials = employeeName
         ? employeeName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
@@ -75,22 +84,8 @@ export default function PrivateLayoutClient({
         })
     }
 
-    const navItems = [
-        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Bookings", href: "/event-bookings", icon: Tickets },
-        { label: "Events", href: "/event-setups", icon: CalendarCogIcon },
-        { label: "Settings", href: "/settings", icon: Settings },
-    ]
-
-    const eventsNavSubItems = [
-        { label: "Event List", href: "/event-setups/events", icon: CalendarDays },
-        { label: "Event Categories", href: "/event-setups/event-types", icon: Component },
-        // { label: "Quiz Generator", href: "/event-setups/quiz-generator", icon: Brain },
-        { label: "Quiz History", href: "/event-setups/quiz-history", icon: Grid2X2 },
-        { label: "Quiz Rules", href: "/event-setups/quiz-categories", icon: Dices },
-    ]
-
-    const eventSubItems = [
+    // Sub-items grouped by top-level destination.
+    const bookingsSubItems: SubItem[] = [
         { label: "Music Bingo", href: "/event-bookings/bingo-bookings", icon: Speaker },
         { label: "Live Music", href: "/event-bookings/music-bookings", icon: Music },
         { label: "Thursday Quiz", href: "/event-bookings/quiz-bookings", icon: Trophy },
@@ -102,16 +97,77 @@ export default function PrivateLayoutClient({
         })),
     ]
 
-    const settingsSubItems = [
-        { label: "Company Info", href: "/settings/company", icon: Building2 },
-        { label: "Guests", href: "/settings/customers", icon: BookUser },
-        { label: "Teams", href: "/settings/teams", icon: Medal },
-        { label: "Floor Plan", href: "/settings/tables", icon: Grid2X2 },
+    // Quiz content: archive (+ generator, which is reached from an event).
+    const quizSubItems: SubItem[] = [
+        { label: "Quiz History", href: "/event-setups/quiz-history", icon: Grid2X2 },
+        // { label: "Quiz Generator", href: "/event-setups/quiz-generator", icon: Brain },
+    ]
+
+    // Public-facing content — everything that renders on the marketing site.
+    const websiteSubItems: SubItem[] = [
         { label: "Menu", href: "/settings/menu", icon: UtensilsCrossed },
         { label: "Specials", href: "/settings/specials", icon: Sparkles },
         { label: "Promo Content", href: "/settings/promo-content", icon: ImageIcon },
         { label: "Gallery", href: "/settings/gallery", icon: Camera },
+    ]
+
+    // True configuration + admin. Event Categories + Quiz Rules are setup, so they live here —
+    // their routes stay under /event-setups, but they belong to Settings in the nav.
+    const settingsSubItems: SubItem[] = [
+        { label: "Company Info", href: "/settings/company", icon: Building2 },
+        { label: "Guests", href: "/settings/customers", icon: BookUser },
+        { label: "Teams", href: "/settings/teams", icon: Medal },
+        { label: "Floor Plan", href: "/settings/tables", icon: Grid2X2 },
+        { label: "Event Categories", href: "/event-setups/event-types", icon: Component },
+        { label: "Quiz Rules", href: "/event-setups/quiz-categories", icon: Dices },
         { label: "System Users", href: "/settings/users", icon: UserCog2 },
+    ]
+
+    const websiteHref = "/settings/website"
+    const websiteHrefs = [websiteHref, ...websiteSubItems.map((s) => s.href)]
+    const isWebsitePath = (p: string) => websiteHrefs.includes(p)
+
+    // The /event-setups subtree is split across three nav groups, and Website overlaps the
+    // /settings prefix — so a path's owning group is resolved here, in one place.
+    function groupForPath(p: string): string | null {
+        if (p === "/dashboard" || p.startsWith("/dashboard/")) return "Dashboard"
+        if (p === "/event-bookings" || p.startsWith("/event-bookings/")) return "Bookings"
+        if (isWebsitePath(p)) return "Website"
+        if (p.startsWith("/event-setups/quiz-history") || p.startsWith("/event-setups/quiz-generator")) return "Quiz"
+        if (p.startsWith("/event-setups/event-types") || p.startsWith("/event-setups/quiz-categories")) return "Settings"
+        if (p === "/event-setups" || p.startsWith("/event-setups/")) return "Schedule"
+        if (p === "/settings" || p.startsWith("/settings/")) return "Settings"
+        return null
+    }
+    const activeGroup = groupForPath(normalizedPathname)
+
+    const navGroups: NavGroup[] = [
+        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, subItems: null },
+        { label: "Bookings", href: "/event-bookings", icon: Tickets, subItems: bookingsSubItems },
+        { label: "Schedule", href: "/event-setups/events", icon: CalendarCogIcon, subItems: null },
+        { label: "Quiz", href: "/event-setups/quiz-history", icon: Brain, subItems: null },
+        { label: "Website", href: websiteHref, icon: Globe, subItems: websiteSubItems },
+        { label: "Settings", href: "/settings", icon: Settings, subItems: settingsSubItems },
+    ]
+
+    const isGroupActive = (group: NavGroup) => activeGroup === group.label
+
+    const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
+        Bookings: activeGroup === "Bookings",
+        Website: activeGroup === "Website",
+        Settings: activeGroup === "Settings",
+    }))
+    const toggleGroup = (label: string) =>
+        setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
+
+    const [moreOpen, setMoreOpen] = useState(false)
+    const moreActive = activeGroup === "Quiz" || activeGroup === "Website" || activeGroup === "Settings"
+
+    // Primary mobile tabs (Quiz / Website / Settings live behind "More").
+    const bottomTabs = [
+        { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, group: "Dashboard" },
+        { label: "Bookings", href: "/event-bookings", icon: Tickets, group: "Bookings" },
+        { label: "Schedule", href: "/event-setups/events", icon: CalendarCogIcon, group: "Schedule" },
     ]
 
     const getPageInfo = () => {
@@ -120,37 +176,36 @@ export default function PrivateLayoutClient({
         const normalizedPath = pathname.replace(/\/$/, "")
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null }
         if (normalizedPath.startsWith("/event-setups")) {
-            if (normalizedPath === "/event-setups") return { title: "Events", subtitle: null, backHref: null }
-
-            const eventSetupsMap: Record<string, string> = {
-                "events": "Event List",
-                "event-types": "Event Categories",
-                "quiz-generator": "Quiz Generator",
-                "quiz-history": "Quiz History",
-                "quiz-categories": "Quiz Rules",
-            }
             const segment = normalizedPath.split("/")[2]
-            const subtitle = eventSetupsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
 
-            // When on quiz generator with event_id, back button goes to event quiz page
+            // Event Categories + Quiz Rules now live under Settings.
+            if (segment === "event-types") return { title: "Settings", subtitle: "Event Categories", backHref: "/settings" }
+            if (segment === "quiz-categories") return { title: "Settings", subtitle: "Quiz Rules", backHref: "/settings" }
+
+            // Quiz section: archive + generator.
+            if (segment === "quiz-history") return { title: "Quiz", subtitle: null, backHref: null }
             if (segment === "quiz-generator") {
+                // Reached from a specific event — back goes to that event's quiz page.
                 const eventId = searchParams.get("event_id")
                 const category = searchParams.get("category")
                 if (eventId) {
                     const categoryParam = category ? `?category=${encodeURIComponent(category)}` : ''
-                    return { title: "Events", subtitle, backHref: `/event-setups/events/${eventId}${categoryParam}` }
+                    return { title: "Quiz", subtitle: "Quiz Generator", backHref: `/event-setups/events/${eventId}${categoryParam}` }
                 }
+                return { title: "Quiz", subtitle: "Quiz Generator", backHref: "/event-setups/quiz-history" }
             }
 
-            // When on event detail page /event-setups/events/{id}, back goes to events list with sheet open
+            // Schedule: event list (landing) + event detail.
             if (segment === "events") {
                 const eventId = normalizedPath.split("/")[3]
                 if (eventId) {
-                    return { title: "Events", subtitle: "Quiz Questions", backHref: `/event-setups/events?open=${eventId}` }
+                    return { title: "Schedule", subtitle: "Quiz Questions", backHref: `/event-setups/events?open=${eventId}` }
                 }
+                return { title: "Schedule", subtitle: null, backHref: null }
             }
 
-            return { title: "Events", subtitle, backHref: "/event-setups" }
+            // /event-setups index (no longer linked from the nav) or anything else.
+            return { title: "Schedule", subtitle: null, backHref: null }
         }
 
         if (normalizedPath.startsWith("/event-bookings")) {
@@ -168,13 +223,27 @@ export default function PrivateLayoutClient({
 
         if (normalizedPath.startsWith("/settings")) {
             if (normalizedPath === "/settings") return { title: "Settings", subtitle: null, backHref: null }
+            const segment = normalizedPath.split("/")[2]
+
+            // Website hub + content pages render under "Website", not "Settings".
+            if (segment === "website") return { title: "Website", subtitle: null, backHref: null }
+            const websiteMap: Record<string, string> = {
+                "menu": "Menu",
+                "specials": "Specials",
+                "promo-content": "Promo Content",
+                "gallery": "Gallery",
+            }
+            if (websiteMap[segment]) {
+                return { title: "Website", subtitle: websiteMap[segment], backHref: "/settings/website" }
+            }
+
             const settingsMap: Record<string, string> = {
                 "tables": "Floor Plan",
                 "customers": "Guests",
                 "teams": "Teams",
                 "users": "System Users",
+                "company": "Company Info",
             }
-            const segment = normalizedPath.split("/")[2]
             const subtitle = settingsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
             return { title: "Settings", subtitle, backHref: "/settings" }
         }
@@ -201,46 +270,45 @@ export default function PrivateLayoutClient({
 
                 {/* Sidebar Navigation */}
                 <nav className="flex-1 p-4 space-y-1 overflow-y-auto no-scrollbar">
-                    {navItems.map((item) => {
-                        const normalizedPathname = pathname?.replace(/\/$/, "") || ""
-                        const normalizedHref = item.href.replace(/\/$/, "")
-                        const isActive = normalizedPathname === normalizedHref || (item.href !== "/dashboard" && normalizedPathname.startsWith(`${normalizedHref}/`))
-
-                        const isSettings = item.label === "Settings"
-                        const isEvents = item.label === "Bookings"
-                        const isEventsNav = item.label === "Events"
-
-                        const hasSubItems = isEvents || isSettings || isEventsNav
-                        const isOpen = isEvents ? eventsOpen : isSettings ? settingsOpen : isEventsNav ? eventsNavOpen : false
-                        const toggle = isEvents
-                            ? () => setEventsOpen((p) => !p)
-                            : isSettings
-                            ? () => setSettingsOpen((p) => !p)
-                            : isEventsNav
-                            ? () => setEventsNavOpen((p) => !p)
-                            : undefined
+                    {navGroups.map((group) => {
+                        const isActive = isGroupActive(group)
+                        const hasSubItems = !!group.subItems
+                        const isOpen = hasSubItems ? !!openGroups[group.label] : false
 
                         return (
-                            <React.Fragment key={item.href}>
-                                {/* Parent row — button for collapsible items, Link for plain items */}
-                                {hasSubItems && toggle ? (
-                                    <button
-                                        type="button"
-                                        onClick={toggle}
+                            <React.Fragment key={group.label}>
+                                {/* Parent row — Link (navigate) + chevron (toggle) for collapsible items, plain Link otherwise */}
+                                {hasSubItems ? (
+                                    <div
                                         className={cn(
-                                            "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
+                                            "flex items-center rounded-xl transition-all duration-300",
                                             isActive
                                                 ? "bg-[#5C4033] text-white shadow-lg shadow-[#5C4033]/10"
                                                 : "text-[#5F624F] hover:bg-[#5C4033]/5"
                                         )}
                                     >
-                                        <item.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-white" : "text-[#5F624F]")} />
-                                        <span className="flex-1 text-left">{item.label}</span>
-                                        {isOpen ? <ChevronUp className="w-3.5 h-3.5 shrink-0 transition-transform duration-200" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0 transition-transform duration-200" />}
-                                    </button>
+                                        <Link
+                                            href={group.href!}
+                                            className={cn(
+                                                "flex items-center gap-3 px-4 py-3 flex-1 min-w-0 font-bold text-xs uppercase tracking-wider",
+                                                isActive ? "text-white" : "text-[#5F624F]"
+                                            )}
+                                        >
+                                            <group.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-white" : "text-[#5F624F]")} />
+                                            <span className="truncate text-left">{group.label}</span>
+                                        </Link>
+                                        <button
+                                            type="button"
+                                            onClick={() => toggleGroup(group.label)}
+                                            aria-label={isOpen ? `Collapse ${group.label}` : `Expand ${group.label}`}
+                                            className="px-3 py-3 shrink-0 rounded-r-xl hover:bg-black/5 transition-colors"
+                                        >
+                                            {isOpen ? <ChevronUp className="w-3.5 h-3.5 transition-transform duration-200" /> : <ChevronDown className="w-3.5 h-3.5 transition-transform duration-200" />}
+                                        </button>
+                                    </div>
                                 ) : (
                                     <Link
-                                        href={item.href}
+                                        href={group.href!}
                                         className={cn(
                                             "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
                                             isActive
@@ -248,64 +316,16 @@ export default function PrivateLayoutClient({
                                                 : "text-[#5F624F] hover:bg-[#5C4033]/5"
                                         )}
                                     >
-                                        <item.icon className={cn("w-5 h-5", isActive ? "text-white" : "text-[#5F624F]")} />
-                                        {item.label}
+                                        <group.icon className={cn("w-5 h-5", isActive ? "text-white" : "text-[#5F624F]")} />
+                                        {group.label}
                                     </Link>
                                 )}
 
-                                {/* Sub-items for Events */}
-                                {isEvents && eventsOpen && (
+                                {/* Collapsible sub-items */}
+                                {hasSubItems && isOpen && (
                                     <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
-                                        {eventSubItems.map((sub) => {
-                                            const isSubActive = normalizedPathname === sub.href
-                                            return (
-                                                <Link
-                                                    key={sub.href}
-                                                    href={sub.href}
-                                                    className={cn(
-                                                        "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[11px] uppercase tracking-wider",
-                                                        isSubActive
-                                                            ? "text-[#5C4033] bg-[#5C4033]/15"
-                                                            : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
-                                                    )}
-                                                >
-                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
-                                                    {sub.label}
-                                                </Link>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-
-                                {/* Sub-items for Events Nav */}
-                                {isEventsNav && eventsNavOpen && (
-                                    <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
-                                        {eventsNavSubItems.map((sub) => {
-                                            const isSubActive = normalizedPathname === sub.href
-                                            return (
-                                                <Link
-                                                    key={sub.href}
-                                                    href={sub.href}
-                                                    className={cn(
-                                                        "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[11px] uppercase tracking-wider",
-                                                        isSubActive
-                                                            ? "text-[#5C4033] bg-[#5C4033]/15"
-                                                            : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
-                                                    )}
-                                                >
-                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
-                                                    {sub.label}
-                                                </Link>
-                                            )
-                                        })}
-                                    </div>
-                                )}
-
-                                {/* Sub-items for Settings */}
-                                {isSettings && settingsOpen && (
-                                    <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
-                                        {settingsSubItems.map((sub) => {
-                                            const isSubActive = normalizedPathname === sub.href
+                                        {group.subItems!.map((sub) => {
+                                            const isSubActive = normalizedPathname === sub.href.replace(/\/$/, "")
                                             return (
                                                 <Link
                                                     key={sub.href}
@@ -385,10 +405,8 @@ export default function PrivateLayoutClient({
                 {/* 3. Persistent Mobile Bottom Navigation */}
                 <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E6DFC8] py-2 sm:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
                     <div className="flex justify-around items-center w-full max-w-md mx-auto px-6">
-                        {navItems.map((item) => {
-                            const normalizedPathname = pathname?.replace(/\/$/, "") || ""
-                            const normalizedHref = item.href.replace(/\/$/, "")
-                            const isActive = normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)
+                        {bottomTabs.map((item) => {
+                            const isActive = activeGroup === item.group
 
                             return (
                                 <Link
@@ -417,8 +435,101 @@ export default function PrivateLayoutClient({
                                 </Link>
                             )
                         })}
+
+                        {/* "More" tab — opens a sheet with Quiz + Website + Settings + Sign Out */}
+                        <button
+                            type="button"
+                            onClick={() => setMoreOpen(true)}
+                            className={cn(
+                                "flex flex-col items-center gap-1 transition-all duration-300 outline-none relative py-1 flex-1",
+                                moreActive ? "opacity-100" : "opacity-60"
+                            )}
+                        >
+                            <div className={cn(
+                                "px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center",
+                                moreActive ? "bg-[#5C4033]/15 text-[#5C4033]" : "text-[#5F624F]"
+                            )}>
+                                <MoreHorizontal className="w-5 h-5 mx-auto" />
+                            </div>
+                            <span className={cn(
+                                "text-[9px] font-bold uppercase tracking-tight text-center block w-full transition-colors",
+                                moreActive ? "text-[#5C4033]" : "text-[#5F624F]"
+                            )}>
+                                More
+                            </span>
+                            {moreActive && (
+                                <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#5C4033] animate-in fade-in zoom-in duration-300" />
+                            )}
+                        </button>
                     </div>
                 </nav>
+
+                {/* 4. Mobile "More" Sheet */}
+                {moreOpen && (
+                    <div className="sm:hidden">
+                        <div
+                            className="fixed inset-0 z-50 bg-black/40 animate-in fade-in duration-200"
+                            onClick={() => setMoreOpen(false)}
+                            aria-hidden="true"
+                        />
+                        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl border-t border-[#E6DFC8] max-h-[85vh] overflow-y-auto pb-8 animate-in slide-in-from-bottom duration-300">
+                            <div className="flex items-center justify-between px-6 pt-4 pb-2">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[#1F1F1A]">More</span>
+                                <button
+                                    type="button"
+                                    onClick={() => setMoreOpen(false)}
+                                    aria-label="Close menu"
+                                    className="p-2 -mr-2 rounded-full hover:bg-slate-100 transition-colors active:scale-95"
+                                >
+                                    <X className="w-5 h-5 text-[#1F1F1A]" />
+                                </button>
+                            </div>
+
+                            {[
+                                { heading: "Quiz", items: quizSubItems },
+                                { heading: "Website", items: websiteSubItems },
+                                { heading: "Settings", items: settingsSubItems },
+                            ].map((section) => (
+                                <div key={section.heading} className="px-4 pt-2 pb-1">
+                                    <p className="px-2 pb-1 text-[10px] font-black uppercase tracking-widest text-[#5F624F]/70">{section.heading}</p>
+                                    <div className="space-y-1">
+                                        {section.items.map((sub) => {
+                                            const isSubActive = normalizedPathname === sub.href.replace(/\/$/, "")
+                                            return (
+                                                <Link
+                                                    key={sub.href}
+                                                    href={sub.href}
+                                                    onClick={() => setMoreOpen(false)}
+                                                    className={cn(
+                                                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold text-xs uppercase tracking-wider",
+                                                        isSubActive
+                                                            ? "text-[#5C4033] bg-[#5C4033]/15"
+                                                            : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
+                                                    )}
+                                                >
+                                                    <sub.icon className={cn("w-5 h-5 shrink-0", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    {sub.label}
+                                                </Link>
+                                            )
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
+
+                            <div className="px-4 pt-2 mt-2 border-t border-[#E6DFC8]">
+                                <button
+                                    type="button"
+                                    onClick={handleSignOut}
+                                    disabled={isPending}
+                                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-[#5F624F] hover:bg-red-50 hover:text-red-600 transition-all duration-200 font-bold text-xs uppercase tracking-wider disabled:opacity-50"
+                                >
+                                    <LogOut className="w-5 h-5" />
+                                    {isPending ? "Signing out…" : "Sign Out"}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     )

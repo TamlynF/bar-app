@@ -140,7 +140,7 @@ export async function saveEventAction(formData: FormData) {
       }
     }
 
-    revalidatePath("/event-setups");
+    revalidatePath("/event-setups/events");
     return { success: true };
   } catch (error) {
     console.error("Error saving event:", error);
@@ -153,7 +153,7 @@ export async function deleteEventAction(id: number) {
   try {
     const { error } = await supabase.from("events").delete().eq("id", id);
     if (error) throw error;
-    revalidatePath("/event-setups");
+    revalidatePath("/event-setups/events");
     return { success: true };
   } catch (error) {
     console.error("Error deleting event:", error);

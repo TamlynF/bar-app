@@ -16,10 +16,6 @@ import {
   Medal,
   UserCog2,
   Building2,
-  Sparkles,
-  UtensilsCrossed,
-  ImageIcon,
-  Camera,
 } from "lucide-react";
 
 const settingsItems = [
@@ -52,32 +48,18 @@ const settingsItems = [
     color: "bg-blue-50 text-blue-600",
   },
   {
-    title: "Menu",
-    description: "Categories, items, and prices",
-    href: "/settings/menu",
-    icon: UtensilsCrossed,
-    color: "bg-purple-50 text-purple-600",
+    title: "Event Categories",
+    description: "Categories and requirements",
+    href: "/event-setups/event-types",
+    icon: Component,
+    color: "bg-indigo-50 text-indigo-600",
   },
   {
-    title: "Specials",
-    description: "Deals and offers on the homepage",
-    href: "/settings/specials",
-    icon: Sparkles,
-    color: "bg-orange-50 text-orange-600",
-  },
-  {
-    title: "Promo Content",
-    description: "Social media posts and event promos",
-    href: "/settings/promo-content",
-    icon: ImageIcon,
-    color: "bg-pink-50 text-pink-600",
-  },
-  {
-    title: "Gallery",
-    description: "Upload and manage gallery photos",
-    href: "/settings/gallery",
-    icon: Camera,
-    color: "bg-sky-50 text-sky-600",
+    title: "Quiz Rules",
+    description: "Category round configurations",
+    href: "/event-setups/quiz-categories",
+    icon: Dices,
+    color: "bg-rose-50 text-rose-600",
   },
   {
     title: "System Users",

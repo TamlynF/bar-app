@@ -1,67 +1,49 @@
 import React from "react";
 import Link from "next/link";
-import { 
-  LayoutDashboard, 
-  CalendarDays, 
-  Tags, 
-  UserCircle, 
-  Users, 
-  Shield, 
-  ChevronRight, 
-  BrainCircuit,
-  Grid2X2,
-  CalendarCogIcon,
-  Component,
-  Dices,
-  BookUser,
-  Medal,
-  UserCog2,
-  Brain
+import {
+  ChevronRight,
+  Sparkles,
+  UtensilsCrossed,
+  ImageIcon,
+  Camera,
 } from "lucide-react";
 
-const eventItems = [
+const websiteItems = [
   {
-    title: "Event List",
-    description: "Schedule and manage dates",
-    href: "/event-setups/events",
-    icon: CalendarCogIcon,
-    color: "bg-amber-500/10 text-amber-600",
+    title: "Menu",
+    description: "Categories, items, and prices",
+    href: "/settings/menu",
+    icon: UtensilsCrossed,
+    color: "bg-purple-50 text-purple-600",
   },
-    {
-    title: "Event Categories",
-    description: "Categories and requirements",
-    href: "/event-setups/event-types",
-    icon: Component,
-    color: "bg-indigo-500/10 text-indigo-600",
+  {
+    title: "Specials",
+    description: "Deals and offers on the homepage",
+    href: "/settings/specials",
+    icon: Sparkles,
+    color: "bg-orange-50 text-orange-600",
   },
-/*   {
-    title: "Quiz AI",
-    description: "Generate quiz questions with AI",
-    href: "/event-setups/quiz-generator",
-    icon: Brain,
-    color: "bg-purple-500/10 text-purple-600",
-  }, */
-      {
-      title: "Quiz History",
-      description: "List of all past quiz questions",
-      href: "/event-setups/quiz-history",
-      icon: Grid2X2,
-      color: "bg-blue-500/10 text-blue-600",
-    },
-    {
-    title: "Quiz Rules",
-    description: "Category round configurations",
-    href: "/event-setups/quiz-categories",
-    icon: Dices,
-    color: "bg-rose-500/10 text-rose-600",
+  {
+    title: "Promo Content",
+    description: "Social media posts and event promos",
+    href: "/settings/promo-content",
+    icon: ImageIcon,
+    color: "bg-pink-50 text-pink-600",
+  },
+  {
+    title: "Gallery",
+    description: "Upload and manage gallery photos",
+    href: "/settings/gallery",
+    icon: Camera,
+    color: "bg-sky-50 text-sky-600",
   },
 ];
 
-export default function SettingsBasePage() {
+export default function WebsiteBasePage() {
   return (
     <div className="p-2 sm:p-8 space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {eventItems.map((item) => (
+        {websiteItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}

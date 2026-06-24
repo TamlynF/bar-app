@@ -623,7 +623,7 @@ export default async function DashboardPage() {
             <QuickLink href="/book/bingo" label="Walk-in" icon={Plus} />
             <QuickLink href="/settings/tables" label="Floor Plan" icon={Grid2X2} />
             <QuickLink href="/event-setups/quiz-generator" label="Quiz" icon={Trophy} />
-            <QuickLink href="/event-setups" label="Events" icon={CalendarDays} />
+            <QuickLink href="/event-setups/events" label="Schedule" icon={CalendarDays} />
           </div>
         </section>
 
