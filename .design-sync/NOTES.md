@@ -86,9 +86,10 @@ as a known warn, do not chase.**
 
 ## Known render warns (checked, legitimate)
 - `[TOKENS_MISSING]` — app runtime vars, see Tailwind compile section. Expected.
-  (Count drifts with the app: 2026-06-23 driver run listed **15** vars — the same
-  radix popover/dropdown + `--chip-c`/`--ev-theme`/`--spotify-bg`/`--badge-color`/`--bg`
-  family, just more radix dropdown sub-vars. Same nature, not a new kind of warn.)
+  (Count drifts with the app: 2026-06-23 driver run listed **15** vars; 2026-06-24
+  driver run listed **18** vars — the same radix popover/dropdown +
+  `--chip-c`/`--ev-theme`/`--spotify-bg`/`--badge-color`/`--bg` family plus new
+  app runtime vars `--fh`/`--cc`/`--spine`. Same nature, not a new kind of warn.)
 - `[FONT_MISSING] "Cambria"` — **benign, accepted (checked 2026-06-23).** Cambria is
   NOT a brand font. It appears only inside Tailwind's default `.font-serif` fallback
   stack (`ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`) emitted into
