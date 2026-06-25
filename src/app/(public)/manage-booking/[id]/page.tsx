@@ -32,7 +32,7 @@ export default async function ManageBookingPage({
       paid_amount,
       special_requests,
       events!bookings_event_id_fkey (event_title: title, event_date: date),
-      contacts (full_name, email)
+      contacts!bookings_contact_id_fkey (full_name, email)
     `)
     .eq("id", id)
     .single();
