@@ -66,10 +66,16 @@ function badgeLabel(et: EventTypeRow): string {
 
 export default async function EventDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
+  const { from } = await searchParams;
+  // Return target for the in-page Back link — defaults to the bookings hub, but
+  // honours `from` (e.g. the Schedule "View All" link) so Back reopens the sheet.
+  const backHref = from || "/event-bookings";
   const eventId = Number(id);
   if (isNaN(eventId)) notFound();
 
@@ -142,11 +148,11 @@ export default async function EventDetailPage({
       {/* Back + title */}
       <div>
         <Link
-          href="/event-bookings"
+          href={backHref}
           className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#1F1F1A] transition-colors mb-4"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          Events
+          {from ? "Back" : "Events"}
         </Link>
         <div className="flex flex-wrap items-start gap-3">
           <h1 className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tight leading-tight flex-1">

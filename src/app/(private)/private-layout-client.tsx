@@ -218,7 +218,10 @@ export default function PrivateLayoutClient({
             }
             const segment = normalizedPath.split("/")[2]
             const subtitle = eventsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
-            return { title: "Bookings", subtitle, backHref: "/event-bookings" }
+            // A `from` param (e.g. set by the Schedule "View All" link) overrides the
+            // default hub target so Back returns to the originating page/sheet.
+            const from = searchParams.get("from")
+            return { title: "Bookings", subtitle, backHref: from || "/event-bookings" }
         }
 
         if (normalizedPath.startsWith("/settings")) {

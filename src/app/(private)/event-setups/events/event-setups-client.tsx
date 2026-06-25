@@ -34,6 +34,7 @@ import { DatePicker, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
+import { buildAdminBookingGroups } from "@/lib/admin-booking-groups";
 import { validateEventForm } from "@/lib/event-form-validation";
 import { BookingConfigEditor } from "@/components/booking-config-editor";
 import { IconPicker } from "@/components/icon-picker";
@@ -307,6 +308,9 @@ export default function EventsClient({
     setIsEditing(false);
     setIsAdding(false);
     setSelected(event);
+    // Reflect the open event in the URL so navigating away (e.g. "View All") and
+    // pressing Back returns here with this sheet reopened in view mode.
+    window.history.replaceState(null, "", `/event-setups/events?open=${event.id}`);
   };
 
   const openAdd = (subtypeId?: number) => {
@@ -375,6 +379,8 @@ export default function EventsClient({
     setIsAdding(false);
     setIsEditing(false);
     setFormError(null);
+    // Drop the ?open marker so a closed sheet isn't restored on Back/refresh.
+    window.history.replaceState(null, "", "/event-setups/events");
   };
 
   const handleSubmit = (formData: FormData) => {
@@ -819,6 +825,25 @@ export default function EventsClient({
               const host = employees.find((e) => e.id === selected.host_employee_id);
               const isQuiz = sub?.behavior === "quiz";
               const bk = getBookingStats(selected.id, bookings);
+              // "View All" target: collapse this event the same way the nav/hub do
+              // (honouring the category's booking_grouping), then drill into this
+              // specific event via ?eventId for the grouped (general) routes.
+              const viewAllGroup = buildAdminBookingGroups([{
+                id: selected.id,
+                title: selected.title,
+                date: selected.date,
+                event_types: type ? { name: type.name, color: type.color, booking_grouping: type.booking_grouping } : null,
+                event_subtypes: sub ? { name: sub.name, color: sub.color } : null,
+              }])[0];
+              const baseViewAllHref = viewAllGroup
+                ? (viewAllGroup.href.startsWith("/event-bookings/general/")
+                    ? `${viewAllGroup.href}?eventId=${selected.id}`
+                    : viewAllGroup.href)
+                : `/event-bookings/event/${selected.id}`;
+              // Carry the return target so the bookings page's Back button comes
+              // back here with this event's sheet reopened in view mode.
+              const returnHref = `/event-setups/events?open=${selected.id}`;
+              const viewAllHref = `${baseViewAllHref}${baseViewAllHref.includes("?") ? "&" : "?"}from=${encodeURIComponent(returnHref)}`;
               return (
                 <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
                   <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
@@ -902,7 +927,7 @@ export default function EventsClient({
                           </div>
                         </div>
                         <div className="px-4 sm:px-5 py-2.5 border-t border-[#E6DFC8]">
-                          <Link href={`/event-bookings/event/${selected.id}`} className="w-full h-9 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors gap-1.5">
+                          <Link href={viewAllHref} className="w-full h-9 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors gap-1.5">
                             <Users className="w-3.5 h-3.5" />
                             <span className="text-[9px] font-black uppercase tracking-wide">View All</span>
                           </Link>
