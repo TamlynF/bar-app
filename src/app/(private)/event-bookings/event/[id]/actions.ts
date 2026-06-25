@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { clearMappingOnStatusChange } from "@/lib/table-allocation";
 
 export async function updateBookingStatusAction(bookingId: number, status: string) {
   const supabase = await createClient();
@@ -14,6 +16,13 @@ export async function updateBookingStatusAction(bookingId: number, status: strin
   }
 
   try {
+    const { data: bookingRow } = await supabase
+      .from("bookings")
+      .select("event_id")
+      .eq("id", bookingId)
+      .single();
+    const eventId = bookingRow?.event_id as number | null;
+
     const { error } = await supabase
       .from("bookings")
       .update({
@@ -24,6 +33,12 @@ export async function updateBookingStatusAction(bookingId: number, status: strin
       })
       .eq("id", bookingId);
     if (error) throw error;
+
+    // Rule 3c: moving away from `confirmed` frees the booking's table.
+    if (status.toLowerCase() !== "confirmed") {
+      await clearMappingOnStatusChange(supabase, bookingId);
+    }
+    if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
 
     revalidatePath("/event-bookings");
     revalidatePath("/dashboard");

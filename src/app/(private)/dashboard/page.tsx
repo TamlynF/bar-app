@@ -22,6 +22,7 @@ import LeaderboardCard, { type LeaderboardEntry } from "./components/leaderboard
 import NeedsActionHero, { type ActionItem } from "./components/needs-action-hero";
 import KpiCard from "./components/kpi-card";
 import BookingsTrend, { type TrendBooking } from "./components/bookings-trend";
+import { countSeatableWaitlist } from "@/lib/table-allocation";
 
 export const dynamic = "force-dynamic";
 
@@ -324,12 +325,17 @@ export default async function DashboardPage() {
   });
   const openSaturdays = currentMonthSaturdays.length - saturdaysBooked.size;
 
+  // Waitlisted bookings on seated events that a now-free table could seat (rule 3e).
+  // Surfaced for manual seating from the bookings page — never auto-promoted.
+  const seatableWaitlistCount = await countSeatableWaitlist(supabase);
+
   const totalActions =
     (pendingPrivate ?? 0) +
     (pendingBands ?? 0) +
     (unpaidBookingsData?.length ?? 0) +
     quizzesMissingQuestions +
-    openSaturdays;
+    openSaturdays +
+    seatableWaitlistCount;
 
   const collectedRevenue =
     monthBookings?.reduce((s, b) => s + (b.paid_amount ?? 0), 0) ?? 0;
@@ -532,6 +538,7 @@ export default async function DashboardPage() {
     { key: "quizzes", label: "Quizzes", count: quizzesMissingQuestions, href: "/event-setups/events?filter=quiz-incomplete", color: "bg-green-700" },
     { key: "saturdays", label: "Saturdays", count: openSaturdays, href: "/event-bookings/music-bookings", color: "bg-red-600" },
     { key: "hires", label: "Hires", count: pendingPrivate ?? 0, href: "/event-bookings/private-bookings?status=pending", color: "bg-blue-600" },
+    { key: "seatable-waitlist", label: "Waitlist", count: seatableWaitlistCount, href: "/event-bookings/quiz-bookings?status=waitlisted", color: "bg-teal-600" },
   ];
 
   // Tonight is highlighted separately; the rest fill "Coming Up".

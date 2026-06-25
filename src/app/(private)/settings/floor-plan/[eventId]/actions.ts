@@ -41,3 +41,83 @@ export async function saveFloorPlanLayoutAction(
     return { error: error instanceof Error ? error.message : "Failed to save floor plan." };
   }
 }
+
+/**
+ * Add an available table to an event's layout as an event-level mapping
+ * (no booking). Requires booking_table_mappings.booking_id to be nullable.
+ */
+export async function addEventTableAction(eventId: number, tableId: number) {
+  const supabase = await createClient();
+  if (!eventId || !tableId) return { error: "Missing event or table." };
+
+  try {
+    const { data: existing } = await supabase
+      .from("booking_table_mappings")
+      .select("id")
+      .eq("event_id", eventId)
+      .eq("table_id", tableId)
+      .limit(1);
+    if (existing && existing.length > 0) {
+      return { error: "That table is already on this event." };
+    }
+
+    const { error } = await supabase
+      .from("booking_table_mappings")
+      .insert({ event_id: eventId, table_id: tableId, booking_id: null, add_seat: 0 });
+    if (error) throw error;
+
+    revalidatePath(`/settings/floor-plan/${eventId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error adding table to event:", error);
+    return { error: error instanceof Error ? error.message : "Failed to add table." };
+  }
+}
+
+/** Add several available tables at once (event-level mappings). */
+export async function addEventTablesAction(eventId: number, tableIds: number[]) {
+  const supabase = await createClient();
+  if (!eventId || tableIds.length === 0) return { error: "Nothing to add." };
+
+  try {
+    const { data: existing } = await supabase
+      .from("booking_table_mappings")
+      .select("table_id")
+      .eq("event_id", eventId);
+    const used = new Set((existing ?? []).map((r) => r.table_id));
+    const rows = tableIds
+      .filter((tid) => !used.has(tid))
+      .map((tid) => ({ event_id: eventId, table_id: tid, booking_id: null, add_seat: 0 }));
+    if (rows.length === 0) return { success: true, added: 0 };
+
+    const { error } = await supabase.from("booking_table_mappings").insert(rows);
+    if (error) throw error;
+
+    revalidatePath(`/settings/floor-plan/${eventId}`);
+    return { success: true, added: rows.length };
+  } catch (error) {
+    console.error("Error adding tables to event:", error);
+    return { error: error instanceof Error ? error.message : "Failed to add tables." };
+  }
+}
+
+/** Remove an event-level (booking-less) table mapping. Won't touch booking tables. */
+export async function removeEventTableAction(eventId: number, mappingId: number) {
+  const supabase = await createClient();
+  if (!mappingId) return { error: "Missing table." };
+
+  try {
+    const { error } = await supabase
+      .from("booking_table_mappings")
+      .delete()
+      .eq("id", mappingId)
+      .is("booking_id", null);
+    if (error) throw error;
+
+    revalidatePath(`/settings/floor-plan/${eventId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("Error removing table from event:", error);
+    return { error: error instanceof Error ? error.message : "Failed to remove table." };
+  }
+}

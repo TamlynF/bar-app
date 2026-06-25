@@ -32,6 +32,7 @@ export type CalcTable = {
   baseSeats: number; // effective base seats (from chair layout, or tables.max_capacity)
   extraChairs: number; // booking_table_mappings.add_seat
   chairLayout: ChairLayout | null;
+  isManual?: boolean; // added directly on the calculator (no booking)
 };
 
 export type FocalPoint = {
@@ -65,6 +66,7 @@ export type TablePlacement = {
   baseSeats: number;
   extraChairs: number;
   chairLayout: ChairLayout | null;
+  isManual: boolean;
   sightlines: Record<string, SightRating>;
   worstRating: SightRating | null;
   mustSeeViolation: boolean;
@@ -389,6 +391,7 @@ export function computeFloorPlan(input: FloorPlanInput): FloorPlanResult {
       baseSeats: t.baseSeats,
       extraChairs: t.extraChairs,
       chairLayout: t.chairLayout,
+      isManual: !!t.isManual,
       sightlines,
       worstRating: worst,
       mustSeeViolation,

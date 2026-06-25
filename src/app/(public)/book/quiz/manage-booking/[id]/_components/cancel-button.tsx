@@ -67,6 +67,7 @@ export default function CancelButton({
 
   const [error, setError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
+  const [blockedMsg, setBlockedMsg] = useState("");
 
   const [teamName, setTeamName] = useState(booking.group_name || "");
   const [teamSize, setTeamSize] = useState(booking.group_size || 4);
@@ -183,6 +184,7 @@ export default function CancelButton({
     setIsUpdating(true);
     setError("");
     setSuccessMsg("");
+    setBlockedMsg("");
 
     const response = await updateBooking(booking.id, {
       group_name: teamName,
@@ -190,10 +192,17 @@ export default function CancelButton({
       special_requests: specialRequests // Save special requests
     });
 
+    const blocked = !response.success && (response as { blocked?: boolean }).blocked;
+
     if (response.success) {
       setSuccessMsg("Changes saved successfully.");
       setIsEditing(false);
       // Success message will be cleared if they open edit mode again
+    } else if (blocked) {
+      // No seating available for the larger group — nothing was changed.
+      setBlockedMsg(
+        response.error || "There's no available space for that group size. Please contact the bar."
+      );
     } else {
       setError(response.error || "Failed to update booking.");
     }
@@ -241,6 +250,21 @@ export default function CancelButton({
         <div className="flex items-start gap-3 mb-6 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
           <Info className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
           <p className="text-amber-400 text-xs font-bold uppercase tracking-tight leading-snug">{seatingWarning}</p>
+        </div>
+      )}
+
+      {blockedMsg && (
+        <div className="mb-6 bg-[#7A1F1F]/20 border border-[#FF6B35]/30 p-4 rounded-2xl animate-in slide-in-from-top-2">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-[#FF6B35] shrink-0 mt-0.5" />
+            <p className="text-[#FFF4CC] text-xs font-bold uppercase tracking-tight leading-snug">{blockedMsg}</p>
+          </div>
+          <a
+            href="/contact"
+            className="mt-3 inline-flex items-center justify-center h-11 px-5 rounded-xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-xs uppercase tracking-widest transition-colors"
+          >
+            Contact the bar
+          </a>
         </div>
       )}
 
@@ -335,6 +359,7 @@ export default function CancelButton({
                 setSpecialRequests(booking.special_requests || "");
                 setNameError("");
                 setSeatingWarning(null);
+                setBlockedMsg("");
               }}
               disabled={isUpdating}
               className="w-full h-14 rounded-2xl border-2 border-white/10 text-stone-400 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all"

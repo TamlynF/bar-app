@@ -1,9 +1,33 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
-import FloorPlanClient from "./_components/floor-plan-client";
+import FloorPlanClient, { type AvailableTable } from "./_components/floor-plan-client";
 import type { CalcTable } from "@/lib/floor-plan/calculator";
 import { chairLayoutSeatCount } from "@/lib/floor-plan/chairs";
 import type { ChairLayout, Feature, Fixture, Obstacle, RoomOutline } from "@/lib/floor-plan/types";
+
+type TableRow = {
+  id: number;
+  name: string;
+  shape: string | null;
+  diameter: number | null;
+  width: number | null;
+  length: number | null;
+  max_capacity: number | null;
+  chair_layout?: ChairLayout | null;
+};
+
+function toSpec(t: TableRow | undefined) {
+  const chairLayout = (t?.chair_layout as ChairLayout | null) ?? null;
+  return {
+    name: t?.name ?? "Table",
+    shape: (t?.shape === "rect" ? "rect" : "round") as "round" | "rect",
+    diameter: t?.diameter ?? null,
+    width: t?.width ?? null,
+    length: t?.length ?? null,
+    baseSeats: chairLayoutSeatCount(chairLayout, t?.max_capacity ?? 0),
+    chairLayout,
+  };
+}
 
 export default async function FloorPlanPage({
   params,
@@ -16,9 +40,22 @@ export default async function FloorPlanPage({
 
   const supabase = await createClient();
 
-  // Venue geometry (single company row), the event, confirmed tables, and the
-  // count of bookable tables — fetched in parallel.
-  const [companyRes, eventRes, mappingRes, availableRes] = await Promise.all([
+  // `chair_layout` is a newer column; if the DB hasn't been migrated yet we
+  // retry without it rather than failing the page.
+  const TABLE_COLS = "id, name, shape, diameter, width, length, max_capacity, chair_layout";
+  const TABLE_COLS_FALLBACK = "id, name, shape, diameter, width, length, max_capacity";
+
+  // Mappings for this event: confirmed-booking tables AND event-level tables
+  // (booking_id is null — added directly on the calculator).
+  const loadMappings = (cols: string) =>
+    supabase
+      .from("booking_table_mappings")
+      .select(`id, add_seat, table_id, booking_id, bookings(status), tables!inner(${cols})`)
+      .eq("event_id", id);
+  const loadAvailable = (cols: string) =>
+    supabase.from("tables").select(cols).eq("available", true).order("id", { ascending: true });
+
+  const [companyRes, eventRes] = await Promise.all([
     supabase
       .from("company_information")
       .select("room_outline, obstacles, fixtures, features")
@@ -30,15 +67,13 @@ export default async function FloorPlanPage({
       .select("id, title, date, seating_required, floor_plan_layout")
       .eq("id", id)
       .single(),
-    supabase
-      .from("booking_table_mappings")
-      .select(
-        "id, add_seat, table_id, bookings!inner(status), tables!inner(id, name, shape, diameter, width, length, max_capacity, chair_layout)"
-      )
-      .eq("event_id", id)
-      .eq("bookings.status", "confirmed"),
-    supabase.from("tables").select("id", { count: "exact", head: true }).eq("available", true),
   ]);
+
+  let mappingRes = await loadMappings(TABLE_COLS);
+  if (mappingRes.error) mappingRes = await loadMappings(TABLE_COLS_FALLBACK);
+
+  let availableRes = await loadAvailable(TABLE_COLS);
+  if (availableRes.error) availableRes = await loadAvailable(TABLE_COLS_FALLBACK);
 
   if (eventRes.error || !eventRes.data) notFound();
   if (companyRes.error) console.error("Error loading venue geometry:", companyRes.error);
@@ -47,41 +82,39 @@ export default async function FloorPlanPage({
   const company = companyRes.data;
   const event = eventRes.data;
 
-  // Normalise the joined mapping rows into CalcTable[].
-  type TableRow = {
-    id: number;
-    name: string;
-    shape: string | null;
-    diameter: number | null;
-    width: number | null;
-    length: number | null;
-    max_capacity: number | null;
-    chair_layout: ChairLayout | null;
-  };
   const rawMappings = (mappingRes.data ?? []) as unknown as Array<{
     id: number;
     add_seat: number | null;
     table_id: number;
+    booking_id: number | null;
+    bookings: { status: string } | { status: string }[] | null;
     tables: TableRow | TableRow[];
   }>;
 
-  const tables: CalcTable[] = rawMappings.map((m) => {
-    const t = Array.isArray(m.tables) ? m.tables[0] : m.tables;
-    const chairLayout = (t?.chair_layout as ChairLayout | null) ?? null;
-    // Effective base seats come from the chair layout when it defines them.
-    const baseSeats = chairLayoutSeatCount(chairLayout, t?.max_capacity ?? 0);
-    return {
-      mappingId: m.id,
-      tableId: m.table_id,
-      name: t?.name ?? `Table ${m.table_id}`,
-      shape: t?.shape === "rect" ? "rect" : "round",
-      diameter: t?.diameter ?? null,
-      width: t?.width ?? null,
-      length: t?.length ?? null,
-      baseSeats,
-      extraChairs: Number(m.add_seat ?? 0),
-      chairLayout,
-    };
+  const tables: CalcTable[] = rawMappings
+    .filter((m) => {
+      // Keep event-level tables (no booking) and confirmed-booking tables only.
+      if (m.booking_id == null) return true;
+      const bk = Array.isArray(m.bookings) ? m.bookings[0] : m.bookings;
+      return bk?.status === "confirmed";
+    })
+    .map((m) => {
+      const t = Array.isArray(m.tables) ? m.tables[0] : m.tables;
+      const spec = toSpec(t);
+      return {
+        mappingId: m.id,
+        tableId: m.table_id,
+        ...spec,
+        extraChairs: Number(m.add_seat ?? 0),
+        isManual: m.booking_id == null,
+      };
+    });
+
+  const usedTableIds = new Set(tables.map((t) => t.tableId));
+  const availableRows = (availableRes.data ?? []) as unknown as TableRow[];
+  const availableTables: AvailableTable[] = availableRows.map((t) => {
+    const spec = toSpec(t);
+    return { tableId: t.id, ...spec, inUse: usedTableIds.has(t.id) };
   });
 
   return (
@@ -92,7 +125,8 @@ export default async function FloorPlanPage({
       fixtures={(company?.fixtures as Fixture[] | null) ?? []}
       features={(company?.features as Feature[] | null) ?? []}
       tables={tables}
-      availableCount={availableRes.count ?? 0}
+      availableTables={availableTables}
+      availableCount={availableTables.length}
       savedLayout={event.floor_plan_layout ?? null}
     />
   );

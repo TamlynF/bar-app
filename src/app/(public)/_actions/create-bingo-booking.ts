@@ -4,6 +4,12 @@ import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { randomUUID } from "crypto";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import {
+  allocateOnCreate,
+  commitMapping,
+  seatingApplies,
+  type FreeTable,
+} from "@/lib/table-allocation";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 
@@ -37,7 +43,7 @@ export async function createBingoBooking(formData: FormData) {
     // events can share a date, so we target the exact one rather than look up by date.
     const { data: eventRow, error: eventLookupError } = await supabase
       .from("events")
-      .select("id, date, payment_amount")
+      .select("id, date, payment_amount, seating_required, is_bookable")
       .eq("id", eventId)
       .single();
 
@@ -48,34 +54,14 @@ export async function createBingoBooking(formData: FormData) {
     const eventDate = eventRow.date as string;
     const paymentAmount = Math.round((eventRow.payment_amount ?? 0) * 100);
 
-    // 3. Table allocation — same logic as quiz booking
-    const { data: confirmedBookings } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("event_id", eventId)
-      .eq("status", "confirmed");
-
-    const confirmedIds = confirmedBookings?.map((b) => b.id) || [];
-
-    let tablesInUse: number[] = [];
-    if (confirmedIds.length > 0) {
-      const { data: mappings } = await supabase
-        .from("booking_table_mappings")
-        .select("table_id")
-        .in("booking_id", confirmedIds);
-      tablesInUse = mappings?.map((m) => m.table_id) || [];
+    // 3. Table allocation — route through the shared module (seated events only).
+    let chosenTable: FreeTable | null = null;
+    let status: "confirmed" | "waitlisted" = "confirmed";
+    if (seatingApplies(eventRow)) {
+      const allocation = await allocateOnCreate(supabase, { eventId, groupSize });
+      status = allocation.status;
+      chosenTable = allocation.status === "confirmed" ? allocation.table : null;
     }
-
-    const { data: suitableTables } = await supabase
-      .from("tables")
-      .select("id, max_capacity")
-      .gte("max_capacity", groupSize)
-      .order("max_capacity", { ascending: true });
-
-    const availableTable = suitableTables?.find(
-      (t) => !tablesInUse.includes(t.id)
-    );
-    const status = availableTable ? "confirmed" : "waitlisted";
 
     // 4. Upsert contact
     let contactId: number;
@@ -127,13 +113,22 @@ export async function createBingoBooking(formData: FormData) {
       throw new Error(`Failed to create booking: ${bookingError?.message || "unknown error"}`);
     }
 
-    // 6. Table mapping
-    if (availableTable) {
-      await supabase.from("booking_table_mappings").insert({
-        booking_id: newBooking.id,
-        table_id: availableTable.id,
-        event_id: eventId,
+    // 6. Table mapping — commit with the unique-index concurrency backstop.
+    if (chosenTable) {
+      const mapped = await commitMapping(supabase, {
+        bookingId: newBooking.id,
+        eventId,
+        tableId: chosenTable.id,
+        groupSize,
       });
+      if (!mapped.ok) {
+        // Lost the last table to a concurrent booking — waitlist this one.
+        status = "waitlisted";
+        if (isFree) {
+          await supabase.from("bookings").update({ status: "waitlisted" }).eq("id", newBooking.id);
+        }
+        // Paid path: the square_order_id update below persists the new status.
+      }
     }
 
     // 6b. Free booking — no payment required, confirm immediately

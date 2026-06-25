@@ -3,6 +3,11 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked"
+import {
+  getFreeTablesForEvent,
+  assignTableDirect,
+  clearMappingOnStatusChange,
+} from "@/lib/table-allocation"
 
 export async function getBookings(type: string, subType: string, selectedDate: string | null, selectedEventId?: string | null) {
   try {
@@ -93,58 +98,13 @@ export async function getBookings(type: string, subType: string, selectedDate: s
  * Excludes tables already mapped to other bookings for the same event.
  */
 export async function getAvailableTablesForEvent(eventId: string, groupSize: number, currentTableId?: string) {
-  console.log("Fetching available tables for event:", { eventId, groupSize, currentTableId })
-
-  try {
-    const supabase = await createClient();
-
-    // 1. Get all bookings for this event (excluding cancelled) to see what tables are taken
-    const { data: eventBookings } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("event_id", eventId)
-      .not("status", "eq", "cancelled");
-
-    console.log("Event bookings for table availability check:", { eventBookings })
-    const bookingIds = eventBookings?.map(b => b.id) || [];
-    console.log("Booking IDs for event:", { bookingIds }) 
-
-    // 2. Find which tables are already assigned
-    const { data: takenMappings } = await supabase
-      .from("booking_table_mappings")
-      .select("table_id")
-      .in("booking_id", bookingIds);
-
-    const takenTableIds = takenMappings?.map(m => m.table_id) || [];
-
-    // 3. Get all available tables. 
-    // We allow tables that might require 'add_seat' (e.g. table for 4 for a group of 5)
-    // but typically we want to prioritize tables that fit.
-    let query = supabase
-      .from("tables")
-      .select("id, name, max_capacity")
-      .eq("available", true);
-
-    // 4. Filter out taken tables, but keep the current one if provided
-    const filteredTakenIds = currentTableId 
-      ? takenTableIds.filter(id => String(id) !== String(currentTableId))
-      : takenTableIds;
-
-    if (filteredTakenIds.length > 0) {
-      query = query.not("id", "in", `(${filteredTakenIds.join(',')})`);
-    }
-
-    const { data: tables, error } = await query.order('max_capacity', { ascending: true });
-    
-    if (error) throw error;
-
-    // Filter in-memory to ensure capacity is at least groupSize OR within a reasonable squeeze limit (e.g. 1-2 people)
-    // For now, we strict match capacity >= groupSize to ensure the UI doesn't over-book.
-    return tables?.filter(t => t.max_capacity >= groupSize) || [];
-  } catch (error) {
-    console.error("Error fetching event-specific tables:", error);
-    return [];
-  }
+  const supabase = await createClient();
+  // Delegates to the shared module (single source of truth). The booking's own
+  // current table is re-included via excludeTableId so it stays selectable.
+  return getFreeTablesForEvent(supabase, Number(eventId), {
+    groupSize,
+    excludeTableId: currentTableId ? Number(currentTableId) : undefined,
+  });
 }
 
 export async function getAvailableTables() {
@@ -283,48 +243,43 @@ export async function updateBookingDetails(
     throw new Error("Failed to update booking")
   }
 
-  // 2. Update table mapping
-  // If table_id is explicitly provided (even if empty string), we update the mapping
-  if (updates.hasOwnProperty('table_id')) {
-    // Delete existing mapping first to handle re-assignment or removal cleanly
-    await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
-    
-    // If a non-empty table_id is provided, create the new mapping
-    if (table_id && table_id !== "") {
-      // Fetch table capacity to calculate add_seat if necessary
-      const { data: tableData } = await supabase
-        .from("tables")
-        .select("max_capacity")
-        .eq("id", table_id)
-        .single();
+  // 2. Resolve the event for downstream allocation + fully-booked recompute.
+  const { data: bookingRow } = await supabase
+    .from("bookings")
+    .select("event_id")
+    .eq("id", id)
+    .single();
+  const eventId = bookingRow?.event_id as number | null;
 
-      const groupSize = updates.group_size || 0;
-      const maxCap = tableData?.max_capacity || 0;
-      
-      // Calculate how many extra seats are needed beyond standard capacity
-      const addSeatCount = groupSize > maxCap ? groupSize - maxCap : 0;
+  // 3. Table mapping — routed through the shared module.
+  // table_id is explicitly provided (empty string clears it). A status moving
+  // away from `confirmed` always frees the table (rule 3c).
+  if (Object.prototype.hasOwnProperty.call(updates, "table_id")) {
+    const leavingConfirmed =
+      updates.status !== undefined && updates.status.toLowerCase() !== "confirmed";
 
-      const { data: bookingRow } = await supabase
-        .from("bookings")
-        .select("event_id")
-        .eq("id", id)
-        .single();
-
-      const { error: mappingError } = await supabase
-        .from("booking_table_mappings")
-        .insert({
-          booking_id: id,
-          table_id: parseInt(table_id),
-          add_seat: addSeatCount,
-          event_id: bookingRow?.event_id ?? null,
-        });
-
-      if (mappingError) {
-        console.error("Error updating table mapping:", mappingError);
-        throw new Error("Failed to update table assignment");
+    if (leavingConfirmed || !table_id) {
+      await clearMappingOnStatusChange(supabase, id); // 3c / explicit clear
+    } else if (eventId != null) {
+      // 3d — validate + write the admin's explicit table pick.
+      const result = await assignTableDirect(supabase, {
+        bookingId: id,
+        eventId,
+        tableId: parseInt(table_id),
+        groupSize: updates.group_size || 0,
+      });
+      if (!result.ok) {
+        throw new Error(
+          result.reason === "double_booked"
+            ? "That table was just taken by another booking for this event."
+            : "That table is not available."
+        );
       }
     }
   }
+
+  // 4. Keep is_fully_booked in sync after any allocation change.
+  if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
 
   revalidatePath("/dashboard")
   revalidatePath("/event-bookings/quiz-bookings")
@@ -340,6 +295,13 @@ export async function updateBookingStatus(id: string, status: string) {
     if (emp) updatedById = emp.id;
   }
 
+  const { data: bookingRow } = await supabase
+    .from("bookings")
+    .select("event_id")
+    .eq("id", id)
+    .single();
+  const eventId = bookingRow?.event_id as number | null;
+
   const { error } = await supabase
     .from("bookings")
     .update({
@@ -354,6 +316,12 @@ export async function updateBookingStatus(id: string, status: string) {
     console.error("Error updating booking status:", error)
     throw new Error("Failed to update booking status")
   }
+
+  // Rule 3c: moving away from `confirmed` frees the booking's table.
+  if (status.toLowerCase() !== "confirmed") {
+    await clearMappingOnStatusChange(supabase, id);
+  }
+  if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
 
   revalidatePath("/dashboard")
   revalidatePath("/event-bookings/quiz-bookings")

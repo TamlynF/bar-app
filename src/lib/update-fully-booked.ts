@@ -1,8 +1,13 @@
 import { SupabaseClient } from "@supabase/supabase-js";
+import { getFreeTablesForEvent } from "@/lib/table-allocation";
 
 /**
  * Checks table availability for an event and updates `is_fully_booked` accordingly.
  * Only applies to events with `seating_required = true`.
+ *
+ * Uses the shared module's `getFreeTablesForEvent` so "taken" is computed from
+ * `booking_table_mappings.event_id` (booking rows only) — the same source of
+ * truth as the allocation logic, keeping this flag consistent with it.
  */
 export async function updateFullyBookedStatus(
   supabase: SupabaseClient,
@@ -17,35 +22,12 @@ export async function updateFullyBookedStatus(
 
   if (!event || !event.seating_required) return;
 
-  // Get all confirmed bookings for this event
-  const { data: bookings } = await supabase
-    .from("bookings")
-    .select("id")
-    .eq("event_id", eventId)
-    .eq("status", "confirmed");
+  const [{ count: totalTables }, freeTables] = await Promise.all([
+    supabase.from("tables").select("*", { count: "exact", head: true }).eq("available", true),
+    getFreeTablesForEvent(supabase, eventId),
+  ]);
 
-  const bookingIds = bookings?.map((b) => b.id) || [];
-
-  // Get tables currently in use
-  let tablesInUse: number[] = [];
-  if (bookingIds.length > 0) {
-    const { data: mappings } = await supabase
-      .from("booking_table_mappings")
-      .select("table_id")
-      .in("booking_id", bookingIds);
-    tablesInUse = mappings?.map((m) => m.table_id) || [];
-  }
-
-  // Get all available tables
-  const { data: allTables } = await supabase
-    .from("tables")
-    .select("id")
-    .eq("available", true);
-
-  const totalTables = allTables?.length || 0;
-  const freeTables = allTables?.filter((t) => !tablesInUse.includes(t.id)).length || 0;
-
-  const isFullyBooked = totalTables > 0 && freeTables === 0;
+  const isFullyBooked = (totalTables ?? 0) > 0 && freeTables.length === 0;
 
   await supabase
     .from("events")

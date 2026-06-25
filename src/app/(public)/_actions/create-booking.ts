@@ -4,6 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import {
+  allocateOnCreate,
+  commitMapping,
+  getFreeTablesForEvent,
+  seatingApplies,
+  type FreeTable,
+} from "@/lib/table-allocation";
 
 interface BookingFormData {
   event_id: number;
@@ -74,34 +81,8 @@ export async function checkQuizAvailability(quizDate: string, teamSize: number):
   // No event yet = available (it'll be created on booking)
   if (!eventData) return { available: true };
 
-  // Find confirmed/waitlisted bookings for this event
-  const { data: bookings } = await supabase
-    .from('bookings')
-    .select('id')
-    .eq('event_id', eventData.id)
-    .in('status', ['confirmed', 'waitlisted']);
-
-  const bookingIds = bookings?.map(b => b.id) || [];
-
-  // Find tables already in use
-  let tablesInUse: number[] = [];
-  if (bookingIds.length > 0) {
-    const { data: mappings } = await supabase
-      .from('booking_table_mappings')
-      .select('table_id')
-      .in('booking_id', bookingIds);
-    tablesInUse = mappings?.map(m => m.table_id) || [];
-  }
-
-  // Find suitable tables not in use
-  const { data: suitableTables } = await supabase
-    .from('tables')
-    .select('id, max_capacity')
-    .gte('max_capacity', teamSize)
-    .order('max_capacity', { ascending: true });
-
-  const availableTable = suitableTables?.find(t => !tablesInUse.includes(t.id));
-  return { available: !!availableTable };
+  const freeTables = await getFreeTablesForEvent(supabase, eventData.id, { groupSize: teamSize });
+  return { available: freeTables.length > 0 };
 }
 
 export async function createBooking(formData: BookingFormData) {
@@ -113,7 +94,7 @@ export async function createBooking(formData: BookingFormData) {
     // events can share a date, so we must target the exact one, not look up by date.
     const { data: eventRow, error: eventLookupError } = await supabase
       .from('events')
-      .select('id, date')
+      .select('id, date, seating_required, is_bookable')
       .eq('id', formData.event_id)
       .single();
 
@@ -125,48 +106,17 @@ export async function createBooking(formData: BookingFormData) {
     const { isAvailable } = await checkTeamName(formData.team_name, quizDate);
     if (!isAvailable) throw new Error('This team name was just reserved by another user. Please choose a different name.');
 
-    // TABLE ALLOCATION LOGIC
-    const { data: conflictingBookings, error: bookingsError } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("event_id", eventId)
-      .eq("status", "confirmed");
-
-    if (bookingsError) throw new Error("Error fetching existing bookings: " + bookingsError.message);
-    console.log(conflictingBookings);
-
-    const conflictingBookingIds = conflictingBookings?.map((b) => b.id) || [];
-
-    // 3. Find which tables are currently mapped to those conflicting bookings
-    let tablesInUse: number[] = [];
-    if (conflictingBookingIds.length > 0) {
-      const { data: mappings, error: mappingsError } = await supabase
-        .from("booking_table_mappings")
-        .select("table_id")
-        .in("booking_id", conflictingBookingIds);
-
-      if (mappingsError) throw new Error("Error fetching table mappings: " + mappingsError.message);
-      tablesInUse = mappings?.map((m) => m.table_id) || [];
+    // TABLE ALLOCATION — route through the shared module (seated events only).
+    let finalStatus: "confirmed" | "waitlisted" = "confirmed";
+    let chosenTable: FreeTable | null = null;
+    if (seatingApplies(eventRow)) {
+      const allocation = await allocateOnCreate(supabase, {
+        eventId,
+        groupSize: formData.team_size,
+      });
+      finalStatus = allocation.status;
+      chosenTable = allocation.status === "confirmed" ? allocation.table : null;
     }
-
-    //console.log(tablesInUse);
-
-    // 4. Find all tables with enough capacity, ordering by smallest suitable table first 
-    const { data: suitableTables, error: tablesError } = await supabase
-      .from("tables")
-      .select("id, max_capacity")
-      .gte("max_capacity", formData.team_size)
-      .order("max_capacity", { ascending: true });
-
-    if (tablesError) throw new Error("Error fetching tables: " + tablesError.message);
-
-    // 5. Pick the first suitable table that isn't already in use
-    const availableTable = suitableTables?.find((table) => !tablesInUse.includes(table.id));
-    //console.log(availableTable);
-
-    // 6. Set the booking status based on table availability
-    const status = availableTable ? "confirmed" : "waitlisted";
-    const isWaitlisted = status === "waitlisted";
 
     // 1. Handle Contact (Find existing or create new)
     let contactId;
@@ -207,7 +157,7 @@ export async function createBooking(formData: BookingFormData) {
           contact_id: contactId,
           group_name: formData.team_name,
           group_size: formData.team_size,
-          status: status,
+          status: finalStatus,
           special_requests: formData.special_requests || null, // Map to DB column
           paid_amount: 0,
           // Note: Omitting team_id as it appears to be optional or handled elsewhere.
@@ -222,26 +172,30 @@ export async function createBooking(formData: BookingFormData) {
       //return { success: false, error: bookingError?.message };
     }
 
-    // TABLE MAPPING
-    if (status === "confirmed" && availableTable) {
-      const { error: mappingInsertError } = await supabase
-        .from("booking_table_mappings")
-        .insert({
-          booking_id: newBooking.id,
-          table_id: availableTable.id,
-          event_id: eventId,
-        });
-
-      if (mappingInsertError) {
-        console.error("Failed to map table:", mappingInsertError);
-        // Optional: you could update the booking status to an error state or alert an admin here
+    // TABLE MAPPING — commit with the unique-index concurrency backstop.
+    if (chosenTable) {
+      const mapped = await commitMapping(supabase, {
+        bookingId: newBooking.id,
+        eventId,
+        tableId: chosenTable.id,
+        groupSize: formData.team_size,
+      });
+      if (!mapped.ok) {
+        // Lost the last table to a concurrent booking — waitlist this one.
+        finalStatus = "waitlisted";
+        await supabase
+          .from("bookings")
+          .update({ status: "waitlisted" })
+          .eq("id", newBooking.id);
       }
     }
+
+    const isWaitlisted = finalStatus === "waitlisted";
 
     // 9. Send the confirmation or waitlist email.
     // A failed email must NOT discard an already-saved booking, so swallow errors here.
     try {
-      await sendBookingEmail(newBooking.id, formData.email, formData.name, quizDate, formData.team_name, formData.team_size, status);
+      await sendBookingEmail(newBooking.id, formData.email, formData.name, quizDate, formData.team_name, formData.team_size, finalStatus);
     } catch (emailError) {
       console.error("Booking saved but confirmation email failed:", emailError);
     }

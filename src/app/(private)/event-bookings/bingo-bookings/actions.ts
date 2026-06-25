@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { assignTableDirect, clearMappingOnStatusChange } from "@/lib/table-allocation";
 
 export async function getBingoEventList() {
   const supabase = await createClient();
@@ -99,11 +100,25 @@ export async function getBingoBookings(selectedDate: string | null, selectedEven
 
 export async function updateBingoBookingStatus(id: string, status: string) {
   const supabase = await createClient();
+  const { data: bookingRow } = await supabase
+    .from("bookings")
+    .select("event_id")
+    .eq("id", id)
+    .single();
+  const eventId = bookingRow?.event_id as number | null;
+
   const { error } = await supabase
     .from("bookings")
     .update({ status: status.toLowerCase(), updated_at: new Date().toISOString() })
     .eq("id", id);
   if (error) throw new Error("Failed to update status");
+
+  // Rule 3c: moving away from `confirmed` frees the booking's table.
+  if (status.toLowerCase() !== "confirmed") {
+    await clearMappingOnStatusChange(supabase, id);
+  }
+  if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
+
   revalidatePath("/event-bookings/bingo-bookings");
   revalidatePath("/dashboard");
 }
@@ -127,30 +142,42 @@ export async function updateBingoBookingDetails(
     .eq("id", id);
   if (error) throw new Error("Failed to update booking");
 
+  // Resolve the event (prefer the explicit event_id, else the booking's own).
+  let eventId: number | null = updates.event_id ? Number(updates.event_id) : null;
+  if (eventId == null) {
+    const { data: bookingRow } = await supabase
+      .from("bookings")
+      .select("event_id")
+      .eq("id", id)
+      .single();
+    eventId = (bookingRow?.event_id as number) ?? null;
+  }
+
+  // Table mapping — routed through the shared module (rules 3c / 3d).
   if (Object.prototype.hasOwnProperty.call(updates, "table_id")) {
-    await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
-    if (table_id && table_id !== "") {
-      const { data: tableData } = await supabase
-        .from("tables")
-        .select("max_capacity")
-        .eq("id", table_id)
-        .single();
-      const groupSize = updates.group_size || 0;
-      const maxCap = tableData?.max_capacity || 0;
-      const addSeatCount = groupSize > maxCap ? groupSize - maxCap : 0;
-      const { data: bookingRow } = await supabase
-        .from("bookings")
-        .select("event_id")
-        .eq("id", id)
-        .single();
-      await supabase.from("booking_table_mappings").insert({
-        booking_id: id,
-        table_id: parseInt(table_id),
-        add_seat: addSeatCount,
-        event_id: bookingRow?.event_id ?? null,
+    const leavingConfirmed =
+      updates.status !== undefined && updates.status.toLowerCase() !== "confirmed";
+
+    if (leavingConfirmed || !table_id) {
+      await clearMappingOnStatusChange(supabase, id);
+    } else if (eventId != null) {
+      const result = await assignTableDirect(supabase, {
+        bookingId: id,
+        eventId,
+        tableId: parseInt(table_id),
+        groupSize: updates.group_size || 0,
       });
+      if (!result.ok) {
+        throw new Error(
+          result.reason === "double_booked"
+            ? "That table was just taken by another booking for this event."
+            : "That table is not available."
+        );
+      }
     }
   }
+
+  if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
 
   revalidatePath("/dashboard");
   revalidatePath("/event-bookings/bingo-bookings");

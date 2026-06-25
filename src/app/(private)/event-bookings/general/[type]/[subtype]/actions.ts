@@ -3,6 +3,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import {
+  getFreeTablesForEvent,
+  assignTableDirect,
+  clearMappingOnStatusChange,
+} from "@/lib/table-allocation";
 import { ALL_SUBTYPES } from "@/lib/booking-grouping";
 
 const GENERAL_PATH = "/event-bookings/general/[type]/[subtype]";
@@ -85,45 +90,13 @@ export async function getAvailableTablesForEventGeneral(
   groupSize: number,
   currentTableId?: string,
 ) {
-  try {
-    const supabase = await createClient();
-
-    const { data: eventBookings } = await supabase
-      .from("bookings")
-      .select("id")
-      .eq("event_id", eventId)
-      .not("status", "eq", "cancelled");
-
-    const bookingIds = eventBookings?.map(b => b.id) || [];
-
-    const { data: takenMappings } = await supabase
-      .from("booking_table_mappings")
-      .select("table_id")
-      .in("booking_id", bookingIds);
-
-    const takenTableIds = takenMappings?.map(m => m.table_id) || [];
-
-    let query = supabase
-      .from("tables")
-      .select("id, name, max_capacity")
-      .eq("available", true);
-
-    const filteredTakenIds = currentTableId
-      ? takenTableIds.filter(id => String(id) !== String(currentTableId))
-      : takenTableIds;
-
-    if (filteredTakenIds.length > 0) {
-      query = query.not("id", "in", `(${filteredTakenIds.join(",")})`);
-    }
-
-    const { data: tables, error } = await query.order("max_capacity", { ascending: true });
-    if (error) throw error;
-
-    return tables?.filter(t => t.max_capacity >= groupSize) || [];
-  } catch (error) {
-    console.error("Error fetching event-specific tables:", error);
-    return [];
-  }
+  const supabase = await createClient();
+  // Delegates to the shared module (single source of truth). The booking's own
+  // current table is re-included via excludeTableId so it stays selectable.
+  return getFreeTablesForEvent(supabase, Number(eventId), {
+    groupSize,
+    excludeTableId: currentTableId ? Number(currentTableId) : undefined,
+  });
 }
 
 /**
@@ -171,40 +144,43 @@ export async function updateGeneralBookingDetails(
     throw new Error("Failed to update booking");
   }
 
-  // Update table mapping when table_id is explicitly provided (empty string clears it)
+  // Resolve the event (prefer the explicit event_id, else the booking's own).
+  let eventId: number | null = updates.event_id ? Number(updates.event_id) : null;
+  if (eventId == null) {
+    const { data: bookingRow } = await supabase
+      .from("bookings")
+      .select("event_id")
+      .eq("id", id)
+      .single();
+    eventId = (bookingRow?.event_id as number) ?? null;
+  }
+
+  // Table mapping — routed through the shared module (rules 3c / 3d).
   if (Object.prototype.hasOwnProperty.call(updates, "table_id")) {
-    await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
+    const leavingConfirmed =
+      updates.status !== undefined && updates.status.toLowerCase() !== "confirmed";
 
-    if (table_id && table_id !== "") {
-      const { data: tableData } = await supabase
-        .from("tables")
-        .select("max_capacity")
-        .eq("id", table_id)
-        .single();
-
-      const groupSize = updates.group_size || 0;
-      const maxCap = tableData?.max_capacity || 0;
-      const addSeatCount = groupSize > maxCap ? groupSize - maxCap : 0;
-
-      const { data: bookingRow } = await supabase
-        .from("bookings")
-        .select("event_id")
-        .eq("id", id)
-        .single();
-
-      const { error: mappingError } = await supabase
-        .from("booking_table_mappings")
-        .insert({ booking_id: id, table_id: parseInt(table_id), add_seat: addSeatCount, event_id: bookingRow?.event_id ?? null });
-
-      if (mappingError) {
-        console.error("Error updating table mapping:", mappingError);
-        throw new Error("Failed to update table assignment");
+    if (leavingConfirmed || !table_id) {
+      await clearMappingOnStatusChange(supabase, id); // 3c / explicit clear
+    } else if (eventId != null) {
+      const result = await assignTableDirect(supabase, {
+        bookingId: id,
+        eventId,
+        tableId: parseInt(table_id),
+        groupSize: updates.group_size || 0,
+      });
+      if (!result.ok) {
+        throw new Error(
+          result.reason === "double_booked"
+            ? "That table was just taken by another booking for this event."
+            : "That table is not available."
+        );
       }
     }
   }
 
-  if (updates.event_id) {
-    await updateFullyBookedStatus(supabase, Number(updates.event_id));
+  if (eventId != null) {
+    await updateFullyBookedStatus(supabase, eventId);
   }
 
   revalidatePath("/dashboard");

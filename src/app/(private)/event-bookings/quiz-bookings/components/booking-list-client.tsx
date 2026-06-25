@@ -299,8 +299,29 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
     }
   }, [initialBookings, selectedDate])
 
-  const handleSaveDetails = () => {
+  const handleSaveDetails = async () => {
     if (!selectedBooking) return
+
+    // Warn before a destructive save that frees the booking's table (rules 3c / 3a.3):
+    //   (a) status moves away from confirmed, or (b) an assigned table is being cleared.
+    const origStatus = normStatus(selectedBooking.status) || "pending";
+    const origTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id ?? "";
+    const hadTable = String(origTableId) !== "";
+    const losesTable = hadTable && !editForm.table_id;
+    const leavesConfirmed = origStatus === "confirmed" && normStatus(editForm.status) !== "confirmed";
+
+    if (losesTable || leavesConfirmed) {
+      const ok = await confirm({
+        title: leavesConfirmed ? "Change status & free table?" : "Remove table assignment?",
+        description: leavesConfirmed
+          ? `This booking is currently confirmed with a table. Changing it to "${editForm.status || "pending"}" will free its table for other guests.`
+          : "This will remove the table assignment and return the table to the pool.",
+        confirmLabel: "Save changes",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    }
+
     startTransition(async () => {
       try {
         await updateBookingDetails(selectedBooking.id, editForm)
@@ -335,7 +356,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         toast.success("Booking updated successfully")
       } catch (error) {
         console.error(error)
-        toast.error("Failed to save changes")
+        toast.error(error instanceof Error ? error.message : "Failed to save changes")
       }
     })
   }

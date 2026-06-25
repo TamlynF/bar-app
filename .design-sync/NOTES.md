@@ -95,6 +95,13 @@ as a known warn, do not chase.**
   (`--fbd`/`--sub-border`/`--cat-bg` + the radix popover/dropdown family).
   Still app runtime vars, irrelevant to Button/Input (both render 2/2 clean).
   Same nature — leave as a known warn.)
+  **2026-06-25 (second run, after refactor commit `4a71b79`) listed 9 vars** —
+  the count *dropped* (radix dropdown/popover transform-origin/available-height +
+  `--chip-c`/`--ev-theme`/`--spotify-bg`/`--badge-color`/`--bg`). globals.css moved
+  again (`4a71b79` "Refactor code structure") so `styles.css` recompiled and
+  re-uploaded (`upload` bundle/styling/aux all true, components unchanged, both
+  Button/Input carried-forward good, render_churn canary confirmed clean). A drop
+  is still the same family — fewer app utilities detected, no new KIND of var.)
 - `[FONT_MISSING] "Cambria"` — **benign, accepted (checked 2026-06-23).** Cambria is
   NOT a brand font. It appears only inside Tailwind's default `.font-serif` fallback
   stack (`ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`) emitted into
