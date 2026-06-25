@@ -14,6 +14,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { updateBookingStatusAction } from "./actions";
 
@@ -58,10 +59,16 @@ export function BookingsList({ items, event }: { items: BookingItem[]; event: Bo
   const selected = selId != null ? list.find((b) => b.id === selId) ?? null : null;
 
   const setStatus = (id: number, status: string) => {
+    const prevStatus = list.find((b) => b.id === id)?.status ?? null;
     setList((prev) => prev.map((b) => (b.id === id ? { ...b, status, paid: status === "confirmed" ? b.total : 0 } : b)));
     setPendingId(id);
     startTransition(async () => {
-      await updateBookingStatusAction(id, status);
+      const result = await updateBookingStatusAction(id, status);
+      if (result?.error) {
+        // Revert the optimistic change (e.g. confirm blocked — no available table).
+        setList((prev) => prev.map((b) => (b.id === id ? { ...b, status: prevStatus ?? b.status } : b)));
+        toast.error(result.error);
+      }
       router.refresh();
       setPendingId(null);
     });

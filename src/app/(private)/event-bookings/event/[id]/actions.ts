@@ -3,7 +3,12 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
-import { clearMappingOnStatusChange } from "@/lib/table-allocation";
+import {
+  clearMappingOnStatusChange,
+  planConfirmSeating,
+  commitMapping,
+  seatingErrorMessage,
+} from "@/lib/table-allocation";
 
 export async function updateBookingStatusAction(bookingId: number, status: string) {
   const supabase = await createClient();
@@ -18,10 +23,20 @@ export async function updateBookingStatusAction(bookingId: number, status: strin
   try {
     const { data: bookingRow } = await supabase
       .from("bookings")
-      .select("event_id")
+      .select("event_id, group_size")
       .eq("id", bookingId)
       .single();
     const eventId = bookingRow?.event_id as number | null;
+    const groupSize = (bookingRow?.group_size as number) ?? 0;
+    const wantConfirmed = status.toLowerCase() === "confirmed";
+
+    // Confirm only if a table can be mapped (seated events). Plan before writing.
+    let tableToAssign = null;
+    if (wantConfirmed && eventId != null) {
+      const plan = await planConfirmSeating(supabase, { eventId, bookingId, groupSize });
+      if (!plan.ok) return { error: seatingErrorMessage("no_table") };
+      tableToAssign = plan.tableToAssign;
+    }
 
     const { error } = await supabase
       .from("bookings")
@@ -34,8 +49,13 @@ export async function updateBookingStatusAction(bookingId: number, status: strin
       .eq("id", bookingId);
     if (error) throw error;
 
-    // Rule 3c: moving away from `confirmed` frees the booking's table.
-    if (status.toLowerCase() !== "confirmed") {
+    if (wantConfirmed) {
+      // Seat it if a free table was found (already-mapped bookings return null).
+      if (tableToAssign && eventId != null) {
+        await commitMapping(supabase, { bookingId, eventId, tableId: tableToAssign.id, groupSize });
+      }
+    } else {
+      // Rule 3c: moving away from `confirmed` frees the booking's table.
       await clearMappingOnStatusChange(supabase, bookingId);
     }
     if (eventId != null) await updateFullyBookedStatus(supabase, eventId);

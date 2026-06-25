@@ -5,8 +5,8 @@ import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import {
   getFreeTablesForEvent,
-  assignTableDirect,
-  clearMappingOnStatusChange,
+  reconcileSeatedBookingTable,
+  seatingErrorMessage,
 } from "@/lib/table-allocation";
 import { ALL_SUBTYPES } from "@/lib/booking-grouping";
 
@@ -128,6 +128,17 @@ export async function updateGeneralBookingDetails(
     if (emp) updatedById = emp.id;
   }
 
+  // Capture the pre-edit size + status + event (needed for downsize relocation).
+  const { data: prev } = await supabase
+    .from("bookings")
+    .select("group_size, status, event_id")
+    .eq("id", id)
+    .single();
+  const oldSize = (prev?.group_size as number) ?? 0;
+  const eventId: number | null = updates.event_id
+    ? Number(updates.event_id)
+    : (prev?.event_id as number) ?? null;
+
   const { table_id, ...bookingUpdates } = updates;
   const { error: bookingError } = await supabase
     .from("bookings")
@@ -144,39 +155,21 @@ export async function updateGeneralBookingDetails(
     throw new Error("Failed to update booking");
   }
 
-  // Resolve the event (prefer the explicit event_id, else the booking's own).
-  let eventId: number | null = updates.event_id ? Number(updates.event_id) : null;
-  if (eventId == null) {
-    const { data: bookingRow } = await supabase
-      .from("bookings")
-      .select("event_id")
-      .eq("id", id)
-      .single();
-    eventId = (bookingRow?.event_id as number) ?? null;
-  }
-
-  // Table mapping — routed through the shared module (rules 3c / 3d).
-  if (Object.prototype.hasOwnProperty.call(updates, "table_id")) {
-    const leavingConfirmed =
-      updates.status !== undefined && updates.status.toLowerCase() !== "confirmed";
-
-    if (leavingConfirmed || !table_id) {
-      await clearMappingOnStatusChange(supabase, id); // 3c / explicit clear
-    } else if (eventId != null) {
-      const result = await assignTableDirect(supabase, {
-        bookingId: id,
-        eventId,
-        tableId: parseInt(table_id),
-        groupSize: updates.group_size || 0,
-      });
-      if (!result.ok) {
-        throw new Error(
-          result.reason === "double_booked"
-            ? "That table was just taken by another booking for this event."
-            : "That table is not available."
-        );
-      }
-    }
+  // Reconcile the table assignment through the shared module
+  // (3c clear / 3d explicit pick / confirm-needs-a-table / downsize relocate).
+  const newSize = updates.group_size ?? oldSize;
+  const finalStatus = (updates.status ?? (prev?.status as string) ?? "").toLowerCase();
+  const result = await reconcileSeatedBookingTable(supabase, {
+    bookingId: id,
+    eventId,
+    oldSize,
+    newSize,
+    finalStatus,
+    tableFieldPresent: Object.prototype.hasOwnProperty.call(updates, "table_id"),
+    tableId: table_id && table_id !== "" ? parseInt(table_id) : null,
+  });
+  if (!result.ok) {
+    throw new Error(seatingErrorMessage(result.reason));
   }
 
   if (eventId != null) {

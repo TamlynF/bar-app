@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { updateBookingStatusAction } from "./actions";
 import { cn } from "@/lib/utils";
 import { Check, X, Clock, Loader2, Copy } from "lucide-react";
@@ -10,7 +11,8 @@ export function BookingStatusButtons({ bookingId, currentStatus }: { bookingId: 
 
   const update = (status: string) => {
     startTransition(async () => {
-      await updateBookingStatusAction(bookingId, status);
+      const result = await updateBookingStatusAction(bookingId, status);
+      if (result?.error) toast.error(result.error);
     });
   };
 

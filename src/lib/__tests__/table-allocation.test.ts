@@ -82,6 +82,19 @@ describe("pickTighterFreeTable", () => {
     expect(pickTighterFreeTable(free, 6, 10)?.id).toBe(1);
   });
 
+  it("steps up to the next higher free capacity when the lowest isn't available, capped below current", () => {
+    // group dropped to 4 from a 10-seat; no free 4/5-seat, so take the 6-seat
+    // (lowest available that fits) — never the 8 over the 6, never >= current 10.
+    const free = [t(1, 8), t(2, 6)];
+    expect(pickTighterFreeTable(free, 4, 10)?.id).toBe(2);
+  });
+
+  it("never picks a table larger than the current one", () => {
+    // newSize fits these, but both are >= current capacity → keep current (null)
+    const free = [t(1, 10), t(2, 12)];
+    expect(pickTighterFreeTable(free, 4, 8)).toBeNull();
+  });
+
   it("returns null when no tighter fitting table exists", () => {
     expect(pickTighterFreeTable([], 4, 10)).toBeNull();
   });

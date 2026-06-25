@@ -5,8 +5,11 @@ import { revalidatePath } from "next/cache"
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked"
 import {
   getFreeTablesForEvent,
-  assignTableDirect,
   clearMappingOnStatusChange,
+  reconcileSeatedBookingTable,
+  planConfirmSeating,
+  commitMapping,
+  seatingErrorMessage,
 } from "@/lib/table-allocation"
 
 export async function getBookings(type: string, subType: string, selectedDate: string | null, selectedEventId?: string | null) {
@@ -226,7 +229,16 @@ export async function updateBookingDetails(
     if (emp) updatedById = emp.id;
   }
 
-  // 1. Update primary booking record
+  // 1. Capture the pre-edit size + status + event (needed for downsize relocation).
+  const { data: prev } = await supabase
+    .from("bookings")
+    .select("group_size, status, event_id")
+    .eq("id", id)
+    .single();
+  const oldSize = (prev?.group_size as number) ?? 0;
+  const eventId = (prev?.event_id as number) ?? null;
+
+  // 2. Update primary booking record
   const { table_id, ...bookingUpdates } = updates;
   const { error: bookingError } = await supabase
     .from("bookings")
@@ -243,39 +255,21 @@ export async function updateBookingDetails(
     throw new Error("Failed to update booking")
   }
 
-  // 2. Resolve the event for downstream allocation + fully-booked recompute.
-  const { data: bookingRow } = await supabase
-    .from("bookings")
-    .select("event_id")
-    .eq("id", id)
-    .single();
-  const eventId = bookingRow?.event_id as number | null;
-
-  // 3. Table mapping — routed through the shared module.
-  // table_id is explicitly provided (empty string clears it). A status moving
-  // away from `confirmed` always frees the table (rule 3c).
-  if (Object.prototype.hasOwnProperty.call(updates, "table_id")) {
-    const leavingConfirmed =
-      updates.status !== undefined && updates.status.toLowerCase() !== "confirmed";
-
-    if (leavingConfirmed || !table_id) {
-      await clearMappingOnStatusChange(supabase, id); // 3c / explicit clear
-    } else if (eventId != null) {
-      // 3d — validate + write the admin's explicit table pick.
-      const result = await assignTableDirect(supabase, {
-        bookingId: id,
-        eventId,
-        tableId: parseInt(table_id),
-        groupSize: updates.group_size || 0,
-      });
-      if (!result.ok) {
-        throw new Error(
-          result.reason === "double_booked"
-            ? "That table was just taken by another booking for this event."
-            : "That table is not available."
-        );
-      }
-    }
+  // 3. Reconcile the table assignment through the shared module
+  //    (3c clear / 3d explicit pick / confirm-needs-a-table / downsize relocate).
+  const newSize = updates.group_size ?? oldSize;
+  const finalStatus = (updates.status ?? (prev?.status as string) ?? "").toLowerCase();
+  const result = await reconcileSeatedBookingTable(supabase, {
+    bookingId: id,
+    eventId,
+    oldSize,
+    newSize,
+    finalStatus,
+    tableFieldPresent: Object.prototype.hasOwnProperty.call(updates, "table_id"),
+    tableId: table_id && table_id !== "" ? parseInt(table_id) : null,
+  });
+  if (!result.ok) {
+    throw new Error(seatingErrorMessage(result.reason));
   }
 
   // 4. Keep is_fully_booked in sync after any allocation change.
@@ -297,10 +291,23 @@ export async function updateBookingStatus(id: string, status: string) {
 
   const { data: bookingRow } = await supabase
     .from("bookings")
-    .select("event_id")
+    .select("event_id, group_size")
     .eq("id", id)
     .single();
   const eventId = bookingRow?.event_id as number | null;
+  const wantConfirmed = status.toLowerCase() === "confirmed";
+
+  // Confirm only if a table can be mapped (seated events). Plan before writing.
+  let tableToAssign = null;
+  if (wantConfirmed && eventId != null) {
+    const plan = await planConfirmSeating(supabase, {
+      eventId,
+      bookingId: id,
+      groupSize: (bookingRow?.group_size as number) ?? 0,
+    });
+    if (!plan.ok) throw new Error(seatingErrorMessage("no_table"));
+    tableToAssign = plan.tableToAssign;
+  }
 
   const { error } = await supabase
     .from("bookings")
@@ -317,8 +324,18 @@ export async function updateBookingStatus(id: string, status: string) {
     throw new Error("Failed to update booking status")
   }
 
-  // Rule 3c: moving away from `confirmed` frees the booking's table.
-  if (status.toLowerCase() !== "confirmed") {
+  if (wantConfirmed) {
+    // Seat it if a free table was found (already-mapped bookings return null).
+    if (tableToAssign && eventId != null) {
+      await commitMapping(supabase, {
+        bookingId: id,
+        eventId,
+        tableId: tableToAssign.id,
+        groupSize: (bookingRow?.group_size as number) ?? 0,
+      });
+    }
+  } else {
+    // Rule 3c: moving away from `confirmed` frees the booking's table.
     await clearMappingOnStatusChange(supabase, id);
   }
   if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
