@@ -1,4 +1,6 @@
 import React from "react";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 import { signIn } from "./actions";
 import LoginForm from "./_components/login-form";
 
@@ -6,7 +8,16 @@ export const metadata = {
   title: "Staff Login | Don Fenticas",
 };
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  // Already signed in? Send staff straight to the dashboard. Doing this here
+  // (rather than in proxy.ts) keeps client-side <Link> navigations into /login
+  // from hitting a spurious App-Router 404 on the middleware redirect.
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect("/dashboard");
+
   return (
     <main className="min-h-dvh w-full bg-[#26300D] flex items-center justify-center px-4">
       <style dangerouslySetInnerHTML={{

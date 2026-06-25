@@ -55,20 +55,16 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/event-setups") ||
     pathname.startsWith("/settings");
 
-  const isLoginPage = pathname === "/login";
-
   // 4. Handle Redirects
+  // Only guard private routes here. The "already signed-in → dashboard" bounce
+  // for /login is handled in the login page itself (a Server Component
+  // `redirect()`), because a middleware redirect on a client-side <Link>
+  // navigation into /login surfaces as a spurious 404 in the App Router.
   if (isPrivateRoute && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/login";
     // Important: Use the loginUrl clone to preserve query params if needed
     return NextResponse.redirect(loginUrl);
-  }
-
-  if (isLoginPage && user) {
-    const dashboardUrl = request.nextUrl.clone();
-    dashboardUrl.pathname = "/dashboard";
-    return NextResponse.redirect(dashboardUrl);
   }
 
   // 5. Return the response (carrying any refreshed cookies)
@@ -82,6 +78,5 @@ export const config = {
     "/event-bookings/:path*",
     "/event-setups/:path*",
     "/settings/:path*",
-    "/login",
   ],
 };

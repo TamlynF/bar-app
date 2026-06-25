@@ -14,6 +14,7 @@ import type {
   Fixture,
   Feature,
   FixtureType,
+  ChairLayout,
 } from "./types";
 import { FOCAL_FIXTURE_TYPES, BLOCKING_FIXTURE_TYPES } from "./types";
 
@@ -28,8 +29,9 @@ export type CalcTable = {
   diameter: number | null;
   width: number | null;
   length: number | null;
-  baseSeats: number; // tables.max_capacity
+  baseSeats: number; // effective base seats (from chair layout, or tables.max_capacity)
   extraChairs: number; // booking_table_mappings.add_seat
+  chairLayout: ChairLayout | null;
 };
 
 export type FocalPoint = {
@@ -57,8 +59,12 @@ export type TablePlacement = {
   y: number;
   rotation: number;
   span: number; // table footprint span (m, table only)
+  width: number; // actual table width (x extent, m)
+  length: number; // actual table length (y extent, m)
+  diameter: number; // round tables (m)
   baseSeats: number;
   extraChairs: number;
+  chairLayout: ChairLayout | null;
   sightlines: Record<string, SightRating>;
   worstRating: SightRating | null;
   mustSeeViolation: boolean;
@@ -365,6 +371,9 @@ export function computeFloorPlan(input: FloorPlanInput): FloorPlanResult {
     const ov = overrides[t.mappingId];
     const center = ov ? { x: ov.x, y: ov.y } : ordered[k].c;
     const { sightlines, worst, mustSeeViolation } = evaluatePosition(center, focals, blockers, settings.mustSee);
+    const dia = t.shape === "round" ? (t.diameter && t.diameter > 0 ? t.diameter : 1.1) : 0;
+    const wdt = t.shape === "round" ? dia : t.width && t.width > 0 ? t.width : 1.2;
+    const len = t.shape === "round" ? dia : t.length && t.length > 0 ? t.length : 0.7;
     placements.push({
       mappingId: t.mappingId,
       tableId: t.tableId,
@@ -374,8 +383,12 @@ export function computeFloorPlan(input: FloorPlanInput): FloorPlanResult {
       y: round(center.y),
       rotation: ov ? round(ov.rotation) : 0,
       span: round(tableSpan(t)),
+      width: round(wdt),
+      length: round(len),
+      diameter: round(dia),
       baseSeats: t.baseSeats,
       extraChairs: t.extraChairs,
+      chairLayout: t.chairLayout,
       sightlines,
       worstRating: worst,
       mustSeeViolation,

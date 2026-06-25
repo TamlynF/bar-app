@@ -35,6 +35,7 @@ const roundTable = (mappingId: number): CalcTable => ({
   length: null,
   baseSeats: 4,
   extraChairs: 0,
+  chairLayout: null,
 });
 
 describe("tableSpan", () => {

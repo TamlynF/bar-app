@@ -29,6 +29,19 @@ export type Obstacle = {
   rotation?: number; // degrees 0-359, spins rect/circle footprint (polygon ignores it)
 };
 
+/**
+ * How a table's chairs are arranged.
+ * - null / "auto" → distribute evenly around the table (ring for round, split
+ *   across the long sides for rectangles).
+ * - "sides" → `perSide` chairs on each long side + `ends` chairs on each short end.
+ * - "bench" → a bench running along each long side, seating `perSide` each.
+ */
+export type ChairLayout = {
+  mode: "auto" | "sides" | "bench";
+  perSide?: number;
+  ends?: number;
+};
+
 export type FixtureType = "stage" | "bar" | "dj_booth" | "projector" | "tv";
 
 /** A named, positioned venue item the user places on the plan. */

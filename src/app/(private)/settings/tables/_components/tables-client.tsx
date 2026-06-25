@@ -21,10 +21,12 @@ import {
   Circle,
   RectangleHorizontal,
   Ruler,
+  Armchair,
 } from "lucide-react";
 import { saveTableAction, deleteTableAction } from "../actions";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import type { ChairLayout } from "@/lib/floor-plan/types";
 
 export type Table = {
   id: number;
@@ -36,6 +38,7 @@ export type Table = {
   diameter: number | null;
   width: number | null;
   length: number | null;
+  chair_layout: ChairLayout | null;
 };
 
 export default function TablesClient({
@@ -50,6 +53,7 @@ export default function TablesClient({
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [shape, setShape] = useState<"round" | "rect">("round");
+  const [chairMode, setChairMode] = useState<"auto" | "sides" | "bench">("auto");
 
   // ── Sheet helpers ─────────────────────────────────────────────────────────
   const isSheetOpen = !!selected || isAdding;
@@ -66,6 +70,7 @@ export default function TablesClient({
     setIsEditing(false);
     setSelected(null);
     setShape("round");
+    setChairMode("auto");
     setIsAdding(true);
   };
 
@@ -266,6 +271,17 @@ export default function TablesClient({
                       }
                       icon={<Ruler className="w-4 h-4" />}
                     />
+                    {selected.shape === "rect" && selected.chair_layout && selected.chair_layout.mode !== "auto" && (
+                      <DetailRow
+                        label="Seating"
+                        value={
+                          selected.chair_layout.mode === "bench"
+                            ? `Bench · ${selected.chair_layout.perSide ?? 0} per side`
+                            : `${selected.chair_layout.perSide ?? 0} per side${selected.chair_layout.ends ? ` · ${selected.chair_layout.ends} per end` : ""}`
+                        }
+                        icon={<Armchair className="w-4 h-4" />}
+                      />
+                    )}
                     {selected.description && (
                       <DetailRow label="Location / Notes" value={selected.description} />
                     )}
@@ -425,6 +441,75 @@ export default function TablesClient({
                     </>
                   )}
 
+                  {/* Chair arrangement — rectangular tables only */}
+                  {shape === "rect" && (
+                    <>
+                      <div className="space-y-2 sm:col-span-2">
+                        <Label
+                          htmlFor="table-chair-mode"
+                          className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                        >
+                          Chair arrangement
+                        </Label>
+                        <select
+                          id="table-chair-mode"
+                          name="chair_mode"
+                          title="Chair arrangement"
+                          aria-label="Chair arrangement"
+                          value={chairMode}
+                          onChange={(e) => setChairMode(e.target.value as "auto" | "sides" | "bench")}
+                          className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold text-[#1F1F1A] focus:border-[#5C4033] transition-all outline-none"
+                        >
+                          <option value="auto">Auto — spread around the table</option>
+                          <option value="sides">Chairs per side</option>
+                          <option value="bench">Bench down each long side</option>
+                        </select>
+                      </div>
+
+                      {chairMode !== "auto" && (
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="table-chair-per-side"
+                            className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                          >
+                            {chairMode === "bench" ? "Seats per bench" : "Chairs per side"}
+                          </Label>
+                          <Input
+                            id="table-chair-per-side"
+                            name="chair_per_side"
+                            type="number"
+                            min={0}
+                            step={1}
+                            placeholder="e.g. 3"
+                            defaultValue={formDefault?.chair_layout?.perSide ?? ""}
+                            className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                          />
+                        </div>
+                      )}
+
+                      {chairMode === "sides" && (
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor="table-chair-ends"
+                            className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                          >
+                            Chairs per end
+                          </Label>
+                          <Input
+                            id="table-chair-ends"
+                            name="chair_ends"
+                            type="number"
+                            min={0}
+                            step={1}
+                            placeholder="e.g. 0"
+                            defaultValue={formDefault?.chair_layout?.ends ?? ""}
+                            className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                          />
+                        </div>
+                      )}
+                    </>
+                  )}
+
                   {/* Location / Notes — full width */}
                   <div className="space-y-2 sm:col-span-2">
                     <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
@@ -469,7 +554,7 @@ export default function TablesClient({
                   )}
                 </Button>
                 <Button
-                  onClick={() => { setFormError(null); setShape(selected.shape ?? "round"); setIsEditing(true); }}
+                  onClick={() => { setFormError(null); setShape(selected.shape ?? "round"); setChairMode(selected.chair_layout?.mode ?? "auto"); setIsEditing(true); }}
                   className="h-14 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit

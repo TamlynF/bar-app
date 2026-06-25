@@ -33,6 +33,7 @@ import {
   doorClearancePolygon,
   benchSeatPositions,
 } from "@/lib/floor-plan/geometry";
+import { computeTableChairs } from "@/lib/floor-plan/chairs";
 import {
   computeFloorPlan,
   focalPointsFrom,
@@ -565,33 +566,50 @@ export default function FloorPlanClient({
 
               {/* Tables */}
               {result.placements.map((p) => {
-                const span = p.span;
-                const r = span / 2;
-                const chairR = r + chairZone * 0.45;
-                const totalChairs = p.baseSeats + p.extraChairs;
-                const chairs = ringPositions(p.x, p.y, chairR, totalChairs);
                 const fill = p.worstRating ? RATING_FILL[p.worstRating] : "#5C4033";
                 const isSel = selectedId === p.mappingId;
-                const bodyTransform = p.shape === "rect" && p.rotation ? `rotate(${p.rotation} ${p.x} ${p.y})` : undefined;
+                const transform = p.rotation ? `rotate(${p.rotation} ${p.x} ${p.y})` : undefined;
+                // Real table extents — round renders a circle, rect renders w × l.
+                const w = p.shape === "round" ? p.diameter : p.width;
+                const l = p.shape === "round" ? p.diameter : p.length;
+                const ringR = Math.max(w, l) / 2 + 0.18;
+                const { chairs, benches } = computeTableChairs({
+                  shape: p.shape,
+                  cx: p.x,
+                  cy: p.y,
+                  width: p.width,
+                  length: p.length,
+                  diameter: p.diameter,
+                  chairGap: Math.max(0.18, chairZone * 0.45),
+                  baseSeats: p.baseSeats,
+                  extraChairs: p.extraChairs,
+                  layout: p.chairLayout,
+                });
                 return (
                   <g key={p.mappingId} className="cursor-move" onPointerDown={(e) => startDrag(e, p.mappingId)}>
-                    {/* chairs */}
-                    {chairs.map((c, i) => (
-                      <circle key={i} cx={c.x} cy={c.y} r={0.13} fill={i >= p.baseSeats ? "#FDCC4B" : "#5C4033"} stroke="#FFFDF7" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-                    ))}
-                    {/* table body */}
-                    {p.shape === "rect" ? (
-                      <rect transform={bodyTransform} x={p.x - r} y={p.y - r} width={span} height={span} rx={0.06} fill={fill} fillOpacity={0.9} stroke={isSel ? "#1F1F1A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
-                    ) : (
-                      <circle cx={p.x} cy={p.y} r={r} fill={fill} fillOpacity={0.9} stroke={isSel ? "#1F1F1A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
-                    )}
-                    {/* must-see violation ring */}
+                    <g transform={transform}>
+                      {/* benches (bench layout) */}
+                      {benches.map((b, i) => (
+                        <rect key={`b${i}`} x={b.x} y={b.y} width={b.width} height={b.length} rx={0.06} fill="#8B6F47" fillOpacity={0.9} stroke="#5C4033" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                      ))}
+                      {/* chairs */}
+                      {chairs.map((c, i) => (
+                        <circle key={`c${i}`} cx={c.x} cy={c.y} r={0.13} fill={c.extra ? "#FDCC4B" : "#5C4033"} stroke="#FFFDF7" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                      ))}
+                      {/* table body */}
+                      {p.shape === "rect" ? (
+                        <rect x={p.x - w / 2} y={p.y - l / 2} width={w} height={l} rx={0.06} fill={fill} fillOpacity={0.9} stroke={isSel ? "#1F1F1A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
+                      ) : (
+                        <circle cx={p.x} cy={p.y} r={p.diameter / 2} fill={fill} fillOpacity={0.9} stroke={isSel ? "#1F1F1A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
+                      )}
+                      <text x={p.x} y={p.y} fontSize={fontSize * 0.95} fontWeight={800} fill="#FFFFFF" textAnchor="middle" dominantBaseline="middle">
+                        {p.baseSeats + p.extraChairs}
+                      </text>
+                    </g>
+                    {/* must-see violation ring (unrotated, around the table centre) */}
                     {p.mustSeeViolation && (
-                      <circle cx={p.x} cy={p.y} r={r + 0.18} fill="none" stroke="#DC2626" strokeWidth={2.5} strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />
+                      <circle cx={p.x} cy={p.y} r={ringR} fill="none" stroke="#DC2626" strokeWidth={2.5} strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />
                     )}
-                    <text x={p.x} y={p.y} fontSize={fontSize * 0.95} fontWeight={800} fill="#FFFFFF" textAnchor="middle" dominantBaseline="middle">
-                      {p.baseSeats + p.extraChairs}
-                    </text>
                   </g>
                 );
               })}
@@ -621,17 +639,6 @@ export default function FloorPlanClient({
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
-
-/** N points evenly around a circle, starting at the top, clockwise. */
-function ringPositions(cx: number, cy: number, radius: number, count: number): Point[] {
-  if (count <= 0) return [];
-  const out: Point[] = [];
-  for (let i = 0; i < count; i++) {
-    const a = (-90 + (360 / count) * i) * (Math.PI / 180);
-    out.push({ x: round(cx + radius * Math.cos(a), 3), y: round(cy + radius * Math.sin(a), 3) });
-  }
-  return out;
-}
 
 function StatBadge({ label, value, sub, tone = "neutral" }: { label: string; value: string; sub?: string; tone?: "neutral" | "good" | "bad" }) {
   return (

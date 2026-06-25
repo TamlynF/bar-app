@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import FloorPlanClient from "./_components/floor-plan-client";
 import type { CalcTable } from "@/lib/floor-plan/calculator";
-import type { Feature, Fixture, Obstacle, RoomOutline } from "@/lib/floor-plan/types";
+import { chairLayoutSeatCount } from "@/lib/floor-plan/chairs";
+import type { ChairLayout, Feature, Fixture, Obstacle, RoomOutline } from "@/lib/floor-plan/types";
 
 export default async function FloorPlanPage({
   params,
@@ -32,7 +33,7 @@ export default async function FloorPlanPage({
     supabase
       .from("booking_table_mappings")
       .select(
-        "id, add_seat, table_id, bookings!inner(status), tables!inner(id, name, shape, diameter, width, length, max_capacity)"
+        "id, add_seat, table_id, bookings!inner(status), tables!inner(id, name, shape, diameter, width, length, max_capacity, chair_layout)"
       )
       .eq("event_id", id)
       .eq("bookings.status", "confirmed"),
@@ -47,17 +48,28 @@ export default async function FloorPlanPage({
   const event = eventRes.data;
 
   // Normalise the joined mapping rows into CalcTable[].
+  type TableRow = {
+    id: number;
+    name: string;
+    shape: string | null;
+    diameter: number | null;
+    width: number | null;
+    length: number | null;
+    max_capacity: number | null;
+    chair_layout: ChairLayout | null;
+  };
   const rawMappings = (mappingRes.data ?? []) as unknown as Array<{
     id: number;
     add_seat: number | null;
     table_id: number;
-    tables:
-      | { id: number; name: string; shape: string | null; diameter: number | null; width: number | null; length: number | null; max_capacity: number | null }
-      | Array<{ id: number; name: string; shape: string | null; diameter: number | null; width: number | null; length: number | null; max_capacity: number | null }>;
+    tables: TableRow | TableRow[];
   }>;
 
   const tables: CalcTable[] = rawMappings.map((m) => {
     const t = Array.isArray(m.tables) ? m.tables[0] : m.tables;
+    const chairLayout = (t?.chair_layout as ChairLayout | null) ?? null;
+    // Effective base seats come from the chair layout when it defines them.
+    const baseSeats = chairLayoutSeatCount(chairLayout, t?.max_capacity ?? 0);
     return {
       mappingId: m.id,
       tableId: m.table_id,
@@ -66,8 +78,9 @@ export default async function FloorPlanPage({
       diameter: t?.diameter ?? null,
       width: t?.width ?? null,
       length: t?.length ?? null,
-      baseSeats: t?.max_capacity ?? 0,
+      baseSeats,
       extraChairs: Number(m.add_seat ?? 0),
+      chairLayout,
     };
   });
 

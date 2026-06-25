@@ -24,6 +24,21 @@ export async function saveTableAction(formData: FormData) {
   const width = shape === "rect" ? parseDim("width") : null;
   const length = shape === "rect" ? parseDim("length") : null;
 
+  // Chair arrangement (rect only). 'auto' (or round) stores null.
+  const parseCount = (key: string) => {
+    const n = parseInt(formData.get(key)?.toString() || "", 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  };
+  const chairMode = formData.get("chair_mode")?.toString();
+  let chair_layout: { mode: "sides" | "bench"; perSide: number; ends?: number } | null = null;
+  if (shape === "rect" && (chairMode === "sides" || chairMode === "bench")) {
+    const perSide = parseCount("chair_per_side");
+    chair_layout =
+      chairMode === "bench"
+        ? { mode: "bench", perSide }
+        : { mode: "sides", perSide, ends: parseCount("chair_ends") };
+  }
+
   if (!max_capacity || max_capacity <= 0) {
     return { error: "A valid capacity is required." };
   }
@@ -37,6 +52,7 @@ export async function saveTableAction(formData: FormData) {
     diameter,
     width,
     length,
+    chair_layout,
   };
 
   try {
