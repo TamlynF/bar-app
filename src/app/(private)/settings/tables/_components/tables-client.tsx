@@ -18,6 +18,9 @@ import {
   LayoutDashboard,
   AlertCircle,
   Hash,
+  Circle,
+  RectangleHorizontal,
+  Ruler,
 } from "lucide-react";
 import { saveTableAction, deleteTableAction } from "../actions";
 import { cn } from "@/lib/utils";
@@ -29,6 +32,10 @@ export type Table = {
   max_capacity: number;
   available: boolean;
   description: string | null;
+  shape: "round" | "rect";
+  diameter: number | null;
+  width: number | null;
+  length: number | null;
 };
 
 export default function TablesClient({
@@ -42,6 +49,7 @@ export default function TablesClient({
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
+  const [shape, setShape] = useState<"round" | "rect">("round");
 
   // ── Sheet helpers ─────────────────────────────────────────────────────────
   const isSheetOpen = !!selected || isAdding;
@@ -57,6 +65,7 @@ export default function TablesClient({
     setFormError(null);
     setIsEditing(false);
     setSelected(null);
+    setShape("round");
     setIsAdding(true);
   };
 
@@ -237,6 +246,26 @@ export default function TablesClient({
                       value={`${selected.max_capacity} guests`}
                       icon={<Users className="w-4 h-4" />}
                     />
+                    <DetailRow
+                      label="Shape"
+                      value={selected.shape === "rect" ? "Rectangular" : "Round"}
+                      icon={selected.shape === "rect"
+                        ? <RectangleHorizontal className="w-4 h-4" />
+                        : <Circle className="w-4 h-4" />}
+                    />
+                    <DetailRow
+                      label="Size"
+                      value={
+                        selected.shape === "rect"
+                          ? selected.width && selected.length
+                            ? `${selected.width} × ${selected.length} m`
+                            : "Not set"
+                          : selected.diameter
+                            ? `${selected.diameter} m ⌀`
+                            : "Not set"
+                      }
+                      icon={<Ruler className="w-4 h-4" />}
+                    />
                     {selected.description && (
                       <DetailRow label="Location / Notes" value={selected.description} />
                     )}
@@ -313,6 +342,89 @@ export default function TablesClient({
                     />
                   </div>
 
+                  {/* Shape — full width */}
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label
+                      htmlFor="table-shape"
+                      className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                    >
+                      Shape <span className="text-red-500">*</span>
+                    </Label>
+                    <select
+                      id="table-shape"
+                      name="shape"
+                      title="Table shape"
+                      aria-label="Table shape"
+                      value={shape}
+                      onChange={(e) => setShape(e.target.value as "round" | "rect")}
+                      className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold text-[#1F1F1A] focus:border-[#5C4033] transition-all outline-none"
+                    >
+                      <option value="round">Round</option>
+                      <option value="rect">Rectangular</option>
+                    </select>
+                  </div>
+
+                  {/* Dimensions (metres) — depend on shape */}
+                  {shape === "round" ? (
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label
+                        htmlFor="table-diameter"
+                        className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                      >
+                        Diameter (m)
+                      </Label>
+                      <Input
+                        id="table-diameter"
+                        name="diameter"
+                        type="number"
+                        min={0}
+                        step={0.05}
+                        placeholder="e.g. 1.2"
+                        defaultValue={formDefault?.diameter ?? ""}
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="table-width"
+                          className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                        >
+                          Width (m)
+                        </Label>
+                        <Input
+                          id="table-width"
+                          name="width"
+                          type="number"
+                          min={0}
+                          step={0.05}
+                          placeholder="e.g. 0.8"
+                          defaultValue={formDefault?.width ?? ""}
+                          className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="table-length"
+                          className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                        >
+                          Length (m)
+                        </Label>
+                        <Input
+                          id="table-length"
+                          name="length"
+                          type="number"
+                          min={0}
+                          step={0.05}
+                          placeholder="e.g. 1.6"
+                          defaultValue={formDefault?.length ?? ""}
+                          className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                        />
+                      </div>
+                    </>
+                  )}
+
                   {/* Location / Notes — full width */}
                   <div className="space-y-2 sm:col-span-2">
                     <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
@@ -357,7 +469,7 @@ export default function TablesClient({
                   )}
                 </Button>
                 <Button
-                  onClick={() => { setFormError(null); setIsEditing(true); }}
+                  onClick={() => { setFormError(null); setShape(selected.shape ?? "round"); setIsEditing(true); }}
                   className="h-14 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit

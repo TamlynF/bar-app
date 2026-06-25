@@ -28,6 +28,7 @@ import {
   Clock,
   Flame,
   ArrowDownUp,
+  Grid2X2,
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
 import { DatePicker, type DateRange } from "./month-picker";
@@ -942,6 +943,14 @@ export default function EventsClient({
                             <span className="text-[9px] font-black uppercase tracking-wide">View All</span>
                           </Link>
                         </div>
+                        {selected.seating_required && (
+                          <div className="px-4 sm:px-5 py-2.5 border-t border-[#E6DFC8]">
+                            <Link href={`/settings/floor-plan/${selected.id}`} className="w-full h-9 rounded-xl border-2 border-[#E6DFC8] bg-white flex items-center justify-center text-[#5C4033] hover:bg-[#F7F4EA] transition-colors gap-1.5">
+                              <Grid2X2 className="w-3.5 h-3.5" />
+                              <span className="text-[9px] font-black uppercase tracking-wide">Floor plan layout calculator</span>
+                            </Link>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>}

@@ -96,7 +96,8 @@ export async function updateBooking(
           .from("booking_table_mappings")
           .insert({
             booking_id: bookingId,
-            table_id: availableTable.id
+            table_id: availableTable.id,
+            event_id: eventId,
           });
         
         finalStatus = "confirmed";

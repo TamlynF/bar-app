@@ -138,10 +138,16 @@ export async function updateBingoBookingDetails(
       const groupSize = updates.group_size || 0;
       const maxCap = tableData?.max_capacity || 0;
       const addSeatCount = groupSize > maxCap ? groupSize - maxCap : 0;
+      const { data: bookingRow } = await supabase
+        .from("bookings")
+        .select("event_id")
+        .eq("id", id)
+        .single();
       await supabase.from("booking_table_mappings").insert({
         booking_id: id,
         table_id: parseInt(table_id),
         add_seat: addSeatCount,
+        event_id: bookingRow?.event_id ?? null,
       });
     }
   }

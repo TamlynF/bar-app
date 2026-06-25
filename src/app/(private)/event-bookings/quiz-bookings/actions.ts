@@ -304,12 +304,19 @@ export async function updateBookingDetails(
       // Calculate how many extra seats are needed beyond standard capacity
       const addSeatCount = groupSize > maxCap ? groupSize - maxCap : 0;
 
+      const { data: bookingRow } = await supabase
+        .from("bookings")
+        .select("event_id")
+        .eq("id", id)
+        .single();
+
       const { error: mappingError } = await supabase
         .from("booking_table_mappings")
         .insert({
           booking_id: id,
           table_id: parseInt(table_id),
-          add_seat: addSeatCount
+          add_seat: addSeatCount,
+          event_id: bookingRow?.event_id ?? null,
         });
 
       if (mappingError) {

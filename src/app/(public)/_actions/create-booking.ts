@@ -229,6 +229,7 @@ export async function createBooking(formData: BookingFormData) {
         .insert({
           booking_id: newBooking.id,
           table_id: availableTable.id,
+          event_id: eventId,
         });
 
       if (mappingInsertError) {

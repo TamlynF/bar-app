@@ -42,6 +42,7 @@ import {
     Camera,
     Globe,
     MoreHorizontal,
+    Shapes,
     X
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -120,6 +121,7 @@ export default function PrivateLayoutClient({
         { label: "Guests", href: "/settings/customers", icon: BookUser },
         { label: "Teams", href: "/settings/teams", icon: Medal },
         { label: "Floor Plan", href: "/settings/tables", icon: Grid2X2 },
+        { label: "Venue Layout", href: "/settings/venue", icon: Shapes },
         { label: "Event Categories", href: "/event-setups/event-types", icon: Component },
         { label: "Quiz Rules", href: "/event-setups/quiz-categories", icon: Dices },
         { label: "System Users", href: "/settings/users", icon: UserCog2 },
@@ -244,8 +246,15 @@ export default function PrivateLayoutClient({
                 return { title: "Website", subtitle: websiteMap[segment], backHref: "/settings/website" }
             }
 
+            // The per-event floor plan calculator is reached from the Schedule, so its
+            // back link returns there rather than to the Settings hub.
+            if (segment === "floor-plan") {
+                return { title: "Settings", subtitle: "Floor Plan Calculator", backHref: "/event-setups/events" }
+            }
+
             const settingsMap: Record<string, string> = {
                 "tables": "Floor Plan",
+                "venue": "Venue Layout",
                 "customers": "Guests",
                 "teams": "Teams",
                 "users": "System Users",

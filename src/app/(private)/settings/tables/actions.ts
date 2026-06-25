@@ -12,15 +12,31 @@ export async function saveTableAction(formData: FormData) {
   const description = formData.get("description")?.toString() || null;
   const available = formData.get("available") === "on"; // Checkbox value
 
+  const shape = formData.get("shape")?.toString() === "rect" ? "rect" : "round";
+  const parseDim = (key: string) => {
+    const raw = formData.get(key)?.toString().trim();
+    if (!raw) return null;
+    const n = parseFloat(raw);
+    return Number.isFinite(n) && n > 0 ? n : null;
+  };
+  // Keep dimensions consistent with the chosen shape (clear the unused ones).
+  const diameter = shape === "round" ? parseDim("diameter") : null;
+  const width = shape === "rect" ? parseDim("width") : null;
+  const length = shape === "rect" ? parseDim("length") : null;
+
   if (!max_capacity || max_capacity <= 0) {
     return { error: "A valid capacity is required." };
   }
 
-  const payload = { 
-    name, 
-    max_capacity, 
+  const payload = {
+    name,
+    max_capacity,
     description,
-    available 
+    available,
+    shape,
+    diameter,
+    width,
+    length,
   };
 
   try {

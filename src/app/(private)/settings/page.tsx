@@ -16,6 +16,7 @@ import {
   Medal,
   UserCog2,
   Building2,
+  Shapes,
 } from "lucide-react";
 
 const settingsItems = [
@@ -46,6 +47,13 @@ const settingsItems = [
     href: "/settings/tables",
     icon: Grid2X2,
     color: "bg-blue-50 text-blue-600",
+  },
+  {
+    title: "Venue Layout",
+    description: "Room shape, obstacles, fixtures",
+    href: "/settings/venue",
+    icon: Shapes,
+    color: "bg-teal-50 text-teal-600",
   },
   {
     title: "Event Categories",

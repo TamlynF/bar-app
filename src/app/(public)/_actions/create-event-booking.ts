@@ -131,6 +131,7 @@ export async function createEventBooking(formData: FormData) {
       await supabase.from("booking_table_mappings").insert({
         booking_id: newBooking.id,
         table_id: availableTable.id,
+        event_id: eventId,
       });
     }
 
