@@ -230,7 +230,7 @@ The booking pages share a public dark theme but each has its own logic:
 ## Things to never do without explicit permission
 
 - Add a new dependency (npm package)
-- Change the colour palette or fonts on either surface
+- Change the fonts on either surface
 - Move files out of the established folder structure
 - Add CSS outside Tailwind (no new `.module.css`, no styled-components)
 - Refactor `proxy.ts` to `middleware.ts` or rename the exported function

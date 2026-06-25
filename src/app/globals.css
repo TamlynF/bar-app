@@ -650,7 +650,9 @@ html, body {
   .bg-\[\#1F1F1A\] { background-color: #1F1F1A; }
   .bg-\[\#282828\] { background-color: #282828; }
   .bg-\[\#E6DFC8\] { background-color: #E6DFC8; }
-
+.bg-\[\#B45309\] {
+ background-color: #B45309;
+}
   /* Text colour */
   .text-black { color: var(--color-black); }
   .text-white\/50 { color: color-mix(in oklab, var(--color-white) 50%, transparent); }
