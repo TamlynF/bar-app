@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useTransition } from "react"
+import React, { useState, useTransition, useRef, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
@@ -269,8 +269,16 @@ export default function PrivateLayoutClient({
 
     const { title, subtitle, backHref } = getPageInfo()
 
+    // On desktop the shell is a fixed full-height frame and only <main> scrolls,
+    // so the sidebar + top nav stay put. Reset that scroll on navigation since
+    // the window itself no longer scrolls.
+    const mainRef = useRef<HTMLElement>(null)
+    useEffect(() => {
+        mainRef.current?.scrollTo({ top: 0 })
+    }, [pathname])
+
     return (
-        <div className="flex min-h-screen bg-[#F7F4EA] pt-safe-top">
+        <div className="flex min-h-screen sm:h-screen sm:overflow-hidden bg-[#F7F4EA] pt-safe-top">
             {/* 1. Sidebar for Tablets/Desktops */}
             <aside className="hidden sm:flex flex-col w-64 bg-white border-r border-[#E6DFC8] sticky top-0 h-screen shrink-0 z-50">
                 {/* Sidebar Brand */}
@@ -383,8 +391,8 @@ export default function PrivateLayoutClient({
             </aside>
 
             {/* 2. Main Content Wrapper */}
-            <div className="flex flex-col flex-1 min-w-0">
-                <header className="sticky top-0 z-40 w-full bg-white backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
+            <div className="flex flex-col flex-1 min-w-0 sm:h-screen">
+                <header className="sticky top-0 z-40 shrink-0 w-full bg-white backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
                     <div className="flex items-center max-w-7xl mx-auto min-h-10 relative">
 
                         {/* Mobile Back Button */}
@@ -414,8 +422,10 @@ export default function PrivateLayoutClient({
                     </div>
                 </header>
 
-                <main className="flex-1 w-full max-w-7xl mx-auto p-1 sm:p-6 pb-20 sm:pb-8">
-                    {children}
+                <main ref={mainRef} className="flex-1 w-full sm:overflow-y-auto sm:min-h-0">
+                    <div className="w-full max-w-7xl mx-auto p-1 sm:p-6 pb-20 sm:pb-8">
+                        {children}
+                    </div>
                 </main>
 
                 {/* 3. Persistent Mobile Bottom Navigation */}
