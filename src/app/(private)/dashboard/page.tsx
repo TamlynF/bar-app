@@ -1,20 +1,13 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
-import { format, isToday, parseISO } from "date-fns";
+import { format } from "date-fns";
 import {
-  BellRing,
-  Music,
-  Building2,
-  CreditCard,
   CalendarDays,
-  Users,
   Grid2X2,
-  ChevronRight,
   Trophy,
   Plus,
   TrendingUp,
-  UserCheck,
   Clock,
   Zap,
 } from "lucide-react";
@@ -25,9 +18,10 @@ import { adminBookingsHref } from "@/lib/booking-links";
 import SectionLabel from "./components/section-label";
 import { EventRowListClient } from "./components/event-row-list-client";
 import TonightCard from "./components/tonight-card";
-import StatCard from "./components/stat-card";
-import ActionRow from "./components/action-row";
 import LeaderboardCard, { type LeaderboardEntry } from "./components/leaderboard-card";
+import NeedsActionHero, { type ActionItem } from "./components/needs-action-hero";
+import KpiCard from "./components/kpi-card";
+import BookingsTrend, { type TrendBooking } from "./components/bookings-trend";
 
 export const dynamic = "force-dynamic";
 
@@ -158,10 +152,17 @@ export function getBookingsHref(et: EventTypeRow, eventId?: number): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const nowMs = new Date().getTime();
   const todayStr = new Date().toISOString().split("T")[0];
   const firstDayOfMonth = new Date(
     new Date().getFullYear(),
     new Date().getMonth(),
+    1
+  ).toISOString().split("T")[0];
+  // Trend chart needs this-month + last-month history (covers the week view too).
+  const firstDayOfLastMonth = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth() - 1,
     1
   ).toISOString().split("T")[0];
 
@@ -226,6 +227,28 @@ export default async function DashboardPage() {
     .from("booking_scores")
     .select("id, score, is_winner, bookings(id, group_name), events(id, title, date)");
   if (leaderboardError) console.error("Leaderboard query error:", leaderboardError);
+
+  // Bookings trend (created_at + event taxonomy) for the weekly/monthly chart.
+  const { data: trendRaw } = await supabase
+    .from("bookings")
+    .select("created_at, events!bookings_event_id_fkey!inner(event_types!inner(id, name), event_subtypes!inner(id, name))")
+    .gte("created_at", firstDayOfLastMonth)
+    .neq("status", "cancelled");
+
+  // Last-month figures → month-over-month KPI deltas.
+  const [{ data: lastMonthBookings }, { count: newContactsLastMonth }] = await Promise.all([
+    supabase
+      .from("bookings")
+      .select("paid_amount, status")
+      .gte("created_at", firstDayOfLastMonth)
+      .lt("created_at", firstDayOfMonth)
+      .neq("status", "cancelled"),
+    supabase
+      .from("contacts")
+      .select("*", { count: "exact", head: true })
+      .gte("created_at", firstDayOfLastMonth)
+      .lt("created_at", firstDayOfMonth),
+  ]);
 
   const { data: rawUpcoming, error: upcomingError } = await supabase
     .from("events")
@@ -483,11 +506,55 @@ export default async function DashboardPage() {
       ? Math.min(100, Math.round((tonightGuests / totalVenueCapacity) * 100))
       : 0;
 
+  // Map trend rows to the flat shape the client chart buckets/filters.
+  type IdName = { id: number; name: string };
+  type TrendEventRel = { event_types: IdName | IdName[]; event_subtypes: IdName | IdName[] };
+  type TrendRaw = { created_at: string; events: TrendEventRel | TrendEventRel[] | null };
+  const trendBookings: TrendBooking[] = ((trendRaw ?? []) as unknown as TrendRaw[])
+    .map((r) => {
+      const ev = Array.isArray(r.events) ? r.events[0] : r.events;
+      const t = ev ? (Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types) : null;
+      const s = ev ? (Array.isArray(ev.event_subtypes) ? ev.event_subtypes[0] : ev.event_subtypes) : null;
+      return {
+        createdAt: r.created_at,
+        typeId: t ? String(t.id) : "other",
+        typeName: t?.name ?? "Other",
+        subId: s ? String(s.id) : null,
+        subName: s?.name ?? null,
+      };
+    })
+    .filter((b) => !!b.createdAt);
+
+  // Triage "Needs Action" segments — order + colour per the design.
+  const actionItems: ActionItem[] = [
+    { key: "unpaid", label: "Unpaid", count: unpaidBookingsData?.length ?? 0, href: `/event-bookings/bingo-bookings?status=confirmed,pending&payment_status=unpaid&from_date=${todayStr}&min_total=0`, color: "bg-amber-700" },
+    { key: "bands", label: "Bands", count: pendingBands ?? 0, href: "/event-bookings/music-bookings?status=pending", color: "bg-purple-700" },
+    { key: "quizzes", label: "Quizzes", count: quizzesMissingQuestions, href: "/event-setups/events?filter=quiz-incomplete", color: "bg-green-700" },
+    { key: "saturdays", label: "Saturdays", count: openSaturdays, href: "/event-bookings/music-bookings", color: "bg-red-600" },
+    { key: "hires", label: "Hires", count: pendingPrivate ?? 0, href: "/event-bookings/private-bookings?status=pending", color: "bg-blue-600" },
+  ];
+
+  // Tonight is highlighted separately; the rest fill "Coming Up".
+  const comingUp = tonightGeneralEvent ? allListItems.slice(1) : allListItems;
+
+  // Month-over-month KPI deltas.
+  const collectedLastMonth = lastMonthBookings?.reduce((s, b) => s + (b.paid_amount ?? 0), 0) ?? 0;
+  const confirmedLastMonth = lastMonthBookings?.filter((b) => b.status === "confirmed").length ?? 0;
+  const collectedDeltaPct =
+    collectedLastMonth > 0
+      ? Math.round(((collectedRevenue - collectedLastMonth) / collectedLastMonth) * 100)
+      : collectedRevenue > 0
+      ? 100
+      : 0;
+  const unpaidCount = unpaidBookingsData?.length ?? 0;
+  const confirmedDelta = (confirmedBookingsCount ?? 0) - confirmedLastMonth;
+  const newGuestsDelta = (newContactsCount ?? 0) - (newContactsLastMonth ?? 0);
+
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="flex-1 bg-background min-h-screen pb-24">
-      <div className="p-4 md:p-6 max-w-4xl mx-auto space-y-8">
+      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5">
 
         <header className="flex justify-center">
           <p className="text-sm font-bold text-[#5F624F] uppercase tracking-wide">
@@ -495,129 +562,76 @@ export default async function DashboardPage() {
           </p>
         </header>
 
-        {/* SECTION A: NEEDS ACTION */}
-        <section className="space-y-2">
-          <SectionLabel
-            icon={BellRing}
-            label="Needs Action"
-            highlight={totalActions > 0}
-            badge={totalActions > 0 ? `${totalActions} Pending` : undefined}
-          />
-          <div className="bg-white border border-[#E6DFC8] rounded-2xl divide-y divide-[#E6DFC8] overflow-hidden">
-            <ActionRow
-              icon={Building2}
-              label="Private Hires"
-              count={pendingPrivate ?? 0}
-              href="/event-bookings/private-bookings?status=pending"
-              activeColor="text-blue-600"
-              activeBg="bg-blue-50"
-              activeDot="bg-blue-500"
-            />
-            <ActionRow
-              icon={Music}
-              label="Band Submissions"
-              count={pendingBands ?? 0}
-              href="/event-bookings/music-bookings?status=pending"
-              activeColor="text-purple-700"
-              activeBg="bg-purple-100"
-              activeDot="bg-purple-500"
-            />
-            <ActionRow
-              icon={CreditCard}
-              label="Unpaid Bookings"
-              count={unpaidBookingsData?.length ?? 0}
-              href={`/event-bookings/bingo-bookings?status=confirmed,pending&payment_status=unpaid&from_date=${todayStr}&min_total=0`}
-              activeColor="text-amber-600"
-              activeBg="bg-amber-50"
-              activeDot="bg-amber-500"
-            />
-            <ActionRow
-              icon={Trophy}
-              label="Incomplete Quizzes"
-              count={quizzesMissingQuestions}
-              href="/event-setups/events?filter=quiz-incomplete"
-              activeColor="text-green-700"
-              activeBg="bg-green-50"
-              activeDot="bg-green-500"
-            />
-            <ActionRow
-              icon={Music}
-              label="Open Saturdays This Month"
-              count={openSaturdays}
-              href="/event-bookings/music-bookings"
-              activeColor="text-red-600"
-              activeBg="bg-red-50"
-              activeDot="bg-rose-500"
-            />
-          </div>
-        </section>
+        {/* TRIAGE: what's wrong — needs-action hero */}
+        <NeedsActionHero items={actionItems} total={totalActions} />
 
-        {/* SECTION B: THIS MONTH */}
-        <section className="space-y-2">
-          <SectionLabel
-            icon={TrendingUp}
-            label={`${format(new Date(), "MMMM")} at a Glance`}
-          />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <StatCard
-              label="Collected"
-              value={`£${collectedRevenue.toFixed(2)}`}
-              sub="revenue paid"
-              positive
-            />
-            <StatCard
-              label="Outstanding"
-              value={`£${outstandingRevenue.toFixed(2)}`}
-              sub="to collect"
-              warn={outstandingRevenue > 0}
-            />
-            <StatCard
-              label="Bookings"
-              value={confirmedBookingsCount ?? 0}
-              sub="confirmed"
-            />
-            <StatCard
-              label="New Guests"
-              value={newContactsCount ?? 0}
-              sub="this month"
-            />
-          </div>
-        </section>
+        {/* Analytics (left) + what's-on (right) on desktop. On mobile each card
+            stacks in source order: Tonight → Bookings → KPIs → Coming Up. */}
+        <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr] lg:items-start">
 
-        {/* SECTION: QUIZ LEADERBOARD */}
+          {/* Happening Tonight — mobile 1st, desktop top-right */}
+          {tonightGeneralEvent && (
+            <section className="space-y-2 lg:col-start-2 lg:row-start-1">
+              <SectionLabel icon={Clock} label="Happening Tonight" />
+              <TonightCard
+                event={tonightGeneralEvent}
+                guests={tonightGuests}
+                capacity={totalVenueCapacity}
+                capacityPercent={capacityPercent}
+              />
+            </section>
+          )}
+
+          {/* Bookings trend — mobile 2nd, desktop top-left */}
+          <div className="lg:col-start-1 lg:row-start-1">
+            <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
+          </div>
+
+          {/* This month KPIs — mobile 3rd, desktop bottom-left */}
+          <section className="space-y-2 lg:col-start-1 lg:row-start-2">
+            <SectionLabel icon={TrendingUp} label={`${format(new Date(), "MMMM")} at a Glance`} />
+            <KpiCard
+              monthLabel={format(new Date(), "MMMM")}
+              collected={collectedRevenue}
+              outstanding={outstandingRevenue}
+              confirmed={confirmedBookingsCount ?? 0}
+              newGuests={newContactsCount ?? 0}
+              collectedDeltaPct={collectedDeltaPct}
+              unpaidCount={unpaidCount}
+              confirmedDelta={confirmedDelta}
+              newGuestsDelta={newGuestsDelta}
+            />
+          </section>
+
+          {/* Coming Up — mobile 4th, desktop bottom-right (top-right when no tonight) */}
+          <section className={`space-y-2 lg:col-start-2 ${tonightGeneralEvent ? "lg:row-start-2" : "lg:row-start-1"}`}>
+            <SectionLabel icon={CalendarDays} label="Coming Up" />
+            {comingUp.length > 0 ? (
+              <EventRowListClient items={comingUp} />
+            ) : !tonightGeneralEvent ? (
+              <div className="bg-white border border-[#E6DFC8] rounded-2xl p-10 text-center">
+                <CalendarDays className="w-10 h-10 text-[#5F624F] opacity-20 mx-auto mb-3" />
+                <p className="text-sm font-black text-[#1F1F1A]">No Upcoming Events</p>
+                <p className="text-[11px] text-[#5F624F] font-medium mt-1">
+                  Schedule an event in Settings to see it here.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white border border-[#E6DFC8] rounded-2xl p-6 text-center">
+                <p className="text-[11px] text-[#5F624F] font-bold uppercase tracking-wide opacity-60">Nothing else scheduled</p>
+              </div>
+            )}
+          </section>
+        </div>
+
+        {/* Quiz leaderboard */}
         <section className="space-y-2">
           <SectionLabel icon={Trophy} label="Quiz Leaderboard" />
           <LeaderboardCard entries={topTeams} />
         </section>
 
-        {/* SECTION C: UPCOMING EVENTS */}
-        <section className="space-y-3">
-          <SectionLabel icon={CalendarDays} label="Upcoming Events" />
-
-          {tonightGeneralEvent && (
-            <TonightCard
-              event={tonightGeneralEvent}
-              guests={tonightGuests}
-              capacity={totalVenueCapacity}
-              capacityPercent={capacityPercent}
-            />
-          )}
-
-          {allListItems.length > 0 ? (
-            <EventRowListClient items={allListItems} />
-          ) : !tonightGeneralEvent ? (
-            <div className="bg-white border border-[#E6DFC8] rounded-2xl p-10 text-center">
-              <CalendarDays className="w-10 h-10 text-[#5F624F] opacity-20 mx-auto mb-3" />
-              <p className="text-sm font-black text-[#1F1F1A]">No Upcoming Events</p>
-              <p className="text-[11px] text-[#5F624F] font-medium mt-1">
-                Schedule an event in Settings to see it here.
-              </p>
-            </div>
-          ) : null}
-        </section>
-
-        {/* SECTION D: QUICK LINKS */}
-        <section className="space-y-3">
+        {/* Quick links */}
+        <section className="space-y-2">
           <SectionLabel icon={Zap} label="Quick Links" />
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <QuickLink href="/book/bingo" label="Walk-in" icon={Plus} />
