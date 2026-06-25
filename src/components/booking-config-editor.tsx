@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { createBrowserClient } from "@supabase/ssr";
-import { Loader2, Upload, Trash2 } from "lucide-react";
+import { Loader2, Upload, Trash2, ChevronDown, ImageIcon } from "lucide-react";
 import {
   normalizeBookingConfig,
   type BookingConfig,
@@ -18,92 +18,138 @@ const supabase = createBrowserClient(
 
 const BUCKET = "booking-images";
 
-// ---- Small presentational rows ----
+// ---- Shared chrome (mirrors the Event Categories redesign) ----
 
-function Toggle({ value, onChange, label, locked }: { value: boolean; onChange?: (v: boolean) => void; label: string; locked?: boolean }) {
-  // Render an actual switch in every state. When `locked` (name/email, always on)
-  // or read-only (no `onChange`) the switch reflects the value but can't be changed.
-  const interactive = !!onChange && !locked;
+/** Collapsible white section card with a tan header — matches the entity sheet. */
+function SectionCard({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="flex items-center gap-2">
-      <span className={cn("text-[10px] font-black uppercase tracking-wide", value ? "text-green-600" : "text-[#5F624F]")}>
-        {value ? "On" : "Off"}
-      </span>
+    <div className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
       <button
         type="button"
-        title={locked ? `${label} is always on` : `Toggle ${label}`}
-        aria-label={locked ? `${label} is always on` : `Toggle ${label}`}
-        disabled={!interactive}
-        onClick={interactive ? () => onChange!(!value) : undefined}
-        className={cn(
-          "w-11 h-6 rounded-full transition-colors relative shrink-0",
-          value ? "bg-green-500" : "bg-[#5F624F]/30",
-          !interactive && "cursor-not-allowed opacity-80"
-        )}
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2.5 px-4 py-3 bg-[#EFEADD] hover:bg-[#E6DFC8] transition-colors text-left"
       >
-        <span className={cn("absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all", value ? "left-5.5" : "left-0.5")} />
+        <span className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">{title}</span>
+        <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform", open && "rotate-180")} />
       </button>
+      {open && <div>{children}</div>}
     </div>
   );
 }
 
-function ToggleRow({ label, value, onChange, locked }: { label: string; value: boolean; onChange?: (v: boolean) => void; locked?: boolean }) {
+/** Pill switch with a colour variant (green for visibility, orange for required). */
+function Switch({ value, onChange, locked, color = "green", label }: {
+  value: boolean; onChange?: (v: boolean) => void; locked?: boolean; color?: "green" | "orange"; label: string;
+}) {
+  const interactive = !!onChange && !locked;
+  const onBg = color === "orange" ? "bg-[#C2410C]" : "bg-[#22a356]";
   return (
-    <div className="flex items-center justify-between px-4 sm:px-5 py-2.5">
-      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">{label}</span>
-      <Toggle label={label} value={value} onChange={onChange} locked={locked} />
-    </div>
-  );
-}
-
-function TextRow({ label, value, placeholder, onChange }: { label: string; value: string; placeholder?: string; onChange?: (v: string) => void }) {
-  return (
-    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5">
-      <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap text-[#5F624F] opacity-60 shrink-0">{label}</span>
-      {onChange ? (
-        <input
-          aria-label={label}
-          placeholder={placeholder}
-          value={value}
-          onChange={e => onChange(e.target.value)}
-          className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
-        />
-      ) : (
-        <span className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">{value || "—"}</span>
+    <button
+      type="button"
+      role="switch"
+      aria-checked={value}
+      aria-label={locked ? `${label} is always on` : `Toggle ${label}`}
+      disabled={!interactive}
+      onClick={interactive ? () => onChange!(!value) : undefined}
+      className={cn(
+        "relative shrink-0 w-11 h-6.25 rounded-full transition-colors",
+        value ? onBg : "bg-[#d8d0bb]",
+        !interactive && "opacity-80 cursor-not-allowed",
       )}
-    </div>
-  );
-}
-
-function NumberRow({ label, value, min, max, onChange }: { label: string; value: number; min?: number; max?: number; onChange?: (v: number) => void }) {
-  return (
-    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5">
-      <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap text-[#5F624F] opacity-60 shrink-0">{label}</span>
-      {onChange ? (
-        <input
-          type="number"
-          aria-label={label}
-          min={min}
-          max={max}
-          value={value}
-          onChange={e => onChange(e.target.value === "" ? (min ?? 0) : parseInt(e.target.value, 10))}
-          className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none w-16"
-        />
-      ) : (
-        <span className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1">{value}</span>
-      )}
-    </div>
+    >
+      <span className={cn("absolute top-[2.5px] left-[2.5px] w-5 h-5 rounded-full bg-white shadow transition-transform", value && "translate-x-4.75")} />
+    </button>
   );
 }
 
 const FIELD_META: { key: "name" | "email" | "phone" | "group_size" | "group_name" | "special_requests"; name: string; locked?: boolean }[] = [
   { key: "name", name: "Name", locked: true },
   { key: "email", name: "Email", locked: true },
-  { key: "phone", name: "Phone Number" },
+  { key: "phone", name: "Phone" },
   { key: "group_size", name: "Group Size" },
   { key: "group_name", name: "Group Name" },
   { key: "special_requests", name: "Special Requests" },
 ];
+
+function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }: {
+  name: string;
+  locked?: boolean;
+  field: FieldConfig | GroupSizeFieldConfig;
+  isGroupSize?: boolean;
+  editable: boolean;
+  onChange: (patch: Partial<GroupSizeFieldConfig>) => void;
+}) {
+  return (
+    <div className={cn("rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] overflow-hidden", !field.visible && "opacity-60")}>
+      {/* Header: field name + visibility */}
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5">
+        <span className="text-xs font-extrabold text-[#1F1F1A]">{name}</span>
+        <div className="flex items-center gap-2">
+          <span className={cn("text-[9px] font-black uppercase tracking-wide", field.visible ? "text-[#1F8A5B]" : "text-[#5F624F]")}>
+            {field.visible ? "Shown" : "Hidden"}
+          </span>
+          <Switch label={name} value={field.visible} locked={locked} onChange={editable && !locked ? (v) => onChange({ visible: v }) : undefined} />
+        </div>
+      </div>
+
+      {field.visible && (
+        <div className="bg-white border-t border-[#E6DFC8]">
+          {/* Label */}
+          <div className="flex items-center gap-3 px-4 py-3">
+            <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0">Label</span>
+            {editable ? (
+              <input
+                aria-label={`${name} label`}
+                value={field.label}
+                onChange={(e) => onChange({ label: e.target.value })}
+                className="flex-1 min-w-0 text-right text-sm font-semibold text-[#1F1F1A] bg-transparent outline-none"
+              />
+            ) : (
+              <span className="flex-1 text-right text-sm font-semibold text-[#1F1F1A]">{field.label || "—"}</span>
+            )}
+          </div>
+
+          {/* Min / max for group size */}
+          {isGroupSize && (
+            <div className="flex gap-3 px-4 py-3 border-t border-[#E6DFC8]">
+              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Min size</label>
+                <input
+                  type="number"
+                  min={1}
+                  aria-label="Minimum group size"
+                  disabled={!editable}
+                  value={(field as GroupSizeFieldConfig).min}
+                  onChange={(e) => onChange({ min: Math.max(1, parseInt(e.target.value, 10) || 1) })}
+                  className="w-full min-w-0 rounded-[10px] border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-sm font-semibold text-[#1F1F1A] outline-none focus-visible:border-[#5C4033] disabled:opacity-70"
+                />
+              </div>
+              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                <label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Max size</label>
+                <input
+                  type="number"
+                  min={1}
+                  aria-label="Maximum group size"
+                  disabled={!editable}
+                  value={(field as GroupSizeFieldConfig).max}
+                  onChange={(e) => onChange({ max: Math.max(1, parseInt(e.target.value, 10) || 6) })}
+                  className="w-full min-w-0 rounded-[10px] border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-sm font-semibold text-[#1F1F1A] outline-none focus-visible:border-[#5C4033] disabled:opacity-70"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Required */}
+          <div className="flex items-center justify-between px-4 py-3 border-t border-[#E6DFC8]">
+            <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Required</span>
+            <Switch label={`${name} required`} color="orange" value={field.required} locked={locked} onChange={editable && !locked ? (v) => onChange({ required: v }) : undefined} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 /**
  * Shared editor for a `booking_config` object. Drives the nested per-field shape
@@ -150,15 +196,11 @@ export function BookingConfigEditor({
   };
 
   return (
-    <div className="space-y-4 sm:space-y-5">
-      {/* Booking Page (image + tagline) */}
-      <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
-        <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#E6DFC8]/60">
-          <span className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Booking Page</span>
-        </div>
-
-        <div className="p-4 space-y-3">
-          <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">Booking Image (Logo)</span>
+    <div className="flex flex-col gap-2.5">
+      {/* Booking page — logo + tagline */}
+      <SectionCard title="Booking Page">
+        <div className="flex flex-col gap-2 px-4 py-3">
+          <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Booking image (logo)</span>
           {cfg.booking_image_url ? (
             <div className="relative rounded-xl overflow-hidden">
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -168,6 +210,7 @@ export function BookingConfigEditor({
                   type="button"
                   onClick={() => set({ booking_image_url: null })}
                   title="Remove image"
+                  aria-label="Remove image"
                   className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg text-white hover:bg-black/80 transition-colors"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -175,75 +218,55 @@ export function BookingConfigEditor({
               )}
             </div>
           ) : editable ? (
-            <label className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-[#E6DFC8] rounded-xl cursor-pointer hover:border-[#5C4033] hover:bg-[#F7F4EA] transition-colors">
-              {uploading ? <Loader2 className="w-8 h-8 text-[#5F624F] animate-spin mb-2" /> : <Upload className="w-8 h-8 text-[#5F624F] opacity-40 mb-2" />}
-              <span className="text-[11px] font-black uppercase tracking-wide text-[#5F624F]">{uploading ? "Uploading..." : "Click to upload"}</span>
-              <span className="text-[9px] text-[#5F624F] opacity-60 mt-1">Shown as the logo on the booking page</span>
+            <label className="flex flex-col items-center justify-center gap-2 py-7 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] cursor-pointer hover:border-[#5C4033] transition-colors">
+              {uploading ? <Loader2 className="w-7 h-7 text-[#5F624F] animate-spin" /> : <Upload className="w-7 h-7 text-[#5F624F] opacity-50" />}
+              <span className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">{uploading ? "Uploading…" : "Upload"}</span>
+              <span className="text-[10px] text-[#5F624F]">Shown as the logo on the booking page</span>
               <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
             </label>
           ) : (
-            <span className="text-xs sm:text-sm font-black text-[#1F1F1A]">—</span>
+            <div className="flex items-center gap-2 py-3 text-[#5F624F]">
+              <ImageIcon className="w-4 h-4 opacity-50" />
+              <span className="text-sm">—</span>
+            </div>
           )}
           {uploadError && <p className="text-[11px] text-red-600 font-bold">{uploadError}</p>}
         </div>
 
-        <TextRow
-          label="Tagline"
-          value={cfg.tag_line}
-          placeholder="Description shown under the logo"
-          onChange={editable ? v => set({ tag_line: v }) : undefined}
-        />
-      </div>
-
-      {/* Form Fields — one card per field: a group header (name + visibility toggle)
-          with the field's own settings (label, required, size) nested beneath it. */}
-      <div className="space-y-3">
-        <div className="px-1">
-          <span className="text-[9px] font-black uppercase tracking-widest text-[#5F624F]">Form Fields</span>
+        <div className="flex flex-col gap-2 px-4 py-3 border-t border-[#E6DFC8]">
+          <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Tagline</span>
+          {editable ? (
+            <textarea
+              aria-label="Tagline"
+              value={cfg.tag_line}
+              rows={2}
+              placeholder="Description shown under the logo"
+              onChange={(e) => set({ tag_line: e.target.value })}
+              className="w-full rounded-[10px] border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2.5 text-sm font-medium text-[#1F1F1A] outline-none resize-none leading-relaxed focus-visible:border-[#5C4033] focus-visible:ring-[3px] focus-visible:ring-[#5C4033]/10 placeholder:text-[#5F624F]/40"
+            />
+          ) : (
+            <span className="text-sm font-medium text-[#1F1F1A]">{cfg.tag_line || "—"}</span>
+          )}
         </div>
+      </SectionCard>
 
-        {FIELD_META.map(({ key, name, locked }) => {
-          const field = cfg.fields[key] as FieldConfig | GroupSizeFieldConfig;
-          return (
-            <div key={key} className="bg-white border-2 border-[#E6DFC8] rounded-2xl overflow-hidden">
-              {/* Group header: the form field this group configures + its visibility toggle */}
-              <div className={cn("flex items-center justify-between px-4 sm:px-5 py-3", field.visible ? "bg-[#E6DFC8]/60" : "bg-[#F7F4EA]/30")}>
-                <div className="flex items-baseline gap-2 min-w-0">
-                  <span className="text-xs sm:text-sm font-black uppercase tracking-wide text-[#26300D] truncate">{name}</span>
-                  {locked && <span className="text-[9px] font-black uppercase tracking-wide text-[#5F624F]/60 shrink-0">Required field</span>}
-                </div>
-                <Toggle
-                  label={name}
-                  value={field.visible}
-                  locked={locked}
-                  onChange={editable && !locked ? v => setField(key, { visible: v }) : undefined}
-                />
-              </div>
-
-              {/* Child settings — indented beneath the group header, only when the field shows */}
-              {field.visible && (
-                <div className="border-t border-[#E6DFC8] pl-3 sm:pl-4">
-                  <div className="border-l-2 border-[#E6DFC8] divide-y divide-[#E6DFC8]/50">
-                    <TextRow label="Label" value={field.label} onChange={editable ? v => setField(key, { label: v }) : undefined} />
-                    <ToggleRow
-                      label="Required"
-                      value={field.required}
-                      locked={locked}
-                      onChange={editable && !locked ? v => setField(key, { required: v }) : undefined}
-                    />
-                    {key === "group_size" && (
-                      <>
-                        <NumberRow label="Min Size" value={(field as GroupSizeFieldConfig).min} min={1} onChange={editable ? v => setField(key, { min: Math.max(1, v) }) : undefined} />
-                        <NumberRow label="Max Size" value={(field as GroupSizeFieldConfig).max} min={1} max={100} onChange={editable ? v => setField(key, { max: v }) : undefined} />
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      {/* Form fields */}
+      <SectionCard title="Form Fields">
+        <p className="px-4 pt-3 text-[11px] text-[#5F624F] leading-relaxed">The fields shown on the public booking form.</p>
+        <div className="flex flex-col gap-2 p-3.5">
+          {FIELD_META.map(({ key, name, locked }) => (
+            <FormFieldCard
+              key={key}
+              name={name}
+              locked={locked}
+              field={cfg.fields[key]}
+              isGroupSize={key === "group_size"}
+              editable={editable}
+              onChange={(patch) => setField(key, patch)}
+            />
+          ))}
+        </div>
+      </SectionCard>
     </div>
   );
 }

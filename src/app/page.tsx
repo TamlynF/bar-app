@@ -76,7 +76,6 @@ export default async function HomePage() {
     .map((g) => ({ id: g.id, title: g.title, image_url: g.image_url }));
 
   const companyInfo = (info ?? null) as CompanyInfo;
-  const description = (info as { description?: string | null } | null)?.description;
   const tagline = DEFAULT_TAGLINE;
 
   // Live "open" pill: today's hours if we have them, else an evergreen line.

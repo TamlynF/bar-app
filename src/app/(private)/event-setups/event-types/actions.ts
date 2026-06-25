@@ -141,6 +141,7 @@ export async function saveSubtypeAction(formData: FormData) {
   };
 
   try {
+    let subtypeId = id ? parseInt(id, 10) : null;
     if (id) {
       const { error } = await supabase
         .from("event_subtypes")
@@ -148,11 +149,45 @@ export async function saveSubtypeAction(formData: FormData) {
         .eq("id", id);
       if (error) throw error;
     } else {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from("event_subtypes")
-        .insert({ ...payload, created_by: empId, modified_by: empId });
+        .insert({ ...payload, created_by: empId, modified_by: empId })
+        .select("id")
+        .single();
       if (error) throw error;
+      subtypeId = data.id;
     }
+
+    // Inline badge reconciliation: when the editor sends a `badges` payload, the
+    // sub-type owns its badge set — insert new ones, update existing by id, and
+    // delete any the editor removed. Absent payload leaves badges untouched
+    // (the list's quick badge editor still uses the standalone badge actions).
+    const badgesRaw = formData.get("badges")?.toString();
+    if (badgesRaw != null && subtypeId) {
+      const incoming = (JSON.parse(badgesRaw) as { id?: number; title: string; description?: string | null; icon?: string | null }[])
+        .filter((b) => b.title?.trim());
+      const { data: existing, error: exErr } = await supabase
+        .from("event_subtype_badges").select("id").eq("event_subtypes_id", subtypeId);
+      if (exErr) throw exErr;
+      const existingIds = new Set((existing ?? []).map((b) => b.id));
+      const keepIds = new Set(incoming.filter((b) => b.id).map((b) => b.id));
+      const toDelete = [...existingIds].filter((eid) => !keepIds.has(eid));
+      if (toDelete.length) {
+        const { error } = await supabase.from("event_subtype_badges").delete().in("id", toDelete);
+        if (error) throw error;
+      }
+      for (const b of incoming) {
+        const row = { title: b.title.trim(), description: b.description?.trim() || null, icon: b.icon || null };
+        if (b.id && existingIds.has(b.id)) {
+          const { error } = await supabase.from("event_subtype_badges").update(row).eq("id", b.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase.from("event_subtype_badges").insert({ event_subtypes_id: subtypeId, ...row });
+          if (error) throw error;
+        }
+      }
+    }
+
     revalidatePath("/event-setups/event-types");
     return { success: true };
   } catch (error) {

@@ -31,6 +31,45 @@ const SWATCH_HEX: Record<string, string> = {
   fuchsia: "#D946EF", slate: "#94A3B8", zinc: "#A1A1AA", stone: "#A8A29E",
 };
 
+/**
+ * Full hex quad per colour key — `bg` (light fill), `text` (readable ink),
+ * `border`, and `solid` (the saturated accent). Used by the Event Categories
+ * redesign to drive category/sub-category tinting through CSS custom properties
+ * (set via `style`, consumed via Tailwind arbitrary values) rather than the
+ * static `badge`/`swatchClass` Tailwind classes above.
+ */
+export type ColorHex = { bg: string; text: string; border: string; solid: string };
+
+const COLOR_HEX: Record<string, ColorHex> = {
+  amber:   { bg: "#fef3c7", text: "#b45309", border: "#fde68a", solid: "#fbbf24" },
+  green:   { bg: "#dcfce7", text: "#15803d", border: "#bbf7d0", solid: "#4ade80" },
+  purple:  { bg: "#f3e8ff", text: "#7e22ce", border: "#e9d5ff", solid: "#c084fc" },
+  blue:    { bg: "#dbeafe", text: "#1d4ed8", border: "#bfdbfe", solid: "#60a5fa" },
+  rose:    { bg: "#ffe4e6", text: "#be123c", border: "#fecdd3", solid: "#fb7185" },
+  sky:     { bg: "#e0f2fe", text: "#0369a1", border: "#bae6fd", solid: "#38bdf8" },
+  orange:  { bg: "#ffedd5", text: "#c2410c", border: "#fed7aa", solid: "#fb923c" },
+  teal:    { bg: "#ccfbf1", text: "#0f766e", border: "#99f6e4", solid: "#2dd4bf" },
+  indigo:  { bg: "#e0e7ff", text: "#4338ca", border: "#c7d2fe", solid: "#818cf8" },
+  pink:    { bg: "#fce7f3", text: "#be185d", border: "#fbcfe8", solid: "#f472b6" },
+  red:     { bg: "#fee2e2", text: "#b91c1c", border: "#fecaca", solid: "#f87171" },
+  yellow:  { bg: "#fef9c3", text: "#a16207", border: "#fef08a", solid: "#facc15" },
+  emerald: { bg: "#d1fae5", text: "#047857", border: "#a7f3d0", solid: "#34d399" },
+  lime:    { bg: "#ecfccb", text: "#4d7c0f", border: "#d9f99d", solid: "#a3e635" },
+  cyan:    { bg: "#cffafe", text: "#0e7490", border: "#a5f3fc", solid: "#22d3ee" },
+  violet:  { bg: "#ede9fe", text: "#6d28d9", border: "#ddd6fe", solid: "#a78bfa" },
+  fuchsia: { bg: "#fae8ff", text: "#a21caf", border: "#f5d0fe", solid: "#e879f9" },
+  slate:   { bg: "#f1f5f9", text: "#334155", border: "#e2e8f0", solid: "#94a3b8" },
+  zinc:    { bg: "#f4f4f5", text: "#3f3f46", border: "#e4e4e7", solid: "#a1a1aa" },
+  stone:   { bg: "#f5f5f4", text: "#44403c", border: "#e7e5e4", solid: "#a8a29e" },
+};
+
+/** Neutral cream/tan fallback used when a record has no colour set. */
+export const FALLBACK_COLOR_HEX: ColorHex = { bg: "#F7F4EA", text: "#5F624F", border: "#E6DFC8", solid: "#E6DFC8" };
+
+export function colorHexFromKey(color: string | null | undefined): ColorHex {
+  return (color && COLOR_HEX[color]) || FALLBACK_COLOR_HEX;
+}
+
 export const FALLBACK_BADGE = "bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]";
 
 export function badgeClassFromColor(color: string | null | undefined): string {
