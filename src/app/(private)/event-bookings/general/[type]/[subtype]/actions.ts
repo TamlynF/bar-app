@@ -239,11 +239,41 @@ export async function getEventDetailsForType(eventId: string) {
       title,
       tagline,
       payment_amount,
+      seating_required,
+      is_active,
       host:employees!events_host_employee_id_fkey(full_name),
       event_types!inner(name),
-      event_subtypes!inner(name, color)
+      event_subtypes!inner(name, color, behavior)
     `)
     .eq("id", eventId)
     .maybeSingle();
   return data;
+}
+
+/** All bookable tables (capacity only) — feeds the seating "Table Status" stats. */
+export async function getAllTables() {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("tables")
+    .select("id, name, max_capacity")
+    .eq("available", true);
+  return data ?? [];
+}
+
+/**
+ * Quiz progress for an event: how many questions are saved vs the configured
+ * total. Mirrors the quiz-bookings page's getQuizStatusStats.
+ */
+export async function getQuizStatsForEvent(eventId: number) {
+  const supabase = await createClient();
+  try {
+    const [{ count: questionCount }, { data: categories }] = await Promise.all([
+      supabase.from("past_quiz_questions").select("*", { count: "exact", head: true }).eq("events_id", eventId),
+      supabase.from("quiz_category_configs").select("question_count"),
+    ]);
+    const categoryTotal = (categories ?? []).reduce((sum, r) => sum + (r.question_count ?? 0), 0);
+    return { questionCount: questionCount ?? 0, categoryTotal };
+  } catch {
+    return { questionCount: 0, categoryTotal: 0 };
+  }
 }

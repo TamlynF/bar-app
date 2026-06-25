@@ -105,16 +105,20 @@ export async function saveEventAction(formData: FormData) {
   }
 
   try {
+    // Holds the freshly saved row so the client can refresh its view without a
+    // round-trip — the list still updates via revalidatePath below.
+    let savedEvent;
     if (id) {
       const { data: prevEvent } = await supabase.from("events").select("is_active").eq("id", id).maybeSingle();
       const bookingPageUrl = computeBookingUrl(id);
-      const { error } = await supabase.from("events").update({
+      const { data: updated, error } = await supabase.from("events").update({
         ...payload,
         booking_page_url: bookingPageUrl,
         updated_by: currentEmployeeId,
         updated_at: new Date().toISOString(),
-      }).eq("id", id);
+      }).eq("id", id).select("*").single();
       if (error) throw error;
+      savedEvent = updated;
 
       // When an event becomes inactive and its date has passed, purge its draft
       // exclusion log (generated_quiz_questions) for this event.
@@ -128,20 +132,22 @@ export async function saveEventAction(formData: FormData) {
         ...payload,
         created_by: currentEmployeeId,
         updated_by: currentEmployeeId,
-      }).select("id").single();
+      }).select("*").single();
       if (insertError) throw insertError;
+      savedEvent = inserted;
 
       const bookingPageUrl = computeBookingUrl(inserted.id);
       if (bookingPageUrl !== null) {
-        const { error: urlError } = await supabase.from("events")
+        const { data: urlUpdated, error: urlError } = await supabase.from("events")
           .update({ booking_page_url: bookingPageUrl })
-          .eq("id", inserted.id);
+          .eq("id", inserted.id).select("*").single();
         if (urlError) throw urlError;
+        savedEvent = urlUpdated;
       }
     }
 
     revalidatePath("/event-setups/events");
-    return { success: true };
+    return { success: true, event: savedEvent };
   } catch (error) {
     console.error("Error saving event:", error);
     return { error: error instanceof Error ? error.message : "Failed to save event." };

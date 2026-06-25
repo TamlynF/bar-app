@@ -243,7 +243,6 @@ export default async function QuizBookingsPage({
                   )}
                 </div>
               </div>
-
             </div>
 
             {/* Expandable event details */}

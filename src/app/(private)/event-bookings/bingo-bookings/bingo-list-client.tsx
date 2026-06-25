@@ -9,8 +9,8 @@ import {
   getBingoEventList,
 } from "./actions";
 import { getAvailableTablesForEvent } from "@/app/(private)/event-bookings/quiz-bookings/actions";
-import { statusTheme } from "@/app/(private)/event-bookings/quiz-bookings/components/booking-list-client";
-import StatusCircle from "@/app/(private)/event-bookings/quiz-bookings/components/status-circle";
+import { statusTheme } from "@/lib/booking-status-theme";
+import StatusCircle from "@/components/editorial/status-circle";
 import type { BingoBooking } from "./page";
 import {
   CheckCircle2,
@@ -848,7 +848,7 @@ function BingoBookingCard({
               </span>
             </div>
           ) : (
-            theme.icon
+            <theme.icon className="w-5 h-5" />
           )}
         </div>
 

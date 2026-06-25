@@ -419,6 +419,16 @@ export default function EventsClient({
       const result = await saveEventAction(formData);
       if (result?.error) {
         setFormError(result.error);
+      } else if (isEditing && result?.event) {
+        // Editing: drop back into the sheet's view mode showing the freshly
+        // saved values (revalidatePath in the action refreshes the list too).
+        setSelected(result.event as EventRecord);
+        setIsEditing(false);
+        setFormError(null);
+        // Clear the ?open marker. The searchParams effect re-selects from
+        // initialEvents on refresh; leaving ?open set lets it clobber the fresh
+        // row above with a stale list entry after revalidation.
+        window.history.replaceState(null, "", "/event-setups/events");
       } else {
         closeSheet();
       }

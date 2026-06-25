@@ -1,20 +1,23 @@
 import { cn } from "@/lib/utils"
-import { statusTheme } from "./booking-list-client"
+import { statusTheme } from "@/lib/booking-status-theme"
 
-export default function StatusCircle({ 
-  guestCount, 
-  teamCount, 
-  status, 
-  label, 
-  isActive, 
-  onClick 
-}: { 
-  guestCount: number, 
+export default function StatusCircle({
+  guestCount,
+  teamCount,
+  status,
+  label,
+  isActive,
+  onClick,
+  unit = "teams",
+}: {
+  guestCount: number,
   teamCount: number,
-  status: string, 
-  label: string, 
-  isActive: boolean, 
-  onClick: () => void 
+  status: string,
+  label: string,
+  isActive: boolean,
+  onClick: () => void,
+  /** Sub-label shown beneath the count inside the circle. */
+  unit?: string,
 }) {
   const theme = statusTheme[status] || statusTheme.pending
 
@@ -36,7 +39,7 @@ export default function StatusCircle({
             "hidden sm:block text-[9px] font-bold uppercase tracking-tight opacity-70",
             isActive ? "text-white" : theme.text
           )}>
-            teams
+            {unit}
           </span>
         </div>
       </button>

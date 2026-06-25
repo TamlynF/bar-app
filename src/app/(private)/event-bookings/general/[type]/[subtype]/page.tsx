@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import React from "react";
 import { badgeClassFromColor } from "@/lib/event-type-colors";
-import { getEventsForType, getBookingsForType, getEventDetailsForType } from "./actions";
+import { getEventsForType, getBookingsForType, getEventDetailsForType, getAllTables, getQuizStatsForEvent } from "./actions";
 import { ALL_SUBTYPES } from "@/lib/booking-grouping";
 import EventTypeFilter from "./components/event-filter";
 import { type GeneralBooking } from "./components/booking-list";
@@ -50,7 +50,7 @@ export default async function GeneralEventBookingsPage({
     ? (Array.isArray(eventDetails.event_types) ? eventDetails.event_types[0] : eventDetails.event_types) as { name: string } | null
     : null;
   const etSub = eventDetails
-    ? (Array.isArray(eventDetails.event_subtypes) ? eventDetails.event_subtypes[0] : eventDetails.event_subtypes) as { name: string; color?: string | null } | null
+    ? (Array.isArray(eventDetails.event_subtypes) ? eventDetails.event_subtypes[0] : eventDetails.event_subtypes) as { name: string; color?: string | null; behavior?: string | null } | null
     : null;
   const et = (etType || etSub) ? { type: etType?.name ?? "", sub_type: etSub?.name ?? "", badge_color: etSub?.color ?? null } : null;
 
@@ -58,9 +58,65 @@ export default async function GeneralEventBookingsPage({
     ? (eventDetails.host as { full_name: string }).full_name
     : null;
 
+  const seatingRequired = !!(eventDetails as { seating_required?: boolean | null } | null)?.seating_required;
+  const isQuiz = etSub?.behavior === "quiz";
+  const paymentAmount = (eventDetails as { payment_amount?: number | null } | null)?.payment_amount ?? null;
+  const isActive = (eventDetails as { is_active?: boolean | null } | null)?.is_active !== false;
+
+  // Payment totals across non-cancelled bookings: expected (price × guests, or the
+  // stored booking total) and the amount actually paid.
+  let totalExpected = 0;
+  let totalPaid = 0;
+  for (const b of bookings) {
+    if ((b.status || "").toLowerCase() === "cancelled") continue;
+    totalPaid += Number(b.paid_amount) || 0;
+    const lineTotal = b.total_amount != null
+      ? Number(b.total_amount)
+      : (paymentAmount ?? 0) * (Number(b.group_size) || 0);
+    totalExpected += lineTotal;
+  }
+
+  // Table statistics (capacity buckets) — only when this event needs seating.
+  let tableStats: { capacity: number; total: number; assigned: number }[] | null = null;
+  if (selectedEventId && eventDetails && seatingRequired) {
+    const allTables = await getAllTables();
+    const groups: Record<number, { total: number; assigned: number }> = {};
+    for (const t of allTables) {
+      const cap = t.max_capacity || 0;
+      if (!groups[cap]) groups[cap] = { total: 0, assigned: 0 };
+      groups[cap].total++;
+    }
+    for (const b of bookings) {
+      for (const m of b.booking_table_mappings ?? []) {
+        const cap = m.tables?.tables_capacity || 0;
+        if (groups[cap]) groups[cap].assigned++;
+      }
+    }
+    tableStats = Object.entries(groups)
+      .map(([cap, v]) => ({ capacity: Number(cap), ...v }))
+      .sort((a, b) => a.capacity - b.capacity);
+  }
+
+  // Quiz status — only when this sub-category behaves as a quiz.
+  let quiz: EventSummary["quiz"] = null;
+  if (selectedEventId && eventDetails && isQuiz) {
+    const stats = await getQuizStatsForEvent(Number(eventDetails.id));
+    const status =
+      stats.categoryTotal === 0
+        ? "Not Started"
+        : stats.questionCount >= stats.categoryTotal
+        ? "Complete"
+        : stats.questionCount > 0
+        ? "Incomplete"
+        : "Not Started";
+    quiz = { status, count: stats.questionCount, total: stats.categoryTotal };
+  }
+
   // Pre-format the event summary so the client section stays presentational.
   const summary: EventSummary | null = selectedEventId && eventDetails
     ? {
+        title: eventDetails.title ?? "",
+        isActive,
         dateLabel: new Date(eventDetails.date + "T00:00:00").toLocaleDateString("en-GB", {
           weekday: "short", day: "numeric", month: "short", year: "numeric",
         }),
@@ -68,6 +124,11 @@ export default async function GeneralEventBookingsPage({
         hostName: hostName ?? "—",
         badgeClass: et ? badgeClassFromColor(et.badge_color) : null,
         badgeLabel: et ? toTitleCase(et.sub_type || et.type) : null,
+        paymentAmount,
+        totalExpected,
+        totalPaid,
+        quiz,
+        tableStats,
       }
     : null;
 

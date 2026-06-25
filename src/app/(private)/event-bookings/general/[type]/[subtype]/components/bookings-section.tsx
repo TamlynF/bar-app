@@ -1,26 +1,29 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { CalendarDays, Clock, User, Search, X } from "lucide-react";
+import { CalendarDays, Clock, User, Search, X, CheckCircle2, AlertCircle, Info, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BookingList, { type GeneralBooking } from "./booking-list";
-
-// Mirrors statusTheme in quiz-bookings/components/booking-list-client.tsx so the
-// stats bar reads consistently across booking surfaces.
-const STAT_THEME: Record<string, { border: string; text: string; dot: string; ring: string }> = {
-  all:        { border: "border-[#E6DFC8]",  text: "text-[#1F1F1A]",  dot: "bg-[#5F624F]", ring: "ring-slate-500/30" },
-  confirmed:  { border: "border-green-200",  text: "text-green-700",  dot: "bg-green-500", ring: "ring-green-500/30" },
-  waitlisted: { border: "border-orange-200", text: "text-orange-700", dot: "bg-orange-500", ring: "ring-orange-500/30" },
-  pending:    { border: "border-yellow-200", text: "text-amber-700",  dot: "bg-amber-500", ring: "ring-yellow-500/30" },
-  cancelled:  { border: "border-red-200",    text: "text-red-700",    dot: "bg-red-500",   ring: "ring-red-500/30" },
-};
+import StatusCircle from "@/components/editorial/status-circle";
 
 export interface EventSummary {
+  title: string;
+  isActive: boolean;
   dateLabel: string;
   timeLabel: string;
   hostName: string;
   badgeClass: string | null;
   badgeLabel: string | null;
+  /** Per-person price (null when the event is free) — drives the payment rows. */
+  paymentAmount: number | null;
+  /** Sum of expected booking totals (non-cancelled). */
+  totalExpected: number;
+  /** Sum of amounts actually paid (non-cancelled). */
+  totalPaid: number;
+  /** Present only for quiz-behaviour sub-categories. */
+  quiz?: { status: string; count: number; total: number } | null;
+  /** Present only when the event requires seating — capacity buckets. */
+  tableStats?: { capacity: number; total: number; assigned: number }[] | null;
 }
 
 const sumGuests = (list: GeneralBooking[]) =>
@@ -75,13 +78,29 @@ export default function BookingsSection({
       );
     });
   }, [bookings, activeStatusFilters, searchQuery]);
-
+  
   return (
     <>
       {/* Event info — only when an event is selected */}
       {summary && (
-        <div className="bg-amber-50 rounded-2xl border border-[#E6DFC8] shadow-sm p-2 animate-in fade-in slide-in-from-top-2 duration-300">
-            <div className="flex flex-wrap items-start gap-x-6 gap-y-3">
+        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+
+          {/* Event details (collapsible) */}
+          <details open className="group bg-amber-50 rounded-2xl border border-[#E6DFC8] shadow-sm overflow-hidden">
+            <summary className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-amber-100/40 transition-colors list-none select-none">
+              <span className="text-sm font-black text-[#1F1F1A] truncate min-w-0">{summary.title || "Untitled Event"}</span>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className={cn(
+                  "text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-md border",
+                  summary.isActive ? "bg-green-100 text-green-700 border-green-300" : "bg-red-100 text-red-600 border-red-300",
+                )}>
+                  {summary.isActive ? "Active" : "Inactive"}
+                </span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] opacity-60 transition-transform group-open:rotate-180" />
+              </div>
+            </summary>
+
+            <div className="flex flex-wrap items-start gap-x-6 gap-y-3 px-4 pb-4 pt-3 border-t border-[#E6DFC8] bg-white">
               {/* Date */}
               <div className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]/50 leading-none">Date</span>
@@ -106,16 +125,76 @@ export default function BookingsSection({
                   <span className="text-xs font-bold text-[#1F1F1A]">{summary.hostName}</span>
                 </div>
               </div>
-              {/* Type badge */}
-              {summary.badgeClass && summary.badgeLabel && (
-                <div className="ml-auto self-start">
-                  <span className={cn("text-[9px] font-black uppercase tracking-wide px-2.5 py-1 rounded-md", summary.badgeClass)}>
-                    {summary.badgeLabel}
-                  </span>
+              {/* Payments — full-width row under Date / Time / Host, paid events only */}
+              {summary.paymentAmount != null && summary.paymentAmount !== 0 && (
+                <div className="basis-full flex flex-col gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]/50 leading-none">Payments</span>
+                  <div className="flex flex-wrap items-start gap-x-8 gap-y-2">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-[#5F624F]/50 leading-none">Per Person</span>
+                      <span className="text-xs font-bold text-[#1F1F1A]">£{summary.paymentAmount.toFixed(2)}</span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-[#5F624F]/50 leading-none">Expected</span>
+                      <span className="text-xs font-bold text-[#1F1F1A]">£{summary.totalExpected.toFixed(2)}</span>
+                    </div>
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-wide text-[#5F624F]/50 leading-none">Paid</span>
+                      <span className="text-xs font-bold text-green-700">£{summary.totalPaid.toFixed(2)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {/* Quiz Status — only for quiz-behaviour sub-categories */}
+              {summary.quiz && (
+                <div className="flex flex-col gap-1">
+                  <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]/50 leading-none">Quiz Status</span>
+                  <div className={cn(
+                    "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-wide",
+                    summary.quiz.status === "Complete"    && "bg-green-100 text-green-700",
+                    summary.quiz.status === "Incomplete"  && "bg-orange-100 text-orange-700",
+                    summary.quiz.status === "Not Started" && "bg-[#F7F4EA] text-[#5F624F]",
+                  )}>
+                    {summary.quiz.status === "Complete"    && <CheckCircle2 className="w-3.5 h-3.5" />}
+                    {summary.quiz.status === "Incomplete"  && <AlertCircle  className="w-3.5 h-3.5" />}
+                    {summary.quiz.status === "Not Started" && <Info         className="w-3.5 h-3.5" />}
+                    <span>{summary.quiz.status}</span>
+                    {summary.quiz.total > 0 && (
+                      <span className="opacity-60 font-bold normal-case tracking-normal">
+                        ({summary.quiz.count}/{summary.quiz.total})
+                      </span>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
-          </div>
+          </details>
+
+          {/* Table status (collapsible) — only when the event requires seating */}
+          {summary.tableStats && summary.tableStats.length > 0 && (
+            <details open className="group bg-white rounded-2xl border border-[#E6DFC8] shadow-sm overflow-hidden">
+              <summary className="flex items-center justify-between gap-3 px-4 py-3 cursor-pointer hover:bg-[#F7F4EA] transition-colors list-none select-none">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Table Status</span>
+                <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] opacity-60 transition-transform group-open:rotate-180" />
+              </summary>
+              <div className="flex flex-wrap gap-2 px-4 pb-4 pt-3 border-t border-[#E6DFC8]">
+                {summary.tableStats.map((g) => (
+                  <div
+                    key={g.capacity}
+                    className="flex flex-col items-center justify-center bg-[#F7F4EA] rounded-xl px-3 py-2 min-w-14"
+                  >
+                    <span className="text-[9px] font-bold uppercase tracking-wide text-[#5F624F] opacity-60">
+                      Cap {g.capacity}
+                    </span>
+                    <span className="text-base font-bold text-[#1F1F1A] tabular-nums leading-tight">
+                      {g.assigned}<span className="text-[#5F624F] opacity-50">/{g.total}</span>
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
+        </div>
       )}
 
       {/* Stats + Search grouped card — always shown, with or without an event selected */}
@@ -124,39 +203,24 @@ export default function BookingsSection({
 
               {/* Stats Bar — scrolls on mobile, evenly spaced on sm+ */}
               <div className="overflow-x-auto no-scrollbar px-1 pt-2 sm:flex-1 sm:pt-0">
-                <div className="flex items-stretch gap-2 w-full px-1 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
+                <div className="flex items-stretch gap-3 w-full px-2 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
                   {bookingStats.map(s => {
-                    const theme = STAT_THEME[s.key];
                     const isActive = s.key === "all"
                       ? activeStatusFilters.size === 0
                       : activeStatusFilters.has(s.key);
                     return (
-                      <div key={s.key} className="flex flex-col items-center gap-1.5 min-w-14 shrink-0">
-                        <button
-                          type="button"
-                          aria-pressed={isActive}
-                          aria-label={`Filter by ${s.label}`}
-                          onClick={() => s.key === "all"
-                            ? setActiveStatusFilters(new Set())
-                            : toggleStatusFilter(s.key)}
-                          className={cn(
-                            "flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all touch-manipulation hover:scale-105 active:scale-95",
-                            isActive ? cn(theme.dot, theme.border, "shadow-lg ring-4", theme.ring) : cn("bg-white", theme.border)
-                          )}
-                        >
-                          <span className={cn("text-sm font-black leading-none tabular-nums", isActive ? "text-white" : theme.text)}>
-                            {s.list.length}
-                          </span>
-                        </button>
-                        <div className="flex flex-col items-center leading-none">
-                          <span className={cn("text-[10px] sm:text-[11px] font-black uppercase tracking-tight", isActive ? theme.text : "text-[#5F624F]")}>
-                            {s.label}
-                          </span>
-                          <span className="text-[9px] sm:text-[10px] font-bold text-[#5F624F] uppercase mt-0.5 tabular-nums">
-                            {sumGuests(s.list)} Guests
-                          </span>
-                        </div>
-                      </div>
+                      <StatusCircle
+                        key={s.key}
+                        status={s.key}
+                        label={s.label}
+                        teamCount={s.list.length}
+                        guestCount={sumGuests(s.list)}
+                        unit="bookings"
+                        isActive={isActive}
+                        onClick={() => s.key === "all"
+                          ? setActiveStatusFilters(new Set())
+                          : toggleStatusFilter(s.key)}
+                      />
                     );
                   })}
                 </div>
@@ -191,7 +255,6 @@ export default function BookingsSection({
                   )}
                 </div>
               </div>
-
             </div>
           </div>
 
