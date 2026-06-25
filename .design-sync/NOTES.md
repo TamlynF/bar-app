@@ -90,6 +90,11 @@ as a known warn, do not chase.**
   driver run listed **18** vars — the same radix popover/dropdown +
   `--chip-c`/`--ev-theme`/`--spotify-bg`/`--badge-color`/`--bg` family plus new
   app runtime vars `--fh`/`--cc`/`--spine`. Same nature, not a new kind of warn.)
+  **2026-06-25 driver run listed 28 vars** — the "After Dark" public theme
+  (commits e865036/000ddb0/301a230/a0ffcdb) added more app runtime vars
+  (`--fbd`/`--sub-border`/`--cat-bg` + the radix popover/dropdown family).
+  Still app runtime vars, irrelevant to Button/Input (both render 2/2 clean).
+  Same nature — leave as a known warn.)
 - `[FONT_MISSING] "Cambria"` — **benign, accepted (checked 2026-06-23).** Cambria is
   NOT a brand font. It appears only inside Tailwind's default `.font-serif` fallback
   stack (`ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`) emitted into
@@ -115,5 +120,13 @@ as a known warn, do not chase.**
   if the admin background token ever changes.
 - The `[TOKENS_MISSING]` warn lists app runtime vars (radix popover/dropdown,
   `--chip-c`, `--ev-theme`, `--spotify-bg`, `--badge-color`, `--bg`). Count drifts
-  with the app — see the authoritative count in **Known render warns** above (15 as
-  of 2026-06-23). Still expected app runtime vars — leave as a known warn.
+  with the app — see the authoritative count in **Known render warns** above (28 as
+  of 2026-06-25). Still expected app runtime vars — leave as a known warn.
+- **`styles.css` re-uploads whenever `globals.css` changes, even when Button/Input
+  are unchanged.** `_tw-input.css` imports `globals.css` and Tailwind v4 auto-detects
+  content from the repo root, so app-wide public utilities (e.g. the After Dark theme)
+  land in the compiled `styles.css`. On 2026-06-25 the driver reported `upload.any:true`
+  with `styling:true`/`aux:true` but `components:[]`/`bundle:false`/`deletePaths:[]` —
+  i.e. only the recompiled stylesheet + anchor changed. This is expected: recompile
+  `styles.css` (the `@tailwindcss/cli` step) before the driver whenever globals.css
+  moved, then upload normally. The component bundle stays identical.
