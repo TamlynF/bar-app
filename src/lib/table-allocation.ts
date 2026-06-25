@@ -731,7 +731,7 @@ export async function assignTableDirect(
 export async function countSeatableWaitlist(supabase: SupabaseClient): Promise<number> {
   const { data, error } = await supabase
     .from("bookings")
-    .select("id, group_size, event_id, events!inner(id, seating_required, is_bookable)")
+    .select("id, group_size, event_id, events!bookings_event_id_fkey!inner(id, seating_required, is_bookable)")
     .eq("status", "waitlisted")
     .eq("events.seating_required", true)
     .eq("events.is_bookable", true);

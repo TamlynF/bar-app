@@ -2,25 +2,16 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import {
-  Trophy,
   Music,
   Lock,
   ChevronRight,
-  Speaker,
-  CalendarDays,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { badgeClassFromColor, swatchClassFromColor } from "@/lib/event-type-colors";
+import { badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
+import { cardIcon } from "@/lib/booking-card-icons";
 import { buildAdminBookingGroups, type AdminBookingGroupEvent } from "@/lib/admin-booking-groups";
 
 const eventBookingItems = [
-  {
-    title: "Bingo Bookings",
-    description: "Manage bingo teams, seating and scores",
-    href: "/event-bookings/bingo-bookings",
-    icon: Speaker,
-    color: "bg-purple-50 text-purple-600",
-  },
   {
     title: "Music Bookings",
     description: "Schedule bands and live entertainment",
@@ -35,13 +26,6 @@ const eventBookingItems = [
     icon: Lock,
     color: "bg-green-50 text-green-600",
   },
-   {
-    title: "Quiz Bookings",
-    description: "Manage quiz teams, seating and scores",
-    href: "/event-bookings/quiz-bookings",
-    icon: Trophy,
-    color: "bg-amber-50 text-amber-600",
-  },
 ];
 
 export default async function EventsHubPage() {
@@ -52,15 +36,17 @@ export default async function EventsHubPage() {
   // event_subtypes is a left join so events without a sub-type still appear.
   const { data: bookableEvents } = await supabase
     .from("events")
-    .select("id, title, date, event_types!inner(name, color, booking_grouping), event_subtypes(name, color)")
+    .select("id, title, date, booking_card_title, booking_card_icon, event_types!inner(name, color, booking_grouping, booking_card_title, booking_card_icon), event_subtypes(name, color, booking_card_title, booking_card_icon)")
     .eq("is_active", true)
     .eq("is_bookable", true)
     .gte("date", today)
     .order("date", { ascending: true })
     .limit(200);
 
-  // Collapse events per each category's booking_grouping (per_event / per_subtype / per_type).
-  const generalGroups = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[]);
+  // Collapse events per each category's booking_grouping (per_event / per_subtype / per_type),
+  // then present alphabetically by label.
+  const generalGroups = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[])
+    .sort((a, b) => a.label.localeCompare(b.label));
 
   return (
     <div className="p-2 sm:p-8 space-y-4">
@@ -98,8 +84,9 @@ export default async function EventsHubPage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {generalGroups.map((group) => {
-              const swatchClass = swatchClassFromColor(group.badgeColor);
               const badgeClasses = badgeClassFromColor(group.badgeColor);
+              const colorHex = swatchHexFromColor(group.badgeColor) ?? "#5C4033";
+              const Icon = cardIcon(group.icon);
               return (
                 <Link
                   key={group.key}
@@ -107,8 +94,11 @@ export default async function EventsHubPage() {
                   className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#5C4033] hover:shadow-md transition-all active:scale-[0.98]"
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${swatchClass}`}>
-                      <CalendarDays className="w-6 h-6 text-[#5C4033]" />
+                    <div
+                      style={{ "--cc": colorHex } as React.CSSProperties}
+                      className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 bg-(--cc)/15"
+                    >
+                      <Icon className="w-6 h-6 text-(--cc)" />
                     </div>
                     <div className="flex flex-col text-left min-w-0">
                       <span className="font-black text-[#1F1F1A] uppercase tracking-tight leading-none truncate">

@@ -10,25 +10,35 @@
 
 import { isBookingGrouping, ALL_SUBTYPES } from "./booking-grouping";
 
-type Named = { name: string | null; color?: string | null; booking_grouping?: string | null };
+type Named = {
+  name: string | null;
+  color?: string | null;
+  booking_grouping?: string | null;
+  booking_card_title?: string | null;
+  booking_card_icon?: string | null;
+};
 
 export type AdminBookingGroupEvent = {
   id: number;
   title: string | null;
   date: string;
+  booking_card_title?: string | null;
+  booking_card_icon?: string | null;
   event_types: Named | Named[] | null;
   event_subtypes: Named | Named[] | null;
 };
 
 export type AdminBookingGroup = {
   key: string;
-  /** Primary display label (event title / sub-type / category name), title-cased. */
+  /** Primary display label — the booking_card_title of the owning row, else a title-cased fallback. */
   label: string;
   /** Secondary label (category name) for the hub cards; null when redundant. */
   typeLabel: string | null;
   href: string;
   count: number;
   badgeColor: string | null;
+  /** Lucide icon name (booking_card_icon) from the owning row; null → default glyph. */
+  icon: string | null;
 };
 
 const first = <T,>(v: T | T[] | null | undefined): T | null =>
@@ -54,13 +64,15 @@ export function buildAdminBookingGroups(events: AdminBookingGroupEvent[]): Admin
     const mode = grouping === "per_subtype" && !subName ? "per_event" : grouping;
 
     if (mode === "per_event") {
+      // per_event → branding from the event row itself.
       out.push({
         key: `e-${ev.id}`,
-        label: toTitleCase(ev.title) || "Event",
+        label: ev.booking_card_title || toTitleCase(ev.title) || "Event",
         typeLabel: toTitleCase(subName ?? typeName) || null,
         href: `/event-bookings/event/${ev.id}`,
         count: 1,
         badgeColor: s?.color ?? t.color ?? null,
+        icon: ev.booking_card_icon ?? null,
       });
       continue;
     }
@@ -76,20 +88,24 @@ export function buildAdminBookingGroups(events: AdminBookingGroupEvent[]): Admin
     const entry: AdminBookingGroup =
       mode === "per_subtype"
         ? {
+            // per_subtype → branding from the sub-type row.
             key: groupKey,
-            label: toTitleCase(subName),
+            label: s?.booking_card_title || toTitleCase(subName),
             typeLabel: toTitleCase(typeName) || null,
             href: `/event-bookings/general/${encodeURIComponent(typeName)}/${encodeURIComponent(subName!)}`,
             count: 1,
             badgeColor: s?.color ?? null,
+            icon: s?.booking_card_icon ?? null,
           }
         : {
+            // per_type → branding from the category row.
             key: groupKey,
-            label: toTitleCase(typeName),
+            label: t.booking_card_title || toTitleCase(typeName),
             typeLabel: null,
             href: `/event-bookings/general/${encodeURIComponent(typeName)}/${ALL_SUBTYPES}`,
             count: 1,
             badgeColor: t.color ?? null,
+            icon: t.booking_card_icon ?? null,
           };
     groups.set(groupKey, entry);
     out.push(entry);

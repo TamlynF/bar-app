@@ -7,14 +7,12 @@ import {
     LayoutDashboard,
     CalendarRange,
     Settings,
-    CalendarDays,
     Tags,
     UserCircle,
     Users,
     Shield,
     ArrowLeft,
     Sparkles,
-    Trophy,
     Award,
     Music,
     Lock,
@@ -35,7 +33,6 @@ import {
     Medal,
     UserCog,
     UserCog2,
-    Speaker,
     Building2,
     UtensilsCrossed,
     Image as ImageIcon,
@@ -47,9 +44,17 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
+import { cardIcon } from "@/lib/booking-card-icons"
+import { swatchHexFromColor } from "@/lib/event-type-colors"
 
-type BookingNavItem = { label: string; href: string };
-type SubItem = { label: string; href: string; icon: React.ComponentType<{ className?: string }> };
+type BookingNavItem = { label: string; href: string; icon?: string | null; color?: string | null };
+type SubItem = {
+    label: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    /** When set, render a coloured icon chip (icon in this hue, lighter background). */
+    colorHex?: string | null;
+};
 type NavGroup = {
     label: string
     href: string | null
@@ -86,16 +91,17 @@ export default function PrivateLayoutClient({
         })
     }
 
-    // Sub-items grouped by top-level destination.
+    // Bespoke booking surfaces stay hardcoded; everything else is data-driven from
+    // each category's booking_card config, presented alphabetically with its own
+    // icon + colour (sorted upstream in the layout).
     const bookingsSubItems: SubItem[] = [
-        { label: "Music Bingo", href: "/event-bookings/bingo-bookings", icon: Speaker },
-        { label: "Live Music", href: "/event-bookings/music-bookings", icon: Music },
-        { label: "Thursday Quiz", href: "/event-bookings/quiz-bookings", icon: Trophy },
+        { label: "Music Bookings", href: "/event-bookings/music-bookings", icon: Music },
         { label: "Private Events", href: "/event-bookings/private-bookings", icon: PartyPopper },
         ...bookingNav.map(nav => ({
             label: nav.label,
             href: nav.href,
-            icon: CalendarDays,
+            icon: cardIcon(nav.icon),
+            colorHex: swatchHexFromColor(nav.color ?? undefined) ?? null,
         })),
     ]
 
@@ -361,7 +367,16 @@ export default function PrivateLayoutClient({
                                                             : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
                                                     )}
                                                 >
-                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    {sub.colorHex ? (
+                                                        <span
+                                                            style={{ "--cc": sub.colorHex } as React.CSSProperties}
+                                                            className="shrink-0 w-5 h-5 rounded-md flex items-center justify-center bg-(--cc)/15"
+                                                        >
+                                                            <sub.icon className="w-3 h-3 text-(--cc)" />
+                                                        </span>
+                                                    ) : (
+                                                        <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    )}
                                                     {sub.label}
                                                 </Link>
                                             )

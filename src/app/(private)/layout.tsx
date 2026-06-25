@@ -19,7 +19,7 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         supabase.auth.getUser(),
         supabase
             .from("events")
-            .select("id, title, date, event_types!inner(name, color, booking_grouping), event_subtypes(name, color)")
+            .select("id, title, date, booking_card_title, booking_card_icon, event_types!inner(name, color, booking_grouping, booking_card_title, booking_card_icon), event_subtypes(name, color, booking_card_title, booking_card_icon)")
             .eq("is_active", true)
             .eq("is_bookable", true)
             .gte("date", today)
@@ -42,9 +42,11 @@ export default async function PrivateLayout({ children }: { children: React.Reac
     }
 
     // Collapse events per each category's booking_grouping for the sidebar nav.
+    // Cap by soonest, then present alphabetically with each link's card icon + colour.
     const bookingNav = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[])
         .slice(0, MAX_NAV_BOOKINGS)
-        .map((g) => ({ label: g.label, href: g.href }));
+        .map((g) => ({ label: g.label, href: g.href, icon: g.icon, color: g.badgeColor }))
+        .sort((a, b) => a.label.localeCompare(b.label));
 
     return <PrivateLayoutClient employeeName={employeeName} employeeRole={employeeRole} bookingNav={bookingNav}>{children}</PrivateLayoutClient>;
 }

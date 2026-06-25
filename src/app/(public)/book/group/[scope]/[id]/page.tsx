@@ -135,7 +135,7 @@ export default async function GroupedBookingPage({
           <ImageThemer imageUrl={cfg.booking_image_url} />
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-[85vh] z-0 opacity-70 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_20%,transparent_58%)]"
+            className="pointer-events-none absolute inset-x-0 top-0 h-[85vh] z-0 opacity-40 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_20%,transparent_58%)]"
           />
           <div
             aria-hidden
