@@ -9,11 +9,23 @@ interface EventItem {
   id: string;
   date: string;
   title: string | null;
+  start_time: string | null;
+}
+
+function formatTime(t?: string | null) {
+  if (!t) return null;
+  const [hh, mm] = t.split(":");
+  const h = parseInt(hh, 10);
+  if (Number.isNaN(h)) return null;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${mm} ${ampm}`;
 }
 
 function formatEventLabel(e: EventItem) {
   const dateStr = format(parseISO(e.date), "eee, do MMM yy");
-  return e.title ? `${dateStr} — ${e.title}` : dateStr;
+  const time = formatTime(e.start_time);
+  return time ? `${dateStr} — ${time}` : dateStr;
 }
 
 export default function EventTypeFilter({

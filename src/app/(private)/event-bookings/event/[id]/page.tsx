@@ -1,17 +1,12 @@
 import React from "react";
 import { notFound } from "next/navigation";
-import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { ArrowLeft, CalendarDays, Clock, User, Users } from "lucide-react";
+import { CalendarDays, Clock, User, Users } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
-import { badgeClassFromColor, FALLBACK_BADGE } from "@/lib/event-type-colors";
-import { CopyLinkButton } from "./booking-actions";
 import { BookingsList, type BookingItem } from "./bookings-list";
 
 export const dynamic = "force-dynamic";
-
-type EventTypeRow = { type: string; sub_type: string; badge_color?: string | null } | null;
 
 type EventRow = {
   id: number;
@@ -47,35 +42,12 @@ type BookingRow = {
   }[];
 };
 
-function getEventType(ev: EventRow): EventTypeRow {
-  const t = Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types;
-  const s = Array.isArray(ev.event_subtypes) ? ev.event_subtypes[0] : ev.event_subtypes;
-  if (!t && !s) return null;
-  return { type: t?.name ?? "", sub_type: s?.name ?? "", badge_color: s?.color ?? null };
-}
-
-function badgeClass(et: EventTypeRow): string {
-  if (!et) return FALLBACK_BADGE;
-  return badgeClassFromColor(et.badge_color);
-}
-
-function badgeLabel(et: EventTypeRow): string {
-  const raw = et?.sub_type || et?.type || "";
-  return raw.charAt(0).toUpperCase() + raw.slice(1).replace(/-/g, " ");
-}
-
 export default async function EventDetailPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ from?: string }>;
 }) {
   const { id } = await params;
-  const { from } = await searchParams;
-  // Return target for the in-page Back link — defaults to the bookings hub, but
-  // honours `from` (e.g. the Schedule "View All" link) so Back reopens the sheet.
-  const backHref = from || "/event-bookings";
   const eventId = Number(id);
   if (isNaN(eventId)) notFound();
 
@@ -108,7 +80,6 @@ export default async function EventDetailPage({
   const bookings = (rawBookings ?? []) as unknown as BookingRow[];
   const totalVenueCapacity = (tablesData ?? []).reduce((s, t) => s + (t.max_capacity ?? 0), 0);
 
-  const et = getEventType(event);
   const confirmed = bookings.filter((b) => b.status === "confirmed");
   const waitlisted = bookings.filter((b) => b.status === "waitlisted");
   const cancelled = bookings.filter((b) => b.status === "cancelled");
@@ -144,31 +115,6 @@ export default async function EventDetailPage({
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
-
-      {/* Back + title */}
-      <div>
-        <Link
-          href={backHref}
-          className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#1F1F1A] transition-colors mb-4"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          {from ? "Back" : "Events"}
-        </Link>
-        <div className="flex flex-wrap items-start gap-3">
-          <h1 className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tight leading-tight flex-1">
-            {event.title ?? "Untitled Event"}
-          </h1>
-          {et && (
-            <span className={cn(
-              "text-[9px] font-black uppercase tracking-wide px-2.5 py-1 rounded-md whitespace-nowrap shrink-0 mt-1",
-              badgeClass(et)
-            )}>
-              {badgeLabel(et)}
-            </span>
-          )}
-        </div>
-        <CopyLinkButton eventId={eventId} />
-      </div>
 
       {/* Event detail card */}
       <div className="bg-white border border-[#E6DFC8] rounded-2xl p-5 space-y-4">

@@ -13,7 +13,7 @@ export async function getEventsForType(type: string, subType: string) {
   const allSubtypes = subType === ALL_SUBTYPES;
   let query = supabase
     .from("events")
-    .select("id, date, title, event_types!inner(name), event_subtypes!inner(name)")
+    .select("id, date, title, start_time, event_types!inner(name), event_subtypes!inner(name)")
     .ilike("event_types.name", type);
   if (!allSubtypes) query = query.ilike("event_subtypes.name", subType);
   const { data } = await query.order("date", { ascending: false });
@@ -21,6 +21,7 @@ export async function getEventsForType(type: string, subType: string) {
     id: String(e.id),
     date: String(e.date),
     title: (e as { title?: string | null }).title ?? null,
+    start_time: (e as { start_time?: string | null }).start_time ?? null,
   }));
 }
 
