@@ -615,7 +615,7 @@ export default function BookingList({
             <Button
               onClick={handleSaveDetails}
               disabled={isPending}
-              className="h-12 rounded-xl bg-[#1B4332] text-white font-black uppercase tracking-widest text-xs"
+              className="h-12 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-xs"
             >
               {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (<><Save className="w-4 h-4 mr-2" /> Save</>)}
             </Button>
@@ -641,7 +641,7 @@ export default function BookingList({
             </Button>
             <Button
               onClick={handleEnterEditMode}
-              className="h-12 rounded-xl bg-[#B45309] text-white font-black uppercase tracking-widest text-xs"
+              className="h-12 rounded-xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-xs"
             >
               <Pencil className="w-4 h-4 mr-2" /> Edit
             </Button>

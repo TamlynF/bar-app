@@ -522,7 +522,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                           <Button
                             onClick={() => saveEdit(q.id)}
                             disabled={isPending}
-                            className="flex-1 bg-[#1B4332] text-white font-black uppercase text-xs tracking-wide h-10 rounded-xl"
+                            className="flex-1 bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase text-xs tracking-wide h-10 rounded-xl"
                           >
                             {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-2" /> Save</>}
                           </Button>

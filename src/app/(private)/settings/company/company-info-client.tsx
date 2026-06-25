@@ -203,12 +203,12 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
           <p className="text-xs text-[#5F624F] font-bold opacity-60 uppercase tracking-wider mt-1">Business details and social links</p>
         </div>
         {!isEditing ? (
-          <Button onClick={handleEdit} className="h-12 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] px-6 shadow-lg active:scale-95 transition-transform">
+          <Button onClick={handleEdit} className="h-12 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] px-6 shadow-lg active:scale-95 transition-transform">
             <Pencil className="w-4 h-4 mr-2" /> Edit
           </Button>
         ) : (
           <div className="flex gap-2">
-            <Button onClick={handleSave} disabled={isPending} className="h-12 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] px-6 shadow-lg active:scale-95 transition-transform">
+            <Button onClick={handleSave} disabled={isPending} className="h-12 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] px-6 shadow-lg active:scale-95 transition-transform">
               {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save</>}
             </Button>
             <Button variant="outline" onClick={() => setIsEditing(false)} className="h-12 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-bold uppercase tracking-wide text-[10px]">

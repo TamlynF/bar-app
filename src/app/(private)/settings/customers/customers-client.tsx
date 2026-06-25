@@ -130,11 +130,11 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
               <button
                 type="button"
                 onClick={openAdd}
-                className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+                className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#1B4332] text-white hover:bg-[#1B4332]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
                 title="Add Customer"
               >
                 <Plus className="w-3.5 h-3.5 shrink-0" />
-                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-wide">Create</span>
+                <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Create</span>
               </button>
               <button
                 type="button"
@@ -299,7 +299,7 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
                         name="country_code"
                         placeholder="+44"
                         defaultValue={formDefault?.country_code ?? ""}
-                        className="text-base sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none text-right w-[4rem] placeholder:text-[#5F624F]/40"
+                        className="text-base sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none text-right w-16 placeholder:text-[#5F624F]/40"
                       />
                       <span className="text-[#5F624F]/50 text-xs">|</span>
                       <input
@@ -350,7 +350,7 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit
                 </Button>
@@ -376,7 +376,7 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
                   type="submit"
                   form="customer-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending
                     ? <Loader2 className="w-4 h-4 animate-spin" />

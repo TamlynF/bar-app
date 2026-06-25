@@ -187,6 +187,15 @@ Status colours: use semantic Tailwind shades:
 - Sheets: bottom sheet on mobile (`h-[85vh]`), centered on desktop (`sm:rounded-[2rem] sm:bottom-6 sm:w-[560px]`)
 - Sticky sheet headers and footers with `bg-white/80 backdrop-blur-md`
 
+### Action buttons — Edit, Save, Add/Create (admin)
+
+The primary record-mutation actions have a **fixed colour identity** across the admin portal so they read the same on every booking/detail/settings surface. When you add one of these buttons, its `className` MUST contain the exact utilities below (compose layout/sizing — `h-12 rounded-xl …`, or a small `h-7` header variant — around them):
+
+- **Edit** (amber): `bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest`
+- **Save / Add / Create / New** (green): `bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest`
+
+`#B45309` is the Edit colour; `#1B4332` is the **green for any record-creating or record-saving action** — Save, plus "Add X" / "Create X" / "New X" / "Upload X" buttons. Don't substitute espresso (`#5C4033`) for an Edit/Save/Add/Create action, and don't use these two hexes for unrelated controls.
+
 ---
 
 ## Cross-surface rules

@@ -186,7 +186,7 @@ export default function SpecialsClient({
           <button
             type="button"
             onClick={openAdd}
-            className="mt-4 h-8 px-4 rounded-lg bg-[#5C4033] text-white text-[10px] font-bold uppercase tracking-wide hover:bg-[#5C4033]/85 transition-colors"
+            className="mt-4 h-8 px-4 rounded-lg bg-[#1B4332] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#1B4332]/85 transition-colors"
           >
             <Plus className="w-3.5 h-3.5 inline mr-1" />
             Create Special
@@ -210,11 +210,11 @@ export default function SpecialsClient({
             <button
               type="button"
               onClick={openAdd}
-              className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+              className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#1B4332] text-white hover:bg-[#1B4332]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
               title="Add Special"
             >
               <Plus className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wide">
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">
                 Create
               </span>
             </button>
@@ -242,7 +242,7 @@ export default function SpecialsClient({
                   special.end_date ? formatDate(special.end_date) : null,
                 ]
                   .filter(Boolean)
-                  .join(" – ");
+                  .join(" - ");
                 return (
                   <div
                     key={special.id}
@@ -624,7 +624,7 @@ export default function SpecialsClient({
                     setImageUrl(selected?.image_url || "");
                     setIsEditing(true);
                   }}
-                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />
                   Edit
@@ -654,7 +654,7 @@ export default function SpecialsClient({
                     const form = document.getElementById('special-form') as HTMLFormElement | null;
                     if (form) form.requestSubmit();
                   }}
-                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

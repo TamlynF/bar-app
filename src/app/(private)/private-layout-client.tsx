@@ -15,6 +15,7 @@ import {
     ArrowLeft,
     Sparkles,
     Trophy,
+    Award,
     Music,
     Lock,
     BrainCircuit,
@@ -97,9 +98,10 @@ export default function PrivateLayoutClient({
         })),
     ]
 
-    // Quiz content: archive (+ generator, which is reached from an event).
+    // Quiz content: archive + leaderboards (+ generator, which is reached from an event).
     const quizSubItems: SubItem[] = [
         { label: "Quiz History", href: "/event-setups/quiz-history", icon: Grid2X2 },
+        { label: "Leaderboards", href: "/event-setups/quiz-leaderboards", icon: Award },
         // { label: "Quiz Generator", href: "/event-setups/quiz-generator", icon: Brain },
     ]
 
@@ -133,7 +135,7 @@ export default function PrivateLayoutClient({
         if (p === "/dashboard" || p.startsWith("/dashboard/")) return "Dashboard"
         if (p === "/event-bookings" || p.startsWith("/event-bookings/")) return "Bookings"
         if (isWebsitePath(p)) return "Website"
-        if (p.startsWith("/event-setups/quiz-history") || p.startsWith("/event-setups/quiz-generator")) return "Quiz"
+        if (p.startsWith("/event-setups/quiz-history") || p.startsWith("/event-setups/quiz-generator") || p.startsWith("/event-setups/quiz-leaderboards")) return "Quiz"
         if (p.startsWith("/event-setups/event-types") || p.startsWith("/event-setups/quiz-categories")) return "Settings"
         if (p === "/event-setups" || p.startsWith("/event-setups/")) return "Schedule"
         if (p === "/settings" || p.startsWith("/settings/")) return "Settings"
@@ -145,7 +147,7 @@ export default function PrivateLayoutClient({
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard, subItems: null },
         { label: "Bookings", href: "/event-bookings", icon: Tickets, subItems: bookingsSubItems },
         { label: "Schedule", href: "/event-setups/events", icon: CalendarCogIcon, subItems: null },
-        { label: "Quiz", href: "/event-setups/quiz-history", icon: Brain, subItems: null },
+        { label: "Quiz", href: "/event-setups/quiz-history", icon: Brain, subItems: quizSubItems },
         { label: "Website", href: websiteHref, icon: Globe, subItems: websiteSubItems },
         { label: "Settings", href: "/settings", icon: Settings, subItems: settingsSubItems },
     ]
@@ -154,6 +156,7 @@ export default function PrivateLayoutClient({
 
     const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => ({
         Bookings: activeGroup === "Bookings",
+        Quiz: activeGroup === "Quiz",
         Website: activeGroup === "Website",
         Settings: activeGroup === "Settings",
     }))
@@ -182,8 +185,9 @@ export default function PrivateLayoutClient({
             if (segment === "event-types") return { title: "Settings", subtitle: "Event Categories", backHref: "/settings" }
             if (segment === "quiz-categories") return { title: "Settings", subtitle: "Quiz Rules", backHref: "/settings" }
 
-            // Quiz section: archive + generator.
+            // Quiz section: archive + leaderboards + generator.
             if (segment === "quiz-history") return { title: "Quiz", subtitle: null, backHref: null }
+            if (segment === "quiz-leaderboards") return { title: "Quiz", subtitle: "Leaderboards", backHref: null }
             if (segment === "quiz-generator") {
                 // Reached from a specific event — back goes to that event's quiz page.
                 const eventId = searchParams.get("event_id")

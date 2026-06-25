@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
-  Plus, Loader2, ChevronRight, ChevronDown, Save, Pencil, Trash2,
+  Plus, Loader2, ChevronDown, Save, Pencil, Trash2,
   Hash, AlertCircle, ImageIcon, Upload,
 } from "lucide-react";
 import { saveGalleryImageAction, deleteGalleryImageAction } from "./actions";
@@ -134,7 +134,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
           <ImageIcon className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
           <p className="text-sm font-black text-[#1F1F1A]">No gallery images yet</p>
           <p className="text-[11px] text-[#5F624F] mt-1">Upload your first image to get started</p>
-          <button type="button" onClick={openAdd} className="mt-4 h-8 px-4 rounded-lg bg-[#5C4033] text-white text-[10px] font-bold uppercase tracking-wide hover:bg-[#5C4033]/85 transition-colors">
+          <button type="button" onClick={openAdd} className="mt-4 h-8 px-4 rounded-lg bg-[#1B4332] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#1B4332]/85 transition-colors">
             <Plus className="w-3.5 h-3.5 inline mr-1" /> Upload Image
           </button>
         </div>
@@ -146,9 +146,9 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                 Gallery Images <span className="text-[#5F624F]">({initialImages.length})</span>
               </p>
             </button>
-            <button type="button" onClick={openAdd} className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0" title="Add Image">
+            <button type="button" onClick={openAdd} className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#1B4332] text-white hover:bg-[#1B4332]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0" title="Add Image">
               <Plus className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline text-[10px] font-bold uppercase tracking-wide">Upload</span>
+              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">Upload</span>
             </button>
             <button type="button" onClick={() => setIsCollapsed(!isCollapsed)} className="shrink-0" title="Toggle">
               <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", !isCollapsed && "rotate-180")} />
@@ -340,7 +340,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                   Delete
                 </Button>
                 <Button onClick={() => { setFormError(null); setImageUrl(selected.image_url); setMediaType(selected.media_type === "video" ? "video" : "image"); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
+                  className="h-14 flex-1 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
                   <Pencil className="w-4 h-4 mr-2" /> Edit
                 </Button>
               </div>
@@ -359,7 +359,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                     const form = document.getElementById('gallery-form') as HTMLFormElement | null;
                     if (form) form.requestSubmit();
                   }}
-                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
+                  className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Save</>}
                 </Button>
               </div>

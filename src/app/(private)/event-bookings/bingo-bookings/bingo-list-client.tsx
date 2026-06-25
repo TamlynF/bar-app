@@ -16,14 +16,12 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock3,
-  HelpCircle,
   Inbox,
   Loader2,
   Pencil,
   Search,
   Table as TableIcon,
   Users,
-  XCircle,
   AlertCircle,
   Trash2,
   Calendar,
@@ -66,10 +64,6 @@ interface SelectableEvent {
 export default function BingoBookingListClient({
   bookings,
   selectedDate,
-  filterStatus,
-  filterPaymentStatus,
-  filterFromDate,
-  filterMinTotal,
 }: {
   bookings: BingoBooking[];
   selectedDate?: string;
@@ -82,7 +76,6 @@ export default function BingoBookingListClient({
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set());
-  const [activePaymentStatusFilters, setActivePaymentStatusFilters] = useState<Set<string>>(new Set());
   const [selectedBooking, setSelectedBooking] = useState<BingoBooking | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [availableTables, setAvailableTables] = useState<SelectableTable[]>([]);
@@ -736,7 +729,7 @@ export default function BingoBookingListClient({
                     <Button
                       onClick={handleSaveDetails}
                       disabled={isPending}
-                      className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
+                      className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
                     >
                       {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save</>}
                     </Button>
@@ -772,7 +765,7 @@ export default function BingoBookingListClient({
                         variant="outline"
                         title="Edit Details"
                         onClick={handleEnterEditMode}
-                        className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                        className="h-14 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                       >
                         <Pencil className="w-4 h-4 mr-2" />Edit
                       </Button>

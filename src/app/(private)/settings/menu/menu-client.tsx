@@ -168,7 +168,7 @@ export default function MenuClient({
             onClick={() =>
               setSheet({ type: "edit-category", category: null })
             }
-            className="h-7 px-2.5 rounded-lg bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide"
+            className="h-7 px-2.5 rounded-lg bg-[#1B4332] text-white hover:bg-[#1B4332]/85 transition-colors flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest"
           >
             <Plus className="w-3.5 h-3.5" />
             Category
@@ -239,7 +239,7 @@ export default function MenuClient({
                         category: cat,
                       })
                     }
-                    className="shrink-0 w-6 h-6 rounded-md bg-[#5C4033] text-white flex items-center justify-center hover:bg-[#5C4033]/85 transition-colors"
+                    className="shrink-0 w-6 h-6 rounded-md bg-[#1B4332] text-white flex items-center justify-center hover:bg-[#1B4332]/85 transition-colors"
                     title="Add item"
                   >
                     <Plus className="w-3 h-3" />
@@ -440,7 +440,7 @@ export default function MenuClient({
                     else
                       setSheet({ type: "edit-item", item: sheet.item, category: sheet.category });
                   }}
-                  className="h-12 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-12 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-1.5" />
                   Edit
@@ -463,7 +463,7 @@ export default function MenuClient({
                   type="submit"
                   form="menu-form"
                   disabled={isPending}
-                  className="h-12 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-12 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1.5" />Save</>}
                 </Button>

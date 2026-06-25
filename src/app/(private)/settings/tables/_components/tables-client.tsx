@@ -113,7 +113,7 @@ export default function TablesClient({
         <Button
           onClick={openAdd}
           size="sm"
-          className="h-11 sm:h-9 px-4 rounded-xl font-black uppercase tracking-wide text-[10px] bg-[#5C4033] text-white hover:bg-[#5C4033]/90"
+          className="h-11 sm:h-9 px-4 rounded-xl font-black uppercase tracking-wide text-[10px] bg-[#1B4332] text-white hover:bg-[#1B4332]/85"
         >
           <Plus className="w-3.5 h-3.5 mr-1.5" />
           Add Table
@@ -348,7 +348,7 @@ export default function TablesClient({
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase tracking-[0.1em] text-[10px] bg-white"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase tracking-widest text-[10px] bg-white"
                 >
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -358,7 +358,7 @@ export default function TablesClient({
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setIsEditing(true); }}
-                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   <Pencil className="w-4 h-4 mr-2" />Edit
                 </Button>
@@ -385,7 +385,7 @@ export default function TablesClient({
                   type="submit"
                   form="table-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-[0.1em] text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
                 >
                   {isPending ? (
                     <Loader2 className="w-4 h-4 animate-spin" />

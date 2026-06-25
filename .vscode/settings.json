@@ -27,6 +27,6 @@
   ],
   "tailwindCSS.emmetCompletions": true,
   "[tailwindcss]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
+    "editor.defaultFormatter": "numso.prettier-standard-vscode"
   }
 }

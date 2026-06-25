@@ -664,10 +664,10 @@ export default function EventsClient({
           type="button"
           onClick={() => openAdd()}
           title="New Event"
-          className="h-11 w-11 sm:w-auto sm:px-4 rounded-xl bg-[#5C4033] text-white hover:bg-[#5C4033]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+          className="h-11 w-11 sm:w-auto sm:px-4 rounded-xl bg-[#1B4332] text-white hover:bg-[#1B4332]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
         >
           <Plus className="w-4 h-4 shrink-0" />
-          <span className="hidden sm:inline text-[11px] font-black uppercase tracking-wide">New</span>
+          <span className="hidden sm:inline text-[11px] font-black uppercase tracking-widest">New</span>
         </button>
       </div>
 
@@ -1237,7 +1237,7 @@ export default function EventsClient({
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
                   Delete
                 </Button>
-                <Button onClick={openEdit} className="h-14 flex-1 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
+                <Button onClick={openEdit} className="h-14 flex-1 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
                   <Pencil className="w-4 h-4 mr-2" />Edit
                 </Button>
               </div>
@@ -1248,7 +1248,7 @@ export default function EventsClient({
                 <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white">
                   Cancel
                 </Button>
-                <Button type="button" disabled={isPending} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
+                <Button type="button" disabled={isPending} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Save</>}
                 </Button>
               </div>
