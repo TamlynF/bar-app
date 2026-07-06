@@ -5,31 +5,21 @@ import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
     LayoutDashboard,
-    CalendarRange,
     Settings,
-    Tags,
-    UserCircle,
-    Users,
-    Shield,
     ArrowLeft,
     Sparkles,
     Award,
-    Lock,
-    BrainCircuit,
     LogOut,
     Brain,
     ChevronDown,
     ChevronUp,
     Tickets,
     Grid2X2,
-    Grid2X2X,
-    CalendarCog,
     CalendarCogIcon,
     Component,
     Dices,
     BookUser,
     Medal,
-    UserCog,
     UserCog2,
     Building2,
     UtensilsCrossed,
@@ -434,7 +424,7 @@ export default function PrivateLayoutClient({
 
                         {/* Title */}
                         <div className="flex flex-col justify-center items-center w-full">
-                            <h1 className="flex flex-wrap justify-center items-center gap-1 sm:gap-2 px-8 font-black text-[#1F1F1A] text-sm text-base text-center uppercase tracking-widest">
+                            <h1 className="flex flex-wrap justify-center items-center gap-1 sm:gap-2 px-8 font-black text-[#1F1F1A] text-sm sm:text-base text-center uppercase tracking-widest">
                                 <span className={cn(subtitle && backHref ? "hidden sm:inline" : "")}>{title}</span>
                                 {subtitle && (
                                     <>
@@ -448,7 +438,7 @@ export default function PrivateLayoutClient({
                 </header>
 
                 <main ref={mainRef} className="flex-1 w-full min-h-0 sm:overflow-y-auto">
-                    <div className="mx-auto p-1 sm:p-6 pb-20 pb-8 w-full max-w-7xl">
+                    <div className="mx-auto p-1 sm:p-6 pb-20 sm:pb-8 w-full max-w-7xl">
                         {children}
                     </div>
                 </main>

@@ -379,7 +379,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const badgeHasErrors = Object.keys(badgeErrors).length > 0;
 
   return (
-    <div className="space-y-3 space-y-4 sm:p-4 md:p-6 px-2 py-3 max-w-3xl">
+    <div className="space-y-3 sm:space-y-4 sm:p-4 md:p-6 px-2 py-3 max-w-3xl">
       {/* Header */}
       <div className="flex justify-between items-center gap-3">
         <p className="font-medium text-[#5F624F] text-[13px]">Manage your event categories and sub-categories.</p>
@@ -522,7 +522,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             title={typeForm?.id ? `Edit ${typeForm.name ? toTitleCase(typeForm.name) : "Category"}` : "New Category"}
             onClose={() => { setTypeForm(null); setError(null); }}
           />
-          <div className="flex-1 space-y-3.5 px-4 px-5 py-4 sm:py-5 min-h-0 overflow-y-auto touch-pan-y">
+          <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-4 sm:py-5 min-h-0 overflow-y-auto touch-pan-y">
             {typeForm && (
               <>
                 <CollapsibleCard title="Identity">
@@ -584,7 +584,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             title={subtypeForm?.id ? `Edit ${subtypeForm.name ? toTitleCase(subtypeForm.name) : "Sub-Category"}` : "New Sub-Category"}
             onClose={() => { setSubtypeForm(null); setError(null); }}
           />
-          <div className="flex-1 space-y-3.5 px-4 px-5 py-4 sm:py-5 min-h-0 overflow-y-auto touch-pan-y">
+          <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-4 sm:py-5 min-h-0 overflow-y-auto touch-pan-y">
             {subtypeForm && (() => {
               const parent = types.find((t) => t.id === subtypeForm.event_types_id);
               const ownsBookingPage = parent?.booking_grouping === "per_subtype";
@@ -689,7 +689,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             title={badgeForm?.id ? "Edit Badge" : "New Badge"}
             onClose={() => { setBadgeForm(null); setError(null); }}
           />
-          <div className="flex-1 space-y-3.5 px-4 px-5 py-4 sm:py-5 min-h-0 overflow-y-auto touch-pan-y">
+          <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-4 sm:py-5 min-h-0 overflow-y-auto touch-pan-y">
             {badgeForm && (
               <>
                 {/* Live preview */}
