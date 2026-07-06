@@ -22,6 +22,9 @@ import {
   AlertCircle,
   AlertTriangle,
   CalendarDays,
+  Video,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -56,6 +59,7 @@ export interface BandRequest {
   video_urls: string[] | null;
   preferred_dates: string[] | null;
   notes: string | null;
+  band_notes: string | null;
   status: string;
   admin_notes: string | null;
   created_at: string;
@@ -132,11 +136,16 @@ export const statusTheme: Record<
   },
 };
 
-const SOCIAL_ICONS: Record<string, React.ElementType> = {
-  instagram: Instagram,
-  facebook: Facebook,
-  youtube: Youtube,
-  tiktok: Music2,
+/** Per-platform brand colours (icon + button) for the social links. */
+const SOCIAL_META: Record<string, { icon: React.ElementType; className: string; label: string }> = {
+  instagram: {
+    icon: Instagram,
+    className: "bg-linear-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] text-white border-transparent",
+    label: "Instagram",
+  },
+  facebook: { icon: Facebook, className: "bg-[#1877F2] text-white border-transparent", label: "Facebook" },
+  youtube: { icon: Youtube, className: "bg-[#FF0000] text-white border-transparent", label: "YouTube" },
+  tiktok: { icon: Music2, className: "bg-black text-white border-transparent", label: "TikTok" },
 };
 
 const normStatus = (s?: string) => (s || "").trim().toLowerCase();
@@ -162,6 +171,7 @@ function EditRow({
   placeholder,
   options,
   readOnlyValue,
+  trailing,
 }: {
   label: string;
   value: string;
@@ -171,12 +181,13 @@ function EditRow({
   placeholder?: string;
   options?: { value: string; label: string }[];
   readOnlyValue?: React.ReactNode;
+  trailing?: React.ReactNode;
 }) {
   return (
-    <div className="flex justify-between items-center gap-4 px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
+    <div className="flex justify-between items-center gap-3 px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
       <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">{label}</span>
       {!editable ? (
-        <span className="font-bold text-[#1F1F1A] text-sm text-right">{readOnlyValue ?? (value || "—")}</span>
+        <span className="flex-1 min-w-0 font-bold text-[#1F1F1A] text-sm text-right truncate">{readOnlyValue ?? (value || "—")}</span>
       ) : options ? (
         <select
           aria-label={label}
@@ -198,6 +209,7 @@ function EditRow({
           className="flex-1 min-w-0 bg-transparent outline-none font-bold text-[#1F1F1A] text-sm text-right placeholder:text-[#5F624F]/40"
         />
       )}
+      {trailing}
     </div>
   );
 }
@@ -235,6 +247,23 @@ function toTitleCase(str?: string | null) {
   return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
 
+/** Payment status is derived from amount vs paid — never set by hand. */
+function derivePaymentStatus(amount: number, paid: number): string {
+  if (!(amount > 0)) return "no_payment";
+  if (paid > amount) return "over_paid";
+  if (paid >= amount) return "paid";
+  if (paid > 0) return "partially_paid";
+  return "unpaid";
+}
+
+const PAYMENT_STATUS_META: Record<string, { label: string; className: string }> = {
+  no_payment: { label: "No payment", className: "bg-gray-100 border-gray-200 text-gray-600" },
+  unpaid: { label: "Unpaid", className: "bg-amber-50 border-amber-200 text-amber-700" },
+  partially_paid: { label: "Partially paid", className: "bg-blue-50 border-blue-200 text-blue-700" },
+  paid: { label: "Paid", className: "bg-green-50 border-green-200 text-green-700" },
+  over_paid: { label: "Over paid", className: "bg-purple-50 border-purple-200 text-purple-700" },
+};
+
 /** Full date + time, e.g. "8 May 2026, 14:32" — used in the audit trail. */
 function formatDateTime(iso?: string | null): string {
   if (!iso) return "—";
@@ -267,9 +296,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [bookerName, setBookerName] = useState(request.booker_name ?? "");
   const [email, setEmail] = useState(request.email ?? "");
   const [phone, setPhone] = useState(request.phone_no ?? "");
+  const [bandNotes, setBandNotes] = useState(request.band_notes ?? "");
   const [paymentAmount, setPaymentAmount] = useState(request.payment_amount != null ? String(request.payment_amount) : "");
   const [paidAmount, setPaidAmount] = useState(request.paid_amount != null ? String(request.paid_amount) : "");
-  const [paymentStatus, setPaymentStatus] = useState(request.payment_status ?? "unpaid");
   const [bankAccountName, setBankAccountName] = useState(request.bank_account_name ?? "");
   const [bankAccountNo, setBankAccountNo] = useState(request.bank_account_no ?? "");
   const [bankSortCode, setBankSortCode] = useState(request.bank_sort_code ?? "");
@@ -286,7 +315,13 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const dates = (request.preferred_dates ?? []).filter(Boolean);
 
   const needsPayment =
-    (request.payment_amount ?? 0) > 0 && request.payment_status === "unpaid";
+    (request.payment_amount ?? 0) > 0 && (request.paid_amount ?? 0) < (request.payment_amount ?? 0);
+
+  // Payment status is derived live from the amount + paid inputs, never edited.
+  const amountNum = paymentAmount === "" ? 0 : Number(paymentAmount) || 0;
+  const paidNum = paidAmount === "" ? 0 : Number(paidAmount) || 0;
+  const derivedStatus = derivePaymentStatus(amountNum, paidNum);
+  const isNoPayment = derivedStatus === "no_payment";
 
   // Original (normalised) values, to detect whether date/time actually changed.
   const origDate = request.selected_date || "";
@@ -303,9 +338,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     bookerName !== (request.booker_name ?? "") ||
     email !== (request.email ?? "") ||
     phone !== (request.phone_no ?? "") ||
+    bandNotes !== (request.band_notes ?? "") ||
     paymentAmount !== (request.payment_amount != null ? String(request.payment_amount) : "") ||
     paidAmount !== (request.paid_amount != null ? String(request.paid_amount) : "") ||
-    paymentStatus !== (request.payment_status ?? "unpaid") ||
     bankAccountName !== (request.bank_account_name ?? "") ||
     bankAccountNo !== (request.bank_account_no ?? "") ||
     bankSortCode !== (request.bank_sort_code ?? "") ||
@@ -322,9 +357,10 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     booker_name: bookerName,
     email,
     phone_no: phone || null,
+    band_notes: bandNotes || null,
     payment_amount: paymentAmount === "" ? null : Number(paymentAmount),
     paid_amount: paidAmount === "" ? null : Number(paidAmount),
-    payment_status: paymentStatus,
+    payment_status: derivedStatus,
     bank_account_name: bankAccountName || null,
     bank_account_no: bankAccountNo || null,
     bank_sort_code: bankSortCode || null,
@@ -373,9 +409,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     setBookerName(request.booker_name ?? "");
     setEmail(request.email ?? "");
     setPhone(request.phone_no ?? "");
+    setBandNotes(request.band_notes ?? "");
     setPaymentAmount(request.payment_amount != null ? String(request.payment_amount) : "");
     setPaidAmount(request.paid_amount != null ? String(request.paid_amount) : "");
-    setPaymentStatus(request.payment_status ?? "unpaid");
     setBankAccountName(request.bank_account_name ?? "");
     setBankAccountNo(request.bank_account_no ?? "");
     setBankSortCode(request.bank_sort_code ?? "");
@@ -575,6 +611,41 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               </span>
             )}
           </div>
+
+          {/* Schedule (confirmed → selected slot; otherwise → preferred dates) + media count */}
+          {(status === "confirmed" ? !!request.selected_date : dates.length > 0) || videos.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-1 font-semibold text-[#5F624F] text-[11px]">
+              {status === "confirmed" ? (
+                request.selected_date && (
+                  <span className="inline-flex items-center gap-1">
+                    <CalendarDays className="w-3 h-3 shrink-0" />
+                    {format(new Date(request.selected_date + "T00:00:00"), "EEE, d MMM")}
+                    {(request.selected_start_time || request.selected_end_time) && (
+                      <span className="text-[#5F624F]/80">
+                        · {[toHHMM(request.selected_start_time), toHHMM(request.selected_end_time)].filter(Boolean).join("–")}
+                      </span>
+                    )}
+                  </span>
+                )
+              ) : (
+                dates.length > 0 && (
+                  <span className="inline-flex items-center gap-1 min-w-0">
+                    <CalendarDays className="w-3 h-3 shrink-0" />
+                    <span className="truncate">
+                      {dates.slice(0, 2).map((d) => format(new Date(d + "T00:00:00"), "d MMM")).join(", ")}
+                      {dates.length > 2 ? ` +${dates.length - 2}` : ""}
+                    </span>
+                  </span>
+                )
+              )}
+              {videos.length > 0 && (
+                <span className="inline-flex items-center gap-1" title={`${videos.length} video${videos.length === 1 ? "" : "s"} attached`}>
+                  <Video className="w-3 h-3 shrink-0" />
+                  {videos.length}
+                </span>
+              )}
+            </div>
+          ) : null}
         </div>
 
         <ChevronRight className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
@@ -709,11 +780,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   )}
                 </div>
 
-                {/* Time — label + start/end on one row (24h, matching the event view) */}
+                {/* Selected time — label + start/end on one row (24h, matching the event view) */}
                 <div className="px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
                   <div className="flex justify-between items-center gap-4">
                     <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">
-                      Time
+                      Selected Time
                     </span>
                     {editable ? (
                       <div className="flex items-center gap-1.5">
@@ -742,6 +813,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                       </span>
                     )}
                   </div>
+                  {status === "pending" && (!selectedStartTime || !selectedEndTime) && (
+                    <FieldMessage warning="Set a start and end time before you can confirm." />
+                  )}
                   {clashes.length > 0 && (
                     <div className="mt-2">
                       <ClashList clashes={clashes} />
@@ -749,11 +823,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   )}
                 </div>
 
-                {/* Notes from applicant */}
-                {request.notes && (
+                {/* Notes from the booking (applicant) — read-only; hidden when blank */}
+                {request.notes && request.notes.trim() && (
                   <div className="px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
                     <span className="block mb-1.5 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
-                      Notes from Applicant
+                      Notes from Booking
                     </span>
                     <p className="text-[#1F1F1A] text-sm italic leading-relaxed">
                       &quot;{request.notes}&quot;
@@ -765,8 +839,46 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {/* Contact info */}
               <Section title="Contact Information">
                 <EditRow label="Name" value={bookerName} onChange={setBookerName} editable={editable} placeholder="Contact name" />
-                <EditRow label="Email" value={email} onChange={setEmail} editable={editable} type="email" placeholder="email@example.com" />
-                <EditRow label="Phone" value={phone} onChange={setPhone} editable={editable} type="tel" placeholder="Phone number" />
+                <EditRow
+                  label="Email"
+                  value={email}
+                  onChange={setEmail}
+                  editable={editable}
+                  type="email"
+                  placeholder="email@example.com"
+                  trailing={
+                    email.trim() ? (
+                      <a
+                        href={`mailto:${email.trim()}`}
+                        title={`Email ${email.trim()}`}
+                        aria-label={`Email ${email.trim()}`}
+                        className="flex justify-center items-center bg-[#F7F4EA] hover:bg-[#5C4033] border border-[#E6DFC8] rounded-lg w-8 h-8 text-[#5C4033] hover:text-white transition-colors shrink-0"
+                      >
+                        <Mail className="w-3.5 h-3.5" />
+                      </a>
+                    ) : undefined
+                  }
+                />
+                <EditRow
+                  label="Phone"
+                  value={phone}
+                  onChange={setPhone}
+                  editable={editable}
+                  type="tel"
+                  placeholder="Phone number"
+                  trailing={
+                    phone.trim() ? (
+                      <a
+                        href={`tel:${phone.replace(/\s+/g, "")}`}
+                        title={`Call ${phone.trim()}`}
+                        aria-label={`Call ${phone.trim()}`}
+                        className="flex justify-center items-center bg-[#F7F4EA] hover:bg-[#5C4033] border border-[#E6DFC8] rounded-lg w-8 h-8 text-[#5C4033] hover:text-white transition-colors shrink-0"
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                      </a>
+                    ) : undefined
+                  }
+                />
               </Section>
 
               {/* Payment Details section */}
@@ -796,53 +908,45 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                       </span>
                     )}
                   </div>
-                  {/* Paid */}
+                  {/* Paid — hidden when there is no payment */}
+                  {!isNoPayment && (
+                    <div className="flex justify-between items-center gap-4 px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
+                      <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">Paid</span>
+                      {editable ? (
+                        <div className="flex flex-1 justify-end items-center gap-1">
+                          <span className="font-bold text-[#5F624F] text-sm">£</span>
+                          <input
+                            aria-label="Paid"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            placeholder="0.00"
+                            value={paidAmount}
+                            onChange={(e) => setPaidAmount(e.target.value)}
+                            className="bg-transparent outline-none w-24 font-bold text-[#1F1F1A] text-sm text-right placeholder:text-[#5F624F]/40"
+                          />
+                        </div>
+                      ) : (
+                        <span className="font-bold text-[#1F1F1A] text-sm text-right">£{(request.paid_amount ?? 0).toFixed(2)}</span>
+                      )}
+                    </div>
+                  )}
+                  {/* Status — derived from amount vs paid, never edited */}
                   <div className="flex justify-between items-center gap-4 px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-                    <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">Paid</span>
-                    {editable ? (
-                      <div className="flex flex-1 justify-end items-center gap-1">
-                        <span className="font-bold text-[#5F624F] text-sm">£</span>
-                        <input
-                          aria-label="Paid"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          placeholder="0.00"
-                          value={paidAmount}
-                          onChange={(e) => setPaidAmount(e.target.value)}
-                          className="bg-transparent outline-none w-24 font-bold text-[#1F1F1A] text-sm text-right placeholder:text-[#5F624F]/40"
-                        />
-                      </div>
-                    ) : (
-                      <span className="font-bold text-[#1F1F1A] text-sm text-right">£{(request.paid_amount ?? 0).toFixed(2)}</span>
-                    )}
+                    <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">Status</span>
+                    <span className={cn("px-2 py-1 border rounded-lg font-black text-[10px] uppercase tracking-tight", PAYMENT_STATUS_META[derivedStatus].className)}>
+                      {PAYMENT_STATUS_META[derivedStatus].label}
+                    </span>
                   </div>
-                  <EditRow
-                    label="Status"
-                    value={paymentStatus}
-                    onChange={setPaymentStatus}
-                    editable={editable}
-                    options={[
-                      { value: "unpaid", label: "Unpaid" },
-                      { value: "paid", label: "Paid" },
-                    ]}
-                    readOnlyValue={
-                      <span
-                        className={cn(
-                          "px-2 py-1 border rounded-lg font-black text-[10px] uppercase tracking-tight",
-                          request.payment_status === "paid"
-                            ? "bg-green-50 border-green-200 text-green-700"
-                            : "bg-amber-50 border-amber-200 text-amber-700"
-                        )}
-                      >
-                        {request.payment_status || "unpaid"}
-                      </span>
-                    }
-                  />
-                  <EditRow label="Account Name" value={bankAccountName} onChange={setBankAccountName} editable={editable} placeholder="—" />
-                  <EditRow label="Account No." value={bankAccountNo} onChange={setBankAccountNo} editable={editable} placeholder="—" />
-                  <EditRow label="Sort Code" value={bankSortCode} onChange={setBankSortCode} editable={editable} placeholder="—" />
-                  <EditRow label="Payment Ref" value={bankPaymentRef} onChange={setBankPaymentRef} editable={editable} placeholder="—" />
+                  {/* Bank details — hidden when there is no payment */}
+                  {!isNoPayment && (
+                    <>
+                      <EditRow label="Account Name" value={bankAccountName} onChange={setBankAccountName} editable={editable} placeholder="—" />
+                      <EditRow label="Account No." value={bankAccountNo} onChange={setBankAccountNo} editable={editable} placeholder="—" />
+                      <EditRow label="Sort Code" value={bankSortCode} onChange={setBankSortCode} editable={editable} placeholder="—" />
+                      <EditRow label="Payment Ref" value={bankPaymentRef} onChange={setBankPaymentRef} editable={editable} placeholder="—" />
+                    </>
+                  )}
                 </Section>
               )}
 
@@ -867,17 +971,21 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <Section title="Social Media">
                   <div className="flex flex-wrap gap-2 px-4 sm:px-5 py-3">
                     {socials.map(([key, url]) => {
-                      const Icon = SOCIAL_ICONS[key] ?? Link2;
+                      const meta = SOCIAL_META[key];
+                      const Icon = meta?.icon ?? Link2;
                       return (
                         <a
                           key={key}
                           href={url as string}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-1.5 bg-white hover:bg-[#F7F4EA] px-3 py-2 border border-[#E6DFC8] rounded-xl font-bold text-[#5C4033] text-xs transition-colors"
+                          className={cn(
+                            "flex items-center gap-1.5 px-3 py-2 border rounded-xl font-bold text-xs hover:opacity-90 transition-opacity",
+                            meta?.className ?? "bg-white border-[#E6DFC8] text-[#5C4033]"
+                          )}
                         >
                           <Icon className="w-3.5 h-3.5" />
-                          {key.charAt(0).toUpperCase() + key.slice(1)}
+                          {meta?.label ?? key.charAt(0).toUpperCase() + key.slice(1)}
                         </a>
                       );
                     })}
@@ -895,6 +1003,26 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   </div>
                 </Section>
               )}
+
+              {/* Band Notes — admin factbox for notes about the band */}
+              <Section title="Band Notes" className="lg:col-span-2">
+                {editable ? (
+                  <div className="px-4 sm:px-5 py-3">
+                    <textarea
+                      aria-label="Band notes"
+                      value={bandNotes}
+                      onChange={(e) => setBandNotes(e.target.value)}
+                      rows={3}
+                      placeholder="Add notes about the band..."
+                      className="bg-[#F7F4EA] px-4 py-3 border border-[#E6DFC8] focus:border-[#5C4033]/30 rounded-2xl focus:outline-none w-full text-[#1F1F1A] placeholder:text-[#5F624F]/50 text-sm transition-all resize-none"
+                    />
+                  </div>
+                ) : (
+                  <p className="px-4 sm:px-5 py-3 text-[#1F1F1A] text-sm italic leading-relaxed">
+                    {bandNotes ? `“${bandNotes}”` : "—"}
+                  </p>
+                )}
+              </Section>
 
               {/* System information — audit trail; collapsed by default */}
               <Section title="System Information" defaultOpen={false} className="lg:col-span-2">
@@ -948,7 +1076,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   <button
                     type="button"
                     onClick={() => handleAction("confirmed")}
-                    disabled={isPending || !selectedDate}
+                    disabled={isPending || !selectedDate || !selectedStartTime || !selectedEndTime}
                     className="flex justify-center items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-2xl h-14 font-black text-white text-[10px] uppercase tracking-widest transition-all active:scale-95"
                   >
                     {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
