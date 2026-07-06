@@ -30,6 +30,7 @@ export async function saveTypeAction(formData: FormData) {
 
   const id = formData.get("id")?.toString();
   const name = formData.get("name")?.toString()?.trim().toLowerCase();
+  const title = formData.get("title")?.toString()?.trim() || null;
   const description = formData.get("description")?.toString() || null;
   const color = formData.get("color")?.toString() || null;
   const groupingRaw = formData.get("booking_grouping")?.toString();
@@ -40,6 +41,8 @@ export async function saveTypeAction(formData: FormData) {
   const booking_config = JSON.parse(formData.get("booking_config")?.toString() || "{}");
 
   if (!name) return { error: "Category name is required." };
+  // per_type categories supply the booking-navigation label, so title is mandatory there.
+  if (booking_grouping === "per_type" && !title) return { error: "Title is required for a per-category booking page." };
 
   const empId = await currentEmployeeId();
 
@@ -47,13 +50,13 @@ export async function saveTypeAction(formData: FormData) {
     if (id) {
       const { error } = await supabase
         .from("event_types")
-        .update({ name, description, color, booking_grouping, is_bookable, booking_config, ...cardFields, modified_by: empId, modified_at: new Date().toISOString() })
+        .update({ name, title, description, color, booking_grouping, is_bookable, booking_config, ...cardFields, modified_by: empId, modified_at: new Date().toISOString() })
         .eq("id", id);
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from("event_types")
-        .insert({ name, description, color, booking_grouping, is_bookable, booking_config, ...cardFields, created_by: empId, modified_by: empId });
+        .insert({ name, title, description, color, booking_grouping, is_bookable, booking_config, ...cardFields, created_by: empId, modified_by: empId });
       if (error) throw error;
     }
     revalidatePath("/event-setups/event-types");
@@ -104,6 +107,7 @@ export async function saveSubtypeAction(formData: FormData) {
   const id = formData.get("id")?.toString();
   const event_types_id = parseInt(formData.get("event_types_id")?.toString() || "0", 10);
   const name = formData.get("name")?.toString()?.trim().toLowerCase();
+  const title = formData.get("title")?.toString()?.trim() || null;
   const default_event_title = formData.get("default_event_title")?.toString() || null;
   const tagline = formData.get("tagline")?.toString() || null;
   const color = formData.get("color")?.toString() || null;
@@ -121,12 +125,18 @@ export async function saveSubtypeAction(formData: FormData) {
   if (!isEventBehavior(behavior)) {
     return { error: "A valid behaviour is required." };
   }
+  // per_subtype sub-types supply the booking-navigation label, so title is mandatory there.
+  const { data: parentType } = await supabase.from("event_types").select("booking_grouping").eq("id", event_types_id).maybeSingle();
+  if (parentType?.booking_grouping === "per_subtype" && !title) {
+    return { error: "Title is required for a per-sub-category booking page." };
+  }
 
   const empId = await currentEmployeeId();
 
   const payload = {
     event_types_id,
     name,
+    title,
     default_event_title,
     tagline,
     color,

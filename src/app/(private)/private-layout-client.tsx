@@ -14,11 +14,9 @@ import {
     ArrowLeft,
     Sparkles,
     Award,
-    Music,
     Lock,
     BrainCircuit,
     LogOut,
-    PartyPopper,
     Brain,
     ChevronDown,
     ChevronUp,
@@ -51,9 +49,11 @@ type BookingNavItem = { label: string; href: string; icon?: string | null; color
 type SubItem = {
     label: string;
     href: string;
-    icon: React.ComponentType<{ className?: string }>;
+    icon?: React.ComponentType<{ className?: string }>;
     /** When set, render a coloured icon chip (icon in this hue, lighter background). */
     colorHex?: string | null;
+    /** When true, render as a non-clickable sub-heading rather than a link. */
+    heading?: boolean;
 };
 type NavGroup = {
     label: string
@@ -66,12 +66,14 @@ export default function PrivateLayoutClient({
     children,
     employeeName,
     employeeRole,
-    bookingNav = [],
+    guestNav = [],
+    requestNav = [],
 }: {
     children: React.ReactNode
     employeeName: string
     employeeRole: string
-    bookingNav?: BookingNavItem[]
+    guestNav?: BookingNavItem[]
+    requestNav?: BookingNavItem[]
 }) {
     const pathname = usePathname()
     const router = useRouter()
@@ -91,18 +93,18 @@ export default function PrivateLayoutClient({
         })
     }
 
-    // Bespoke booking surfaces stay hardcoded; everything else is data-driven from
-    // each category's booking_card config, presented alphabetically with its own
-    // icon + colour (sorted upstream in the layout).
+    // Booking links are data-driven from each category's booking_card config, split
+    // into two sub-headed groups (guest bookings vs requests & enquiries) and sorted
+    // alphabetically upstream in the layout. A heading only shows when its group has items.
+    const toSub = (nav: BookingNavItem): SubItem => ({
+        label: nav.label,
+        href: nav.href,
+        icon: cardIcon(nav.icon),
+        colorHex: swatchHexFromColor(nav.color ?? undefined) ?? null,
+    })
     const bookingsSubItems: SubItem[] = [
-        { label: "Music Bookings", href: "/event-bookings/music-bookings", icon: Music },
-        { label: "Private Events", href: "/event-bookings/private-bookings", icon: PartyPopper },
-        ...bookingNav.map(nav => ({
-            label: nav.label,
-            href: nav.href,
-            icon: cardIcon(nav.icon),
-            colorHex: swatchHexFromColor(nav.color ?? undefined) ?? null,
-        })),
+        ...(requestNav.length ? [{ heading: true as const, label: "Requests & Enquiries", href: "heading-requests" }, ...requestNav.map(toSub)] : []),
+        ...(guestNav.length ? [{ heading: true as const, label: "Guest Bookings", href: "heading-guest" }, ...guestNav.map(toSub)] : []),
     ]
 
     // Quiz content: archive + leaderboards (+ generator, which is reached from an event).
@@ -284,22 +286,22 @@ export default function PrivateLayoutClient({
     }, [pathname])
 
     return (
-        <div className="flex min-h-screen sm:h-screen sm:overflow-hidden bg-[#F7F4EA] pt-safe-top">
+        <div className="pt-safe-top flex bg-[#F7F4EA] h-screen min-h-screen sm:overflow-hidden">
             {/* 1. Sidebar for Tablets/Desktops */}
-            <aside className="hidden sm:flex flex-col w-64 bg-white border-r border-[#E6DFC8] sticky top-0 h-screen shrink-0 z-50">
+            <aside className="hidden top-0 z-50 sticky sm:flex flex-col bg-white border-[#E6DFC8] border-r w-64 h-screen shrink-0">
                 {/* Sidebar Brand */}
-                <div className="p-6 border-b border-[#E6DFC8] flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#5C4033] flex items-center justify-center shrink-0 shadow-sm">
-                        <span className="text-white font-black text-sm">{initials}</span>
+                <div className="flex items-center gap-3 p-6 border-[#E6DFC8] border-b">
+                    <div className="flex justify-center items-center bg-[#5C4033] shadow-sm rounded-xl w-10 h-10 shrink-0">
+                        <span className="font-black text-white text-sm">{initials}</span>
                     </div>
                     <div className="flex flex-col min-w-0">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#1F1F1A] truncate">{displayName}</span>
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F]">{employeeRole}</span>
+                        <span className="font-black text-[#1F1F1A] text-[10px] truncate uppercase tracking-[0.2em]">{displayName}</span>
+                        <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-[0.2em]">{employeeRole}</span>
                     </div>
                 </div>
 
                 {/* Sidebar Navigation */}
-                <nav className="flex-1 p-4 space-y-1 overflow-y-auto no-scrollbar">
+                <nav className="flex-1 space-y-1 p-4 overflow-y-auto no-scrollbar">
                     {navGroups.map((group) => {
                         const isActive = isGroupActive(group)
                         const hasSubItems = !!group.subItems
@@ -320,18 +322,18 @@ export default function PrivateLayoutClient({
                                         <Link
                                             href={group.href!}
                                             className={cn(
-                                                "flex items-center gap-3 px-4 py-3 flex-1 min-w-0 font-bold text-xs uppercase tracking-wider",
+                                                "flex flex-1 items-center gap-3 px-4 py-3 min-w-0 font-bold text-xs uppercase tracking-wider",
                                                 isActive ? "text-white" : "text-[#5F624F]"
                                             )}
                                         >
                                             <group.icon className={cn("w-5 h-5 shrink-0", isActive ? "text-white" : "text-[#5F624F]")} />
-                                            <span className="truncate text-left">{group.label}</span>
+                                            <span className="text-left truncate">{group.label}</span>
                                         </Link>
                                         <button
                                             type="button"
                                             onClick={() => toggleGroup(group.label)}
                                             aria-label={isOpen ? `Collapse ${group.label}` : `Expand ${group.label}`}
-                                            className="px-3 py-3 shrink-0 rounded-r-xl hover:bg-black/5 transition-colors"
+                                            className="hover:bg-black/5 px-3 py-3 rounded-r-xl transition-colors shrink-0"
                                         >
                                             {isOpen ? <ChevronUp className="w-3.5 h-3.5 transition-transform duration-200" /> : <ChevronDown className="w-3.5 h-3.5 transition-transform duration-200" />}
                                         </button>
@@ -340,7 +342,7 @@ export default function PrivateLayoutClient({
                                     <Link
                                         href={group.href!}
                                         className={cn(
-                                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 font-bold text-xs uppercase tracking-wider",
+                                            "flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300",
                                             isActive
                                                 ? "bg-[#5C4033] text-white shadow-lg shadow-[#5C4033]/10"
                                                 : "text-[#5F624F] hover:bg-[#5C4033]/5"
@@ -353,15 +355,23 @@ export default function PrivateLayoutClient({
 
                                 {/* Collapsible sub-items */}
                                 {hasSubItems && isOpen && (
-                                    <div className="mt-1 space-y-1 ml-4 border-l border-[#E6DFC8] pl-2 pb-2">
+                                    <div className="space-y-1 mt-1 ml-4 pb-2 pl-2 border-[#E6DFC8] border-l">
                                         {group.subItems!.map((sub) => {
+                                            if (sub.heading) {
+                                                return (
+                                                    <p key={sub.href} className="px-3 pt-3 first:pt-1 pb-0.5 font-black text-[#5F624F]/50 text-[9px] uppercase tracking-widest">
+                                                        {sub.label}
+                                                    </p>
+                                                )
+                                            }
                                             const isSubActive = normalizedPathname === sub.href.replace(/\/$/, "")
+                                            const Icon = sub.icon
                                             return (
                                                 <Link
                                                     key={sub.href}
                                                     href={sub.href}
                                                     className={cn(
-                                                        "flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 font-bold text-[11px] uppercase tracking-wider",
+                                                        "flex items-center gap-2.5 px-3 py-2 rounded-lg font-bold text-[11px] uppercase tracking-wider transition-all duration-200",
                                                         isSubActive
                                                             ? "text-[#5C4033] bg-[#5C4033]/15"
                                                             : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
@@ -370,12 +380,12 @@ export default function PrivateLayoutClient({
                                                     {sub.colorHex ? (
                                                         <span
                                                             style={{ "--cc": sub.colorHex } as React.CSSProperties}
-                                                            className="shrink-0 w-5 h-5 rounded-md flex items-center justify-center bg-(--cc)/15"
+                                                            className="flex items-center justify-center w-5 h-5 bg-(--cc)/15 rounded-md shrink-0"
                                                         >
-                                                            <sub.icon className="w-3 h-3 text-(--cc)" />
+                                                            {Icon && <Icon className="w-3 h-3 text-(--cc)" />}
                                                         </span>
                                                     ) : (
-                                                        <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                        Icon && <Icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
                                                     )}
                                                     {sub.label}
                                                 </Link>
@@ -389,17 +399,17 @@ export default function PrivateLayoutClient({
                 </nav>
 
                 {/* Sidebar Footer */}
-                <div className="p-4 border-t border-[#E6DFC8] space-y-2">
+                <div className="space-y-2 p-4 border-[#E6DFC8] border-t">
                     <button
                         type="button"
                         onClick={handleSignOut}
                         disabled={isPending}
-                        className="flex items-center gap-3 w-full px-4 py-2.5 rounded-xl text-[#5F624F] hover:bg-red-50 hover:text-red-600 transition-all duration-200 font-bold text-xs uppercase tracking-wider disabled:opacity-50"
+                        className="flex items-center gap-3 hover:bg-red-50 disabled:opacity-50 px-4 py-2.5 rounded-xl w-full font-bold text-[#5F624F] hover:text-red-600 text-xs uppercase tracking-wider transition-all duration-200"
                     >
                         <LogOut className="w-4 h-4" />
                         {isPending ? "Signing out…" : "Sign Out"}
                     </button>
-                    <p className="text-[9px] text-[#5F624F]/70 font-bold uppercase tracking-widest px-4">
+                    <p className="px-4 font-bold text-[#5F624F]/70 text-[9px] uppercase tracking-widest">
                         v0.1.0 Alpha
                     </p>
                 </div>
@@ -407,8 +417,8 @@ export default function PrivateLayoutClient({
 
             {/* 2. Main Content Wrapper */}
             <div className="flex flex-col flex-1 min-w-0 sm:h-screen">
-                <header className="sticky top-0 z-40 shrink-0 w-full bg-white backdrop-blur-md border-b border-[#E6DFC8] px-4 py-3 sm:px-8">
-                    <div className="flex items-center max-w-7xl mx-auto min-h-10 relative">
+                <header className="top-0 z-40 sticky bg-white backdrop-blur-md px-4 sm:px-8 py-3 border-[#E6DFC8] border-b w-full shrink-0">
+                    <div className="relative flex items-center mx-auto max-w-7xl min-h-10">
 
                         {/* Mobile Back Button */}
                         {backHref && (
@@ -416,15 +426,15 @@ export default function PrivateLayoutClient({
                                 title="Go back"
                                 type="button"
                                 onClick={() => router.push(backHref)}
-                                className="absolute left-0 p-2 hover:bg-slate-100 rounded-full transition-colors active:scale-95"
+                                className="left-0 absolute hover:bg-slate-100 p-2 rounded-full active:scale-95 transition-colors"
                             >
                                 <ArrowLeft className="w-5 h-5 text-[#1F1F1A]" />
                             </button>
                         )}
 
                         {/* Title */}
-                        <div className="flex flex-col items-center justify-center w-full">
-                            <h1 className="text-sm sm:text-base font-black uppercase tracking-widest text-[#1F1F1A] text-center px-8 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+                        <div className="flex flex-col justify-center items-center w-full">
+                            <h1 className="flex flex-wrap justify-center items-center gap-1 sm:gap-2 px-8 font-black text-[#1F1F1A] text-sm text-base text-center uppercase tracking-widest">
                                 <span className={cn(subtitle && backHref ? "hidden sm:inline" : "")}>{title}</span>
                                 {subtitle && (
                                     <>
@@ -437,15 +447,15 @@ export default function PrivateLayoutClient({
                     </div>
                 </header>
 
-                <main ref={mainRef} className="flex-1 w-full sm:overflow-y-auto sm:min-h-0">
-                    <div className="w-full max-w-7xl mx-auto p-1 sm:p-6 pb-20 sm:pb-8">
+                <main ref={mainRef} className="flex-1 w-full min-h-0 sm:overflow-y-auto">
+                    <div className="mx-auto p-1 sm:p-6 pb-20 pb-8 w-full max-w-7xl">
                         {children}
                     </div>
                 </main>
 
                 {/* 3. Persistent Mobile Bottom Navigation */}
-                <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-[#E6DFC8] py-2 sm:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                    <div className="flex justify-around items-center w-full max-w-md mx-auto px-6">
+                <nav className="sm:hidden right-0 bottom-0 left-0 z-50 fixed bg-white shadow-[0_-4px_20px_rgba(0,0,0,0.05)] py-2 border-[#E6DFC8] border-t">
+                    <div className="flex justify-around items-center mx-auto px-6 w-full max-w-md">
                         {bottomTabs.map((item) => {
                             const isActive = activeGroup === item.group
 
@@ -454,24 +464,24 @@ export default function PrivateLayoutClient({
                                     key={item.href}
                                     href={item.href}
                                     className={cn(
-                                        "flex flex-col items-center gap-1 transition-all duration-300 outline-none relative py-1 flex-1",
+                                        "relative flex flex-col flex-1 items-center gap-1 py-1 outline-none transition-all duration-300",
                                         isActive ? "opacity-100" : "opacity-60"
                                     )}
                                 >
                                     <div className={cn(
-                                        "px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center",
+                                        "flex justify-center items-center px-4 py-1 rounded-full transition-all duration-300",
                                         isActive ? "bg-[#5C4033]/15 text-[#5C4033]" : "text-[#5F624F]"
                                     )}>
-                                        <item.icon className="w-5 h-5 mx-auto" />
+                                        <item.icon className="mx-auto w-5 h-5" />
                                     </div>
                                     <span className={cn(
-                                        "text-[9px] font-bold uppercase tracking-tight text-center block w-full transition-colors",
+                                        "block w-full font-bold text-[9px] text-center uppercase tracking-tight transition-colors",
                                         isActive ? "text-[#5C4033]" : "text-[#5F624F]"
                                     )}>
                                         {item.label}
                                     </span>
                                     {isActive && (
-                                        <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#5C4033] animate-in fade-in zoom-in duration-300" />
+                                        <div className="-bottom-0.5 left-1/2 absolute bg-[#5C4033] rounded-full w-1 h-1 -translate-x-1/2 animate-in duration-300 fade-in zoom-in" />
                                     )}
                                 </Link>
                             )
@@ -482,24 +492,24 @@ export default function PrivateLayoutClient({
                             type="button"
                             onClick={() => setMoreOpen(true)}
                             className={cn(
-                                "flex flex-col items-center gap-1 transition-all duration-300 outline-none relative py-1 flex-1",
+                                "relative flex flex-col flex-1 items-center gap-1 py-1 outline-none transition-all duration-300",
                                 moreActive ? "opacity-100" : "opacity-60"
                             )}
                         >
                             <div className={cn(
-                                "px-4 py-1 rounded-full transition-all duration-300 flex items-center justify-center",
+                                "flex justify-center items-center px-4 py-1 rounded-full transition-all duration-300",
                                 moreActive ? "bg-[#5C4033]/15 text-[#5C4033]" : "text-[#5F624F]"
                             )}>
-                                <MoreHorizontal className="w-5 h-5 mx-auto" />
+                                <MoreHorizontal className="mx-auto w-5 h-5" />
                             </div>
                             <span className={cn(
-                                "text-[9px] font-bold uppercase tracking-tight text-center block w-full transition-colors",
+                                "block w-full font-bold text-[9px] text-center uppercase tracking-tight transition-colors",
                                 moreActive ? "text-[#5C4033]" : "text-[#5F624F]"
                             )}>
                                 More
                             </span>
                             {moreActive && (
-                                <div className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-[#5C4033] animate-in fade-in zoom-in duration-300" />
+                                <div className="-bottom-0.5 left-1/2 absolute bg-[#5C4033] rounded-full w-1 h-1 -translate-x-1/2 animate-in duration-300 fade-in zoom-in" />
                             )}
                         </button>
                     </div>
@@ -509,18 +519,18 @@ export default function PrivateLayoutClient({
                 {moreOpen && (
                     <div className="sm:hidden">
                         <div
-                            className="fixed inset-0 z-50 bg-black/40 animate-in fade-in duration-200"
+                            className="z-50 fixed inset-0 bg-black/40 animate-in duration-200 fade-in"
                             onClick={() => setMoreOpen(false)}
                             aria-hidden="true"
                         />
-                        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-3xl border-t border-[#E6DFC8] max-h-[85vh] overflow-y-auto pb-8 animate-in slide-in-from-bottom duration-300">
-                            <div className="flex items-center justify-between px-6 pt-4 pb-2">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-[#1F1F1A]">More</span>
+                        <div className="right-0 bottom-0 slide-in-from-bottom left-0 z-50 fixed bg-white pb-8 border-[#E6DFC8] border-t rounded-t-3xl max-h-[85vh] overflow-y-auto animate-in duration-300">
+                            <div className="flex justify-between items-center px-6 pt-4 pb-2">
+                                <span className="font-black text-[#1F1F1A] text-[10px] uppercase tracking-widest">More</span>
                                 <button
                                     type="button"
                                     onClick={() => setMoreOpen(false)}
                                     aria-label="Close menu"
-                                    className="p-2 -mr-2 rounded-full hover:bg-slate-100 transition-colors active:scale-95"
+                                    className="hover:bg-slate-100 -mr-2 p-2 rounded-full active:scale-95 transition-colors"
                                 >
                                     <X className="w-5 h-5 text-[#1F1F1A]" />
                                 </button>
@@ -532,23 +542,24 @@ export default function PrivateLayoutClient({
                                 { heading: "Settings", items: settingsSubItems },
                             ].map((section) => (
                                 <div key={section.heading} className="px-4 pt-2 pb-1">
-                                    <p className="px-2 pb-1 text-[10px] font-black uppercase tracking-widest text-[#5F624F]/70">{section.heading}</p>
+                                    <p className="px-2 pb-1 font-black text-[#5F624F]/70 text-[10px] uppercase tracking-widest">{section.heading}</p>
                                     <div className="space-y-1">
                                         {section.items.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href.replace(/\/$/, "")
+                                            const Icon = sub.icon
                                             return (
                                                 <Link
                                                     key={sub.href}
                                                     href={sub.href}
                                                     onClick={() => setMoreOpen(false)}
                                                     className={cn(
-                                                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-bold text-xs uppercase tracking-wider",
+                                                        "flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-200",
                                                         isSubActive
                                                             ? "text-[#5C4033] bg-[#5C4033]/15"
                                                             : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
                                                     )}
                                                 >
-                                                    <sub.icon className={cn("w-5 h-5 shrink-0", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    {Icon && <Icon className={cn("w-5 h-5 shrink-0", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />}
                                                     {sub.label}
                                                 </Link>
                                             )
@@ -557,12 +568,12 @@ export default function PrivateLayoutClient({
                                 </div>
                             ))}
 
-                            <div className="px-4 pt-2 mt-2 border-t border-[#E6DFC8]">
+                            <div className="mt-2 px-4 pt-2 border-[#E6DFC8] border-t">
                                 <button
                                     type="button"
                                     onClick={handleSignOut}
                                     disabled={isPending}
-                                    className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-[#5F624F] hover:bg-red-50 hover:text-red-600 transition-all duration-200 font-bold text-xs uppercase tracking-wider disabled:opacity-50"
+                                    className="flex items-center gap-3 hover:bg-red-50 disabled:opacity-50 px-4 py-3 rounded-xl w-full font-bold text-[#5F624F] hover:text-red-600 text-xs uppercase tracking-wider transition-all duration-200"
                                 >
                                     <LogOut className="w-5 h-5" />
                                     {isPending ? "Signing out…" : "Sign Out"}
