@@ -12,6 +12,8 @@ interface ConfirmOptions {
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "destructive" | "default";
+  /** Hide the cancel button, turning the dialog into a single-action acknowledgement (e.g. a validation alert). */
+  hideCancel?: boolean;
 }
 
 export function useConfirm() {
@@ -68,13 +70,15 @@ export function useConfirm() {
           <div className="px-6 pb-2 max-h-[45vh] overflow-y-auto">{options.content}</div>
         )}
         <div className="px-6 pb-6 flex flex-row gap-2">
-          <button
-            type="button"
-            onClick={handleCancel}
-            className="flex-1 h-11 rounded-xl border-2 border-[#E6DFC8] bg-white text-[10px] font-black uppercase tracking-widest text-[#5F624F] hover:bg-[#F7F4EA] transition-colors"
-          >
-            {options.cancelLabel ?? "Cancel"}
-          </button>
+          {!options.hideCancel && (
+            <button
+              type="button"
+              onClick={handleCancel}
+              className="flex-1 h-11 rounded-xl border-2 border-[#E6DFC8] bg-white text-[10px] font-black uppercase tracking-widest text-[#5F624F] hover:bg-[#F7F4EA] transition-colors"
+            >
+              {options.cancelLabel ?? "Cancel"}
+            </button>
+          )}
           <button
             type="button"
             onClick={handleConfirm}

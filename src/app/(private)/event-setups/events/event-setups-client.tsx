@@ -36,7 +36,8 @@ import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
 import { buildAdminBookingGroups } from "@/lib/admin-booking-groups";
-import { validateEventForm } from "@/lib/event-form-validation";
+import { findActiveEventClashes, isOvernightEnd } from "@/lib/event-form-validation";
+import { parseTimeToMinutes, addHoursToTime } from "@/lib/event-clash";
 import { BookingConfigEditor } from "@/components/booking-config-editor";
 import { IconPicker } from "@/components/icon-picker";
 import type { BookingConfig } from "@/lib/booking-config";
@@ -234,8 +235,18 @@ export default function EventsClient({
   const [formTypeId, setFormTypeId] = useState<string>("");
   const [formSubtypeId, setFormSubtypeId] = useState<string>("");
   const [formTitle, setFormTitle] = useState<string>("");
+  const [formDate, setFormDate] = useState<string>("");
+  const [formStartTime, setFormStartTime] = useState<string>("");
+  const [formEndTime, setFormEndTime] = useState<string>("");
+  const [formHostId, setFormHostId] = useState<string>("");
   const [formTagline, setFormTagline] = useState<string>("");
   const [formPayment, setFormPayment] = useState<string>("");
+  const [formBookingPageUrl, setFormBookingPageUrl] = useState<string>("");
+  // True once the admin manually edits the booking URL. While false, the field is
+  // kept in sync with the Public Booking toggle (auto-filled on / cleared off) and
+  // is submitted blank so the server generates the canonical URL with the real id.
+  const [bookingUrlManual, setBookingUrlManual] = useState(false);
+  const [formKaraokeUrl, setFormKaraokeUrl] = useState<string>("");
   const [formSeating, setFormSeating] = useState<boolean>(true);
   const [formActive, setFormActive] = useState<boolean>(true);
   const [formFullyBooked, setFormFullyBooked] = useState<boolean>(false);
@@ -282,6 +293,18 @@ export default function EventsClient({
   const isSearching = searchQuery.trim() !== "";
   const isSheetOpen = !!selected || isAdding;
 
+  // Preview of the public booking URL for the current form context. The server
+  // regenerates the canonical URL (with the real event id) on save; this value is
+  // only shown in the field and only persisted if the admin manually edits it.
+  const bookingUrlFor = (opts: { typeId: number; subtypeId: number; grouping: string | null | undefined; eventId: number | null }): string => {
+    if (typeof window === "undefined") return "";
+    const origin = window.location.origin;
+    const q = opts.eventId ? `?id=${opts.eventId}` : "";
+    if (opts.grouping === "per_type") return `${origin}/book/group/type/${opts.typeId}${q}`;
+    if (opts.grouping === "per_subtype" && opts.subtypeId) return `${origin}/book/group/subtype/${opts.subtypeId}${q}`;
+    return `${origin}/book/event/${opts.eventId ?? ""}`;
+  };
+
   const applySubtypeDefaults = (sub: EventSubtype | undefined, type?: EventType) => {
     setFormTitle(sub?.default_event_title ?? "");
     setFormTagline(sub?.tagline ?? "");
@@ -292,16 +315,37 @@ export default function EventsClient({
     // sub-type (per_subtype). per_event events own their own config, so they
     // start blank and are filled in on the event itself.
     const owner = type ?? (sub ? typeById.get(sub.event_types_id) : undefined);
+    let bookable = false;
     if (owner?.booking_grouping === "per_type") {
-      setFormIsBookable(owner.is_bookable ?? false);
+      bookable = owner.is_bookable ?? false;
       setFormBookingConfig(owner.booking_config ?? {});
     } else if (owner?.booking_grouping === "per_subtype") {
-      setFormIsBookable(sub?.is_bookable ?? false);
+      bookable = sub?.is_bookable ?? false;
       setFormBookingConfig(sub?.booking_config ?? {});
     } else {
-      setFormIsBookable(false);
       setFormBookingConfig({});
     }
+    setFormIsBookable(bookable);
+    // Keep the booking URL in step with the toggle unless the admin has typed one.
+    if (!bookingUrlManual) {
+      const eventId = isEditing ? (selected?.id ?? null) : null;
+      setFormBookingPageUrl(bookable ? bookingUrlFor({ typeId: owner?.id ?? 0, subtypeId: sub?.id ?? 0, grouping: owner?.booking_grouping, eventId }) : "");
+    }
+  };
+
+  // Toggle handler for Public Booking: mirrors the on/off state into the URL field
+  // (auto-fill / clear) while the admin hasn't manually overridden it.
+  const toggleBookable = () => {
+    setFormIsBookable((prev) => {
+      const next = !prev;
+      if (!bookingUrlManual) {
+        const typeId = Number(formTypeId) || 0;
+        const grouping = typeById.get(typeId)?.booking_grouping;
+        const eventId = isEditing ? (selected?.id ?? null) : null;
+        setFormBookingPageUrl(next ? bookingUrlFor({ typeId, subtypeId: Number(formSubtypeId) || 0, grouping, eventId }) : "");
+      }
+      return next;
+    });
   };
 
   const openView = (event: EventRecord) => {
@@ -322,6 +366,13 @@ export default function EventsClient({
     const ownerType = sub ? typeById.get(sub.event_types_id) : (eventTypes[0] ? typeById.get(eventTypes[0].id) : undefined);
     setFormTypeId(sub ? String(sub.event_types_id) : (eventTypes[0]?.id ? String(eventTypes[0].id) : ""));
     setFormSubtypeId(sub ? String(sub.id) : "");
+    setFormDate("");
+    setFormStartTime("");
+    setFormEndTime("");
+    setFormHostId("");
+    setFormBookingPageUrl("");
+    setBookingUrlManual(false);
+    setFormKaraokeUrl("");
     setFormBookingId("");
     setFormGroupName("");
     setFormCardTitle("");
@@ -342,6 +393,24 @@ export default function EventsClient({
     setFormTypeId(String(selected.event_types_id));
     setFormSubtypeId(String(selected.event_subtypes_id));
     setFormTitle(selected.title ?? "");
+    setFormDate(selected.date ?? "");
+    setFormStartTime(selected.start_time ? formatTime(selected.start_time) : "");
+    setFormEndTime(selected.end_time ? formatTime(selected.end_time) : "");
+    setFormHostId(selected.host_employee_id ? String(selected.host_employee_id) : "");
+    // A stored URL is treated as a manual override (preserved on save); if the event
+    // is bookable but has no stored URL, auto-fill a preview from its grouping.
+    if (selected.booking_page_url) {
+      setFormBookingPageUrl(selected.booking_page_url);
+      setBookingUrlManual(true);
+    } else if (selected.is_bookable) {
+      const grouping = typeById.get(selected.event_types_id)?.booking_grouping;
+      setFormBookingPageUrl(bookingUrlFor({ typeId: selected.event_types_id, subtypeId: selected.event_subtypes_id, grouping, eventId: selected.id }));
+      setBookingUrlManual(false);
+    } else {
+      setFormBookingPageUrl("");
+      setBookingUrlManual(false);
+    }
+    setFormKaraokeUrl(selected.karaoke_request_url ?? "");
     setFormTagline(selected.tagline ?? "");
     setFormPayment(selected.payment_amount != null ? String(selected.payment_amount) : "");
     setFormSeating(selected.seating_required ?? true);
@@ -386,35 +455,17 @@ export default function EventsClient({
 
   const handleSubmit = (formData: FormData) => {
     setFormError(null);
-    // Required fields live inside the collapsible "Details" section, so validate
-    // here rather than relying on native `required` (which can't focus a field in
-    // a collapsed/hidden section). Validation logic is shared with the server
-    // action via the pure helper in @/lib/event-form-validation.
-    const date = formData.get("date")?.toString() ?? "";
-    const validation = validateEventForm(
-      {
-        eventTypesId: formData.get("event_types_id") ? Number(formData.get("event_types_id")) : null,
-        eventSubtypesId: formData.get("event_subtypes_id") ? Number(formData.get("event_subtypes_id")) : null,
-        title: formData.get("title")?.toString() ?? "",
-        date,
-        startTime: formData.get("start_time")?.toString() ?? "",
-        endTime: formData.get("end_time")?.toString() ?? "",
-      },
-      initialEvents,
-      formDefault?.id ?? null
-    );
-    if (!validation.ok) {
+    // Validation errors are computed live (see `fieldErrors` below) and shown
+    // inline under each field; the Save button is disabled while any exist. This
+    // is a defensive guard in case a submit is triggered some other way.
+    if (Object.keys(fieldErrors).length > 0) {
       setFormDetailsOpen(true);
-      if (validation.code === "missing_fields") {
-        setFormError("Fill in event type, sub-type, title, date, start time and end time.");
-      } else if (validation.code === "end_before_start") {
-        setFormError("End time must be after the start time.");
-      } else {
-        const c = validation.clash;
-        setFormError(`Clashes with an active event on ${formatDate(date)}: ${c.title} (${c.start}${c.end ? ` - ${c.end}` : ""}).`);
-      }
       return;
     }
+
+    // When the URL is the auto-derived preview (not manually overridden), send it
+    // blank so the server generates the canonical URL with the real event id.
+    if (!bookingUrlManual) formData.set("booking_page_url", "");
 
     startTransition(async () => {
       const result = await saveEventAction(formData);
@@ -553,7 +604,7 @@ export default function EventsClient({
         onClick={() => openView(event)}
         style={{ "--spine": accentHex } as React.CSSProperties}
         className={cn(
-          "relative w-full text-left flex items-center gap-3 pl-4 pr-3 py-3 bg-white border rounded-2xl transition active:scale-[0.99] hover:shadow-md",
+          "relative w-full text-left flex items-center gap-3 pl-4 pr-3 py-3 sm:gap-4 sm:pl-5 sm:pr-4 sm:py-4 bg-white border rounded-2xl transition active:scale-[0.99] hover:shadow-md",
           isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#E6DFC8]",
           inactive && "opacity-60"
         )}
@@ -568,9 +619,9 @@ export default function EventsClient({
         )}
 
         {/* date badge */}
-        <div className={cn("w-11 h-11 rounded-xl flex flex-col items-center justify-center shrink-0 border", badgeClass)}>
+        <div className={cn("w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center shrink-0 border", badgeClass)}>
           <span className="text-[9px] font-black uppercase tracking-tighter leading-none">{monthAbbrOf(event.date)}</span>
-          <span className="text-base font-black leading-none">{dayNumOf(event.date)}</span>
+          <span className="text-base sm:text-lg font-black leading-none">{dayNumOf(event.date)}</span>
         </div>
 
         {/* middle */}
@@ -587,12 +638,12 @@ export default function EventsClient({
               </span>
             )}
           </div>
-          <p className={cn("text-sm font-black leading-tight truncate", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
+          <p className={cn("text-sm sm:text-base lg:text-lg font-black leading-tight truncate", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
             {event.title || "Untitled Event"}
           </p>
-          <div className="flex items-center gap-2.5 mt-1 text-[11px] text-[#5F624F] font-semibold flex-wrap">
+          <div className="flex items-center gap-2.5 mt-1 text-[11px] sm:text-[13px] lg:text-sm text-[#5F624F] font-semibold flex-wrap">
             <span className="inline-flex items-center gap-1">
-              <Clock className="w-3 h-3" />
+              <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
               {formatTime(event.start_time)}{event.end_time ? `–${formatTime(event.end_time)}` : ""}
             </span>
             {host && (
@@ -604,17 +655,17 @@ export default function EventsClient({
               </span>
             )}
           </div>
-          {event.tagline && <p className="text-[11px] italic text-[#a39d86] truncate mt-1">{event.tagline}</p>}
+          {event.tagline && <p className="text-[11px] sm:text-xs lg:text-sm italic text-[#a39d86] truncate mt-1">{event.tagline}</p>}
         </div>
 
         {/* right */}
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           {(event.is_bookable || bStats.confirmedPeople > 0) && (
-            <span className="inline-flex items-center gap-1 text-xs font-black text-[#5F624F] tabular-nums">
-              <Users className="w-3.5 h-3.5" />{bStats.confirmedPeople}
+            <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-black text-[#5F624F] tabular-nums">
+              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{bStats.confirmedPeople}
             </span>
           )}
-          {hasPricing && <span className="text-[11px] font-black text-green-700">£{event.payment_amount!.toFixed(2)}</span>}
+          {hasPricing && <span className="text-[11px] sm:text-xs lg:text-sm font-black text-green-700">£{event.payment_amount!.toFixed(2)}</span>}
           {event.is_fully_booked && <span className="text-[9px] font-black uppercase tracking-wide text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Full</span>}
           <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40" />
         </div>
@@ -628,8 +679,59 @@ export default function EventsClient({
   const selectedTypeForForm = typeById.get(Number(formTypeId));
   const formSubtypeOptions = subtypesByType.get(Number(formTypeId)) ?? [];
 
+  // Live per-field validation for the edit/add form. Recomputed every render from
+  // the controlled fields so messages appear as soon as the form opens (not only
+  // on Save) and the Save button can be disabled while any error is present.
+  // Keyed by field name (event_types_id, event_subtypes_id, title, date, time);
+  // the clash helper is shared with the server action via @/lib/event-form-validation.
+  const fieldErrors: Record<string, string> = {};
+  // Non-blocking warnings (amber). These flag likely-missing details based on the
+  // selected sub-type's requirements but never prevent saving.
+  const fieldWarnings: Record<string, string> = {};
+  if (showForm) {
+    if (!formTypeId) fieldErrors.event_types_id = "Choose an event type.";
+    if (!formSubtypeId) fieldErrors.event_subtypes_id = "Choose a sub-type.";
+    if (!formTitle.trim()) fieldErrors.title = "Give the event a title.";
+    if (!formDate) fieldErrors.date = "Pick a date.";
+    if (!formStartTime || !formEndTime) {
+      fieldErrors.time = !formStartTime && !formEndTime
+        ? "Set a start and end time."
+        : !formStartTime ? "Set a start time." : "Set an end time.";
+    } else {
+      const start = parseTimeToMinutes(formStartTime);
+      const end = parseTimeToMinutes(formEndTime);
+      if (start == null || end == null || (end <= start && !isOvernightEnd(end))) {
+        fieldErrors.time = "End time must be after the start time.";
+      } else if (formDate) {
+        const clashes = findActiveEventClashes(
+          { id: formDefault?.id ?? null, date: formDate, start: formStartTime, end: formEndTime },
+          initialEvents
+        );
+        if (clashes.length > 0) {
+          const c = clashes[0];
+          fieldErrors.time = `Clashes with ${c.title} (${c.start}${c.end ? ` - ${c.end}` : ""}) on ${formatDate(formDate)}.`;
+        }
+      }
+    }
+
+    // Sub-type-driven warnings + the bookable-URL error.
+    if (selectedSubtype?.host_required && (!formHostId || Number(formHostId) === 0)) {
+      fieldWarnings.host_employee_id = "This sub-type usually has a host, but none is assigned.";
+    }
+    if (selectedSubtype?.payment_required && (!formPayment.trim() || !(Number(formPayment) > 0))) {
+      fieldWarnings.payment_amount = "This sub-type usually takes payment, but no amount is set.";
+    }
+    if (selectedSubtype?.behavior === "karaoke" && !formKaraokeUrl.trim()) {
+      fieldWarnings.karaoke_request_url = "Add a karaoke request link so guests can pick songs.";
+    }
+    if (formIsBookable && !formBookingPageUrl.trim()) {
+      fieldErrors.booking_page_url = "Set a booking URL for this bookable event.";
+    }
+  }
+  const hasFieldErrors = Object.keys(fieldErrors).length > 0;
+
   return (
-    <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl bg-[#F7F4EA]">
+    <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl md:max-w-3xl lg:max-w-5xl mx-auto bg-[#F7F4EA]">
 
       {/* Filter notice */}
       {filter === "quiz-incomplete" && (
@@ -766,14 +868,14 @@ export default function EventsClient({
           )}
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 sm:space-y-2">
           {dayGroups.map((group) => (
-            <section key={group.date} className="space-y-1.5">
+            <section key={group.date} className="space-y-1.5 sm:space-y-2">
               {/* Sticky day separator */}
               <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#F7F4EA] py-1.5">
-                <span className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">{relativeDayOf(group.date, todayStr)}</span>
+                <span className="text-[11px] sm:text-xs lg:text-sm font-black uppercase tracking-wide text-[#5C4033]">{relativeDayOf(group.date, todayStr)}</span>
                 <span className="flex-1 h-px bg-[#E6DFC8]" />
-                <span className="text-[10px] font-bold text-[#5F624F]">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
+                <span className="text-[10px] sm:text-[11px] lg:text-xs font-bold text-[#5F624F]">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
               </div>
               {group.events.map((event) => renderEventRow(event))}
             </section>
@@ -789,8 +891,8 @@ export default function EventsClient({
           onOpenAutoFocus={(e) => e.preventDefault()}
            className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
-            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140 lg:w-6xl xl:w-7xl
+            sm:h-auto sm:max-h-[80vh] lg:max-h-[90vh] sm:rounded-4xl sm:bottom-6
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sheet header */}
@@ -856,7 +958,7 @@ export default function EventsClient({
               const returnHref = `/event-setups/events?open=${selected.id}`;
               const viewAllHref = `${baseViewAllHref}${baseViewAllHref.includes("?") ? "&" : "?"}from=${encodeURIComponent(returnHref)}`;
               return (
-                <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
+                <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
                   <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
                     <button type="button" onClick={() => setDetailsOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left">
                       <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Event Details</span>
@@ -1004,14 +1106,14 @@ export default function EventsClient({
                     )}
                   </div>
 
-                  {formError && <ErrorBox message={formError} />}
+                  {formError && <div className="lg:col-span-2"><ErrorBox message={formError} /></div>}
                 </div>
               );
             })()}
 
             {/* Edit / Add form */}
             {showForm && (
-              <form id="event-form" action={handleSubmit} className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
+              <form id="event-form" action={handleSubmit} className="animate-in fade-in duration-200 space-y-4 sm:space-y-5 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
                 {/* Boolean fields live in the collapsible Settings section; keep their
                     hidden inputs at the form root so they submit even when collapsed. */}
@@ -1022,7 +1124,7 @@ export default function EventsClient({
 
                 <FormSection title="Details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
                   {/* Event Type */}
-                  <FormRow label="Event Type" required>
+                  <FormRow label="Event Type" required error={fieldErrors.event_types_id}>
                     <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
                       <select
                         title="Event Type"
@@ -1040,7 +1142,7 @@ export default function EventsClient({
                   </FormRow>
 
                   {/* Sub-Type */}
-                  <FormRow label="Sub-Type" required>
+                  <FormRow label="Sub-Type" required error={fieldErrors.event_subtypes_id}>
                     <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
                       <select
                         title="Sub-Type"
@@ -1059,7 +1161,7 @@ export default function EventsClient({
                   </FormRow>
 
                   {/* Title */}
-                  <FormRow label="Title" required>
+                  <FormRow label="Title" required error={fieldErrors.title}>
                     <input
                       name="title"
                       placeholder="e.g. Music Bingo"
@@ -1070,24 +1172,26 @@ export default function EventsClient({
                   </FormRow>
 
                   {/* Date */}
-                  <FormRow label="Date" required>
-                    <input title="Date" name="date" type="date" defaultValue={formDefault?.date ?? ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none" />
+                  <FormRow label="Date" required error={fieldErrors.date}>
+                    <div className="flex items-center flex-1 justify-end">
+                      <input title="Date" name="date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none" />
+                    </div>
                   </FormRow>
 
                   {/* Time */}
-                  <FormRow label="Time">
+                  <FormRow label="Time" required error={fieldErrors.time}>
                     <div className="flex items-center gap-2 flex-1 justify-end">
-                      <input title="Start time" name="start_time" type="time" defaultValue={formDefault?.start_time ? formatTime(formDefault.start_time) : ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-22 text-right" />
+                      <input title="Start time" name="start_time" type="time" value={formStartTime} onChange={(e) => { const v = e.target.value; setFormStartTime(v); if (v && !formEndTime) { const end = addHoursToTime(v, 2); if (end) setFormEndTime(end); } }} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-22 text-right" />
                       <span className="text-[#5F624F]/50 text-xs">-</span>
-                      <input title="End time" name="end_time" type="time" defaultValue={formDefault?.end_time ? formatTime(formDefault.end_time) : ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-22 text-right" />
+                      <input title="End time" name="end_time" type="time" value={formEndTime} onChange={(e) => setFormEndTime(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-22 text-right" />
                     </div>
                   </FormRow>
 
                   {/* Host — only when subtype requires a host */}
                   {selectedSubtype?.host_required && (
-                    <FormRow label="Host">
+                    <FormRow label="Host" warning={fieldWarnings.host_employee_id}>
                       <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-                        <select title="Host" name="host_employee_id" defaultValue={formDefault?.host_employee_id ?? ""} className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]">
+                        <select title="Host" name="host_employee_id" value={formHostId} onChange={(e) => setFormHostId(e.target.value)} className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]">
                           <option value="">No host</option>
                           {employees.map((e) => (
                             <option key={e.id} value={e.id}>{e.full_name}</option>
@@ -1099,7 +1203,7 @@ export default function EventsClient({
                   )}
 
                   {/* Payment */}
-                  <FormRow label="Payment (£)">
+                  <FormRow label="Payment (£)" warning={fieldWarnings.payment_amount}>
                     <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
 
@@ -1118,13 +1222,15 @@ export default function EventsClient({
 
                   {/* Karaoke Song Request Link — only when subtype is karaoke */}
                   {selectedSubtype?.behavior === "karaoke" && (
-                    <FormRow label="Singa Link">
-                      <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." defaultValue={formDefault?.karaoke_request_url ?? ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    <FormRow label="Singa Link" warning={fieldWarnings.karaoke_request_url}>
+                      <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." value={formKaraokeUrl} onChange={(e) => setFormKaraokeUrl(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
                     </FormRow>
                   )}
 
                 </FormSection>
 
+                {/* Right column on desktop: the two shorter sections stacked beside Details. */}
+                <div className="space-y-4 sm:space-y-5">
                 <FormSection title="Settings" open={formSettingsOpen} onToggle={() => setFormSettingsOpen((o) => !o)}>
                   <FormRow label="Seating">
                     <span className="flex-1" />
@@ -1139,7 +1245,7 @@ export default function EventsClient({
                 <FormSection title="Public Booking Settings" open={formBookingSettingsOpen} onToggle={() => setFormBookingSettingsOpen((o) => !o)}>
                   <FormRow label="Public Booking">
                     <span className="flex-1" />
-                    <FormToggle label="Public booking" on={formIsBookable} onToggle={() => setFormIsBookable((o) => !o)} />
+                    <FormToggle label="Public booking" on={formIsBookable} onToggle={toggleBookable} />
                   </FormRow>
 
                   {/* fully booked, booking_url, linked booking & group name only apply to a publicly bookable event. */}
@@ -1150,10 +1256,10 @@ export default function EventsClient({
                         <FormToggle label="Fully booked" on={formFullyBooked} onToggle={() => setFormFullyBooked((o) => !o)} danger />
                       </FormRow>
 
-                      {/* Booking URL — optional manual override. Left blank, the URL is
-                          auto-generated from the category's booking grouping on save. */}
-                      <FormRow label="Booking URL">
-                        <input name="booking_page_url" type="url" placeholder="Auto-generated on save" defaultValue="" className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                      {/* Booking URL — required for a bookable event. Seeded from the
+                          saved value when editing; blocks save while empty. */}
+                      <FormRow label="Booking URL" required error={fieldErrors.booking_page_url}>
+                        <input name="booking_page_url" type="url" placeholder="https://..." value={formBookingPageUrl} onChange={(e) => { setFormBookingPageUrl(e.target.value); setBookingUrlManual(true); }} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
                       </FormRow>
 
                       {/* Linked Booking & Group Name (games only) */}
@@ -1173,6 +1279,9 @@ export default function EventsClient({
                                     if (bId) {
                                       const bk = eventBookings.find(b => String(b.id) === bId);
                                       if (bk?.group_name) setFormGroupName(bk.group_name);
+                                    } else {
+                                      // "No booking" selected — clear the linked group name.
+                                      setFormGroupName("");
                                     }
                                   }}
                                   className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]"
@@ -1195,19 +1304,20 @@ export default function EventsClient({
                     </>
                   )}
                 </FormSection>
+                </div>
 
                 {/* Booking page/form config — editable whenever the event is bookable.
                     Saved onto this event's own booking_config regardless of grouping. */}
                 {formIsBookable && (
-                  <>
+                  <div className="lg:col-span-2">
                     <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
                     <BookingConfigEditor value={formBookingConfig} onChange={setFormBookingConfig} />
-                  </>
+                  </div>
                 )}
 
                 {/* Booking card branding — only when this category owns the card (per_event) and it's bookable. */}
                 {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
-                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                  <div className="lg:col-span-2 bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
                     <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#E6DFC8]/60">
                       <span className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Booking Card</span>
                     </div>
@@ -1231,7 +1341,7 @@ export default function EventsClient({
                   </div>
                 )}
 
-                {formError && <ErrorBox message={formError} />}
+                {formError && <div className="lg:col-span-2"><ErrorBox message={formError} /></div>}
               </form>
             )}
 
@@ -1257,7 +1367,7 @@ export default function EventsClient({
                 <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white">
                   Cancel
                 </Button>
-                <Button type="button" disabled={isPending} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
+                <Button type="button" disabled={isPending || hasFieldErrors} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
                   {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Save</>}
                 </Button>
               </div>
@@ -1270,14 +1380,25 @@ export default function EventsClient({
   );
 }
 
-function FormRow({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
+function FormRow({ label, required, error, warning, children }: { label: string; required?: boolean; error?: string; warning?: string; children: React.ReactNode }) {
+  // Errors (red) take precedence over warnings (amber); both render underneath.
+  const message = error ?? warning;
+  const isWarning = !error && !!warning;
   return (
-    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
-      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
-        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">{label}</span>
-        {required && <span className="text-red-500 text-[10px] font-black">*</span>}
+    <div className="px-4 sm:px-5 py-2.5 sm:py-4">
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className={cn("flex items-center gap-1.5 sm:gap-2 shrink-0", error ? "text-red-600 opacity-100" : warning ? "text-amber-600 opacity-100" : "text-[#5F624F] opacity-60")}>
+          <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">{label}</span>
+          {required && <span className="text-red-500 text-[10px] font-black">*</span>}
+        </div>
+        {children}
       </div>
-      {children}
+      {message && (
+        <p className={cn("mt-1.5 flex items-center gap-1 text-[11px] font-bold leading-snug", isWarning ? "text-amber-600" : "text-red-600")}>
+          {isWarning ? <AlertTriangle className="w-3 h-3 shrink-0" /> : <AlertCircle className="w-3 h-3 shrink-0" />}
+          {message}
+        </p>
+      )}
     </div>
   );
 }
@@ -1328,9 +1449,9 @@ function ErrorBox({ message }: { message: string }) {
 /** Collapsible section wrapper for the edit/new form. Body stays mounted (hidden
  * when collapsed) so field values — including uncontrolled inputs — survive a
  * collapse and remain submittable. */
-function FormSection({ title, open, onToggle, children }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode }) {
+function FormSection({ title, open, onToggle, children, className }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode; className?: string }) {
   return (
-    <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+    <div className={cn("bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden", className)}>
       <button type="button" onClick={onToggle} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left">
         <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">{title}</span>
         <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />

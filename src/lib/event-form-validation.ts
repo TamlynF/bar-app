@@ -56,6 +56,18 @@ export function findActiveEventClashes(
   return findEventClashes({ start: target.start, end: target.end }, sameDayActive);
 }
 
+/** Latest minute-of-day an end time may fall on to count as an overnight finish. */
+export const OVERNIGHT_END_MAX_MINUTES = 6 * 60; // 06:00
+
+/**
+ * True when the end time is between midnight and 6am. Such an end is treated as
+ * finishing the next day (an overnight event), so it's valid even though it's
+ * numerically at or before the start time.
+ */
+export function isOvernightEnd(endMinutes: number | null): boolean {
+  return endMinutes != null && endMinutes <= OVERNIGHT_END_MAX_MINUTES;
+}
+
 /**
  * Full create/save validation, in order: required fields → end-after-start →
  * no clash with another active event on the same date. Returns a structured
@@ -70,7 +82,7 @@ export function validateEventForm(
 
   const start = parseTimeToMinutes(fields.startTime);
   const end = parseTimeToMinutes(fields.endTime);
-  if (start == null || end == null || end <= start) return { ok: false, code: "end_before_start" };
+  if (start == null || end == null || (end <= start && !isOvernightEnd(end))) return { ok: false, code: "end_before_start" };
 
   const clashes = findActiveEventClashes(
     { id: editingId ?? null, date: fields.date, start: fields.startTime, end: fields.endTime },

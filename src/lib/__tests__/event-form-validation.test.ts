@@ -109,6 +109,21 @@ describe("validateEventForm", () => {
     expect(result).toEqual({ ok: false, code: "end_before_start" });
   });
 
+  it("allows an overnight end between midnight and 6am", () => {
+    const result = validateEventForm({ ...validFields, startTime: "22:00", endTime: "01:00" }, noClash);
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("allows an end at exactly 6am (overnight boundary)", () => {
+    const result = validateEventForm({ ...validFields, startTime: "22:00", endTime: "06:00" }, noClash);
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("still rejects an end after 6am that is before the start", () => {
+    const result = validateEventForm({ ...validFields, startTime: "22:00", endTime: "06:30" }, noClash);
+    expect(result).toEqual({ ok: false, code: "end_before_start" });
+  });
+
   it("returns a clash with the offending event", () => {
     const candidates: EventClashCandidate[] = [
       { id: 7, title: "Bingo", date: "2026-06-25", start_time: "20:00", end_time: "21:00", is_active: true },
