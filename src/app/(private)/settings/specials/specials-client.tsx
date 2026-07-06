@@ -174,7 +174,7 @@ export default function SpecialsClient({
   const formDefault = isEditing ? selected : null;
 
   return (
-    <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl">
+    <div className="px-2 py-3 sm:px-4 md:px-6 sm:py-0 space-y-3 sm:space-y-4 max-w-2xl">
       {/* List */}
       {initialSpecials.length === 0 ? (
         <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">

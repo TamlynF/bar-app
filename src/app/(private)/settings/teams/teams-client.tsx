@@ -85,7 +85,7 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
   };
 
   return (
-    <div className="p-6">
+    <div className="px-6 py-6 sm:py-0">
       <div className="flex items-center justify-between pb-4 border-b">
         <div>
           <h3 className="text-lg font-medium">Teams & Leaderboard</h3>

@@ -122,7 +122,7 @@ export default function MenuClient({
   };
 
   return (
-    <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl">
+    <div className="px-2 py-3 sm:px-4 md:px-6 sm:py-0 space-y-3 sm:space-y-4 max-w-2xl">
       {/* Hidden iframe for printing the public menu page */}
       <iframe
         id="menu-print-frame"

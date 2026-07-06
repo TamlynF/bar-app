@@ -488,7 +488,7 @@ export default function VenueEditorClient({
   const benchSeatTotal = features.filter((f) => f.kind === "bench").reduce((sum, f) => sum + (f.seats ?? 0), 0);
 
   return (
-    <div className="p-2 sm:p-4 space-y-4 max-w-5xl">
+    <div className="px-2 py-2 sm:px-4 sm:py-0 space-y-4 max-w-5xl">
       {/* ── Header ── */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>

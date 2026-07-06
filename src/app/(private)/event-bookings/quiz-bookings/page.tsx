@@ -162,7 +162,7 @@ export default async function QuizBookingsPage({
       <div className="fixed top-0 right-0 w-96 h-96 bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10" />
       <div className="fixed bottom-0 left-0 w-80 h-80 bg-blue-500/5 blur-[100px] rounded-full pointer-events-none -z-10" />
 
-      <div className="p-3 md:p-8 max-w-7xl mx-auto space-y-5 text-left">
+      <div className="px-3 py-3 md:px-8 sm:py-0 max-w-7xl mx-auto space-y-5 text-left">
 
         {/* Full-width Event Selection Section */}
         <div className="w-full bg-white rounded-2xl border border-[#E6DFC8] shadow-sm p-1.5">

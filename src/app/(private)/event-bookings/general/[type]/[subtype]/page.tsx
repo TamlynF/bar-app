@@ -16,7 +16,7 @@ import { type PrivateHireRequest } from "../../../private-bookings/components/pr
 function RequestsShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div className="flex-1 bg-background min-h-screen">
-      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+      <div className="px-4 py-4 md:px-8 sm:py-0 max-w-4xl mx-auto space-y-6">
         <div>
           <h2 className="text-xl font-black text-[#1F1F1A] uppercase tracking-tight">{title}</h2>
           <p className="text-xs text-[#5F624F] mt-0.5">{subtitle}</p>

@@ -10,8 +10,10 @@ import {
   Loader2,
   CalendarDays,
   Users,
+  ChevronLeft,
   ChevronRight,
   ChevronDown,
+  List,
   Save,
   Pencil,
   Trash2,
@@ -29,6 +31,7 @@ import {
   Flame,
   ArrowDownUp,
   Grid2X2,
+  SlidersHorizontal,
 } from "lucide-react";
 import { saveEventAction, deleteEventAction } from "./actions";
 import { DatePicker, type DateRange } from "./month-picker";
@@ -212,6 +215,16 @@ export default function EventsClient({
   const [formError, setFormError] = useState<string | null>(null);
   const [catFilter, setCatFilter] = useState<number | "all">("all");
   const [sortSoon, setSortSoon] = useState(true);
+  // List (flat, date-grouped) vs calendar (month grid). The month grid drives its
+  // own navigation via calendarMonth and ignores the header's date-range filter.
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
+  // Category / sort / quick filters are collapsed behind the Filters button; the
+  // search bar stays visible. Hidden by default.
+  const [showFilters, setShowFilters] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() };
+  });
   const [quickFilters, setQuickFilters] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | null>(() => {
@@ -548,10 +561,29 @@ export default function EventsClient({
     return total < target;
   };
 
+  // Mirrors the edit form's required-field validation (see `fieldErrors` /
+  // `fieldWarnings` below): flags a saved event whose required or sub-type-driven
+  // fields are still unset.
+  const missingInfo = (e: EventRecord) => {
+    const sub = subtypeById.get(e.event_subtypes_id);
+    if (!e.title?.trim()) return true;
+    if (!e.date) return true;
+    if (!e.start_time || !e.end_time) return true;
+    if (e.is_bookable && !e.booking_page_url?.trim()) return true;
+    if (sub?.host_required && !e.host_employee_id) return true;
+    if (sub?.payment_required && !(e.payment_amount != null && e.payment_amount > 0)) return true;
+    if (sub?.behavior === "karaoke" && !e.karaoke_request_url?.trim()) return true;
+    return false;
+  };
+
   const QUICK_FILTERS: { key: string; label: string; test: (e: EventRecord) => boolean }[] = [
+    { key: "bookable", label: "Requires bookings", test: (e) => e.is_bookable === true },
     { key: "bookings", label: "Has bookings", test: (e) => getBookingStats(e.id, bookings).confirmedPeople > 0 },
+    { key: "under-10", label: "< 10 bookings", test: (e) => e.is_bookable === true && getBookingStats(e.id, bookings).confirmedPeople < 10 },
     { key: "quiz", label: "Needs quiz", test: needsQuiz },
     { key: "active", label: "Active only", test: (e) => e.is_active !== false },
+    { key: "fully-booked", label: "Fully booked", test: (e) => e.is_fully_booked === true },
+    { key: "missing-info", label: "Missing info", test: missingInfo },
   ];
 
   const passesQuick = (e: EventRecord) =>
@@ -573,6 +605,8 @@ export default function EventsClient({
     });
 
   const anyFilterActive = isSearching || catFilter !== "all" || quickFilters.size > 0;
+  // Filters hidden behind the toggle button (category + quick filters, not search).
+  const activeFilterCount = (catFilter !== "all" ? 1 : 0) + quickFilters.size;
   const clearAllFilters = () => { setCatFilter("all"); setQuickFilters(new Set()); setSearchQuery(""); };
 
   // Group the (already date-sorted) list into day buckets for sticky day headers.
@@ -582,6 +616,45 @@ export default function EventsClient({
     if (last && last.date === e.date) last.events.push(e);
     else dayGroups.push({ date: e.date, events: [e] });
   }
+
+  // --- Calendar (month grid) view ---
+  // The grid honours search + category + quick filters, but not the header date
+  // range (it has its own month navigation). Events are bucketed by date string.
+  const matchesSearchOnly = (e: EventRecord) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    const host = e.host_employee_id ? (hostById.get(e.host_employee_id) ?? "") : "";
+    return `${e.title ?? ""} ${formatDate(e.date)} ${e.date ?? ""} ${host}`.toLowerCase().includes(q);
+  };
+  const eventsByDate = new Map<string, EventRecord[]>();
+  for (const e of baseEvents) {
+    if (!e.date) continue;
+    if (!(matchesSearchOnly(e) && passesQuick(e) && (catFilter === "all" || e.event_types_id === catFilter))) continue;
+    if (!eventsByDate.has(e.date)) eventsByDate.set(e.date, []);
+    eventsByDate.get(e.date)!.push(e);
+  }
+  for (const list of eventsByDate.values()) {
+    list.sort((a, b) => (a.start_time ?? "").localeCompare(b.start_time ?? ""));
+  }
+  const calMonthStart = new Date(calendarMonth.year, calendarMonth.month, 1);
+  const calMonthLabel = calMonthStart.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
+  const calDaysInMonth = new Date(calendarMonth.year, calendarMonth.month + 1, 0).getDate();
+  const calendarCells: (string | null)[] = [];
+  for (let i = 0; i < calMonthStart.getDay(); i++) calendarCells.push(null);
+  for (let d = 1; d <= calDaysInMonth; d++) {
+    const mm = String(calendarMonth.month + 1).padStart(2, "0");
+    calendarCells.push(`${calendarMonth.year}-${mm}-${String(d).padStart(2, "0")}`);
+  }
+  while (calendarCells.length % 7 !== 0) calendarCells.push(null);
+  const shiftMonth = (delta: number) =>
+    setCalendarMonth(({ year, month }) => {
+      const d = new Date(year, month + delta, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    });
+  const goToday = () => {
+    const n = new Date();
+    setCalendarMonth({ year: n.getFullYear(), month: n.getMonth() });
+  };
 
   const renderEventRow = (event: EventRecord) => {
     const sub = subtypeById.get(event.event_subtypes_id);
@@ -604,71 +677,125 @@ export default function EventsClient({
         onClick={() => openView(event)}
         style={{ "--spine": accentHex } as React.CSSProperties}
         className={cn(
-          "relative w-full text-left flex items-center gap-3 pl-4 pr-3 py-3 sm:gap-4 sm:pl-5 sm:pr-4 sm:py-4 bg-white border rounded-2xl transition active:scale-[0.99] hover:shadow-md",
+          "relative flex items-center gap-3 sm:gap-4 bg-white hover:shadow-md py-3 sm:py-4 pr-3 sm:pr-4 pl-4 sm:pl-5 border rounded-2xl w-full text-left active:scale-[0.99] transition",
           isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#E6DFC8]",
           inactive && "opacity-60"
         )}
       >
         {/* colour spine */}
-        <span className="absolute left-0 top-3 bottom-3 w-1 rounded-full bg-(--spine)" />
+        <span className="absolute left-0 top-3 bottom-3 w-1 bg-(--spine) rounded-full" />
 
         {isTonight && (
-          <span className="absolute -top-2 left-3 z-1 inline-flex items-center gap-1 h-4.75 px-2 rounded-full bg-[#FF6B35] text-white text-[9px] font-black uppercase tracking-wide shadow">
+          <span className="inline-flex -top-2 left-3 z-1 absolute items-center gap-1 bg-[#FF6B35] shadow px-2 rounded-full h-4.75 font-black text-[9px] text-white uppercase tracking-wide">
             <Flame className="w-2.5 h-2.5" /> Tonight
           </span>
         )}
 
         {/* date badge */}
-        <div className={cn("w-11 h-11 sm:w-12 sm:h-12 rounded-xl flex flex-col items-center justify-center shrink-0 border", badgeClass)}>
-          <span className="text-[9px] font-black uppercase tracking-tighter leading-none">{monthAbbrOf(event.date)}</span>
-          <span className="text-base sm:text-lg font-black leading-none">{dayNumOf(event.date)}</span>
+        <div className={cn("flex flex-col justify-center items-center border rounded-xl w-11 sm:w-12 h-11 sm:h-12 shrink-0", badgeClass)}>
+          <span className="font-black text-[9px] uppercase leading-none tracking-tighter">{monthAbbrOf(event.date)}</span>
+          <span className="font-black text-base sm:text-lg leading-none">{dayNumOf(event.date)}</span>
         </div>
 
         {/* middle */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 flex-wrap mb-1">
-            {sub && <span className={cn("text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded", badgeClass)}>{toTitleCase(sub.name)}</span>}
-            {inactive && <span className="text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">Inactive</span>}
+          <div className="flex flex-wrap items-center gap-1.5 mb-1">
+            {sub && <span className={cn("px-1.5 py-0.5 rounded font-black text-[9px] uppercase tracking-wide", badgeClass)}>{toTitleCase(sub.name)}</span>}
+            {inactive && <span className="bg-gray-100 px-1.5 py-0.5 rounded font-black text-[9px] text-gray-500 uppercase tracking-wide">Inactive</span>}
             {quizStat && !quizStat.allComplete && (
               <span className="inline-flex items-center gap-0.5">
-                <span className="text-[9px] font-black text-[#5F624F]">Qz</span>
+                <span className="font-black text-[#5F624F] text-[9px]">Qz</span>
                 {quizStat.someExist
                   ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
                   : <AlertCircle className="w-3.5 h-3.5 text-red-500" />}
               </span>
             )}
           </div>
-          <p className={cn("text-sm sm:text-base lg:text-lg font-black leading-tight truncate", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
+          <p className={cn("font-black text-sm sm:text-base lg:text-lg truncate leading-tight", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
             {event.title || "Untitled Event"}
           </p>
-          <div className="flex items-center gap-2.5 mt-1 text-[11px] sm:text-[13px] lg:text-sm text-[#5F624F] font-semibold flex-wrap">
+          <div className="flex flex-wrap items-center gap-2.5 mt-1 font-semibold text-[#5F624F] text-[11px] sm:text-[13px] lg:text-sm">
             <span className="inline-flex items-center gap-1">
-              <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+              <Clock className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
               {formatTime(event.start_time)}{event.end_time ? `–${formatTime(event.end_time)}` : ""}
             </span>
             {host && (
               <span className="inline-flex items-center gap-1.5">
-                <span className="w-4.25 h-4.25 rounded-full text-white text-[8.5px] font-black inline-grid place-items-center bg-(--spine)">
+                <span className="inline-grid place-items-center w-4.25 h-4.25 text-white text-[8.5px] font-black bg-(--spine) rounded-full">
                   {host.full_name[0]}
                 </span>
                 {shortHost(host.full_name)}
               </span>
             )}
           </div>
-          {event.tagline && <p className="text-[11px] sm:text-xs lg:text-sm italic text-[#a39d86] truncate mt-1">{event.tagline}</p>}
+          {event.tagline && <p className="hidden sm:block mt-1 text-[#a39d86] text-[11px] sm:text-xs lg:text-sm truncate italic">{event.tagline}</p>}
         </div>
 
         {/* right */}
         <div className="flex flex-col items-end gap-1.5 shrink-0">
           {(event.is_bookable || bStats.confirmedPeople > 0) && (
-            <span className="inline-flex items-center gap-1 text-xs sm:text-sm font-black text-[#5F624F] tabular-nums">
-              <Users className="w-3.5 h-3.5 sm:w-4 sm:h-4" />{bStats.confirmedPeople}
+            <span className="inline-flex items-center gap-1 font-black tabular-nums text-[#5F624F] text-xs sm:text-sm">
+              <Users className="w-3.5 sm:w-4 h-3.5 sm:h-4" />{bStats.confirmedPeople}
             </span>
           )}
-          {hasPricing && <span className="text-[11px] sm:text-xs lg:text-sm font-black text-green-700">£{event.payment_amount!.toFixed(2)}</span>}
-          {event.is_fully_booked && <span className="text-[9px] font-black uppercase tracking-wide text-red-600 bg-red-50 px-1.5 py-0.5 rounded">Full</span>}
-          <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40" />
+          {hasPricing && <span className="font-black text-[11px] text-green-700 sm:text-xs lg:text-sm">£{event.payment_amount!.toFixed(2)}</span>}
+          {event.is_fully_booked && <span className="bg-red-50 px-1.5 py-0.5 rounded font-black text-[9px] text-red-600 uppercase tracking-wide">Full</span>}
+          <ChevronRight className="opacity-40 w-4 h-4 text-[#5F624F]" />
         </div>
+      </button>
+    );
+  };
+
+  // A calendar day cell reads as a mini day-timeline: the vertical axis is the time
+  // of day, so an event sits lower in the cell the later it starts. The window runs
+  // 08:00 (top) → 02:00 next-day (bottom), covering typical venue hours.
+  const TL_START_MIN = 8 * 60;
+  const TL_END_MIN = 26 * 60;
+  const TL_MIN_GAP = 26; // % — keep stacked pills from overlapping (fits 2-line phone pills)
+  const TL_MAX_TOP = 78; // % — keep the last pill inside the cell
+  const timeTopPct = (startTime: string | null) => {
+    const m = startTime ? parseTimeToMinutes(startTime.slice(0, 5)) : null;
+    if (m == null) return 0;
+    const mins = m < 6 * 60 ? m + 24 * 60 : m; // small hours read as after midnight
+    const f = (mins - TL_START_MIN) / (TL_END_MIN - TL_START_MIN);
+    return Math.min(1, Math.max(0, f)) * 100;
+  };
+  // Position each event by its time, then nudge later-but-clashing ones down so
+  // they never overlap while staying in chronological order.
+  const layoutDayByTime = (events: EventRecord[]) => {
+    const sorted = [...events].sort((a, b) => timeTopPct(a.start_time) - timeTopPct(b.start_time));
+    let last = -Infinity;
+    return sorted.map((event) => {
+      let top = Math.min(timeTopPct(event.start_time), TL_MAX_TOP);
+      if (top < last + TL_MIN_GAP) top = Math.min(last + TL_MIN_GAP, TL_MAX_TOP);
+      last = top;
+      return { event, top };
+    });
+  };
+
+  // Compact event pill for a calendar day cell — colour-coded by sub-type/type.
+  // On phones it stacks time over title (two lines) so more of the event shows;
+  // wider screens lay time + title on one line.
+  const renderCalendarChip = (event: EventRecord) => {
+    const sub = subtypeById.get(event.event_subtypes_id);
+    const type = typeById.get(event.event_types_id);
+    const badgeClass = badgeClassFromColor(sub?.color ?? type?.color ?? null);
+    const inactive = event.is_active === false;
+    return (
+      <button
+        type="button"
+        onClick={() => openView(event)}
+        title={`${event.title || "Untitled Event"}${event.start_time ? ` · ${formatTime(event.start_time)}` : ""}`}
+        className={cn(
+          "flex flex-col gap-0 sm:flex-row sm:items-center sm:gap-1 lg:gap-1.5 hover:brightness-95 px-1 lg:px-1.5 py-0.5 border rounded-md w-full min-w-0 overflow-hidden text-left transition",
+          badgeClass,
+          inactive && "opacity-50 line-through",
+        )}
+      >
+        {event.start_time && (
+          <span className="font-black tabular-nums text-[8px] sm:text-[10px] lg:text-[11px] leading-tight shrink-0">{formatTime(event.start_time)}</span>
+        )}
+        <span className="min-w-0 font-bold text-[9px] sm:text-[10px] lg:text-[11px] leading-tight truncate">{event.title || "Untitled"}</span>
       </button>
     );
   };
@@ -731,58 +858,118 @@ export default function EventsClient({
   const hasFieldErrors = Object.keys(fieldErrors).length > 0;
 
   return (
-    <div className="px-2 py-3 sm:p-4 md:p-6 space-y-3 sm:space-y-4 max-w-2xl md:max-w-3xl lg:max-w-5xl mx-auto bg-[#F7F4EA]">
+    <div className={cn(
+      "space-y-3 sm:space-y-4 bg-[#F7F4EA] mx-auto sm:px-4 sm:py-0 md:px-6 px-2 py-3",
+      // The calendar grid needs the full screen width to breathe; the list stays a
+      // comfortable reading column.
+      viewMode === "calendar"
+        ? "sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-368 2xl:max-w-432"
+        : "sm:max-w-2xl md:max-w-3xl lg:max-w-5xl"
+    )}>
 
       {/* Filter notice */}
       {filter === "quiz-incomplete" && (
-        <div className="flex items-center justify-between gap-3 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-2xl">
-          <p className="text-[11px] font-black uppercase tracking-wide text-amber-700">
+        <div className="flex justify-between items-center gap-3 bg-amber-50 px-4 py-2.5 border border-amber-200 rounded-2xl">
+          <p className="font-black text-[11px] text-amber-700 uppercase tracking-wide">
             Upcoming quizzes with incomplete questions
           </p>
-          <Link href="/event-setups/events" className="text-[11px] font-black uppercase tracking-wide text-amber-700 underline shrink-0">
+          <Link href="/event-setups/events" className="font-black text-[11px] text-amber-700 underline uppercase tracking-wide shrink-0">
             Clear
           </Link>
         </div>
       )}
 
-      {/* Header bar: search + date + compact New */}
+      {/* View toggle (top-left) + Filters toggle (right) */}
+      <div className="flex justify-between items-center gap-2">
+        <div className="inline-flex items-center bg-white p-0.5 border border-[#E6DFC8] rounded-xl">
+          <button
+            type="button"
+            onClick={() => setViewMode("list")}
+            aria-pressed={viewMode === "list"}
+            title="List view"
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 sm:px-3 rounded-lg h-8 font-black text-[10px] uppercase tracking-wide transition-colors",
+              viewMode === "list" ? "bg-[#5C4033] text-white" : "text-[#5F624F] hover:text-[#5C4033]"
+            )}
+          >
+            <List className="w-3.5 h-3.5" /> List
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("calendar")}
+            aria-pressed={viewMode === "calendar"}
+            title="Calendar view"
+            className={cn(
+              "inline-flex items-center gap-1.5 px-2.5 sm:px-3 rounded-lg h-8 font-black text-[10px] uppercase tracking-wide transition-colors",
+              viewMode === "calendar" ? "bg-[#5C4033] text-white" : "text-[#5F624F] hover:text-[#5C4033]"
+            )}
+          >
+            <Grid2X2 className="w-3.5 h-3.5" /> Calendar
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => openAdd()}
+          title="New Event"
+          className="inline-flex justify-center items-center gap-1.5 bg-[#1B4332] hover:bg-[#1B4332]/85 px-3 rounded-xl h-9 text-white transition-colors shrink-0"
+        >
+          <Plus className="w-3.5 h-3.5 shrink-0" />
+          <span className="font-black text-[10px] uppercase tracking-widest">New</span>
+        </button>
+      </div>
+
+      {/* Header bar: search + date + compact Filters */}
       <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 h-11 px-3 flex-1 min-w-0 rounded-xl border border-[#E6DFC8] bg-white focus-within:border-[#5C4033] transition-colors">
+        <div className="flex flex-1 items-center gap-2 bg-white px-3 border border-[#E6DFC8] focus-within:border-[#5C4033] rounded-xl min-w-0 h-11 transition-colors">
           <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
           <input
             type="text"
             placeholder="Search title, date or host..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 min-w-0 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+            className="flex-1 bg-transparent outline-none min-w-0 text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-sm"
           />
           {isSearching && (
-            <button type="button" onClick={() => setSearchQuery("")} className="shrink-0 -mr-1 p-1 rounded-md hover:bg-[#E6DFC8] transition-colors" title="Clear search">
+            <button type="button" onClick={() => setSearchQuery("")} className="hover:bg-[#E6DFC8] -mr-1 p-1 rounded-md transition-colors shrink-0" title="Clear search">
               <X className="w-3.5 h-3.5 text-[#5F624F]/50" />
             </button>
           )}
         </div>
-        <DatePicker value={dateRange} onChange={setDateRange} />
+        {viewMode === "list" && <DatePicker value={dateRange} onChange={setDateRange} />}
         <button
           type="button"
-          onClick={() => openAdd()}
-          title="New Event"
-          className="h-11 w-11 sm:w-auto sm:px-4 rounded-xl bg-[#1B4332] text-white hover:bg-[#1B4332]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+          onClick={() => setShowFilters((s) => !s)}
+          aria-pressed={showFilters}
+          aria-expanded={showFilters}
+          title={showFilters ? "Hide filters" : "Show filters"}
+          className={cn(
+            "inline-flex justify-center items-center gap-1.5 sm:px-4 border rounded-xl w-11 sm:w-auto h-11 font-black text-[11px] uppercase tracking-widest transition-colors shrink-0",
+            showFilters || activeFilterCount > 0
+              ? "bg-[#5C4033] text-white border-[#5C4033]"
+              : "bg-white text-[#5F624F] border-[#E6DFC8] hover:text-[#5C4033]"
+          )}
         >
-          <Plus className="w-4 h-4 shrink-0" />
-          <span className="hidden sm:inline text-[11px] font-black uppercase tracking-widest">New</span>
+          <SlidersHorizontal className="w-4 h-4 shrink-0" />
+          <span className="hidden sm:inline">Filters</span>
+          {activeFilterCount > 0 && (
+            <span className="inline-flex justify-center items-center bg-white px-1 rounded-full min-w-4 h-4 font-black tabular-nums text-[#5C4033] text-[9px]">
+              {activeFilterCount}
+            </span>
+          )}
         </button>
       </div>
 
-      {/* Filter bar: category chips + sort / quick filters */}
-      <div className="pt-1 pb-1 space-y-2">
+      {/* Filter bar: category chips + sort / quick filters (collapsed behind Filters) */}
+      {showFilters && (
+      <div className="space-y-2 pt-1 pb-1">
         {/* Category chips */}
-        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="[&::-webkit-scrollbar]:hidden flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
           <button
             type="button"
             onClick={() => setCatFilter("all")}
             className={cn(
-              "shrink-0 h-7 px-3 rounded-full border text-[10px] font-black uppercase tracking-wide inline-flex items-center gap-1.5 transition-colors",
+              "inline-flex items-center gap-1.5 px-3 border rounded-full h-7 font-black text-[10px] uppercase tracking-wide transition-colors shrink-0",
               catFilter === "all" ? "bg-[#5C4033] text-white border-[#5C4033]" : "bg-white text-[#5F624F] border-[#E6DFC8]"
             )}
           >
@@ -796,7 +983,7 @@ export default function EventsClient({
                 type="button"
                 onClick={() => setCatFilter(sel ? "all" : type.id)}
                 className={cn(
-                  "shrink-0 h-7 px-3 rounded-full border text-[10px] font-black uppercase tracking-wide inline-flex items-center gap-1.5 transition-colors",
+                  "inline-flex items-center gap-1.5 px-3 border rounded-full h-7 font-black text-[10px] uppercase tracking-wide transition-colors shrink-0",
                   sel ? "bg-[#5C4033] text-white border-[#5C4033]" : cn(badgeClassFromColor(type.color), "rounded-full")
                 )}
               >
@@ -807,15 +994,15 @@ export default function EventsClient({
         </div>
 
         {/* Sort + quick filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="[&::-webkit-scrollbar]:hidden flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
           <button
             type="button"
             onClick={() => setSortSoon((s) => !s)}
-            className="shrink-0 h-7 px-2.5 rounded-lg border border-[#E6DFC8] bg-[#EFE8D4] text-[#5C4033] text-[9px] font-black uppercase tracking-wide inline-flex items-center gap-1.5"
+            className="inline-flex items-center gap-1.5 bg-[#EFE8D4] px-2.5 border border-[#E6DFC8] rounded-lg h-7 font-black text-[#5C4033] text-[9px] uppercase tracking-wide shrink-0"
           >
             <ArrowDownUp className="w-3 h-3" /> {sortSoon ? "Soonest" : "Latest"}
           </button>
-          <span className="shrink-0 w-px h-4 bg-[#E6DFC8]" />
+          <span className="bg-[#E6DFC8] w-px h-4 shrink-0" />
           {QUICK_FILTERS.map((q) => {
             const on = quickFilters.has(q.key);
             return (
@@ -824,7 +1011,7 @@ export default function EventsClient({
                 type="button"
                 onClick={() => toggleQuickFilter(q.key)}
                 className={cn(
-                  "shrink-0 h-7 px-3 rounded-full border text-[9px] font-black uppercase tracking-wide transition-colors",
+                  "px-3 border rounded-full h-7 font-black text-[9px] uppercase tracking-wide transition-colors shrink-0",
                   on ? "bg-[#5C4033] text-white border-[#5C4033]" : "bg-white text-[#5F624F] border-[#E6DFC8]"
                 )}
               >
@@ -834,35 +1021,99 @@ export default function EventsClient({
           })}
         </div>
       </div>
+      )}
 
       {/* Result line */}
-      {anyFilterActive && (
-        <div className="flex items-center gap-1.5 px-1 text-xs text-[#5F624F] font-semibold">
+      {viewMode === "list" && anyFilterActive && (
+        <div className="flex items-center gap-1.5 px-1 font-semibold text-[#5F624F] text-xs">
           <b className="font-black text-[#1F1F1A] text-[13px]">{visibleEvents.length}</b>
           event{visibleEvents.length === 1 ? "" : "s"}
           {catFilter !== "all" && (
             <> in <span className="font-black text-[#5C4033]">{toTitleCase(typeById.get(catFilter)?.name)}</span></>
           )}
-          <button type="button" onClick={clearAllFilters} className="ml-auto font-black text-[10px] uppercase tracking-wide text-[#5C4033] underline">
+          <button type="button" onClick={clearAllFilters} className="ml-auto font-black text-[#5C4033] text-[10px] underline uppercase tracking-wide">
             Clear all
           </button>
         </div>
       )}
 
-      {/* Flat event list */}
-      {visibleEvents.length === 0 ? (
-        <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
-          <CalendarDays className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
-          <p className="text-sm font-black text-[#1F1F1A]">
+      {/* Calendar grid or flat event list */}
+      {viewMode === "calendar" ? (
+        <div className="space-y-3">
+          {/* Month navigation */}
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={() => shiftMonth(-1)} title="Previous month" className="inline-flex justify-center items-center bg-white hover:bg-[#EFE8D4] border border-[#E6DFC8] rounded-xl w-9 h-9 text-[#5C4033] transition-colors">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <button type="button" onClick={() => shiftMonth(1)} title="Next month" className="inline-flex justify-center items-center bg-white hover:bg-[#EFE8D4] border border-[#E6DFC8] rounded-xl w-9 h-9 text-[#5C4033] transition-colors">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+            <h3 className="font-black text-[#1F1F1A] text-sm sm:text-base uppercase tracking-tight">{calMonthLabel}</h3>
+            <button type="button" onClick={goToday} className="bg-[#EFE8D4] hover:bg-[#E6DFC8] ml-auto px-3 border border-[#E6DFC8] rounded-xl h-9 font-black text-[#5C4033] text-[10px] uppercase tracking-wide transition-colors">
+              Today
+            </button>
+          </div>
+
+          {/* Weekday header */}
+          <div className="gap-1 sm:gap-1.5 lg:gap-2 grid grid-cols-7">
+            {WEEKDAYS.map((w) => (
+              <div key={w} className="py-1 font-black text-[#5F624F] text-[9px] sm:text-[11px] lg:text-xs text-center uppercase tracking-wide">{w}</div>
+            ))}
+          </div>
+
+          {/* Day cells — every cell the same fixed width (grid-cols-7) and height;
+              inside each, events are positioned vertically by their start time. */}
+          <div className="gap-1 sm:gap-1.5 lg:gap-2 grid grid-cols-7">
+            {calendarCells.map((dateStr, i) => {
+              if (!dateStr) return <div key={`blank-${i}`} className="bg-[#F0EDE0]/50 border border-transparent rounded-xl h-32 sm:h-36 lg:h-44" />;
+              const dayEvents = eventsByDate.get(dateStr) ?? [];
+              const isToday = dateStr === todayStr;
+              const MAX = 4;
+              const laid = layoutDayByTime(dayEvents);
+              const shown = laid.slice(0, MAX);
+              const extra = laid.length - shown.length;
+              return (
+                <div key={dateStr} className={cn("relative bg-white border rounded-xl h-32 sm:h-36 lg:h-44 overflow-hidden", isToday ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#E6DFC8]")}>
+                  {/* day number + event count */}
+                  <div className="flex justify-between items-center px-1 pt-1">
+                    <span className={cn("font-black tabular-nums text-[10px] sm:text-xs lg:text-sm", isToday ? "text-[#FF6B35]" : "text-[#5F624F]")}>{Number(dateStr.slice(-2))}</span>
+                    {dayEvents.length > 0 && <span className="font-black tabular-nums text-[#5F624F]/60 text-[8px] sm:text-[9px]">{dayEvents.length}</span>}
+                  </div>
+                  {/* timeline area below the day number — top = earlier, bottom = later */}
+                  <div className="absolute inset-x-0 top-5 lg:top-6 bottom-1">
+                    {shown.map(({ event, top }) => (
+                      <div
+                        key={event.id}
+                        style={{ "--top": `${top}%` } as React.CSSProperties}
+                        className="absolute inset-x-1 top-(--top)"
+                      >
+                        {renderCalendarChip(event)}
+                      </div>
+                    ))}
+                    {extra > 0 && (
+                      <button type="button" onClick={() => openView(laid[MAX].event)} className="right-1 bottom-0 absolute bg-[#F7F4EA] px-1 rounded font-black text-[#5C4033] text-[8px] sm:text-[9px] lg:text-[10px] uppercase tracking-wide">
+                        +{extra} more
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : visibleEvents.length === 0 ? (
+        <div className="py-14 border border-[#E6DFC8] border-dashed rounded-2xl text-center">
+          <CalendarDays className="opacity-30 mx-auto mb-3 w-8 h-8 text-[#5F624F]" />
+          <p className="font-black text-[#1F1F1A] text-sm">
             {filter === "quiz-incomplete" ? "No upcoming quizzes with incomplete questions" : "Nothing matches"}
           </p>
-          <p className="text-[11px] text-[#5F624F] mt-1">
+          <p className="mt-1 text-[#5F624F] text-[11px]">
             {filter === "quiz-incomplete"
               ? "All quiz questions are complete"
               : anyFilterActive ? "No events with these filters" : "No events for the selected dates"}
           </p>
           {anyFilterActive && filter !== "quiz-incomplete" && (
-            <button type="button" onClick={clearAllFilters} className="mt-3 text-[11px] font-black uppercase tracking-wide text-[#5C4033] underline">
+            <button type="button" onClick={clearAllFilters} className="mt-3 font-black text-[#5C4033] text-[11px] underline uppercase tracking-wide">
               Reset filters
             </button>
           )}
@@ -872,10 +1123,10 @@ export default function EventsClient({
           {dayGroups.map((group) => (
             <section key={group.date} className="space-y-1.5 sm:space-y-2">
               {/* Sticky day separator */}
-              <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#F7F4EA] py-1.5">
-                <span className="text-[11px] sm:text-xs lg:text-sm font-black uppercase tracking-wide text-[#5C4033]">{relativeDayOf(group.date, todayStr)}</span>
-                <span className="flex-1 h-px bg-[#E6DFC8]" />
-                <span className="text-[10px] sm:text-[11px] lg:text-xs font-bold text-[#5F624F]">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
+              <div className="top-0 z-10 sticky flex items-center gap-2 bg-[#F7F4EA] py-1.5">
+                <span className="font-black text-[#5C4033] text-[11px] sm:text-xs lg:text-sm uppercase tracking-wide">{relativeDayOf(group.date, todayStr)}</span>
+                <span className="flex-1 bg-[#E6DFC8] h-px" />
+                <span className="font-bold text-[#5F624F] text-[10px] sm:text-[11px] lg:text-xs">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
               </div>
               {group.events.map((event) => renderEventRow(event))}
             </section>
@@ -889,17 +1140,16 @@ export default function EventsClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-           className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
-            flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140 lg:w-6xl xl:w-7xl
-            sm:h-auto sm:max-h-[80vh] lg:max-h-[90vh] sm:rounded-4xl sm:bottom-6
-            sm:border-2 sm:border-[#E6DFC8]"
+          className="flex flex-col bg-[#F7F4EA] shadow-2xl p-0 border-[#E6DFC8] border-t-2 rounded-t-[2.5rem] outline-none h-[85vh]
+            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2
+            sm:w-140 lg:w-6xl xl:w-7xl
+            sm:h-auto sm:max-h-[80vh] lg:max-h-[90vh] sm:border-2 sm:rounded-4xl"
         >
           {/* Sheet header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-3">
+          <div className="top-0 z-30 sticky bg-white/80 backdrop-blur-md p-4 pb-3 border-[#E6DFC8] border-b sm:rounded-t-4xl shrink-0">
+            <div className="flex justify-between items-start gap-3">
               <div className="min-w-0">
-                <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+                <SheetTitle className="font-black text-[#1F1F1A] text-xl truncate uppercase leading-tight tracking-tighter">
                   {isAdding ? "New Event" : isEditing ? "Edit Event" : (() => {
                     const sub = selected ? subtypeById.get(selected.event_subtypes_id) : null;
                     const subType = toTitleCase(sub?.name);
@@ -912,13 +1162,13 @@ export default function EventsClient({
                 {selected && (
                   <div className="flex items-center gap-1.5 mt-1">
                     <Hash className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-wide tabular-nums">ID: {selected.id}</span>
+                    <span className="font-black tabular-nums text-[#5F624F] text-xs uppercase tracking-wide">ID: {selected.id}</span>
                   </div>
                 )}
               </div>
               {selected && !isAdding && (
                 <span className={cn(
-                  "shrink-0 text-[10px] font-black px-3 py-1.5 rounded-full border",
+                  "px-3 py-1.5 border rounded-full font-black text-[10px] shrink-0",
                   selected.is_active !== false ? "bg-green-100 text-green-700 border-green-300" : "bg-red-100 text-red-600 border-red-300"
                 )}>
                   {selected.is_active !== false ? "Active" : "Inactive"}
@@ -928,7 +1178,7 @@ export default function EventsClient({
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y space-y-4 sm:space-y-5">
+          <div className="flex-1 space-y-4 sm:space-y-5 px-4 sm:px-6 py-4 sm:py-6 min-h-0 overflow-y-auto touch-pan-y">
 
             {/* View mode */}
             {!showForm && selected && (() => {
@@ -958,10 +1208,10 @@ export default function EventsClient({
               const returnHref = `/event-setups/events?open=${selected.id}`;
               const viewAllHref = `${baseViewAllHref}${baseViewAllHref.includes("?") ? "&" : "?"}from=${encodeURIComponent(returnHref)}`;
               return (
-                <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
-                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                    <button type="button" onClick={() => setDetailsOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left">
-                      <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Event Details</span>
+                <div className="items-start gap-5 space-y-4 sm:space-y-5 lg:space-y-0 lg:grid grid-cols-2 animate-in duration-200 fade-in">
+                  <div className="bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden">
+                    <button type="button" onClick={() => setDetailsOpen(o => !o)} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+                      <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Event Details</span>
                       <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", detailsOpen && "rotate-180")} />
                     </button>
                     {detailsOpen && (
@@ -984,28 +1234,28 @@ export default function EventsClient({
                   {isQuiz && (() => {
                     const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
                     return (
-                      <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                        <button type="button" onClick={() => setQuizOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left">
-                          <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Quiz Questions</span>
+                      <div className="bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden">
+                        <button type="button" onClick={() => setQuizOpen(o => !o)} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+                          <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Quiz Questions</span>
                           <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", quizOpen && "rotate-180")} />
                         </button>
                         {quizOpen && (
                           <>
-                            <div className="px-4 sm:px-5 py-2.5 space-y-2">
+                            <div className="space-y-2 px-4 sm:px-5 py-2.5">
                               {categoryCounts.map(cat => (
-                                <div key={cat.id} className="flex items-center justify-between gap-2">
-                                  <span className="text-xs sm:text-sm font-bold text-[#1F1F1A]">{cat.category_name}</span>
+                                <div key={cat.id} className="flex justify-between items-center gap-2">
+                                  <span className="font-bold text-[#1F1F1A] text-xs sm:text-sm">{cat.category_name}</span>
                                   <div className="flex items-center gap-1.5">
                                     {cat.count >= cat.question_count ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600" /> : cat.count > 0 ? <AlertTriangle className="w-3.5 h-3.5 text-amber-500" /> : <AlertCircle className="w-3.5 h-3.5 text-red-400" />}
-                                    <span className="text-xs sm:text-sm font-black tabular-nums text-[#5F624F]">{cat.count} / {cat.question_count}</span>
+                                    <span className="font-black tabular-nums text-[#5F624F] text-xs sm:text-sm">{cat.count} / {cat.question_count}</span>
                                   </div>
                                 </div>
                               ))}
                             </div>
-                            <div className="px-4 sm:px-5 py-2.5 border-t border-[#E6DFC8]">
-                              <Link href={`/event-setups/events/${selected.id}`} className="w-full h-9 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors gap-1.5" title="Manage Quiz">
+                            <div className="px-4 sm:px-5 py-2.5 border-[#E6DFC8] border-t">
+                              <Link href={`/event-setups/events/${selected.id}`} className="flex justify-center items-center gap-1.5 bg-[#5C4033] hover:bg-[#5C4033]/85 rounded-xl w-full h-9 text-white transition-colors" title="Manage Quiz">
                                 <Brain className="w-3.5 h-3.5" />
-                                <span className="text-[9px] font-black uppercase tracking-wide">Manage Quiz</span>
+                                <span className="font-black text-[9px] uppercase tracking-wide">Manage Quiz</span>
                               </Link>
                             </div>
                           </>
@@ -1014,9 +1264,9 @@ export default function EventsClient({
                     );
                   })()}
 
-                  {selected.is_bookable && <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                    <button type="button" onClick={() => setBookingsOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left">
-                      <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Bookings</span>
+                  {selected.is_bookable && <div className="bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden">
+                    <button type="button" onClick={() => setBookingsOpen(o => !o)} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+                      <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Bookings</span>
                       <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingsOpen && "rotate-180")} />
                     </button>
                     {bookingsOpen && (
@@ -1027,29 +1277,29 @@ export default function EventsClient({
                         )}
                         <div className="grid grid-cols-3 divide-x divide-[#E6DFC8]/50">
                           <div className="px-2 sm:px-3 py-2 text-center">
-                            <p className="text-base sm:text-lg font-black text-green-600 tabular-nums leading-tight">{bk.confirmedPeople}</p>
-                            <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Confirmed</p>
+                            <p className="font-black tabular-nums text-green-600 text-base sm:text-lg leading-tight">{bk.confirmedPeople}</p>
+                            <p className="font-black text-[#5F624F] text-[10px] sm:text-[9px] uppercase tracking-wide">Confirmed</p>
                           </div>
                           <div className="px-2 sm:px-3 py-2 text-center">
-                            <p className="text-base sm:text-lg font-black text-amber-500 tabular-nums leading-tight">{bk.waitlistedPeople}</p>
-                            <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Waitlisted</p>
+                            <p className="font-black tabular-nums text-amber-500 text-base sm:text-lg leading-tight">{bk.waitlistedPeople}</p>
+                            <p className="font-black text-[#5F624F] text-[10px] sm:text-[9px] uppercase tracking-wide">Waitlisted</p>
                           </div>
                           <div className="px-2 sm:px-3 py-2 text-center">
-                            <p className="text-base sm:text-lg font-black text-red-500 tabular-nums leading-tight">{bk.cancelledPeople}</p>
-                            <p className="text-[10px] sm:text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Cancelled</p>
+                            <p className="font-black tabular-nums text-red-500 text-base sm:text-lg leading-tight">{bk.cancelledPeople}</p>
+                            <p className="font-black text-[#5F624F] text-[10px] sm:text-[9px] uppercase tracking-wide">Cancelled</p>
                           </div>
                         </div>
-                        <div className="px-4 sm:px-5 py-2.5 border-t border-[#E6DFC8]">
-                          <Link href={viewAllHref} className="w-full h-9 rounded-xl bg-[#5C4033] flex items-center justify-center text-white hover:bg-[#5C4033]/85 transition-colors gap-1.5">
+                        <div className="px-4 sm:px-5 py-2.5 border-[#E6DFC8] border-t">
+                          <Link href={viewAllHref} className="flex justify-center items-center gap-1.5 bg-[#5C4033] hover:bg-[#5C4033]/85 rounded-xl w-full h-9 text-white transition-colors">
                             <Users className="w-3.5 h-3.5" />
-                            <span className="text-[9px] font-black uppercase tracking-wide">View All</span>
+                            <span className="font-black text-[9px] uppercase tracking-wide">View All</span>
                           </Link>
                         </div>
                         {selected.seating_required && (
-                          <div className="px-4 sm:px-5 py-2.5 border-t border-[#E6DFC8]">
-                            <Link href={`/settings/floor-plan/${selected.id}`} className="w-full h-9 rounded-xl border-2 border-[#E6DFC8] bg-white flex items-center justify-center text-[#5C4033] hover:bg-[#F7F4EA] transition-colors gap-1.5">
+                          <div className="px-4 sm:px-5 py-2.5 border-[#E6DFC8] border-t">
+                            <Link href={`/settings/floor-plan/${selected.id}`} className="flex justify-center items-center gap-1.5 bg-white hover:bg-[#F7F4EA] border-[#E6DFC8] border-2 rounded-xl w-full h-9 text-[#5C4033] transition-colors">
                               <Grid2X2 className="w-3.5 h-3.5" />
-                              <span className="text-[9px] font-black uppercase tracking-wide">Floor plan layout calculator</span>
+                              <span className="font-black text-[9px] uppercase tracking-wide">Floor plan layout calculator</span>
                             </Link>
                           </div>
                         )}
@@ -1057,9 +1307,9 @@ export default function EventsClient({
                     )}
                   </div>}
 
-                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
-                    <button type="button" onClick={() => setBookingSettingsOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left">
-                      <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Public Booking Settings</span>
+                  <div className="bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden">
+                    <button type="button" onClick={() => setBookingSettingsOpen(o => !o)} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+                      <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Public Booking Settings</span>
                       <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingSettingsOpen && "rotate-180")} />
                     </button>
                     {bookingSettingsOpen && (
@@ -1067,16 +1317,16 @@ export default function EventsClient({
                         <DetailCell label="Public Booking" toggle={!!selected.is_bookable} />
 
                         {selected.is_bookable && (
-                          <div className="px-4 sm:px-5 py-3 border-t border-[#E6DFC8]">
+                          <div className="px-4 sm:px-5 py-3 border-[#E6DFC8] border-t">
                             <div className="flex items-center gap-1.5 mb-2">
                               <Link2 className="w-3.5 h-3.5 text-[#5F624F]" />
-                              <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Shareable Booking Link</span>
+                              <span className="font-bold text-[#5F624F] text-[10px] uppercase tracking-wide">Shareable Booking Link</span>
                             </div>
                             <div className="flex items-center gap-2">
-                              <code className="text-[11px] font-bold text-[#26300D] bg-[#F7F4EA] border border-[#E6DFC8] rounded-lg px-3 py-2 flex-1 truncate">
+                              <code className="flex-1 bg-[#F7F4EA] px-3 py-2 border border-[#E6DFC8] rounded-lg font-bold text-[#26300D] text-[11px] truncate">
                                 {selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`)}
                               </code>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => {
+                              <Button variant="ghost" size="icon" className="w-8 h-8 shrink-0" onClick={() => {
                                 const url = selected.booking_page_url ?? `${window.location.origin}/book/event/${selected.id}`;
                                 navigator.clipboard.writeText(url);
                                 setLinkCopied(true);
@@ -1090,13 +1340,13 @@ export default function EventsClient({
 
                         {/* Booking page config — shown whenever the event is bookable. */}
                         {selected.is_bookable && (
-                          <div className="border-t border-[#E6DFC8]">
-                            <button type="button" onClick={() => setBookingPageOpen(o => !o)} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#E6DFC8]/60 hover:bg-[#E6DFC8]/80 transition-colors text-left">
-                              <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Booking Page</span>
+                          <div className="border-[#E6DFC8] border-t">
+                            <button type="button" onClick={() => setBookingPageOpen(o => !o)} className="flex justify-between items-center bg-[#E6DFC8]/60 hover:bg-[#E6DFC8]/80 px-4 sm:px-5 py-3 w-full text-left transition-colors">
+                              <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Booking Page</span>
                               <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingPageOpen && "rotate-180")} />
                             </button>
                             {bookingPageOpen && (
-                              <div className="p-3 sm:p-4 bg-[#F7F4EA]/40">
+                              <div className="bg-[#F7F4EA]/40 p-3 sm:p-4">
                                 <BookingConfigEditor value={selected.booking_config ?? {}} readOnly />
                               </div>
                             )}
@@ -1113,7 +1363,7 @@ export default function EventsClient({
 
             {/* Edit / Add form */}
             {showForm && (
-              <form id="event-form" action={handleSubmit} className="animate-in fade-in duration-200 space-y-4 sm:space-y-5 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
+              <form id="event-form" action={handleSubmit} className="items-start gap-5 space-y-4 sm:space-y-5 lg:space-y-0 lg:grid grid-cols-2 animate-in duration-200 fade-in">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
                 {/* Boolean fields live in the collapsible Settings section; keep their
                     hidden inputs at the form root so they submit even when collapsed. */}
@@ -1125,38 +1375,38 @@ export default function EventsClient({
                 <FormSection title="Details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
                   {/* Event Type */}
                   <FormRow label="Event Type" required error={fieldErrors.event_types_id}>
-                    <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                    <div className="flex flex-1 justify-end items-center gap-1.5 min-w-0">
                       <select
                         title="Event Type"
                         name="event_types_id"
                         value={formTypeId}
                         onChange={(e) => onSelectType(e.target.value)}
-                        className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]"
+                        className="bg-transparent outline-none min-w-0 font-black text-[#1F1F1A] text-xs sm:text-sm text-right appearance-none cursor-pointer [text-align-last:right]"
                       >
                         {eventTypes.map((t) => (
                           <option key={t.id} value={t.id}>{toTitleCase(t.name)}</option>
                         ))}
                       </select>
-                      <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
+                      <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] pointer-events-none shrink-0" />
                     </div>
                   </FormRow>
 
                   {/* Sub-Type */}
                   <FormRow label="Sub-Type" required error={fieldErrors.event_subtypes_id}>
-                    <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                    <div className="flex flex-1 justify-end items-center gap-1.5 min-w-0">
                       <select
                         title="Sub-Type"
                         name="event_subtypes_id"
                         value={formSubtypeId}
                         onChange={(e) => onSelectSubtype(e.target.value)}
-                        className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]"
+                        className="bg-transparent outline-none min-w-0 font-black text-[#1F1F1A] text-xs sm:text-sm text-right appearance-none cursor-pointer [text-align-last:right]"
                       >
                         <option value="" disabled>Select a sub-type...</option>
                         {formSubtypeOptions.map((s) => (
                           <option key={s.id} value={s.id}>{toTitleCase(s.name)}</option>
                         ))}
                       </select>
-                      <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
+                      <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] pointer-events-none shrink-0" />
                     </div>
                   </FormRow>
 
@@ -1167,63 +1417,63 @@ export default function EventsClient({
                       placeholder="e.g. Music Bingo"
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
-                      className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      className="flex-1 bg-transparent outline-none font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm text-right"
                     />
                   </FormRow>
 
                   {/* Date */}
                   <FormRow label="Date" required error={fieldErrors.date}>
-                    <div className="flex items-center flex-1 justify-end">
-                      <input title="Date" name="date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none" />
+                    <div className="flex flex-1 justify-end items-center">
+                      <input title="Date" name="date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="bg-transparent outline-none font-black text-[#1F1F1A] text-xs sm:text-sm" />
                     </div>
                   </FormRow>
 
                   {/* Time */}
                   <FormRow label="Time" required error={fieldErrors.time}>
-                    <div className="flex items-center gap-2 flex-1 justify-end">
-                      <input title="Start time" name="start_time" type="time" value={formStartTime} onChange={(e) => { const v = e.target.value; setFormStartTime(v); if (v && !formEndTime) { const end = addHoursToTime(v, 2); if (end) setFormEndTime(end); } }} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-22 text-right" />
+                    <div className="flex flex-1 justify-end items-center gap-2">
+                      <input title="Start time" name="start_time" type="time" value={formStartTime} onChange={(e) => { const v = e.target.value; setFormStartTime(v); if (v && !formEndTime) { const end = addHoursToTime(v, 2); if (end) setFormEndTime(end); } }} className="bg-transparent outline-none w-22 font-black text-[#1F1F1A] text-xs sm:text-sm text-right" />
                       <span className="text-[#5F624F]/50 text-xs">-</span>
-                      <input title="End time" name="end_time" type="time" value={formEndTime} onChange={(e) => setFormEndTime(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none w-22 text-right" />
+                      <input title="End time" name="end_time" type="time" value={formEndTime} onChange={(e) => setFormEndTime(e.target.value)} className="bg-transparent outline-none w-22 font-black text-[#1F1F1A] text-xs sm:text-sm text-right" />
                     </div>
                   </FormRow>
 
                   {/* Host — only when subtype requires a host */}
                   {selectedSubtype?.host_required && (
                     <FormRow label="Host" warning={fieldWarnings.host_employee_id}>
-                      <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-                        <select title="Host" name="host_employee_id" value={formHostId} onChange={(e) => setFormHostId(e.target.value)} className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]">
+                      <div className="flex flex-1 justify-end items-center gap-1.5 min-w-0">
+                        <select title="Host" name="host_employee_id" value={formHostId} onChange={(e) => setFormHostId(e.target.value)} className="bg-transparent outline-none min-w-0 font-black text-[#1F1F1A] text-xs sm:text-sm text-right appearance-none cursor-pointer [text-align-last:right]">
                           <option value="">No host</option>
                           {employees.map((e) => (
                             <option key={e.id} value={e.id}>{e.full_name}</option>
                           ))}
                         </select>
-                        <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
+                        <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] pointer-events-none shrink-0" />
                       </div>
                     </FormRow>
                   )}
 
                   {/* Payment */}
                   <FormRow label="Payment (£)" warning={fieldWarnings.payment_amount}>
-                    <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="flex-1 bg-transparent outline-none font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm text-right" />
                   </FormRow>
 
                   {/* Tagline */}
                   <div className="px-4 sm:px-5 py-2.5 sm:py-4">
-                    <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 mb-2">
-                      <span className="text-[10px] font-black uppercase tracking-wide">Tagline</span>
+                    <div className="flex items-center gap-1.5 sm:gap-2 opacity-60 mb-2 text-[#5F624F]">
+                      <span className="font-black text-[10px] uppercase tracking-wide">Tagline</span>
                     </div>
-                    <textarea name="tagline" placeholder="Brief tagline for the event..." rows={2} value={formTagline} onChange={(e) => setFormTagline(e.target.value)} className="w-full text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none placeholder:text-[#5F624F]/40 resize-none" />
+                    <textarea name="tagline" placeholder="Brief tagline for the event..." rows={2} value={formTagline} onChange={(e) => setFormTagline(e.target.value)} className="bg-transparent outline-none w-full font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm resize-none" />
                   </div>
 
                   {/* External Link */}
                   <FormRow label="External Link">
-                    <input name="external_link" type="url" placeholder="https://instagram.com/..." defaultValue={formDefault?.external_link ?? ""} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    <input name="external_link" type="url" placeholder="https://instagram.com/..." defaultValue={formDefault?.external_link ?? ""} className="flex-1 bg-transparent outline-none font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm text-right" />
                   </FormRow>
 
                   {/* Karaoke Song Request Link — only when subtype is karaoke */}
                   {selectedSubtype?.behavior === "karaoke" && (
                     <FormRow label="Singa Link" warning={fieldWarnings.karaoke_request_url}>
-                      <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." value={formKaraokeUrl} onChange={(e) => setFormKaraokeUrl(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                      <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." value={formKaraokeUrl} onChange={(e) => setFormKaraokeUrl(e.target.value)} className="flex-1 bg-transparent outline-none font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm text-right" />
                     </FormRow>
                   )}
 
@@ -1259,7 +1509,7 @@ export default function EventsClient({
                       {/* Booking URL — required for a bookable event. Seeded from the
                           saved value when editing; blocks save while empty. */}
                       <FormRow label="Booking URL" required error={fieldErrors.booking_page_url}>
-                        <input name="booking_page_url" type="url" placeholder="https://..." value={formBookingPageUrl} onChange={(e) => { setFormBookingPageUrl(e.target.value); setBookingUrlManual(true); }} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                        <input name="booking_page_url" type="url" placeholder="https://..." value={formBookingPageUrl} onChange={(e) => { setFormBookingPageUrl(e.target.value); setBookingUrlManual(true); }} className="flex-1 bg-transparent outline-none font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm text-right" />
                       </FormRow>
 
                       {/* Linked Booking & Group Name (games only) */}
@@ -1269,7 +1519,7 @@ export default function EventsClient({
                           <>
                             <FormRow label="Linked Booking">
                               <input type="hidden" name="booking_id" value={formBookingId} />
-                              <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                              <div className="flex flex-1 justify-end items-center gap-1.5 min-w-0">
                                 <select
                                   title="Linked Booking"
                                   value={formBookingId}
@@ -1284,19 +1534,19 @@ export default function EventsClient({
                                       setFormGroupName("");
                                     }
                                   }}
-                                  className="min-w-0 text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none appearance-none cursor-pointer text-right [text-align-last:right]"
+                                  className="bg-transparent outline-none min-w-0 font-black text-[#1F1F1A] text-xs sm:text-sm text-right appearance-none cursor-pointer [text-align-last:right]"
                                 >
                                   <option value="">No booking</option>
                                   {eventBookings.map(b => (
                                     <option key={b.id} value={b.id}>#{b.id} — {b.group_name || "Unnamed"}</option>
                                   ))}
                                 </select>
-                                <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] shrink-0 pointer-events-none" />
+                                <ChevronDown className="w-3.5 h-3.5 text-[#5F624F] pointer-events-none shrink-0" />
                               </div>
                             </FormRow>
                             <FormRow label="Group Name">
                               <input type="hidden" name="group_name" value={formGroupName} />
-                              <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                              <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="flex-1 bg-transparent outline-none font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm text-right" />
                             </FormRow>
                           </>
                         );
@@ -1317,24 +1567,24 @@ export default function EventsClient({
 
                 {/* Booking card branding — only when this category owns the card (per_event) and it's bookable. */}
                 {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
-                  <div className="lg:col-span-2 bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
-                    <div className="px-4 sm:px-5 py-2.5 sm:py-3 bg-[#E6DFC8]/60">
-                      <span className="text-[11px] font-black uppercase tracking-wide text-[#26300D]">Booking Card</span>
+                  <div className="lg:col-span-2 bg-white border-[#E6DFC8] border-2 rounded-3xl divide-y divide-[#E6DFC8]/50 overflow-hidden">
+                    <div className="bg-[#E6DFC8]/60 px-4 sm:px-5 py-2.5 sm:py-3">
+                      <span className="font-black text-[#26300D] text-[11px] uppercase tracking-wide">Booking Card</span>
                     </div>
                     <div className="px-4 sm:px-5 pt-2.5">
-                      <p className="text-[10px] text-[#5F624F] leading-relaxed">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
+                      <p className="text-[#5F624F] text-[10px] leading-relaxed">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
                     </div>
                     <FormRow label="Card Title">
-                      <input name="booking_card_title" placeholder="e.g. Music Bingo" value={formCardTitle} onChange={(e) => setFormCardTitle(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                      <input name="booking_card_title" placeholder="e.g. Music Bingo" value={formCardTitle} onChange={(e) => setFormCardTitle(e.target.value)} className="flex-1 bg-transparent outline-none font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm text-right" />
                     </FormRow>
                     <div className="px-4 sm:px-5 py-2.5 sm:py-4">
-                      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-wide">Card Tagline</span>
+                      <div className="flex items-center gap-1.5 sm:gap-2 opacity-60 mb-2 text-[#5F624F]">
+                        <span className="font-black text-[10px] uppercase tracking-wide">Card Tagline</span>
                       </div>
-                      <textarea name="booking_card_tagline" placeholder="Short line shown under the title..." rows={2} value={formCardTagline} onChange={(e) => setFormCardTagline(e.target.value)} className="w-full text-xs sm:text-sm font-black text-[#1F1F1A] bg-transparent outline-none placeholder:text-[#5F624F]/40 resize-none" />
+                      <textarea name="booking_card_tagline" placeholder="Short line shown under the title..." rows={2} value={formCardTagline} onChange={(e) => setFormCardTagline(e.target.value)} className="bg-transparent outline-none w-full font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm resize-none" />
                     </div>
                     <FormRow label="Card Badge">
-                      <input name="booking_card_badge" placeholder="e.g. Thursdays, Book Now" value={formCardBadge} onChange={(e) => setFormCardBadge(e.target.value)} className="text-xs sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                      <input name="booking_card_badge" placeholder="e.g. Thursdays, Book Now" value={formCardBadge} onChange={(e) => setFormCardBadge(e.target.value)} className="flex-1 bg-transparent outline-none font-black text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-xs sm:text-sm text-right" />
                     </FormRow>
                     <input type="hidden" name="booking_card_icon" value={formCardIcon ?? ""} />
                     <IconPicker label="Card Icon" value={formCardIcon} onChange={setFormCardIcon} />
@@ -1349,26 +1599,26 @@ export default function EventsClient({
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
+          <div className="z-40 bg-white/80 backdrop-blur-md px-6 py-5 pb-10 sm:pb-5 border-[#E6DFC8] border-t-2 rounded-b-4xl shrink-0">
             {!showForm && selected && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-wide text-[10px] bg-white hover:bg-red-50 hover:border-red-200">
-                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              <div className="gap-3 grid grid-cols-2">
+                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="bg-white hover:bg-red-50 px-4 border-[#E6DFC8] border-2 hover:border-red-200 rounded-2xl h-14 font-black text-[10px] text-red-500 uppercase tracking-wide">
+                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="mr-2 w-4 h-4" />}
                   Delete
                 </Button>
-                <Button onClick={openEdit} className="h-14 flex-1 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95">
-                  <Pencil className="w-4 h-4 mr-2" />Edit
+                <Button onClick={openEdit} className="flex-1 bg-[#B45309] hover:bg-[#B45309]/85 shadow-lg rounded-2xl h-14 font-black text-[10px] text-white uppercase tracking-widest active:scale-95">
+                  <Pencil className="mr-2 w-4 h-4" />Edit
                 </Button>
               </div>
             )}
 
             {showForm && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white">
+              <div className="gap-3 grid grid-cols-2">
+                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="bg-white border-[#E6DFC8] border-2 rounded-2xl h-14 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
                   Cancel
                 </Button>
-                <Button type="button" disabled={isPending || hasFieldErrors} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95 disabled:opacity-50 disabled:pointer-events-none">
-                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" />Save</>}
+                <Button type="button" disabled={isPending || hasFieldErrors} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="bg-[#1B4332] hover:bg-[#1B4332]/85 disabled:opacity-50 shadow-lg rounded-2xl h-14 font-black text-[10px] text-white uppercase tracking-widest active:scale-95 disabled:pointer-events-none">
+                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="mr-2 w-4 h-4" />Save</>}
                 </Button>
               </div>
             )}
@@ -1388,13 +1638,13 @@ function FormRow({ label, required, error, warning, children }: { label: string;
     <div className="px-4 sm:px-5 py-2.5 sm:py-4">
       <div className="flex items-center gap-2 sm:gap-3">
         <div className={cn("flex items-center gap-1.5 sm:gap-2 shrink-0", error ? "text-red-600 opacity-100" : warning ? "text-amber-600 opacity-100" : "text-[#5F624F] opacity-60")}>
-          <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">{label}</span>
-          {required && <span className="text-red-500 text-[10px] font-black">*</span>}
+          <span className="font-black text-[10px] uppercase tracking-wide whitespace-nowrap">{label}</span>
+          {required && <span className="font-black text-[10px] text-red-500">*</span>}
         </div>
         {children}
       </div>
       {message && (
-        <p className={cn("mt-1.5 flex items-center gap-1 text-[11px] font-bold leading-snug", isWarning ? "text-amber-600" : "text-red-600")}>
+        <p className={cn("flex items-center gap-1 mt-1.5 font-bold text-[11px] leading-snug", isWarning ? "text-amber-600" : "text-red-600")}>
           {isWarning ? <AlertTriangle className="w-3 h-3 shrink-0" /> : <AlertCircle className="w-3 h-3 shrink-0" />}
           {message}
         </p>
@@ -1405,17 +1655,17 @@ function FormRow({ label, required, error, warning, children }: { label: string;
 
 function DetailCell({ label, value, icon, toggle, accent }: { label: string; value?: string; icon?: React.ReactNode; toggle?: boolean; accent?: string }) {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-b border-[#E6DFC8] last:border-0">
-      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
+    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-[#E6DFC8] last:border-0 border-b">
+      <div className="flex items-center gap-1.5 sm:gap-2 opacity-60 text-[#5F624F] shrink-0">
         {icon}
-        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">{label}</span>
+        <span className="font-black text-[10px] uppercase tracking-wide whitespace-nowrap">{label}</span>
       </div>
       {toggle !== undefined ? (
-        <span className="flex-1 flex justify-end">
+        <span className="flex flex-1 justify-end">
           <ToggleSlider on={toggle} />
         </span>
       ) : (
-        <span className={cn("text-xs sm:text-sm font-black text-right flex-1 leading-snug", accent ?? "text-[#1F1F1A]")}>{value}</span>
+        <span className={cn("flex-1 font-black text-xs sm:text-sm text-right leading-snug", accent ?? "text-[#1F1F1A]")}>{value}</span>
       )}
     </div>
   );
@@ -1428,20 +1678,20 @@ function ToggleSlider({ on, danger }: { on: boolean; danger?: boolean }) {
       role="img"
       aria-label={on ? "On" : "Off"}
       className={cn(
-        "relative w-9 h-5 rounded-full transition-colors shrink-0",
+        "relative rounded-full w-9 h-5 transition-colors shrink-0",
         on ? (danger ? "bg-red-600" : "bg-green-600") : "bg-[#5F624F]/25"
       )}
     >
-      <span className={cn("absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform", on ? "translate-x-4.5" : "translate-x-0.5")} />
+      <span className={cn("top-0.5 absolute bg-white shadow rounded-full w-4 h-4 transition-transform", on ? "translate-x-4.5" : "translate-x-0.5")} />
     </span>
   );
 }
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
-      <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-      <p className="text-sm text-red-700 font-bold leading-snug">{message}</p>
+    <div className="flex items-start gap-3 bg-red-50 p-4 border border-red-200 rounded-2xl">
+      <AlertCircle className="mt-0.5 w-5 h-5 text-red-500 shrink-0" />
+      <p className="font-bold text-red-700 text-sm leading-snug">{message}</p>
     </div>
   );
 }
@@ -1451,9 +1701,9 @@ function ErrorBox({ message }: { message: string }) {
  * collapse and remain submittable. */
 function FormSection({ title, open, onToggle, children, className }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden", className)}>
-      <button type="button" onClick={onToggle} className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left">
-        <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">{title}</span>
+    <div className={cn("bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden", className)}>
+      <button type="button" onClick={onToggle} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+        <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">{title}</span>
         <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
       </button>
       <div className={cn("divide-y divide-[#E6DFC8]/50", !open && "hidden")}>{children}</div>
@@ -1471,11 +1721,11 @@ function FormToggle({ on, onToggle, danger, label }: { on: boolean; onToggle: ()
       aria-label={label}
       onClick={onToggle}
       className={cn(
-        "relative w-11 h-6 rounded-full transition-colors shrink-0 border",
+        "relative border rounded-full w-11 h-6 transition-colors shrink-0",
         on ? (danger ? "bg-red-600 border-red-700" : "bg-green-500 border-green-600") : "bg-[#5F624F]/20 border-[#5F624F]/30"
       )}
     >
-      <span className={cn("absolute top-1/2 left-0 -translate-y-1/2 w-5 h-5 bg-white rounded-full shadow transition-transform", on ? "translate-x-5.25" : "translate-x-0.5")} />
+      <span className={cn("top-1/2 left-0 absolute bg-white shadow rounded-full w-5 h-5 transition-transform -translate-y-1/2", on ? "translate-x-5.25" : "translate-x-0.5")} />
     </button>
   );
 }

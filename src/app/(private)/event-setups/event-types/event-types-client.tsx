@@ -379,7 +379,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const badgeHasErrors = Object.keys(badgeErrors).length > 0;
 
   return (
-    <div className="space-y-3 sm:space-y-4 sm:p-4 md:p-6 px-2 py-3 max-w-3xl">
+    <div className="space-y-3 sm:space-y-4 sm:px-4 md:px-6 sm:py-0 px-2 py-3 max-w-3xl">
       {/* Header */}
       <div className="flex justify-between items-center gap-3">
         <p className="font-medium text-[#5F624F] text-[13px]">Manage your event categories and sub-categories.</p>

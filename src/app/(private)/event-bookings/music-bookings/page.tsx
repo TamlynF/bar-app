@@ -18,7 +18,7 @@ export default async function MusicBookingsPage() {
   const items = (requests ?? []) as unknown as BandRequest[];
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+    <div className="px-4 py-4 md:px-8 sm:py-0 max-w-4xl mx-auto space-y-6">
       {/* Header */}
       <div>
         <h2 className="text-xl font-black text-[#1F1F1A] uppercase tracking-tight">

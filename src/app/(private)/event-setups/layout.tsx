@@ -13,7 +13,7 @@ export default function SettingsLayout({
   const isSettingsRoot = pathname === "/settings";
 
   return (
-    <div className="flex flex-col min-h-screen bg-background lg:flex-row lg:space-x-12 p-2 md:p-8 max-w-7xl mx-auto w-full transition-all duration-500">  
+    <div className="flex flex-col min-h-screen bg-background lg:flex-row lg:space-x-12 px-2 md:px-8 pt-2 sm:pt-0 pb-2 md:pb-8 max-w-7xl mx-auto w-full transition-all duration-500">  
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col">
         <main className={cn(

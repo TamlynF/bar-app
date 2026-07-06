@@ -114,7 +114,7 @@ export default function EventsHubClient({
   )
 
   return (
-    <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 animate-in fade-in duration-700 max-w-5xl mx-auto pb-24 sm:pb-8 text-left">
+    <div className="px-4 sm:px-8 pt-4 sm:pt-0 space-y-6 sm:space-y-8 animate-in fade-in duration-700 max-w-5xl mx-auto pb-24 sm:pb-8 text-left">
       
       {/* KPI Stats Grid */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">

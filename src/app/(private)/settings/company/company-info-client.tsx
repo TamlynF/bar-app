@@ -195,7 +195,7 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
   const openingHours = (data.opening_hours ?? {}) as OpeningHours;
 
   return (
-    <div className="p-4 sm:p-8 space-y-6 animate-in fade-in duration-500">
+    <div className="px-4 py-4 sm:px-8 sm:py-0 space-y-6 animate-in fade-in duration-500">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

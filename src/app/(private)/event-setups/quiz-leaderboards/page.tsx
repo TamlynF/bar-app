@@ -99,7 +99,7 @@ export default async function QuizLeaderboardsPage({
 
   if (events.length === 0) {
     return (
-      <div className="max-w-4xl mx-auto p-2 sm:p-4 md:p-6">
+      <div className="max-w-4xl mx-auto px-2 py-2 sm:px-4 md:px-6 sm:py-0">
         <EmptyState
           title="No quiz events yet"
           hint="Quiz events with at least one booked team will appear here, where you can record scores and see the standings."
@@ -125,7 +125,7 @@ export default async function QuizLeaderboardsPage({
   const totalGuests = teams.reduce((sum, t) => sum + (t.groupSize ?? 0), 0);
 
   return (
-    <div className="max-w-4xl mx-auto p-2 sm:p-4 md:p-6 space-y-4">
+    <div className="max-w-4xl mx-auto px-2 py-2 sm:px-4 md:px-6 sm:py-0 space-y-4">
       {/* Controls + event summary */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>

@@ -561,7 +561,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex-1 bg-background min-h-screen pb-24">
-      <div className="p-4 md:p-6 max-w-6xl mx-auto space-y-5">
+      <div className="px-4 py-4 md:px-6 sm:py-0 max-w-6xl mx-auto space-y-5">
 
         <header className="flex justify-center">
           <p className="text-sm font-bold text-[#5F624F] uppercase tracking-wide">

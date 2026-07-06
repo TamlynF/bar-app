@@ -438,7 +438,7 @@ export default function PrivateLayoutClient({
                 </header>
 
                 <main ref={mainRef} className="flex-1 w-full min-h-0 sm:overflow-y-auto">
-                    <div className="mx-auto p-1 sm:p-6 pb-20 sm:pb-8 w-full max-w-7xl">
+                    <div className="mx-auto p-1 sm:px-6 pt-2 pb-20 sm:pb-8 w-full max-w-7xl">
                         {children}
                     </div>
                 </main>

@@ -162,7 +162,7 @@ export default function TablesClient({
   const formDefault = isEditing ? selected : null;
 
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-4xl">
+    <div className="px-4 py-4 md:px-6 sm:py-0 space-y-4 max-w-4xl">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-3">

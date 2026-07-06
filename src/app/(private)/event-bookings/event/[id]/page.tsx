@@ -114,7 +114,7 @@ export default async function EventDetailPage({
   }));
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+    <div className="px-4 py-4 md:px-8 sm:py-0 max-w-4xl mx-auto space-y-6">
 
       {/* Event detail card */}
       <div className="bg-white border border-[#E6DFC8] rounded-2xl p-5 space-y-4">
