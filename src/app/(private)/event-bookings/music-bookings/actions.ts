@@ -127,7 +127,7 @@ export async function rescheduleConfirmedBooking(
     await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
   }
 
-  await sendRescheduleEmail(
+  const emailError = await sendRescheduleEmail(
     record.booker_name,
     record.email,
     record.group_name,
@@ -141,6 +141,8 @@ export async function rescheduleConfirmedBooking(
   revalidatePath("/dashboard");
   revalidatePath("/event-setups/events");
   revalidatePath("/");
+
+  return { emailError };
 }
 
 export async function updateBandStatus(
@@ -229,8 +231,9 @@ export async function updateBandStatus(
   }
 
   // Send outcome email for confirmed or cancelled
+  let emailError: string | null = null;
   if (status === "confirmed" || status === "cancelled") {
-    await sendOutcomeEmail(
+    emailError = await sendOutcomeEmail(
       record.booker_name,
       record.email,
       status,
@@ -247,6 +250,8 @@ export async function updateBandStatus(
   revalidatePath("/dashboard");
   revalidatePath("/event-setups/events");
   revalidatePath("/");
+
+  return { emailError };
 }
 
 function formatTime12(t?: string | null): string {
@@ -275,7 +280,7 @@ async function sendRescheduleEmail(
   date: string | null,
   startTime: string | null,
   endTime: string | null
-) {
+): Promise<string | null> {
   const e = buildRescheduleEmail({ name, groupName, date, startTime, endTime });
 
   const html = `
@@ -304,8 +309,12 @@ async function sendRescheduleEmail(
     </div>`;
 
   const { data, error } = await resend.emails.send({ from: FROM, to: email, subject: e.subject, html });
-  if (error) console.error("[band reschedule email] Resend failed:", JSON.stringify(error));
-  else console.log("[band reschedule email] sent:", data?.id, "→", email);
+  if (error) {
+    console.error("[band reschedule email] Resend failed:", JSON.stringify(error));
+    return error.message ?? "Email failed to send.";
+  }
+  console.log("[band reschedule email] sent:", data?.id, "→", email);
+  return null;
 }
 
 async function sendOutcomeEmail(
@@ -317,7 +326,7 @@ async function sendOutcomeEmail(
   startTime?: string | null,
   endTime?: string | null,
   notes?: string | null
-) {
+): Promise<string | null> {
   const isConfirmed = status === "confirmed";
   const subject = isConfirmed
     ? "Your Performance at Don Fenticas is Confirmed!"
@@ -375,6 +384,10 @@ async function sendOutcomeEmail(
     </div>`;
 
   const { data, error } = await resend.emails.send({ from: FROM, to: email, subject, html });
-  if (error) console.error("[band outcome email] Resend failed:", JSON.stringify(error));
-  else console.log("[band outcome email] sent:", data?.id, "→", email);
+  if (error) {
+    console.error("[band outcome email] Resend failed:", JSON.stringify(error));
+    return error.message ?? "Email failed to send.";
+  }
+  console.log("[band outcome email] sent:", data?.id, "→", email);
+  return null;
 }

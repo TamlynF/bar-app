@@ -26,7 +26,7 @@ import {
   Mail,
   Phone,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -314,9 +314,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const videos = (request.video_urls ?? []).filter(Boolean);
   const dates = (request.preferred_dates ?? []).filter(Boolean);
 
-  const needsPayment =
-    (request.payment_amount ?? 0) > 0 && (request.paid_amount ?? 0) < (request.payment_amount ?? 0);
-
   // Payment status is derived live from the amount + paid inputs, never edited.
   const amountNum = paymentAmount === "" ? 0 : Number(paymentAmount) || 0;
   const paidNum = paidAmount === "" ? 0 : Number(paidAmount) || 0;
@@ -445,8 +442,18 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             selected_end_time: selectedEndTime || null,
           });
         }
-        await updateBandStatus(request.id, newStatus, adminNotes || undefined);
+        const result = await updateBandStatus(request.id, newStatus, adminNotes || undefined);
         setOpen(false);
+        if (newStatus === "confirmed" || newStatus === "cancelled") {
+          const verb = newStatus === "confirmed" ? "confirmed" : "rejected";
+          if (result?.emailError) {
+            toast.error(`Booking ${verb}, but the email didn't send: ${result.emailError}`);
+          } else {
+            toast.success(`Booking ${verb} — band emailed`);
+          }
+        } else {
+          toast.success("Booking moved to pending");
+        }
       } catch {
         setError("Failed to update. Please try again.");
       }
@@ -517,13 +524,17 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           if (!ok) return;
 
           await updateBandBookingFields(request.id, detailFields());
-          await rescheduleConfirmedBooking(request.id, {
+          const result = await rescheduleConfirmedBooking(request.id, {
             selected_date: selectedDate || null,
             selected_start_time: selectedStartTime || null,
             selected_end_time: selectedEndTime || null,
             admin_notes: adminNotes || null,
           });
-          toast.success("Booking updated — band notified");
+          if (result?.emailError) {
+            toast.error(`Booking updated, but the email didn't send: ${result.emailError}`);
+          } else {
+            toast.success("Booking updated — band notified");
+          }
           setOpen(false);
           return;
         }
@@ -586,22 +597,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             <p className="font-black text-[#1F1F1A] text-sm truncate uppercase tracking-tight">
               {request.group_name || request.booker_name}
             </p>
-            {/* Indicators */}
-            {request.notes && (
-              <span className="bg-blue-50 px-1.5 py-0.5 border border-blue-200 rounded font-black text-[10px] text-blue-700 uppercase shrink-0">
-                NOTE
-              </span>
-            )}
-            {request.admin_notes && (
-              <span className="bg-purple-50 px-1.5 py-0.5 border border-purple-200 rounded font-black text-[10px] text-purple-700 uppercase shrink-0">
-                ADMIN
-              </span>
-            )}
-            {needsPayment && (
-              <span className="bg-amber-50 px-1.5 py-0.5 border border-amber-200 rounded font-black text-[10px] text-amber-700 uppercase shrink-0">
-                PAY
-              </span>
-            )}
           </div>
           <div className="flex items-center gap-2 mt-0.5 text-[#5F624F]">
             <p className="font-semibold text-xs truncate">{request.booker_name}</p>
@@ -612,8 +607,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             )}
           </div>
 
-          {/* Schedule (confirmed → selected slot; otherwise → preferred dates) + media count */}
-          {(status === "confirmed" ? !!request.selected_date : dates.length > 0) || videos.length > 0 ? (
+          {/* Schedule — confirmed → selected slot; otherwise → applicant's preferred dates */}
+          {(status === "confirmed" ? !!request.selected_date : dates.length > 0) ? (
             <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-1 font-semibold text-[#5F624F] text-[11px]">
               {status === "confirmed" ? (
                 request.selected_date && (
@@ -638,14 +633,35 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   </span>
                 )
               )}
-              {videos.length > 0 && (
-                <span className="inline-flex items-center gap-1" title={`${videos.length} video${videos.length === 1 ? "" : "s"} attached`}>
-                  <Video className="w-3 h-3 shrink-0" />
-                  {videos.length}
-                </span>
-              )}
             </div>
           ) : null}
+        </div>
+
+        {/* Right column: media count (top, above the arrow) + payment pill (end) */}
+        <div className="flex flex-col justify-center items-end gap-1.5 shrink-0">
+          {videos.length > 0 && (
+            <span
+              className="inline-flex items-center gap-1 font-bold text-[#5F624F] text-[11px]"
+              title={`${videos.length} video${videos.length === 1 ? "" : "s"} attached`}
+            >
+              <Video className="w-3.5 h-3.5 shrink-0" />
+              {videos.length}
+            </span>
+          )}
+          {(() => {
+            const amount = request.payment_amount ?? 0;
+            const isFree = !(amount > 0);
+            return (
+              <span
+                className={cn(
+                  "inline-flex items-center px-1.5 py-0.5 border rounded font-black text-[10px] uppercase tracking-tight shrink-0",
+                  isFree ? "bg-green-50 border-green-200 text-green-700" : "bg-amber-50 border-amber-200 text-amber-700"
+                )}
+              >
+                {isFree ? "Free" : `£${amount.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+              </span>
+            );
+          })()}
         </div>
 
         <ChevronRight className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
@@ -669,6 +685,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <SheetTitle className="font-black text-[#1F1F1A] text-lg truncate uppercase leading-tight tracking-tight">
                   {request.group_name || request.booker_name}
                 </SheetTitle>
+                <SheetDescription className="sr-only">
+                  Review and manage this band request.
+                </SheetDescription>
                 {request.group_name && (
                   <p className="mt-0.5 text-[#5F624F] text-xs">{request.booker_name}</p>
                 )}
