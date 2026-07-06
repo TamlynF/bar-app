@@ -728,7 +728,6 @@ export default function EventsClient({
               </span>
             )}
           </div>
-          {event.tagline && <p className="hidden sm:block mt-1 text-[#a39d86] text-[11px] sm:text-xs lg:text-sm truncate italic">{event.tagline}</p>}
         </div>
 
         {/* right */}
