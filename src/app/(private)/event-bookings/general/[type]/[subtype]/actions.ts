@@ -260,7 +260,7 @@ export async function getPrivateHireRequestsForType() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("private_hire_requests")
-    .select("*, event_subtypes:event_subtypes_id ( name, default_event_title )")
+    .select("*, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id ), updated_by_employee:employees!private_hire_requests_updated_by_fkey ( full_name )")
     .order("created_at", { ascending: false });
   if (error) console.error("getPrivateHireRequestsForType error:", error);
   return data ?? [];
