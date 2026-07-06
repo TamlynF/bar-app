@@ -591,13 +591,13 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                 {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
 
                 {status === "pending" ? (
-                  <div className="flex gap-2">
+                  <div className="gap-3 grid grid-cols-2">
                     <button
                       type="button"
                       onClick={() => handleAction("confirmed")}
                       disabled={isPending || !selectedDate}
                       title={!selectedDate ? "Set a selected date before confirming" : undefined}
-                      className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
+                      className="flex justify-center items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-2xl h-14 font-black text-white text-[10px] uppercase tracking-widest transition-all active:scale-95"
                     >
                       {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
                       Confirm
@@ -606,7 +606,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                       type="button"
                       onClick={() => handleAction("cancelled")}
                       disabled={isPending}
-                      className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
+                      className="flex justify-center items-center gap-2 bg-red-50 hover:bg-red-100 disabled:opacity-50 border border-red-200 rounded-2xl h-14 font-black text-red-700 text-[10px] uppercase tracking-widest transition-all"
                     >
                       {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
                       Reject
@@ -617,28 +617,28 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                     type="button"
                     onClick={() => handleAction("cancelled")}
                     disabled={isPending}
-                    className="w-full flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs uppercase tracking-wider rounded-2xl py-3 transition-all disabled:opacity-50"
+                    className="flex justify-center items-center gap-2 bg-red-50 hover:bg-red-100 disabled:opacity-50 border border-red-200 rounded-2xl w-full h-14 font-black text-red-700 text-[10px] uppercase tracking-widest transition-all"
                   >
                     {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                    Cancel Booking
+                    Reject
                   </button>
                 )}
 
-                {/* Discard / Save edits */}
-                <div className="flex gap-2">
+                {/* Cancel / Save Changes */}
+                <div className="gap-3 grid grid-cols-2">
                   <button
                     type="button"
                     onClick={handleCancel}
                     disabled={isPending}
-                    className="flex-1 flex items-center justify-center bg-white border-2 border-[#E6DFC8] text-[#5F624F] font-black text-[10px] uppercase tracking-wide rounded-2xl py-3 disabled:opacity-50"
+                    className="flex justify-center items-center bg-white disabled:opacity-50 border-[#E6DFC8] border-2 rounded-2xl h-14 font-black text-[#5F624F] text-[10px] uppercase tracking-wide"
                   >
-                    Discard
+                    Cancel
                   </button>
                   <button
                     type="button"
                     onClick={handleSave}
                     disabled={isPending || !hasChanges}
-                    className="flex-1 flex items-center justify-center gap-2 bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black text-[10px] uppercase tracking-widest rounded-2xl py-3 disabled:opacity-50 disabled:pointer-events-none"
+                    className="flex justify-center items-center gap-2 bg-[#1B4332] hover:bg-[#1B4332]/85 disabled:opacity-50 disabled:pointer-events-none shadow-lg rounded-2xl h-14 font-black text-white text-[10px] uppercase tracking-widest active:scale-95"
                   >
                     {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
                     Save Changes

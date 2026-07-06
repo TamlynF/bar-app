@@ -139,7 +139,7 @@ export async function updatePrivateHireStatus(
 
   const { data: record, error } = await supabase
     .from("private_hire_requests")
-    .update({ status, admin_notes: adminNotes || null, updated_by: empId })
+    .update({ status, admin_notes: adminNotes || null, updated_by: empId, updated_at: new Date().toISOString() })
     .eq("id", id)
     .select("full_name, email, reason_for_hire, reason, selected_date, selected_start_time, selected_end_time, deposit_amount, event_id, event_subtypes_id, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id )")
     .single();
