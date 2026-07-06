@@ -10,12 +10,12 @@ export default async function MusicBookingsPage() {
 
   const { data: requests, error } = await supabase
     .from("band_booking_requests")
-    .select("*")
+    .select("*, updated_by_employee:employees!updated_by(full_name)")
     .order("created_at", { ascending: false });
 
   if (error) console.error("Music bookings fetch error:", error);
 
-  const items = (requests ?? []) as BandRequest[];
+  const items = (requests ?? []) as unknown as BandRequest[];
 
   return (
     <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">

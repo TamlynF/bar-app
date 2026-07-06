@@ -2,11 +2,30 @@ export const dynamic = "force-dynamic";
 
 import React from "react";
 import { badgeClassFromColor } from "@/lib/event-type-colors";
-import { getEventsForType, getBookingsForType, getEventDetailsForType, getAllTables, getQuizStatsForEvent } from "./actions";
+import { getEventsForType, getBookingsForType, getEventDetailsForType, getAllTables, getQuizStatsForEvent, getTypeRequestKind, getBandRequestsForType, getPrivateHireRequestsForType } from "./actions";
 import { ALL_SUBTYPES } from "@/lib/booking-grouping";
 import EventTypeFilter from "./components/event-filter";
 import { type GeneralBooking } from "./components/booking-list";
 import BookingsSection, { type EventSummary } from "./components/bookings-section";
+import BandBookingListClient from "../../../music-bookings/components/band-booking-list-client";
+import { type BandRequest } from "../../../music-bookings/components/band-booking-card";
+import PrivateHireListClient from "../../../private-bookings/components/private-hire-list-client";
+import { type PrivateHireRequest } from "../../../private-bookings/components/private-hire-card";
+
+/** Page shell for the request/enquiry pipelines (band + private hire). */
+function RequestsShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
+  return (
+    <div className="flex-1 bg-background min-h-screen">
+      <div className="p-4 md:p-8 max-w-4xl mx-auto space-y-6">
+        <div>
+          <h2 className="text-xl font-black text-[#1F1F1A] uppercase tracking-tight">{title}</h2>
+          <p className="text-xs text-[#5F624F] mt-0.5">{subtitle}</p>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
 
 function toTitleCase(str: string) {
   return str
@@ -37,6 +56,27 @@ export default async function GeneralEventBookingsPage({
   // per_type grouping uses the ALL_SUBTYPES sentinel — label the page by category.
   const isAllSubtypes = subtype === ALL_SUBTYPES;
   const filterLabel = isAllSubtypes ? toTitleCase(type) : toTitleCase(subtype);
+
+  // Requests & Enquiries surfaces: a per_type category whose sub-type behaviour is a
+  // music act or private hire. For these the event *is* the booking, so show the
+  // review-pipeline request tables instead of the per-event bookings list.
+  const requestKind = isAllSubtypes ? await getTypeRequestKind(type) : null;
+  if (requestKind === "music_act") {
+    const requests = (await getBandRequestsForType()) as unknown as BandRequest[];
+    return (
+      <RequestsShell title="Band Applications" subtitle="Review and respond to artist bookings">
+        <BandBookingListClient initialRequests={requests} />
+      </RequestsShell>
+    );
+  }
+  if (requestKind === "private") {
+    const requests = (await getPrivateHireRequestsForType()) as unknown as PrivateHireRequest[];
+    return (
+      <RequestsShell title="Private Hire" subtitle="Review and respond to venue hire enquiries">
+        <PrivateHireListClient initialRequests={requests} />
+      </RequestsShell>
+    );
+  }
 
   const [events, rawBookings, eventDetails] = await Promise.all([
     getEventsForType(type, subtype),

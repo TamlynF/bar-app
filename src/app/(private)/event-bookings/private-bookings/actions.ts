@@ -108,6 +108,7 @@ export async function updatePrivateHireStatus(
   await sendOutcomeEmail(record.full_name, record.email, status, adminNotes);
 
   revalidatePath("/event-bookings/private-bookings");
+  revalidatePath("/event-bookings/general/[type]/[subtype]", "page");
   revalidatePath("/dashboard");
   revalidatePath("/event-setups/events");
 }

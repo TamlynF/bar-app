@@ -225,6 +225,47 @@ export async function getEventDetailsForType(eventId: string) {
   return data;
 }
 
+/**
+ * For a per_type category, whether it's a review-pipeline surface: "music_act" and
+ * "private" categories treat the event itself as the booking, so the bookings hub
+ * shows their request tables instead of per-event bookings. Returns null otherwise.
+ */
+export async function getTypeRequestKind(type: string): Promise<"music_act" | "private" | null> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("event_types")
+    .select("booking_grouping, event_subtypes(behavior)")
+    .ilike("name", type)
+    .maybeSingle();
+  if (!data || data.booking_grouping !== "per_type") return null;
+  const behaviors = ((data.event_subtypes ?? []) as { behavior: string | null }[]).map((s) => s.behavior);
+  if (behaviors.includes("music_act")) return "music_act";
+  if (behaviors.includes("private")) return "private";
+  return null;
+}
+
+/** Band applications (music_act request pipeline) — mirrors the music-bookings page. */
+export async function getBandRequestsForType() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("band_booking_requests")
+    .select("*, updated_by_employee:employees!updated_by(full_name)")
+    .order("created_at", { ascending: false });
+  if (error) console.error("getBandRequestsForType error:", error);
+  return data ?? [];
+}
+
+/** Private hire enquiries (private request pipeline) — mirrors the private-bookings page. */
+export async function getPrivateHireRequestsForType() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("private_hire_requests")
+    .select("*, event_subtypes:event_subtypes_id ( name, default_event_title )")
+    .order("created_at", { ascending: false });
+  if (error) console.error("getPrivateHireRequestsForType error:", error);
+  return data ?? [];
+}
+
 /** All bookable tables (capacity only) — feeds the seating "Table Status" stats. */
 export async function getAllTables() {
   const supabase = await createClient();

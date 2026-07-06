@@ -36,6 +36,12 @@ export async function getBandBookingById(id: string) {
 export async function updateBandBookingFields(
   id: string,
   fields: {
+    group_name?: string | null;
+    type?: string | null;
+    genre?: string | null;
+    booker_name?: string;
+    email?: string;
+    phone_no?: string | null;
     selected_date?: string | null;
     selected_start_time?: string | null;
     selected_end_time?: string | null;
@@ -59,6 +65,7 @@ export async function updateBandBookingFields(
   if (error) throw new Error("Failed to save changes.");
 
   revalidatePath("/event-bookings/music-bookings");
+  revalidatePath("/event-bookings/general/[type]/[subtype]", "page");
   revalidatePath("/dashboard");
 }
 
@@ -128,6 +135,7 @@ export async function rescheduleConfirmedBooking(
   );
 
   revalidatePath("/event-bookings/music-bookings");
+  revalidatePath("/event-bookings/general/[type]/[subtype]", "page");
   revalidatePath("/dashboard");
   revalidatePath("/event-setups/events");
   revalidatePath("/");
@@ -215,6 +223,7 @@ export async function updateBandStatus(
   }
 
   revalidatePath("/event-bookings/music-bookings");
+  revalidatePath("/event-bookings/general/[type]/[subtype]", "page");
   revalidatePath("/dashboard");
   revalidatePath("/event-setups/events");
   revalidatePath("/");

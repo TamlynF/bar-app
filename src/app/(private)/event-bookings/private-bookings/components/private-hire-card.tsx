@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react";
 import { updatePrivateHireStatus } from "../actions";
-import { ChevronRight, CheckCircle, XCircle, Clock, Users, Loader2, MessageSquareQuote } from "lucide-react";
+import { ChevronRight, ChevronDown, CheckCircle, XCircle, Clock, Users, Loader2, MessageSquareQuote } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -79,11 +79,39 @@ const formatTimeRange = (start?: string | null, end?: string | null) =>
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
+    <div className="flex items-start justify-between gap-4 px-4 sm:px-5 py-3 border-b border-[#E6DFC8] last:border-0">
       <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
         {label}
       </span>
       <span className="text-sm font-bold text-[#1F1F1A] text-right">{value || "—"}</span>
+    </div>
+  );
+}
+
+/** Collapsible card section — matches the layout/format of the event-setups sheet. */
+function Section({
+  title,
+  defaultOpen = true,
+  className,
+  children,
+}: {
+  title: string;
+  defaultOpen?: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className={cn("bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden", className)}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+      >
+        <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">{title}</span>
+        <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+      </button>
+      <div className={cn(!open && "hidden")}>{children}</div>
     </div>
   );
 }
@@ -165,8 +193,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           onOpenAutoFocus={(e) => e.preventDefault()}
           className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
             flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
-            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
+            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140 lg:w-6xl xl:w-7xl
+            sm:h-auto sm:max-h-[80vh] lg:max-h-[90vh] sm:rounded-4xl sm:bottom-6
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sheet header */}
@@ -193,98 +221,73 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 min-h-0 touch-pan-y space-y-6">
-            {/* Event details + Contact side by side on sm+ */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
-                  Event Details
-                </p>
-                <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
-                  <SheetRow label="Reason for Hire" value={reasonLabel} />
-                  <SheetRow label="Guests" value={request.guest_count} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
-                  Contact
-                </p>
-                <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
-                  <SheetRow label="Name" value={request.full_name} />
-                  <SheetRow label="Email" value={request.email} />
-                  <SheetRow label="Phone" value={request.phone_no} />
-                </div>
-              </div>
-            </div>
+          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y">
+            <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
+              {/* Event details */}
+              <Section title="Event Details">
+                <SheetRow label="Reason for Hire" value={reasonLabel} />
+                <SheetRow label="Guests" value={request.guest_count} />
+              </Section>
 
-            {/* Requested vs selected slot side by side on sm+ */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
-                  Requested Time
-                </p>
-                <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
-                  <SheetRow label="Date" value={formatDate(request.preferred_date)} />
-                  <SheetRow label="Time" value={formatTimeRange(request.preferred_start_time, request.preferred_end_time)} />
-                </div>
-              </div>
-              <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
-                  Selected Time
-                </p>
-                <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden">
-                  <SheetRow label="Date" value={formatDate(request.selected_date)} />
-                  <SheetRow label="Time" value={formatTimeRange(request.selected_start_time, request.selected_end_time)} />
-                </div>
-              </div>
-            </div>
+              {/* Contact */}
+              <Section title="Contact">
+                <SheetRow label="Name" value={request.full_name} />
+                <SheetRow label="Email" value={request.email} />
+                <SheetRow label="Phone" value={request.phone_no} />
+              </Section>
 
-            {/* Additional requirements */}
-            {request.additional_requirements && (
-              <div className="space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
-                  Additional Requirements
-                </p>
-                <p className="text-sm text-[#1F1F1A] bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3">
-                  {request.additional_requirements}
-                </p>
-              </div>
-            )}
+              {/* Requested time */}
+              <Section title="Requested Time">
+                <SheetRow label="Date" value={formatDate(request.preferred_date)} />
+                <SheetRow label="Time" value={formatTimeRange(request.preferred_start_time, request.preferred_end_time)} />
+              </Section>
 
-            {/* Submitted */}
-            <div className="space-y-2">
-              <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
-                Submitted
-              </p>
-              <p className="text-sm text-[#1F1F1A]">
-                {new Date(request.created_at).toLocaleDateString("en-GB", {
-                  weekday: "long",
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </p>
-            </div>
+              {/* Selected time */}
+              <Section title="Selected Time">
+                <SheetRow label="Date" value={formatDate(request.selected_date)} />
+                <SheetRow label="Time" value={formatTimeRange(request.selected_start_time, request.selected_end_time)} />
+              </Section>
 
-            {/* Admin notes (read-only once cancelled; pending & confirmed edit it in the footer) */}
-            {status === "cancelled" && request.admin_notes && (
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-2">
-                  Admin Notes
-                </p>
-                <div className="bg-[#5C4033]/5 p-4 rounded-2xl border border-[#5C4033]/15">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageSquareQuote className="w-4 h-4 text-[#5C4033] opacity-40" />
-                    <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">
-                      Staff Note
-                    </span>
-                  </div>
-                  <p className="text-sm text-[#1F1F1A] italic leading-relaxed">
-                    &quot;{request.admin_notes}&quot;
+              {/* Additional requirements */}
+              {request.additional_requirements && (
+                <Section title="Additional Requirements" className="lg:col-span-2">
+                  <p className="px-4 sm:px-5 py-3 text-sm text-[#1F1F1A]">
+                    {request.additional_requirements}
                   </p>
-                </div>
-              </div>
-            )}
+                </Section>
+              )}
+
+              {/* Submitted */}
+              <Section title="Submitted">
+                <p className="px-4 sm:px-5 py-3 text-sm font-bold text-[#1F1F1A]">
+                  {new Date(request.created_at).toLocaleDateString("en-GB", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })}
+                </p>
+              </Section>
+
+              {/* Admin notes (read-only once cancelled; pending & confirmed edit it in the footer) */}
+              {status === "cancelled" && request.admin_notes && (
+                <Section title="Admin Notes" className="lg:col-span-2">
+                  <div className="px-4 sm:px-5 py-3">
+                    <div className="bg-[#5C4033]/5 p-4 rounded-2xl border border-[#5C4033]/15">
+                      <div className="flex items-center gap-2 mb-2">
+                        <MessageSquareQuote className="w-4 h-4 text-[#5C4033] opacity-40" />
+                        <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">
+                          Staff Note
+                        </span>
+                      </div>
+                      <p className="text-sm text-[#1F1F1A] italic leading-relaxed">
+                        &quot;{request.admin_notes}&quot;
+                      </p>
+                    </div>
+                  </div>
+                </Section>
+              )}
+            </div>
             <div className="h-4" />
           </div>
 

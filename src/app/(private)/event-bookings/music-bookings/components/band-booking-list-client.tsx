@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import { Search, Inbox, X } from "lucide-react";
-import { BandBookingCard, type BandRequest, statusTheme } from "./band-booking-card";
+import { BandBookingCard, type BandRequest } from "./band-booking-card";
 import StatusCircle from "./status-circle";
 
 const normStatus = (s?: string) => (s || "").trim().toLowerCase();
@@ -73,13 +73,13 @@ export default function BandBookingListClient({
   }, [initialRequests]);
 
   return (
-    <div className="space-y-3 animate-in fade-in duration-500">
+    <div className="space-y-3 animate-in duration-500 fade-in">
       {/* Stats + Search grouped card */}
-      <div className="bg-white border border-[#E6DFC8] rounded-2xl shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center">
+      <div className="bg-white shadow-sm border border-[#E6DFC8] rounded-2xl">
+        <div className="flex sm:flex-row flex-col items-center">
           {/* Stats Bar */}
-          <div className="overflow-x-auto no-scrollbar px-2 pt-2 sm:flex-1 sm:pt-0">
-            <div className="flex items-stretch gap-3 w-full px-2 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
+          <div className="sm:flex-1 px-2 pt-2 sm:pt-0 overflow-x-auto no-scrollbar">
+            <div className="flex sm:justify-evenly items-stretch gap-3 sm:gap-0 px-2 py-3 w-full min-w-max sm:min-w-0">
               <StatusCircle
                 count={stats.total}
                 status="all"
@@ -112,13 +112,13 @@ export default function BandBookingListClient({
           </div>
 
           {/* Divider */}
-          <div className="border-t border-[#E6DFC8] mx-3 sm:hidden" />
-          <div className="hidden sm:block w-px bg-[#E6DFC8] sm:self-stretch sm:my-2" />
+          <div className="sm:hidden mx-3 border-[#E6DFC8] border-t" />
+          <div className="hidden sm:block self-stretch bg-[#E6DFC8] my-2 w-px" />
 
           {/* Search */}
-          <div className="flex justify-center px-4 mb-3 sm:mb-0 sm:py-2 sm:px-3 sm:shrink-0">
-            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-[#5C4033] transition-colors">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
+          <div className="flex justify-center mb-3 sm:mb-0 px-3 sm:px-4 py-2 shrink-0">
+            <div className="flex items-center gap-3 px-4 border border-[#E6DFC8] focus-within:border-[#5C4033] rounded-xl w-full sm:w-56 max-w-sm h-10 transition-colors">
+              <div className="flex flex-1 items-center gap-2 min-w-0">
                 <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
                 <input
                   type="text"
@@ -127,7 +127,7 @@ export default function BandBookingListClient({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setSearchQuery(e.target.value)
                   }
-                  className="flex-1 min-w-0 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
+                  className="flex-1 bg-transparent outline-none min-w-0 placeholder:font-normal text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-sm placeholder:normal-case placeholder:tracking-normal"
                 />
               </div>
               {(activeStatusFilters.size > 0 || searchQuery.length > 0) && (
@@ -138,7 +138,7 @@ export default function BandBookingListClient({
                     setActiveStatusFilters(new Set());
                     setSearchQuery("");
                   }}
-                  className="shrink-0 p-1 rounded-lg hover:bg-[#E6DFC8] transition-colors"
+                  className="hover:bg-[#E6DFC8] p-1 rounded-lg transition-colors shrink-0"
                 >
                   <X className="w-3.5 h-3.5 text-[#5F624F]/50" />
                 </button>
@@ -151,9 +151,9 @@ export default function BandBookingListClient({
       {/* Cards */}
       <div className="space-y-2 pb-2">
         {filteredRequests.length === 0 ? (
-          <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-[#E6DFC8]">
-            <Inbox className="w-10 h-10 text-[#5F624F]/50 mx-auto mb-3" />
-            <p className="text-[#5F624F] text-sm font-medium">
+          <div className="bg-white py-16 border border-[#E6DFC8] border-dashed rounded-2xl text-center">
+            <Inbox className="mx-auto mb-3 w-10 h-10 text-[#5F624F]/50" />
+            <p className="font-medium text-[#5F624F] text-sm">
               No band applications found
             </p>
           </div>
