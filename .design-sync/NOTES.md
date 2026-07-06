@@ -137,3 +137,18 @@ as a known warn, do not chase.**
   i.e. only the recompiled stylesheet + anchor changed. This is expected: recompile
   `styles.css` (the `@tailwindcss/cli` step) before the driver whenever globals.css
   moved, then upload normally. The component bundle stays identical.
+  **Broaden the trigger (2026-06-25, third run):** styles.css drift is NOT limited to
+  `globals.css` changes — Tailwind scans the **whole repo root**, so utilities added by
+  ANY app page leak in. This run `globals.css` was untouched but the tables-settings
+  redesign (`settings/tables/_components/tables-client.tsx`) added `translate-x-5` /
+  `peer-checked:*` (a toggle) and the driver reported `upload.any:true` with ONLY
+  `styling:true` (`bundle:false`/`aux:false`/`components:[]`). Harmless (extra unused CSS
+  in the closure); upload or skip is a judgment call — the user chose to upload.
+- **A concurrent newer-toolchain sync touched this project (observed 2026-06-25, third run).**
+  The remote `_ds_sync.json` had moved since the prior run in the same session: `scriptsSha`
+  `6bd093d3b53fd39e`→`093dbd516cd40af9`, `bundleSha12` `eb08f45d91e7`→`2a75cdd6fe76`,
+  `styleSha`/`auxSha`/`renderHashes` all changed — but `sourceKeys`/`sourceHashes` were
+  IDENTICAL (same Button/Input logic). After re-copying the staged scripts my build matched
+  the remote on bundle/aux/scripts (so the project is being managed with the current bundled
+  skill version too). If you see bundle/aux/scriptsSha move with identical source again, it's
+  a concurrent sync, not a real change — re-fetch the anchor and trust the driver's diff.

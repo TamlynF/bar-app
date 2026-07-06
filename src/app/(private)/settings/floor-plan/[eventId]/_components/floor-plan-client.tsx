@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef, useState, useTransition } from "react";
+import React, { useMemo, useRef, useState, useTransition, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,10 @@ import {
   computeFloorPlan,
   focalPointsFrom,
   buildBlockers,
+  generateCells,
+  tableSpan,
+  tableFootprint,
+  aabbOverlap,
   MIN_AISLE,
   type CalcTable,
   type SightRating,
@@ -131,6 +135,8 @@ export default function FloorPlanClient({
   const [showPool, setShowPool] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isMutating, startMutate] = useTransition();
+  // Bumped when a drag finishes, to trigger the "fill freed space" check.
+  const [autoFillTick, setAutoFillTick] = useState(0);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<{ mappingId: number; grabDX: number; grabDY: number } | null>(null);
@@ -263,6 +269,8 @@ export default function FloorPlanClient({
       } catch {
         /* already released */
       }
+      // The move may have opened room for another table — check after this gesture.
+      setAutoFillTick((t) => t + 1);
     }
   };
   const rotateSelected = (delta: number) => {
@@ -364,6 +372,54 @@ export default function FloorPlanClient({
       }
     });
   };
+
+  // ── Auto-fill freed space after a manual move ──
+  // `cellsAvailable` is a fixed theatre-grid count, so it can't tell when nudging
+  // tables together opens real space. Instead, look for a grid cell whose footprint
+  // clears every *current* table: when a drag frees one (and a table is available),
+  // drop the next available table into that gap and refresh.
+  const cellSize = useMemo(() => {
+    const spans = tablesWithChairs.map((t) => tableSpan(t));
+    const maxSpan = spans.length ? Math.max(...spans) : 1.1;
+    return round(maxSpan + 2 * Math.max(0, chairZone));
+  }, [tablesWithChairs, chairZone]);
+
+  const findFreeCell = (): Point | null => {
+    if (!room || room.points.length < 3) return null;
+    const cells = generateCells(room.points, blockers, cellSize, aisleWidth);
+    const half = cellSize / 2;
+    const occupied = result.placements.map((p) => tableFootprint({ x: p.x, y: p.y }, p.span, chairZone));
+    for (const c of cells) {
+      const foot = { minX: c.x - half, minY: c.y - half, maxX: c.x + half, maxY: c.y + half };
+      if (occupied.some((o) => aabbOverlap(foot, o))) continue;
+      return c;
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    if (autoFillTick === 0 || isMutating) return;
+    if (addableTables.length === 0) return;
+    const cell = findFreeCell();
+    if (!cell) return;
+    const tableId = addableTables[0].tableId;
+    startMutate(async () => {
+      const res = await addEventTableAction(event.id, tableId);
+      if (res?.error) {
+        toast.error(res.error);
+        return;
+      }
+      // Pin the new table into the gap that opened, then refresh to load it.
+      if (res?.mappingId != null) {
+        setOverrides((prev) => ({ ...prev, [res.mappingId as number]: { x: cell.x, y: cell.y, rotation: 0 } }));
+      }
+      markDirty();
+      toast.success("Added the next table to the freed space.");
+      router.refresh();
+    });
+    // Runs once per completed drag; the other inputs are read fresh inside.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoFillTick]);
 
   // ── Save ──
   const handleSave = () => {

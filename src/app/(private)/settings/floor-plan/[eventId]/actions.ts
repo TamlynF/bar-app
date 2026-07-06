@@ -61,13 +61,15 @@ export async function addEventTableAction(eventId: number, tableId: number) {
       return { error: "That table is already on this event." };
     }
 
-    const { error } = await supabase
+    const { data: inserted, error } = await supabase
       .from("booking_table_mappings")
-      .insert({ event_id: eventId, table_id: tableId, booking_id: null, add_seat: 0 });
+      .insert({ event_id: eventId, table_id: tableId, booking_id: null, add_seat: 0 })
+      .select("id")
+      .single();
     if (error) throw error;
 
     revalidatePath(`/settings/floor-plan/${eventId}`);
-    return { success: true };
+    return { success: true, mappingId: inserted?.id as number | undefined };
   } catch (error) {
     console.error("Error adding table to event:", error);
     return { error: error instanceof Error ? error.message : "Failed to add table." };
