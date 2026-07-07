@@ -3,7 +3,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import EventBookingForm from "./_components/event-booking-form";
 import ImageThemer from "./_components/image-themer";
-import Image from "next/image";
 import {
   Banknote, Calendar, Users, Trophy, Wine,
   MapPin, Clock, DollarSign, Star, CheckCircle,
@@ -68,6 +67,9 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
   const cfg = normalizeBookingConfig(config);
   const tagline = cfg.tag_line || (subtype?.tagline as string) || event.tagline || "";
   const eventTitle = event.title || "Event";
+  // Banner + theme source: the event's booking image, falling back to the logo so
+  // the header always renders a themed banner (matches the grouped booking page).
+  const bannerImage = cfg.booking_image_url || "/CompanyName.png";
 
   const dbBadges = (infoItems || []).map((item) => ({
     icon: ICON_MAP[item.icon || ""] || Info,
@@ -105,71 +107,38 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-      {/* Dynamic theme — the booking image's dominant colour is sampled client-side
-          into the `--ev-theme` CSS variable and bled across the page via gradients,
-          so the whole surface picks up the image's colour. Falls back to the olive
-          theme when there's no image or no readable vibrant colour. */}
-      {cfg.booking_image_url && (
-        <>
-          <ImageThemer imageUrl={cfg.booking_image_url} />
+      {/* Dynamic theme — the banner image's dominant colour is sampled client-side
+          into the `--ev-theme` CSS variable and bled across the page via gradients.
+          The banner is the event's booking image, or the company logo when absent,
+          so the header always themes. Mirrors the grouped booking page. */}
+      <ImageThemer imageUrl={bannerImage} />
 
-          {/* Colour wash — a strong field of the image's colour behind the banner and
-              header that carries a little way behind the top of the form before
-              resolving into the olive base, so the theme bleeds into the form softly. */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-[85vh] z-0 opacity-70 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_20%,transparent_58%)]"
-          />
-
-          {/* Blurred copy of the banner — carries the real image colours/texture down
-              past its own bottom edge, so the banner melts into the field instead of
-              cutting off on a hard line. */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-[60vh] z-0 overflow-hidden mask-[linear-gradient(to_bottom,black_0%,transparent_85%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_85%)]"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={cfg.booking_image_url}
-              alt=""
-              className="w-full h-full object-cover scale-150 blur-3xl opacity-45"
-            />
-          </div>
-        </>
-      )}
+      {/* Colour wash — a strong field of the image's colour that carries down over
+          most of the page (past 75%) before resolving into the olive base. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-0 opacity-80 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_35%,transparent_82%)]"
+      />
 
       <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto py-4 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
 
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
-          {cfg.booking_image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={cfg.booking_image_url}
-              alt={eventTitle}
-              className="w-full h-auto object-contain -mt-2 mask-[linear-gradient(to_bottom,black_90%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_90%,transparent_100%)]"
-            />
-          ) : (
-            <div className="w-full max-w-45 sm:max-w-xs">
-              <Image
-                src="/CompanyName.png"
-                alt="Don Fenticas"
-                width={300}
-                height={90}
-                className="w-full h-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
-                priority
-              />
-            </div>
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={bannerImage}
+            alt={eventTitle}
+            className="w-full sm:max-w-md h-auto mx-auto object-contain -mt-2"
+          />
           <div className="mt-5 sm:mt-7 space-y-2 px-2">
             <div className="inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-4 py-1.5 mb-1">
               <span className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]">{eventTitle}</span>
             </div>
-            <p className="text-stone-300 text-xs sm:text-sm font-bold">
+            <p className="text-(--ev-fg,#d6d3d1) text-xs sm:text-sm font-bold">
               {eventDate}{timeStr ? ` · ${timeStr}` : ""}
             </p>
             {tagline && (
-              <p className="text-stone-400 text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic opacity-80 text-center">
+              <p className="text-(--ev-fg-dim,#a8a29e) text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic text-center">
                 {tagline}
               </p>
             )}
@@ -204,7 +173,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
 
           <div className="mb-8 text-center relative z-10">
             <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">Book Your Spot</h3>
-            <p className="text-stone-500 text-xs sm:text-base mt-2 font-medium">
+            <p className="text-(--ev-fg-dim,#78716c) text-xs sm:text-base mt-2 font-medium">
               Fill in the details below to reserve your place.
             </p>
           </div>

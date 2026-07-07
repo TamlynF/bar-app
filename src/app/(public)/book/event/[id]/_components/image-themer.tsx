@@ -59,7 +59,30 @@ export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
         const r = Math.round(best.r / best.count);
         const g = Math.round(best.g / best.count);
         const b = Math.round(best.b / best.count);
-        root.style.setProperty("--ev-theme", `rgb(${r} ${g} ${b})`);
+
+        // Shift the wash away from the artwork's own lightness so the image reads
+        // clearly against it (a gold logo shouldn't sit on a gold field): deepen a
+        // bright image, lift a dark one — keeping the hue so the page still themes.
+        const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        let wr: number, wg: number, wb: number;
+        if (lum > 0.5) {
+          const f = 0.42; // deepen a light/bright image
+          wr = Math.round(r * f); wg = Math.round(g * f); wb = Math.round(b * f);
+        } else {
+          const t = 0.5; // lift a dark image toward a lighter tint of the same hue
+          wr = Math.round(r + (255 - r) * t);
+          wg = Math.round(g + (255 - g) * t);
+          wb = Math.round(b + (255 - b) * t);
+        }
+        root.style.setProperty("--ev-theme", `rgb(${wr} ${wg} ${wb})`);
+
+        // Publish a legible foreground for text/icons on the wash + inputs, contrasting
+        // the *shifted* wash colour. `--ev-fg` is solid (labels, icons); `--ev-fg-dim`
+        // is muted (placeholders, subtext).
+        const washLum = (0.299 * wr + 0.587 * wg + 0.114 * wb) / 255;
+        const fgRgb = washLum > 0.58 ? "28 25 23" : "245 245 244"; // near-black vs near-white
+        root.style.setProperty("--ev-fg", `rgb(${fgRgb})`);
+        root.style.setProperty("--ev-fg-dim", `rgb(${fgRgb} / 0.62)`);
       } catch {
         /* tainted canvas / CORS failure — keep default theme */
       }
@@ -70,6 +93,8 @@ export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
     return () => {
       cancelled = true;
       root.style.removeProperty("--ev-theme");
+      root.style.removeProperty("--ev-fg");
+      root.style.removeProperty("--ev-fg-dim");
     };
   }, [imageUrl]);
 

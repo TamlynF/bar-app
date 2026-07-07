@@ -135,19 +135,8 @@ export default async function GroupedBookingPage({
           <ImageThemer imageUrl={cfg.booking_image_url} />
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-[85vh] z-0 opacity-40 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_20%,transparent_58%)]"
+            className="pointer-events-none absolute inset-0 z-0 opacity-80 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_35%,transparent_82%)]"
           />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-[60vh] z-0 overflow-hidden mask-[linear-gradient(to_bottom,black_0%,transparent_85%)] [-webkit-mask-image:linear-gradient(to_bottom,black_0%,transparent_85%)]"
-          >
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={cfg.booking_image_url}
-              alt=""
-              className="w-full h-full object-cover scale-150 blur-3xl opacity-45"
-            />
-          </div>
         </>
       )}
 
@@ -160,7 +149,7 @@ export default async function GroupedBookingPage({
             <img
               src={cfg.booking_image_url}
               alt={title}
-              className="w-full h-auto object-contain -mt-2 mask-[linear-gradient(to_bottom,black_90%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_90%,transparent_100%)]"
+              className="w-full sm:max-w-md h-auto mx-auto object-contain -mt-2"
             />
           ) : (
             <div className="w-full max-w-45 sm:max-w-xs">
@@ -179,7 +168,7 @@ export default async function GroupedBookingPage({
               <span className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]">{title}</span>
             </div>
             {tagline && (
-              <p className="text-stone-400 text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic opacity-80 text-center">
+              <p className="text-(--ev-fg-dim,#a8a29e) text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic text-center">
                 {tagline}
               </p>
             )}
@@ -210,7 +199,7 @@ export default async function GroupedBookingPage({
 
           <div className="mb-8 text-center relative z-10">
             <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">Book Your Spot</h3>
-            <p className="text-stone-500 text-xs sm:text-base mt-2 font-medium">
+            <p className="text-(--ev-fg-dim,#78716c) text-xs sm:text-base mt-2 font-medium">
               {events.length > 0
                 ? "Select a date below and lock in your place."
                 : "Check back soon for upcoming events."}
