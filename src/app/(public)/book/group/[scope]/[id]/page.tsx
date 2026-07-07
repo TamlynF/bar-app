@@ -140,10 +140,10 @@ export default async function GroupedBookingPage({
         </>
       )}
 
-      <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto py-4 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
+      <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8 flex flex-col">
 
         {/* Header */}
-        <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
+        <div className="flex flex-col items-center text-center mb-4 sm:mb-6">
           {cfg.booking_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -163,12 +163,9 @@ export default async function GroupedBookingPage({
               />
             </div>
           )}
-          <div className="mt-5 sm:mt-7 space-y-2 px-2">
-            <div className="inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-4 py-1.5 mb-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]">{title}</span>
-            </div>
+          <div className="mt-4 sm:mt-5 space-y-2 px-2">
             {tagline && (
-              <p className="text-(--ev-fg-dim,#a8a29e) text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic text-center">
+              <p className="text-(--ev-fg-dim,#a8a29e) text-xs sm:text-base font-medium max-w-sm sm:max-w-2xl mx-auto leading-relaxed italic text-center">
                 {tagline}
               </p>
             )}
@@ -177,12 +174,12 @@ export default async function GroupedBookingPage({
 
         {/* Event Badges */}
         {badges.length > 0 && (
-          <div className="flex flex-row overflow-x-auto no-scrollbar gap-2 pb-4 -mx-4 px-4 mb-4 sm:mb-12 sm:flex-wrap sm:overflow-visible sm:mx-0 sm:px-0 sm:justify-center sm:gap-3">
+          <div className="flex flex-row overflow-x-auto no-scrollbar gap-2 pb-4 -mx-4 px-4 mb-4 sm:mb-5 sm:flex-wrap sm:overflow-visible sm:mx-0 sm:px-0 sm:justify-center sm:gap-3">
             {badges.map((badge, index) => (
               <div
                 key={index}
                 className={cn(
-                  "flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 hover:border-white/20",
+                  "flex items-center justify-center bg-black/30 border border-white/25 backdrop-blur-sm shadow-lg shadow-black/20 rounded-xl px-4 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-black/40 hover:border-white/40",
                   "flex-none sm:flex-1 sm:min-w-37.5"
                 )}
               >
