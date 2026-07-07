@@ -3,7 +3,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { generateGrounded, parseJsonLoose } from "@/lib/gemini";
-import { buildAdvertisingTrendsPrompt, buildEventIdeasPrompt } from "../lib/prompts";
+import { formatGbp } from "@/lib/price";
+import { buildAdvertisingTrendsPrompt, buildEventIdeasPrompt, buildPriceTrendsPrompt } from "../lib/prompts";
+import { buildComparison } from "../lib/compare";
 import { trendSignature } from "../lib/signature";
 import {
   ensureMarketingSettings,
@@ -11,7 +13,7 @@ import {
   resolveComparisonArea,
   deriveAreaFromAddress,
 } from "../lib/settings";
-import type { AiTrend, TrendEffort, TrendKind, TrendState } from "../lib/types";
+import type { AiTrend, CompetitorPrice, MenuItemLite, TrendEffort, TrendKind, TrendState } from "../lib/types";
 
 function normalizeEffort(raw?: string): TrendEffort | null {
   const v = (raw ?? "").trim().toLowerCase();
@@ -34,6 +36,66 @@ async function currentEmployeeId(
     .eq("email", user.email)
     .maybeSingle();
   return emp?.id ?? null;
+}
+
+/**
+ * Build a compact snapshot of the venue's own prices vs local rivals for the
+ * price-trends prompt, so the AI can name the exact gap and the real venues it
+ * beats (instead of a generic national average). Uses the last stored competitor
+ * snapshot for the area — empty on the very first run, in which case the prompt
+ * falls back to pure web search.
+ */
+async function buildPriceContext(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  area: string,
+): Promise<string> {
+  // Venue's own active menu items (name + free-text price).
+  const { data: cats } = await supabase
+    .from("menu_categories")
+    .select("name, menu_items(id, name, price, is_active)")
+    .eq("is_active", true);
+  const menuItems: MenuItemLite[] = [];
+  (cats ?? []).forEach(
+    (cat: { name: string; menu_items?: { id: number; name: string; price: string; is_active: boolean }[] }) => {
+      (cat.menu_items ?? [])
+        .filter((it) => it.is_active)
+        .forEach((it) => menuItems.push({ id: it.id, name: it.name, price: it.price, category: cat.name }));
+    },
+  );
+
+  // Latest stored competitor prices for this area.
+  const { data: comp } = await supabase
+    .from("competitor_prices")
+    .select("id, venue_name, item_name, item_type, price_text, price_amount, area, source_url, source_name, fetched_at")
+    .eq("area", area);
+  const competitorPrices = (comp ?? []) as CompetitorPrice[];
+  if (!competitorPrices.length && !menuItems.length) return "";
+
+  // Per-benchmark gap: our price vs local min/avg/max.
+  const gapLines = buildComparison(competitorPrices, menuItems)
+    .filter((c) => c.ownPrice != null && c.competitorAvg != null && c.sampleCount > 0)
+    .map((c) => {
+      const diff = (c.ownPrice as number) - (c.competitorAvg as number);
+      const stance =
+        diff < -0.01 ? `£${Math.abs(diff).toFixed(2)} UNDER` : diff > 0.01 ? `£${diff.toFixed(2)} OVER` : "level with";
+      return `- ${c.label}: you ${formatGbp(c.ownPrice)}${c.ownItemName ? ` (${c.ownItemName})` : ""} vs local ${formatGbp(c.competitorMin)}–${formatGbp(c.competitorMax)} (avg ${formatGbp(c.competitorAvg)}) across ${c.sampleCount} venue${c.sampleCount === 1 ? "" : "s"} → you're ${stance} local avg`;
+    });
+
+  // A few named nearby venues + a sample price, for concrete call-outs.
+  const venueSamples = new Map<string, string>();
+  competitorPrices.forEach((p) => {
+    if (!venueSamples.has(p.venue_name)) {
+      venueSamples.set(p.venue_name, `${p.item_name} ${p.price_text || formatGbp(p.price_amount)}`);
+    }
+  });
+  const venueLines = Array.from(venueSamples)
+    .slice(0, 8)
+    .map(([venue, sample]) => `- ${venue}: e.g. ${sample}`);
+
+  const parts: string[] = [];
+  if (gapLines.length) parts.push(`YOUR PRICE vs LOCAL AVG (${area}):\n${gapLines.join("\n")}`);
+  if (venueLines.length) parts.push(`NAMED NEARBY VENUES (quote these by name):\n${venueLines.join("\n")}`);
+  return parts.join("\n\n");
 }
 
 function toRows(kind: TrendKind, area: string, aiTrends: AiTrend[], employeeId: number | null) {
@@ -90,12 +152,17 @@ export async function refreshTrendsAction(
     .limit(40);
   const blocklist = (dismissed ?? []).map((d) => d.title).filter(Boolean);
 
+  // Only fetch the real local price snapshot when we're actually scanning price trends.
+  const priceContext = kinds.includes("price") ? await buildPriceContext(supabase, area) : "";
+
   const jobs = kinds.map((k) => ({
     kind: k,
     prompt:
       k === "advertising"
         ? buildAdvertisingTrendsPrompt(area, todayISO, blocklist)
-        : buildEventIdeasPrompt(area, todayISO, blocklist),
+        : k === "price"
+          ? buildPriceTrendsPrompt(area, settings?.comparison_radius ?? null, todayISO, priceContext, blocklist)
+          : buildEventIdeasPrompt(area, todayISO, blocklist),
   }));
   const results = await Promise.all(jobs.map((j) => generateGrounded(j.prompt)));
 

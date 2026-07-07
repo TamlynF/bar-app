@@ -52,11 +52,16 @@ function StatusCircle({
 
 export default function PrivateHireListClient({
   initialRequests,
+  initialStatuses = [],
 }: {
   initialRequests: PrivateHireRequest[];
+  /** Status keys to pre-select in the filter (e.g. from ?status=pending). */
+  initialStatuses?: string[];
 }) {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set());
+  const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(
+    () => new Set(initialStatuses.map((s) => s.trim().toLowerCase()).filter(Boolean))
+  );
 
   const toggleStatusFilter = (status: string) => {
     const next = new Set(activeStatusFilters);

@@ -48,11 +48,16 @@ export default async function GeneralEventBookingsPage({
   searchParams,
 }: {
   params: Promise<{ type: string; subtype: string }>;
-  searchParams: Promise<{ eventId?: string }>;
+  searchParams: Promise<{ eventId?: string; status?: string }>;
 }) {
   const { type, subtype } = await params;
-  const { eventId } = await searchParams;
+  const { eventId, status } = await searchParams;
   const selectedEventId = eventId ?? null;
+  // Optional status pre-filter for the request pipelines (e.g. ?status=pending),
+  // used by the dashboard "needs action" links. Comma-separated, case-insensitive.
+  const initialStatuses = status
+    ? status.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
+    : [];
   // per_type grouping uses the ALL_SUBTYPES sentinel — label the page by category.
   const isAllSubtypes = subtype === ALL_SUBTYPES;
   const filterLabel = isAllSubtypes ? toTitleCase(type) : toTitleCase(subtype);
@@ -65,7 +70,7 @@ export default async function GeneralEventBookingsPage({
     const requests = (await getBandRequestsForType()) as unknown as BandRequest[];
     return (
       <RequestsShell title="Band Applications" subtitle="Review and respond to artist bookings">
-        <BandBookingListClient initialRequests={requests} />
+        <BandBookingListClient initialRequests={requests} initialStatuses={initialStatuses} />
       </RequestsShell>
     );
   }
@@ -73,7 +78,7 @@ export default async function GeneralEventBookingsPage({
     const requests = (await getPrivateHireRequestsForType()) as unknown as PrivateHireRequest[];
     return (
       <RequestsShell title="Private Hire" subtitle="Review and respond to venue hire enquiries">
-        <PrivateHireListClient initialRequests={requests} />
+        <PrivateHireListClient initialRequests={requests} initialStatuses={initialStatuses} />
       </RequestsShell>
     );
   }

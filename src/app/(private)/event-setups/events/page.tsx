@@ -4,9 +4,9 @@ import EventsClient from "./event-setups-client";
 export default async function EventsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; from?: string; to?: string; quick?: string }>;
 }) {
-  const { filter } = await searchParams;
+  const { filter, from, to, quick } = await searchParams;
   const supabase = await createClient();
 
   const [{ data: events }, { data: eventTypes }, { data: eventSubtypes }, { data: employees }, { data: quizCategories }, { data: quizQuestions }, { data: bookings }] = await Promise.all([
@@ -19,5 +19,5 @@ export default async function EventsPage({
     supabase.from("bookings").select("id, event_id, status, group_size, group_name"),
   ]);
 
-  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} filter={filter} />;
+  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} filter={filter} initialFrom={from} initialTo={to} initialQuick={quick} />;
 }

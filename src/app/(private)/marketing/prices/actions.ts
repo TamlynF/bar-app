@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { generateGrounded, parseJsonLoose } from "@/lib/gemini";
 import { parseGbp } from "@/lib/price";
 import { buildPricesPrompt } from "../lib/prompts";
+import { refreshTrendsAction } from "../trends/actions";
 import {
   ensureMarketingSettings,
   readCompanyAddress,
@@ -105,6 +106,29 @@ export async function refreshPricesAction(): Promise<
   revalidatePath("/marketing/prices");
   revalidatePath("/marketing/trends"); // Prices tab is also embedded on the Trends page.
   return { success: true, count: rows.length };
+}
+
+/**
+ * "Live AI: local price insights" — refreshes competitor prices for the table
+ * AND generates fresh price-positioning idea cards, in one click.
+ */
+export async function refreshPriceInsightsAction(): Promise<
+  { success: true; priceCount: number; ideaCount: number } | { error: string }
+> {
+  const [prices, ideas] = await Promise.all([
+    refreshPricesAction(),
+    refreshTrendsAction("price"),
+  ]);
+
+  // Only a hard fail if both halves failed.
+  if ("error" in prices && "error" in ideas) {
+    return { error: prices.error };
+  }
+  return {
+    success: true,
+    priceCount: "error" in prices ? 0 : prices.count,
+    ideaCount: "error" in ideas ? 0 : ideas.added,
+  };
 }
 
 /** Update the editable comparison area / radius. */

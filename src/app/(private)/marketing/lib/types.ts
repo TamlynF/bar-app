@@ -1,7 +1,7 @@
 // Hand-declared row types for the Marketing feature (the app has no generated
 // Supabase types file — types live next to the code that uses them).
 
-export type TrendKind = "advertising" | "event_idea";
+export type TrendKind = "advertising" | "event_idea" | "price";
 export type TrendState = "new" | "saved" | "ignored";
 export type TrendEffort = "Easy" | "Medium" | "Big";
 export type CompetitorItemType = "drink" | "snack" | "food";

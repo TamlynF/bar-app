@@ -12,19 +12,27 @@ no `dist/`, no exported package. To make the converter work we build a small
 
 - `.design-sync/poc-src/{button,input,index}.tsx` — copies of the two components
   (durable, committed).
-- esbuild bundles `poc-src/index.ts` → `node_modules/bar-app-ds/dist/index.js`
-  (react/react-dom/jsx external; clsx + tailwind-merge + cva + radix Slot bundled in).
-- `node_modules/bar-app-ds/dist/index.d.ts` — hand-written prop contracts for
-  `Button`/`Input` (the converter extracts `<Name>Props` from these).
-- `node_modules/bar-app-ds/styles.css` — compiled Tailwind (see below).
-- Build command:
+- **`.design-sync/build-minipkg.mjs` (durable, committed) rebuilds the whole
+  mini-package** — run it from the repo root before the driver:
   ```
-  node .ds-sync/package-build.mjs --config .design-sync/config.json \
-    --node-modules ./node_modules --entry ./node_modules/bar-app-ds/dist/index.js \
-    --out ./ds-bundle
+  node .design-sync/build-minipkg.mjs
   ```
-  `node_modules/bar-app-ds/` is NOT committed (it's under node_modules) — recreate
-  it on a fresh clone with the esbuild + d.ts + css steps above before building.
+  It emits `node_modules/bar-app-ds/dist/index.js` (esbuild; react/react-dom/jsx
+  external; clsx + tailwind-merge + cva + radix Slot inlined), the hand-faithful
+  `dist/index.d.ts`, and `package.json`. `node_modules/bar-app-ds/` is NOT committed
+  (it's under node_modules) — this script recreates it on a fresh clone. It imports
+  esbuild from `.ds-sync/node_modules` (staged converter deps, recreated per clone
+  by the SKILL step-7 `npm i`).
+- **`.d.ts` GOTCHA (learned 2026-07-07):** the ts-morph extractor DROPS
+  `VariantProps<typeof buttonVariants>` and `React.ComponentProps<"button">`
+  (unresolved generics). A `.d.ts` that relies on them silently emits a
+  `Button.d.ts` **missing `variant`/`size`** (only `asChild` + fallback props
+  survive). `build-minipkg.mjs` therefore spells `variant`/`size` out as **direct
+  literal members** with `extends React.*HTMLAttributes` for native attrs — do NOT
+  "simplify" it back to the intersection form.
+- `node_modules/bar-app-ds/styles.css` — compiled Tailwind (see below); still a
+  separate `@tailwindcss/cli` step, not part of `build-minipkg.mjs`.
+- Converter/driver entry: `--entry ./node_modules/bar-app-ds/dist/index.js`.
 
 ## RESOLVED (2026-06-22) — the token layer now exists
 The earlier sync recorded "no semantic token layer". **That has flipped.**
@@ -67,6 +75,31 @@ Tailwind v4 **auto-detects content from the repo root** in addition to the
 (`--spotify-bg`, `--badge-color`, `--chip-c`, `--ev-theme`, radix popover vars).
 These are set at runtime by the app and are irrelevant to Button/Input — **leave
 as a known warn, do not chase.**
+
+## Run log
+- **2026-07-07 re-sync (bundled skill 2.1.202).** Remote anchor had moved since the
+  last cached one (`styleSha` `7b17c76d…`→`8c66c2a0…`, everything else identical) — a
+  prior styling-only re-upload. My fresh build: both components **verification-unchanged**
+  (renderHashes + sourceKeys matched → no re-grade), `upload.any:true` with
+  `styling:true` (styles.css grew to **255 KB** — app utilities, was 162 KB in the
+  first sync), `bundle:true`/`aux:true` (toolchain churn: `scriptsSha` `093dbd51…`→
+  `0f1e261b…`, newer staged scripts), and `components:[Button]` (Button's `.d.ts`/
+  `.prompt.md` re-emitted with the fixed contract; Input's emitted files matched remote
+  byte-for-byte). Uploaded all 18 DS files, `deletePaths:[]`. Render check 2/2 clean;
+  only the known `[FONT_MISSING] "Cambria"` warn.
+- **The project is actively USED by the design agent** — `list_files` shows `app/*`,
+  `whatson-export/*`, `uploads/*`, `Don Fenticas - Home.html`, `port/*` etc. alongside
+  the DS files. These are the agent building pages WITH the DS (not scaffold junk).
+  The driver's `deletePaths` never lists them (it only manages `components/`, `_preview/`,
+  `_ds_bundle*`, `styles.css`, `_vendor/`, aux) — **never delete them**, `deletes:[]`
+  stays correct on this atomic path.
+- Conventions header re-validated against the fresh build: all tokens (`--primary`…
+  `--ring`), values (`#5C4033`×157 etc.) and semantic utilities (`bg-primary`,
+  `border-input`, `ring-ring`…) resolve in the shipped `_ds_bundle.css` closure (note:
+  `styles.css` is just `@import "./_ds_bundle.css";` — grep the bundle css, not styles.css).
+  The only header items not in the closure are the illustrative public-surface arbitrary
+  hex classes (`bg-[#FDCC4B]`/`text-[#26300D]`) — generated on use, never pre-shipped;
+  expected, not drift. No rewrite.
 
 ## Things that DON'T work / dead ends
 - **Junction trick (`node_modules/bar-app` → repo root): DO NOT USE.** It makes the
@@ -113,7 +146,8 @@ as a known warn, do not chase.**
 
 ## Re-sync risks (what can go stale)
 - `node_modules/bar-app-ds/` is gitignored-by-location — a fresh clone has no
-  mini-package; rebuild it (esbuild + d.ts + css) before re-running the converter.
+  mini-package; run `node .design-sync/build-minipkg.mjs` (durable script) then the
+  `@tailwindcss/cli` styles.css step before re-running the driver.
 - If `src/components/ui/{button,input}.tsx` change upstream, the `poc-src/` copies
   and the hand-written `.d.ts` will drift — re-copy and re-bundle.
 - `.d.ts` props are hand-written, not extracted from source — verify against the

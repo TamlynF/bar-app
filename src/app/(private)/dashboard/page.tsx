@@ -160,6 +160,12 @@ export default async function DashboardPage() {
   const analyticsPromise = fetchDashboardAnalytics(supabase);
   const nowMs = new Date().getTime();
   const todayStr = new Date().toISOString().split("T")[0];
+  // 12-month horizon for the "missing quiz" deep-link's date-range filter.
+  const twelveMonthsStr = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth() + 12,
+    new Date().getDate()
+  ).toISOString().split("T")[0];
   const firstDayOfMonth = new Date(
     new Date().getFullYear(),
     new Date().getMonth(),
@@ -184,26 +190,30 @@ export default async function DashboardPage() {
     supabase
       .from("private_hire_requests")
       .select("*", { count: "exact", head: true })
-      .eq("status", "pending")
-      .gte("preferred_date", firstDayOfMonth),
+      .eq("status", "pending"),
     supabase
       .from("band_booking_requests")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
     supabase
       .from("bookings")
-      .select("id, events!bookings_event_id_fkey!inner(date)")
-      .eq("payment_status", "unpaid")
+      .select("id, total_amount, paid_amount, events!bookings_event_id_fkey!inner(is_active)")
+      .eq("status", "confirmed")
       .gt("total_amount", 0)
-      .in("status", ["confirmed", "pending"])
-      .gte("events.date", todayStr),
+      .eq("events.is_active", true),
     supabase
       .from("events")
       .select("id, event_subtypes!inner(behavior), past_quiz_questions(id)")
       .gte("date", todayStr)
+      .lte("date", twelveMonthsStr)
       .eq("is_active", true)
       .eq("event_subtypes.behavior", "quiz"),
   ]);
+
+  // Confirmed bookings on active events that still owe money. The paid < total
+  // comparison isn't expressible in the PostgREST filter, so it's applied here.
+  const unpaidCount = ((unpaidBookingsData ?? []) as { total_amount: number | null; paid_amount: number | null }[])
+    .filter((b) => (b.paid_amount ?? 0) < (b.total_amount ?? 0)).length;
 
   const { data: bandPreferredDates } = await supabase
     .from("band_booking_requests")
@@ -302,7 +312,7 @@ export default async function DashboardPage() {
   const totalActions =
     (pendingPrivate ?? 0) +
     (pendingBands ?? 0) +
-    (unpaidBookingsData?.length ?? 0) +
+    unpaidCount +
     quizzesMissingQuestions +
     openSaturdays +
     seatableWaitlistCount;
@@ -496,12 +506,12 @@ export default async function DashboardPage() {
 
   // Triage "Needs Action" segments — order + colour per the design.
   const actionItems: ActionItem[] = [
-    { key: "unpaid", label: "Unpaid", count: unpaidBookingsData?.length ?? 0, href: `/event-bookings/bingo-bookings?status=confirmed,pending&payment_status=unpaid&from_date=${todayStr}&min_total=0`, color: "bg-amber-700" },
-    { key: "bands", label: "Bands", count: pendingBands ?? 0, href: "/event-bookings/music-bookings?status=pending", color: "bg-purple-700" },
-    { key: "quizzes", label: "Quizzes", count: quizzesMissingQuestions, href: "/event-setups/events?filter=quiz-incomplete", color: "bg-green-700" },
-    { key: "saturdays", label: "Saturdays", count: openSaturdays, href: "/event-bookings/music-bookings", color: "bg-red-600" },
-    { key: "hires", label: "Hires", count: pendingPrivate ?? 0, href: "/event-bookings/private-bookings?status=pending", color: "bg-blue-600" },
-    { key: "seatable-waitlist", label: "Waitlist", count: seatableWaitlistCount, href: "/event-bookings/quiz-bookings?status=waitlisted", color: "bg-teal-600" },
+    { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
+    { key: "bands", label: "Bands pending", count: pendingBands ?? 0, href: "/event-bookings/general/music/__all__?status=pending", color: "bg-purple-700" },
+    { key: "hires", label: "Private hires pending", count: pendingPrivate ?? 0, href: "/event-bookings/general/private/__all__?status=pending", color: "bg-blue-600" },
+    { key: "quizzes", label: "Missing quiz", count: quizzesMissingQuestions, href: `/event-setups/events?from=${todayStr}&to=${twelveMonthsStr}&quick=quiz,active`, color: "bg-green-700" },
+    //{ key: "saturdays", label: "Saturdays", count: openSaturdays, href: "/event-bookings/music-bookings", color: "bg-red-600" },    
+    //{ key: "seatable-waitlist", label: "Waitlist", count: seatableWaitlistCount, href: "/event-bookings/quiz-bookings?status=waitlisted", color: "bg-teal-600" },
   ];
 
   // Tonight is highlighted separately; the rest fill "Coming Up".

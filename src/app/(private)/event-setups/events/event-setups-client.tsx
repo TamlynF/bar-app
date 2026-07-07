@@ -199,6 +199,9 @@ export default function EventsClient({
   quizQuestions = [],
   bookings = [],
   filter,
+  initialFrom,
+  initialTo,
+  initialQuick,
 }: {
   initialEvents: EventRecord[];
   eventTypes: EventType[];
@@ -208,6 +211,11 @@ export default function EventsClient({
   quizQuestions: QuizQuestion[];
   bookings: BookingRecord[];
   filter?: string;
+  /** Optional URL-driven date range (YYYY-MM-DD) — e.g. dashboard "needs action" links. */
+  initialFrom?: string;
+  initialTo?: string;
+  /** Optional comma-separated quick-filter keys to pre-activate (e.g. "quiz"). */
+  initialQuick?: string;
 }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
@@ -223,14 +231,19 @@ export default function EventsClient({
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   // Category / sort / quick filters are collapsed behind the Filters button; the
   // search bar stays visible. Hidden by default.
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(!!initialQuick);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
   });
-  const [quickFilters, setQuickFilters] = useState<Set<string>>(new Set());
+  const [quickFilters, setQuickFilters] = useState<Set<string>>(
+    () => new Set((initialQuick ?? "").split(",").map((s) => s.trim()).filter(Boolean))
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | null>(() => {
+    // A URL-supplied range (e.g. dashboard "needs action" links) wins over the
+    // default current-month window.
+    if (initialFrom) return { start: initialFrom, end: initialTo ?? initialFrom };
     const now = new Date();
     const y = now.getFullYear();
     const m = now.getMonth();

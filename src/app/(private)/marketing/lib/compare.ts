@@ -81,3 +81,65 @@ export function buildComparison(
     };
   });
 }
+
+// ── Named-competitor matrix — your price vs each nearby venue, per benchmark ──
+export type VenueMatrix = {
+  venues: string[];
+  rows: { key: string; label: string; ownPrice: number | null; cells: (number | null)[] }[];
+};
+
+type PricedEntry = { venue: string; key: string; amount: number };
+
+function pricedEntries(competitorPrices: CompetitorPrice[]): PricedEntry[] {
+  return competitorPrices
+    .map((p) => ({
+      venue: p.venue_name,
+      key: matchBenchmark(p.item_name)?.key ?? null,
+      amount: p.price_amount ?? parseGbp(p.price_text),
+    }))
+    .filter((p): p is PricedEntry => !!p.venue && !!p.key && p.amount != null);
+}
+
+/**
+ * All venues that have at least one benchmark-matching price, ranked by coverage
+ * (most matches first). The UI defaults to the top few and lets the user pick.
+ */
+export function rankedVenues(competitorPrices: CompetitorPrice[]): string[] {
+  const coverage = new Map<string, number>();
+  pricedEntries(competitorPrices).forEach((p) => coverage.set(p.venue, (coverage.get(p.venue) ?? 0) + 1));
+  return Array.from(coverage.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([v]) => v);
+}
+
+/**
+ * Build a "your price vs each named venue" grid for a chosen set of venues:
+ * benchmark rows × the given venues (in order). Each cell is that venue's
+ * cheapest price matching the benchmark, or null if none found.
+ */
+export function buildVenueMatrix(
+  competitorPrices: CompetitorPrice[],
+  comparison: BenchmarkComparison[],
+  venues: string[],
+): VenueMatrix {
+  const priced = pricedEntries(competitorPrices);
+  const venueSet = new Set(venues);
+
+  // Cheapest price per (venue, benchmark).
+  const cellMin = new Map<string, number>();
+  priced.forEach((p) => {
+    if (!venueSet.has(p.venue)) return;
+    const k = `${p.venue}|${p.key}`;
+    const cur = cellMin.get(k);
+    if (cur == null || p.amount < cur) cellMin.set(k, p.amount);
+  });
+
+  const rows = comparison.map((c) => ({
+    key: c.key,
+    label: c.label,
+    ownPrice: c.ownPrice,
+    cells: venues.map((v) => cellMin.get(`${v}|${c.key}`) ?? null),
+  }));
+
+  return { venues, rows };
+}
