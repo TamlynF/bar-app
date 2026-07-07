@@ -12,8 +12,6 @@ import {
   ExternalLink,
   ArrowUp,
   ArrowDown,
-  Minus,
-  Equal,
   SlidersHorizontal,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -37,20 +35,58 @@ function formatWhen(iso: string | null): string {
   });
 }
 
-const VERDICT: Record<Verdict, { label: string; chip: string; Icon: typeof ArrowUp }> = {
-  above: { label: "Above avg", chip: "text-red-600 bg-red-50 border-red-200", Icon: ArrowUp },
-  below: { label: "Below avg", chip: "text-green-700 bg-green-50 border-green-200", Icon: ArrowDown },
-  inline: { label: "In line", chip: "text-[#5C4033] bg-[#F7F4EA] border-[#E6DFC8]", Icon: Minus },
-  unknown: { label: "No data", chip: "text-[#5F624F] bg-white border-[#E6DFC8]", Icon: Minus },
+// Verdict → the word shown beside your price + colour for the range-bar "you" dot.
+const VERDICT_WORD: Record<Verdict, { word: string; text: string; dot: string }> = {
+  above: { word: "above avg", text: "text-red-600", dot: "#DC2626" },
+  below: { word: "below avg", text: "text-green-700", dot: "#15803D" },
+  inline: { word: "in line", text: "text-[#B45309]", dot: "#B45309" },
+  unknown: { word: "no data", text: "text-[#5F624F]/60", dot: "#8A8D7A" },
 };
 
-// Phone-only inline verdict indicator: icon + colour, no wording.
-const VERDICT_MOBILE: Record<Verdict, { Icon: typeof ArrowUp; className: string }> = {
-  above: { Icon: ArrowUp, className: "text-red-600" },
-  below: { Icon: ArrowDown, className: "text-green-700" },
-  inline: { Icon: Equal, className: "text-amber-600" },
-  unknown: { Icon: Minus, className: "text-[#5F624F]/40" },
-};
+// Min→max range bar with an avg tick and a your-price dot (desktop only; phone
+// swaps to a compact min·avg·max line). Dynamic positions ride CSS custom
+// properties consumed by Tailwind arbitrary values (no standard inline styles).
+function RangeBar({ c }: { c: BenchmarkComparison }) {
+  const min = c.competitorMin as number;
+  const max = c.competitorMax as number;
+  const avg = c.competitorAvg as number;
+  const own = c.ownPrice;
+  const lo = Math.min(own ?? min, min) * 0.92;
+  const hi = Math.max(own ?? max, max) * 1.06;
+  const span = hi - lo || 1;
+  const pct = (v: number) => ((v - lo) / span) * 100;
+  const bandLeft = pct(min);
+  const bandWidth = Math.max(pct(max) - bandLeft, 1.5);
+
+  return (
+    <div className="sm:flex flex-col gap-1.5 hidden">
+      <div className="relative h-3.5">
+        <div className="top-1.5 right-0 left-0 absolute bg-[#E6DFC8] rounded h-0.5" />
+        <div
+          className="top-[5px] absolute bg-[#D9D2B8] rounded h-1 left-[var(--l)] w-[var(--w)]"
+          style={{ "--l": `${bandLeft}%`, "--w": `${bandWidth}%` } as React.CSSProperties}
+        />
+        <div
+          className="top-0.5 absolute bg-[#5F624F] rounded w-0.5 h-2.5 -translate-x-px left-[var(--l)]"
+          style={{ "--l": `${pct(avg)}%` } as React.CSSProperties}
+        />
+        {own != null && (
+          <div
+            className="top-px absolute bg-[var(--dot)] shadow-[0_1px_4px_rgba(31,31,26,0.35)] border-2 border-white rounded-full w-3 h-3 -translate-x-1.5 left-[var(--l)]"
+            style={{ "--l": `${pct(own)}%`, "--dot": VERDICT_WORD[c.verdict].dot } as React.CSSProperties}
+          />
+        )}
+      </div>
+      <div className="flex justify-between tabular-nums text-[#5F624F] text-[9.5px]">
+        <span>{formatGbp(min)}</span>
+        <span className="font-black">
+          avg {formatGbp(avg)} <span className="opacity-55">({c.sampleCount})</span>
+        </span>
+        <span>{formatGbp(max)}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function PricesClient({
   area,
@@ -376,46 +412,37 @@ export default function PricesClient({
           </div>
         ) : (
           <div className="divide-y divide-[#E6DFC8]/60">
-            {/* header row */}
-            <div className="hidden gap-2 sm:grid grid-cols-[1.4fr_0.8fr_1.4fr_0.9fr] px-5 py-2 font-black text-[#5F624F]/60 text-[9px] uppercase tracking-widest">
-              <span>Item</span>
-              <span className="text-right">Your price</span>
-              <span className="text-right">Local min · avg · max</span>
-              <span className="text-right">Vs avg</span>
-            </div>
             {comparison.map((c) => {
-              const v = VERDICT[c.verdict];
-              const m = VERDICT_MOBILE[c.verdict];
+              const vw = VERDICT_WORD[c.verdict];
+              const hasData = c.sampleCount > 0 && c.competitorAvg != null;
               return (
-                <div key={c.key} className="items-center gap-2 grid grid-cols-2 sm:grid-cols-[1.4fr_0.8fr_1.4fr_0.9fr] px-4 px-5 py-3">
-                  <div className="col-span-2 sm:col-span-1 min-w-0">
-                    <p className="font-black text-[#1F1F1A] text-[13px] truncate">{c.label}</p>
-                    {c.ownItemName && (
-                      <p className="text-[#5F624F]/70 text-[10px] truncate">Your: {c.ownItemName}</p>
-                    )}
+                <div key={c.key} className="flex flex-col gap-2 px-4 sm:px-5 py-3">
+                  <div className="flex justify-between items-baseline gap-3">
+                    <p className="min-w-0 font-black text-[#1F1F1A] text-[12.5px]">
+                      {c.label}
+                      {c.ownItemName && (
+                        <span className="ml-1 font-medium text-[#5F624F]/80 text-[10px]">· your {c.ownItemName}</span>
+                      )}
+                    </p>
+                    <p className={cn("font-black tabular-nums text-[14px] whitespace-nowrap shrink-0", vw.text)}>
+                      {formatGbp(c.ownPrice)}
+                      {hasData && <span className="ml-1 text-[8.5px] uppercase tracking-widest">{vw.word}</span>}
+                    </p>
                   </div>
-                  <div className="tabular-nums text-right">
-                    <span className="sm:hidden mr-1 font-black text-[#5F624F]/50 text-[9px] uppercase tracking-widest">You</span>
-                    <span className="font-black text-[#1F1F1A] text-[13px]">{formatGbp(c.ownPrice)}</span>
-                  </div>
-                  <div className="flex justify-end items-center gap-1.5 tabular-nums text-[#5F624F] text-[12px] text-right">
-                    {c.sampleCount > 0 ? (
-                      <span>
-                        {formatGbp(c.competitorMin)} · <span className="font-black text-[#1F1F1A]">{formatGbp(c.competitorAvg)}</span> · {formatGbp(c.competitorMax)}
-                        <span className="ml-1 text-[#5F624F]/50 text-[9px]">({c.sampleCount})</span>
-                      </span>
-                    ) : (
-                      <span className="text-[#5F624F]/40">—</span>
-                    )}
-                    {/* Phone-only inline verdict indicator on the same line as the values */}
-                    <m.Icon aria-label={v.label} className={cn("sm:hidden w-3.5 h-3.5 shrink-0", m.className)} />
-                  </div>
-                  <div className="hidden sm:block text-right">
-                    <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 border rounded-full font-black text-[9px] uppercase tracking-wide", v.chip)}>
-                      <v.Icon className="w-3 h-3" />
-                      {v.label}
-                    </span>
-                  </div>
+                  {hasData ? (
+                    <>
+                      <RangeBar c={c} />
+                      {/* Phone: compact one-line min · avg · max */}
+                      <p className="sm:hidden tabular-nums text-[#5F624F] text-[10.5px]">
+                        {formatGbp(c.competitorMin)} · avg{" "}
+                        <span className="font-black text-[#1F1F1A]">{formatGbp(c.competitorAvg)}</span> ·{" "}
+                        {formatGbp(c.competitorMax)}
+                        <span className="opacity-55 ml-1">({c.sampleCount})</span>
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-[#5F624F]/40 text-[10.5px]">No local data yet.</p>
+                  )}
                 </div>
               );
             })}
