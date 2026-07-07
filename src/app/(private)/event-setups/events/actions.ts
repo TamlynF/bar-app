@@ -40,6 +40,8 @@ export async function saveEventAction(formData: FormData) {
     booking_card_tagline: formData.get("booking_card_tagline")?.toString() || null,
     booking_card_icon: formData.get("booking_card_icon")?.toString() || null,
     booking_card_badge: formData.get("booking_card_badge")?.toString() || null,
+    // A non-bookable event has no shareable link, so drop any stored QR code.
+    ...(isBookable ? {} : { booking_qr_url: null }),
   };
 
   // --- Validation (shared with the client form via @/lib/event-form-validation) ---
@@ -151,6 +153,23 @@ export async function saveEventAction(formData: FormData) {
   } catch (error) {
     console.error("Error saving event:", error);
     return { error: error instanceof Error ? error.message : "Failed to save event." };
+  }
+}
+
+/**
+ * Persist (or clear) the QR code for an event's shareable booking link. The QR is
+ * generated client-side as a PNG data URL; pass null to remove it.
+ */
+export async function setEventQr(id: number, qrDataUrl: string | null) {
+  const supabase = await createClient();
+  try {
+    const { error } = await supabase.from("events").update({ booking_qr_url: qrDataUrl }).eq("id", id);
+    if (error) throw error;
+    revalidatePath("/event-setups/events");
+    return { success: true };
+  } catch (error) {
+    console.error("Error saving event QR:", error);
+    return { error: error instanceof Error ? error.message : "Failed to save QR code." };
   }
 }
 

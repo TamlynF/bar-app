@@ -80,7 +80,8 @@ export default function QuizGeneratorPage() {
   const searchParams = useSearchParams()
   const presetEventId = searchParams.get('event_id')
   const presetCategory = searchParams.get('category')
-
+  console.log('Preset event_id:', presetEventId, 'Preset category:', presetCategory)
+  
   const [topic, setTopic] = useState('')
   const [difficulty, setDifficulty] = useState('Medium')
   const [category, setCategory] = useState('')
@@ -310,7 +311,7 @@ export default function QuizGeneratorPage() {
           setIsLoading(false)
           return
         }
-        const result = await generatePictureRoundAction(numQuestions, category, topic, difficulty, selectedEventId ? parseInt(selectedEventId) : undefined, selectedCategoryConfig?.id, previousPictureAnswers)
+        const result = await generatePictureRoundAction(numQuestions, topic, difficulty, selectedEventId ? parseInt(selectedEventId) : undefined, selectedCategoryConfig?.id, previousPictureAnswers)
         if (result.error) {
           setError(result.error)
           toast.error(result.error)
@@ -323,7 +324,7 @@ export default function QuizGeneratorPage() {
           toast.success("Picture round generated!")
         }
       } else if (isMusicSnippets) {
-        const result = await generateMusicSnippetsAction(numQuestions, category, topic, difficulty, parseInt(selectedEventId), selectedCategoryConfig!.id)
+        const result = await generateMusicSnippetsAction(numQuestions, topic, difficulty, parseInt(selectedEventId), selectedCategoryConfig!.id)
         if (result.error) {
           setError(result.error)
           toast.error(result.error)
@@ -516,7 +517,7 @@ export default function QuizGeneratorPage() {
   }, [viewingCategory, eventHistory]);
 
   return (
-    <div className="max-w-6xl mx-auto px-2 sm:px-6 py-2 sm:py-4 space-y-2 sm:space-y-4 animate-in fade-in duration-700 pb-32 text-left">
+    <div className="space-y-2 space-y-4 mx-auto px-2 sm:px-6 py-2 py-4 pb-32 max-w-6xl text-left animate-in duration-700 fade-in">
 
       {/* CATEGORY PROGRESS INDICATORS */}
       {/* <div className={styles.pillsContainer}>
@@ -531,7 +532,7 @@ export default function QuizGeneratorPage() {
               onClick={() => setViewingCategory(stat)}
               style={{ borderColor: isFull ? '#047857' : hasQuestions ? '#b45309' : '#b91c1c' }}
               className={cn(
-                "flex flex-row! items-center gap-1.5 px-3 h-9 rounded-lg border border-solid shrink-0 whitespace-nowrap shadow-md transition-all hover:shadow-lg active:scale-[0.98]",
+                "flex flex-row! items-center gap-1.5 shadow-md hover:shadow-lg px-3 border border-solid rounded-lg h-9 whitespace-nowrap active:scale-[0.98] transition-all shrink-0",
                 isFull
                   ? "bg-green-50"
                   : hasQuestions
@@ -541,7 +542,7 @@ export default function QuizGeneratorPage() {
               )}
             >
               <span className={cn(
-                "text-[11px] font-black uppercase tracking-tight leading-none",
+                "font-black text-[11px] uppercase leading-none tracking-tight",
                 isFull ? "text-green-700" : hasQuestions ? "text-amber-700" : "text-red-700"
               )}>
                 {stat.short_name || stat.category_name}:
@@ -551,7 +552,7 @@ export default function QuizGeneratorPage() {
                 <CheckCircle className="w-3 h-3 text-green-600 shrink-0" />
               ) : (
                 <span className={cn(
-                  "text-[11px] font-black tabular-nums leading-none shrink-0",
+                  "font-black tabular-nums text-[11px] leading-none shrink-0",
                   hasQuestions ? "text-amber-700" : "text-red-700"
                 )}>
                   {stat.currentCount}/{stat.question_count}
@@ -572,33 +573,33 @@ export default function QuizGeneratorPage() {
         <SheetContent 
           side="bottom" 
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh] flex flex-col outline-none shadow-2xl"
+          className="flex flex-col bg-[#F7F4EA] shadow-2xl p-0 border-[#E6DFC8] border-t-2 rounded-t-[2.5rem] outline-none h-[85vh]"
         >
           {viewingCategory && (
             <>
-              <SheetHeader className="p-6 pb-4 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-20 text-left shrink-0">
-                <div className="flex items-center justify-between">
+              <SheetHeader className="top-0 z-20 sticky bg-white/80 backdrop-blur-md p-6 pb-4 border-[#E6DFC8] border-b text-left shrink-0">
+                <div className="flex justify-between items-center">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <span className={cn(
-                        "text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wide",
+                        "px-2 py-0.5 rounded-full font-black text-[10px] uppercase tracking-wide",
                         viewingCategory.isFull ? "bg-green-100 text-green-700" : "bg-[#C8956D] text-[#5C4033]"
                       )}>
                         {viewingCategory.isFull ? "Round Complete" : "Round In Progress"}
                       </span>
                     </div>
-                    <SheetTitle className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter">
+                    <SheetTitle className="font-black text-[#1F1F1A] text-2xl uppercase tracking-tighter">
                       {viewingCategory.category_name}
                     </SheetTitle>
                   </div>
                   <div className="text-right">
-                    <p className="text-[10px] font-black text-[#5F624F] uppercase tracking-wide opacity-60">Locked Items</p>
-                    <p className="text-lg font-black text-[#5C4033] tabular-nums leading-none">
-                      {viewingCategory.currentCount} <span className="text-xs opacity-30">/</span> {viewingCategory.question_count}
+                    <p className="opacity-60 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">Locked Items</p>
+                    <p className="font-black tabular-nums text-[#5C4033] text-lg leading-none">
+                      {viewingCategory.currentCount} <span className="opacity-30 text-xs">/</span> {viewingCategory.question_count}
                     </p>
                   </div>
                 </div>
-                {/* <SheetDescription className="text-xs font-bold text-[#5F624F] uppercase tracking-wider mt-2">
+                {/* <SheetDescription className="mt-2 font-bold text-[#5F624F] text-xs uppercase tracking-wider">
                   Showing questions saved for {upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'this event'}.
                 </SheetDescription> */}
               </SheetHeader>
@@ -606,57 +607,57 @@ export default function QuizGeneratorPage() {
               {/* Scrollable Container Fix: Added overflow-y-auto and min-h-0 for flex context */}
               <div 
                 ref={scrollContainerRef}
-                className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 text-left overscroll-contain min-h-0"
+                className="flex-1 space-y-4 p-4 sm:p-6 min-h-0 overflow-y-auto overscroll-contain text-left"
               >
                 {savedQuestionsForCategory.length === 0 ? (
-                  <div className="py-20 text-center flex flex-col items-center gap-4">
-                    <div className="w-16 h-16 bg-white border-2 border-dashed border-[#E6DFC8] rounded-4xl flex items-center justify-center text-[#E6DFC8]">
+                  <div className="flex flex-col items-center gap-4 py-20 text-center">
+                    <div className="flex justify-center items-center bg-white border-[#E6DFC8] border-2 border-dashed rounded-4xl w-16 h-16 text-[#E6DFC8]">
                       <Plus className="w-8 h-8" />
                     </div>
-                    <p className="text-sm font-black text-[#1F1F1A] uppercase tracking-tight">No questions assigned yet</p>
+                    <p className="font-black text-[#1F1F1A] text-sm uppercase tracking-tight">No questions assigned yet</p>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 pb-6">
+                  <div className="gap-4 grid grid-cols-1 pb-6">
                     {savedQuestionsForCategory.map((record, i) => {
                       const isEditing = editingQuestionId === record.id;
                       
                       return (
                         <div key={record.id} className={cn(
-                          "bg-white border-2 rounded-2xl p-4 shadow-sm relative overflow-hidden group transition-all",
+                          "group relative bg-white shadow-sm p-4 border-2 rounded-2xl overflow-hidden transition-all",
                           isEditing ? "border-[#5C4033] ring-4 ring-[#5C4033]/5" : "border-[#E6DFC8]"
                         )}>
                           {isEditing ? (
-                            <div className="space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="space-y-4 animate-in duration-200 fade-in zoom-in-95">
                                <div className="space-y-1.5">
-                                  <Label className="text-[10px] font-black uppercase text-[#5F624F] ml-1">Edit Question</Label>
+                                  <Label className="ml-1 font-black text-[#5F624F] text-[10px] uppercase">Edit Question</Label>
                                 <textarea 
                                     title="Edit Question Text"
                                     value={editForm.question}
                                     onChange={(e) => setEditForm({...editForm, question: e.target.value})}
-                                    className="w-full text-sm font-semibold min-h-20 p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
+                                    className="bg-[#F7F4EA]/30 p-3 border-[#E6DFC8] border-2 focus:border-[#5C4033] rounded-xl outline-none w-full min-h-20 font-semibold text-sm resize-none"
                                   />
                                </div>
                                <div className="space-y-1.5">
-                                  <Label className="text-[10px] font-black uppercase text-[#5F624F] ml-1">Edit Answer</Label>
+                                  <Label className="ml-1 font-black text-[#5F624F] text-[10px] uppercase">Edit Answer</Label>
                                   <Input 
                                     value={editForm.answer}
                                     onChange={(e) => setEditForm({...editForm, answer: e.target.value})}
-                                    className="text-sm font-black text-[#5C4033] bg-[#5C4033]/10 border-2 border-[#5C4033]/15 focus:border-[#5C4033] rounded-xl h-11"
+                                    className="bg-[#5C4033]/10 border-[#5C4033]/15 border-2 focus:border-[#5C4033] rounded-xl h-11 font-black text-[#5C4033] text-sm"
                                   />
                                </div>
                                <div className="flex gap-2 pt-2">
                                   <Button 
                                     onClick={() => saveEdit(record.id)}
                                     disabled={isActionPending}
-                                    className="flex-1 bg-[#5C4033] text-white font-black uppercase text-[10px] tracking-wide h-10 rounded-xl"
+                                    className="flex-1 bg-[#5C4033] rounded-xl h-10 font-black text-[10px] text-white uppercase tracking-wide"
                                   >
-                                    {isActionPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-2" /> Save Changes</>}
+                                    {isActionPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="mr-2 w-3.5 h-3.5" /> Save Changes</>}
                                   </Button>
                                   <Button 
                                     variant="outline"
                                     onClick={cancelEditing}
                                     disabled={isActionPending}
-                                    className="px-4 border-2 border-[#E6DFC8] text-[#5F624F] font-bold uppercase text-[10px] h-10 rounded-xl"
+                                    className="px-4 border-[#E6DFC8] border-2 rounded-xl h-10 font-bold text-[#5F624F] text-[10px] uppercase"
                                   >
                                     Cancel
                                   </Button>
@@ -666,22 +667,22 @@ export default function QuizGeneratorPage() {
                             <div className="space-y-3">
                               <div className="flex items-start gap-4">
                                 {record.release_year ? (
-                                  <span className="shrink-0 bg-[#5C4033] text-white text-[10px] font-black px-2 py-1 rounded-lg tracking-wider mt-0.5">
+                                  <span className="bg-[#5C4033] mt-0.5 px-2 py-1 rounded-lg font-black text-[10px] text-white tracking-wider shrink-0">
                                     {record.release_year}
                                   </span>
                                 ) : (
-                                  <span className="text-[10px] font-black text-[#5C4033]/20 mt-1 shrink-0">Q{i+1}</span>
+                                  <span className="mt-1 font-black text-[#5C4033]/20 text-[10px] shrink-0">Q{i+1}</span>
                                 )}
-                                <div className="space-y-3 flex-1 min-w-0">
+                                <div className="flex-1 space-y-3 min-w-0">
                                   {record.image_url ? (
                                     /* eslint-disable-next-line @next/next/no-img-element */
-                                    <img src={record.image_url} alt={record.answer_text} className="w-full h-40 object-cover rounded-xl" />
+                                    <img src={record.image_url} alt={record.answer_text} className="rounded-xl w-full h-40 object-cover" />
                                   ) : !record.spotify_track_id && record.question_text ? (
-                                    <p className="text-sm font-bold text-[#1F1F1A] leading-snug">{record.question_text}</p>
+                                    <p className="font-bold text-[#1F1F1A] text-sm leading-snug">{record.question_text}</p>
                                   ) : null}
-                                  <div className="flex items-center gap-2 bg-[#7A1F1F] text-white px-3 py-2 rounded-xl w-fit shadow-sm">
+                                  <div className="flex items-center gap-2 bg-[#7A1F1F] shadow-sm px-3 py-2 rounded-xl w-fit text-white">
                                     <Target className="w-3 h-3 text-white/50" />
-                                    <span className="text-xs font-black tracking-tight">{record.answer_text}</span>
+                                    <span className="font-black text-xs tracking-tight">{record.answer_text}</span>
                                   </div>
                                 </div>
 
@@ -690,7 +691,7 @@ export default function QuizGeneratorPage() {
                                     variant="ghost"
                                     size="icon"
                                     onClick={() => startEditing(record)}
-                                    className="h-9 w-9 rounded-xl bg-[#F7F4EA] text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
+                                    className="bg-[#F7F4EA] hover:bg-[#5C4033]/5 rounded-xl w-9 h-9 text-[#5F624F] hover:text-[#5C4033]"
                                   >
                                     <Edit2 className="w-4 h-4" />
                                   </Button>
@@ -701,7 +702,7 @@ export default function QuizGeneratorPage() {
                                       const ok = await confirm({ title: "Delete question", description: "Delete this question? This cannot be undone.", confirmLabel: "Delete", variant: "destructive" })
                                       if (ok) deleteQuestion(record.id)
                                     }}
-                                    className="h-9 w-9 rounded-xl bg-red-50 text-red-600 hover:bg-red-100"
+                                    className="bg-red-50 hover:bg-red-100 rounded-xl w-9 h-9 text-red-600"
                                   >
                                     <Trash2 className="w-4 h-4" />
                                   </Button>
@@ -719,9 +720,9 @@ export default function QuizGeneratorPage() {
                 )}
               </div>
 
-              <div className="p-6 pt-2 border-t border-[#E6DFC8] bg-white/80 backdrop-blur-md pb-10 shrink-0 z-20">
+              <div className="z-20 bg-white/80 backdrop-blur-md p-6 pt-2 pb-10 border-[#E6DFC8] border-t shrink-0">
                 <Button 
-                  className="w-full h-12 rounded-2xl bg-[#5C4033] text-white font-black uppercase tracking-wide text-xs shadow-lg active:scale-95 transition-transform"
+                  className="bg-[#5C4033] shadow-lg rounded-2xl w-full h-12 font-black text-white text-xs uppercase tracking-wide active:scale-95 transition-transform"
                   onClick={() => {
                     setFilterCategory(viewingCategory.category_name);
                     setCategory(viewingCategory.category_name);
@@ -730,7 +731,7 @@ export default function QuizGeneratorPage() {
                     setNumQuestions(remaining > 0 ? remaining : viewingCategory.question_count);
                   }}
                 >
-                  <Sparkles className="w-4 h-4 mr-2" /> 
+                  <Sparkles className="mr-2 w-4 h-4" /> 
                   {viewingCategory.isFull ? "Generate Extra Items" : "Generate Remaining Items"}
                 </Button>
               </div>
@@ -740,21 +741,21 @@ export default function QuizGeneratorPage() {
       </Sheet>
 
       {/* GENERATOR FORM */}
-      <form onSubmit={handleGenerate} className="bg-white border border-[#E6DFC8] rounded-2xl shadow-sm overflow-hidden">
+      <form onSubmit={handleGenerate} className="bg-white shadow-sm border border-[#E6DFC8] rounded-2xl overflow-hidden">
         {/* Collapsible header — Event & Category on same row */}
         <button
           type="button"
           onClick={() => setFormOpen(o => !o)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+          className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 py-3 w-full text-left transition-colors"
         >
           <div className="flex items-center gap-3 min-w-0">
             <Sparkles className="w-4 h-4 text-[#5C4033] shrink-0" />
             <div className="flex items-center gap-1.5 min-w-0">
-              <span className="text-[11px] font-black text-[#5C4033] uppercase tracking-tight truncate">
+              <span className="font-black text-[#5C4033] text-[11px] truncate uppercase tracking-tight">
                 {category || 'Select Category'}
               </span>
-              <span className="text-[10px] text-[#5F624F]/50 font-bold shrink-0">/</span>
-              <span className="text-[11px] font-bold text-[#5F624F] uppercase tracking-tight shrink-0">
+              <span className="font-bold text-[#5F624F]/50 text-[10px] shrink-0">/</span>
+              <span className="font-bold text-[#5F624F] text-[11px] uppercase tracking-tight shrink-0">
                 {selectedEventId ? format(new Date(upcomingEvents.find(e => String(e.id) === selectedEventId)?.date || ''), "dd MMM") : '—'}
               </span>
             </div>
@@ -767,12 +768,12 @@ export default function QuizGeneratorPage() {
 
         {/* Collapsible body */}
         {formOpen && (
-          <div className="p-4 space-y-4 border-t border-[#E6DFC8]">
+          <div className="space-y-4 p-4 border-[#E6DFC8] border-t">
             {/* Topic */}
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">
+              <Label className="block ml-0.5 font-black text-[#5C4033] text-[10px] text-left uppercase tracking-wide">
                 {isMusicSnippets ? 'Theme' : 'Topic'}
-                {isPictureRound && <span className="text-red-500 ml-0.5">*</span>}
+                {isPictureRound && <span className="ml-0.5 text-red-500">*</span>}
               </Label>
               <Input
                 placeholder={isPictureRound ? "e.g. Dog Breeds, World Flags, Famous Landmarks..." : isMusicSnippets ? "e.g. 80s, Rock, Christmas..." : "e.g. Disney, 90s..."}
@@ -781,7 +782,7 @@ export default function QuizGeneratorPage() {
                 required={isPictureRound}
                 disabled={currentCategoryIsFull || pictureTopicLocked}
                 className={cn(
-                  "h-11 rounded-xl border text-xs font-bold focus:ring-0 px-3 w-full",
+                  "px-3 border rounded-xl focus:ring-0 w-full h-11 font-bold text-xs",
                   currentCategoryIsFull || pictureTopicLocked
                     ? "bg-[#F7F4EA] border-[#E6DFC8] text-[#5F624F] placeholder:text-[#5F624F]/40"
                     : "bg-[#F7F4EA] border-[#E6DFC8] focus:border-[#5C4033]"
@@ -791,7 +792,7 @@ export default function QuizGeneratorPage() {
 
             {/* Difficulty — segmented buttons */}
             <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-wide text-[#5C4033] ml-0.5 block text-left">Difficulty</Label>
+              <Label className="block ml-0.5 font-black text-[#5C4033] text-[10px] text-left uppercase tracking-wide">Difficulty</Label>
               <div className="flex gap-2">
                 {[{ value: 'Easy', label: 'Easy' }, { value: 'Medium', label: 'Medium' }, { value: 'Difficult', label: 'Hard' }].map(opt => (
                   <button
@@ -799,7 +800,7 @@ export default function QuizGeneratorPage() {
                     type="button"
                     onClick={() => setDifficulty(opt.value)}
                     className={cn(
-                      "flex-1 h-11 rounded-xl text-[11px] font-black uppercase tracking-wide transition-all",
+                      "flex-1 rounded-xl h-11 font-black text-[11px] uppercase tracking-wide transition-all",
                       difficulty === opt.value
                         ? "bg-[#5C4033] text-white shadow-sm"
                         : "bg-[#F7F4EA] border border-[#E6DFC8] text-[#5F624F] hover:bg-[#E6DFC8]/50"
@@ -815,7 +816,7 @@ export default function QuizGeneratorPage() {
             <Button
               type="submit"
               disabled={isLoading || categories.length === 0 || currentCategoryIsFull || (isPictureRound && !topic.trim())}
-              className="w-full h-12 rounded-xl bg-[#5C4033] text-white font-black uppercase tracking-wider text-xs shadow-sm active:scale-[0.98] transition-all hover:bg-[#5C4033]/90"
+              className="bg-[#5C4033] hover:bg-[#5C4033]/90 shadow-sm rounded-xl w-full h-12 font-black text-white text-xs uppercase tracking-wider active:scale-[0.98] transition-all"
             >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : (
                 <span className="flex items-center gap-2">
@@ -826,7 +827,7 @@ export default function QuizGeneratorPage() {
             </Button>
 
             {currentCategoryStat && (
-              <p className="text-center text-[11px] font-black uppercase tracking-wider">
+              <p className="font-black text-[11px] text-center uppercase tracking-wider">
                 <span className="text-[#5F624F]">Saved </span>
                 <span className={cn("tabular-nums", currentCategoryIsFull ? "text-red-600" : "text-[#5C4033]")}>
                   {currentCategoryStat.currentCount}/{currentCategoryStat.question_count}
@@ -835,8 +836,8 @@ export default function QuizGeneratorPage() {
             )}
 
             {currentCategoryIsFull && (
-              <p className="text-[10px] font-black text-red-600 uppercase tracking-wide ml-0.5 animate-in fade-in slide-in-from-top-1">
-                <AlertCircle className="inline w-2.5 h-2.5 mr-0.5 -mt-0.5" />
+              <p className="slide-in-from-top-1 ml-0.5 font-black text-[10px] text-red-600 uppercase tracking-wide animate-in fade-in">
+                <AlertCircle className="inline -mt-0.5 mr-0.5 w-2.5 h-2.5" />
                 {category} is full for this date
               </p>
             )}
@@ -845,12 +846,12 @@ export default function QuizGeneratorPage() {
                 <a
                   href={`/api/spotify/login?return=${encodeURIComponent(`/event-setups/quiz-generator?category=${encodeURIComponent(category)}${selectedEventId ? `&event_id=${selectedEventId}` : ''}`)}`}
                   style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-(--spotify-bg) text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:opacity-90 transition-opacity"
+                  className="flex items-center gap-1.5 px-3 py-2 text-white text-[10px] font-bold tracking-wider bg-(--spotify-bg) rounded-xl transition-opacity uppercase hover:opacity-90"
                 >
                   <Music className="w-3.5 h-3.5" />
                   Connect Spotify
                 </a>
-                <span className="text-[10px] text-[#5F624F]">Required to play songs</span>
+                <span className="text-[#5F624F] text-[10px]">Required to play songs</span>
               </div>
             )}
           </div>
@@ -858,25 +859,25 @@ export default function QuizGeneratorPage() {
       </form>
 
       {error && (
-        <div className="bg-red-50 border border-red-100 p-2.5 rounded-xl flex items-center gap-2.5 text-red-700 animate-in slide-in-from-top-1">
+        <div className="flex items-center gap-2.5 bg-red-50 slide-in-from-top-1 p-2.5 border border-red-100 rounded-xl text-red-700 animate-in">
           <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-          <p className="text-[10px] font-bold leading-tight uppercase">{error}</p>
+          <p className="font-bold text-[10px] uppercase leading-tight">{error}</p>
         </div>
       )}
 
       {/* DRAFT RESULTS SECTION */}
       {questions.length > 0 && (
-        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F7F4EA] rounded-xl p-2 sm:p-3 space-y-2">
+        <div className="slide-in-from-bottom-3 space-y-2 bg-[#F7F4EA] p-2 sm:p-3 rounded-xl animate-in duration-500 fade-in">
 
           {/* STICKY ACTION BAR */}
-          <div className="flex items-center justify-between bg-white border border-[#E6DFC8] p-2 rounded-lg shadow-md sticky top-16 z-20">
+          <div className="top-16 z-20 sticky flex justify-between items-center bg-white shadow-md p-2 border border-[#E6DFC8] rounded-lg">
             <div className="flex items-center gap-2 px-0.5">
-              <div className="bg-[#5C4033] text-white w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
+              <div className="flex justify-center items-center bg-[#5C4033] rounded-md w-6 h-6 font-black text-[10px] text-white">
                 {selectedIndices.size}
               </div>
-              <span className="text-[#5C4033] text-[10px] font-black uppercase tracking-wider leading-none">Draft Items</span>
+              <span className="font-black text-[#5C4033] text-[10px] uppercase leading-none tracking-wider">Draft Items</span>
               {approveExceedsCapacity(selectedIndices.size) && (
-                <span className="text-red-600 text-[10px] font-black uppercase tracking-wider leading-none">
+                <span className="font-black text-[10px] text-red-600 uppercase leading-none tracking-wider">
                   Over limit · {currentCategoryStat!.currentCount + selectedIndices.size}/{currentCategoryStat!.question_count}
                 </span>
               )}
@@ -885,7 +886,7 @@ export default function QuizGeneratorPage() {
               <button
                 type="button"
                 onClick={toggleSelectAllQuestions}
-                className="h-8 px-3 font-black uppercase text-[10px] tracking-wider rounded-md border border-[#E6DFC8] text-[#5C4033] hover:bg-[#F7F4EA] active:scale-95 transition-transform"
+                className="hover:bg-[#F7F4EA] px-3 border border-[#E6DFC8] rounded-md h-8 font-black text-[#5C4033] text-[10px] uppercase tracking-wider active:scale-95 transition-transform"
               >
                 {allQuestionsSelected ? "Clear" : "Select all"}
               </button>
@@ -893,7 +894,7 @@ export default function QuizGeneratorPage() {
                 variant="default"
                 onClick={handleSave}
                 disabled={isSaving || selectedIndices.size === 0 || approveExceedsCapacity(selectedIndices.size)}
-                className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
+                className="bg-[#5C4033] px-4 rounded-md h-8 font-black text-[10px] text-white uppercase tracking-wider active:scale-95 transition-transform"
               >
                 {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
                   <span className="flex items-center gap-1">
@@ -906,7 +907,7 @@ export default function QuizGeneratorPage() {
           </div>
 
           {/* DRAFT CARDS GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="gap-2 grid grid-cols-1 md:grid-cols-2">
             {filteredQuestions.map((q, idx) => {
               const originalIndex = questions.indexOf(q);
               const isSelected = selectedIndices.has(originalIndex);
@@ -920,30 +921,30 @@ export default function QuizGeneratorPage() {
                     setSelectedIndices(next);
                   }}
                   className={cn(
-                    "group relative flex flex-col bg-white rounded-lg transition-all cursor-pointer select-none overflow-hidden shadow-sm",
+                    "group relative flex flex-col bg-white shadow-sm rounded-lg overflow-hidden transition-all cursor-pointer select-none",
                     isSelected
                       ? "border border-[#5C4033]/60 shadow-md"
                       : "border border-transparent opacity-60 hover:opacity-100"
                   )}
                 >
                   <div className="flex items-start gap-2.5 px-3 py-2.5">
-                    <div className="flex-1 min-w-0 space-y-2">
-                      <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
+                    <div className="flex-1 space-y-2 min-w-0">
+                      <p className="font-bold text-[#1F1F1A] text-sm leading-snug">
                         {q.question}
                       </p>
-                      <div className="px-2.5 py-1.5 rounded-md text-center bg-[#F7F4EA]">
-                        <p className="text-xs font-black text-[#5C4033] leading-tight">
+                      <div className="bg-[#F7F4EA] px-2.5 py-1.5 rounded-md text-center">
+                        <p className="font-black text-[#5C4033] text-xs leading-tight">
                           {q.answer}
                         </p>
                       </div>
                     </div>
                     <div className={cn(
-                      "w-5 h-5 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0 mt-0.5",
+                      "flex justify-center items-center mt-0.5 border-2 rounded-full w-5 h-5 transition-all duration-300 shrink-0",
                       isSelected
                         ? "bg-[#5C4033] border-[#5C4033] text-white"
                         : "bg-white border-[#E6DFC8] text-[#E6DFC8]"
                     )}>
-                      {isSelected ? <Check className="w-2.5 h-2.5 stroke-4" /> : <Plus className="w-2.5 h-2.5" />}
+                      {isSelected ? <Check className="stroke-4 w-2.5 h-2.5" /> : <Plus className="w-2.5 h-2.5" />}
                     </div>
                   </div>
                 </div>
@@ -955,17 +956,17 @@ export default function QuizGeneratorPage() {
 
       {/* MUSIC SNIPPETS DRAFT SECTION */}
       {musicSnippets.length > 0 && (
-        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F7F4EA] rounded-xl p-2 sm:p-3 space-y-2">
+        <div className="slide-in-from-bottom-3 space-y-2 bg-[#F7F4EA] p-2 sm:p-3 rounded-xl animate-in duration-500 fade-in">
 
           {/* STICKY ACTION BAR */}
-          <div className="flex items-center justify-between bg-white border border-[#E6DFC8] p-2 rounded-lg shadow-md sticky top-16 z-20">
+          <div className="top-16 z-20 sticky flex justify-between items-center bg-white shadow-md p-2 border border-[#E6DFC8] rounded-lg">
             <div className="flex items-center gap-2 px-0.5">
-              <div className="bg-[#5C4033] text-white w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
+              <div className="flex justify-center items-center bg-[#5C4033] rounded-md w-6 h-6 font-black text-[10px] text-white">
                 {selectedSnippetIndices.size}
               </div>
-              <span className="text-[#5C4033] text-[10px] font-black uppercase tracking-wider leading-none">Songs</span>
+              <span className="font-black text-[#5C4033] text-[10px] uppercase leading-none tracking-wider">Songs</span>
               {approveExceedsCapacity(selectedSnippetIndices.size) && (
-                <span className="text-red-600 text-[10px] font-black uppercase tracking-wider leading-none">
+                <span className="font-black text-[10px] text-red-600 uppercase leading-none tracking-wider">
                   Over limit · {currentCategoryStat!.currentCount + selectedSnippetIndices.size}/{currentCategoryStat!.question_count}
                 </span>
               )}
@@ -974,7 +975,7 @@ export default function QuizGeneratorPage() {
               <button
                 type="button"
                 onClick={toggleSelectAllSnippets}
-                className="h-8 px-3 font-black uppercase text-[10px] tracking-wider rounded-md border border-[#E6DFC8] text-[#5C4033] hover:bg-[#F7F4EA] active:scale-95 transition-transform"
+                className="hover:bg-[#F7F4EA] px-3 border border-[#E6DFC8] rounded-md h-8 font-black text-[#5C4033] text-[10px] uppercase tracking-wider active:scale-95 transition-transform"
               >
                 {allSnippetsSelected ? "Clear" : "Select all"}
               </button>
@@ -982,7 +983,7 @@ export default function QuizGeneratorPage() {
                 variant="default"
                 onClick={handleSave}
                 disabled={isSaving || selectedSnippetIndices.size === 0 || approveExceedsCapacity(selectedSnippetIndices.size)}
-                className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
+                className="bg-[#5C4033] px-4 rounded-md h-8 font-black text-[10px] text-white uppercase tracking-wider active:scale-95 transition-transform"
               >
                 {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
                   <span className="flex items-center gap-1">
@@ -995,14 +996,14 @@ export default function QuizGeneratorPage() {
           </div>
 
           {/* SONG CARDS */}
-          <div className="grid grid-cols-1 gap-2">
+          <div className="gap-2 grid grid-cols-1">
             {musicSnippets.map((song, idx) => {
               const isSelected = selectedSnippetIndices.has(idx)
               return (
                 <div
                   key={idx}
                   className={cn(
-                    "group relative bg-white rounded-lg transition-all overflow-hidden shadow-sm",
+                    "group relative bg-white shadow-sm rounded-lg overflow-hidden transition-all",
                     isSelected
                       ? "border border-[#5C4033]/60 shadow-md"
                       : "border border-transparent opacity-60 hover:opacity-100"
@@ -1021,11 +1022,11 @@ export default function QuizGeneratorPage() {
                     <div className="flex-1 min-w-0">
                       {isHigherOrLower && song.hint_year ? (
                         <div className="space-y-2">
-                          <p className="text-sm text-[#1F1F1A] leading-snug">
+                          <p className="text-[#1F1F1A] text-sm leading-snug">
                             <span className="font-bold italic">{song.artist} - {song.title}</span> higher or lower than <span className="font-bold text-orange-600">{song.hint_year}</span>?
                           </p>
-                          <div className="px-2.5 py-1.5 rounded-md text-center bg-[#F7F4EA]">
-                            <p className="text-xs font-black text-[#5C4033] leading-tight">
+                          <div className="bg-[#F7F4EA] px-2.5 py-1.5 rounded-md text-center">
+                            <p className="font-black text-[#5C4033] text-xs leading-tight">
                               {song.year > song.hint_year ? 'Higher' : 'Lower'} - <span className={cn(
                                 "font-bold italic",
                                 song.year > song.hint_year ? "text-green-600" : "text-red-600"
@@ -1035,22 +1036,22 @@ export default function QuizGeneratorPage() {
                         </div>
                       ) : (
                         <>
-                          <p className="text-sm font-bold text-[#1F1F1A] leading-tight tracking-tight truncate">
+                          <p className="font-bold text-[#1F1F1A] text-sm truncate leading-tight tracking-tight">
                             [{song.year}] {song.artist} — {song.title}
                           </p>
-                          <p className="text-xs text-[#5F624F] font-medium mt-0.5 leading-tight line-clamp-1">
+                          <p className="mt-0.5 font-medium text-[#5F624F] text-xs line-clamp-1 leading-tight">
                             {song.intro_description}
                           </p>
                         </>
                       )}
                     </div>
                     <div className={cn(
-                      "w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0",
+                      "flex justify-center items-center border-2 rounded-full w-4.5 h-4.5 transition-all duration-300 shrink-0",
                       isSelected
                         ? "bg-[#5C4033] border-[#5C4033] text-white"
                         : "bg-white border-[#E6DFC8] text-[#E6DFC8]"
                     )}>
-                      {isSelected ? <Check className="w-2.5 h-2.5 stroke-4" /> : <Plus className="w-2.5 h-2.5" />}
+                      {isSelected ? <Check className="stroke-4 w-2.5 h-2.5" /> : <Plus className="w-2.5 h-2.5" />}
                     </div>
                   </div>
 
@@ -1059,14 +1060,14 @@ export default function QuizGeneratorPage() {
                     {song.spotify_track_id ? (
                       <SpotifyPlayer trackId={song.spotify_track_id} title={`${song.artist} - ${song.title}`} compact />
                     ) : (
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-[#F7F4EA] rounded-md">
+                      <div className="flex items-center gap-1.5 bg-[#F7F4EA] px-2 py-1 rounded-md">
                         <AlertCircle className="w-2.5 h-2.5 text-[#5F624F] shrink-0" />
-                        <span className="text-[10px] font-bold text-[#5F624F] uppercase tracking-wider">Not on Spotify</span>
+                        <span className="font-bold text-[#5F624F] text-[10px] uppercase tracking-wider">Not on Spotify</span>
                         <a
                           href={`https://open.spotify.com/search/${encodeURIComponent(song.artist + ' ' + song.title)}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="ml-auto flex items-center gap-0.5 text-[10px] font-black text-[#5C4033] uppercase tracking-wider hover:underline"
+                          className="flex items-center gap-0.5 ml-auto font-black text-[#5C4033] text-[10px] hover:underline uppercase tracking-wider"
                         >
                           Search <ExternalLink className="w-2.5 h-2.5" />
                         </a>
@@ -1082,16 +1083,16 @@ export default function QuizGeneratorPage() {
 
       {/* PICTURE ROUND DRAFT SECTION */}
       {pictureItems.length > 0 && (
-        <div className="animate-in fade-in slide-in-from-bottom-3 duration-500 bg-[#F7F4EA] rounded-xl p-2 sm:p-3 space-y-2">
+        <div className="slide-in-from-bottom-3 space-y-2 bg-[#F7F4EA] p-2 sm:p-3 rounded-xl animate-in duration-500 fade-in">
           {/* Sticky action bar */}
-          <div className="flex items-center justify-between bg-white border border-[#E6DFC8] p-2 rounded-lg shadow-md sticky top-16 z-20">
+          <div className="top-16 z-20 sticky flex justify-between items-center bg-white shadow-md p-2 border border-[#E6DFC8] rounded-lg">
             <div className="flex items-center gap-2 px-0.5">
-              <div className="bg-[#5C4033] text-white w-6 h-6 rounded-md flex items-center justify-center font-black text-[10px]">
+              <div className="flex justify-center items-center bg-[#5C4033] rounded-md w-6 h-6 font-black text-[10px] text-white">
                 {selectedPictureIndices.size}
               </div>
-              <span className="text-[#5C4033] text-[10px] font-black uppercase tracking-wider leading-none">Images</span>
+              <span className="font-black text-[#5C4033] text-[10px] uppercase leading-none tracking-wider">Images</span>
               {approveExceedsCapacity(selectedPictureIndices.size) && (
-                <span className="text-red-600 text-[10px] font-black uppercase tracking-wider leading-none">
+                <span className="font-black text-[10px] text-red-600 uppercase leading-none tracking-wider">
                   Over limit · {currentCategoryStat!.currentCount + selectedPictureIndices.size}/{currentCategoryStat!.question_count}
                 </span>
               )}
@@ -1100,7 +1101,7 @@ export default function QuizGeneratorPage() {
               <button
                 type="button"
                 onClick={toggleSelectAllPictures}
-                className="h-8 px-3 font-black uppercase text-[10px] tracking-wider rounded-md border border-[#E6DFC8] text-[#5C4033] hover:bg-[#F7F4EA] active:scale-95 transition-transform"
+                className="hover:bg-[#F7F4EA] px-3 border border-[#E6DFC8] rounded-md h-8 font-black text-[#5C4033] text-[10px] uppercase tracking-wider active:scale-95 transition-transform"
               >
                 {allPicturesSelected ? "Clear" : "Select all"}
               </button>
@@ -1108,7 +1109,7 @@ export default function QuizGeneratorPage() {
                 variant="default"
                 onClick={handleSave}
                 disabled={isSaving || selectedPictureIndices.size === 0 || approveExceedsCapacity(selectedPictureIndices.size)}
-                className="h-8 bg-[#5C4033] text-white px-4 font-black uppercase text-[10px] tracking-wider rounded-md active:scale-95 transition-transform"
+                className="bg-[#5C4033] px-4 rounded-md h-8 font-black text-[10px] text-white uppercase tracking-wider active:scale-95 transition-transform"
               >
                 {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (
                   <span className="flex items-center gap-1">
@@ -1121,7 +1122,7 @@ export default function QuizGeneratorPage() {
           </div>
 
           {/* Picture cards grid */}
-          <div className="grid grid-cols-1 gap-2">
+          <div className="gap-2 grid grid-cols-1">
             {pictureItems.map((item, idx) => {
               const isSelected = selectedPictureIndices.has(idx)
               return (
@@ -1134,7 +1135,7 @@ export default function QuizGeneratorPage() {
                     setSelectedPictureIndices(next)
                   }}
                   className={cn(
-                    "group relative bg-white rounded-lg transition-all cursor-pointer select-none overflow-hidden shadow-sm",
+                    "group relative bg-white shadow-sm rounded-lg overflow-hidden transition-all cursor-pointer select-none",
                     isSelected
                       ? "border border-[#5C4033]/60 shadow-md"
                       : "border border-transparent opacity-60 hover:opacity-100"
@@ -1144,21 +1145,21 @@ export default function QuizGeneratorPage() {
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={item.imageUrl} alt={item.answer} className="w-full h-52 object-cover" />
                   ) : (
-                    <div className="w-full h-52 bg-[#F7F4EA] flex items-center justify-center">
+                    <div className="flex justify-center items-center bg-[#F7F4EA] w-full h-52">
                       <ImageIcon className="w-10 h-10 text-[#E6DFC8]" />
                     </div>
                   )}
-                  <div className="p-2 flex items-center justify-between gap-1.5">
-                    <p className="text-xs font-black text-[#5C4033] leading-tight flex-1 min-w-0 truncate uppercase tracking-tight">
+                  <div className="flex justify-between items-center gap-1.5 p-2">
+                    <p className="flex-1 min-w-0 font-black text-[#5C4033] text-xs truncate uppercase leading-tight tracking-tight">
                       {item.answer}
                     </p>
                     <div className={cn(
-                      "w-4 h-4 rounded-full flex items-center justify-center border-2 transition-all duration-300 shrink-0",
+                      "flex justify-center items-center border-2 rounded-full w-4 h-4 transition-all duration-300 shrink-0",
                       isSelected
                         ? "bg-[#5C4033] border-[#5C4033] text-white"
                         : "bg-white border-[#E6DFC8] text-[#E6DFC8]"
                     )}>
-                      {isSelected ? <Check className="w-2.5 h-2.5 stroke-4" /> : <Plus className="w-2.5 h-2.5" />}
+                      {isSelected ? <Check className="stroke-4 w-2.5 h-2.5" /> : <Plus className="w-2.5 h-2.5" />}
                     </div>
                   </div>
                 </div>
@@ -1170,24 +1171,24 @@ export default function QuizGeneratorPage() {
 
       {/* SAVED SNIPPETS FOR EVENT */}
       {isMusicSnippets && savedSnippets.length > 0 && musicSnippets.length === 0 && questions.length === 0 && (
-        <div className="animate-in fade-in duration-500 bg-[#F7F4EA] rounded-xl p-2 sm:p-3 space-y-2">
-          <p className="text-[10px] font-black text-[#5F624F] uppercase tracking-wide ml-0.5">
+        <div className="space-y-2 bg-[#F7F4EA] p-2 sm:p-3 rounded-xl animate-in duration-500 fade-in">
+          <p className="ml-0.5 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
             Saved Songs ({savedSnippets.length})
           </p>
-          <div className="grid grid-cols-1 gap-2">
+          <div className="gap-2 grid grid-cols-1">
             {savedSnippets.map((snippet) => (
-              <div key={snippet.id} className="bg-white border border-[#5C4033]/20 rounded-lg overflow-hidden shadow-sm">
-                <div className="px-2.5 py-2 flex items-center gap-2">
-                  <span className="shrink-0 bg-[#5C4033] text-white text-[10px] font-black px-1.5 py-0.5 rounded tracking-wider">
+              <div key={snippet.id} className="bg-white shadow-sm border border-[#5C4033]/20 rounded-lg overflow-hidden">
+                <div className="flex items-center gap-2 px-2.5 py-2">
+                  <span className="bg-[#5C4033] px-1.5 py-0.5 rounded font-black text-[10px] text-white tracking-wider shrink-0">
                     {snippet.release_year || '—'}
                   </span>
                   <div className="flex-1 min-w-0">
                     {isHigherOrLower && snippet.hint_year && (
-                      <p className="text-[10px] font-black text-amber-700 leading-tight">
+                      <p className="font-black text-[10px] text-amber-700 leading-tight">
                         Is {(snippet.release_year ?? 0) > snippet.hint_year ? 'higher' : 'lower'} than {snippet.hint_year}?
                       </p>
                     )}
-                    <p className="text-[10px] font-bold text-[#1F1F1A] tracking-tight truncate">
+                    <p className="font-bold text-[#1F1F1A] text-[10px] truncate tracking-tight">
                       {snippet.answer_text_ext ?? snippet.answer_text}
                     </p>
                   </div>
@@ -1206,7 +1207,7 @@ export default function QuizGeneratorPage() {
                         }
                       }
                     }}
-                    className="h-7 w-7 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 shrink-0"
+                    className="bg-red-50 hover:bg-red-100 rounded-lg w-7 h-7 text-red-600 shrink-0"
                   >
                     <Trash2 className="w-3 h-3" />
                   </Button>
@@ -1225,17 +1226,17 @@ export default function QuizGeneratorPage() {
       {/* EMPTY STATE */}
       {!isLoading && questions.length === 0 && musicSnippets.length === 0 && pictureItems.length === 0 && (
         <div className={cn(
-          "py-10 text-center border border-dashed border-[#E6DFC8] rounded-xl bg-white/40 flex flex-col items-center",
+          "flex flex-col items-center bg-white/40 py-10 border border-[#E6DFC8] border-dashed rounded-xl text-center",
           isMusicSnippets && savedSnippets.length > 0 && "hidden"
         )}>
            {isPictureRound ? (
-             <ImageIcon className="w-6 h-6 text-[#5C4033]/10 mb-2" />
+             <ImageIcon className="mb-2 w-6 h-6 text-[#5C4033]/10" />
            ) : isMusicSnippets ? (
-             <Music className="w-6 h-6 text-[#5C4033]/10 mb-2" />
+             <Music className="mb-2 w-6 h-6 text-[#5C4033]/10" />
            ) : (
-             <BookOpen className="w-6 h-6 text-[#5C4033]/10 mb-2" />
+             <BookOpen className="mb-2 w-6 h-6 text-[#5C4033]/10" />
            )}
-           <p className="text-[10px] text-[#5F624F] uppercase tracking-[0.2em] font-black opacity-40">
+           <p className="opacity-40 font-black text-[#5F624F] text-[10px] uppercase tracking-[0.2em]">
              {isPictureRound ? 'Enter a topic and generate picture cards' : isMusicSnippets ? 'Generate song suggestions' : 'Select parameters to draft a round'}
            </p>
         </div>

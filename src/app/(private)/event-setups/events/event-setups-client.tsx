@@ -32,8 +32,10 @@ import {
   ArrowDownUp,
   Grid2X2,
   SlidersHorizontal,
+  QrCode,
 } from "lucide-react";
-import { saveEventAction, deleteEventAction } from "./actions";
+import QRCode from "qrcode";
+import { saveEventAction, deleteEventAction, setEventQr } from "./actions";
 import { DatePicker, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -99,6 +101,7 @@ export type EventRecord = {
   booking_card_tagline: string | null;
   booking_card_icon: string | null;
   booking_card_badge: string | null;
+  booking_qr_url: string | null;
 };
 
 function toTitleCase(str?: string | null) {
@@ -267,6 +270,8 @@ export default function EventsClient({
   const [formSettingsOpen, setFormSettingsOpen] = useState(true);
   const [formBookingSettingsOpen, setFormBookingSettingsOpen] = useState(true);
   const [linkCopied, setLinkCopied] = useState(false);
+  const [qrBusy, setQrBusy] = useState(false);
+  const [qrCopied, setQrCopied] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
   const [quizOpen, setQuizOpen] = useState(true);
   const [bookingsOpen, setBookingsOpen] = useState(true);
@@ -466,6 +471,58 @@ export default function EventsClient({
     window.history.replaceState(null, "", "/event-setups/events");
   };
 
+  // --- Booking-link QR code ---
+  // The public booking URL used for this event's QR — the stored link, or the
+  // canonical per-event fallback when none has been generated yet.
+  const bookingUrlOf = (ev: EventRecord) =>
+    ev.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${ev.id}` : `/book/event/${ev.id}`);
+
+  const makeQrDataUrl = (url: string) =>
+    QRCode.toDataURL(url, { width: 512, margin: 1, errorCorrectionLevel: "M", color: { dark: "#26300D", light: "#ffffff" } });
+
+  // Generate (or regenerate) and persist the QR code for the selected event.
+  const generateQr = async () => {
+    if (!selected) return;
+    setQrBusy(true);
+    try {
+      const dataUrl = await makeQrDataUrl(bookingUrlOf(selected));
+      const res = await setEventQr(selected.id, dataUrl);
+      if (res?.error) { setFormError(res.error); return; }
+      setSelected((cur) => (cur && cur.id === selected.id ? { ...cur, booking_qr_url: dataUrl } : cur));
+    } finally {
+      setQrBusy(false);
+    }
+  };
+
+  // Copy the QR image (PNG) to the clipboard.
+  const copyQr = async () => {
+    if (!selected?.booking_qr_url) return;
+    try {
+      const blob = await (await fetch(selected.booking_qr_url)).blob();
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      setQrCopied(true);
+      setTimeout(() => setQrCopied(false), 2000);
+    } catch {
+      /* clipboard image write unsupported in this browser — ignore */
+    }
+  };
+
+  // After saving an edit: if the booking link changed and a QR was already stored,
+  // ask whether to refresh it so the code points at the new link.
+  const reconcileQrAfterSave = async (saved: EventRecord, prevUrl: string | null, prevQr: string | null) => {
+    if (!saved.is_bookable) return; // server already cleared any stored QR
+    if (!prevQr || prevUrl === (saved.booking_page_url ?? null)) return;
+    const ok = await confirm({
+      title: "Booking link changed",
+      description: "This event's booking link changed. Update the saved QR code to match the new link?",
+      confirmLabel: "Update QR",
+    });
+    if (!ok) return;
+    const dataUrl = await makeQrDataUrl(bookingUrlOf(saved));
+    const res = await setEventQr(saved.id, dataUrl);
+    if (!res?.error) setSelected((cur) => (cur && cur.id === saved.id ? { ...cur, booking_qr_url: dataUrl } : cur));
+  };
+
   const handleSubmit = (formData: FormData) => {
     setFormError(null);
     // Validation errors are computed live (see `fieldErrors` below) and shown
@@ -485,15 +542,21 @@ export default function EventsClient({
       if (result?.error) {
         setFormError(result.error);
       } else if (isEditing && result?.event) {
+        const saved = result.event as EventRecord;
+        const prevUrl = selected?.booking_page_url ?? null;
+        const prevQr = selected?.booking_qr_url ?? null;
         // Editing: drop back into the sheet's view mode showing the freshly
         // saved values (revalidatePath in the action refreshes the list too).
-        setSelected(result.event as EventRecord);
+        setSelected(saved);
         setIsEditing(false);
         setFormError(null);
         // Clear the ?open marker. The searchParams effect re-selects from
         // initialEvents on refresh; leaving ?open set lets it clobber the fresh
         // row above with a stale list entry after revalidation.
         window.history.replaceState(null, "", "/event-setups/events");
+        // If the link changed and a QR was already saved, ask to refresh it.
+        // Run outside the transition so the confirm dialog doesn't hold it pending.
+        void reconcileQrAfterSave(saved, prevUrl, prevQr);
       } else {
         closeSheet();
       }
@@ -1333,6 +1396,35 @@ export default function EventsClient({
                               }}>
                                 {linkCopied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4 text-[#5F624F]" />}
                               </Button>
+                            </div>
+
+                            {/* QR code for the booking link */}
+                            <div className="mt-3 pt-3 border-[#E6DFC8] border-t">
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <QrCode className="w-3.5 h-3.5 text-[#5F624F]" />
+                                <span className="font-bold text-[#5F624F] text-[10px] uppercase tracking-wide">Booking QR Code</span>
+                              </div>
+                              {selected.booking_qr_url ? (
+                                <div className="flex items-start gap-3">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={selected.booking_qr_url} alt="Booking link QR code" className="w-28 h-28 shrink-0 rounded-lg border border-[#E6DFC8] bg-white p-1.5" />
+                                  <div className="flex flex-col gap-2">
+                                    <button type="button" onClick={copyQr} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F0EDE0] text-[#5C4033] text-[10px] font-black uppercase tracking-wide transition-colors">
+                                      {qrCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                      {qrCopied ? "Copied" : "Copy QR"}
+                                    </button>
+                                    <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F0EDE0] text-[#5C4033] text-[10px] font-black uppercase tracking-wide transition-colors disabled:opacity-50">
+                                      {qrBusy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <QrCode className="w-3.5 h-3.5" />}
+                                      Regenerate
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex items-center gap-1.5 h-9 px-4 rounded-lg bg-[#1B4332] hover:bg-[#1B4332]/85 text-white text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-50">
+                                  {qrBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <QrCode className="w-4 h-4" />}
+                                  Generate QR Code
+                                </button>
+                              )}
                             </div>
                           </div>
                         )}

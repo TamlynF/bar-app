@@ -619,7 +619,6 @@ async function searchSpotifyTrack(
  */
 export async function generateMusicSnippetsAction(
   numberOfSongs: number = 10,
-  categoryName: string = 'Music Snippets',
   topic: string = '',
   difficulty: string = 'Medium',
   eventId: number,
@@ -1034,7 +1033,6 @@ async function generateImageForAnswer(answer: string): Promise<string | null> {
  */
 export async function generatePictureRoundAction(
   numberOfItems: number = 10,
-  categoryName: string = 'Pictures',
   topic: string,
   difficulty: string = 'Medium',
   eventId?: number,
