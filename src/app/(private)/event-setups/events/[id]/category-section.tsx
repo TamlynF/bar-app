@@ -71,7 +71,7 @@ const printStyles = `
   @page { size: A4; margin: 1.2cm; }
 `;
 
-export default function CategorySection({ eventId, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, playlistUrl: initialPlaylistUrl, autoOpen }: Props) {
+export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, playlistUrl: initialPlaylistUrl, autoOpen }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
   const isHigherOrLower = includeSpotify && !!isHigherLower;
@@ -80,6 +80,9 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
   const count = questions.length;
   const isComplete = count >= question_count;
   const hasAny = count > 0;
+  // Past events are read-only for question generation — hide the Generate button
+  // once the event date has passed (dates are YYYY-MM-DD strings).
+  const isPastEvent = !!eventDate && eventDate < new Date().toISOString().split("T")[0];
   const [open, setOpen] = useState(!!autoOpen);
   const sectionRef = useRef<HTMLElement>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -316,9 +319,9 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-3.5 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+        className="w-full flex items-center justify-between px-5 py-3.5 bg-[#E6DFC8] hover:bg-[#DDD4B8] border-b border-[#D6CDAE] transition-colors text-left"
       >
-        <p className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">
+        <p className="text-xs font-black uppercase tracking-wide text-[#5C4033]">
           {orderNo != null ? `${orderNo}. ` : ''}{category_name}
         </p>
         <div className="flex items-center gap-2 shrink-0">
@@ -539,7 +542,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                     ) : (
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2 -mt-1">
-                          <span className="text-sm font-black text-[#5C4033]/20 shrink-0">Question {q.question_no ?? idx + 1}:</span>
+                          <span className="text-sm font-black text-[#5C4033] shrink-0">Question {q.question_no ?? idx + 1}:</span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -593,7 +596,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                                 />
                               ) : (
                                 (!includeSpotify || !q.spotify_track_id) && (
-                                  <p className="text-sm text-[#1F1F1A] leading-snug">
+                                  <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
                                     {q.question_text}
                                   </p>
                                 )
@@ -601,7 +604,7 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
                               {hideQuestionText && q.spotify_track_id && (
                                 <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
                               )}
-                              <div className="flex items-center justify-center gap-2 bg-[#1B4332] text-white px-3 py-2 rounded-xl w-full shadow-sm">
+                              <div className="flex items-center justify-center gap-2 bg-[#1B4332] text-white px-3 py-2 rounded-xl w-full sm:w-fit sm:min-w-50 shadow-sm">
                                 <Target className="w-3 h-3 text-white/50 shrink-0" />
                                 <span className="text-xs font-black tracking-tight text-center">{q.answer_text}</span>
                               </div>
@@ -619,21 +622,23 @@ export default function CategorySection({ eventId, categoryConfigId, category_na
             )}
           </div>
 
-          {/* Generate button */}
-          <div className="px-5 py-3.5 border-t border-[#E6DFC8] bg-[#F7F4EA]/50">
-            <Link
-              href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
-              className={cn(
-                "flex items-center justify-center gap-2 w-full h-10 rounded-xl font-black text-[11px] uppercase tracking-wide transition-all",
-                isComplete
-                  ? "bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA]"
-                  : "bg-[#9A3412] text-white hover:bg-[#9A3412]/50 shadow-sm"
-              )}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              {isComplete ? "Generate Extra" : "Generate Questions"}
-            </Link>
-          </div>
+          {/* Generate button — hidden for events whose date has passed */}
+          {!isPastEvent && (
+            <div className="px-5 py-3.5 border-t border-[#E6DFC8] bg-[#F7F4EA]/50">
+              <Link
+                href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
+                className={cn(
+                  "flex items-center justify-center gap-2 w-full h-10 rounded-xl font-black text-[11px] uppercase tracking-wide transition-all",
+                  isComplete
+                    ? "bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA]"
+                    : "bg-[#9A3412] text-white hover:bg-[#9A3412]/50 shadow-sm"
+                )}
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                {isComplete ? "Generate Extra" : "Generate Questions"}
+              </Link>
+            </div>
+          )}
         </>
       )}
       {ConfirmDialogUI}

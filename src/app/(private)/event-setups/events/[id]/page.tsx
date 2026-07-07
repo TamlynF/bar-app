@@ -108,28 +108,28 @@ export default async function EventQuizQuestionsPage({
   const targetQuestions = cats.reduce((s, c) => s + c.question_count, 0);
 
   return (
-    <div className="p-2 md:p-6 space-y-6 max-w-2xl">
+    <div className="space-y-6 mx-auto p-2 sm:p-6 sm:max-w-2xl md:max-w-7xl lg:max-w-7xl text-left animate-in duration-700 fade-in">
 
       {/* Event header card */}
-      <div className="bg-white border border-[#E6DFC8] rounded-2xl px-5 py-4 flex items-start gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-[#C8956D]/30 border border-[#C8956D]/30 flex items-center justify-center shrink-0">
+      <div className="flex items-start gap-3 bg-white px-5 py-4 border border-[#E6DFC8] rounded-2xl">
+        <div className="flex justify-center items-center bg-[#C8956D]/30 border border-[#C8956D]/30 rounded-2xl w-10 h-10 shrink-0">
           <Brain className="w-4 h-4 text-[#5C4033]" />
         </div>
         <div className="flex-1 min-w-0">
-          <h1 className="text-xl font-black text-[#5C4033] uppercase tracking-tighter leading-tight">
+          <h1 className="font-black text-[#5C4033] text-xl uppercase leading-tight tracking-tighter">
             {event.title ?? "Untitled Event"}
           </h1>
-          <p className="text-[11px] font-bold text-[#5F624F] mt-0.5">
+          <p className="mt-0.5 font-bold text-[#5F624F] text-[11px]">
             {formatDate(event.date)}
           </p>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+        <div className="text-right shrink-0">
+          <p className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
             Questions
           </p>
-          <p className="text-lg font-black text-[#5C4033] tabular-nums leading-none">
+          <p className="font-black tabular-nums text-[#5C4033] text-lg leading-none">
             {totalQuestions}
-            <span className="text-xs text-[#5F624F]/50 font-bold"> / {targetQuestions}</span>
+            <span className="font-bold text-[#5F624F]/50 text-xs"> / {targetQuestions}</span>
           </p>
         </div>
       </div>
@@ -156,10 +156,10 @@ export default async function EventQuizQuestionsPage({
 
         {/* No categories configured at all */}
         {byCategory.length === 0 && (
-          <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
-            <BookOpen className="w-8 h-8 text-[#5F624F] opacity-20 mx-auto mb-3" />
-            <p className="text-sm font-black text-[#1F1F1A]">No quiz categories configured</p>
-            <p className="text-[11px] text-[#5F624F] mt-1">
+          <div className="py-14 border border-[#E6DFC8] border-dashed rounded-2xl text-center">
+            <BookOpen className="opacity-20 mx-auto mb-3 w-8 h-8 text-[#5F624F]" />
+            <p className="font-black text-[#1F1F1A] text-sm">No quiz categories configured</p>
+            <p className="mt-1 text-[#5F624F] text-[11px]">
               Add categories in{" "}
               <Link href="/event-setups/quiz-categories" className="underline">
                 Quiz Rules

@@ -142,7 +142,7 @@ export async function createEventBooking(formData: FormData) {
       order: {
         locationId: process.env.SQUARE_LOCATION_ID!,
         lineItems: [{
-          name: `${event.title} — ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`,
+          name: `${event.id}:${event.title} — ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`,
           quantity: String(groupSize),
           basePriceMoney: {
             amount: BigInt(paymentAmountPence),

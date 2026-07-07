@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
-import styles from './quiz-generator.module.css'
 
 // Using relative paths to resolve build errors and environment pathing issues
 import {
@@ -18,7 +17,6 @@ import {
   getMusicSnippetsForEventAction,
   generatePictureRoundAction,
   savePictureRoundAction,
-  cleanupGeneratedQuestionsForInactiveEventAction,
   syncCategoryPlaylistAction,
 } from '@/app/(private)/event-setups/quiz-generator/actions'
 
@@ -48,7 +46,6 @@ import {
   ChevronDown,
   Check,
   Plus,
-  CheckCircle,
   Target,
   Edit2,
   Trash2,
@@ -141,9 +138,11 @@ export default function QuizGeneratorPage() {
         setCategories(categoryConfigs);
 
         // Event: prefer URL param, fallback to first
+        console.log('Upcoming events:', events);
         const targetEventId = presetEventId && events.some(e => String(e.id) === presetEventId)
           ? presetEventId
           : events.length > 0 ? String(events[0].id) : '';
+        console.log('Target event_id:', targetEventId, 'Preset event_id:', presetEventId, 'Events:', events);
         if (targetEventId) {
           setSelectedEventId(targetEventId);
           loadEventHistory(targetEventId);
@@ -227,34 +226,6 @@ export default function QuizGeneratorPage() {
   const isMusicSnippets = selectedCategoryConfig?.include_spotify ?? false
   const isHigherOrLower = isMusicSnippets && (selectedCategoryConfig?.is_higher_lower ?? false)
   const isPictureRound = selectedCategoryConfig?.is_picture ?? false
-
-  const handleEventChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const id = e.target.value;
-    setSelectedEventId(id);
-    // Purge the generated-question exclusion log if this event is no longer active.
-    if (id) cleanupGeneratedQuestionsForInactiveEventAction(parseInt(id)).catch(() => {});
-    loadEventHistory(id);
-    // Load saved snippets for the new event
-    if (selectedCategoryConfig?.include_spotify) {
-      getMusicSnippetsForEventAction(id, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {});
-    }
-  };
-
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedName = e.target.value;
-    setCategory(selectedName);
-    const config = categories.find(c => c.category_name === selectedName);
-    if (config) setNumQuestions(config.question_count);
-    // Clear all draft results when switching category
-    setQuestions([])
-    setSelectedIndices(new Set())
-    setMusicSnippets([])
-    setSelectedSnippetIndices(new Set())
-    setPictureItems([])
-    setSelectedPictureIndices(new Set())
-    setPreviousPictureAnswers([])
-    setError('')
-  };
 
   // Load saved snippets when event or spotify category changes
   useEffect(() => {
@@ -517,7 +488,7 @@ export default function QuizGeneratorPage() {
   }, [viewingCategory, eventHistory]);
 
   return (
-    <div className="space-y-2 space-y-4 mx-auto px-2 sm:px-6 py-2 py-4 pb-32 max-w-6xl text-left animate-in duration-700 fade-in">
+    <div className="space-y-2 sm:space-y-4 mx-auto px-2 sm:px-6 py-2 sm:py-4 pb-32 max-w-6xl text-left animate-in duration-700 fade-in">
 
       {/* CATEGORY PROGRESS INDICATORS */}
       {/* <div className={styles.pillsContainer}>

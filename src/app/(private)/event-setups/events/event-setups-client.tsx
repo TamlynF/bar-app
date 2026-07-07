@@ -1272,7 +1272,7 @@ export default function EventsClient({
               return (
                 <div className="items-start gap-5 space-y-4 sm:space-y-5 lg:space-y-0 lg:grid grid-cols-2 animate-in duration-200 fade-in">
                   <div className="bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden">
-                    <button type="button" onClick={() => setDetailsOpen(o => !o)} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+                    <button type="button" onClick={() => setDetailsOpen(o => !o)} className="flex justify-between items-center bg-[#E6DFC8] hover:bg-[#DDD4B8] px-4 sm:px-5 py-3 w-full text-left transition-colors">
                       <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Event Details</span>
                       <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", detailsOpen && "rotate-180")} />
                     </button>
@@ -1297,7 +1297,7 @@ export default function EventsClient({
                     const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
                     return (
                       <div className="bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden">
-                        <button type="button" onClick={() => setQuizOpen(o => !o)} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+                        <button type="button" onClick={() => setQuizOpen(o => !o)} className="flex justify-between items-center bg-[#E6DFC8] hover:bg-[#DDD4B8] px-4 sm:px-5 py-3 w-full text-left transition-colors">
                           <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Quiz Questions</span>
                           <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", quizOpen && "rotate-180")} />
                         </button>
@@ -1327,7 +1327,7 @@ export default function EventsClient({
                   })()}
 
                   {selected.is_bookable && <div className="bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden">
-                    <button type="button" onClick={() => setBookingsOpen(o => !o)} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+                    <button type="button" onClick={() => setBookingsOpen(o => !o)} className="flex justify-between items-center bg-[#E6DFC8] hover:bg-[#DDD4B8] px-4 sm:px-5 py-3 w-full text-left transition-colors">
                       <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Bookings</span>
                       <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingsOpen && "rotate-180")} />
                     </button>
@@ -1370,7 +1370,7 @@ export default function EventsClient({
                   </div>}
 
                   <div className="bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden">
-                    <button type="button" onClick={() => setBookingSettingsOpen(o => !o)} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+                    <button type="button" onClick={() => setBookingSettingsOpen(o => !o)} className="flex justify-between items-center bg-[#E6DFC8] hover:bg-[#DDD4B8] px-4 sm:px-5 py-3 w-full text-left transition-colors">
                       <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Public Booking Settings</span>
                       <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", bookingSettingsOpen && "rotate-180")} />
                     </button>
@@ -1793,7 +1793,7 @@ function ErrorBox({ message }: { message: string }) {
 function FormSection({ title, open, onToggle, children, className }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode; className?: string }) {
   return (
     <div className={cn("bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden", className)}>
-      <button type="button" onClick={onToggle} className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors">
+      <button type="button" onClick={onToggle} className="flex justify-between items-center bg-[#E6DFC8] hover:bg-[#DDD4B8] px-4 sm:px-5 py-3 w-full text-left transition-colors">
         <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">{title}</span>
         <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
       </button>
