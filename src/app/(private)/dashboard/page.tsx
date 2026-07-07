@@ -20,9 +20,13 @@ import { EventRowListClient } from "./components/event-row-list-client";
 import TonightCard from "./components/tonight-card";
 import LeaderboardCard, { type LeaderboardEntry } from "./components/leaderboard-card";
 import NeedsActionHero, { type ActionItem } from "./components/needs-action-hero";
-import KpiCard from "./components/kpi-card";
 import BookingsTrend, { type TrendBooking } from "./components/bookings-trend";
 import { countSeatableWaitlist } from "@/lib/table-allocation";
+import { BarChart3 } from "lucide-react"; // alongside existing lucide imports
+import { fetchDashboardAnalytics } from "./lib/analytics";
+import { RevenueTrendChart } from "./components/revenue-trend-chart";
+import { RevenueByTypeChart } from "./components/revenue-by-type-chart";
+import StatCard from "./components/stat-card";
 
 export const dynamic = "force-dynamic";
 
@@ -153,6 +157,7 @@ export function getBookingsHref(et: EventTypeRow, eventId?: number): string {
 
 export default async function DashboardPage() {
   const supabase = await createClient();
+  const analyticsPromise = fetchDashboardAnalytics(supabase);
   const nowMs = new Date().getTime();
   const todayStr = new Date().toISOString().split("T")[0];
   const firstDayOfMonth = new Date(
@@ -168,7 +173,8 @@ export default async function DashboardPage() {
   ).toISOString().split("T")[0];
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
-
+  const analytics = await analyticsPromise;
+  
   const [
     { count: pendingPrivate },
     { count: pendingBands },
@@ -199,30 +205,9 @@ export default async function DashboardPage() {
       .eq("event_subtypes.behavior", "quiz"),
   ]);
 
-  const [
-    { data: monthBookings },
-    { count: newContactsCount },
-    { count: confirmedBookingsCount },
-    { data: bandPreferredDates },
-  ] = await Promise.all([
-    supabase
-      .from("bookings")
-      .select("total_amount, paid_amount, payment_status, status")
-      .gte("created_at", firstDayOfMonth)
-      .neq("status", "cancelled"),
-    supabase
-      .from("contacts")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", firstDayOfMonth),
-    supabase
-      .from("bookings")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "confirmed")
-      .gte("created_at", firstDayOfMonth),
-    supabase
-      .from("band_booking_requests")
-      .select("preferred_dates"),
-  ]);
+  const { data: bandPreferredDates } = await supabase
+    .from("band_booking_requests")
+    .select("preferred_dates");
 
   const { data: leaderboardScores, error: leaderboardError } = await supabase
     .from("booking_scores")
@@ -235,21 +220,6 @@ export default async function DashboardPage() {
     .select("created_at, events!bookings_event_id_fkey!inner(event_types!inner(id, name), event_subtypes!inner(id, name))")
     .gte("created_at", firstDayOfLastMonth)
     .neq("status", "cancelled");
-
-  // Last-month figures → month-over-month KPI deltas.
-  const [{ data: lastMonthBookings }, { count: newContactsLastMonth }] = await Promise.all([
-    supabase
-      .from("bookings")
-      .select("paid_amount, status")
-      .gte("created_at", firstDayOfLastMonth)
-      .lt("created_at", firstDayOfMonth)
-      .neq("status", "cancelled"),
-    supabase
-      .from("contacts")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", firstDayOfLastMonth)
-      .lt("created_at", firstDayOfMonth),
-  ]);
 
   const { data: rawUpcoming, error: upcomingError } = await supabase
     .from("events")
@@ -336,13 +306,6 @@ export default async function DashboardPage() {
     quizzesMissingQuestions +
     openSaturdays +
     seatableWaitlistCount;
-
-  const collectedRevenue =
-    monthBookings?.reduce((s, b) => s + (b.paid_amount ?? 0), 0) ?? 0;
-  const outstandingRevenue =
-    monthBookings
-      ?.filter((b) => b.payment_status === "unpaid")
-      .reduce((s, b) => s + ((b.total_amount ?? 0) - (b.paid_amount ?? 0)), 0) ?? 0;
 
   const totalVenueCapacity =
     tablesData?.reduce((acc, t) => acc + t.max_capacity, 0) ?? 0;
@@ -544,27 +507,15 @@ export default async function DashboardPage() {
   // Tonight is highlighted separately; the rest fill "Coming Up".
   const comingUp = tonightGeneralEvent ? allListItems.slice(1) : allListItems;
 
-  // Month-over-month KPI deltas.
-  const collectedLastMonth = lastMonthBookings?.reduce((s, b) => s + (b.paid_amount ?? 0), 0) ?? 0;
-  const confirmedLastMonth = lastMonthBookings?.filter((b) => b.status === "confirmed").length ?? 0;
-  const collectedDeltaPct =
-    collectedLastMonth > 0
-      ? Math.round(((collectedRevenue - collectedLastMonth) / collectedLastMonth) * 100)
-      : collectedRevenue > 0
-      ? 100
-      : 0;
-  const unpaidCount = unpaidBookingsData?.length ?? 0;
-  const confirmedDelta = (confirmedBookingsCount ?? 0) - confirmedLastMonth;
-  const newGuestsDelta = (newContactsCount ?? 0) - (newContactsLastMonth ?? 0);
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 bg-background min-h-screen pb-24">
-      <div className="px-4 py-4 md:px-6 sm:py-0 max-w-6xl mx-auto space-y-5">
+    <div className="flex-1 bg-background pb-24 min-h-screen">
+      <div className="space-y-5 mx-auto px-4 md:px-6 py-4 sm:py-0 max-w-6xl">
 
         <header className="flex justify-center">
-          <p className="text-sm font-bold text-[#5F624F] uppercase tracking-wide">
+          <p className="font-bold text-[#5F624F] text-sm uppercase tracking-wide">
             {format(new Date(), "EEEE, do MMMM yyyy")}
           </p>
         </header>
@@ -574,11 +525,11 @@ export default async function DashboardPage() {
 
         {/* Analytics (left) + what's-on (right) on desktop. On mobile each card
             stacks in source order: Tonight → Bookings → KPIs → Coming Up. */}
-        <div className="grid gap-5 lg:grid-cols-[1.6fr_1fr] lg:items-start">
+        <div className="items-start gap-5 grid lg:grid-cols-[1.6fr_1fr]">
 
           {/* Happening Tonight — mobile 1st, desktop top-right */}
           {tonightGeneralEvent && (
-            <section className="space-y-2 lg:col-start-2 lg:row-start-1">
+            <section className="space-y-2 lg:col-start-2 row-start-1">
               <SectionLabel icon={Clock} label="Happening Tonight" />
               <TonightCard
                 event={tonightGeneralEvent}
@@ -590,12 +541,12 @@ export default async function DashboardPage() {
           )}
 
           {/* Bookings trend — mobile 2nd, desktop top-left */}
-          <div className="lg:col-start-1 lg:row-start-1">
+          <div className="lg:col-start-1 row-start-1">
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
           {/* This month KPIs — mobile 3rd, desktop bottom-left */}
-          <section className="space-y-2 lg:col-start-1 lg:row-start-2">
+          {/* <section className="space-y-2 lg:col-start-1 row-start-2">
             <SectionLabel icon={TrendingUp} label={`${format(new Date(), "MMMM")} at a Glance`} />
             <KpiCard
               monthLabel={format(new Date(), "MMMM")}
@@ -608,7 +559,70 @@ export default async function DashboardPage() {
               confirmedDelta={confirmedDelta}
               newGuestsDelta={newGuestsDelta}
             />
+          </section> */}
+          {/* SECTION B: THIS MONTH */}
+<section className="space-y-2">
+  <SectionLabel
+    icon={TrendingUp}
+    label={`${format(new Date(), "MMMM")} at a Glance`}
+  />
+  <div className="gap-3 grid grid-cols-2 sm:grid-cols-4">
+    <StatCard
+      label="Collected"
+      value={`£${analytics.thisMonth.collected.toFixed(2)}`}
+      sub="revenue paid"
+      positive
+      delta={analytics.deltas.collected}
+    />
+    <StatCard
+      label="Outstanding"
+      value={`£${analytics.thisMonth.outstanding.toFixed(2)}`}
+      sub="to collect"
+      warn={analytics.thisMonth.outstanding > 0}
+    />
+    <StatCard
+      label="Bookings"
+      value={analytics.thisMonth.bookings}
+      sub="this month"
+      delta={analytics.deltas.bookings}
+    />
+    <StatCard
+      label="New Guests"
+      value={analytics.guestSplit.newGuests}
+      sub="first-time bookers"
+    />
+  </div>
           </section>
+          
+          {/* SECTION: TRENDS */}
+<section className="space-y-2">
+  <SectionLabel icon={BarChart3} label="Trends" />
+  <div className="gap-3 grid grid-cols-1 sm:grid-cols-2">
+    <RevenueTrendChart data={analytics.weekly} />
+    <RevenueByTypeChart
+      data={analytics.revenueByType}
+      bandSpend={analytics.bandSpendThisMonth}
+    />
+  </div>
+  <div className="gap-3 grid grid-cols-3">
+    <StatCard
+      label="Returning"
+      value={`${analytics.guestSplit.returningPct}%`}
+      sub="of month's guests"
+    />
+    <StatCard
+      label="Cancellations"
+      value={`${analytics.cancellationPct}%`}
+      sub="of bookings"
+      warn={analytics.cancellationPct > 15}
+    />
+    <StatCard
+      label="Lead Time"
+      value={`${analytics.medianLeadDays}d`}
+      sub="median booking"
+    />
+  </div>
+</section>
 
           {/* Coming Up — mobile 4th, desktop bottom-right (top-right when no tonight) */}
           <section className={`space-y-2 lg:col-start-2 ${tonightGeneralEvent ? "lg:row-start-2" : "lg:row-start-1"}`}>
@@ -616,16 +630,16 @@ export default async function DashboardPage() {
             {comingUp.length > 0 ? (
               <EventRowListClient items={comingUp} />
             ) : !tonightGeneralEvent ? (
-              <div className="bg-white border border-[#E6DFC8] rounded-2xl p-10 text-center">
-                <CalendarDays className="w-10 h-10 text-[#5F624F] opacity-20 mx-auto mb-3" />
-                <p className="text-sm font-black text-[#1F1F1A]">No Upcoming Events</p>
-                <p className="text-[11px] text-[#5F624F] font-medium mt-1">
+              <div className="bg-white p-10 border border-[#E6DFC8] rounded-2xl text-center">
+                <CalendarDays className="opacity-20 mx-auto mb-3 w-10 h-10 text-[#5F624F]" />
+                <p className="font-black text-[#1F1F1A] text-sm">No Upcoming Events</p>
+                <p className="mt-1 font-medium text-[#5F624F] text-[11px]">
                   Schedule an event in Settings to see it here.
                 </p>
               </div>
             ) : (
-              <div className="bg-white border border-[#E6DFC8] rounded-2xl p-6 text-center">
-                <p className="text-[11px] text-[#5F624F] font-bold uppercase tracking-wide opacity-60">Nothing else scheduled</p>
+              <div className="bg-white p-6 border border-[#E6DFC8] rounded-2xl text-center">
+                <p className="opacity-60 font-bold text-[#5F624F] text-[11px] uppercase tracking-wide">Nothing else scheduled</p>
               </div>
             )}
           </section>
@@ -640,7 +654,7 @@ export default async function DashboardPage() {
         {/* Quick links */}
         <section className="space-y-2">
           <SectionLabel icon={Zap} label="Quick Links" />
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="gap-3 grid grid-cols-2 sm:grid-cols-4">
             <QuickLink href="/book/bingo" label="Walk-in" icon={Plus} />
             <QuickLink href="/settings/tables" label="Floor Plan" icon={Grid2X2} />
             <QuickLink href="/event-setups/quiz-generator" label="Quiz" icon={Trophy} />
@@ -676,12 +690,12 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="flex flex-col items-center justify-center gap-2 p-4 bg-white border border-[#E6DFC8] rounded-2xl hover:bg-[#F7F4EA] transition-colors group"
+      className="group flex flex-col justify-center items-center gap-2 bg-white hover:bg-[#F7F4EA] p-4 border border-[#E6DFC8] rounded-2xl transition-colors"
     >
-      <div className="w-10 h-10 bg-[#F7F4EA] group-hover:bg-white rounded-full flex items-center justify-center transition-colors shadow-sm">
+      <div className="flex justify-center items-center bg-[#F7F4EA] group-hover:bg-white shadow-sm rounded-full w-10 h-10 transition-colors">
         <Icon className="w-5 h-5 text-[#5C4033]" />
       </div>
-      <span className="text-[10px] font-black uppercase tracking-wide text-[#1F1F1A]">
+      <span className="font-black text-[#1F1F1A] text-[10px] uppercase tracking-wide">
         {label}
       </span>
     </Link>
