@@ -13,11 +13,10 @@ import {
   Loader2,
   MessageSquareQuote,
   AlertCircle,
-  Flag,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { COUNTRY_CODES } from "@/lib/country-codes";
+import { CountryCodeSelect } from "@/components/country-code-select";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 
 interface EventData {
@@ -201,24 +200,10 @@ export default function EventBookingForm({ event, config }: Props) {
             {f.phone.label} {f.phone.required && <span className="text-red-500">*</span>}
           </label>
           <div className="flex gap-2">
-            <div className="relative group shrink-0 w-24">
-              <div className={iconContainerClasses}>
-                <Flag className={iconClasses} />
-              </div>
-              <select
-                title="Country Code"
-                name="countryCode"
-                value={formData.countryCode}
-                onChange={handleInputChange}
-                className={cn(inputBaseClasses, "pl-11 pr-2 appearance-none cursor-pointer")}
-              >
-                {COUNTRY_CODES.map((c) => (
-                  <option key={c.iso + c.code} value={c.code}>
-                    {c.iso} {c.code}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <CountryCodeSelect
+              value={formData.countryCode}
+              onChange={(code) => setFormData((prev) => ({ ...prev, countryCode: code }))}
+            />
             <div className="relative group flex-1">
               <div className={iconContainerClasses}>
                 <Phone className={iconClasses} />

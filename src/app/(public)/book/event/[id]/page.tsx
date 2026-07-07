@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
+import { PublicNav } from "@/components/public-nav";
 
 const ICON_MAP: Record<string, React.ElementType> = {
   Banknote, Calendar, Users, Trophy, Wine,
@@ -120,7 +121,9 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         className="pointer-events-none absolute inset-0 z-0 opacity-80 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_35%,transparent_82%)]"
       />
 
-      <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto py-4 sm:py-6 px-4 sm:px-6 lg:px-8 flex flex-col">
+      <PublicNav currentPath="/book/event" />
+
+      <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto pt-12 pb-4 sm:pt-14 sm:pb-6 px-4 sm:px-6 lg:px-8 flex flex-col">
 
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-4 sm:mb-6">

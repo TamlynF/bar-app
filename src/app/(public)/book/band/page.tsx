@@ -9,6 +9,7 @@ import {
   Sparkles, AlertCircle, Beer, Info, Speaker, User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { PublicNav } from "@/components/public-nav";
 
 export const metadata = {
   title: "Book the Stage | Don Fenticas",
@@ -59,7 +60,9 @@ export default async function BandBookingPage() {
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-      <div className="flex-1 w-full max-w-3xl mx-auto py-4 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
+      <PublicNav currentPath="/book/band" />
+
+      <div className="flex-1 w-full max-w-3xl mx-auto pt-12 pb-4 sm:pt-14 sm:pb-12 px-4 sm:px-6 lg:px-8 flex flex-col">
 
         {/* Header */}
         <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
