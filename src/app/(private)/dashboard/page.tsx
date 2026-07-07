@@ -18,7 +18,6 @@ import { adminBookingsHref } from "@/lib/booking-links";
 import SectionLabel from "./components/section-label";
 import { EventRowListClient } from "./components/event-row-list-client";
 import TonightCard from "./components/tonight-card";
-import LeaderboardCard, { type LeaderboardEntry } from "./components/leaderboard-card";
 import NeedsActionHero, { type ActionItem } from "./components/needs-action-hero";
 import BookingsTrend, { type TrendBooking } from "./components/bookings-trend";
 import { countSeatableWaitlist } from "@/lib/table-allocation";
@@ -219,11 +218,6 @@ export default async function DashboardPage() {
     .from("band_booking_requests")
     .select("preferred_dates");
 
-  const { data: leaderboardScores, error: leaderboardError } = await supabase
-    .from("booking_scores")
-    .select("id, score, is_winner, bookings(id, group_name), events(id, title, date)");
-  if (leaderboardError) console.error("Leaderboard query error:", leaderboardError);
-
   // Bookings trend (created_at + event taxonomy) for the weekly/monthly chart.
   const { data: trendRaw } = await supabase
     .from("bookings")
@@ -349,24 +343,6 @@ export default async function DashboardPage() {
         assigned: assignedByCapacity.get(capacity) ?? 0,
       }));
   };
-
-  // ─── Leaderboard Aggregation ─────────────────────────────────────────────
-  const topTeams: LeaderboardEntry[] = (() => {
-    const statsMap: Record<string, LeaderboardEntry> = {};
-    (leaderboardScores ?? []).forEach((record: { score: number | null; is_winner: boolean | null; bookings: { id: number; group_name: string | null } | { id: number; group_name: string | null }[] | null }) => {
-      const booking = Array.isArray(record.bookings) ? record.bookings[0] : record.bookings;
-      const teamName = booking?.group_name || "Unknown Team";
-      if (!statsMap[teamName]) {
-        statsMap[teamName] = { team_name: teamName, wins: 0, quizzes_attended: 0, total_score: 0 };
-      }
-      statsMap[teamName].quizzes_attended += 1;
-      statsMap[teamName].total_score += record.score || 0;
-      if (record.is_winner) statsMap[teamName].wins += 1;
-    });
-    return Object.values(statsMap)
-      .sort((a, b) => b.wins !== a.wins ? b.wins - a.wins : b.total_score - a.total_score)
-      .slice(0, 5);
-  })();
 
   const eventListItems: ListItem[] = upcomingEvents.map((ev) => {
     const et = getEventType(ev);
@@ -570,40 +546,26 @@ export default async function DashboardPage() {
               newGuestsDelta={newGuestsDelta}
             />
           </section> */}
-          {/* SECTION B: THIS MONTH */}
-<section className="space-y-2">
-  <SectionLabel
-    icon={TrendingUp}
-    label={`${format(new Date(), "MMMM")} at a Glance`}
-  />
-  <div className="gap-3 grid grid-cols-2 sm:grid-cols-4">
-    <StatCard
-      label="Collected"
-      value={`£${analytics.thisMonth.collected.toFixed(2)}`}
-      sub="revenue paid"
-      positive
-      delta={analytics.deltas.collected}
-    />
-    <StatCard
-      label="Outstanding"
-      value={`£${analytics.thisMonth.outstanding.toFixed(2)}`}
-      sub="to collect"
-      warn={analytics.thisMonth.outstanding > 0}
-    />
-    <StatCard
-      label="Bookings"
-      value={analytics.thisMonth.bookings}
-      sub="this month"
-      delta={analytics.deltas.bookings}
-    />
-    <StatCard
-      label="New Guests"
-      value={analytics.guestSplit.newGuests}
-      sub="first-time bookers"
-    />
-  </div>
+          {/* Coming Up — swapped into the "at a Glance" slot (desktop bottom-left, wide column) */}
+          <section className="space-y-2">
+            <SectionLabel icon={CalendarDays} label="Coming Up" />
+            {comingUp.length > 0 ? (
+              <EventRowListClient items={comingUp} />
+            ) : !tonightGeneralEvent ? (
+              <div className="bg-white p-10 border border-[#E6DFC8] rounded-2xl text-center">
+                <CalendarDays className="opacity-20 mx-auto mb-3 w-10 h-10 text-[#5F624F]" />
+                <p className="font-black text-[#1F1F1A] text-sm">No Upcoming Events</p>
+                <p className="mt-1 font-medium text-[#5F624F] text-[11px]">
+                  Schedule an event in Settings to see it here.
+                </p>
+              </div>
+            ) : (
+              <div className="bg-white p-6 border border-[#E6DFC8] rounded-2xl text-center">
+                <p className="opacity-60 font-bold text-[#5F624F] text-[11px] uppercase tracking-wide">Nothing else scheduled</p>
+              </div>
+            )}
           </section>
-          
+
           {/* SECTION: TRENDS */}
 <section className="space-y-2">
   <SectionLabel icon={BarChart3} label="Trends" />
@@ -634,32 +596,40 @@ export default async function DashboardPage() {
   </div>
 </section>
 
-          {/* Coming Up — mobile 4th, desktop bottom-right (top-right when no tonight) */}
+          {/* This month "at a Glance" — swapped into the Coming Up slot (desktop right column) */}
           <section className={`space-y-2 lg:col-start-2 ${tonightGeneralEvent ? "lg:row-start-2" : "lg:row-start-1"}`}>
-            <SectionLabel icon={CalendarDays} label="Coming Up" />
-            {comingUp.length > 0 ? (
-              <EventRowListClient items={comingUp} />
-            ) : !tonightGeneralEvent ? (
-              <div className="bg-white p-10 border border-[#E6DFC8] rounded-2xl text-center">
-                <CalendarDays className="opacity-20 mx-auto mb-3 w-10 h-10 text-[#5F624F]" />
-                <p className="font-black text-[#1F1F1A] text-sm">No Upcoming Events</p>
-                <p className="mt-1 font-medium text-[#5F624F] text-[11px]">
-                  Schedule an event in Settings to see it here.
-                </p>
-              </div>
-            ) : (
-              <div className="bg-white p-6 border border-[#E6DFC8] rounded-2xl text-center">
-                <p className="opacity-60 font-bold text-[#5F624F] text-[11px] uppercase tracking-wide">Nothing else scheduled</p>
-              </div>
-            )}
+            <SectionLabel
+              icon={TrendingUp}
+              label={`${format(new Date(), "MMMM")} at a Glance`}
+            />
+            <div className="gap-3 grid grid-cols-2">
+              <StatCard
+                label="Collected"
+                value={`£${analytics.thisMonth.collected.toFixed(2)}`}
+                sub="revenue paid"
+                positive
+                delta={analytics.deltas.collected}
+              />
+              <StatCard
+                label="Outstanding"
+                value={`£${analytics.thisMonth.outstanding.toFixed(2)}`}
+                sub="to collect"
+                warn={analytics.thisMonth.outstanding > 0}
+              />
+              <StatCard
+                label="Bookings"
+                value={analytics.thisMonth.bookings}
+                sub="this month"
+                delta={analytics.deltas.bookings}
+              />
+              <StatCard
+                label="New Guests"
+                value={analytics.guestSplit.newGuests}
+                sub="first-time bookers"
+              />
+            </div>
           </section>
         </div>
-
-        {/* Quiz leaderboard */}
-        <section className="space-y-2">
-          <SectionLabel icon={Trophy} label="Quiz Leaderboard" />
-          <LeaderboardCard entries={topTeams} />
-        </section>
 
         {/* Quick links */}
         <section className="space-y-2">

@@ -191,7 +191,7 @@ export default async function GeneralEventBookingsPage({
         </div>
 
         {/* Event summary + interactive stats bar + bookings list */}
-        <BookingsSection bookings={bookings} summary={summary} type={type} subtype={subtype} />
+        <BookingsSection bookings={bookings} summary={summary} type={type} subtype={subtype} initialStatuses={initialStatuses} />
       </div>
     </div>
   );

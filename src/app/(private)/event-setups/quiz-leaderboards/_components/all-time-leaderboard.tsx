@@ -1,15 +1,9 @@
-import Link from "next/link";
-import { Trophy, Medal, ChevronRight, Target } from "lucide-react";
+import { Trophy, Medal, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { AllTimeTeam } from "../actions";
 
-export type LeaderboardEntry = {
-  team_name: string;
-  wins: number;
-  quizzes_attended: number;
-  total_score: number;
-};
-
-export default function LeaderboardCard({ entries }: { entries: LeaderboardEntry[] }) {
+// All-time team standings across every quiz. Moved here from the dashboard.
+export default function AllTimeLeaderboard({ entries }: { entries: AllTimeTeam[] }) {
   if (entries.length === 0) {
     return (
       <div className="bg-white border border-[#E6DFC8] rounded-2xl p-10 text-center">
@@ -28,10 +22,7 @@ export default function LeaderboardCard({ entries }: { entries: LeaderboardEntry
         {entries.map((entry, index) => {
           const rank = index + 1;
           return (
-            <div
-              key={entry.team_name}
-              className="flex items-center gap-3 px-4 py-3"
-            >
+            <div key={entry.team_name} className="flex items-center gap-3 px-4 py-3">
               {/* Rank badge */}
               <span className={cn(
                 "w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-[11px] font-black",
@@ -45,9 +36,7 @@ export default function LeaderboardCard({ entries }: { entries: LeaderboardEntry
 
               {/* Team name */}
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-[#1F1F1A] truncate">
-                  {entry.team_name}
-                </p>
+                <p className="text-sm font-black text-[#1F1F1A] truncate">{entry.team_name}</p>
                 <p className="text-[10px] font-medium text-[#5F624F]">
                   {entry.quizzes_attended} quiz{entry.quizzes_attended !== 1 ? "zes" : ""}
                 </p>
@@ -69,14 +58,6 @@ export default function LeaderboardCard({ entries }: { entries: LeaderboardEntry
           );
         })}
       </div>
-
-      <Link
-        href="/settings/teams"
-        className="flex items-center justify-center gap-1.5 px-4 py-2.5 border-t border-[#E6DFC8] text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:text-[#5C4033] hover:bg-[#F7F4EA]/50 transition-colors"
-      >
-        View Full Leaderboard
-        <ChevronRight className="w-3 h-3" />
-      </Link>
     </div>
   );
 }

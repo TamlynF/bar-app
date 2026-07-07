@@ -4,8 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { CalendarDays, Clock, ChevronRight, Wallet, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { badgeClassFromColor } from "@/lib/event-type-colors";
-import { isEventBehavior } from "@/lib/event-behavior";
-import { adminBookingsHref } from "@/lib/booking-links";
+import { buildAdminBookingGroups, type AdminBookingGroupEvent } from "@/lib/admin-booking-groups";
 
 export const dynamic = "force-dynamic";
 
@@ -51,7 +50,7 @@ type RawBooking = {
     start_time: string | null;
     title: string | null;
     is_active: boolean | null;
-    event_types: Rel<{ name: string }>;
+    event_types: Rel<{ name: string; booking_grouping: string | null }>;
     event_subtypes: Rel<{ name: string; color: string | null; behavior: string | null }>;
   }>;
 };
@@ -94,7 +93,7 @@ export default async function UnpaidBookingsPage() {
       contacts!bookings_contact_id_fkey(full_name, email, phone_no),
       events!bookings_event_id_fkey!inner(
         id, date, start_time, title, is_active,
-        event_types!inner(name),
+        event_types!inner(name, booking_grouping),
         event_subtypes!inner(name, color, behavior)
       )
     `)
@@ -121,7 +120,19 @@ export default async function UnpaidBookingsPage() {
     if (!groupMap.has(ev.id)) {
       const et = first(ev.event_types);
       const es = first(ev.event_subtypes);
-      const behavior = isEventBehavior(es?.behavior) ? es!.behavior : "standard";
+      // Reuse the shared admin-nav grouping to build the destination href, so the
+      // link matches how each category's bookings are surfaced elsewhere:
+      //   per_event   → /event-bookings/event/[id]
+      //   per_subtype → /event-bookings/general/[type]/[subtype]
+      //   per_type    → /event-bookings/general/[type]/__all__
+      // per_type / per_subtype land on a shared screen, so also pre-select this
+      // event (?eventId). Every link filters bookings to status=confirmed.
+      const group = buildAdminBookingGroups([ev as unknown as AdminBookingGroupEvent])[0];
+      const base = group?.href ?? `/event-bookings/event/${ev.id}`;
+      const href =
+        group?.grouping === "per_type" || group?.grouping === "per_subtype"
+          ? `${base}?eventId=${ev.id}&status=confirmed`
+          : `${base}?status=confirmed`;
       groupMap.set(ev.id, {
         eventId: ev.id,
         date: ev.date,
@@ -130,7 +141,7 @@ export default async function UnpaidBookingsPage() {
         typeName: et?.name ?? "",
         subName: es?.name ?? "",
         color: es?.color ?? null,
-        href: adminBookingsHref(behavior, ev.id),
+        href,
         bookings: [],
         outstanding: 0,
       });

@@ -27,6 +27,13 @@ export interface ScoreEntry {
   isWinner: boolean;
 }
 
+export interface AllTimeTeam {
+  team_name: string;
+  wins: number;
+  quizzes_attended: number;
+  total_score: number;
+}
+
 /** Helper for Supabase joins that may come back as an array or a single object. */
 function one<T>(rel: T | T[] | null | undefined): T | null {
   if (!rel) return null;
@@ -103,6 +110,39 @@ export async function getEventTeams(eventId: string): Promise<TeamRow[]> {
       isWinner: !!scoreRow?.is_winner,
     };
   });
+}
+
+/**
+ * All-time team standings across every quiz: total points, quizzes attended and
+ * wins, aggregated by team name. Sorted by wins then total score. Moved here from
+ * the dashboard, which no longer surfaces the leaderboard.
+ */
+export async function getAllTimeLeaderboard(limit = 5): Promise<AllTimeTeam[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("booking_scores")
+    .select("score, is_winner, bookings(group_name)");
+
+  if (error) {
+    console.error("getAllTimeLeaderboard error:", error);
+    return [];
+  }
+
+  const statsMap: Record<string, AllTimeTeam> = {};
+  for (const record of data ?? []) {
+    const booking = one(record.bookings as unknown as { group_name: string | null } | { group_name: string | null }[] | null);
+    const teamName = booking?.group_name?.trim() || "Unknown Team";
+    if (!statsMap[teamName]) {
+      statsMap[teamName] = { team_name: teamName, wins: 0, quizzes_attended: 0, total_score: 0 };
+    }
+    statsMap[teamName].quizzes_attended += 1;
+    statsMap[teamName].total_score += (record.score as number | null) || 0;
+    if (record.is_winner) statsMap[teamName].wins += 1;
+  }
+
+  return Object.values(statsMap)
+    .sort((a, b) => (b.wins !== a.wins ? b.wins - a.wins : b.total_score - a.total_score))
+    .slice(0, limit);
 }
 
 /**

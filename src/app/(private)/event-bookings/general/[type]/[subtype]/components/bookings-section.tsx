@@ -255,16 +255,22 @@ export default function BookingsSection({
   summary,
   type,
   subtype,
+  initialStatuses = [],
 }: {
   bookings: GeneralBooking[];
   /** Present when an event is selected — enables the interactive stats bar. */
   summary: EventSummary | null;
   type: string;
   subtype: string;
+  /** Status keys to pre-select in the filter (e.g. from ?status=confirmed). */
+  initialStatuses?: string[];
 }) {
-  const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(new Set());
+  const seededStatuses = initialStatuses.map((s) => s.trim().toLowerCase()).filter(Boolean);
+  const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(
+    () => new Set(seededStatuses)
+  );
   const [searchQuery, setSearchQuery] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(seededStatuses.length > 0);
   const [showTables, setShowTables] = useState(false);
 
   const toggleStatusFilter = (status: string) => {

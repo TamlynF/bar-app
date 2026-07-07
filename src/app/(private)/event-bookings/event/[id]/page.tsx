@@ -44,12 +44,22 @@ type BookingRow = {
 
 export default async function EventDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
   const { id } = await params;
+  const { status } = await searchParams;
   const eventId = Number(id);
   if (isNaN(eventId)) notFound();
+
+  // Optional status pre-filter (e.g. ?status=confirmed) — comma-separated,
+  // case-insensitive. Applied to the bookings list below (the summary card
+  // still reflects the whole event).
+  const statusFilter = new Set(
+    (status ?? "").split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
+  );
 
   const supabase = await createClient();
 
@@ -112,6 +122,10 @@ export default async function EventDetailPage({
       : null,
     tables: b.booking_table_mappings.map((m) => m.tables?.name).filter(Boolean).join(", "),
   }));
+
+  const visibleItems = statusFilter.size
+    ? bookingItems.filter((b) => statusFilter.has((b.status || "").toLowerCase()))
+    : bookingItems;
 
   return (
     <div className="px-4 py-4 md:px-8 sm:py-0 max-w-4xl mx-auto space-y-6">
@@ -178,17 +192,28 @@ export default async function EventDetailPage({
       {/* Bookings */}
       <section className="space-y-3">
         <h2 className="text-[11px] font-black uppercase tracking-wide text-[#5F624F]">
-          Bookings ({bookings.length})
+          Bookings ({visibleItems.length})
+          {statusFilter.size > 0 && (
+            <span className="ml-1.5 font-bold normal-case tracking-normal text-[#5F624F]/70">
+              · filtered by {[...statusFilter].join(", ")}
+            </span>
+          )}
         </h2>
 
-        {bookings.length === 0 ? (
+        {visibleItems.length === 0 ? (
           <div className="bg-white border border-[#E6DFC8] rounded-2xl p-10 text-center">
-            <p className="text-sm font-black text-[#1F1F1A]">No bookings yet</p>
-            <p className="text-[11px] text-[#5F624F] mt-1">Bookings will appear here once guests register.</p>
+            <p className="text-sm font-black text-[#1F1F1A]">
+              {bookings.length === 0 ? "No bookings yet" : "No matching bookings"}
+            </p>
+            <p className="text-[11px] text-[#5F624F] mt-1">
+              {bookings.length === 0
+                ? "Bookings will appear here once guests register."
+                : "No bookings match the current status filter."}
+            </p>
           </div>
         ) : (
           <BookingsList
-            items={bookingItems}
+            items={visibleItems}
             event={{
               title: event.title ?? "Untitled Event",
               dateLabel: format(parsed, "EEE d MMM yyyy"),

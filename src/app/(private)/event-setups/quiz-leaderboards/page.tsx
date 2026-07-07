@@ -4,9 +4,10 @@ import React from "react";
 import { Trophy, Medal, Award, Crown, Users, ListOrdered } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { getQuizEvents, getEventTeams, type TeamRow } from "./actions";
+import { getQuizEvents, getEventTeams, getAllTimeLeaderboard, type TeamRow } from "./actions";
 import LeaderboardEventFilter from "./_components/leaderboard-event-filter";
 import ScoreEntry from "./_components/score-entry";
+import AllTimeLeaderboard from "./_components/all-time-leaderboard";
 
 const parseDate = (d: string) => new Date(d + "T00:00:00");
 
@@ -111,7 +112,10 @@ export default async function QuizLeaderboardsPage({
   const selectedEventId = event && events.some((e) => e.id === event) ? event : events[0].id;
   const selectedEvent = events.find((e) => e.id === selectedEventId)!;
   const eventLabel = selectedEvent.title || format(parseDate(selectedEvent.date), "dd MMM yyyy");
-  const teams = await getEventTeams(selectedEventId);
+  const [teams, allTimeTeams] = await Promise.all([
+    getEventTeams(selectedEventId),
+    getAllTimeLeaderboard(10),
+  ]);
 
   const scored = teams.filter((t) => t.score != null).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   const unscored = teams.filter((t) => t.score == null);
@@ -134,7 +138,7 @@ export default async function QuizLeaderboardsPage({
         </div>
         <div className="flex items-center gap-2">
           <LeaderboardEventFilter events={events} selectedEventId={selectedEventId} />
-          <ScoreEntry eventId={selectedEventId} eventLabel={eventLabel} teams={teams} />
+          <ScoreEntry events={events} initialEventId={selectedEventId} initialTeams={teams} />
         </div>
       </div>
 
@@ -174,6 +178,15 @@ export default async function QuizLeaderboardsPage({
           ))}
         </div>
       )}
+
+      {/* All-time standings across every quiz (moved here from the dashboard) */}
+      <section className="space-y-2.5 pt-2">
+        <div className="flex items-center gap-2 px-0.5">
+          <Crown className="w-4 h-4 text-[#D4AF37]" />
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F]">All-Time Standings</p>
+        </div>
+        <AllTimeLeaderboard entries={allTimeTeams} />
+      </section>
     </div>
   );
 }
