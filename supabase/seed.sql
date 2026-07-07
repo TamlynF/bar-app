@@ -9,6 +9,10 @@
 insert into public.company_information (id, name, max_capacity, address, email)
 values (1, 'Don Fenticas', 100, '1 Test Street', 'admin@example.com');
 
+-- Marketing settings (single row; comparison area seeded for local E2E)
+insert into public.marketing_settings (comparison_area, comparison_radius)
+values ('Hinckley', '5 miles');
+
 -- Staff (auth_user_id is linked at test runtime by Playwright global-setup)
 insert into public.employees (id, full_name, email, start_date, status, role)
 values (1, 'Test Admin', 'test-admin@example.com', CURRENT_DATE, 'active', 'manager');

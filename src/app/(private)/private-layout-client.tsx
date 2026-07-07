@@ -28,6 +28,8 @@ import {
     Globe,
     MoreHorizontal,
     Shapes,
+    Megaphone,
+    TrendingUp,
     X
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -104,6 +106,11 @@ export default function PrivateLayoutClient({
         // { label: "Quiz Generator", href: "/event-setups/quiz-generator", icon: Brain },
     ]
 
+    // Marketing insights — AI/web-sourced trends + local price comparison (tabs on one page).
+    const marketingSubItems: SubItem[] = [
+        { label: "Trends", href: "/marketing/trends", icon: TrendingUp },
+    ]
+
     // Public-facing content — everything that renders on the marketing site.
     const websiteSubItems: SubItem[] = [
         { label: "Menu", href: "/settings/menu", icon: UtensilsCrossed },
@@ -138,6 +145,7 @@ export default function PrivateLayoutClient({
         if (p.startsWith("/event-setups/quiz-history") || p.startsWith("/event-setups/quiz-generator") || p.startsWith("/event-setups/quiz-leaderboards")) return "Quiz"
         if (p.startsWith("/event-setups/event-types") || p.startsWith("/event-setups/quiz-categories")) return "Settings"
         if (p === "/event-setups" || p.startsWith("/event-setups/")) return "Schedule"
+        if (p === "/marketing" || p.startsWith("/marketing/")) return "Marketing"
         if (p === "/settings" || p.startsWith("/settings/")) return "Settings"
         return null
     }
@@ -149,6 +157,7 @@ export default function PrivateLayoutClient({
         { label: "Schedule", href: "/event-setups/events", icon: CalendarCogIcon, subItems: null },
         { label: "Quiz", href: "/event-setups/quiz-history", icon: Brain, subItems: quizSubItems },
         { label: "Website", href: websiteHref, icon: Globe, subItems: websiteSubItems },
+        { label: "Marketing", href: "/marketing/trends", icon: Megaphone, subItems: marketingSubItems },
         { label: "Settings", href: "/settings", icon: Settings, subItems: settingsSubItems },
     ]
 
@@ -158,13 +167,14 @@ export default function PrivateLayoutClient({
         Bookings: activeGroup === "Bookings",
         Quiz: activeGroup === "Quiz",
         Website: activeGroup === "Website",
+        Marketing: activeGroup === "Marketing",
         Settings: activeGroup === "Settings",
     }))
     const toggleGroup = (label: string) =>
         setOpenGroups((prev) => ({ ...prev, [label]: !prev[label] }))
 
     const [moreOpen, setMoreOpen] = useState(false)
-    const moreActive = activeGroup === "Quiz" || activeGroup === "Website" || activeGroup === "Settings"
+    const moreActive = activeGroup === "Quiz" || activeGroup === "Website" || activeGroup === "Marketing" || activeGroup === "Settings"
 
     // Primary mobile tabs (Quiz / Website / Settings live behind "More").
     const bottomTabs = [
@@ -226,6 +236,10 @@ export default function PrivateLayoutClient({
             // default hub target so Back returns to the originating page/sheet.
             const from = searchParams.get("from")
             return { title: "Bookings", subtitle, backHref: from || "/event-bookings" }
+        }
+
+        if (normalizedPath.startsWith("/marketing")) {
+            return { title: "Marketing", subtitle: "Trends", backHref: null }
         }
 
         if (normalizedPath.startsWith("/settings")) {
@@ -529,6 +543,7 @@ export default function PrivateLayoutClient({
                             {[
                                 { heading: "Quiz", items: quizSubItems },
                                 { heading: "Website", items: websiteSubItems },
+                                { heading: "Marketing", items: marketingSubItems },
                                 { heading: "Settings", items: settingsSubItems },
                             ].map((section) => (
                                 <div key={section.heading} className="px-4 pt-2 pb-1">
