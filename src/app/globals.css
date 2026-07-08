@@ -222,6 +222,24 @@ body {
   border-color: color-mix(in oklab, var(--ev-c, #fdcc4b) 32%, transparent);
 }
 
+/* Whats-on flip cards: light up to the event colour on hover OR when open.
+   The open ("is-lit") state mirrors the home schedule-row hover for touch
+   devices, where there is no hover to trigger it. */
+.ev-card {
+  transition: border-color 0.22s ease, background-color 0.22s ease,
+    box-shadow 0.22s ease;
+}
+.group:hover .ev-card,
+.ev-card.is-lit {
+  border-color: color-mix(in oklab, var(--ev-c, #fdcc4b) 55%, transparent);
+  background-color: color-mix(
+    in oklab,
+    var(--ev-c, #fdcc4b) 8%,
+    var(--canvas-2)
+  );
+  box-shadow: 0 10px 30px -18px var(--ev-c, #fdcc4b);
+}
+
 /* Perforated left edge on the burgundy special "ticket stubs" */
 .ad-stub-perf {
   background: radial-gradient(circle at -2px 9px, transparent 5px, #1a2008 5px)

@@ -23,9 +23,12 @@ import BookingsTrend, { type TrendBooking } from "./components/bookings-trend";
 import { countSeatableWaitlist } from "@/lib/table-allocation";
 import { BarChart3 } from "lucide-react"; // alongside existing lucide imports
 import { fetchDashboardAnalytics } from "./lib/analytics";
+import { fetchVenueSales } from "./lib/venue-sales";
 import { RevenueTrendChart } from "./components/revenue-trend-chart";
 import { RevenueByTypeChart } from "./components/revenue-by-type-chart";
+import { VenueSalesSection } from "./components/venue-sales-section";
 import StatCard from "./components/stat-card";
+import { Wine } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -157,6 +160,7 @@ export function getBookingsHref(et: EventTypeRow, eventId?: number): string {
 export default async function DashboardPage() {
   const supabase = await createClient();
   const analyticsPromise = fetchDashboardAnalytics(supabase);
+  const venueSalesPromise = fetchVenueSales(supabase);
   const nowMs = new Date().getTime();
   const todayStr = new Date().toISOString().split("T")[0];
   // 12-month horizon for the "missing quiz" deep-link's date-range filter.
@@ -179,6 +183,7 @@ export default async function DashboardPage() {
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
   const analytics = await analyticsPromise;
+  const venueSales = await venueSalesPromise;
   
   const [
     { count: pendingPrivate },
@@ -515,7 +520,7 @@ export default async function DashboardPage() {
 
           {/* Happening Tonight — mobile 1st, desktop top-right */}
           {tonightGeneralEvent && (
-            <section className="space-y-2 lg:col-start-2 row-start-1">
+            <section className="space-y-2 lg:col-start-2 lg:row-start-1">
               <SectionLabel icon={Clock} label="Happening Tonight" />
               <TonightCard
                 event={tonightGeneralEvent}
@@ -527,25 +532,10 @@ export default async function DashboardPage() {
           )}
 
           {/* Bookings trend — mobile 2nd, desktop top-left */}
-          <div className="lg:col-start-1 row-start-1">
+          <div className="lg:col-start-1 lg:row-start-1">
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
-          {/* This month KPIs — mobile 3rd, desktop bottom-left */}
-          {/* <section className="space-y-2 lg:col-start-1 row-start-2">
-            <SectionLabel icon={TrendingUp} label={`${format(new Date(), "MMMM")} at a Glance`} />
-            <KpiCard
-              monthLabel={format(new Date(), "MMMM")}
-              collected={collectedRevenue}
-              outstanding={outstandingRevenue}
-              confirmed={confirmedBookingsCount ?? 0}
-              newGuests={newContactsCount ?? 0}
-              collectedDeltaPct={collectedDeltaPct}
-              unpaidCount={unpaidCount}
-              confirmedDelta={confirmedDelta}
-              newGuestsDelta={newGuestsDelta}
-            />
-          </section> */}
           {/* Coming Up — swapped into the "at a Glance" slot (desktop bottom-left, wide column) */}
           <section className="space-y-2">
             <SectionLabel icon={CalendarDays} label="Coming Up" />
@@ -595,6 +585,12 @@ export default async function DashboardPage() {
     />
   </div>
 </section>
+
+          {/* SECTION: VENUE SALES (actual Square takings — distinct from pre-booked revenue) */}
+          <section className="space-y-2 lg:col-span-2">
+            <SectionLabel icon={Wine} label="Venue Sales" />
+            <VenueSalesSection data={venueSales} />
+          </section>
 
           {/* This month "at a Glance" — swapped into the Coming Up slot (desktop right column) */}
           <section className={`space-y-2 lg:col-start-2 ${tonightGeneralEvent ? "lg:row-start-2" : "lg:row-start-1"}`}>

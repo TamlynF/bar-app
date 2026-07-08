@@ -130,7 +130,7 @@ export function EventCard({
   const subLabel = event.subType ?? "Event";
   const price = priceLabel(event);
   const faceBase =
-    "absolute inset-x-0 top-0 rounded-2xl border border-hairline bg-canvas-2 backface-hidden";
+    "ev-card absolute inset-x-0 top-0 rounded-2xl border border-hairline bg-canvas-2 backface-hidden";
 
   return (
     <div
@@ -164,7 +164,7 @@ export function EventCard({
           className={
             faceBase +
             " flex items-center gap-3 p-3 h-full overflow-hidden sm:gap-4 sm:p-4" +
-            (open ? " pointer-events-none" : "")
+            (open ? " pointer-events-none is-lit" : "")
           }
         >
           {/* Date chip — tinted with the subtype colour (.ad-kind reads --ev-c) */}
@@ -235,7 +235,7 @@ export function EventCard({
           className={
             faceBase +
             " flex flex-col p-3 sm:p-4 transform-[rotateY(180deg)]" +
-            (open ? "" : " pointer-events-none")
+            (open ? " is-lit" : " pointer-events-none")
           }
         >
           <div className="flex items-center gap-2 mb-2">
