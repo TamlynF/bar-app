@@ -96,8 +96,8 @@ export async function getClashingEvents(
 }
 
 /**
- * Used when an admin edits the date/time of an already-confirmed booking. The
- * booking drops back to "pending", its linked event is deactivated, and the band
+ * Used when an admin edits the date/time of an already-booked booking. The
+ * booking drops back to "offered", its linked event is deactivated, and the band
  * is emailed to re-confirm the new slot.
  */
 export async function rescheduleConfirmedBooking(
@@ -114,15 +114,15 @@ export async function rescheduleConfirmedBooking(
 
   const { data: record, error } = await supabase
     .from("band_booking_requests")
-    .update({ ...fields, status: "pending", updated_by: empId, updated_at: new Date().toISOString() })
+    .update({ ...fields, status: "offered", updated_by: empId, updated_at: new Date().toISOString() })
     .eq("id", id)
     .select("booker_name, email, group_name, selected_date, selected_start_time, selected_end_time, event_id")
     .single();
 
   if (error || !record) throw new Error("Failed to update booking.");
 
-  // Back to pending → take the linked event off the schedule.
-  const plan = planBandEventSync({ status: "pending", selectedDate: record.selected_date, eventId: record.event_id });
+  // Back to offered → take the linked event off the schedule until re-booked.
+  const plan = planBandEventSync({ status: "offered", selectedDate: record.selected_date, eventId: record.event_id });
   if (plan.action === "deactivate") {
     await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
   }
@@ -226,17 +226,30 @@ export async function updateBandStatus(
       }
     }
   } else if (plan.action === "deactivate") {
-    // Cancelling a confirmed booking takes its linked event off the schedule.
+    // Any non-booked status takes the linked event off the schedule.
     await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
   }
 
-  // Send outcome email for confirmed or cancelled
+  // Emails per stage: offered → offer email; booked/declined → the existing
+  // outcome templates (mapped onto their old confirmed/cancelled names);
+  // new/reviewing → silent.
   let emailError: string | null = null;
-  if (status === "confirmed" || status === "cancelled") {
+  if (status === "offered") {
+    emailError = await sendOfferEmail(
+      record.booker_name,
+      record.email,
+      record.group_name,
+      record.selected_date,
+      record.selected_start_time,
+      record.selected_end_time,
+      record.payment_amount,
+      adminNotes
+    );
+  } else if (status === "booked" || status === "declined") {
     emailError = await sendOutcomeEmail(
       record.booker_name,
       record.email,
-      status,
+      status === "booked" ? "confirmed" : "cancelled",
       record.group_name,
       record.selected_date,
       record.selected_start_time,
@@ -389,5 +402,67 @@ async function sendOutcomeEmail(
     return error.message ?? "Email failed to send.";
   }
   console.log("[band outcome email] sent:", data?.id, "→", email);
+  return null;
+}
+
+async function sendOfferEmail(
+  name: string,
+  email: string,
+  groupName: string | null,
+  date: string | null,
+  startTime: string | null,
+  endTime: string | null,
+  paymentAmount: number | null,
+  notes?: string | null
+): Promise<string | null> {
+  const slot = date
+    ? `${formatDateLong(date)}${startTime ? `, ${formatTime12(startTime)}` : ""}${endTime ? ` – ${formatTime12(endTime)}` : ""}`
+    : "to be arranged";
+
+  const html = `
+    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F4EA;border-radius:16px;overflow:hidden;">
+      <div style="background:#5C4033;padding:32px 24px;text-align:center;">
+        <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
+          We'd Love to Book You
+        </h1>
+        ${groupName ? `<p style="margin:8px 0 0;color:#E6DFC8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
+      </div>
+      <div style="padding:32px 24px;">
+        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">Hi ${name},</p>
+        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">
+          Great news — we'd love to have ${groupName ? `<strong>${groupName}</strong>` : "you"} play at <strong>Don Fenticas</strong>. Here's what we're offering:
+        </p>
+        <div style="background:#fff;border:2px solid #E6DFC8;border-radius:12px;padding:20px;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Proposed Slot</p>
+          <p style="margin:0;font-size:18px;font-weight:900;color:#1F1F1A;">${slot}</p>
+          ${paymentAmount != null ? `<p style="margin:8px 0 0;font-size:14px;font-weight:700;color:#5F624F;">Fee: £${paymentAmount}</p>` : ""}
+        </div>
+        ${notes ? `
+        <div style="background:#fff;border-left:4px solid #5C4033;border-radius:8px;padding:16px;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Note from our team</p>
+          <p style="margin:0;font-size:14px;color:#1F1F1A;line-height:1.5;">${notes}</p>
+        </div>` : ""}
+        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">
+          Reply to this email to accept the slot or discuss details — once you confirm, we'll lock it in and it goes on our events calendar.
+        </p>
+      </div>
+      <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
+        <p style="margin:0;font-size:11px;color:#5F624F;">
+          Don Fenticas — Unit 1, Regent St, Hinckley LE10 0BB
+        </p>
+      </div>
+    </div>`;
+
+  const { data, error } = await resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `We'd love to book you${groupName ? `, ${groupName}` : ""} — Don Fenticas`,
+    html,
+  });
+  if (error) {
+    console.error("[band offer email] Resend failed:", JSON.stringify(error));
+    return error.message ?? "Email failed to send.";
+  }
+  console.log("[band offer email] sent:", data?.id, "→", email);
   return null;
 }

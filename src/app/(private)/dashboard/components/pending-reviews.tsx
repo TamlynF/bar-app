@@ -14,10 +14,10 @@ export function PendingReviews({ items }: { items: PendingItem[] }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 space-y-3">
+    <div className="space-y-3 rounded-2xl border border-amber-200 bg-amber-50 p-5">
       <div className="flex items-center gap-2">
-        <Clock className="w-4 h-4 text-amber-600" />
-        <h3 className="text-sm font-black uppercase tracking-wide text-amber-800">
+        <Clock className="h-4 w-4 text-amber-600" />
+        <h3 className="font-black text-sm tracking-wide text-amber-800 uppercase">
           Needs Review ({items.length})
         </h3>
       </div>
@@ -32,17 +32,17 @@ export function PendingReviews({ items }: { items: PendingItem[] }) {
             <Link
               key={`${item.type}-${item.id}`}
               href={href}
-              className="flex items-center gap-3 bg-white rounded-xl px-4 py-3 border border-amber-200 hover:border-amber-400 transition-all group"
+              className="group flex items-center gap-3 rounded-xl border border-amber-200 bg-white px-4 py-3 transition-all hover:border-amber-400"
             >
-              <Icon className="w-4 h-4 text-amber-600 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-black text-[#1F1F1A] truncate">{item.name}</p>
-                <p className="text-[10px] text-amber-700 uppercase tracking-wide font-bold">{typeLabel}</p>
+              <Icon className="h-4 w-4 shrink-0 text-amber-600" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-black text-sm text-[#1F1F1A]">{item.name}</p>
+                <p className="text-[10px] font-bold tracking-wide text-amber-700 uppercase">{typeLabel}</p>
               </div>
-              <p className="text-[11px] text-[#5F624F] shrink-0 hidden sm:block">
+              <p className="hidden shrink-0 text-[11px] text-[#5F624F] sm:block">
                 {new Date(item.created_at).toLocaleDateString("en-GB")}
               </p>
-              <ArrowRight className="w-3.5 h-3.5 text-amber-500 shrink-0 group-hover:translate-x-0.5 transition-transform" />
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-amber-500 transition-transform group-hover:translate-x-0.5" />
             </Link>
           );
         })}
@@ -50,14 +50,14 @@ export function PendingReviews({ items }: { items: PendingItem[] }) {
 
       <div className="flex gap-2 pt-1">
         <Link
-          href="/event-bookings/music-bookings?status=pending"
-          className="flex-1 text-center text-[10px] font-black uppercase tracking-wide py-2 rounded-xl bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
+          href="/event-bookings/music-bookings?status=new"
+          className="flex-1 rounded-xl bg-amber-100 py-2 text-center font-black text-[10px] tracking-wide text-amber-800 uppercase transition-colors hover:bg-amber-200"
         >
           View Band Applications
         </Link>
         <Link
           href="/event-bookings/private-bookings?status=pending"
-          className="flex-1 text-center text-[10px] font-black uppercase tracking-wide py-2 rounded-xl bg-amber-100 text-amber-800 hover:bg-amber-200 transition-colors"
+          className="flex-1 rounded-xl bg-amber-100 py-2 text-center font-black text-[10px] tracking-wide text-amber-800 uppercase transition-colors hover:bg-amber-200"
         >
           View Private Hire
         </Link>

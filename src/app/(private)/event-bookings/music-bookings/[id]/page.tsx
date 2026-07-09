@@ -2,11 +2,12 @@ import React from "react";
 import { notFound } from "next/navigation";
 import { getBandBookingById } from "../actions";
 import BandDetailClient from "./band-detail-client";
-import BackButton from "@/components/ui/back-button";
 import {
   CheckCircle,
   XCircle,
   Clock,
+  Inbox,
+  Send,
   Instagram,
   Facebook,
   Youtube,
@@ -25,18 +26,28 @@ const STATUS_CONFIG: Record<
   string,
   { label: string; badge: string; icon: React.ElementType }
 > = {
-  pending: {
-    label: "Pending",
+  new: {
+    label: "New",
+    badge: "bg-sky-50 text-sky-700 border-sky-200",
+    icon: Inbox,
+  },
+  reviewing: {
+    label: "Reviewing",
     badge: "bg-amber-50 text-amber-700 border-amber-200",
     icon: Clock,
   },
-  confirmed: {
-    label: "Confirmed",
+  offered: {
+    label: "Offered",
+    badge: "bg-purple-50 text-purple-700 border-purple-200",
+    icon: Send,
+  },
+  booked: {
+    label: "Booked",
     badge: "bg-green-50 text-green-700 border-green-200",
     icon: CheckCircle,
   },
-  cancelled: {
-    label: "Cancelled",
+  declined: {
+    label: "Declined",
     badge: "bg-red-50 text-red-700 border-red-200",
     icon: XCircle,
   },
@@ -51,11 +62,11 @@ const SOCIAL_ICONS: Record<string, React.ElementType> = {
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
-      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
+    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3 last:border-0">
+      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
-      <span className="text-sm font-bold text-[#1F1F1A] text-right">{value || "—"}</span>
+      <span className="text-right text-sm font-bold text-[#1F1F1A]">{value || "—"}</span>
     </div>
   );
 }
@@ -88,7 +99,7 @@ export default async function BandBookingDetailPage({
     notFound();
   }
 
-  const cfg = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.pending;
+  const cfg = STATUS_CONFIG[request.status] ?? STATUS_CONFIG.new;
   const StatusIcon = cfg.icon;
 
   const socials = request.social_links
@@ -98,8 +109,8 @@ export default async function BandBookingDetailPage({
   const dates = ((request.preferred_dates as string[] | null) ?? []).filter(Boolean);
 
   return (
-    <div className="flex-1 bg-background min-h-screen">
-      <div className="px-4 py-4 md:px-8 sm:py-0 max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen flex-1 bg-background">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-4 sm:py-0 md:px-8">
 
         {/* Back link + header */}
         <div className="space-y-3">
@@ -107,36 +118,36 @@ export default async function BandBookingDetailPage({
             <BackButton label="All Band Applications" />
           </div> */}
 
-          <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tight leading-tight">
+              <h1 className="font-black text-2xl leading-tight tracking-tight text-[#1F1F1A] uppercase">
                 {request.group_name || request.booker_name}
               </h1>
               {request.group_name && (
-                <p className="text-sm text-[#5F624F] mt-0.5">{request.booker_name}</p>
+                <p className="mt-0.5 text-sm text-[#5F624F]">{request.booker_name}</p>
               )}
             </div>
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider shrink-0",
+                "inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-[10px] tracking-wider uppercase",
                 cfg.badge
               )}
             >
-              <StatusIcon className="w-3.5 h-3.5" />
+              <StatusIcon className="h-3.5 w-3.5" />
               {cfg.label}
             </span>
           </div>
         </div>
 
         {/* Event details + Contact — two-column on sm+ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
           {/* Event details */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Event Details
             </p>
-            <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white px-4 shadow-sm">
               <DetailRow label="Act Name" value={request.group_name} />
               <DetailRow label="Type" value={toTitleCase(request.type)} />
               <DetailRow label="Genre" value={toTitleCase(request.genre)} />
@@ -158,21 +169,21 @@ export default async function BandBookingDetailPage({
                 />
               )}
               {request.payment_amount != null && (
-                <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
-                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
+                <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3 last:border-0">
+                  <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                     Payment
                   </span>
                   <div className="flex items-center gap-1.5 text-right">
-                    <DollarSign className="w-3.5 h-3.5 text-[#5F624F] opacity-50" />
-                    <span className="text-sm font-black text-[#1F1F1A]">
+                    <DollarSign className="h-3.5 w-3.5 text-[#5F624F] opacity-50" />
+                    <span className="font-black text-sm text-[#1F1F1A]">
                       £{request.payment_amount.toFixed(2)}
                     </span>
                     {request.payment_status && (
                       <span className={cn(
-                        "text-[9px] font-black uppercase tracking-tight px-1.5 py-0.5 rounded border",
+                        "rounded border px-1.5 py-0.5 font-black text-[9px] tracking-tight uppercase",
                         request.payment_status === "paid"
-                          ? "bg-green-50 border-green-200 text-green-700"
-                          : "bg-amber-50 border-amber-200 text-amber-700"
+                          ? "border-green-200 bg-green-50 text-green-700"
+                          : "border-amber-200 bg-amber-50 text-amber-700"
                       )}>
                         {request.payment_status}
                       </span>
@@ -182,10 +193,10 @@ export default async function BandBookingDetailPage({
               )}
               {dates.length > 0 ? (
                 <div className="flex items-start justify-between gap-4 py-3">
-                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
+                  <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                     Preferred Dates
                   </span>
-                  <ul className="text-right space-y-1">
+                  <ul className="space-y-1 text-right">
                     {dates.map((d, i) => (
                       <li key={i} className="text-sm font-bold text-[#1F1F1A]">
                         {new Date(d).toLocaleDateString("en-GB", {
@@ -206,26 +217,26 @@ export default async function BandBookingDetailPage({
 
           {/* Contact */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Contact Information
             </p>
-            <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white px-4 shadow-sm">
               <DetailRow label="Name" value={request.booker_name} />
-              <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8]">
-                <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
-                  <Mail className="w-3 h-3" /> Email
+              <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3">
+                <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                  <Mail className="h-3 w-3" /> Email
                 </span>
                 <a
                   href={`mailto:${request.email}`}
-                  className="text-sm font-bold text-[#5C4033] underline underline-offset-2 text-right break-all"
+                  className="text-right text-sm font-bold break-all text-[#5C4033] underline underline-offset-2"
                 >
                   {request.email}
                 </a>
               </div>
               {request.phone_no && (
-                <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8]">
-                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
-                    <Phone className="w-3 h-3" /> Phone
+                <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3">
+                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                    <Phone className="h-3 w-3" /> Phone
                   </span>
                   <a
                     href={`tel:${request.phone_no}`}
@@ -236,8 +247,8 @@ export default async function BandBookingDetailPage({
                 </div>
               )}
               <div className="flex items-start justify-between gap-4 py-3">
-                <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
-                  <CalendarDays className="w-3 h-3" /> Submitted
+                <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                  <CalendarDays className="h-3 w-3" /> Submitted
                 </span>
                 <span className="text-sm font-bold text-[#1F1F1A]">
                   {new Date(request.created_at).toLocaleDateString("en-GB", {
@@ -251,11 +262,11 @@ export default async function BandBookingDetailPage({
 
             {/* Bank details — only if present */}
             {(request.bank_account_no || request.bank_sort_code) && (
-              <div className="space-y-2 mt-2">
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+              <div className="mt-2 space-y-2">
+                <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                   Bank Details
                 </p>
-                <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden shadow-sm">
+                <div className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white px-4 shadow-sm">
                   {request.bank_account_name && <DetailRow label="Account Name" value={request.bank_account_name} />}
                   {request.bank_account_no && <DetailRow label="Account No." value={request.bank_account_no} />}
                   {request.bank_sort_code && <DetailRow label="Sort Code" value={request.bank_sort_code} />}
@@ -269,7 +280,7 @@ export default async function BandBookingDetailPage({
         {/* Social links */}
         {socials.length > 0 && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Social Media
             </p>
             <div className="flex flex-wrap gap-2">
@@ -281,9 +292,9 @@ export default async function BandBookingDetailPage({
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 px-3 py-2 bg-white border border-[#E6DFC8] rounded-xl text-xs font-bold text-[#5C4033] hover:bg-[#F7F4EA] transition-colors shadow-sm"
+                    className="flex items-center gap-1.5 rounded-xl border border-[#E6DFC8] bg-white px-3 py-2 text-xs font-bold text-[#5C4033] shadow-sm transition-colors hover:bg-[#F7F4EA]"
                   >
-                    <Icon className="w-3.5 h-3.5" />
+                    <Icon className="h-3.5 w-3.5" />
                     {key.charAt(0).toUpperCase() + key.slice(1)}
                   </a>
                 );
@@ -295,22 +306,22 @@ export default async function BandBookingDetailPage({
         {/* Notes from applicant */}
         {request.notes && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Notes from Applicant
             </p>
-            <p className="text-sm text-[#1F1F1A] bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3 shadow-sm">
+            <p className="rounded-2xl border border-[#E6DFC8] bg-white px-4 py-3 text-sm text-[#1F1F1A] shadow-sm">
               {request.notes}
             </p>
           </div>
         )}
 
-        {/* Admin notes — read-only when resolved */}
-        {request.status !== "pending" && request.admin_notes && (
+        {/* Admin notes — read-only once booked/declined (editable in the action area otherwise) */}
+        {(request.status === "booked" || request.status === "declined") && request.admin_notes && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Admin Notes
             </p>
-            <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] border border-[#E6DFC8] rounded-2xl px-4 py-3">
+            <p className="rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-4 py-3 text-sm text-[#1F1F1A]">
               {request.admin_notes}
             </p>
           </div>

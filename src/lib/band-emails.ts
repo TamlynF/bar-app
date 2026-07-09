@@ -34,9 +34,9 @@ export type RescheduleEmail = {
 };
 
 /**
- * Email a band receives when an admin changes the date/time of an already-confirmed
+ * Email a band receives when an admin changes the date/time of an already-booked
  * booking. It asks them to re-confirm the new slot (the booking has been moved back
- * to "pending" until they do).
+ * to "offered" until they do).
  */
 export function buildRescheduleEmail(p: {
   name: string;

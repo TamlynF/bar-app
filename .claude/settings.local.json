@@ -80,7 +80,8 @@
       "Bash(echo \"exit: $?\")",
       "Bash(python -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('upload'\\),indent=2\\)\\)\")",
       "mcp__visualize__read_me",
-      "mcp__visualize__show_widget"
+      "mcp__visualize__show_widget",
+      "Bash(npx vitest *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\tamly\\.claude\\skills",

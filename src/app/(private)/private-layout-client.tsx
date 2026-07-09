@@ -10,6 +10,7 @@ import {
     ArrowLeft,
     Sparkles,
     LogOut,
+    TrendingUp,
     Brain,
     ChevronDown,
     ChevronUp,
@@ -93,7 +94,7 @@ export default function PrivateLayoutClient({
 
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname && pathname.startsWith("/event-bookings") && !isRequestPath(pathname))
     const [requestsOpen, setRequestsOpen] = useState(() => !!pathname && isRequestPath(pathname))
-    const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname && pathname.startsWith("/event-setups") && !isQuizPath(pathname))
+    const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname && (pathname.startsWith("/event-setups") || isQuizPath(pathname)))
     const [quizOpen, setQuizOpen] = useState(() => !!pathname && isQuizPath(pathname))
     const [settingsOpen, setSettingsOpen] = useState(() => !!pathname && pathname.startsWith("/settings") && !isQuizPath(pathname))
 
@@ -109,24 +110,25 @@ export default function PrivateLayoutClient({
 
     const badgeText = pendingRequestsCount > 99 ? "99+" : String(pendingRequestsCount)
 
-    // Mobile bottom nav — five thumb-reach destinations. Quiz stays
-    // desktop/hub-only until Trends & Content arrive with a "More" sheet.
+    // Mobile bottom nav — thumb-reach destinations. Quiz lives under Events;
+    // Market Trends links straight to the marketing insights page.
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Bookings", href: "/event-bookings", icon: Tickets },
         { label: "Requests", href: "/requests", icon: Inbox },
         { label: "Events", href: "/event-setups", icon: CalendarCogIcon },
+        { label: "Trends", href: "/marketing/trends", icon: TrendingUp },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
-    // Desktop sidebar. `/quiz` is a stable key only — the Quiz parent row is
-    // a toggle and never navigates.
+    // Desktop sidebar. Quiz pages now live under the Events group; Market
+    // Trends is a plain link to the marketing insights page.
     const sidebarItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Bookings", href: "/event-bookings", icon: Tickets },
         { label: "Requests", href: "/requests", icon: Inbox },
         { label: "Events", href: "/event-setups", icon: CalendarCogIcon },
-        { label: "Quiz", href: "/quiz", icon: Brain },
+        { label: "Market Trends", href: "/marketing/trends", icon: TrendingUp },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
@@ -153,10 +155,11 @@ export default function PrivateLayoutClient({
         { label: "Event Categories", href: "/event-setups/event-types", icon: Component },
     ]
 
+    // Nested Quiz sub-group, rendered inside the Events group.
     const quizSubItems = [
         { label: "Quiz History", href: "/event-setups/quiz-history", icon: Grid2X2 },
-        { label: "Leaderboard", href: "/event-setups/leaderboard", icon: Crown },
         { label: "Quiz Rules", href: "/event-setups/quiz-categories", icon: Dices },
+        { label: "Leaderboard", href: "/event-setups/leaderboard", icon: Crown },
         { label: "Teams", href: "/settings/teams", icon: Medal },
     ]
 
@@ -314,25 +317,23 @@ export default function PrivateLayoutClient({
                         const isEvents = item.label === "Bookings"
                         const isRequests = item.label === "Requests"
                         const isEventsNav = item.label === "Events"
-                        const isQuizGroup = item.label === "Quiz"
 
-                        // Quiz and Requests claim their own paths; Bookings,
-                        // Events and Settings exclude them so two parents
-                        // never light up at once.
-                        const isActive = isQuizGroup
-                            ? onQuizPath
-                            : isRequests
+                        // Requests claims its own paths; Bookings and Settings
+                        // exclude Requests/Quiz so two parents never light up at
+                        // once. Quiz pages now live under the Events group, so
+                        // Events lights up on them too.
+                        const isActive = isRequests
                             ? onRequestPath
                             : isEvents
                             ? (normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)) && !onRequestPath
                             : isEventsNav
-                            ? (normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)) && !onQuizPath
+                            ? (normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)) || onQuizPath
                             : isSettings
                             ? (normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)) && !onQuizPath
                             : normalizedPathname === normalizedHref || (item.href !== "/dashboard" && normalizedPathname.startsWith(`${normalizedHref}/`))
 
-                        const hasSubItems = isEvents || isRequests || isSettings || isEventsNav || isQuizGroup
-                        const isOpen = isEvents ? eventsOpen : isRequests ? requestsOpen : isSettings ? settingsOpen : isEventsNav ? eventsNavOpen : isQuizGroup ? quizOpen : false
+                        const hasSubItems = isEvents || isRequests || isSettings || isEventsNav
+                        const isOpen = isEvents ? eventsOpen : isRequests ? requestsOpen : isSettings ? settingsOpen : isEventsNav ? eventsNavOpen : false
                         const toggle = isEvents
                             ? () => setEventsOpen((p) => !p)
                             : isRequests
@@ -341,8 +342,6 @@ export default function PrivateLayoutClient({
                             ? () => setSettingsOpen((p) => !p)
                             : isEventsNav
                             ? () => setEventsNavOpen((p) => !p)
-                            : isQuizGroup
-                            ? () => setQuizOpen((p) => !p)
                             : undefined
 
                         return (
@@ -483,30 +482,44 @@ export default function PrivateLayoutClient({
                                                 </Link>
                                             )
                                         })}
-                                    </div>
-                                )}
 
-                                {/* Sub-items for Quiz */}
-                                {isQuizGroup && quizOpen && (
-                                    <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
-                                        {quizSubItems.map((sub) => {
-                                            const isSubActive = normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
-                                            return (
-                                                <Link
-                                                    key={sub.href}
-                                                    href={sub.href}
-                                                    className={cn(
-                                                        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
-                                                        isSubActive
-                                                            ? "bg-[#5C4033]/15 text-[#5C4033]"
-                                                            : "text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
-                                                    )}
-                                                >
-                                                    <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
-                                                    {sub.label}
-                                                </Link>
-                                            )
-                                        })}
+                                        {/* Nested Quiz sub-group */}
+                                        <button
+                                            type="button"
+                                            onClick={() => setQuizOpen((p) => !p)}
+                                            className={cn(
+                                                "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
+                                                onQuizPath
+                                                    ? "bg-[#5C4033]/15 text-[#5C4033]"
+                                                    : "text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
+                                            )}
+                                        >
+                                            <Brain className={cn("h-3.5 w-3.5", onQuizPath ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                            <span className="flex-1 text-left">Quiz</span>
+                                            {quizOpen ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />}
+                                        </button>
+                                        {quizOpen && (
+                                            <div className="mt-1 ml-3 space-y-1 border-l border-[#E6DFC8] pb-1 pl-2">
+                                                {quizSubItems.map((sub) => {
+                                                    const isSubActive = normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
+                                                    return (
+                                                        <Link
+                                                            key={sub.href}
+                                                            href={sub.href}
+                                                            className={cn(
+                                                                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
+                                                                isSubActive
+                                                                    ? "bg-[#5C4033]/15 text-[#5C4033]"
+                                                                    : "text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
+                                                            )}
+                                                        >
+                                                            <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                            {sub.label}
+                                                        </Link>
+                                                    )
+                                                })}
+                                            </div>
+                                        )}
                                     </div>
                                 )}
 

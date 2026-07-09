@@ -21,7 +21,6 @@ import {
   Pencil,
   Phone,
   RefreshCw,
-  Save,
   Star,
   Table as TableIcon,
   Trash2,
@@ -172,8 +171,11 @@ export default function BookingList({
   }, [selectedId, isWide]);
 
   const handleSelectBooking = (booking: GeneralBooking) => {
-    setSelectedId(booking.id);
-    setIsEditing(false);
+    // Switching booking is an exit from the current editor — guard it too.
+    guardedClose(() => {
+      setSelectedId(booking.id);
+      setIsEditing(false);
+    });
   };
 
   const closeSheet = () => {
@@ -267,8 +269,25 @@ export default function BookingList({
     }
   };
 
-  const handleSaveDetails = async () => {
-    if (!selectedBooking) return;
+  // Whether the edit form diverges from the selected booking's saved values.
+  // Mirrors the initial form seeded in handleEnterEditMode.
+  const isDirty = () => {
+    if (!selectedBooking) return false;
+    const currentTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id || "";
+    return (
+      editForm.group_name !== (selectedBooking.group_name || "") ||
+      editForm.group_size !== (Number(selectedBooking.group_size) || 0) ||
+      editForm.special_requests !== (selectedBooking.special_requests || "") ||
+      editForm.table_id !== currentTableId ||
+      editForm.status !== (normStatus(selectedBooking.status) || "pending") ||
+      editForm.event_id !== String(selectedBooking.event_id ?? "")
+    );
+  };
+
+  // Persist the current edits. Resolves true on success (or when there's nothing
+  // to do), false if the user backs out of the destructive prompt or it fails.
+  const persistEdits = async (): Promise<boolean> => {
+    if (!selectedBooking) return true;
 
     // Warn before a destructive save that frees the booking's table (rules 3c / 3a.3).
     const origStatus = normStatus(selectedBooking.status) || "pending";
@@ -286,20 +305,43 @@ export default function BookingList({
         confirmLabel: "Save changes",
         variant: "destructive",
       });
-      if (!ok) return;
+      if (!ok) return false;
     }
 
-    startTransition(async () => {
-      try {
-        await updateGeneralBookingDetails(selectedBooking.id, editForm);
-        setIsEditing(false);
-        toast.success("Booking updated successfully");
-        router.refresh();
-      } catch (error) {
-        console.error(error);
-        toast.error(error instanceof Error ? error.message : "Failed to save changes");
-      }
+    const bookingId = selectedBooking.id;
+    return new Promise<boolean>((resolve) => {
+      startTransition(async () => {
+        try {
+          await updateGeneralBookingDetails(bookingId, editForm);
+          toast.success("Booking updated successfully");
+          router.refresh();
+          resolve(true);
+        } catch (error) {
+          console.error(error);
+          toast.error(error instanceof Error ? error.message : "Failed to save changes");
+          resolve(false);
+        }
+      });
     });
+  };
+
+  // Guard any exit from an active edit (close panel / dismiss sheet / switch
+  // booking): if there are unsaved changes, ask whether to save or discard
+  // before running `proceed`.
+  const guardedClose = async (proceed: () => void) => {
+    if (isEditing && isDirty()) {
+      const save = await confirm({
+        title: "Save changes?",
+        description: "You've made changes to this booking. Save them before closing?",
+        confirmLabel: "Save changes",
+        cancelLabel: "Discard",
+      });
+      if (save) {
+        const ok = await persistEdits();
+        if (!ok) return; // save failed or was backed out of — stay in the editor
+      }
+    }
+    proceed();
   };
 
   const handleDeleteBooking = (id: string) => {
@@ -394,7 +436,7 @@ export default function BookingList({
             )}
             <button
               type="button"
-              onClick={closeSheet}
+              onClick={() => guardedClose(closeSheet)}
               aria-label="Close panel"
               className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F7F4EA] text-[#5F624F] transition-colors hover:bg-[#E6DFC8]"
             >
@@ -633,52 +675,36 @@ export default function BookingList({
       </div>
     );
 
-    const footer = (
+    // In edit mode there are no action buttons — closing the panel/sheet with
+    // unsaved changes prompts to save (see guardedClose). View mode keeps
+    // Delete + Edit.
+    const footer = isEditing ? null : (
       <div className="shrink-0 border-t border-[#E6DFC8] bg-white/90 px-5 py-4 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md sm:px-6">
-        {isEditing ? (
-          <div className="grid grid-cols-[auto_1fr] gap-3">
-            <Button
-              variant="secondary"
-              onClick={() => setIsEditing(false)}
-              className="h-12 rounded-xl px-5 font-black text-[11px] tracking-wide uppercase"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSaveDetails}
-              disabled={isPending}
-              className="h-12 rounded-xl bg-[#1B4332] font-black text-xs tracking-widest text-white uppercase hover:bg-[#1B4332]/85"
-            >
-              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><Save className="mr-2 h-4 w-4" /> Save</>)}
-            </Button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-[auto_1fr] gap-3">
-            <Button
-              variant="secondary"
-              disabled={isPending}
-              onClick={async () => {
-                const ok = await confirm({
-                  title: "Delete booking",
-                  description: "Permanently delete this booking? This cannot be undone.",
-                  confirmLabel: "Delete",
-                  variant: "destructive",
-                });
-                if (ok) handleDeleteBooking(selectedBooking.id);
-              }}
-              className="h-12 rounded-xl px-5 font-black text-[11px] tracking-wide text-[#5C4033] uppercase hover:bg-red-50! hover:text-red-600!"
-            >
-              <Trash2 className="mr-1.5 h-4 w-4" />
-              Delete
-            </Button>
-            <Button
-              onClick={handleEnterEditMode}
-              className="h-12 rounded-xl bg-[#B45309] font-black text-xs tracking-widest text-white uppercase hover:bg-[#B45309]/85"
-            >
-              <Pencil className="mr-2 h-4 w-4" /> Edit
-            </Button>
-          </div>
-        )}
+        <div className="grid grid-cols-[auto_1fr] gap-3">
+          <Button
+            variant="secondary"
+            disabled={isPending}
+            onClick={async () => {
+              const ok = await confirm({
+                title: "Delete booking",
+                description: "Permanently delete this booking? This cannot be undone.",
+                confirmLabel: "Delete",
+                variant: "destructive",
+              });
+              if (ok) handleDeleteBooking(selectedBooking.id);
+            }}
+            className="h-12 rounded-xl px-5 font-black text-[11px] tracking-wide text-[#5C4033] uppercase hover:bg-red-50! hover:text-red-600!"
+          >
+            <Trash2 className="mr-1.5 h-4 w-4" />
+            Delete
+          </Button>
+          <Button
+            onClick={handleEnterEditMode}
+            className="h-12 rounded-xl bg-[#B45309] font-black text-xs tracking-widest text-white uppercase hover:bg-[#B45309]/85"
+          >
+            <Pencil className="mr-2 h-4 w-4" /> Edit
+          </Button>
+        </div>
       </div>
     );
 
@@ -730,7 +756,7 @@ export default function BookingList({
       ) : (
         <>
           {listItems}
-          <Sheet open={!!selectedBooking} onOpenChange={open => { if (!open) closeSheet(); }}>
+          <Sheet open={!!selectedBooking} onOpenChange={open => { if (!open) guardedClose(closeSheet); }}>
             <SheetContent
               side="bottom"
               onOpenAutoFocus={e => e.preventDefault()}
@@ -781,7 +807,7 @@ function RefinedCard({
       className={cn(
         "flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all active:scale-[0.99]",
         selected
-          ? "border-2 border-[#B45309] bg-[#B45309]/[0.04] shadow-lg ring-2 ring-[#B45309]/20"
+          ? "border-2 border-[#B45309] bg-[#B45309]/4 shadow-lg ring-2 ring-[#B45309]/20"
           : "border border-[#E6DFC8] bg-white shadow-sm",
       )}
     >

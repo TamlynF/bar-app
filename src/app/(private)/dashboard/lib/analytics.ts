@@ -185,10 +185,10 @@ export function revenueByEventType(
     .sort((a, b) => b.revenue - a.revenue);
 }
 
-/** Confirmed band/entertainment spend — pair with revenue for margin context. */
+/** Booked band/entertainment spend — pair with revenue for margin context. */
 export function entertainmentSpend(bands: BandCostRow[]): number {
   const total = bands
-    .filter((b) => b.status === "confirmed")
+    .filter((b) => b.status === "booked")
     .reduce((s, b) => s + (b.payment_amount ?? 0), 0);
   return Math.round(total * 100) / 100;
 }

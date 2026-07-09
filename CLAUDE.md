@@ -208,8 +208,8 @@ The booking pages share a public dark theme but each has its own logic:
 | `events` / `event_types` | Schedule; events lazily created on first booking for a date |
 | `booking_table_mappings` | Seating assignment for confirmed bookings |
 | `tables` | Physical tables with `max_capacity` |
-| `band_booking_requests` | Stage applications — status: `pending`, `confirmed`, `cancelled`. `confirmed` (with a date) places an active `events` row; any other status deactivates the linked event. Separate `payment_status` (`unpaid`/`paid`) tracks the fee |
-| `private_hire_requests` | Private hire enquiries — status: `pending`, `confirmed`, `cancelled` (same set as `band_booking_requests`). `confirmed` (with a date) places/updates an active `events` row; `cancelled` deactivates the linked event |
+| `band_booking_requests` | Stage applications — five-stage pipeline: `new` → `reviewing` → `offered` → `booked` → `declined`. `booked` (with a date) places an active `events` row; every other status deactivates the linked event. `offered` emails an offer, `booked`/`declined` email the outcome; reschedule sends a request back to `offered`. Separate `payment_status` (`no_payment`/`unpaid`/`partially_paid`/`paid`/`over_paid`, derived from amounts) tracks the fee |
+| `private_hire_requests` | Private hire enquiries — status: `pending`, `confirmed`, `cancelled`. `confirmed` (with a date) places/updates an active `events` row; `cancelled` deactivates the linked event |
 | `quiz_category_configs` | Quiz rounds + question count targets |
 | `past_quiz_questions` | Archive (fed back to Gemini to avoid repeats) |
 | `gallery_images` | Media on the public gallery and homepage |

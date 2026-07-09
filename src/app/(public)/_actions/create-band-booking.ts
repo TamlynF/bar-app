@@ -45,7 +45,7 @@ export async function createBandBooking(data: BandBookingData) {
         video_urls: data.video_urls.filter(Boolean),
         preferred_dates: data.preferred_dates.filter(Boolean),
         notes: data.notes || null,
-        status: "pending",
+        status: "new",
       },
     ])
     .select("id")

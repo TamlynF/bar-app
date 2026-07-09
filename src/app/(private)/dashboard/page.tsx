@@ -195,7 +195,7 @@ export default async function DashboardPage() {
     supabase
       .from("band_booking_requests")
       .select("*", { count: "exact", head: true })
-      .eq("status", "pending"),
+      .in("status", ["new", "reviewing"]),
     supabase
       .from("enquiries")
       .select("*", { count: "exact", head: true })
@@ -259,7 +259,7 @@ export default async function DashboardPage() {
     supabase
       .from("band_booking_requests")
       .select("id, event_id, group_name, booker_name, email, phone_no, type, genre, payment_amount, payment_status, selected_date, selected_start_time, selected_end_time")
-      .eq("status", "confirmed")
+      .eq("status", "booked")
       .gte("selected_date", todayStr)
       .order("selected_date", { ascending: true }),
     supabase.from("quiz_category_configs").select("question_count").eq("is_active", true),
@@ -490,7 +490,7 @@ export default async function DashboardPage() {
   // Triage "Needs Action" segments — order + colour per the design.
   const actionItems: ActionItem[] = [
     { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
-    { key: "bands", label: "Bands pending", count: pendingBands ?? 0, href: "/event-bookings/general/music/__all__?status=pending", color: "bg-purple-700" },
+    { key: "bands", label: "Bands pending", count: pendingBands ?? 0, href: "/event-bookings/general/music/__all__?status=new,reviewing", color: "bg-purple-700" },
     { key: "hires", label: "Private hires pending", count: pendingPrivate ?? 0, href: "/event-bookings/general/private/__all__?status=pending", color: "bg-blue-600" },
     { key: "enquiries", label: "Enquiries pending", count: pendingEnquiries ?? 0, href: "/requests/enquiries?status=pending", color: "bg-teal-600" },
     { key: "quizzes", label: "Missing quiz", count: quizzesMissingQuestions, href: `/event-setups/events?from=${todayStr}&to=${twelveMonthsStr}&quick=quiz,active`, color: "bg-green-700" },
@@ -505,11 +505,11 @@ export default async function DashboardPage() {
   // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 bg-background pb-24 min-h-screen">
-      <div className="space-y-5 mx-auto px-4 md:px-6 py-4 sm:py-0 max-w-6xl">
+    <div className="min-h-screen flex-1 bg-background pb-24">
+      <div className="mx-auto max-w-6xl space-y-5 px-4 py-4 sm:py-0 md:px-6">
 
         <header className="flex justify-center">
-          <p className="font-bold text-[#5F624F] text-sm uppercase tracking-wide">
+          <p className="text-sm font-bold tracking-wide text-[#5F624F] uppercase">
             {format(new Date(), "EEEE, do MMMM yyyy")}
           </p>
         </header>
@@ -519,11 +519,11 @@ export default async function DashboardPage() {
 
         {/* Analytics (left) + what's-on (right) on desktop. On mobile each card
             stacks in source order: Tonight → Bookings → KPIs → Coming Up. */}
-        <div className="items-start gap-5 grid lg:grid-cols-[1.6fr_1fr]">
+        <div className="grid items-start gap-5 lg:grid-cols-[1.6fr_1fr]">
 
           {/* Happening Tonight — mobile 1st, desktop top-right */}
           {tonightGeneralEvent && (
-            <section className="space-y-2 lg:col-start-2 row-start-1">
+            <section className="row-start-1 space-y-2 lg:col-start-2">
               <SectionLabel icon={Clock} label="Happening Tonight" />
               <TonightCard
                 event={tonightGeneralEvent}
@@ -535,7 +535,7 @@ export default async function DashboardPage() {
           )}
 
           {/* Bookings trend — mobile 2nd, desktop top-left */}
-          <div className="lg:col-start-1 row-start-1">
+          <div className="row-start-1 lg:col-start-1">
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
@@ -545,16 +545,16 @@ export default async function DashboardPage() {
             {comingUp.length > 0 ? (
               <EventRowListClient items={comingUp} />
             ) : !tonightGeneralEvent ? (
-              <div className="bg-white p-10 border border-[#E6DFC8] rounded-2xl text-center">
-                <CalendarDays className="opacity-20 mx-auto mb-3 w-10 h-10 text-[#5F624F]" />
-                <p className="font-black text-[#1F1F1A] text-sm">No Upcoming Events</p>
-                <p className="mt-1 font-medium text-[#5F624F] text-[11px]">
+              <div className="rounded-2xl border border-[#E6DFC8] bg-white p-10 text-center">
+                <CalendarDays className="mx-auto mb-3 h-10 w-10 text-[#5F624F] opacity-20" />
+                <p className="font-black text-sm text-[#1F1F1A]">No Upcoming Events</p>
+                <p className="mt-1 text-[11px] font-medium text-[#5F624F]">
                   Schedule an event in Settings to see it here.
                 </p>
               </div>
             ) : (
-              <div className="bg-white p-6 border border-[#E6DFC8] rounded-2xl text-center">
-                <p className="opacity-60 font-bold text-[#5F624F] text-[11px] uppercase tracking-wide">Nothing else scheduled</p>
+              <div className="rounded-2xl border border-[#E6DFC8] bg-white p-6 text-center">
+                <p className="text-[11px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">Nothing else scheduled</p>
               </div>
             )}
           </section>
@@ -562,14 +562,14 @@ export default async function DashboardPage() {
           {/* SECTION: TRENDS */}
 <section className="space-y-2">
   <SectionLabel icon={BarChart3} label="Trends" />
-  <div className="gap-3 grid grid-cols-1 sm:grid-cols-2">
+  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
     <RevenueTrendChart data={analytics.weekly} />
     <RevenueByTypeChart
       data={analytics.revenueByType}
       bandSpend={analytics.bandSpendThisMonth}
     />
   </div>
-  <div className="gap-3 grid grid-cols-3">
+  <div className="grid grid-cols-3 gap-3">
     <StatCard
       label="Returning"
       value={`${analytics.guestSplit.returningPct}%`}
@@ -601,7 +601,7 @@ export default async function DashboardPage() {
               icon={TrendingUp}
               label={`${format(new Date(), "MMMM")} at a Glance`}
             />
-            <div className="gap-3 grid grid-cols-2">
+            <div className="grid grid-cols-2 gap-3">
               <StatCard
                 label="Collected"
                 value={`£${analytics.thisMonth.collected.toFixed(2)}`}
@@ -633,7 +633,7 @@ export default async function DashboardPage() {
         {/* Quick links */}
         <section className="space-y-2">
           <SectionLabel icon={Zap} label="Quick Links" />
-          <div className="gap-3 grid grid-cols-2 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <QuickLink href="/book/bingo" label="Walk-in" icon={Plus} />
             <QuickLink href="/settings/tables" label="Floor Plan" icon={Grid2X2} />
             <QuickLink href="/event-setups/quiz-generator" label="Quiz" icon={Trophy} />
@@ -669,12 +669,12 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="group flex flex-col justify-center items-center gap-2 bg-white hover:bg-[#F7F4EA] p-4 border border-[#E6DFC8] rounded-2xl transition-colors"
+      className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-[#E6DFC8] bg-white p-4 transition-colors hover:bg-[#F7F4EA]"
     >
-      <div className="flex justify-center items-center bg-[#F7F4EA] group-hover:bg-white shadow-sm rounded-full w-10 h-10 transition-colors">
-        <Icon className="w-5 h-5 text-[#5C4033]" />
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F7F4EA] shadow-sm transition-colors group-hover:bg-white">
+        <Icon className="h-5 w-5 text-[#5C4033]" />
       </div>
-      <span className="font-black text-[#1F1F1A] text-[10px] uppercase tracking-wide">
+      <span className="font-black text-[10px] tracking-wide text-[#1F1F1A] uppercase">
         {label}
       </span>
     </Link>

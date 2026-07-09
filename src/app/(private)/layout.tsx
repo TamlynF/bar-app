@@ -33,7 +33,7 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         supabase
             .from("band_booking_requests")
             .select("id", { count: "exact", head: true })
-            .eq("status", "pending"),
+            .in("status", ["new", "reviewing"]),
         // Pending private-hire enquiries.
         // NOTE: check this table name against your schema — it should be the
         // table your private-bookings pages query.

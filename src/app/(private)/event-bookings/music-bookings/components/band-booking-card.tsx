@@ -14,6 +14,8 @@ import {
   CheckCircle2,
   XCircle,
   Clock3,
+  Inbox,
+  Send,
   Loader2,
   Save,
   CreditCard,
@@ -101,39 +103,100 @@ export const statusTheme: Record<
     dot: "bg-[#5F624F]",
     ring: "ring-slate-500/40",
     cardBorder: "border-[#E6DFC8]",
-    icon: <Music2 className="w-5 h-5" />,
+    icon: <Music2 className="h-5 w-5" />,
     label: "All",
   },
-  confirmed: {
-    bg: "bg-green-50",
-    text: "text-green-700",
-    border: "border-green-200",
-    dot: "bg-green-500",
-    ring: "ring-green-500/40",
-    cardBorder: "border-green-500/50",
-    icon: <CheckCircle2 className="w-5 h-5" />,
-    label: "Confirmed",
+  new: {
+    bg: "bg-sky-50",
+    text: "text-sky-700",
+    border: "border-sky-200",
+    dot: "bg-sky-500",
+    ring: "ring-sky-500/40",
+    cardBorder: "border-sky-500/50",
+    icon: <Inbox className="h-5 w-5" />,
+    label: "New",
   },
-  pending: {
+  reviewing: {
     bg: "bg-amber-50",
     text: "text-amber-700",
     border: "border-amber-200",
     dot: "bg-amber-500",
     ring: "ring-amber-500/40",
     cardBorder: "border-amber-500/50",
-    icon: <Clock3 className="w-5 h-5" />,
-    label: "Pending",
+    icon: <Clock3 className="h-5 w-5" />,
+    label: "Reviewing",
   },
-  cancelled: {
+  offered: {
+    bg: "bg-purple-50",
+    text: "text-purple-700",
+    border: "border-purple-200",
+    dot: "bg-purple-500",
+    ring: "ring-purple-500/40",
+    cardBorder: "border-purple-500/50",
+    icon: <Send className="h-5 w-5" />,
+    label: "Offered",
+  },
+  booked: {
+    bg: "bg-green-50",
+    text: "text-green-700",
+    border: "border-green-200",
+    dot: "bg-green-500",
+    ring: "ring-green-500/40",
+    cardBorder: "border-green-500/50",
+    icon: <CheckCircle2 className="h-5 w-5" />,
+    label: "Booked",
+  },
+  declined: {
     bg: "bg-red-50",
     text: "text-red-700",
     border: "border-red-200",
     dot: "bg-red-500",
     ring: "ring-red-500/40",
     cardBorder: "border-red-500/50",
-    icon: <XCircle className="w-5 h-5" />,
-    label: "Cancelled",
+    icon: <XCircle className="h-5 w-5" />,
+    label: "Declined",
   },
+};
+
+/**
+ * Which status buttons each stage shows, and where they lead. Booked is terminal
+ * here (aside from Decline) because slot changes go through the reschedule flow,
+ * which lands on "offered". Colours are semantic per stage, matching the app's
+ * existing status-button convention (not the Edit/Save identity colours).
+ */
+export const BAND_TRANSITIONS: Record<
+  BandStatus,
+  { label: string; next: BandStatus; className: string }[]
+> = {
+  new: [
+    { label: "Start Review", next: "reviewing", className: "bg-amber-500 hover:bg-amber-600 text-white" },
+    { label: "Send Offer", next: "offered", className: "bg-purple-600 hover:bg-purple-700 text-white" },
+    { label: "Decline", next: "declined", className: "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200" },
+  ],
+  reviewing: [
+    { label: "Send Offer", next: "offered", className: "bg-purple-600 hover:bg-purple-700 text-white" },
+    { label: "Decline", next: "declined", className: "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200" },
+  ],
+  offered: [
+    { label: "Mark Booked", next: "booked", className: "bg-green-600 hover:bg-green-700 text-white" },
+    { label: "Back to Review", next: "reviewing", className: "bg-white hover:bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]" },
+    { label: "Decline", next: "declined", className: "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200" },
+  ],
+  booked: [
+    { label: "Decline", next: "declined", className: "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200" },
+  ],
+  declined: [
+    { label: "Reopen", next: "reviewing", className: "bg-white hover:bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]" },
+  ],
+};
+
+/** Success-toast copy per destination status. */
+const STATUS_TOAST: Record<BandStatus, string> = {
+  new: "Moved to New",
+  reviewing: "Moved to Reviewing",
+  offered: "Offer sent",
+  booked: "Booking confirmed",
+  declined: "Application declined",
 };
 
 /** Per-platform brand colours (icon + button) for the social links. */
@@ -152,11 +215,11 @@ const normStatus = (s?: string) => (s || "").trim().toLowerCase();
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex justify-between items-start gap-4 px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-      <span className="pt-0.5 font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">
+    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
-      <span className="font-bold text-[#1F1F1A] text-sm text-right">{value || "—"}</span>
+      <span className="text-right text-sm font-bold text-[#1F1F1A]">{value || "—"}</span>
     </div>
   );
 }
@@ -184,16 +247,16 @@ function EditRow({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="flex justify-between items-center gap-3 px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-      <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">{label}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
       {!editable ? (
-        <span className="flex-1 min-w-0 font-bold text-[#1F1F1A] text-sm text-right truncate">{readOnlyValue ?? (value || "—")}</span>
+        <span className="min-w-0 flex-1 truncate text-right text-sm font-bold text-[#1F1F1A]">{readOnlyValue ?? (value || "—")}</span>
       ) : options ? (
         <select
           aria-label={label}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 bg-transparent outline-none font-bold text-[#1F1F1A] text-sm text-right [text-align-last:right] cursor-pointer"
+          className="flex-1 cursor-pointer bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none [text-align-last:right]"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -206,7 +269,7 @@ function EditRow({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent outline-none font-bold text-[#1F1F1A] text-sm text-right placeholder:text-[#5F624F]/40"
+          className="min-w-0 flex-1 bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
         />
       )}
       {trailing}
@@ -228,14 +291,14 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={cn("bg-white border-[#E6DFC8] border-2 rounded-3xl overflow-hidden", className)}>
+    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex justify-between items-center bg-[#F7F4EA] hover:bg-[#F0EDE0] px-4 sm:px-5 py-3 w-full text-left transition-colors"
+        className="flex w-full items-center justify-between bg-[#F7F4EA] px-4 py-3 text-left transition-colors hover:bg-[#F0EDE0] sm:px-5"
       >
-        <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">{title}</span>
-        <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+        <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
       </button>
       <div className={cn(!open && "hidden")}>{children}</div>
     </div>
@@ -305,8 +368,13 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [bankPaymentRef, setBankPaymentRef] = useState(request.bank_payment_ref ?? "");
 
   const status = normStatus(request.status);
-  const theme = statusTheme[status] || statusTheme.pending;
-  const editable = status !== "cancelled";
+  const theme = statusTheme[status] || statusTheme.new;
+  const editable = status !== "declined";
+
+  // A selected slot exists to show once one has been offered or booked.
+  const hasSlot = status === "offered" || status === "booked";
+  // Triage stages where the admin picks a slot and the note-to-applicant shows.
+  const isWorkingStage = status === "new" || status === "reviewing" || status === "offered";
 
   const socials = request.social_links
     ? Object.entries(request.social_links).filter(([, v]) => v)
@@ -427,9 +495,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     setClashes([]);
     startTransition(async () => {
       try {
-        // Confirming places an event — block it if the slot clashes. The clashes
+        // Booking places an event — block it if the slot clashes. The clashes
         // render inline under the Performance Time field, so no footer error here.
-        if (newStatus === "confirmed") {
+        if (newStatus === "booked") {
           const c = await findClashes();
           if (c.length) return;
         }
@@ -444,15 +512,17 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         }
         const result = await updateBandStatus(request.id, newStatus, adminNotes || undefined);
         setOpen(false);
-        if (newStatus === "confirmed" || newStatus === "cancelled") {
-          const verb = newStatus === "confirmed" ? "confirmed" : "rejected";
+        // offered / booked / declined email the band; new / reviewing are silent.
+        const emails = newStatus === "offered" || newStatus === "booked" || newStatus === "declined";
+        const done = STATUS_TOAST[newStatus];
+        if (emails) {
           if (result?.emailError) {
-            toast.error(`Booking ${verb}, but the email didn't send: ${result.emailError}`);
+            toast.error(`${done}, but the email didn't send: ${result.emailError}`);
           } else {
-            toast.success(`Booking ${verb} — band emailed`);
+            toast.success(`${done} — band emailed`);
           }
         } else {
-          toast.success("Booking moved to pending");
+          toast.success(done);
         }
       } catch {
         setError("Failed to update. Please try again.");
@@ -469,7 +539,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     setClashes([]);
     startTransition(async () => {
       try {
-        if (status !== "confirmed") {
+        if (status !== "booked") {
           await updateBandBookingFields(request.id, {
             ...detailFields(),
             selected_date: selectedDate || null,
@@ -497,24 +567,24 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           const ok = await confirm({
             title: "Update slot & notify band",
             description:
-              "This moves the booking back to Pending, takes the linked event off the schedule, and emails the band to re-confirm. Preview:",
+              "This moves the booking back to Offered, takes the linked event off the schedule, and emails the band to re-confirm. Preview:",
             confirmLabel: "Update & Email",
             content: (
-              <div className="space-y-1.5 bg-white p-3 border border-[#E6DFC8] rounded-xl text-left">
-                <p className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
+              <div className="space-y-1.5 rounded-xl border border-[#E6DFC8] bg-white p-3 text-left">
+                <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                   To: {request.email}
                 </p>
-                <p className="font-black text-[#1F1F1A] text-xs">{preview.subject}</p>
-                <p className="text-[#5F624F] text-xs">{preview.greeting}</p>
+                <p className="font-black text-xs text-[#1F1F1A]">{preview.subject}</p>
+                <p className="text-xs text-[#5F624F]">{preview.greeting}</p>
                 {preview.body.map((p, i) => (
-                  <p key={i} className="text-[#5F624F] text-xs leading-relaxed">{p}</p>
+                  <p key={i} className="text-xs leading-relaxed text-[#5F624F]">{p}</p>
                 ))}
                 {preview.dateLabel && (
-                  <div className="bg-[#F7F4EA] mt-1 px-3 py-2 border border-[#E6DFC8] rounded-lg">
-                    <p className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide">New Slot</p>
-                    <p className="font-black text-[#1F1F1A] text-sm">{preview.dateLabel}</p>
+                  <div className="mt-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2">
+                    <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">New Slot</p>
+                    <p className="font-black text-sm text-[#1F1F1A]">{preview.dateLabel}</p>
                     {preview.timeLabel && (
-                      <p className="font-bold text-[#5F624F] text-xs">{preview.timeLabel}</p>
+                      <p className="text-xs font-bold text-[#5F624F]">{preview.timeLabel}</p>
                     )}
                   </div>
                 )}
@@ -543,7 +613,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         const ok = await confirm({
           title: "Save changes?",
           description:
-            "This booking is confirmed — saving updates its details and the linked event.",
+            "This booking is booked — saving updates its details and the linked event.",
           confirmLabel: "Save Changes",
         });
         if (!ok) return;
@@ -563,23 +633,23 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "bg-white border-[#E6DFC8] border-2 rounded-2xl w-full overflow-hidden",
+          "w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
           "flex items-center gap-3 px-3 py-3.5 text-left",
-          "hover:bg-[#F7F4EA]/60 transition-all active:scale-[0.98] shadow-sm"
+          "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]"
         )}
       >
         {/* Status badge circle (left) */}
         <div
           className={cn(
-            "flex flex-col justify-center items-center border rounded-full w-11 h-11 shrink-0",
+            "flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full border",
             theme.bg,
             theme.text,
             theme.border
           )}
         >
-          {status === "confirmed" && request.selected_date ? (
-            <div className="flex flex-col justify-center items-center leading-none">
-              <span className="opacity-80 mb-0.5 font-black text-[10px] uppercase tracking-tighter">
+          {hasSlot && request.selected_date ? (
+            <div className="flex flex-col items-center justify-center leading-none">
+              <span className="mb-0.5 font-black text-[10px] tracking-tighter uppercase opacity-80">
                 {format(new Date(request.selected_date + "T00:00:00"), "MMM")}
               </span>
               <span className="font-black text-base tracking-tighter">
@@ -592,28 +662,28 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         </div>
 
         {/* Names + type/genre */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <p className="font-black text-[#1F1F1A] text-sm truncate uppercase tracking-tight">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
               {request.group_name || request.booker_name}
             </p>
           </div>
-          <div className="flex items-center gap-2 mt-0.5 text-[#5F624F]">
-            <p className="font-semibold text-xs truncate">{request.booker_name}</p>
+          <div className="mt-0.5 flex items-center gap-2 text-[#5F624F]">
+            <p className="truncate text-xs font-semibold">{request.booker_name}</p>
             {(request.type || request.genre) && (
-              <span className="opacity-60 font-bold text-[10px] truncate">
+              <span className="truncate text-[10px] font-bold opacity-60">
                 {[toTitleCase(request.type), toTitleCase(request.genre)].filter(Boolean).join(" / ")}
               </span>
             )}
           </div>
 
-          {/* Schedule — confirmed → selected slot; otherwise → applicant's preferred dates */}
-          {(status === "confirmed" ? !!request.selected_date : dates.length > 0) ? (
-            <div className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 mt-1 font-semibold text-[#5F624F] text-[11px]">
-              {status === "confirmed" ? (
+          {/* Schedule — offered/booked → selected slot; otherwise → applicant's preferred dates */}
+          {(hasSlot ? !!request.selected_date : dates.length > 0) ? (
+            <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] font-semibold text-[#5F624F]">
+              {hasSlot ? (
                 request.selected_date && (
                   <span className="inline-flex items-center gap-1">
-                    <CalendarDays className="w-3 h-3 shrink-0" />
+                    <CalendarDays className="h-3 w-3 shrink-0" />
                     {format(new Date(request.selected_date + "T00:00:00"), "EEE, d MMM")}
                     {(request.selected_start_time || request.selected_end_time) && (
                       <span className="text-[#5F624F]/80">
@@ -624,8 +694,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 )
               ) : (
                 dates.length > 0 && (
-                  <span className="inline-flex items-center gap-1 min-w-0">
-                    <CalendarDays className="w-3 h-3 shrink-0" />
+                  <span className="inline-flex min-w-0 items-center gap-1">
+                    <CalendarDays className="h-3 w-3 shrink-0" />
                     <span className="truncate">
                       {dates.slice(0, 2).map((d) => format(new Date(d + "T00:00:00"), "d MMM")).join(", ")}
                       {dates.length > 2 ? ` +${dates.length - 2}` : ""}
@@ -638,13 +708,13 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         </div>
 
         {/* Right column: media count (top, above the arrow) + payment pill (end) */}
-        <div className="flex flex-col justify-center items-end gap-1.5 shrink-0">
+        <div className="flex shrink-0 flex-col items-end justify-center gap-1.5">
           {videos.length > 0 && (
             <span
-              className="inline-flex items-center gap-1 font-bold text-[#5F624F] text-[11px]"
+              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#5F624F]"
               title={`${videos.length} video${videos.length === 1 ? "" : "s"} attached`}
             >
-              <Video className="w-3.5 h-3.5 shrink-0" />
+              <Video className="h-3.5 w-3.5 shrink-0" />
               {videos.length}
             </span>
           )}
@@ -654,8 +724,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             return (
               <span
                 className={cn(
-                  "inline-flex items-center px-1.5 py-0.5 border rounded font-black text-[10px] uppercase tracking-tight shrink-0",
-                  isFree ? "bg-green-50 border-green-200 text-green-700" : "bg-amber-50 border-amber-200 text-amber-700"
+                  "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 font-black text-[10px] tracking-tight uppercase",
+                  isFree ? "border-green-200 bg-green-50 text-green-700" : "border-amber-200 bg-amber-50 text-amber-700"
                 )}
               >
                 {isFree ? "Free" : `£${amount.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
@@ -664,7 +734,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           })()}
         </div>
 
-        <ChevronRight className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
       </button>
 
       {/* Bottom sheet */}
@@ -672,43 +742,43 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
-            flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140 lg:w-6xl xl:w-7xl
-            sm:h-auto sm:max-h-[80vh] lg:max-h-[90vh] sm:rounded-4xl sm:bottom-6
-            sm:border-2 sm:border-[#E6DFC8]"
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8]
+            bg-[#F7F4EA] p-0 shadow-2xl outline-none
+            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto sm:max-h-[80vh] sm:w-140
+            sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 sm:border-[#E6DFC8] lg:max-h-[90vh]
+            lg:w-6xl xl:w-7xl"
         >
           {/* Sheet header */}
-          <div className="top-0 z-30 sticky bg-white/80 backdrop-blur-md p-4 pb-3 border-[#E6DFC8] border-b sm:rounded-t-4xl shrink-0">
-            <div className="flex justify-between items-start gap-3">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+            <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="font-black text-[#1F1F1A] text-lg truncate uppercase leading-tight tracking-tight">
+                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#1F1F1A] uppercase">
                   {request.group_name || request.booker_name}
                 </SheetTitle>
                 <SheetDescription className="sr-only">
                   Review and manage this band request.
                 </SheetDescription>
                 {request.group_name && (
-                  <p className="mt-0.5 text-[#5F624F] text-xs">{request.booker_name}</p>
+                  <p className="mt-0.5 text-xs text-[#5F624F]">{request.booker_name}</p>
                 )}
               </div>
               <span
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-xl font-black text-[10px] uppercase tracking-wider shrink-0",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-[10px] tracking-wider uppercase",
                   theme.bg,
                   theme.text,
                   theme.border
                 )}
               >
-                <span className={cn("rounded-full w-2 h-2", theme.dot)} />
+                <span className={cn("h-2 w-2 rounded-full", theme.dot)} />
                 {theme.label}
               </span>
             </div>
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 px-4 sm:px-6 py-4 sm:py-6 min-h-0 overflow-y-auto touch-pan-y">
-            <div className="items-start gap-5 space-y-4 sm:space-y-5 lg:space-y-0 lg:grid grid-cols-2 animate-in duration-200 fade-in">
+          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+            <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
               {/* Event details */}
               <Section title="Event Details">
                 <EditRow label="Act Name" value={actName} onChange={setActName} editable={editable} placeholder="Act name" />
@@ -728,8 +798,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
                 {/* Preferred dates — applicant's choices, shown above the selected slot */}
                 {dates.length > 0 && (
-                  <div className="px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-                    <span className="block mb-2 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
+                  <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                    <span className="mb-2 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Preferred Dates
                     </span>
                     <div className="flex flex-wrap gap-1.5">
@@ -742,11 +812,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                             disabled={!editable}
                             onClick={() => applyDate(isSelected ? "" : d)}
                             className={cn(
-                              "px-3 py-1.5 border rounded-xl font-bold text-xs transition-all",
+                              "rounded-xl border px-3 py-1.5 text-xs font-bold transition-all",
                               isSelected
-                                ? "bg-[#5C4033] text-white border-[#5C4033]"
-                                : "bg-white border-[#E6DFC8] text-[#1F1F1A] hover:border-[#5C4033]/30",
-                              !editable && "opacity-60 cursor-not-allowed"
+                                ? "border-[#5C4033] bg-[#5C4033] text-white"
+                                : "border-[#E6DFC8] bg-white text-[#1F1F1A] hover:border-[#5C4033]/30",
+                              !editable && "cursor-not-allowed opacity-60"
                             )}
                           >
                             {format(new Date(d + "T00:00:00"), "EEE, d MMM")}
@@ -758,9 +828,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 )}
 
                 {/* Selected date — label + value on one row (right-aligned); calendar popover when editable */}
-                <div className="px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-                  <div className="flex justify-between items-center gap-4">
-                    <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">
+                <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Selected Date
                     </span>
                     {editable ? (
@@ -768,15 +838,15 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         <PopoverTrigger asChild>
                           <button
                             type="button"
-                            className="inline-flex items-center gap-2 font-bold text-[#1F1F1A] hover:text-[#5C4033] text-sm transition-colors"
+                            className="inline-flex items-center gap-2 text-sm font-bold text-[#1F1F1A] transition-colors hover:text-[#5C4033]"
                           >
                             {selectedDate
                               ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
                               : "Pick a date"}
-                            <CalendarDays className="w-4 h-4 text-[#5F624F]/60 shrink-0" />
+                            <CalendarDays className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
                           </button>
                         </PopoverTrigger>
-                        <PopoverContent align="end" className="bg-white p-0 border-[#E6DFC8] border-2 rounded-2xl w-auto">
+                        <PopoverContent align="end" className="w-auto rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
                           <Calendar
                             mode="single"
                             selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
@@ -789,20 +859,20 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         </PopoverContent>
                       </Popover>
                     ) : (
-                      <span className="font-bold text-[#1F1F1A] text-sm text-right">
+                      <span className="text-right text-sm font-bold text-[#1F1F1A]">
                         {selectedDate ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy") : "—"}
                       </span>
                     )}
                   </div>
-                  {status === "pending" && !selectedDate && (
-                    <FieldMessage warning="Pick a date before you can confirm." />
+                  {isWorkingStage && !selectedDate && (
+                    <FieldMessage warning="Pick a date before you can book." />
                   )}
                 </div>
 
                 {/* Selected time — label + start/end on one row (24h, matching the event view) */}
-                <div className="px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-                  <div className="flex justify-between items-center gap-4">
-                    <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">
+                <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Selected Time
                     </span>
                     {editable ? (
@@ -812,9 +882,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                           aria-label="Performance start time"
                           value={selectedStartTime}
                           onChange={(e) => applyStart(e.target.value)}
-                          className="bg-transparent outline-none font-bold text-[#1F1F1A] text-sm text-right"
+                          className="bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none"
                         />
-                        <span className="text-[#5F624F]/50 text-xs">-</span>
+                        <span className="text-xs text-[#5F624F]/50">-</span>
                         <input
                           type="time"
                           aria-label="Performance end time"
@@ -823,17 +893,17 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                             setSelectedEndTime(e.target.value);
                             setClashes([]);
                           }}
-                          className="bg-transparent outline-none font-bold text-[#1F1F1A] text-sm text-right"
+                          className="bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none"
                         />
                       </div>
                     ) : (
-                      <span className="font-bold text-[#1F1F1A] text-sm text-right">
+                      <span className="text-right text-sm font-bold text-[#1F1F1A]">
                         {selectedStartTime || selectedEndTime ? `${selectedStartTime} - ${selectedEndTime}` : "—"}
                       </span>
                     )}
                   </div>
-                  {status === "pending" && (!selectedStartTime || !selectedEndTime) && (
-                    <FieldMessage warning="Set a start and end time before you can confirm." />
+                  {isWorkingStage && (!selectedStartTime || !selectedEndTime) && (
+                    <FieldMessage warning="Set a start and end time before you can book." />
                   )}
                   {clashes.length > 0 && (
                     <div className="mt-2">
@@ -844,11 +914,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
                 {/* Notes from the booking (applicant) — read-only; hidden when blank */}
                 {request.notes && request.notes.trim() && (
-                  <div className="px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-                    <span className="block mb-1.5 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
+                  <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                    <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Notes from Booking
                     </span>
-                    <p className="text-[#1F1F1A] text-sm italic leading-relaxed">
+                    <p className="text-sm leading-relaxed text-[#1F1F1A] italic">
                       &quot;{request.notes}&quot;
                     </p>
                   </div>
@@ -871,9 +941,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         href={`mailto:${email.trim()}`}
                         title={`Email ${email.trim()}`}
                         aria-label={`Email ${email.trim()}`}
-                        className="flex justify-center items-center bg-[#F7F4EA] hover:bg-[#5C4033] border border-[#E6DFC8] rounded-lg w-8 h-8 text-[#5C4033] hover:text-white transition-colors shrink-0"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
                       >
-                        <Mail className="w-3.5 h-3.5" />
+                        <Mail className="h-3.5 w-3.5" />
                       </a>
                     ) : undefined
                   }
@@ -891,9 +961,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         href={`tel:${phone.replace(/\s+/g, "")}`}
                         title={`Call ${phone.trim()}`}
                         aria-label={`Call ${phone.trim()}`}
-                        className="flex justify-center items-center bg-[#F7F4EA] hover:bg-[#5C4033] border border-[#E6DFC8] rounded-lg w-8 h-8 text-[#5C4033] hover:text-white transition-colors shrink-0"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
                       >
-                        <Phone className="w-3.5 h-3.5" />
+                        <Phone className="h-3.5 w-3.5" />
                       </a>
                     ) : undefined
                   }
@@ -904,11 +974,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {(editable || (request.payment_amount ?? 0) > 0) && (
                 <Section title="Payment Details">
                   {/* Amount */}
-                  <div className="flex justify-between items-center gap-4 px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-                    <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">Amount</span>
+                  <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Amount</span>
                     {editable ? (
-                      <div className="flex flex-1 justify-end items-center gap-1">
-                        <span className="font-bold text-[#5F624F] text-sm">£</span>
+                      <div className="flex flex-1 items-center justify-end gap-1">
+                        <span className="text-sm font-bold text-[#5F624F]">£</span>
                         <input
                           aria-label="Amount"
                           type="number"
@@ -917,23 +987,23 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                           placeholder="0.00"
                           value={paymentAmount}
                           onChange={(e) => setPaymentAmount(e.target.value)}
-                          className="bg-transparent outline-none w-24 font-bold text-[#1F1F1A] text-sm text-right placeholder:text-[#5F624F]/40"
+                          className="w-24 bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
                         />
                       </div>
                     ) : (
-                      <span className="flex items-center gap-1.5 font-bold text-[#1F1F1A] text-sm">
-                        <CreditCard className="opacity-50 w-3.5 h-3.5 text-[#5F624F]" />
+                      <span className="flex items-center gap-1.5 text-sm font-bold text-[#1F1F1A]">
+                        <CreditCard className="h-3.5 w-3.5 text-[#5F624F] opacity-50" />
                         £{(request.payment_amount ?? 0).toFixed(2)}
                       </span>
                     )}
                   </div>
                   {/* Paid — hidden when there is no payment */}
                   {!isNoPayment && (
-                    <div className="flex justify-between items-center gap-4 px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-                      <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">Paid</span>
+                    <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Paid</span>
                       {editable ? (
-                        <div className="flex flex-1 justify-end items-center gap-1">
-                          <span className="font-bold text-[#5F624F] text-sm">£</span>
+                        <div className="flex flex-1 items-center justify-end gap-1">
+                          <span className="text-sm font-bold text-[#5F624F]">£</span>
                           <input
                             aria-label="Paid"
                             type="number"
@@ -942,18 +1012,18 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                             placeholder="0.00"
                             value={paidAmount}
                             onChange={(e) => setPaidAmount(e.target.value)}
-                            className="bg-transparent outline-none w-24 font-bold text-[#1F1F1A] text-sm text-right placeholder:text-[#5F624F]/40"
+                            className="w-24 bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
                           />
                         </div>
                       ) : (
-                        <span className="font-bold text-[#1F1F1A] text-sm text-right">£{(request.paid_amount ?? 0).toFixed(2)}</span>
+                        <span className="text-right text-sm font-bold text-[#1F1F1A]">£{(request.paid_amount ?? 0).toFixed(2)}</span>
                       )}
                     </div>
                   )}
                   {/* Status — derived from amount vs paid, never edited */}
-                  <div className="flex justify-between items-center gap-4 px-4 sm:px-5 py-3 border-[#E6DFC8] last:border-0 border-b">
-                    <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide shrink-0">Status</span>
-                    <span className={cn("px-2 py-1 border rounded-lg font-black text-[10px] uppercase tracking-tight", PAYMENT_STATUS_META[derivedStatus].className)}>
+                  <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Status</span>
+                    <span className={cn("rounded-lg border px-2 py-1 font-black text-[10px] tracking-tight uppercase", PAYMENT_STATUS_META[derivedStatus].className)}>
                       {PAYMENT_STATUS_META[derivedStatus].label}
                     </span>
                   </div>
@@ -973,22 +1043,22 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {request.event_id && (
                 <Link
                   href={`/event-setups/events?open=${request.event_id}`}
-                  className="group flex justify-between items-center gap-3 bg-white hover:bg-[#F7F4EA] px-4 sm:px-5 py-3.5 border-[#E6DFC8] border-2 rounded-3xl h-fit transition-colors"
+                  className="group flex h-fit items-center justify-between gap-3 rounded-3xl border-2 border-[#E6DFC8] bg-white px-4 py-3.5 transition-colors hover:bg-[#F7F4EA] sm:px-5"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <CalendarDays className="w-4 h-4 text-[#5C4033] shrink-0" />
-                    <span className="font-black text-[#5C4033] text-xs uppercase tracking-wide">
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <CalendarDays className="h-4 w-4 shrink-0 text-[#5C4033]" />
+                    <span className="font-black text-xs tracking-wide text-[#5C4033] uppercase">
                       View Linked Event
                     </span>
                   </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-[#5F624F] group-hover:text-[#5C4033] transition-colors shrink-0" />
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[#5F624F] transition-colors group-hover:text-[#5C4033]" />
                 </Link>
               )}
 
               {/* Social links */}
               {socials.length > 0 && (
                 <Section title="Social Media">
-                  <div className="flex flex-wrap gap-2 px-4 sm:px-5 py-3">
+                  <div className="flex flex-wrap gap-2 px-4 py-3 sm:px-5">
                     {socials.map(([key, url]) => {
                       const meta = SOCIAL_META[key];
                       const Icon = meta?.icon ?? Link2;
@@ -999,11 +1069,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                           target="_blank"
                           rel="noopener noreferrer"
                           className={cn(
-                            "flex items-center gap-1.5 px-3 py-2 border rounded-xl font-bold text-xs hover:opacity-90 transition-opacity",
-                            meta?.className ?? "bg-white border-[#E6DFC8] text-[#5C4033]"
+                            "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-opacity hover:opacity-90",
+                            meta?.className ?? "border-[#E6DFC8] bg-white text-[#5C4033]"
                           )}
                         >
-                          <Icon className="w-3.5 h-3.5" />
+                          <Icon className="h-3.5 w-3.5" />
                           {meta?.label ?? key.charAt(0).toUpperCase() + key.slice(1)}
                         </a>
                       );
@@ -1015,7 +1085,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {/* Videos — play inline on the page (facade: loads on click) */}
               {videos.length > 0 && (
                 <Section title="Performance Videos" className="lg:col-span-2">
-                  <div className="gap-3 grid grid-cols-1 sm:grid-cols-2 px-4 sm:px-5 py-3">
+                  <div className="grid grid-cols-1 gap-3 px-4 py-3 sm:grid-cols-2 sm:px-5">
                     {videos.map((url, i) => (
                       <VideoFacade key={i} url={url} title={`Video ${i + 1}`} />
                     ))}
@@ -1026,18 +1096,18 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {/* Band Notes — admin factbox for notes about the band */}
               <Section title="Band Notes" className="lg:col-span-2">
                 {editable ? (
-                  <div className="px-4 sm:px-5 py-3">
+                  <div className="px-4 py-3 sm:px-5">
                     <textarea
                       aria-label="Band notes"
                       value={bandNotes}
                       onChange={(e) => setBandNotes(e.target.value)}
                       rows={3}
                       placeholder="Add notes about the band..."
-                      className="bg-[#F7F4EA] px-4 py-3 border border-[#E6DFC8] focus:border-[#5C4033]/30 rounded-2xl focus:outline-none w-full text-[#1F1F1A] placeholder:text-[#5F624F]/50 text-sm transition-all resize-none"
+                      className="w-full resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-4 py-3 text-sm text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
                     />
                   </div>
                 ) : (
-                  <p className="px-4 sm:px-5 py-3 text-[#1F1F1A] text-sm italic leading-relaxed">
+                  <p className="px-4 py-3 text-sm leading-relaxed text-[#1F1F1A] italic sm:px-5">
                     {bandNotes ? `“${bandNotes}”` : "—"}
                   </p>
                 )}
@@ -1050,16 +1120,16 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "—"} />
               </Section>
 
-              {/* Admin notes (read-only if resolved, editable if pending) */}
-              {status !== "pending" && request.admin_notes && (
+              {/* Admin notes (read-only once booked/declined; editable in the working-stage footer) */}
+              {!isWorkingStage && request.admin_notes && (
                 <Section title="Admin Notes" className="lg:col-span-2">
-                  <div className="px-4 sm:px-5 py-3">
-                    <div className="bg-[#5C4033]/5 p-4 border border-[#5C4033]/15 rounded-2xl">
-                      <div className="flex items-center gap-2 mb-2">
-                        <MessageSquareQuote className="opacity-40 w-4 h-4 text-[#5C4033]" />
-                        <span className="font-black text-[#5C4033] text-[10px] uppercase tracking-wide">Staff Note</span>
+                  <div className="px-4 py-3 sm:px-5">
+                    <div className="rounded-2xl border border-[#5C4033]/15 bg-[#5C4033]/5 p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <MessageSquareQuote className="h-4 w-4 text-[#5C4033] opacity-40" />
+                        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Staff Note</span>
                       </div>
-                      <p className="text-[#1F1F1A] text-sm italic leading-relaxed">
+                      <p className="text-sm leading-relaxed text-[#1F1F1A] italic">
                         &quot;{request.admin_notes}&quot;
                       </p>
                     </div>
@@ -1071,54 +1141,57 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           </div>
 
           {/* Footer */}
-          <div className="z-40 bg-white/80 backdrop-blur-md px-6 py-5 pb-10 sm:pb-5 border-[#E6DFC8] border-t-2 rounded-b-4xl shrink-0">
-            {/* Action area — pending */}
-            {status === "pending" && (
+          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:pb-5">
+            {/* Action area — editable stages (new / reviewing / offered / booked).
+                A declined request is read-only, so no footer. */}
+            {editable && (
               <div className="space-y-3">
                 <div>
-                  <label className="block mb-1.5 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
+                  <label className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                     Note to Applicant (optional)
                   </label>
                   <textarea
                     value={adminNotes}
                     onChange={(e) => setAdminNotes(e.target.value)}
-                    placeholder="Add a message to include in the outcome email..."
+                    placeholder="Add a message to include in the offer / outcome email..."
                     rows={2}
-                    className="bg-[#F7F4EA] px-4 py-3 border border-[#E6DFC8] focus:border-[#5C4033]/30 rounded-2xl focus:outline-none w-full text-[#1F1F1A] placeholder:text-[#5F624F]/50 text-sm transition-all resize-none"
+                    className="w-full resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-4 py-3 text-sm text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
                   />
                 </div>
 
-                {error && <p className="font-bold text-red-500 text-xs">{error}</p>}
+                {error && <p className="text-xs font-bold text-red-500">{error}</p>}
 
-                {/* Status actions */}
-                <div className="gap-3 grid grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => handleAction("confirmed")}
-                    disabled={isPending || !selectedDate || !selectedStartTime || !selectedEndTime}
-                    className="flex justify-center items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-2xl h-14 font-black text-white text-[10px] uppercase tracking-widest transition-all active:scale-95"
-                  >
-                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-                    Confirm
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAction("cancelled")}
-                    disabled={isPending}
-                    className="flex justify-center items-center gap-2 bg-red-50 hover:bg-red-100 disabled:opacity-50 border border-red-200 rounded-2xl h-14 font-black text-red-700 text-[10px] uppercase tracking-widest transition-all"
-                  >
-                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                    Reject
-                  </button>
+                {/* Stage transitions. Booking needs a full slot, mirroring the old
+                    Confirm guard, so an event is always placed when booked. */}
+                <div className="flex flex-wrap gap-3">
+                  {(BAND_TRANSITIONS[status as BandStatus] ?? []).map((t) => {
+                    const needsSlot =
+                      t.next === "booked" && (!selectedDate || !selectedStartTime || !selectedEndTime);
+                    return (
+                      <button
+                        key={t.next + t.label}
+                        type="button"
+                        onClick={() => handleAction(t.next)}
+                        disabled={isPending || needsSlot}
+                        title={needsSlot ? "Set a date, start and end time before booking" : undefined}
+                        className={cn(
+                          "flex h-14 min-w-28 flex-1 items-center justify-center gap-2 rounded-2xl font-black text-[10px] tracking-widest uppercase transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50",
+                          t.className
+                        )}
+                      >
+                        {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {/* Cancel / Save Changes */}
-                <div className="gap-3 grid grid-cols-2">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={handleCancel}
                     disabled={isPending}
-                    className="flex justify-center items-center bg-white disabled:opacity-50 border-[#E6DFC8] border-2 rounded-2xl h-14 font-black text-[#5F624F] text-[10px] uppercase tracking-wide"
+                    className="flex h-14 items-center justify-center rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -1126,59 +1199,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     type="button"
                     onClick={handleSave}
                     disabled={isPending || !hasChanges}
-                    className="flex justify-center items-center gap-2 bg-[#1B4332] hover:bg-[#1B4332]/85 disabled:opacity-50 disabled:pointer-events-none shadow-lg rounded-2xl h-14 font-black text-white text-[10px] uppercase tracking-widest active:scale-95"
+                    className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
                   >
-                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                    Save Changes
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* Action area — confirmed */}
-            {status === "confirmed" && (
-              <div className="space-y-3">
-                {error && <p className="font-bold text-red-500 text-xs">{error}</p>}
-
-                {/* Status actions */}
-                <div className="gap-3 grid grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={() => handleAction("cancelled")}
-                    disabled={isPending}
-                    className="flex justify-center items-center gap-2 bg-red-50 hover:bg-red-100 disabled:opacity-50 border border-red-200 rounded-2xl h-14 font-black text-red-700 text-[10px] uppercase tracking-widest transition-all"
-                  >
-                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-                    Reject
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAction("pending")}
-                    disabled={isPending}
-                    className="flex justify-center items-center gap-2 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 border border-amber-200 rounded-2xl h-14 font-black text-amber-700 text-[10px] uppercase tracking-widest transition-all"
-                  >
-                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Clock3 className="w-3.5 h-3.5" />}
-                    Set Pending
-                  </button>
-                </div>
-
-                {/* Cancel / Save Changes */}
-                <div className="gap-3 grid grid-cols-2">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    disabled={isPending}
-                    className="flex justify-center items-center bg-white disabled:opacity-50 border-[#E6DFC8] border-2 rounded-2xl h-14 font-black text-[#5F624F] text-[10px] uppercase tracking-wide"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSave}
-                    disabled={isPending || !hasChanges}
-                    className="flex justify-center items-center gap-2 bg-[#1B4332] hover:bg-[#1B4332]/85 disabled:opacity-50 disabled:pointer-events-none shadow-lg rounded-2xl h-14 font-black text-white text-[10px] uppercase tracking-widest active:scale-95"
-                  >
-                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                     Save Changes
                   </button>
                 </div>
@@ -1198,8 +1221,8 @@ function FieldMessage({ error, warning }: { error?: string; warning?: string }) 
   if (!message) return null;
   const isWarning = !error && !!warning;
   return (
-    <p className={cn("flex items-center gap-1 mt-2 font-bold text-[11px] leading-snug", isWarning ? "text-amber-600" : "text-red-600")}>
-      {isWarning ? <AlertTriangle className="w-3 h-3 shrink-0" /> : <AlertCircle className="w-3 h-3 shrink-0" />}
+    <p className={cn("mt-2 flex items-center gap-1 text-[11px] leading-snug font-bold", isWarning ? "text-amber-600" : "text-red-600")}>
+      {isWarning ? <AlertTriangle className="h-3 w-3 shrink-0" /> : <AlertCircle className="h-3 w-3 shrink-0" />}
       {message}
     </p>
   );
@@ -1208,16 +1231,16 @@ function FieldMessage({ error, warning }: { error?: string; warning?: string }) 
 function ClashList({ clashes }: { clashes: ClashEvent[] }) {
   if (clashes.length === 0) return null;
   return (
-    <div className="space-y-1.5 bg-red-50 p-3 border border-red-200 rounded-xl">
+    <div className="space-y-1.5 rounded-xl border border-red-200 bg-red-50 p-3">
       <div className="flex items-center gap-2">
-        <AlertCircle className="w-3.5 h-3.5 text-red-600 shrink-0" />
-        <p className="font-black text-[10px] text-red-700 uppercase tracking-tight">
+        <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-600" />
+        <p className="font-black text-[10px] tracking-tight text-red-700 uppercase">
           Time slot full — conflicts with:
         </p>
       </div>
-      <ul className="space-y-0.5 pl-6 list-disc">
+      <ul className="list-disc space-y-0.5 pl-6">
         {clashes.map((c) => (
-          <li key={c.id} className="font-bold text-[11px] text-red-700">
+          <li key={c.id} className="text-[11px] font-bold text-red-700">
             {c.title} ({c.start} – {c.end})
           </li>
         ))}
