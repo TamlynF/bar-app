@@ -14,12 +14,10 @@ import {
     Shield,
     ArrowLeft,
     Sparkles,
-    Trophy,
     Music,
     Lock,
     BrainCircuit,
     LogOut,
-    PartyPopper,
     Brain,
     ChevronDown,
     ChevronUp,
@@ -34,20 +32,27 @@ import {
     Medal,
     UserCog,
     UserCog2,
-    Speaker,
     Building2,
     UtensilsCrossed,
     Image as ImageIcon,
     Camera,
     Crown,
     Inbox,
-    Guitar,
     MessageSquare
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
+import { cardIcon } from "@/lib/booking-card-icons"
+import { swatchHexFromColor } from "@/lib/event-type-colors"
 
-type BookableEvent = { id: number; title: string; date: string };
+type BookingNavItem = { label: string; href: string; icon?: string | null; color?: string | null };
+type SubItem = {
+    label: string;
+    href: string;
+    icon?: React.ComponentType<{ className?: string }>;
+    /** When set, render a coloured icon chip (icon in this hue, lighter background). */
+    colorHex?: string | null;
+};
 
 // Routes that belong to the Quiz group, regardless of URL prefix.
 const QUIZ_PATHS = [
@@ -71,27 +76,33 @@ function isQuizPath(path: string): boolean {
     return QUIZ_PATHS.some((q) => path === q || path.startsWith(`${q}/`))
 }
 
-function isRequestPath(path: string): boolean {
-    return REQUEST_PATHS.some((q) => path === q || path.startsWith(`${q}/`))
-}
-
 export default function PrivateLayoutClient({
     children,
     employeeName,
     employeeRole,
-    bookableEvents = [],
+    guestNav = [],
+    requestNav = [],
     pendingRequestsCount = 0,
 }: {
     children: React.ReactNode
     employeeName: string
     employeeRole: string
-    bookableEvents?: BookableEvent[]
+    guestNav?: BookingNavItem[]
+    requestNav?: BookingNavItem[]
     pendingRequestsCount?: number
 }) {
     const pathname = usePathname()
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const searchParams = useSearchParams()
+
+    // Requests own /requests, the legacy band/private pages (REQUEST_PATHS) and
+    // any dynamic request booking links, so those never light up Bookings.
+    const requestNavHrefs = requestNav.map((n) => n.href)
+    const isRequestPath = (path: string): boolean =>
+        REQUEST_PATHS.some((q) => path === q || path.startsWith(`${q}/`)) ||
+        requestNavHrefs.some((h) => path === h || path.startsWith(`${h}/`))
+
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname && pathname.startsWith("/event-bookings") && !isRequestPath(pathname))
     const [requestsOpen, setRequestsOpen] = useState(() => !!pathname && isRequestPath(pathname))
     const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname && pathname.startsWith("/event-setups") && !isQuizPath(pathname))
@@ -132,22 +143,21 @@ export default function PrivateLayoutClient({
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
-    // Confirmed capacity only. Band applications (music-bookings) moved to
-    // Requests — confirmed bands surface here as bookable events via the
-    // band → event sync.
-    const eventSubItems = [
-        { label: "Music Bingo", href: "/event-bookings/bingo-bookings", icon: Speaker },
-        { label: "Thursday Quiz", href: "/event-bookings/quiz-bookings", icon: Trophy },
-        ...bookableEvents.map(ev => ({
-            label: ev.title,
-            href: `/event-bookings/event/${ev.id}`,
-            icon: CalendarDays,
-        })),
-    ]
+    // Booking links are data-driven from each category's booking_card config
+    // (grouped + partitioned upstream in the layout), rendered with a coloured
+    // icon chip. Guest bookings and requests keep their own nav groups; the
+    // standalone Enquiries page is appended to Requests.
+    const toSub = (nav: BookingNavItem): SubItem => ({
+        label: nav.label,
+        href: nav.href,
+        icon: cardIcon(nav.icon),
+        colorHex: swatchHexFromColor(nav.color ?? undefined) ?? null,
+    })
 
-    const requestSubItems = [
-        { label: "Band Applications", href: "/event-bookings/music-bookings", icon: Guitar },
-        { label: "Private Hire", href: "/event-bookings/private-bookings", icon: PartyPopper },
+    const eventSubItems: SubItem[] = guestNav.map(toSub)
+
+    const requestSubItems: SubItem[] = [
+        ...requestNav.map(toSub),
         { label: "Enquiries", href: "/requests/enquiries", icon: MessageSquare },
     ]
 
@@ -281,7 +291,7 @@ export default function PrivateLayoutClient({
     const { title, subtitle, backHref } = getPageInfo()
 
     return (
-        <div className="pt-safe-top flex bg-[#F7F4EA] min-h-screen">
+        <div className="pt-safe-top flex bg-[#F7F4EA] min-h-screen sm:h-screen sm:overflow-hidden">
             {/* 1. Sidebar for Tablets/Desktops */}
             <aside className="hidden top-0 z-50 sticky sm:flex flex-col bg-white border-[#E6DFC8] border-r w-64 h-screen shrink-0">
                 {/* Sidebar Brand */}
@@ -391,7 +401,8 @@ export default function PrivateLayoutClient({
                                 {isEvents && eventsOpen && (
                                     <div className="space-y-1 mt-1 ml-4 pb-2 pl-2 border-[#E6DFC8] border-l">
                                         {eventSubItems.map((sub) => {
-                                            const isSubActive = normalizedPathname === sub.href
+                                            const isSubActive = normalizedPathname === sub.href.replace(/\/$/, "")
+                                            const Icon = sub.icon
                                             return (
                                                 <Link
                                                     key={sub.href}
@@ -403,7 +414,16 @@ export default function PrivateLayoutClient({
                                                             : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
                                                     )}
                                                 >
-                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    {sub.colorHex ? (
+                                                        <span
+                                                            style={{ "--cc": sub.colorHex } as React.CSSProperties}
+                                                            className="flex justify-center items-center bg-(--cc)/15 rounded-md w-5 h-5 shrink-0"
+                                                        >
+                                                            {Icon && <Icon className="w-3 h-3 text-(--cc)" />}
+                                                        </span>
+                                                    ) : (
+                                                        Icon && <Icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    )}
                                                     {sub.label}
                                                 </Link>
                                             )
@@ -416,6 +436,7 @@ export default function PrivateLayoutClient({
                                     <div className="space-y-1 mt-1 ml-4 pb-2 pl-2 border-[#E6DFC8] border-l">
                                         {requestSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
+                                            const Icon = sub.icon
                                             return (
                                                 <Link
                                                     key={sub.href}
@@ -427,7 +448,16 @@ export default function PrivateLayoutClient({
                                                             : "text-[#5F624F] hover:text-[#5C4033] hover:bg-[#5C4033]/5"
                                                     )}
                                                 >
-                                                    <sub.icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    {sub.colorHex ? (
+                                                        <span
+                                                            style={{ "--cc": sub.colorHex } as React.CSSProperties}
+                                                            className="flex justify-center items-center bg-(--cc)/15 rounded-md w-5 h-5 shrink-0"
+                                                        >
+                                                            {Icon && <Icon className="w-3 h-3 text-(--cc)" />}
+                                                        </span>
+                                                    ) : (
+                                                        Icon && <Icon className={cn("w-3.5 h-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    )}
                                                     {sub.label}
                                                 </Link>
                                             )
@@ -529,7 +559,7 @@ export default function PrivateLayoutClient({
             </aside>
 
             {/* 2. Main Content Wrapper */}
-            <div className="flex flex-col flex-1 min-w-0">
+            <div className="flex flex-col flex-1 min-w-0 sm:h-screen sm:overflow-y-auto">
                 <header className="top-0 z-40 sticky bg-[#F7F4EA]/95 backdrop-blur-md px-4 sm:px-8 py-3 border-[#E6DFC8] border-b w-full">
                     <div className="relative flex items-center mx-auto max-w-7xl min-h-10">
 

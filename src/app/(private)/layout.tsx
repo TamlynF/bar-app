@@ -1,5 +1,6 @@
 import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { buildAdminBookingGroups, partitionBookingGroups, type AdminBookingGroup, type AdminBookingGroupEvent } from "@/lib/admin-booking-groups";
 import PrivateLayoutClient from "./private-layout-client";
 
 export const viewport: Viewport = {
@@ -18,14 +19,16 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         { count: pendingEnquiryCount },
     ] = await Promise.all([
         supabase.auth.getUser(),
+        // Upcoming bookable events with taxonomy metadata, so the sidebar's
+        // booking links are built from the same grouping logic as the hub.
         supabase
             .from("events")
-            .select("id, title, date")
+            .select("id, title, date, booking_card_title, booking_card_icon, event_types!inner(name, title, color, booking_grouping, booking_card_title, booking_card_icon), event_subtypes(name, title, color, behavior, booking_card_title, booking_card_icon)")
             .eq("is_active", true)
             .eq("is_bookable", true)
             .gte("date", today)
             .order("date", { ascending: true })
-            .limit(10),
+            .limit(200),
         // Pending band applications — drives the amber Requests badge.
         supabase
             .from("band_booking_requests")
@@ -59,11 +62,20 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         }
     }
 
-    const navEvents = (bookableEvents ?? []).map(e => ({
-        id: e.id as number,
-        title: (e.title as string) || "Event",
-        date: e.date as string,
-    }));
+    // Collapse events per each category's booking_grouping, then split into guest
+    // bookings vs requests & enquiries — the same partition the bookings hub uses.
+    const allGroups = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[])
+        .sort((a, b) => a.label.localeCompare(b.label));
+    const { guest: guestGroups, requests: requestGroups } = partitionBookingGroups(allGroups);
+
+    const toNav = (g: AdminBookingGroup) => ({
+        label: g.label,
+        href: g.href,
+        icon: g.icon,
+        color: g.badgeColor,
+    });
+    const guestNav = guestGroups.map(toNav);
+    const requestNav = requestGroups.map(toNav);
 
     const pendingRequestsCount =
         (pendingBandCount ?? 0) + (pendingHireCount ?? 0) + (pendingEnquiryCount ?? 0);
@@ -72,7 +84,8 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         <PrivateLayoutClient
             employeeName={employeeName}
             employeeRole={employeeRole}
-            bookableEvents={navEvents}
+            guestNav={guestNav}
+            requestNav={requestNav}
             pendingRequestsCount={pendingRequestsCount}
         >
             {children}
