@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import React from "react";
 import { badgeClassFromColor } from "@/lib/event-type-colors";
-import { getEventsForType, getBookingsForType, getEventDetailsForType, getAllTables, getQuizStatsForEvent, getTypeRequestKind, getBandRequestsForType, getPrivateHireRequestsForType } from "./actions";
+import { getEventsForType, getBookingsForType, getEventDetailsForType, getAllTables, getQuizStatsForEvent, getTypeRequestKind, getBandRequestsForType, getPrivateHireRequestsForType, getNextActiveEventIdForType } from "./actions";
 import { ALL_SUBTYPES } from "@/lib/booking-grouping";
 import EventTypeFilter from "./components/event-filter";
 import { type GeneralBooking } from "./components/booking-list";
@@ -15,11 +15,11 @@ import { type PrivateHireRequest } from "../../../private-bookings/components/pr
 /** Page shell for the request/enquiry pipelines (band + private hire). */
 function RequestsShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
-    <div className="flex-1 bg-background min-h-screen">
-      <div className="px-4 py-4 md:px-8 sm:py-0 max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen flex-1 bg-background">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-4 sm:py-0 md:px-8">
         <div>
-          <h2 className="text-xl font-black text-[#1F1F1A] uppercase tracking-tight">{title}</h2>
-          <p className="text-xs text-[#5F624F] mt-0.5">{subtitle}</p>
+          <h2 className="font-black text-xl tracking-tight text-[#1F1F1A] uppercase">{title}</h2>
+          <p className="mt-0.5 text-xs text-[#5F624F]">{subtitle}</p>
         </div>
         {children}
       </div>
@@ -48,11 +48,11 @@ export default async function GeneralEventBookingsPage({
   searchParams,
 }: {
   params: Promise<{ type: string; subtype: string }>;
-  searchParams: Promise<{ eventId?: string; status?: string }>;
+  searchParams: Promise<{ eventId?: string; status?: string; all?: string }>;
 }) {
   const { type, subtype } = await params;
-  const { eventId, status } = await searchParams;
-  const selectedEventId = eventId ?? null;
+  const { eventId, status, all } = await searchParams;
+  let selectedEventId = eventId ?? null;
   // Optional status pre-filter for the request pipelines (e.g. ?status=pending),
   // used by the dashboard "needs action" links. Comma-separated, case-insensitive.
   const initialStatuses = status
@@ -81,6 +81,14 @@ export default async function GeneralEventBookingsPage({
         <PrivateHireListClient initialRequests={requests} initialStatuses={initialStatuses} />
       </RequestsShell>
     );
+  }
+
+  // With no filters in the URL, default the event filter to the next upcoming
+  // active event so the page opens on the most relevant event rather than all
+  // history. The ?all=1 sentinel (set by "Clear") and explicit ?status opt out
+  // and show everything.
+  if (!selectedEventId && !status && !all) {
+    selectedEventId = await getNextActiveEventIdForType(type, subtype);
   }
 
   const [events, rawBookings, eventDetails] = await Promise.all([
@@ -178,11 +186,14 @@ export default async function GeneralEventBookingsPage({
     : null;
 
   return (
-    <div className="flex-1 bg-background min-h-screen">
-      <div className="p-2 md:p-8 max-w-7xl mx-auto space-y-4">
+    <div className="min-h-screen flex-1 bg-background xl:min-h-0">
+      {/* On xl the page fills the viewport (minus header + main padding) so the
+          bookings list scrolls on its own while the filter/search header and the
+          detail panel stay fixed. Below xl it's normal document flow. */}
+      <div className="mx-auto max-w-7xl space-y-4 px-3 py-3 sm:py-0 md:px-8 xl:flex xl:h-[calc(100vh-7.5rem)] xl:flex-col xl:overflow-hidden">
 
         {/* Event selector */}
-        <div className="w-full bg-white rounded-2xl border border-[#E6DFC8] shadow-sm p-1.5">
+        <div className="w-full rounded-2xl border border-[#E6DFC8] bg-white p-1.5 shadow-sm">
           <EventTypeFilter
             events={events}
             selectedEventId={selectedEventId}

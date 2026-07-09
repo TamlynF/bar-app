@@ -30,6 +30,32 @@ export async function getEventsForType(type: string, subType: string) {
   }));
 }
 
+/**
+ * The id of the next upcoming *active* event for this type/subtype (date today
+ * or later, is_active = true, soonest first). Used to seed the page's event
+ * filter when it's opened with no search params. Returns null if none upcoming.
+ */
+export async function getNextActiveEventIdForType(
+  type: string,
+  subType: string,
+): Promise<string | null> {
+  const supabase = await createClient();
+  const allSubtypes = subType === ALL_SUBTYPES;
+  const today = new Date().toISOString().split("T")[0];
+  let query = supabase
+    .from("events")
+    .select("id, date, start_time, event_types!inner(name), event_subtypes!inner(name)")
+    .ilike("event_types.name", type)
+    .eq("is_active", true)
+    .gte("date", today)
+    .order("date", { ascending: true })
+    .order("start_time", { ascending: true })
+    .limit(1);
+  if (!allSubtypes) query = query.ilike("event_subtypes.name", subType);
+  const { data } = await query;
+  return data && data.length > 0 ? String(data[0].id) : null;
+}
+
 export async function getBookingsForType(
   type: string,
   subType: string,
@@ -77,7 +103,23 @@ export async function getBookingsForType(
     console.error("getBookingsForType error:", error);
     return [];
   }
-  return data ?? [];
+
+  // Always order by event date then start_time, both descending. The DB order
+  // above keeps group_name ascending as a stable secondary within an event
+  // (Array.sort is stable, so equal date+time keys preserve that order).
+  const rows = data ?? [];
+  const eventOf = (b: (typeof rows)[number]) => {
+    const ev = (b as { events?: unknown }).events;
+    return (Array.isArray(ev) ? ev[0] : ev) as { event_date?: string; event_start_time?: string | null } | undefined;
+  };
+  rows.sort((a, b) => {
+    const ea = eventOf(a);
+    const eb = eventOf(b);
+    const dateCmp = (eb?.event_date ?? "").localeCompare(ea?.event_date ?? "");
+    if (dateCmp !== 0) return dateCmp;
+    return (eb?.event_start_time ?? "").localeCompare(ea?.event_start_time ?? "");
+  });
+  return rows;
 }
 
 /**

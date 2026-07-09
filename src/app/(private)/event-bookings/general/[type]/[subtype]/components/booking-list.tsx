@@ -60,6 +60,7 @@ interface ContactRow {
 
 interface EventRow {
   event_date?: string;
+  event_start_time?: string | null;
   event_title?: string | null;
   event_payment_amount?: number | null;
   seating_required?: boolean | null;
@@ -98,6 +99,17 @@ const normStatus = (s?: string | null) => (s || "").trim().toLowerCase();
 // Date strings come from the DB as YYYY-MM-DD — anchor to local midnight to
 // avoid timezone shifts (see CLAUDE.md).
 const parseDate = (d?: string | null) => (d ? new Date(d + "T00:00:00") : null);
+
+// Time strings arrive as "HH:mm(:ss)" — render a compact 12-hour label.
+const formatTime = (t?: string | null) => {
+  if (!t) return null;
+  const [hh, mm] = t.split(":");
+  const h = parseInt(hh, 10);
+  if (Number.isNaN(h)) return null;
+  const ampm = h >= 12 ? "PM" : "AM";
+  const h12 = h % 12 || 12;
+  return `${h12}:${mm} ${ampm}`;
+};
 
 const initials = (name?: string | null) =>
   (name || "?")
@@ -328,12 +340,12 @@ export default function BookingList({
     if (!selectedBooking) {
       if (placement !== "inline") return null;
       return (
-        <div className="h-full flex flex-col items-center justify-center text-center px-10 bg-white">
-          <div className="w-16 h-16 rounded-3xl flex items-center justify-center mb-5 bg-[#F7F4EA] text-[#5F624F]">
-            <List className="w-7 h-7" />
+        <div className="flex h-full flex-col items-center justify-center bg-[#ECE4CE] px-10 text-center">
+          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#F7F4EA] text-[#5F624F]">
+            <List className="h-7 w-7" />
           </div>
-          <p className="text-base font-black uppercase tracking-tight text-[#1F1F1A]">No booking selected</p>
-          <p className="text-sm mt-1.5 max-w-60 text-[#5F624F]">
+          <p className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">No booking selected</p>
+          <p className="mt-1.5 max-w-60 text-sm text-[#5F624F]">
             Pick a team from the list to see and edit its details here.
           </p>
         </div>
@@ -351,32 +363,32 @@ export default function BookingList({
     const header = (
       <div className="shrink-0">
         <div className={cn("h-1.5 w-full", theme.dot)} />
-        <div className="px-5 sm:px-6 pt-4 pb-3.5 flex items-start justify-between gap-3 bg-white/90 backdrop-blur-md border-b border-[#E6DFC8]">
+        <div className="flex items-start justify-between gap-3 border-b border-[#E6DFC8] bg-white/90 px-5 pt-4 pb-3.5 backdrop-blur-md sm:px-6">
           <div className="min-w-0">
-            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-[0.18em] text-[#5F624F] uppercase">
               {isEditing ? "Editing" : "Booking"} · Ref {selectedBooking.id}
             </p>
             {isOverlay ? (
-              <SheetTitle className="text-xl sm:text-2xl font-black uppercase tracking-tight leading-tight truncate mt-0.5 text-[#1F1F1A]">
+              <SheetTitle className="mt-0.5 truncate font-black text-xl leading-tight tracking-tight text-[#1F1F1A] uppercase sm:text-2xl">
                 {selectedBooking.group_name || "Guest Team"}
               </SheetTitle>
             ) : (
-              <h2 className="text-xl sm:text-2xl font-black uppercase tracking-tight leading-tight truncate mt-0.5 text-[#1F1F1A]">
+              <h2 className="mt-0.5 truncate font-black text-xl leading-tight tracking-tight text-[#1F1F1A] uppercase sm:text-2xl">
                 {selectedBooking.group_name || "Guest Team"}
               </h2>
             )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex shrink-0 items-center gap-2">
             {!isEditing && (
               <span
                 className={cn(
-                  "inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-black uppercase tracking-wider border",
+                  "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 font-black text-[11px] tracking-wider uppercase",
                   theme.bg,
                   theme.text,
                   theme.border,
                 )}
               >
-                <span className={cn("w-2 h-2 rounded-full", theme.dot)} />
+                <span className={cn("h-2 w-2 rounded-full", theme.dot)} />
                 {status}
               </span>
             )}
@@ -384,9 +396,9 @@ export default function BookingList({
               type="button"
               onClick={closeSheet}
               aria-label="Close panel"
-              className="w-9 h-9 rounded-xl flex items-center justify-center bg-[#F7F4EA] text-[#5F624F] hover:bg-[#E6DFC8] transition-colors"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F7F4EA] text-[#5F624F] transition-colors hover:bg-[#E6DFC8]"
             >
-              <X className="w-4 h-4" />
+              <X className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -394,16 +406,16 @@ export default function BookingList({
     );
 
     const viewBody = (
-      <div className="space-y-5 animate-in fade-in duration-300">
+      <div className="animate-in space-y-5 duration-300 fade-in">
         {/* Key facts grid */}
         <div className="grid grid-cols-2 gap-2.5">
-          <Fact icon={<Calendar className="w-4 h-4" />} label="Event date" value={eventDate ? format(eventDate, "do MMM yyyy") : "—"} />
-          <Fact icon={<Users className="w-4 h-4" />} label="Group size" value={`${selectedBooking.group_size ?? 0} guests`} />
+          <Fact icon={<Calendar className="h-4 w-4" />} label="Event date" value={eventDate ? format(eventDate, "do MMM yyyy") : "—"} />
+          <Fact icon={<Users className="h-4 w-4" />} label="Group size" value={`${selectedBooking.group_size ?? 0} guests`} />
           {seatingRequired && (
-            <Fact icon={<TableIcon className="w-4 h-4" />} label="Table" value={tableName} accent={!hasTable} />
+            <Fact icon={<TableIcon className="h-4 w-4" />} label="Table" value={tableName} accent={!hasTable} />
           )}
           <Fact
-            icon={<Clock3 className="w-4 h-4" />}
+            icon={<Clock3 className="h-4 w-4" />}
             label="Booked on"
             value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "—"}
             small
@@ -412,14 +424,14 @@ export default function BookingList({
 
         {/* Payment strip */}
         {hasPayment && (
-          <div className="rounded-2xl p-4 flex items-center justify-between bg-[#F7F4EA] border border-[#E6DFC8]">
+          <div className="flex items-center justify-between rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] p-4">
             <div className="flex items-center gap-2.5">
-              <span className="w-9 h-9 rounded-xl flex items-center justify-center bg-white text-[#5C4033]">
-                <Coins className="w-4 h-4" />
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#5C4033]">
+                <Coins className="h-4 w-4" />
               </span>
               <div>
-                <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Payment</p>
-                <p className="text-sm font-black tabular-nums text-[#1F1F1A]">
+                <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Payment</p>
+                <p className="font-black text-sm text-[#1F1F1A] tabular-nums">
                   £{(selectedBooking.paid_amount ?? 0).toFixed(2)}{" "}
                   <span className="text-[#5F624F]">/ £{(selectedBooking.total_amount ?? 0).toFixed(2)}</span>
                 </p>
@@ -433,25 +445,25 @@ export default function BookingList({
         {selectedBooking.contacts && (
           <section>
             <SectionLabel>Primary contact</SectionLabel>
-            <div className="rounded-2xl p-4 flex items-center gap-3.5 bg-white border border-[#E6DFC8]">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-base shrink-0 bg-[#F7F4EA] text-[#5C4033] border border-[#E6DFC8]">
+            <div className="flex items-center gap-3.5 rounded-2xl border border-[#E6DFC8] bg-white p-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] font-black text-base text-[#5C4033]">
                 {initials(selectedBooking.contacts.full_name)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-black uppercase tracking-tight truncate text-[#1F1F1A]">{selectedBooking.contacts.full_name}</p>
+                <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">{selectedBooking.contacts.full_name}</p>
                 {selectedBooking.contacts.email && (
-                  <p className="text-xs font-semibold truncate text-[#5F624F]">{selectedBooking.contacts.email}</p>
+                  <p className="truncate text-xs font-semibold text-[#5F624F]">{selectedBooking.contacts.email}</p>
                 )}
               </div>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex shrink-0 gap-2">
                 {selectedBooking.contacts.email && (
                   <Link
                     href={`mailto:${selectedBooking.contacts.email}`}
                     aria-label="Email contact"
                     title="Email"
-                    className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#5C4033]/7 text-[#5C4033] hover:bg-[#5C4033] hover:text-white transition-all active:scale-95"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5C4033]/7 text-[#5C4033] transition-all hover:bg-[#5C4033] hover:text-white active:scale-95"
                   >
-                    <Mail className="w-4 h-4" />
+                    <Mail className="h-4 w-4" />
                   </Link>
                 )}
                 {selectedBooking.contacts.phone_no && (
@@ -459,9 +471,9 @@ export default function BookingList({
                     href={`tel:${selectedBooking.contacts.country_code ?? ""}${selectedBooking.contacts.phone_no}`}
                     aria-label="Call contact"
                     title="Call"
-                    className="w-10 h-10 rounded-xl flex items-center justify-center bg-[#5C4033]/7 text-[#5C4033] hover:bg-[#5C4033] hover:text-white transition-all active:scale-95"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5C4033]/7 text-[#5C4033] transition-all hover:bg-[#5C4033] hover:text-white active:scale-95"
                   >
-                    <Phone className="w-4 h-4" />
+                    <Phone className="h-4 w-4" />
                   </Link>
                 )}
               </div>
@@ -471,12 +483,12 @@ export default function BookingList({
 
         {/* Staff instructions */}
         {selectedBooking.special_requests && (
-          <div className="rounded-2xl p-4 bg-[#5C4033]/5 border border-[#5C4033]/15">
-            <div className="flex items-center gap-2 mb-2">
-              <MessageSquareQuote className="w-4 h-4 text-[#5C4033]" />
-              <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Staff instructions</span>
+          <div className="rounded-2xl border border-[#5C4033]/15 bg-[#5C4033]/5 p-4">
+            <div className="mb-2 flex items-center gap-2">
+              <MessageSquareQuote className="h-4 w-4 text-[#5C4033]" />
+              <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Staff instructions</span>
             </div>
-            <p className="text-sm font-bold italic leading-relaxed text-[#1F1F1A]">&ldquo;{selectedBooking.special_requests}&rdquo;</p>
+            <p className="text-sm leading-relaxed font-bold text-[#1F1F1A] italic">&ldquo;{selectedBooking.special_requests}&rdquo;</p>
           </div>
         )}
 
@@ -484,29 +496,29 @@ export default function BookingList({
         {selectedBooking.event_id && (
           <Link
             href={`/event-bookings/event/${selectedBooking.event_id}`}
-            className="flex items-center justify-between gap-3 rounded-2xl px-4 py-3.5 bg-white border border-[#E6DFC8] hover:bg-[#F7F4EA] transition-colors"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-[#E6DFC8] bg-white px-4 py-3.5 transition-colors hover:bg-[#F7F4EA]"
           >
             <span className="flex items-center gap-2.5">
-              <CalendarDays className="w-4 h-4 text-[#5C4033]" />
-              <span className="text-xs font-black uppercase tracking-wide text-[#5C4033]">Manage event</span>
+              <CalendarDays className="h-4 w-4 text-[#5C4033]" />
+              <span className="font-black text-xs tracking-wide text-[#5C4033] uppercase">Manage event</span>
             </span>
-            <ExternalLink className="w-3.5 h-3.5 text-[#5F624F]" />
+            <ExternalLink className="h-3.5 w-3.5 text-[#5F624F]" />
           </Link>
         )}
       </div>
     );
 
     const editBody = (
-      <div className="space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="animate-in space-y-5 duration-300 fade-in slide-in-from-bottom-2">
         {/* Event */}
         <div className="space-y-2">
-          <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Event Date &amp; Session</Label>
+          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Event Date &amp; Session</Label>
           <div className="relative">
             <select
               title="Select Event"
               value={editForm.event_id}
               onChange={e => handleEventChange(e.target.value)}
-              className="w-full h-12 rounded-xl border-[1.5px] border-[#E6DFC8] bg-white px-3.5 text-sm font-bold appearance-none outline-none focus:border-[#5C4033] transition-colors"
+              className="h-12 w-full appearance-none rounded-xl border-[1.5px] border-[#E6DFC8] bg-white px-3.5 text-sm font-bold transition-colors outline-none focus:border-[#5C4033]"
             >
               {availableEvents.map(e => (
                 <option key={e.id} value={e.id}>
@@ -514,48 +526,48 @@ export default function BookingList({
                 </option>
               ))}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F] pointer-events-none" />
+            <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5F624F]" />
           </div>
           {showEventMoveHint && (
-            <Hint tone="blue" icon={<CalendarDays className="w-3.5 h-3.5" />}>Moving event. Table assignment has been reset.</Hint>
+            <Hint tone="blue" icon={<CalendarDays className="h-3.5 w-3.5" />}>Moving event. Table assignment has been reset.</Hint>
           )}
         </div>
 
         {/* Group name */}
         <div className="space-y-2">
-          <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Group Name</Label>
+          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Group Name</Label>
           <Input
             aria-label="Group Name"
             value={editForm.group_name}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm(prev => ({ ...prev, group_name: e.target.value }))}
-            className="h-12 rounded-xl border-[1.5px] border-[#E6DFC8] bg-white text-base font-bold px-3.5 focus:border-[#5C4033]"
+            className="h-12 rounded-xl border-[1.5px] border-[#E6DFC8] bg-white px-3.5 text-base font-bold focus:border-[#5C4033]"
           />
         </div>
 
         {/* Group size + Table */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Group Size</Label>
+            <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Group Size</Label>
             <Input
               aria-label="Group Size"
               type="number"
               min={1}
               value={editForm.group_size || ""}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleGroupSizeChange(Number(e.target.value) || 0)}
-              className="h-12 rounded-xl border-[1.5px] border-[#E6DFC8] bg-white text-base font-bold px-3.5 focus:border-[#5C4033]"
+              className="h-12 rounded-xl border-[1.5px] border-[#E6DFC8] bg-white px-3.5 text-base font-bold focus:border-[#5C4033]"
             />
           </div>
           {seatingRequired && (
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Table</Label>
+              <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Table</Label>
               <div className="relative">
                 <select
                   title="Select Table"
                   value={editForm.table_id}
                   onChange={e => handleTableChange(e.target.value)}
                   className={cn(
-                    "w-full h-12 rounded-xl px-3.5 pr-9 text-sm font-bold appearance-none outline-none transition-colors",
-                    editForm.table_id ? "bg-white border-[1.5px] border-[#E6DFC8] focus:border-[#5C4033]" : "bg-[#F7F4EA] border-[1.5px] border-dashed border-[#E6DFC8]",
+                    "h-12 w-full appearance-none rounded-xl px-3.5 pr-9 text-sm font-bold transition-colors outline-none",
+                    editForm.table_id ? "border-[1.5px] border-[#E6DFC8] bg-white focus:border-[#5C4033]" : "border-[1.5px] border-dashed border-[#E6DFC8] bg-[#F7F4EA]",
                   )}
                 >
                   <option value="">Unassigned</option>
@@ -565,21 +577,21 @@ export default function BookingList({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F] pointer-events-none" />
+                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5F624F]" />
               </div>
             </div>
           )}
         </div>
         {showTableConfirmedHint && (
-          <Hint tone="green" icon={<CheckCircle2 className="w-3.5 h-3.5" />}>Table selected. Status will update to Confirmed.</Hint>
+          <Hint tone="green" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Table selected. Status will update to Confirmed.</Hint>
         )}
         {showTableCancelledHint && (
-          <Hint tone="red" icon={<AlertCircle className="w-3.5 h-3.5" />}>Table removed. Status will update to Cancelled.</Hint>
+          <Hint tone="red" icon={<AlertCircle className="h-3.5 w-3.5" />}>Table removed. Status will update to Cancelled.</Hint>
         )}
 
         {/* Status */}
         <div>
-          <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1 mb-2 block">Status</Label>
+          <Label className="mb-2 ml-1 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Status</Label>
           <div className="grid grid-cols-2 gap-2">
             {["confirmed", "waitlisted", "pending", "cancelled"].map(s => {
               const st = statusTheme[s];
@@ -590,11 +602,11 @@ export default function BookingList({
                   type="button"
                   onClick={() => handleStatusChangeInEdit(s)}
                   className={cn(
-                    "flex items-center gap-2 h-12 rounded-xl px-3 font-black uppercase tracking-wide text-[11px] transition-all border-2",
-                    active ? cn(st.bg, st.text, st.cardBorder) : "bg-white text-[#5F624F] border-[#E6DFC8]",
+                    "flex h-12 items-center gap-2 rounded-xl border-2 px-3 font-black text-[11px] tracking-wide uppercase transition-all",
+                    active ? cn(st.bg, st.text, st.cardBorder) : "border-[#E6DFC8] bg-white text-[#5F624F]",
                   )}
                 >
-                  <span className={cn("w-2.5 h-2.5 rounded-full", st.dot)} />
+                  <span className={cn("h-2.5 w-2.5 rounded-full", st.dot)} />
                   {s.charAt(0).toUpperCase() + s.slice(1)}
                 </button>
               );
@@ -602,42 +614,42 @@ export default function BookingList({
           </div>
           {showStatusTableUnassignedHint && (
             <div className="mt-2">
-              <Hint tone="amber" icon={<RefreshCw className="w-3.5 h-3.5" />}>Status changed. Table assignment will be cleared.</Hint>
+              <Hint tone="amber" icon={<RefreshCw className="h-3.5 w-3.5" />}>Status changed. Table assignment will be cleared.</Hint>
             </div>
           )}
         </div>
 
         {/* Special requests */}
         <div className="space-y-2">
-          <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Special Requests</Label>
+          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Special Requests</Label>
           <Textarea
             aria-label="Special Requests"
             value={editForm.special_requests}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({ ...prev, special_requests: e.target.value }))}
             placeholder="Dietary needs, table preference, occasion…"
-            className="min-h-28 rounded-xl border-[1.5px] border-[#E6DFC8] bg-white text-sm font-medium p-3.5 focus:border-[#5C4033] resize-none"
+            className="min-h-28 resize-none rounded-xl border-[1.5px] border-[#E6DFC8] bg-white p-3.5 text-sm font-medium focus:border-[#5C4033]"
           />
         </div>
       </div>
     );
 
     const footer = (
-      <div className="shrink-0 px-5 sm:px-6 py-4 bg-white/90 backdrop-blur-md border-t border-[#E6DFC8] shadow-[0_-10px_30px_rgba(0,0,0,0.04)]">
+      <div className="shrink-0 border-t border-[#E6DFC8] bg-white/90 px-5 py-4 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md sm:px-6">
         {isEditing ? (
           <div className="grid grid-cols-[auto_1fr] gap-3">
             <Button
               variant="secondary"
               onClick={() => setIsEditing(false)}
-              className="h-12 rounded-xl font-black uppercase tracking-wide text-[11px] px-5"
+              className="h-12 rounded-xl px-5 font-black text-[11px] tracking-wide uppercase"
             >
               Cancel
             </Button>
             <Button
               onClick={handleSaveDetails}
               disabled={isPending}
-              className="h-12 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-xs"
+              className="h-12 rounded-xl bg-[#1B4332] font-black text-xs tracking-widest text-white uppercase hover:bg-[#1B4332]/85"
             >
-              {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : (<><Save className="w-4 h-4 mr-2" /> Save</>)}
+              {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><Save className="mr-2 h-4 w-4" /> Save</>)}
             </Button>
           </div>
         ) : (
@@ -654,16 +666,16 @@ export default function BookingList({
                 });
                 if (ok) handleDeleteBooking(selectedBooking.id);
               }}
-              className="h-12 rounded-xl font-black uppercase tracking-wide text-[11px] px-5 text-[#5C4033] hover:bg-red-50! hover:text-red-600!"
+              className="h-12 rounded-xl px-5 font-black text-[11px] tracking-wide text-[#5C4033] uppercase hover:bg-red-50! hover:text-red-600!"
             >
-              <Trash2 className="w-4 h-4 mr-1.5" />
+              <Trash2 className="mr-1.5 h-4 w-4" />
               Delete
             </Button>
             <Button
               onClick={handleEnterEditMode}
-              className="h-12 rounded-xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-xs"
+              className="h-12 rounded-xl bg-[#B45309] font-black text-xs tracking-widest text-white uppercase hover:bg-[#B45309]/85"
             >
-              <Pencil className="w-4 h-4 mr-2" /> Edit
+              <Pencil className="mr-2 h-4 w-4" /> Edit
             </Button>
           </div>
         )}
@@ -671,10 +683,10 @@ export default function BookingList({
     );
 
     return (
-      <div className="flex flex-col h-full overflow-hidden bg-white">
+      <div className="flex h-full flex-col overflow-hidden bg-[#ECE4CE]">
         {isOverlay && <span ref={topFocusRef} tabIndex={-1} className="sr-only" />}
         {header}
-        <div ref={isOverlay ? scrollContainerRef : undefined} className="flex-1 overflow-y-auto px-5 sm:px-6 py-5 bg-[#F7F4EA] min-h-0 overscroll-contain">
+        <div ref={isOverlay ? scrollContainerRef : undefined} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#ECE4CE] px-5 py-5 sm:px-6">
           {isEditing ? editBody : viewBody}
           <div className="h-2" />
         </div>
@@ -702,12 +714,15 @@ export default function BookingList({
   );
 
   return (
-    <div>
+    <div className="xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
       {isWide ? (
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          {listItems}
+        <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+          {/* Left column scrolls on its own; the detail panel stays fixed. */}
+          <div className="h-full min-h-0 overflow-y-auto pr-1">
+            {listItems}
+          </div>
           <aside
-            className="sticky top-4 self-start rounded-3xl overflow-hidden border border-[#E6DFC8] shadow-lg h-[calc(100vh-7rem)] min-h-135"
+            className="h-full min-h-0 self-stretch overflow-hidden rounded-3xl border-2 border-[#5C4033]/15 shadow-xl"
           >
             {renderPanel("inline")}
           </aside>
@@ -719,7 +734,7 @@ export default function BookingList({
             <SheetContent
               side="bottom"
               onOpenAutoFocus={e => e.preventDefault()}
-              className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[88vh] flex flex-col outline-none shadow-2xl"
+              className="flex h-[88vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none"
             >
               {renderPanel("bottom")}
             </SheetContent>
@@ -729,8 +744,8 @@ export default function BookingList({
 
       {/* Global transition overlay */}
       {isPending && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#5C4033] text-white px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-wide shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <Loader2 className="w-4 h-4 animate-spin" /> Syncing with DB...
+        <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#5C4033] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
+          <Loader2 className="h-4 w-4 animate-spin" /> Syncing with DB...
         </div>
       )}
       {ConfirmDialogUI}
@@ -755,6 +770,7 @@ function RefinedCard({
   const table = booking.booking_table_mappings?.[0]?.tables;
   const capacity = table?.tables_capacity;
   const eventDate = parseDate(booking.events?.event_date);
+  const eventTime = formatTime(booking.events?.event_start_time);
   const seatingRequired = booking.events?.seating_required !== false;
   const StatusIcon = theme.icon;
 
@@ -763,43 +779,55 @@ function RefinedCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full text-left rounded-2xl p-3 flex items-center gap-3 bg-white transition-all active:scale-[0.99]",
-        selected ? "border-2 border-[#5C4033] shadow-lg" : "border border-[#E6DFC8] shadow-sm",
+        "flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all active:scale-[0.99]",
+        selected
+          ? "border-2 border-[#B45309] bg-[#B45309]/[0.04] shadow-lg ring-2 ring-[#B45309]/20"
+          : "border border-[#E6DFC8] bg-white shadow-sm",
       )}
     >
-      <div className={cn("w-1 self-stretch rounded-full shrink-0", theme.dot)} />
-      <div className={cn("w-11 h-11 rounded-full flex items-center justify-center shrink-0 border", theme.bg, theme.text, theme.border)}>
+      <div className={cn("w-1 shrink-0 self-stretch rounded-full", theme.dot)} />
+      <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full border", theme.bg, theme.text, theme.border)}>
         {showDate && eventDate ? (
-          <div className="flex flex-col leading-none items-center justify-center">
-            <span className="text-[9px] font-black uppercase tracking-tighter opacity-80">{format(eventDate, "MMM")}</span>
-            <span className="text-base font-black tracking-tighter">{format(eventDate, "dd")}</span>
+          <div className="flex flex-col items-center justify-center leading-none">
+            <span className="font-black text-[9px] tracking-tighter uppercase opacity-80">{format(eventDate, "MMM")}</span>
+            <span className="font-black text-base tracking-tighter">{format(eventDate, "dd")}</span>
           </div>
         ) : (
-          <StatusIcon className="w-5 h-5" />
+          <StatusIcon className="h-5 w-5" />
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <h4 className="text-sm font-black uppercase tracking-tight truncate text-[#1F1F1A]">{booking.group_name || "Guest Team"}</h4>
+        {/* Event context — only when no event is filtered, and only on ≥ sm. */}
+        {showDate && (
+          <div className="mb-1 hidden min-w-0 items-center gap-1.5 sm:flex">
+            <CalendarDays className="h-3 w-3 shrink-0 text-[#5F624F]/55" />
+            <span className="truncate font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+              {booking.events?.event_title || "Untitled Event"}
+              {eventTime ? ` · ${eventTime}` : ""}
+            </span>
+          </div>
+        )}
+        <div className="flex min-w-0 items-center gap-1.5">
+          <h4 className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">{booking.group_name || "Guest Team"}</h4>
           {booking.special_requests && (
-            <span title="Has staff instructions" className="inline-flex items-center justify-center w-5 h-5 rounded-md shrink-0 bg-amber-50 text-amber-700">
-              <Star className="w-3 h-3 fill-current" />
+            <span title="Has staff instructions" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-amber-50 text-amber-700">
+              <Star className="h-3 w-3 fill-current" />
             </span>
           )}
         </div>
-        <div className="flex items-center justify-between gap-2 mt-1.5">
-          <span className="text-xs font-semibold truncate text-[#5F624F]">{booking.contacts?.full_name}</span>
-          <div className="flex items-center gap-2 shrink-0">
+        <div className="mt-1.5 flex items-center justify-between gap-2">
+          <span className="truncate text-xs font-semibold text-[#5F624F]">{booking.contacts?.full_name}</span>
+          <div className="flex shrink-0 items-center gap-2">
             {seatingRequired && <TableChip name={table?.tables_name} />}
-            <span className="inline-flex items-center gap-1 text-sm font-black tabular-nums text-[#1F1F1A]">
-              <Users className="w-3.5 h-3.5 text-[#5F624F]/55" />
+            <span className="inline-flex items-center gap-1 font-black text-sm text-[#1F1F1A] tabular-nums">
+              <Users className="h-3.5 w-3.5 text-[#5F624F]/55" />
               {booking.group_size}
               {seatingRequired && capacity ? <span className="text-[#5F624F]/70">/{capacity}</span> : null}
             </span>
           </div>
         </div>
       </div>
-      <ChevronRight className="w-4 h-4 shrink-0 text-[#5F624F]/50" />
+      <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
     </button>
   );
 }
@@ -807,41 +835,41 @@ function RefinedCard({
 function TableChip({ name }: { name?: string | null }) {
   if (!name) {
     return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide bg-[#F7F4EA] text-[#5F624F] border border-dashed border-[#E6DFC8]">
-        <TableIcon className="w-3 h-3" /> No table
+      <span className="inline-flex items-center gap-1 rounded-md border border-dashed border-[#E6DFC8] bg-[#F7F4EA] px-2 py-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+        <TableIcon className="h-3 w-3" /> No table
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wide bg-[#5C4033]/7 text-[#5C4033]">
-      <TableIcon className="w-3 h-3" /> {name.replace("Table ", "T")}
+    <span className="inline-flex items-center gap-1 rounded-md bg-[#5C4033]/7 px-2 py-0.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+      <TableIcon className="h-3 w-3" /> {name.replace("Table ", "T")}
     </span>
   );
 }
 
 function EmptyList() {
   return (
-    <div className="rounded-2xl p-10 text-center bg-white border border-[#E6DFC8]">
-      <div className="w-12 h-12 rounded-2xl mx-auto mb-3 flex items-center justify-center bg-[#F7F4EA] text-[#5F624F]">
-        <CalendarDays className="w-5 h-5" />
+    <div className="rounded-2xl border border-[#E6DFC8] bg-white p-10 text-center">
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F7F4EA] text-[#5F624F]">
+        <CalendarDays className="h-5 w-5" />
       </div>
-      <p className="text-sm font-black uppercase tracking-tight text-[#1F1F1A]">No bookings match</p>
-      <p className="text-xs mt-1 text-[#5F624F]">Try clearing a filter or the search.</p>
+      <p className="font-black text-sm tracking-tight text-[#1F1F1A] uppercase">No bookings match</p>
+      <p className="mt-1 text-xs text-[#5F624F]">Try clearing a filter or the search.</p>
     </div>
   );
 }
 
 // ---- Detail building blocks ----------------------------------------------
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[10px] font-black uppercase tracking-[0.2em] mb-2 text-[#5F624F]/70">{children}</p>;
+  return <p className="mb-2 font-black text-[10px] tracking-[0.2em] text-[#5F624F]/70 uppercase">{children}</p>;
 }
 
 function Fact({ icon, label, value, small, accent }: { icon: React.ReactNode; label: string; value: string; small?: boolean; accent?: boolean }) {
   return (
-    <div className="rounded-2xl p-3.5 bg-white border border-[#E6DFC8]">
-      <div className="flex items-center gap-1.5 mb-1.5 text-[#5F624F]">
+    <div className="rounded-2xl border border-[#E6DFC8] bg-white p-3.5">
+      <div className="mb-1.5 flex items-center gap-1.5 text-[#5F624F]">
         <span className="opacity-70">{icon}</span>
-        <span className="text-[9.5px] font-black uppercase tracking-wide">{label}</span>
+        <span className="font-black text-[9.5px] tracking-wide uppercase">{label}</span>
       </div>
       <p className={cn("font-black leading-tight", small ? "text-xs" : "text-sm", accent ? "text-[#C8956D]" : "text-[#1F1F1A]")}>{value}</p>
     </div>
@@ -856,7 +884,7 @@ function PayBadge({ status }: { status: string }) {
     Refunded: "bg-red-50 text-red-700",
   };
   const cls = map[status] || "bg-[#F7F4EA] text-[#5F624F]";
-  return <span className={cn("px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wide", cls)}>{status}</span>;
+  return <span className={cn("rounded-full px-3 py-1.5 font-black text-[10px] tracking-wide uppercase", cls)}>{status}</span>;
 }
 
 function Hint({ tone, icon, children }: { tone: "blue" | "green" | "red" | "amber"; icon: React.ReactNode; children: React.ReactNode }) {
@@ -867,9 +895,9 @@ function Hint({ tone, icon, children }: { tone: "blue" | "green" | "red" | "ambe
     amber: "bg-amber-50 border-amber-200 text-amber-700",
   };
   return (
-    <div className={cn("flex items-center gap-2 p-3 rounded-xl border animate-in fade-in slide-in-from-top-1", tones[tone])}>
+    <div className={cn("flex animate-in items-center gap-2 rounded-xl border p-3 fade-in slide-in-from-top-1", tones[tone])}>
       {icon}
-      <p className="text-[10px] font-black uppercase tracking-tight">{children}</p>
+      <p className="font-black text-[10px] tracking-tight uppercase">{children}</p>
     </div>
   );
 }
