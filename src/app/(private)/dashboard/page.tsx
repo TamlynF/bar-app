@@ -8,7 +8,6 @@ import {
   Trophy,
   Plus,
   TrendingUp,
-  Clock,
   Zap,
 } from "lucide-react";
 
@@ -17,10 +16,8 @@ import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subty
 import { adminBookingsHref } from "@/lib/booking-links";
 import SectionLabel from "./components/section-label";
 import { EventRowListClient } from "./components/event-row-list-client";
-import TonightCard from "./components/tonight-card";
 import NeedsActionHero, { type ActionItem } from "./components/needs-action-hero";
 import BookingsTrend, { type TrendBooking } from "./components/bookings-trend";
-import { countSeatableWaitlist } from "@/lib/table-allocation";
 import { BarChart3 } from "lucide-react"; // alongside existing lucide imports
 import { fetchDashboardAnalytics } from "./lib/analytics";
 import { fetchVenueSales } from "./lib/venue-sales";
@@ -104,6 +101,7 @@ type BingoDetails = {
 };
 export type ListItem = {
   key: string;
+  eventId: number;
   date: string;
   title: string;
   startTime: string | null;
@@ -170,12 +168,11 @@ export default async function DashboardPage() {
     new Date().getDate()
   ).toISOString().split("T")[0];
 
-  // Trend chart needs this-month + last-month history (covers the week view too).
-  const firstDayOfLastMonth = new Date(
-    new Date().getFullYear(),
-    new Date().getMonth() - 1,
-    1
-  ).toISOString().split("T")[0];
+  // Trend chart supports week/month/year views, so fetch from the start of last
+  // calendar year (covers "this year" vs "last year", and the shorter ranges).
+  const trendFrom = new Date(Date.UTC(new Date().getUTCFullYear() - 1, 0, 1))
+    .toISOString()
+    .split("T")[0];
 
   // ─── Data Fetching ────────────────────────────────────────────────────────
   const analytics = await analyticsPromise;
@@ -228,7 +225,7 @@ export default async function DashboardPage() {
   const { data: trendRaw } = await supabase
     .from("bookings")
     .select("created_at, events!bookings_event_id_fkey!inner(event_types!inner(id, name), event_subtypes!inner(id, name))")
-    .gte("created_at", firstDayOfLastMonth)
+    .gte("created_at", trendFrom)
     .neq("status", "cancelled");
 
   const { data: rawUpcoming, error: upcomingError } = await supabase
@@ -303,20 +300,13 @@ export default async function DashboardPage() {
       if (currentMonthSaturdays.includes(d)) saturdaysBooked.add(d);
     });
   });
-  const openSaturdays = currentMonthSaturdays.length - saturdaysBooked.size;
-
-  // Waitlisted bookings on seated events that a now-free table could seat (rule 3e).
-  // Surfaced for manual seating from the bookings page — never auto-promoted.
-  const seatableWaitlistCount = await countSeatableWaitlist(supabase);
 
   const totalActions =
     (pendingPrivate ?? 0) +
     (pendingBands ?? 0) +
     (pendingEnquiries ?? 0) +
     unpaidCount +
-    quizzesMissingQuestions +
-    openSaturdays +
-    seatableWaitlistCount;
+    quizzesMissingQuestions;
 
   const totalVenueCapacity =
     tablesData?.reduce((acc, t) => acc + t.max_capacity, 0) ?? 0;
@@ -425,6 +415,7 @@ export default async function DashboardPage() {
 
     return {
       key: `event-${ev.id}`,
+      eventId: ev.id,
       date: ev.date,
       title: ev.title ?? "Untitled Event",
       startTime: ev.start_time,
@@ -458,16 +449,6 @@ export default async function DashboardPage() {
       return a.startTime.localeCompare(b.startTime); // ascending startTime
     });
 
-  //console.log("All List Items:", allListItems);
-  const tonightGeneralEvent = allListItems[0]?.date === todayStr ? allListItems[0] : null;
-  const tonightGuests = tonightGeneralEvent?.guests ?? 0;
-
-  //console.log("tonightgen", tonightGeneralEvent);
-  const capacityPercent =
-    totalVenueCapacity > 0
-      ? Math.min(100, Math.round((tonightGuests / totalVenueCapacity) * 100))
-      : 0;
-
   // Map trend rows to the flat shape the client chart buckets/filters.
   type IdName = { id: number; name: string };
   type TrendEventRel = { event_types: IdName | IdName[]; event_subtypes: IdName | IdName[] };
@@ -498,8 +479,9 @@ export default async function DashboardPage() {
     //{ key: "seatable-waitlist", label: "Waitlist", count: seatableWaitlistCount, href: "/event-bookings/quiz-bookings?status=waitlisted", color: "bg-teal-600" },
   ];
 
-  // Tonight is highlighted separately; the rest fill "Coming Up".
-  const comingUp = tonightGeneralEvent ? allListItems.slice(1) : allListItems;
+  // Everything upcoming (incl. tonight) lists together in "Coming Up"; tonight's
+  // event is flagged inside the row list (see EventRowListClient).
+  const comingUp = allListItems;
 
 
   // ─── Render ───────────────────────────────────────────────────────────────
@@ -517,116 +499,102 @@ export default async function DashboardPage() {
         {/* TRIAGE: what's wrong — needs-action hero */}
         <NeedsActionHero items={actionItems} total={totalActions} />
 
-        {/* Analytics (left) + what's-on (right) on desktop. On mobile each card
-            stacks in source order: Tonight → Bookings → KPIs → Coming Up. */}
+        {/* Bookings graph spans full width (like the needs-action hero); below it
+            Trends fills the wide left column and "at a Glance" + "Coming Up" stack
+            in the right column. Mobile stacks in source order. */}
         <div className="grid items-start gap-5 lg:grid-cols-[1.6fr_1fr]">
 
-          {/* Happening Tonight — mobile 1st, desktop top-right */}
-          {tonightGeneralEvent && (
-            <section className="row-start-1 space-y-2 lg:col-start-2">
-              <SectionLabel icon={Clock} label="Happening Tonight" />
-              <TonightCard
-                event={tonightGeneralEvent}
-                guests={tonightGuests}
-                capacity={totalVenueCapacity}
-                capacityPercent={capacityPercent}
-              />
-            </section>
-          )}
-
-          {/* Bookings trend — mobile 2nd, desktop top-left */}
-          <div className="row-start-1 lg:col-start-1">
+          {/* Bookings trend — full width, matching the needs-action hero */}
+          <div className="lg:col-span-2 lg:row-start-1">
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
-          {/* Coming Up — swapped into the "at a Glance" slot (desktop bottom-left, wide column) */}
-          <section className="space-y-2">
-            <SectionLabel icon={CalendarDays} label="Coming Up" />
-            {comingUp.length > 0 ? (
-              <EventRowListClient items={comingUp} />
-            ) : !tonightGeneralEvent ? (
-              <div className="rounded-2xl border border-[#E6DFC8] bg-white p-10 text-center">
-                <CalendarDays className="mx-auto mb-3 h-10 w-10 text-[#5F624F] opacity-20" />
-                <p className="font-black text-sm text-[#1F1F1A]">No Upcoming Events</p>
-                <p className="mt-1 text-[11px] font-medium text-[#5F624F]">
-                  Schedule an event in Settings to see it here.
-                </p>
-              </div>
-            ) : (
-              <div className="rounded-2xl border border-[#E6DFC8] bg-white p-6 text-center">
-                <p className="text-[11px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">Nothing else scheduled</p>
-              </div>
-            )}
+          {/* SECTION: TRENDS — wide left column */}
+          <section className="space-y-2 lg:col-start-1 lg:row-start-2">
+            <SectionLabel icon={BarChart3} label="Trends" />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <RevenueTrendChart data={analytics.weekly} />
+              <RevenueByTypeChart
+                data={analytics.revenueByType}
+                bandSpend={analytics.bandSpendThisMonth}
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <StatCard
+                label="Returning"
+                value={`${analytics.guestSplit.returningPct}%`}
+                sub="of month's guests"
+              />
+              <StatCard
+                label="Cancellations"
+                value={`${analytics.cancellationPct}%`}
+                sub="of bookings"
+                warn={analytics.cancellationPct > 15}
+              />
+              <StatCard
+                label="Lead Time"
+                value={`${analytics.medianLeadDays}d`}
+                sub="median booking"
+              />
+            </div>
           </section>
 
-          {/* SECTION: TRENDS */}
-<section className="space-y-2">
-  <SectionLabel icon={BarChart3} label="Trends" />
-  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-    <RevenueTrendChart data={analytics.weekly} />
-    <RevenueByTypeChart
-      data={analytics.revenueByType}
-      bandSpend={analytics.bandSpendThisMonth}
-    />
-  </div>
-  <div className="grid grid-cols-3 gap-3">
-    <StatCard
-      label="Returning"
-      value={`${analytics.guestSplit.returningPct}%`}
-      sub="of month's guests"
-    />
-    <StatCard
-      label="Cancellations"
-      value={`${analytics.cancellationPct}%`}
-      sub="of bookings"
-      warn={analytics.cancellationPct > 15}
-    />
-    <StatCard
-      label="Lead Time"
-      value={`${analytics.medianLeadDays}d`}
-      sub="median booking"
-    />
-  </div>
-</section>
+          {/* Right column: this month "at a Glance", then "Coming Up" beneath it */}
+          <div className="space-y-5 lg:col-start-2 lg:row-start-2">
+            <section className="space-y-2">
+              <SectionLabel
+                icon={TrendingUp}
+                label={`${format(new Date(), "MMMM")} at a Glance`}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <StatCard
+                  label="Collected"
+                  value={`£${analytics.thisMonth.collected.toFixed(2)}`}
+                  sub="revenue paid"
+                  positive
+                  delta={analytics.deltas.collected}
+                />
+                <StatCard
+                  label="Outstanding"
+                  value={`£${analytics.thisMonth.outstanding.toFixed(2)}`}
+                  sub="to collect"
+                  warn={analytics.thisMonth.outstanding > 0}
+                />
+                <StatCard
+                  label="Bookings"
+                  value={analytics.thisMonth.bookings}
+                  sub="this month"
+                  delta={analytics.deltas.bookings}
+                />
+                <StatCard
+                  label="New Guests"
+                  value={analytics.guestSplit.newGuests}
+                  sub="first-time bookers"
+                />
+              </div>
+            </section>
+
+            {/* Coming Up (incl. tonight) — directly under "at a Glance" */}
+            <section className="space-y-2">
+              <SectionLabel icon={CalendarDays} label="Coming Up" />
+              {comingUp.length > 0 ? (
+                <EventRowListClient items={comingUp} />
+              ) : (
+                <div className="rounded-2xl border border-[#E6DFC8] bg-white p-10 text-center">
+                  <CalendarDays className="mx-auto mb-3 h-10 w-10 text-[#5F624F] opacity-20" />
+                  <p className="font-black text-sm text-[#1F1F1A]">No Upcoming Events</p>
+                  <p className="mt-1 text-[11px] font-medium text-[#5F624F]">
+                    Schedule an event in Settings to see it here.
+                  </p>
+                </div>
+              )}
+            </section>
+          </div>
 
           {/* SECTION: VENUE SALES (actual Square takings — distinct from pre-booked revenue) */}
           <section className="space-y-2 lg:col-span-2">
             <SectionLabel icon={Wine} label="Venue Sales" />
             <VenueSalesSection data={venueSales} />
-          </section>
-
-          {/* This month "at a Glance" — swapped into the Coming Up slot (desktop right column) */}
-          <section className={`space-y-2 lg:col-start-2 ${tonightGeneralEvent ? "lg:row-start-2" : "lg:row-start-1"}`}>
-            <SectionLabel
-              icon={TrendingUp}
-              label={`${format(new Date(), "MMMM")} at a Glance`}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard
-                label="Collected"
-                value={`£${analytics.thisMonth.collected.toFixed(2)}`}
-                sub="revenue paid"
-                positive
-                delta={analytics.deltas.collected}
-              />
-              <StatCard
-                label="Outstanding"
-                value={`£${analytics.thisMonth.outstanding.toFixed(2)}`}
-                sub="to collect"
-                warn={analytics.thisMonth.outstanding > 0}
-              />
-              <StatCard
-                label="Bookings"
-                value={analytics.thisMonth.bookings}
-                sub="this month"
-                delta={analytics.deltas.bookings}
-              />
-              <StatCard
-                label="New Guests"
-                value={analytics.guestSplit.newGuests}
-                sub="first-time bookers"
-              />
-            </div>
           </section>
         </div>
 

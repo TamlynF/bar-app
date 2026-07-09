@@ -12,7 +12,8 @@ export interface TrendBooking {
   subName: string | null;
 }
 
-type Range = "week" | "month";
+type Range = "week" | "month" | "year";
+type View = "summary" | "detail";
 
 // SVG canvas (stretched to fill width via preserveAspectRatio="none"; strokes
 // stay crisp with vector-effect="non-scaling-stroke").
@@ -21,6 +22,22 @@ const H = 120;
 const PAD_TOP = 14;
 const PAD_BOT = 18;
 const DAY = 86_400_000;
+
+// Distinct series colours for the detail (breakdown) view.
+const SERIES_COLORS = [
+  "#5C4033", "#B45309", "#1B4332", "#2563EB",
+  "#7C3AED", "#DB2777", "#0891B2", "#CA8A04",
+  "#4B5563", "#9D174D",
+];
+
+// Detail view caps the number of distinct series for readability; the rest roll
+// into a single grey "Other" line.
+const TOP_N = 5;
+const OTHER_COLOR = "#9CA3AF";
+
+// Labels come from the DB (often lower-case) — show them Title Cased.
+const titleCase = (s: string) =>
+  s ? s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : s;
 
 const yFor = (v: number, max: number) => H - PAD_BOT - (v / max) * (H - PAD_TOP - PAD_BOT);
 const xFor = (i: number, n: number) => (n === 1 ? 0 : (i / (n - 1)) * W);
@@ -36,6 +53,7 @@ function linePath(vals: number[], max: number, close: boolean) {
 
 export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBooking[]; nowMs: number }) {
   const [range, setRange] = useState<Range>("week");
+  const [view, setView] = useState<View>("summary");
   const [applied, setApplied] = useState<string>("all"); // 'all' | 'type:<id>' | 'sub:<id>'
   const [selType, setSelType] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
@@ -63,74 +81,166 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [bookings]);
 
-  // Bucket counts for the current + previous period. All date math is in UTC and
-  // keyed off the server-passed `nowMs`, so SSR and client agree (no mismatch).
-  const series = useMemo(() => {
+  // Bucketing for the current + previous period. All date math is in UTC and
+  // keyed off the server-passed `nowMs`, so SSR and client agree.
+  const period = useMemo(() => {
+    if (range === "week") {
+      const dow = (new Date(nowMs).getUTCDay() + 6) % 7; // 0 = Monday
+      const weekStart = utcDayStart(nowMs) - dow * DAY;
+      const prevStart = weekStart - 7 * DAY;
+      return {
+        n: 7,
+        labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+        curLbl: "This week",
+        prevLbl: "Last week",
+        curBucket: (ms: number) => { const i = Math.round((utcDayStart(ms) - weekStart) / DAY); return i >= 0 && i < 7 ? i : -1; },
+        prevBucket: (ms: number) => { const i = Math.round((utcDayStart(ms) - prevStart) / DAY); return i >= 0 && i < 7 ? i : -1; },
+      };
+    }
+    if (range === "month") {
+      const now = new Date(nowMs);
+      const curY = now.getUTCFullYear();
+      const curM = now.getUTCMonth();
+      const prevRef = new Date(Date.UTC(curY, curM - 1, 1));
+      const prevY = prevRef.getUTCFullYear();
+      const prevM = prevRef.getUTCMonth();
+      return {
+        n: 5,
+        labels: ["W1", "W2", "W3", "W4", "W5"],
+        curLbl: "This month",
+        prevLbl: "Last month",
+        curBucket: (ms: number) => { const d = new Date(ms); return d.getUTCFullYear() === curY && d.getUTCMonth() === curM ? Math.min(4, Math.floor((d.getUTCDate() - 1) / 7)) : -1; },
+        prevBucket: (ms: number) => { const d = new Date(ms); return d.getUTCFullYear() === prevY && d.getUTCMonth() === prevM ? Math.min(4, Math.floor((d.getUTCDate() - 1) / 7)) : -1; },
+      };
+    }
+    // year — bucket by month, current vs previous calendar year.
+    const curY = new Date(nowMs).getUTCFullYear();
+    const prevY = curY - 1;
+    return {
+      n: 12,
+      labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+      curLbl: "This year",
+      prevLbl: "Last year",
+      curBucket: (ms: number) => { const d = new Date(ms); return d.getUTCFullYear() === curY ? d.getUTCMonth() : -1; },
+      prevBucket: (ms: number) => { const d = new Date(ms); return d.getUTCFullYear() === prevY ? d.getUTCMonth() : -1; },
+    };
+  }, [range, nowMs]);
+
+  // Summary series — the current selection as a single line vs. the prior period.
+  const summary = useMemo(() => {
     const inFilter = (b: TrendBooking) => {
       if (applied === "all") return true;
       if (applied.startsWith("type:")) return b.typeId === applied.slice(5);
       if (applied.startsWith("sub:")) return b.subId === applied.slice(4);
       return true;
     };
-    const rows = bookings.filter(inFilter);
+    const cur = new Array(period.n).fill(0);
+    const prev = new Array(period.n).fill(0);
+    for (const b of bookings) {
+      if (!inFilter(b)) continue;
+      const ms = new Date(b.createdAt).getTime();
+      const ic = period.curBucket(ms); if (ic >= 0) cur[ic]++;
+      const ip = period.prevBucket(ms); if (ip >= 0) prev[ip]++;
+    }
+    return { cur, prev };
+  }, [bookings, applied, period]);
 
-    if (range === "week") {
-      const dow = (new Date(nowMs).getUTCDay() + 6) % 7; // 0 = Monday
-      const weekStart = utcDayStart(nowMs) - dow * DAY;
-      const prevStart = weekStart - 7 * DAY;
-      const cur = new Array(7).fill(0);
-      const prev = new Array(7).fill(0);
-      for (const b of rows) {
-        const ms = utcDayStart(new Date(b.createdAt).getTime());
-        const ic = Math.round((ms - weekStart) / DAY);
-        if (ic >= 0 && ic < 7) cur[ic]++;
-        const ip = Math.round((ms - prevStart) / DAY);
-        if (ip >= 0 && ip < 7) prev[ip]++;
+  // Detail series — a line per group for the current period. Grouping depends on
+  // the selection: "all" → per event type; a type ("all subtypes") → per sub-type;
+  // a single sub-type → just that one line.
+  const detail = useMemo(() => {
+    let groups: { id: string; name: string }[] = [];
+    let keyOf: (b: TrendBooking) => string | null = () => null;
+
+    if (applied === "all") {
+      groups = taxonomy.map((t) => ({ id: t.id, name: t.name }));
+      keyOf = (b) => b.typeId;
+    } else if (applied.startsWith("type:")) {
+      const tid = applied.slice(5);
+      const t = taxonomy.find((t) => t.id === tid);
+      groups = t ? t.subs.map((s) => ({ id: s.id, name: s.name })) : [];
+      keyOf = (b) => (b.typeId === tid ? b.subId : null);
+    } else if (applied.startsWith("sub:")) {
+      const sid = applied.slice(4);
+      let name = sid;
+      for (const t of taxonomy) { const s = t.subs.find((s) => s.id === sid); if (s) { name = s.name; break; } }
+      groups = [{ id: sid, name }];
+      keyOf = (b) => (b.subId === sid ? sid : null);
+    }
+
+    const idx = new Map(groups.map((g, i) => [g.id, i]));
+    const cur = groups.map(() => new Array(period.n).fill(0));
+    const prev = groups.map(() => new Array(period.n).fill(0));
+    for (const b of bookings) {
+      const key = keyOf(b);
+      if (key == null) continue;
+      const gi = idx.get(key);
+      if (gi === undefined) continue;
+      const ms = new Date(b.createdAt).getTime();
+      const ci = period.curBucket(ms); if (ci >= 0) cur[gi][ci]++;
+      const pi = period.prevBucket(ms); if (pi >= 0) prev[gi][pi]++;
+    }
+
+    let list = groups.map((g, i) => ({
+      id: g.id,
+      name: g.name,
+      vals: cur[i],
+      prevVals: prev[i],
+      total: cur[i].reduce((a, b) => a + b, 0),
+    }));
+
+    // Keep the chart readable: rank by volume, keep the top N, roll the rest
+    // into a single "Other" line (summing both current + previous buckets).
+    list.sort((a, b) => b.total - a.total);
+    if (list.length > TOP_N) {
+      const keep = list.slice(0, TOP_N);
+      const rest = list.slice(TOP_N);
+      const oVals = new Array(period.n).fill(0);
+      const oPrev = new Array(period.n).fill(0);
+      let oTotal = 0;
+      for (const s of rest) {
+        for (let i = 0; i < period.n; i++) { oVals[i] += s.vals[i]; oPrev[i] += s.prevVals[i]; }
+        oTotal += s.total;
       }
-      return { labels: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], cur, prev, curLbl: "This week", prevLbl: "Last week" };
+      keep.push({ id: "__other__", name: `Other (${rest.length})`, vals: oVals, prevVals: oPrev, total: oTotal });
+      list = keep;
     }
 
-    const now = new Date(nowMs);
-    const curY = now.getUTCFullYear();
-    const curM = now.getUTCMonth();
-    const prevRef = new Date(Date.UTC(curY, curM - 1, 1));
-    const prevY = prevRef.getUTCFullYear();
-    const prevM = prevRef.getUTCMonth();
-    const cur = new Array(5).fill(0);
-    const prev = new Array(5).fill(0);
-    for (const b of rows) {
-      const d = new Date(b.createdAt);
-      const w = Math.min(4, Math.floor((d.getUTCDate() - 1) / 7));
-      if (d.getUTCFullYear() === curY && d.getUTCMonth() === curM) cur[w]++;
-      else if (d.getUTCFullYear() === prevY && d.getUTCMonth() === prevM) prev[w]++;
-    }
-    return { labels: ["W1", "W2", "W3", "W4", "W5"], cur, prev, curLbl: "This month", prevLbl: "Last month" };
-  }, [bookings, range, applied, nowMs]);
+    return list.map((s, i) => ({
+      ...s,
+      color: s.id === "__other__" ? OTHER_COLOR : SERIES_COLORS[i % SERIES_COLORS.length],
+    }));
+  }, [bookings, applied, taxonomy, period]);
 
-  const sumCur = series.cur.reduce((a, b) => a + b, 0);
-  const sumPrev = series.prev.reduce((a, b) => a + b, 0);
-  const up = sumCur >= sumPrev;
-  const delta =
-    sumPrev === 0 ? (sumCur > 0 ? "New" : "0%") : `${up ? "+" : ""}${Math.round(((sumCur - sumPrev) / sumPrev) * 100)}%`;
+  const isDetail = view === "detail";
 
-  const rawMax = Math.max(1, ...series.cur, ...series.prev);
+  const rawMax = isDetail
+    ? Math.max(1, ...detail.flatMap((s) => [...s.vals, ...s.prevVals]))
+    : Math.max(1, ...summary.cur, ...summary.prev);
   const niceMax = Math.max(2, Math.ceil((rawMax * 1.1) / 2) * 2);
   const ticks = [niceMax, niceMax / 2, 0];
 
-  const cur = linePath(series.cur, niceMax, false);
-  const prev = linePath(series.prev, niceMax, false);
-  const area = linePath(series.cur, niceMax, true);
+  // Summary paths.
+  const curPath = linePath(summary.cur, niceMax, false);
+  const prevPath = linePath(summary.prev, niceMax, false);
+  const areaPath = linePath(summary.cur, niceMax, true);
+
+  const sumCur = summary.cur.reduce((a, b) => a + b, 0);
+  const sumPrev = summary.prev.reduce((a, b) => a + b, 0);
+  const up = sumCur >= sumPrev;
+  const delta =
+    sumPrev === 0 ? (sumCur > 0 ? "New" : "0%") : `${up ? "+" : ""}${Math.round(((sumCur - sumPrev) / sumPrev) * 100)}%`;
 
   const labelFor = (v: string) => {
     if (v === "all") return "All bookable events";
     if (v.startsWith("type:")) {
       const t = taxonomy.find((t) => t.id === v.slice(5));
-      return t ? `${t.name} — all` : "All bookable events";
+      return t ? `${titleCase(t.name)} — all` : "All bookable events";
     }
     if (v.startsWith("sub:")) {
       for (const t of taxonomy) {
         const s = t.subs.find((s) => s.id === v.slice(4));
-        if (s) return `${t.name} · ${s.name}`;
+        if (s) return `${titleCase(t.name)} · ${titleCase(s.name)}`;
       }
     }
     return "All bookable events";
@@ -141,17 +251,18 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2 px-1">
-        <TrendingUp className="w-4 h-4 text-[#5F624F]" />
-        <h2 className="text-[11px] font-black uppercase tracking-wide text-[#5F624F]">Bookings</h2>
-        <div className="ml-auto flex gap-0.5 p-0.5 rounded-lg bg-[#F7F4EA] border border-[#E6DFC8]">
-          {(["week", "month"] as Range[]).map((r) => (
+        <TrendingUp className="h-4 w-4 text-[#5F624F]" />
+        <h2 className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">Bookings</h2>
+        {/* Range toggle — filled active state so it reads clearly */}
+        <div className="ml-auto flex gap-1 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-1 shadow-sm">
+          {(["week", "month", "year"] as Range[]).map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => setRange(r)}
               className={cn(
-                "px-3 py-1 rounded-md text-[9px] font-black uppercase tracking-wide transition-colors",
-                range === r ? "bg-white text-[#5C4033] shadow-sm" : "text-[#5F624F]",
+                "rounded-lg px-3 py-1.5 font-black text-[10px] tracking-wide uppercase transition-colors",
+                range === r ? "bg-[#5C4033] text-white shadow-sm" : "text-[#5F624F] hover:bg-white",
               )}
             >
               {r}
@@ -160,28 +271,28 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
         </div>
       </div>
 
-      <div className="bg-white border border-[#E6DFC8] rounded-2xl p-4 shadow-sm">
-        {/* Event filter */}
-        <div className="flex items-center gap-2 mb-3">
-          <Filter className="w-3.5 h-3.5 text-[#5F624F] shrink-0" />
-          <div ref={ref} className="relative flex-1 min-w-0">
+      <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm">
+        {/* Event filter + summary/detail toggle */}
+        <div className="mb-3 flex items-center gap-2">
+          <Filter className="h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
+          <div ref={ref} className="relative min-w-0 flex-1">
             <button
               type="button"
               onClick={() => setOpen((o) => !o)}
               className={cn(
-                "w-full flex items-center gap-2 text-[11px] font-bold text-[#1F1F1A] bg-[#F7F4EA] border rounded-lg px-3 py-2 transition-colors",
+                "flex w-full items-center gap-2 rounded-lg border bg-[#F7F4EA] px-3 py-2 text-[11px] font-bold text-[#1F1F1A] transition-colors",
                 open ? "border-[#5C4033] ring-2 ring-[#5C4033]/15" : "border-[#E6DFC8] hover:border-[#d3cbb0]",
               )}
             >
-              <span className="flex-1 text-left truncate">{labelFor(applied)}</span>
-              <ChevronDown className={cn("w-3.5 h-3.5 text-[#5F624F] shrink-0 transition-transform", open && "rotate-180")} />
+              <span className="flex-1 truncate text-left">{labelFor(applied)}</span>
+              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-[#5F624F] transition-transform", open && "rotate-180")} />
             </button>
             {open && (
-              <div className="absolute z-40 top-[calc(100%+6px)] left-0 right-0 bg-white border border-[#E6DFC8] rounded-xl shadow-[0_18px_40px_-12px_rgba(31,31,26,0.30)] overflow-hidden">
+              <div className="absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-xl border border-[#E6DFC8] bg-white shadow-[0_18px_40px_-12px_rgba(31,31,26,0.30)]">
                 <div className="grid grid-cols-2">
                   {/* Column 1 — event types */}
-                  <div className="max-h-60 overflow-y-auto p-1.5 border-r border-[#E6DFC8]">
-                    <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#a7a288] px-2 pt-1.5 pb-1">Event type</p>
+                  <div className="max-h-60 overflow-y-auto border-r border-[#E6DFC8] p-1.5">
+                    <p className="px-2 pt-1.5 pb-1 font-black text-[8px] tracking-[0.09em] text-[#a7a288] uppercase">Event type</p>
                     <FilterOpt
                       label="All bookable events"
                       active={applied === "all"}
@@ -190,7 +301,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                     {taxonomy.map((t) => (
                       <FilterOpt
                         key={t.id}
-                        label={t.name}
+                        label={titleCase(t.name)}
                         chevron={t.subs.length > 0}
                         selected={selType === t.id}
                         active={applied === `type:${t.id}` && selType === t.id}
@@ -201,27 +312,27 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                   {/* Column 2 — sub-types of the selected type */}
                   <div className="max-h-60 overflow-y-auto p-1.5">
                     {!selectedType ? (
-                      <p className="text-[10px] font-medium text-[#a7a288] italic p-3 leading-relaxed">
+                      <p className="p-3 text-[10px] leading-relaxed font-medium text-[#a7a288] italic">
                         Pick an event type to filter by its sub-types.
                       </p>
                     ) : (
                       <>
-                        <p className="text-[8px] font-black uppercase tracking-[0.09em] text-[#a7a288] px-2 pt-1.5 pb-1">{selectedType.name} sub-type</p>
+                        <p className="px-2 pt-1.5 pb-1 font-black text-[8px] tracking-[0.09em] text-[#a7a288] uppercase">{titleCase(selectedType.name)} sub-type</p>
                         <FilterOpt
-                          label={`All ${selectedType.name}`}
+                          label={`All ${titleCase(selectedType.name)}`}
                           active={applied === `type:${selectedType.id}`}
                           onClick={() => { setApplied(`type:${selectedType.id}`); setOpen(false); }}
                         />
                         {selectedType.subs.map((s) => (
                           <FilterOpt
                             key={s.id}
-                            label={s.name}
+                            label={titleCase(s.name)}
                             active={applied === `sub:${s.id}`}
                             onClick={() => { setApplied(`sub:${s.id}`); setOpen(false); }}
                           />
                         ))}
                         {selectedType.subs.length === 0 && (
-                          <p className="text-[10px] font-medium text-[#a7a288] italic p-3">No sub-types with bookings.</p>
+                          <p className="p-3 text-[10px] font-medium text-[#a7a288] italic">No sub-types with bookings.</p>
                         )}
                       </>
                     )}
@@ -230,29 +341,67 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               </div>
             )}
           </div>
+          {/* Summary / Detail toggle */}
+          <div className="flex shrink-0 gap-0.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] p-0.5">
+            {(["summary", "detail"] as View[]).map((vw) => (
+              <button
+                key={vw}
+                type="button"
+                onClick={() => setView(vw)}
+                className={cn(
+                  "rounded-md px-2.5 py-1.5 font-black text-[9px] tracking-wide uppercase transition-colors",
+                  view === vw ? "bg-[#5C4033] text-white shadow-sm" : "text-[#5F624F] hover:bg-white",
+                )}
+              >
+                {vw}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-4 mb-2.5 px-0.5">
-          <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wide text-[#5F624F]">
-            <i className="w-3.5 h-0 border-t-[2.5px] border-[#5C4033] rounded-sm" /> {series.curLbl}
-          </span>
-          <span className="flex items-center gap-1.5 text-[9px] font-black uppercase tracking-wide text-[#5F624F]">
-            <i className="w-3.5 h-0 border-t-[2.5px] border-dashed border-[#bdb49a] rounded-sm" /> {series.prevLbl}
-          </span>
-          <span className={cn("ml-auto text-[9px] font-black uppercase tracking-wide", up ? "text-green-700" : "text-red-600")}>
-            {delta}
-          </span>
-        </div>
+        {isDetail ? (
+          <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5">
+            {detail.length === 0 ? (
+              <span className="text-[9px] font-bold tracking-wide text-[#a7a288] uppercase">No breakdown for this selection</span>
+            ) : (
+              <>
+                {detail.map((s) => (
+                  <span key={s.id} className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5F624F] uppercase">
+                    <i
+                      className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-(--c)"
+                      style={{ "--c": s.color } as React.CSSProperties}
+                    /> {titleCase(s.name)}
+                  </span>
+                ))}
+                <span className="basis-full text-[8px] font-bold tracking-wide text-[#a7a288] uppercase">
+                  Solid = {period.curLbl} · dashed = {period.prevLbl}
+                </span>
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="mb-2.5 flex items-center gap-4 px-0.5">
+            <span className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5F624F] uppercase">
+              <i className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-[#5C4033]" /> {period.curLbl}
+            </span>
+            <span className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5F624F] uppercase">
+              <i className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-dashed border-[#bdb49a]" /> {period.prevLbl}
+            </span>
+            <span className={cn("ml-auto font-black text-[9px] tracking-wide uppercase", up ? "text-green-700" : "text-red-600")}>
+              {delta}
+            </span>
+          </div>
+        )}
 
         {/* Plot */}
         <div className="relative pl-7">
           {/* y-axis labels */}
-          <div className="absolute left-0 top-0 bottom-6 w-6">
+          <div className="absolute top-0 bottom-6 left-0 w-6">
             {ticks.map((t) => (
               <span
                 key={t}
-                className="absolute right-0 -translate-y-1/2 text-[8.5px] font-black tabular-nums text-[#a7a288] top-(--t)"
+                className="absolute top-(--t) right-0 -translate-y-1/2 font-black text-[8.5px] text-[#a7a288] tabular-nums"
                 style={{ "--t": `${(yFor(t, niceMax) / H) * 100}%` } as React.CSSProperties}
               >
                 {t}
@@ -260,7 +409,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
             ))}
           </div>
 
-          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className="w-full h-28 sm:h-32">
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={cn("w-full", isDetail ? "h-44 sm:h-52" : "h-28 sm:h-32")}>
             <defs>
               <linearGradient id="trend-area" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0" stopColor="#5C403322" />
@@ -279,16 +428,51 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                 vectorEffect="non-scaling-stroke"
               />
             ))}
-            <path d={area.d} fill="url(#trend-area)" />
-            <path d={prev.d} fill="none" stroke="#bdb49a" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-            <path d={cur.d} fill="none" stroke="#5C4033" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-            <circle cx={cur.last[0]} cy={cur.last[1]} r="4" fill="#5C4033" vectorEffect="non-scaling-stroke" />
+            {isDetail ? (
+              <>
+                {/* Previous period per series — dashed, drawn behind the solid lines */}
+                {detail.map((s) => {
+                  const p = linePath(s.prevVals, niceMax, false);
+                  return (
+                    <path
+                      key={`prev-${s.id}`}
+                      d={p.d}
+                      fill="none"
+                      stroke={s.color}
+                      strokeWidth="1.5"
+                      strokeDasharray="3 4"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      opacity="0.5"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  );
+                })}
+                {/* Current period per series — solid */}
+                {detail.map((s) => {
+                  const c = linePath(s.vals, niceMax, false);
+                  return (
+                    <g key={s.id}>
+                      <path d={c.d} fill="none" stroke={s.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                      <circle cx={c.last[0]} cy={c.last[1]} r="3.5" fill={s.color} vectorEffect="non-scaling-stroke" />
+                    </g>
+                  );
+                })}
+              </>
+            ) : (
+              <>
+                <path d={areaPath.d} fill="url(#trend-area)" />
+                <path d={prevPath.d} fill="none" stroke="#bdb49a" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                <path d={curPath.d} fill="none" stroke="#5C4033" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                <circle cx={curPath.last[0]} cy={curPath.last[1]} r="4" fill="#5C4033" vectorEffect="non-scaling-stroke" />
+              </>
+            )}
           </svg>
 
           {/* x-axis labels */}
-          <div className="flex justify-between mt-1.5 px-0.5">
-            {series.labels.map((l) => (
-              <span key={l} className="text-[9px] font-bold uppercase tracking-wide text-[#5F624F]">
+          <div className="mt-1.5 flex justify-between px-0.5">
+            {period.labels.map((l) => (
+              <span key={l} className="text-[9px] font-bold tracking-wide text-[#5F624F] uppercase">
                 {l}
               </span>
             ))}
@@ -317,12 +501,12 @@ function FilterOpt({
       type="button"
       onClick={onClick}
       className={cn(
-        "w-full flex items-center gap-1.5 px-2 py-2 rounded-lg text-[11px] font-bold text-left transition-colors",
+        "flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-left text-[11px] font-bold transition-colors",
         active ? "bg-[#5C4033] text-white" : selected ? "bg-[#efe9d8] text-[#5C4033]" : "text-[#1F1F1A] hover:bg-[#F7F4EA]",
       )}
     >
-      <span className="flex-1 min-w-0 truncate">{label}</span>
-      {chevron && <ChevronDown className="w-3 h-3 shrink-0 -rotate-90 opacity-60" />}
+      <span className="min-w-0 flex-1 truncate">{label}</span>
+      {chevron && <ChevronDown className="h-3 w-3 shrink-0 -rotate-90 opacity-60" />}
     </button>
   );
 }

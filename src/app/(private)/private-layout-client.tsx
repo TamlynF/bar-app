@@ -28,20 +28,26 @@ import {
     Camera,
     Crown,
     Inbox,
-    MessageSquare
+    Guitar,
+    PartyPopper,
+    MessageSquare,
+    PanelLeftClose,
+    PanelLeftOpen
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
 import { cardIcon } from "@/lib/booking-card-icons"
 import { swatchHexFromColor } from "@/lib/event-type-colors"
 
-type BookingNavItem = { label: string; href: string; icon?: string | null; color?: string | null };
+type BookingNavItem = { label: string; href: string; icon?: string | null; color?: string | null; count?: number };
 type SubItem = {
     label: string;
     href: string;
     icon?: React.ComponentType<{ className?: string }>;
     /** When set, render a coloured icon chip (icon in this hue, lighter background). */
     colorHex?: string | null;
+    /** When > 0, render an amber count pill on the right (e.g. pending enquiries). */
+    count?: number;
 };
 
 // Routes that belong to the Quiz group, regardless of URL prefix.
@@ -49,7 +55,7 @@ const QUIZ_PATHS = [
     "/event-setups/quiz-history",
     "/event-setups/quiz-categories",
     "/event-setups/quiz-generator",
-    "/event-setups/leaderboard",
+    "/event-setups/quiz-leaderboards",
     "/settings/teams",
 ]
 
@@ -70,27 +76,32 @@ export default function PrivateLayoutClient({
     children,
     employeeName,
     guestNav = [],
-    requestNav = [],
     pendingRequestsCount = 0,
+    pendingBandCount = 0,
+    pendingHireCount = 0,
+    pendingEnquiriesCount = 0,
 }: {
     children: React.ReactNode
     employeeName: string
     employeeRole: string
     guestNav?: BookingNavItem[]
-    requestNav?: BookingNavItem[]
     pendingRequestsCount?: number
+    pendingBandCount?: number
+    pendingHireCount?: number
+    pendingEnquiriesCount?: number
 }) {
     const pathname = usePathname()
     const router = useRouter()
     const [isPending, startTransition] = useTransition()
     const searchParams = useSearchParams()
 
-    // Requests own /requests, the legacy band/private pages (REQUEST_PATHS) and
-    // any dynamic request booking links, so those never light up Bookings.
-    const requestNavHrefs = requestNav.map((n) => n.href)
+    // Requests own /requests and the band/private review pages (REQUEST_PATHS),
+    // so those never light up Bookings.
     const isRequestPath = (path: string): boolean =>
-        REQUEST_PATHS.some((q) => path === q || path.startsWith(`${q}/`)) ||
-        requestNavHrefs.some((h) => path === h || path.startsWith(`${h}/`))
+        REQUEST_PATHS.some((q) => path === q || path.startsWith(`${q}/`))
+
+    // Desktop sidebar collapse (icon-only rail). Survives SPA navigation.
+    const [collapsed, setCollapsed] = useState(false)
 
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname && pathname.startsWith("/event-bookings") && !isRequestPath(pathname))
     const [requestsOpen, setRequestsOpen] = useState(() => !!pathname && isRequestPath(pathname))
@@ -141,13 +152,17 @@ export default function PrivateLayoutClient({
         href: nav.href,
         icon: cardIcon(nav.icon),
         colorHex: swatchHexFromColor(nav.color ?? undefined) ?? null,
+        count: nav.count,
     })
 
     const eventSubItems: SubItem[] = guestNav.map(toSub)
 
+    // Requests are fixed review queues (not event-derived), so they're always
+    // shown with their own pending-count pill and coloured icon chip.
     const requestSubItems: SubItem[] = [
-        ...requestNav.map(toSub),
-        { label: "Enquiries", href: "/requests/enquiries", icon: MessageSquare },
+        { label: "Band Applications", href: "/event-bookings/music-bookings", icon: Guitar, colorHex: "#7C3AED", count: pendingBandCount },
+        { label: "Private Hire", href: "/event-bookings/private-bookings", icon: PartyPopper, colorHex: "#0EA5E9", count: pendingHireCount },
+        { label: "Enquiries", href: "/requests/enquiries", icon: MessageSquare, colorHex: "#DC2626", count: pendingEnquiriesCount },
     ]
 
     const eventsNavSubItems = [
@@ -297,12 +312,29 @@ export default function PrivateLayoutClient({
     return (
         <div className="pt-safe-top flex h-screen min-h-screen bg-[#F7F4EA] sm:overflow-hidden">
             {/* 1. Sidebar for Tablets/Desktops */}
-            <aside className="sticky top-0 z-50 hidden h-screen w-64 shrink-0 flex-col border-r border-[#E6DFC8] bg-white sm:flex">
-                {/* Sidebar Brand */}
-                <div className="flex min-h-10 items-center gap-3 border-b border-[#E6DFC8] px-6 py-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#5C4033] shadow-sm">
-                        <span className="font-black text-sm text-white">{initials}</span>
-                    </div>
+            <aside className={cn(
+                "sticky top-0 z-50 hidden h-screen shrink-0 flex-col border-r border-[#E6DFC8] bg-white transition-[width] duration-300 sm:flex",
+                collapsed ? "w-16" : "w-72"
+            )}>
+                {/* Sidebar Brand + collapse toggle */}
+                <div className={cn(
+                    "flex min-h-10 items-center gap-3 border-b border-[#E6DFC8] px-3 py-3",
+                    collapsed ? "justify-center" : "justify-between px-6"
+                )}>
+                    {!collapsed && (
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#5C4033] shadow-sm">
+                            <span className="font-black text-sm text-white">{initials}</span>
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => setCollapsed((c) => !c)}
+                        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                        title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#5F624F] hover:bg-[#5C4033]/5"
+                    >
+                        {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+                    </button>
                 </div>
 
                 {/* Sidebar Navigation */}
@@ -343,6 +375,16 @@ export default function PrivateLayoutClient({
                             : isEventsNav
                             ? () => setEventsNavOpen((p) => !p)
                             : undefined
+                        // Collapsed rail: clicking a group expands the sidebar and opens it.
+                        const openGroup = isEvents
+                            ? () => setEventsOpen(true)
+                            : isRequests
+                            ? () => setRequestsOpen(true)
+                            : isSettings
+                            ? () => setSettingsOpen(true)
+                            : isEventsNav
+                            ? () => setEventsNavOpen(true)
+                            : undefined
 
                         return (
                             <React.Fragment key={item.href}>
@@ -350,51 +392,65 @@ export default function PrivateLayoutClient({
                                 {hasSubItems && toggle ? (
                                     <button
                                         type="button"
-                                        onClick={toggle}
+                                        onClick={collapsed ? () => { setCollapsed(false); openGroup?.() } : toggle}
+                                        title={collapsed ? item.label : undefined}
                                         className={cn(
-                                            "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-xs font-bold tracking-wider uppercase transition-all duration-300",
+                                            "relative flex w-full items-center gap-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300",
+                                            collapsed ? "justify-center px-0 py-3" : "px-4 py-3",
                                             isActive
                                                 ? "bg-[#5C4033] text-white shadow-lg shadow-[#5C4033]/10"
                                                 : "text-[#5F624F] hover:bg-[#5C4033]/5"
                                         )}
                                     >
                                         <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-[#5F624F]")} />
-                                        <span className="flex-1 text-left">{item.label}</span>
 
-                                        {/* Green dot — confirmed capacity */}
-                                        {isEvents && (
-                                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" aria-hidden="true" />
+                                        {/* Collapsed: amber dot when requests are pending */}
+                                        {collapsed && isRequests && pendingRequestsCount > 0 && (
+                                            <span className="absolute top-1.5 right-2 h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
                                         )}
 
-                                        {/* Amber count — pending requests */}
-                                        {isRequests && pendingRequestsCount > 0 && (
-                                            <span className={cn(
-                                                "flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full px-1 font-black text-[9px] tabular-nums",
-                                                isActive ? "bg-amber-400 text-[#1F1F1A]" : "bg-amber-500 text-white"
-                                            )}>
-                                                {badgeText}
-                                            </span>
-                                        )}
+                                        {!collapsed && (
+                                            <>
+                                                <span className="flex-1 text-left">{item.label}</span>
 
-                                        {isOpen ? <ChevronUp className="h-3.5 w-3.5 shrink-0 transition-transform duration-200" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform duration-200" />}
+                                                {/* Green dot — confirmed capacity */}
+                                                {isEvents && (
+                                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" aria-hidden="true" />
+                                                )}
+
+                                                {/* Amber count — pending requests */}
+                                                {isRequests && pendingRequestsCount > 0 && (
+                                                    <span className={cn(
+                                                        "flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full px-1 font-black text-[9px] tabular-nums",
+                                                        isActive ? "bg-amber-400 text-[#1F1F1A]" : "bg-amber-500 text-white"
+                                                    )}>
+                                                        {badgeText}
+                                                    </span>
+                                                )}
+
+                                                {isOpen ? <ChevronUp className="h-3.5 w-3.5 shrink-0 transition-transform duration-200" /> : <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform duration-200" />}
+                                            </>
+                                        )}
                                     </button>
                                 ) : (
                                     <Link
                                         href={item.href}
+                                        title={collapsed ? item.label : undefined}
                                         className={cn(
-                                            "flex items-center gap-3 rounded-xl px-4 py-3 text-xs font-bold tracking-wider uppercase transition-all duration-300",
+                                            "flex items-center gap-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300",
+                                            collapsed ? "justify-center px-0 py-3" : "px-4 py-3",
                                             isActive
                                                 ? "bg-[#5C4033] text-white shadow-lg shadow-[#5C4033]/10"
                                                 : "text-[#5F624F] hover:bg-[#5C4033]/5"
                                         )}
                                     >
-                                        <item.icon className={cn("h-5 w-5", isActive ? "text-white" : "text-[#5F624F]")} />
-                                        {item.label}
+                                        <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-[#5F624F]")} />
+                                        {!collapsed && item.label}
                                     </Link>
                                 )}
 
                                 {/* Sub-items for Bookings */}
-                                {isEvents && eventsOpen && (
+                                {isEvents && eventsOpen && !collapsed && (
                                     <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
                                         {eventSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href.replace(/\/$/, "")
@@ -428,7 +484,7 @@ export default function PrivateLayoutClient({
                                 )}
 
                                 {/* Sub-items for Requests */}
-                                {isRequests && requestsOpen && (
+                                {isRequests && requestsOpen && !collapsed && (
                                     <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
                                         {requestSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
@@ -454,7 +510,12 @@ export default function PrivateLayoutClient({
                                                     ) : (
                                                         Icon && <Icon className={cn("h-3.5 w-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
                                                     )}
-                                                    {sub.label}
+                                                    <span className="min-w-0 flex-1 truncate">{sub.label}</span>
+                                                    {typeof sub.count === "number" && sub.count > 0 && (
+                                                        <span className="flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full bg-amber-500 px-1 font-black text-[9px] text-white tabular-nums">
+                                                            {sub.count > 99 ? "99+" : sub.count}
+                                                        </span>
+                                                    )}
                                                 </Link>
                                             )
                                         })}
@@ -462,7 +523,7 @@ export default function PrivateLayoutClient({
                                 )}
 
                                 {/* Sub-items for Events Nav */}
-                                {isEventsNav && eventsNavOpen && (
+                                {isEventsNav && eventsNavOpen && !collapsed && (
                                     <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
                                         {eventsNavSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href
@@ -524,7 +585,7 @@ export default function PrivateLayoutClient({
                                 )}
 
                                 {/* Sub-items for Settings */}
-                                {isSettings && settingsOpen && (
+                                {isSettings && settingsOpen && !collapsed && (
                                     <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
                                         {settingsSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href
@@ -557,14 +618,20 @@ export default function PrivateLayoutClient({
                         type="button"
                         onClick={handleSignOut}
                         disabled={isPending}
-                        className="flex w-full items-center gap-3 rounded-xl px-4 py-2.5 text-xs font-bold tracking-wider text-[#5F624F] uppercase transition-all duration-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                        title={collapsed ? "Sign Out" : undefined}
+                        className={cn(
+                            "flex w-full items-center gap-3 rounded-xl py-2.5 text-xs font-bold tracking-wider text-[#5F624F] uppercase transition-all duration-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50",
+                            collapsed ? "justify-center px-0" : "px-4"
+                        )}
                     >
-                        <LogOut className="h-4 w-4" />
-                        {isPending ? "Signing out…" : "Sign Out"}
+                        <LogOut className="h-4 w-4 shrink-0" />
+                        {!collapsed && (isPending ? "Signing out…" : "Sign Out")}
                     </button>
-                    <p className="px-4 text-[9px] font-bold tracking-widest text-[#5F624F]/70 uppercase">
-                        v0.1.0 Alpha
-                    </p>
+                    {!collapsed && (
+                        <p className="px-4 text-[9px] font-bold tracking-widest text-[#5F624F]/70 uppercase">
+                            v0.1.0 Alpha
+                        </p>
+                    )}
                 </div>
             </aside>
 

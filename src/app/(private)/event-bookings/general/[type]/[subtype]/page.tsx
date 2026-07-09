@@ -192,17 +192,24 @@ export default async function GeneralEventBookingsPage({
           detail panel stay fixed. Below xl it's normal document flow. */}
       <div className="mx-auto max-w-7xl space-y-4 px-3 py-3 sm:py-0 md:px-8 xl:flex xl:h-[calc(100vh-7.5rem)] xl:flex-col xl:overflow-hidden">
 
-        {/* Event selector */}
-        <div className="w-full rounded-2xl border border-[#E6DFC8] bg-white p-1.5 shadow-sm">
-          <EventTypeFilter
-            events={events}
-            selectedEventId={selectedEventId}
-            label={filterLabel}
-          />
-        </div>
-
-        {/* Event summary + interactive stats bar + bookings list */}
-        <BookingsSection bookings={bookings} summary={summary} type={type} subtype={subtype} initialStatuses={initialStatuses} />
+        {/* Event summary + interactive stats bar + bookings list. The event
+            selector is passed in so it shares the search/filters row on sm+. */}
+        <BookingsSection
+          bookings={bookings}
+          summary={summary}
+          type={type}
+          subtype={subtype}
+          initialStatuses={initialStatuses}
+          eventFilter={
+            <div className="w-full rounded-2xl border border-[#E6DFC8] bg-white p-1.5 shadow-sm sm:rounded-xl sm:p-1">
+              <EventTypeFilter
+                events={events}
+                selectedEventId={selectedEventId}
+                label={filterLabel}
+              />
+            </div>
+          }
+        />
       </div>
     </div>
   );

@@ -62,11 +62,11 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         }
     }
 
-    // Collapse events per each category's booking_grouping, then split into guest
-    // bookings vs requests & enquiries — the same partition the bookings hub uses.
+    // Collapse events per each category's booking_grouping, keeping only the
+    // guest bookings — requests are fixed review queues rendered by the client.
     const allGroups = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[])
         .sort((a, b) => a.label.localeCompare(b.label));
-    const { guest: guestGroups, requests: requestGroups } = partitionBookingGroups(allGroups);
+    const { guest: guestGroups } = partitionBookingGroups(allGroups);
 
     const toNav = (g: AdminBookingGroup) => ({
         label: g.label,
@@ -75,7 +75,6 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         color: g.badgeColor,
     });
     const guestNav = guestGroups.map(toNav);
-    const requestNav = requestGroups.map(toNav);
 
     const pendingRequestsCount =
         (pendingBandCount ?? 0) + (pendingHireCount ?? 0) + (pendingEnquiryCount ?? 0);
@@ -85,8 +84,10 @@ export default async function PrivateLayout({ children }: { children: React.Reac
             employeeName={employeeName}
             employeeRole={employeeRole}
             guestNav={guestNav}
-            requestNav={requestNav}
             pendingRequestsCount={pendingRequestsCount}
+            pendingBandCount={pendingBandCount ?? 0}
+            pendingHireCount={pendingHireCount ?? 0}
+            pendingEnquiriesCount={pendingEnquiryCount ?? 0}
         >
             {children}
         </PrivateLayoutClient>

@@ -84,9 +84,9 @@ export default function EventTypeFilter({
 
   return (
     <div className="relative w-full">
-      <div className="flex h-12 items-center gap-3 rounded-xl bg-[#F7F4EA] px-4">
+      <div className="flex h-12 items-center gap-3 rounded-xl bg-[#F7F4EA] px-4 sm:h-10 sm:px-3">
         <div className="flex min-w-0 flex-1 flex-col">
-          <span className="mb-0.5 font-black text-[10px] leading-none tracking-wide text-[#5F624F]/50 uppercase">
+          <span className="mb-0.5 font-black text-[10px] leading-none tracking-wide text-[#5F624F]/50 uppercase sm:text-[8px]">
             {label}
           </span>
           <div className="flex items-center gap-1.5">
@@ -100,7 +100,7 @@ export default function EventTypeFilter({
               onClick={() => setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 150)}
               placeholder={selected ? displayValue : "All history — type to filter…"}
-              className="min-w-0 flex-1 bg-transparent font-black text-sm tracking-tight text-[#1F1F1A] uppercase outline-none placeholder:font-medium placeholder:tracking-normal placeholder:text-[#5F624F]/50 placeholder:normal-case"
+              className="min-w-0 flex-1 bg-transparent font-black text-sm tracking-tight text-[#1F1F1A] uppercase outline-none placeholder:font-medium placeholder:tracking-normal placeholder:text-[#5F624F]/50 placeholder:normal-case sm:text-xs"
             />
           </div>
         </div>

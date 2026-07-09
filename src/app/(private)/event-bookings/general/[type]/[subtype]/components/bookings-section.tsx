@@ -67,25 +67,25 @@ function EventBanner({
   const hasPayments = summary.paymentAmount != null && summary.paymentAmount !== 0;
 
   return (
-    <div className="rounded-2xl overflow-hidden flex bg-white border border-[#E6DFC8] shadow-sm">
+    <div className="flex overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
       <div className="w-1.5 shrink-0 bg-[#5C4033]" />
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         {/* Header */}
         <div
           className={cn(
-            "flex items-center gap-2.5 px-4 py-3 bg-[#ECE4CE]",
+            "flex items-center gap-2.5 bg-[#ECE4CE] px-4 py-3",
             open && "border-b border-[#E6DFC8]",
           )}
         >
-          <h2 className="text-base font-black uppercase tracking-tight text-[#1F1F1A] truncate min-w-0">
+          <h2 className="min-w-0 truncate font-black text-base tracking-tight text-[#1F1F1A] uppercase">
             {summary.title || "Untitled Event"}
           </h2>
           <span
             className={cn(
-              "shrink-0 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wide border",
+              "shrink-0 rounded-md border px-2 py-0.5 font-black text-[9px] tracking-wide uppercase",
               summary.isActive
-                ? "bg-green-100 text-green-700 border-green-300"
-                : "bg-red-100 text-red-600 border-red-300",
+                ? "border-green-300 bg-green-100 text-green-700"
+                : "border-red-300 bg-red-100 text-red-600",
             )}
           >
             {summary.isActive ? "Active" : "Inactive"}
@@ -98,13 +98,13 @@ function EventBanner({
               aria-pressed={tablesOpen}
               aria-label="Toggle table status"
               className={cn(
-                "shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-lg text-[10px] font-black uppercase tracking-wide transition-colors",
+                "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2.5 font-black text-[10px] tracking-wide uppercase transition-colors",
                 tablesOpen
                   ? "bg-[#5C4033] text-white"
-                  : "bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8] hover:bg-[#E6DFC8]",
+                  : "border border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F] hover:bg-[#E6DFC8]",
               )}
             >
-              <TableIcon className="w-3.5 h-3.5" /> Tables
+              <TableIcon className="h-3.5 w-3.5" /> Tables
             </button>
           )}
           <button
@@ -112,20 +112,20 @@ function EventBanner({
             onClick={() => setOpen(o => !o)}
             aria-expanded={open}
             aria-label="Toggle event details"
-            className="shrink-0 w-7 h-7 -mr-1 rounded-lg flex items-center justify-center text-[#5F624F] transition-colors hover:bg-black/5"
+            className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#5F624F] transition-colors hover:bg-black/5"
           >
-            <ChevronDown className={cn("w-4 h-4 transition-transform", open && "rotate-180")} />
+            <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
           </button>
         </div>
 
         {/* Body — collapsible facts */}
         {open && (
-          <div className="px-4 pb-3.5 pt-3 flex items-center gap-x-5 gap-y-2 flex-wrap">
-            <Meta icon={<CalendarDays className="w-3.5 h-3.5" />}>{summary.dateLabel}</Meta>
-            <Meta icon={<Clock className="w-3.5 h-3.5" />}>{summary.timeLabel}</Meta>
-            <Meta icon={<User className="w-3.5 h-3.5" />}>{summary.hostName}</Meta>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 pt-3 pb-3.5">
+            <Meta icon={<CalendarDays className="h-3.5 w-3.5" />}>{summary.dateLabel}</Meta>
+            <Meta icon={<Clock className="h-3.5 w-3.5" />}>{summary.timeLabel}</Meta>
+            <Meta icon={<User className="h-3.5 w-3.5" />}>{summary.hostName}</Meta>
             {hasPayments && (
-              <Meta icon={<Coins className="w-3.5 h-3.5" />}>
+              <Meta icon={<Coins className="h-3.5 w-3.5" />}>
                 <span className="text-green-700">£{summary.totalPaid.toFixed(2)}</span>
                 <span className="text-[#5F624F]"> / £{summary.totalExpected.toFixed(2)}</span>
               </Meta>
@@ -133,18 +133,18 @@ function EventBanner({
             {summary.quiz && (
               <span
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wide",
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-black text-[10px] tracking-wide uppercase",
                   summary.quiz.status === "Complete" && "bg-green-100 text-green-700",
                   summary.quiz.status === "Incomplete" && "bg-orange-100 text-orange-700",
                   summary.quiz.status === "Not Started" && "bg-[#F7F4EA] text-[#5F624F]",
                 )}
               >
-                {summary.quiz.status === "Complete" && <CheckCircle2 className="w-3.5 h-3.5" />}
-                {summary.quiz.status === "Incomplete" && <AlertCircle className="w-3.5 h-3.5" />}
-                {summary.quiz.status === "Not Started" && <Info className="w-3.5 h-3.5" />}
+                {summary.quiz.status === "Complete" && <CheckCircle2 className="h-3.5 w-3.5" />}
+                {summary.quiz.status === "Incomplete" && <AlertCircle className="h-3.5 w-3.5" />}
+                {summary.quiz.status === "Not Started" && <Info className="h-3.5 w-3.5" />}
                 <span>Quiz {summary.quiz.status}</span>
                 {summary.quiz.total > 0 && (
-                  <span className="opacity-60 font-bold normal-case tracking-normal">
+                  <span className="font-bold tracking-normal normal-case opacity-60">
                     ({summary.quiz.count}/{summary.quiz.total})
                   </span>
                 )}
@@ -171,28 +171,28 @@ function TableStats({ buckets }: { buckets: { capacity: number; total: number; a
   const assigned = buckets.reduce((a, b) => a + b.assigned, 0);
   const total = buckets.reduce((a, b) => a + b.total, 0);
   return (
-    <div className="rounded-2xl p-3.5 bg-white border border-[#E6DFC8] shadow-sm animate-in fade-in slide-in-from-top-1 duration-200">
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wide text-[#5F624F]">
-          <TableIcon className="w-3.5 h-3.5" /> Table Status
+    <div className="animate-in rounded-2xl border border-[#E6DFC8] bg-white p-3.5 shadow-sm duration-200 fade-in slide-in-from-top-1">
+      <div className="mb-2.5 flex items-center justify-between">
+        <span className="inline-flex items-center gap-1.5 font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
+          <TableIcon className="h-3.5 w-3.5" /> Table Status
         </span>
-        <span className="text-[10px] font-black uppercase tracking-wide tabular-nums text-[#5F624F]">
+        <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase tabular-nums">
           {assigned}/{total} seated
         </span>
       </div>
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex flex-wrap gap-2">
         {buckets.map(g => {
           const full = g.assigned >= g.total;
           return (
             <div
               key={g.capacity}
               className={cn(
-                "flex flex-col items-center justify-center rounded-xl px-3 py-2 min-w-15 bg-[#F7F4EA] border",
+                "flex min-w-15 flex-col items-center justify-center rounded-xl border bg-[#F7F4EA] px-3 py-2",
                 full ? "border-green-500/40" : "border-[#E6DFC8]",
               )}
             >
-              <span className="text-[9px] font-black uppercase tracking-wide text-[#5F624F]">Cap {g.capacity}</span>
-              <span className={cn("text-base font-black tabular-nums leading-tight", full ? "text-green-700" : "text-[#1F1F1A]")}>
+              <span className="font-black text-[9px] tracking-wide text-[#5F624F] uppercase">Cap {g.capacity}</span>
+              <span className={cn("font-black text-base leading-tight tabular-nums", full ? "text-green-700" : "text-[#1F1F1A]")}>
                 {g.assigned}
                 <span className="text-[#5F624F]/45">/{g.total}</span>
               </span>
@@ -226,23 +226,23 @@ function StatPill({
       type="button"
       onClick={onClick}
       className={cn(
-        "group flex items-center gap-2.5 h-11 pl-2 pr-3.5 rounded-xl shrink-0 transition-all active:scale-[0.97]",
-        active ? cn(theme.dot, "shadow-md") : "bg-white border border-[#E6DFC8]",
+        "group flex h-11 shrink-0 items-center gap-2.5 rounded-xl pr-3.5 pl-2 transition-all active:scale-[0.97]",
+        active ? cn(theme.dot, "shadow-md") : "border border-[#E6DFC8] bg-white",
       )}
     >
       <span
         className={cn(
-          "w-7 h-7 rounded-lg flex items-center justify-center text-sm font-black tabular-nums",
+          "flex h-7 w-7 items-center justify-center rounded-lg font-black text-sm tabular-nums",
           active ? "bg-white/25 text-white" : cn(theme.bg, theme.text),
         )}
       >
         {teamCount}
       </span>
       <span className="text-left leading-none">
-        <span className={cn("block text-[11px] font-black uppercase tracking-wide", active ? "text-white" : "text-[#1F1F1A]")}>
+        <span className={cn("block font-black text-[11px] tracking-wide uppercase", active ? "text-white" : "text-[#1F1F1A]")}>
           {label}
         </span>
-        <span className={cn("block text-[9.5px] font-bold uppercase tracking-wide mt-0.5", active ? "text-white/80" : "text-[#5F624F]")}>
+        <span className={cn("mt-0.5 block text-[9.5px] font-bold tracking-wide uppercase", active ? "text-white/80" : "text-[#5F624F]")}>
           {guestCount} guests
         </span>
       </span>
@@ -256,6 +256,7 @@ export default function BookingsSection({
   type,
   subtype,
   initialStatuses = [],
+  eventFilter,
 }: {
   bookings: GeneralBooking[];
   /** Present when an event is selected — enables the interactive stats bar. */
@@ -264,6 +265,8 @@ export default function BookingsSection({
   subtype: string;
   /** Status keys to pre-select in the filter (e.g. from ?status=confirmed). */
   initialStatuses?: string[];
+  /** Optional event selector — stacks above on mobile, shares the search row on sm+. */
+  eventFilter?: React.ReactNode;
 }) {
   const seededStatuses = initialStatuses.map((s) => s.trim().toLowerCase()).filter(Boolean);
   const [activeStatusFilters, setActiveStatusFilters] = useState<Set<string>>(
@@ -313,7 +316,7 @@ export default function BookingsSection({
     <>
       {/* Event context — only when an event is selected */}
       {summary && (
-        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="animate-in space-y-3 duration-300 fade-in slide-in-from-top-2">
           <EventBanner
             summary={summary}
             tablesOpen={showTables}
@@ -323,27 +326,30 @@ export default function BookingsSection({
         </div>
       )}
 
-      {/* Search + Filters toggle */}
+      {/* Event selector + Search + Filters toggle. On mobile the event selector
+          stacks above; on sm+ all three share one row. */}
       <div className="space-y-2.5">
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2.5 h-11 px-3.5 rounded-xl bg-white border border-[#E6DFC8] focus-within:border-[#5C4033] transition-colors flex-1 min-w-0">
-            <Search className="w-4 h-4 shrink-0 text-[#5F624F]/60" />
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {eventFilter && <div className="sm:w-56 sm:shrink-0 lg:w-72">{eventFilter}</div>}
+          <div className="flex items-center gap-2 sm:min-w-0 sm:flex-1">
+          <div className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-[#E6DFC8] bg-white px-3.5 transition-colors focus-within:border-[#5C4033]">
+            <Search className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
             <input
               type="text"
               placeholder="Search teams or hosts…"
               aria-label="Search bookings"
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              className="flex-1 min-w-0 bg-transparent text-sm font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 placeholder:font-normal"
+              className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#1F1F1A] outline-none placeholder:font-normal placeholder:text-[#5F624F]/40"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
                 aria-label="Clear search"
-                className="shrink-0 w-6 h-6 rounded-lg flex items-center justify-center text-[#5F624F] hover:bg-[#E6DFC8] transition-colors"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[#5F624F] transition-colors hover:bg-[#E6DFC8]"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="h-3.5 w-3.5" />
               </button>
             )}
           </div>
@@ -353,24 +359,25 @@ export default function BookingsSection({
             aria-pressed={showFilters}
             aria-label="Toggle status filters"
             className={cn(
-              "shrink-0 inline-flex items-center gap-1.5 h-11 px-3.5 rounded-xl text-[11px] font-black uppercase tracking-wide transition-colors",
+              "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3.5 font-black text-[11px] tracking-wide uppercase transition-colors",
               showFilters || activeCount > 0
                 ? "bg-[#5C4033] text-white"
-                : "bg-white text-[#5F624F] border border-[#E6DFC8] hover:bg-[#F7F4EA]",
+                : "border border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]",
             )}
           >
-            <SlidersHorizontal className="w-4 h-4" /> Filters
+            <SlidersHorizontal className="h-4 w-4" /> Filters
             {activeCount > 0 && (
-              <span className="inline-flex items-center justify-center min-w-4.5 h-4.5 px-1 rounded-full text-[10px] tabular-nums bg-white/25 text-white">
+              <span className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-white/25 px-1 text-[10px] text-white tabular-nums">
                 {activeCount}
               </span>
             )}
           </button>
+          </div>
         </div>
 
         {/* Status filter pills */}
         {showFilters && (
-          <div className="flex gap-2 overflow-x-auto no-scrollbar px-0.5 pb-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="no-scrollbar flex animate-in gap-2 overflow-x-auto px-0.5 pb-0.5 duration-200 fade-in slide-in-from-top-1">
             {statCounts.map(s => (
               <StatPill
                 key={s.key}
@@ -388,7 +395,7 @@ export default function BookingsSection({
 
       {/* Bookings count + clear */}
       <div className="flex items-center justify-between px-0.5">
-        <span className="text-[11px] font-black uppercase tracking-wide text-[#5F624F]">
+        <span className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
           Bookings ({filteredBookings.length})
         </span>
         {(activeCount > 0 || searchQuery) && (
@@ -398,7 +405,7 @@ export default function BookingsSection({
               setActiveStatusFilters(new Set());
               setSearchQuery("");
             }}
-            className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]"
+            className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase"
           >
             Clear
           </button>
