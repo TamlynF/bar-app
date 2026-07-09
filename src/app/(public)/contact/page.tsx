@@ -7,9 +7,11 @@ import {
   Facebook,
   ExternalLink,
   Clock,
+  MessageSquare,
 } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
+import EnquiryForm from "./_components/enquiry-form";
 
 export const metadata = {
   title: "Contact Us | Don Fenticas",
@@ -44,7 +46,7 @@ export default async function ContactPage() {
     .toLowerCase();
 
   return (
-    <main className="min-h-dvh w-full bg-[#1a2008] text-white selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased">
+    <main className="bg-[#1a2008] selection:bg-[#FDCC4B] w-full min-h-dvh text-white selection:text-[#1a2008] antialiased">
       <style
         dangerouslySetInnerHTML={{
           __html: `html, body { background-color: #1a2008 !important; margin: 0; padding: 0; overflow-x: hidden; }`,
@@ -53,11 +55,11 @@ export default async function ContactPage() {
 
       <PublicNav currentPath="/contact" />
 
-      <div className="max-w-xl mx-auto px-4 py-6 sm:py-10">
+      <div className="mx-auto px-4 py-6 sm:py-10 max-w-xl">
         {/* Page header */}
         <SectionHeading eyebrow="Find us · get in touch" title="About Us" />
         {info?.description && (
-          <p className="text-stone-400 text-sm font-medium -mt-2 mb-8 leading-relaxed">
+          <p className="-mt-2 mb-8 font-medium text-stone-400 text-sm leading-relaxed">
             {info.description}
           </p>
         )}
@@ -95,7 +97,7 @@ export default async function ContactPage() {
         {hasHours && (
           <section className="mt-8">
             <SectionLabel icon={Clock} label="Opening Hours" />
-            <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden divide-y divide-white/5 mt-3">
+            <div className="bg-white/5 mt-3 border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden">
               {DAYS.map((day) => {
                 const hours = openingHours[day];
                 const isToday = todayName === day;
@@ -110,8 +112,8 @@ export default async function ContactPage() {
                     <div className="flex items-center gap-2">
                       {isToday && (
                         <span className="relative flex w-1.5 h-1.5">
-                          <span className="absolute inline-flex w-full h-full neon-bg rounded-full animate-ping opacity-75" />
-                          <span className="relative inline-flex w-1.5 h-1.5 neon-bg rounded-full" />
+                          <span className="inline-flex absolute opacity-75 rounded-full w-full h-full animate-ping neon-bg" />
+                          <span className="inline-flex relative rounded-full w-1.5 h-1.5 neon-bg" />
                         </span>
                       )}
                       <span
@@ -123,9 +125,9 @@ export default async function ContactPage() {
                       </span>
                     </div>
                     {closed ? (
-                      <span className="text-xs font-bold text-stone-600">Closed</span>
+                      <span className="font-bold text-stone-600 text-xs">Closed</span>
                     ) : (
-                      <span className="text-xs font-black text-white tabular-nums">
+                      <span className="font-black tabular-nums text-white text-xs">
                         {hours!.open} &ndash; {hours!.close}
                       </span>
                     )}
@@ -136,11 +138,18 @@ export default async function ContactPage() {
           </section>
         )}
 
+        <section className="mt-8">
+  <SectionLabel icon={MessageSquare} label="Send Us a Message" />
+  <div className="mt-3">
+    <EnquiryForm />
+  </div>
+</section>
+
         {/* Social */}
         {(info?.instagram || info?.facebook || info?.twitter || info?.tiktok || info?.youtube) && (
           <section className="mt-8">
             <SectionLabel icon={Instagram} label="Follow Us" />
-            <div className="grid grid-cols-2 gap-3 mt-3">
+            <div className="gap-3 grid grid-cols-2 mt-3">
               {info?.instagram && (
                 <SocialCard
                   icon={Instagram}
@@ -192,12 +201,12 @@ export default async function ContactPage() {
 
         {/* Fallback if nothing configured */}
         {!info?.address && !info?.phone && !info?.email && (
-          <div className="text-center py-16 bg-white/3 border border-white/5 rounded-2xl">
-            <Mail className="w-8 h-8 text-stone-700 mx-auto mb-3" />
-            <p className="text-stone-500 text-sm font-bold uppercase tracking-tight">
+          <div className="bg-white/3 py-16 border border-white/5 rounded-2xl text-center">
+            <Mail className="mx-auto mb-3 w-8 h-8 text-stone-700" />
+            <p className="font-bold text-stone-500 text-sm uppercase tracking-tight">
               Contact details coming soon
             </p>
-            <p className="text-stone-600 text-xs mt-1">
+            <p className="mt-1 text-stone-600 text-xs">
               Check back later or visit us in person
             </p>
           </div>
@@ -205,12 +214,12 @@ export default async function ContactPage() {
 
         {/* Footer */}
         <div className="mt-16 text-center">
-          <div className="flex items-center justify-center gap-3 text-stone-800">
-            <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">
+          <div className="flex justify-center items-center gap-3 text-stone-800">
+            <div className="bg-stone-800/50 w-6 h-px" />
+            <span className="font-bold text-[9px] uppercase tracking-[0.4em]">
               Don Fenticas
             </span>
-            <div className="h-px w-6 bg-stone-800/50" />
+            <div className="bg-stone-800/50 w-6 h-px" />
           </div>
         </div>
       </div>
@@ -228,10 +237,10 @@ function SectionLabel({
   return (
     <div className="flex items-center gap-2 px-1">
       <Icon className="w-3 h-3 text-[#FDCC4B]" />
-      <span className="text-[10px] font-black uppercase tracking-[0.25em] text-stone-500">
+      <span className="font-black text-[10px] text-stone-500 uppercase tracking-[0.25em]">
         {label}
       </span>
-      <div className="flex-1 h-px bg-stone-800/50" />
+      <div className="flex-1 bg-stone-800/50 h-px" />
     </div>
   );
 }
@@ -250,21 +259,21 @@ function ContactCard({
   action?: string;
 }) {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-2xl p-4 sm:p-5 flex items-start gap-4">
-      <div className="shrink-0 w-11 h-11 rounded-xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">
+    <div className="flex items-start gap-4 bg-white/5 p-4 sm:p-5 border border-white/10 rounded-2xl">
+      <div className="flex justify-center items-center bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-xl w-11 h-11 shrink-0">
         <Icon className="w-5 h-5 text-[#FDCC4B]" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.2em]">
+        <p className="font-black text-[10px] text-stone-500 uppercase tracking-[0.2em]">
           {label}
         </p>
-        <p className="text-white text-sm font-bold mt-1 whitespace-pre-line break-all">
+        <p className="mt-1 font-bold text-white text-sm break-all whitespace-pre-line">
           {value}
         </p>
         {href && action && (
           <a
             href={href}
-            className="inline-flex items-center gap-1 text-[#FDCC4B] text-[10px] font-black uppercase tracking-widest mt-2 hover:text-white transition-colors"
+            className="inline-flex items-center gap-1 mt-2 font-black text-[#FDCC4B] text-[10px] hover:text-white uppercase tracking-widest transition-colors"
           >
             {action} <ExternalLink className="w-3 h-3" />
           </a>
@@ -290,22 +299,22 @@ function SocialCard({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group bg-white/5 border border-white/10 rounded-2xl p-4 flex items-center gap-3 hover:bg-white/8 hover:border-white/20 transition-all"
+      className="group flex items-center gap-3 bg-white/5 hover:bg-white/8 p-4 border border-white/10 hover:border-white/20 rounded-2xl transition-all"
     >
-      <div className="shrink-0 w-9 h-9 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+      <div className="flex justify-center items-center bg-white/5 group-hover:bg-white/10 border border-white/10 rounded-xl w-9 h-9 transition-colors shrink-0">
         {Icon ? (
           <Icon className="w-4 h-4 text-stone-400" />
         ) : (
-          <span className="text-stone-400 text-xs font-black">
+          <span className="font-black text-stone-400 text-xs">
             {label.charAt(0)}
           </span>
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-white text-xs font-black uppercase tracking-tight">
+        <p className="font-black text-white text-xs uppercase tracking-tight">
           {label}
         </p>
-        <p className="text-stone-500 text-[11px] font-bold truncate">{handle}</p>
+        <p className="font-bold text-[11px] text-stone-500 truncate">{handle}</p>
       </div>
       <ExternalLink className="w-3.5 h-3.5 text-stone-600 group-hover:text-stone-400 transition-colors shrink-0" />
     </a>

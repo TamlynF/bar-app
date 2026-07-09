@@ -169,11 +169,7 @@ export default async function DashboardPage() {
     new Date().getMonth() + 12,
     new Date().getDate()
   ).toISOString().split("T")[0];
-  const firstDayOfMonth = new Date(
-    new Date().getFullYear(),
-    new Date().getMonth(),
-    1
-  ).toISOString().split("T")[0];
+
   // Trend chart needs this-month + last-month history (covers the week view too).
   const firstDayOfLastMonth = new Date(
     new Date().getFullYear(),
@@ -188,6 +184,7 @@ export default async function DashboardPage() {
   const [
     { count: pendingPrivate },
     { count: pendingBands },
+    { count: pendingEnquiries },
     { data: unpaidBookingsData },
     { data: upcomingQuizData },
   ] = await Promise.all([
@@ -197,6 +194,10 @@ export default async function DashboardPage() {
       .eq("status", "pending"),
     supabase
       .from("band_booking_requests")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "pending"),
+    supabase
+      .from("enquiries")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
     supabase
@@ -311,6 +312,7 @@ export default async function DashboardPage() {
   const totalActions =
     (pendingPrivate ?? 0) +
     (pendingBands ?? 0) +
+    (pendingEnquiries ?? 0) +
     unpaidCount +
     quizzesMissingQuestions +
     openSaturdays +
@@ -490,6 +492,7 @@ export default async function DashboardPage() {
     { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
     { key: "bands", label: "Bands pending", count: pendingBands ?? 0, href: "/event-bookings/general/music/__all__?status=pending", color: "bg-purple-700" },
     { key: "hires", label: "Private hires pending", count: pendingPrivate ?? 0, href: "/event-bookings/general/private/__all__?status=pending", color: "bg-blue-600" },
+    { key: "enquiries", label: "Enquiries pending", count: pendingEnquiries ?? 0, href: "/requests/enquiries?status=pending", color: "bg-teal-600" },
     { key: "quizzes", label: "Missing quiz", count: quizzesMissingQuestions, href: `/event-setups/events?from=${todayStr}&to=${twelveMonthsStr}&quick=quiz,active`, color: "bg-green-700" },
     //{ key: "saturdays", label: "Saturdays", count: openSaturdays, href: "/event-bookings/music-bookings", color: "bg-red-600" },    
     //{ key: "seatable-waitlist", label: "Waitlist", count: seatableWaitlistCount, href: "/event-bookings/quiz-bookings?status=waitlisted", color: "bg-teal-600" },
@@ -520,7 +523,7 @@ export default async function DashboardPage() {
 
           {/* Happening Tonight — mobile 1st, desktop top-right */}
           {tonightGeneralEvent && (
-            <section className="space-y-2 lg:col-start-2 lg:row-start-1">
+            <section className="space-y-2 lg:col-start-2 row-start-1">
               <SectionLabel icon={Clock} label="Happening Tonight" />
               <TonightCard
                 event={tonightGeneralEvent}
@@ -532,7 +535,7 @@ export default async function DashboardPage() {
           )}
 
           {/* Bookings trend — mobile 2nd, desktop top-left */}
-          <div className="lg:col-start-1 lg:row-start-1">
+          <div className="lg:col-start-1 row-start-1">
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
