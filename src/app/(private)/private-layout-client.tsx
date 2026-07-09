@@ -159,14 +159,14 @@ export default function PrivateLayoutClient({
     const quizSubItems = [
         { label: "Quiz History", href: "/event-setups/quiz-history", icon: Grid2X2 },
         { label: "Quiz Rules", href: "/event-setups/quiz-categories", icon: Dices },
-        { label: "Leaderboard", href: "/event-setups/leaderboard", icon: Crown },
+        { label: "Leaderboard", href: "/event-setups/quiz-leaderboards", icon: Crown },
         { label: "Teams", href: "/settings/teams", icon: Medal },
     ]
 
     const settingsSubItems = [
         { label: "Company Info", href: "/settings/company", icon: Building2 },
         { label: "Guests", href: "/settings/customers", icon: BookUser },
-        { label: "Floor Plan", href: "/settings/tables", icon: Grid2X2 },
+        { label: "Seating Plan", href: "/settings/tables", icon: Grid2X2 },
         { label: "Menu", href: "/settings/menu", icon: UtensilsCrossed },
         { label: "Specials", href: "/settings/specials", icon: Sparkles },
         { label: "Promo Content", href: "/settings/promo-content", icon: ImageIcon },
@@ -295,7 +295,7 @@ export default function PrivateLayoutClient({
     const { title, subtitle, backHref } = getPageInfo()
 
     return (
-        <div className="pt-safe-top flex min-h-screen bg-[#F7F4EA] sm:h-screen sm:overflow-hidden">
+        <div className="pt-safe-top flex h-screen min-h-screen bg-[#F7F4EA] sm:overflow-hidden">
             {/* 1. Sidebar for Tablets/Desktops */}
             <aside className="sticky top-0 z-50 hidden h-screen w-64 shrink-0 flex-col border-r border-[#E6DFC8] bg-white sm:flex">
                 {/* Sidebar Brand */}
@@ -569,7 +569,7 @@ export default function PrivateLayoutClient({
             </aside>
 
             {/* 2. Main Content Wrapper */}
-            <div className="flex min-w-0 flex-1 flex-col sm:h-screen sm:overflow-y-auto">
+            <div className="flex h-screen min-w-0 flex-1 flex-col sm:overflow-y-auto">
                 <header className="sticky top-0 z-40 w-full border-b border-[#E6DFC8] bg-white px-4 py-3 sm:px-8">
                     <div className="relative mx-auto flex min-h-10 max-w-7xl items-center">
 
@@ -587,7 +587,7 @@ export default function PrivateLayoutClient({
 
                         {/* Title */}
                         <div className="flex w-full flex-col items-center justify-center">
-                            <h1 className="flex flex-wrap items-center justify-center gap-1 px-8 text-center font-black text-sm tracking-widest text-[#1F1F1A] uppercase sm:gap-2 sm:text-base">
+                            <h1 className="flex flex-wrap items-center justify-center gap-1 px-8 text-center font-black text-base text-sm tracking-widest text-[#1F1F1A] uppercase sm:gap-2">
                                 <span className={cn(subtitle && backHref ? "hidden sm:inline" : "")}>{title}</span>
                                 {subtitle && (
                                     <>
@@ -600,7 +600,7 @@ export default function PrivateLayoutClient({
                     </div>
                 </header>
 
-                <main className="mx-auto w-full max-w-7xl flex-1 p-1 pb-20 sm:p-6 sm:pb-8">
+                <main className="mx-auto w-full max-w-7xl flex-1 p-1 pb-8 pb-20 sm:p-6">
                     {children}
                 </main>
 
