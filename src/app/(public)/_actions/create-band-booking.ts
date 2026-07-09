@@ -46,6 +46,7 @@ export async function createBandBooking(data: BandBookingData) {
         preferred_dates: data.preferred_dates.filter(Boolean),
         notes: data.notes || null,
         status: "new",
+        payment_status: "no_payment",
       },
     ])
     .select("id")
