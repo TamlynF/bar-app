@@ -1,6 +1,6 @@
 {
   "css.lint.unknownAtRules": "ignore",
-  "workbench.colorTheme": "Pitch Black",
+  "workbench.colorTheme": "Dark 2026",
   "files.associations": {
     "*.css": "tailwindcss"
   },
@@ -17,6 +17,9 @@
   "notebook.defaultFormatter": "dbaeumer.vscode-eslint",
   "eslint.debug": true,
   "eslint.format.enable": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
   "eslint.lintTask.enable": true,
   "eslint.useESLintClass": true,
   "npm.packageManager": "npm",
