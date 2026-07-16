@@ -23,6 +23,15 @@ const appUrl = process.env.NEXT_PUBLIC_SITE_URL
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function createEventBooking(formData: FormData) {
+  console.log("createEventBooking called with formData:", Object.fromEntries(formData.entries()));
+  console.log("Environment variables:", {
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    VERCEL_URL: process.env.VERCEL_URL,
+    SQUARE_ENVIRONMENT: process.env.SQUARE_ENVIRONMENT,
+    SQUARE_ACCESS_TOKEN: process.env.SQUARE_ACCESS_TOKEN,
+    SQUARE_LOCATION_ID: process.env.SQUARE_LOCATION_ID,
+  });
+  console.log(formData.get("event_id"), formData.get("full_name"), formData.get("email"), formData.get("group_size"));
   const supabase = await createClient();
 
   const eventId = parseInt(formData.get("event_id") as string, 10);
