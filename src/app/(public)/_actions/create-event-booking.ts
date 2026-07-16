@@ -12,6 +12,7 @@ import {
 } from "@/lib/table-allocation";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
+import { buildBuyerPhone, buildEventOrder, buildPrePopulatedData } from "@/lib/square-order";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -136,56 +137,30 @@ export async function createEventBooking(formData: FormData) {
       return { success: true };
     }
 
-    // 7. Create Square Payment Link
-    // Attach the real booker to the order so the Square dashboard shows them,
-    // not Square's sandbox default buyer ("Jane Doe"). We split the name for the
-    // buyer address and use a PICKUP fulfillment recipient (tickets are collected
-    // at the venue) so the order's Recipient field is authoritative.
-    const [firstName, ...restName] = fullName.trim().split(/\s+/);
-    const lastName = restName.join(" ") || undefined;
-    const buyerPhone = phoneNo ? `${countryCode ?? ""}${phoneNo}`.trim() : undefined;
+    // 7. Create Square Payment Link — payload shape lives in the pure
+    // `square-order` builders (unit-tested); we supply the impure bits here.
+    const buyerPhone = buildBuyerPhone(countryCode, phoneNo);
 
     const { paymentLink } = await squareClient.checkout.paymentLinks.create({
       idempotencyKey: randomUUID(),
-      order: {
+      order: buildEventOrder({
         locationId: process.env.SQUARE_LOCATION_ID!,
-        // Link the order back to our booking without polluting the customer-facing
-        // line-item name. referenceId shows as "Reference ID" in the dashboard;
-        // metadata keeps the ids machine-readable for our own logic.
-        referenceId: String(newBooking.id),
-        metadata: { booking_id: String(newBooking.id), event_id: String(event.id) },
-        lineItems: [{
-          name: `${event.title} — ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`,
-          quantity: String(groupSize),
-          basePriceMoney: {
-            amount: BigInt(paymentAmountPence),
-            currency: "GBP",
-          },
-        }],
-        fulfillments: [{
-          type: "PICKUP",
-          state: "PROPOSED",
-          pickupDetails: {
-            scheduleType: "ASAP",
-            recipient: {
-              displayName: fullName,
-              emailAddress: email,
-              ...(buyerPhone ? { phoneNumber: buyerPhone } : {}),
-            },
-          },
-        }],
-      },
+        bookingId: newBooking.id,
+        eventId: event.id,
+        title: event.title || "Event",
+        amountPence: paymentAmountPence,
+        groupSize,
+        fullName,
+        email,
+        buyerPhone,
+      }),
       checkoutOptions: {
         redirectUrl: `${appUrl}/book/event/${eventId}/success?bookingId=${newBooking.id}`,
         merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
       },
-      prePopulatedData: {
-        buyerEmail: email,
-        ...(buyerPhone ? { buyerPhoneNumber: buyerPhone } : {}),
-        buyerAddress: { firstName, lastName },
-      },
+      prePopulatedData: buildPrePopulatedData({ email, fullName, buyerPhone }),
     });
-
+console.log("Square payment link created:", paymentLink);
     const checkoutUrl = paymentLink?.url;
     const orderId = paymentLink?.orderId;
 
