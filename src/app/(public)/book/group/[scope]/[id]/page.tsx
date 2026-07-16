@@ -28,6 +28,7 @@ function isScope(v: string): v is Scope {
 }
 
 async function loadHeader(scope: Scope, id: string) {
+  console.log("loadHeader called with scope:", scope, "id:", id);
   const supabase = await createClient();
   if (scope === "subtype") {
     const [{ data: subtype }, { data: badges }] = await Promise.all([
@@ -51,7 +52,9 @@ async function loadHeader(scope: Scope, id: string) {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ scope: string; id: string }> }) {
+  console.log("generateMetadata called with params:", params);
   const { scope, id } = await params;
+  console.log("generateMetadata resolved scope:", scope, "id:", id);
   if (!isScope(scope)) return { title: "Book | Don Fenticas" };
   const header = await loadHeader(scope, id);
   return {
@@ -69,14 +72,15 @@ export default async function GroupedBookingPage({
 }: {
   params: Promise<{ scope: string; id: string }>;
   searchParams: Promise<{ id?: string }>;
-}) {
+  }) {
+  console.log("GroupedBookingPage called with params:", params, "searchParams:", searchParams);
   const { scope, id } = await params;
   const { id: defaultEventId } = await searchParams;
   if (!isScope(scope)) notFound();
 
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
-
+console.log("Querying events with scope:", scope, "id:", id);
   let query = supabase
     .from("events")
     .select("id, date, start_time, title, tagline, payment_amount, is_fully_booked, seating_required")
@@ -100,9 +104,10 @@ export default async function GroupedBookingPage({
     is_fully_booked: (e.is_fully_booked as boolean) ?? false,
     seating_required: (e.seating_required as boolean) ?? false,
   }));
-
+console.log("Loaded events:", events, "header:", header);
   // The whole group shares one booking form/page config (from the type or sub-type).
   const cfg = normalizeBookingConfig(header.bookingConfig);
+  console.log("Normalized booking config:", cfg);
   const tagline = cfg.tag_line || header.tagline;
   const title = toTitleCase(header.title);
   const badges = (header.badges || []).map((item) => ({
@@ -143,7 +148,7 @@ export default async function GroupedBookingPage({
 
       <PublicNav currentPath="/book/group" />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-12 pb-4 sm:px-6 sm:pt-14 sm:pb-6 lg:px-8">
+      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-12 pt-14 pb-4 pb-6 sm:px-6 lg:px-8">
 
         {/* Header */}
         <div className="mb-4 flex flex-col items-center text-center sm:mb-6">
@@ -168,7 +173,7 @@ export default async function GroupedBookingPage({
           )}
           <div className="mt-4 space-y-2 px-2 sm:mt-5">
             {tagline && (
-              <p className="mx-auto max-w-sm text-center text-xs leading-relaxed font-medium text-(--ev-fg-dim,#a8a29e) italic sm:max-w-2xl sm:text-base">
+              <p className="mx-auto max-w-sm text-center text-base text-xs leading-relaxed font-medium text-(--ev-fg-dim,#a8a29e) italic sm:max-w-2xl">
                 {tagline}
               </p>
             )}
@@ -177,7 +182,7 @@ export default async function GroupedBookingPage({
 
         {/* Event Badges */}
         {badges.length > 0 && (
-          <div className="no-scrollbar -mx-4 mb-4 flex flex-row gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:mb-5 sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0">
+          <div className="no-scrollbar -mx-4 mx-0 mb-4 mb-5 flex flex-row flex-wrap justify-center gap-2 gap-3 overflow-x-auto px-0 px-4 pb-4 sm:overflow-visible">
             {badges.map((badge, index) => (
               <div
                 key={index}
