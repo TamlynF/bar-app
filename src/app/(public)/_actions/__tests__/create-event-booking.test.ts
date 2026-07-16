@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 
 // Module-load consts in the action read these; set before the dynamic import.
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
-process.env.SQUARE_LOCATION_ID = "LOC_TEST";
+//process.env.SQUARE_LOCATION_ID = "LOC_TEST";
 
 // Mutable seams referenced from the hoisted vi.mock factories.
 const h = vi.hoisted(() => ({

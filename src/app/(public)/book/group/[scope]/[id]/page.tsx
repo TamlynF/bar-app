@@ -28,7 +28,6 @@ function isScope(v: string): v is Scope {
 }
 
 async function loadHeader(scope: Scope, id: string) {
-  console.log("loadHeader called with scope:", scope, "id:", id);
   const supabase = await createClient();
   if (scope === "subtype") {
     const [{ data: subtype }, { data: badges }] = await Promise.all([
@@ -52,9 +51,7 @@ async function loadHeader(scope: Scope, id: string) {
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ scope: string; id: string }> }) {
-  console.log("generateMetadata called with params:", params);
   const { scope, id } = await params;
-  console.log("generateMetadata resolved scope:", scope, "id:", id);
   if (!isScope(scope)) return { title: "Book | Don Fenticas" };
   const header = await loadHeader(scope, id);
   return {
@@ -73,14 +70,12 @@ export default async function GroupedBookingPage({
   params: Promise<{ scope: string; id: string }>;
   searchParams: Promise<{ id?: string }>;
   }) {
-  console.log("GroupedBookingPage called with params:", params, "searchParams:", searchParams);
   const { scope, id } = await params;
   const { id: defaultEventId } = await searchParams;
   if (!isScope(scope)) notFound();
 
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
-console.log("Querying events with scope:", scope, "id:", id);
   let query = supabase
     .from("events")
     .select("id, date, start_time, title, tagline, payment_amount, is_fully_booked, seating_required")
@@ -94,7 +89,6 @@ console.log("Querying events with scope:", scope, "id:", id);
     : query.eq("event_types_id", id);
 
   const [{ data: rawEvents }, header] = await Promise.all([query, loadHeader(scope, id)]);
-
   const events: GroupedEvent[] = (rawEvents ?? []).map((e) => ({
     id: e.id as number,
     date: e.date as string,
@@ -104,10 +98,8 @@ console.log("Querying events with scope:", scope, "id:", id);
     is_fully_booked: (e.is_fully_booked as boolean) ?? false,
     seating_required: (e.seating_required as boolean) ?? false,
   }));
-console.log("Loaded events:", events, "header:", header);
   // The whole group shares one booking form/page config (from the type or sub-type).
   const cfg = normalizeBookingConfig(header.bookingConfig);
-  console.log("Normalized booking config:", cfg);
   const tagline = cfg.tag_line || header.tagline;
   const title = toTitleCase(header.title);
   const badges = (header.badges || []).map((item) => ({

@@ -63,7 +63,6 @@ const emptyForm = {
 };
 
 export default function GroupedBookingForm({ events, config, showTitleInSelector = false, defaultEventId }: Props) {
-  console.log("GroupedBookingForm rendered with events:", events, "config:", config, "showTitleInSelector:", showTitleInSelector, "defaultEventId:", defaultEventId);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
@@ -85,7 +84,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
   const selectedEvent = events.find((e) => String(e.id) === eventId) ?? events[0];
 
   const cfg = useMemo(() => normalizeBookingConfig(config), [config]);
-  console.log("Normalized booking config:", cfg);
   const f = cfg.fields;
   const groupSizeOptions = useMemo(
     () =>
@@ -105,21 +103,13 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    console.log("Input change:", name, value);
-    console.log("Before change, formData:", formData);
     setFormData((prev) => ({ ...prev, [name]: value }));
-    console.log("After change, formData:", { ...formData, [name]: value });
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    console.log("Form submit:", e.currentTarget);
     e.preventDefault();
     setError(null);
-    const fd = new FormData(e.currentTarget);
-    console.log("FormData entries:");
-    for (const [key, value] of fd.entries()) {
-      console.log(key, value);
-    }
+    const fd = new FormData(e.currentTarget);    
     startTransition(async () => {
       const result = await createEventBooking(fd);
       if (result.error) {
