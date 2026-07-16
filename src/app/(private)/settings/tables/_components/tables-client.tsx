@@ -162,11 +162,11 @@ export default function TablesClient({
   const formDefault = isEditing ? selected : null;
 
   return (
-    <div className="px-4 py-4 md:px-6 sm:py-0 space-y-4 max-w-4xl">
+    <div className="max-w-4xl space-y-4 px-4 py-4 sm:py-0 md:px-6">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+        <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
           {initialTables.length} table{initialTables.length !== 1 ? "s" : ""}
           {anyFilterActive && (
             <span className="text-[#5C4033]"> · {filtered.length} shown</span>
@@ -175,9 +175,9 @@ export default function TablesClient({
         <Button
           onClick={openAdd}
           size="sm"
-          className="h-11 sm:h-9 px-4 rounded-xl font-black uppercase tracking-wide text-[10px] bg-[#1B4332] text-white hover:bg-[#1B4332]/85"
+          className="h-11 rounded-xl bg-[#1B4332] px-4 font-black text-[10px] tracking-wide text-white uppercase hover:bg-[#1B4332]/85 sm:h-9"
         >
-          <Plus className="w-3.5 h-3.5 mr-1.5" />
+          <Plus className="mr-1.5 h-3.5 w-3.5" />
           Add Table
         </Button>
       </div>
@@ -186,15 +186,15 @@ export default function TablesClient({
       {initialTables.length > 0 && (
         <div className="space-y-2.5">
           {/* Search */}
-          <div className="flex items-center gap-2 h-11 px-3 rounded-xl border border-[#E6DFC8] bg-white focus-within:border-[#5C4033]/40 transition-colors">
-            <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
+          <div className="flex h-11 items-center gap-2 rounded-xl border border-[#E6DFC8] bg-white px-3 transition-colors focus-within:border-[#5C4033]/40">
+            <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
             <input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by table name, ID or location..."
               aria-label="Search tables"
-              className="flex-1 min-w-0 bg-transparent text-sm font-medium text-[#1F1F1A] placeholder:text-[#5F624F]/40 outline-none"
+              className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
             />
             {query && (
               <button
@@ -203,7 +203,7 @@ export default function TablesClient({
                 aria-label="Clear search"
                 className="shrink-0 text-[#5F624F]/60 hover:text-[#5C4033]"
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </button>
             )}
           </div>
@@ -214,13 +214,13 @@ export default function TablesClient({
               All shapes
             </Chip>
             <Chip active={shapeFilter === "round"} onClick={() => setShapeFilter("round")}>
-              <Circle className="w-3 h-3" /> Round
+              <Circle className="h-3 w-3" /> Round
             </Chip>
             <Chip active={shapeFilter === "rect"} onClick={() => setShapeFilter("rect")}>
-              <RectangleHorizontal className="w-3 h-3" /> Rectangular
+              <RectangleHorizontal className="h-3 w-3" /> Rectangular
             </Chip>
 
-            <span className="w-px h-4 bg-[#E6DFC8] mx-1" />
+            <span className="mx-1 h-4 w-px bg-[#E6DFC8]" />
 
             <Chip active={availFilter === "all"} onClick={() => setAvailFilter("all")}>
               All
@@ -229,20 +229,20 @@ export default function TablesClient({
               active={availFilter === "available"}
               onClick={() => setAvailFilter("available")}
             >
-              <Check className="w-3 h-3" /> Available
+              <Check className="h-3 w-3" /> Available
             </Chip>
             <Chip
               active={availFilter === "unavailable"}
               onClick={() => setAvailFilter("unavailable")}
             >
-              <X className="w-3 h-3" /> Unavailable
+              <X className="h-3 w-3" /> Unavailable
             </Chip>
 
             {anyFilterActive && (
               <button
                 type="button"
                 onClick={clearFilters}
-                className="ml-auto font-black text-[10px] uppercase tracking-wide text-[#5C4033] underline underline-offset-2"
+                className="ml-auto font-black text-[10px] tracking-wide text-[#5C4033] uppercase underline underline-offset-2"
               >
                 Clear
               </button>
@@ -253,21 +253,21 @@ export default function TablesClient({
 
       {/* ── Card List ── */}
       {initialTables.length === 0 ? (
-        <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
-          <LayoutDashboard className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
-          <p className="text-sm font-black text-[#1F1F1A]">No tables yet</p>
-          <p className="text-[11px] text-[#5F624F] mt-1">
+        <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
+          <LayoutDashboard className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
+          <p className="font-black text-sm text-[#1F1F1A]">No tables yet</p>
+          <p className="mt-1 text-[11px] text-[#5F624F]">
             Add your first table to get started
           </p>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
-          <Search className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
-          <p className="text-sm font-black text-[#1F1F1A]">No matching tables</p>
+        <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
+          <Search className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
+          <p className="font-black text-sm text-[#1F1F1A]">No matching tables</p>
           <button
             type="button"
             onClick={clearFilters}
-            className="text-[11px] font-black uppercase tracking-wide text-[#5C4033] underline underline-offset-2 mt-2"
+            className="mt-2 font-black text-[11px] tracking-wide text-[#5C4033] uppercase underline underline-offset-2"
           >
             Clear filters
           </button>
@@ -278,44 +278,44 @@ export default function TablesClient({
             <div
               key={table.id}
               onClick={() => openView(table)}
-              className="bg-white border border-[#E6DFC8] rounded-2xl px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:border-[#5C4033]/30 hover:shadow-sm transition-all active:scale-[0.99]"
+              className="flex cursor-pointer items-center gap-3 rounded-2xl border border-[#E6DFC8] bg-white px-4 py-2.5 transition-all hover:border-[#5C4033]/30 hover:shadow-sm active:scale-[0.99]"
             >
               {/* Shape icon */}
-              <div className="w-10 h-10 rounded-xl bg-[#F7F4EA] flex items-center justify-center shrink-0 text-[#5C4033]">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F7F4EA] text-[#5C4033]">
                 {table.shape === "rect" ? (
-                  <RectangleHorizontal className="w-4 h-4" />
+                  <RectangleHorizontal className="h-4 w-4" />
                 ) : (
-                  <Circle className="w-4 h-4" />
+                  <Circle className="h-4 w-4" />
                 )}
               </div>
 
               {/* Text */}
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-1.5 py-0.5 rounded-md tabular-nums shrink-0">
+                  <span className="shrink-0 rounded-md border border-[#E6DFC8] bg-[#F7F4EA] px-1.5 py-0.5 font-black text-[10px] text-[#5F624F] tabular-nums">
                     #{table.id}
                   </span>
-                  <p className="font-black text-[#1F1F1A] truncate">{table.name}</p>
+                  <p className="truncate font-black text-[#1F1F1A]">{table.name}</p>
                 </div>
                 {table.description && (
-                  <p className="text-[11px] text-[#5F624F] font-medium truncate mt-0.5">
+                  <p className="mt-0.5 truncate text-[11px] font-medium text-[#5F624F]">
                     {table.description}
                   </p>
                 )}
               </div>
 
               {/* Badges */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <InfoBadge icon={<Users className="w-3 h-3" />}>
+              <div className="flex shrink-0 items-center gap-1.5">
+                <InfoBadge icon={<Users className="h-3 w-3" />}>
                   {table.max_capacity}
                 </InfoBadge>
                 <InfoBadge
                   className="hidden sm:inline-flex"
                   icon={
                     table.shape === "rect" ? (
-                      <RectangleHorizontal className="w-3 h-3" />
+                      <RectangleHorizontal className="h-3 w-3" />
                     ) : (
-                      <Circle className="w-3 h-3" />
+                      <Circle className="h-3 w-3" />
                     )
                   }
                 >
@@ -323,7 +323,7 @@ export default function TablesClient({
                 </InfoBadge>
                 <InfoBadge
                   className="hidden md:inline-flex"
-                  icon={<Armchair className="w-3 h-3" />}
+                  icon={<Armchair className="h-3 w-3" />}
                 >
                   {chairBadge(table)}
                 </InfoBadge>
@@ -331,7 +331,7 @@ export default function TablesClient({
 
               <StatusPill available={table.available} />
 
-              <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
+              <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F] opacity-40" />
             </div>
           ))}
         </div>
@@ -349,21 +349,21 @@ export default function TablesClient({
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
-            flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
-            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8]
+            bg-[#F7F4EA] p-0 shadow-2xl outline-none
+            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
+            sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Sticky header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
-            <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+            <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase">
               {isAdding ? "New Table" : isEditing ? "Edit Table" : (selected?.name ?? "")}
             </SheetTitle>
             {selected && !isAdding && (
-              <div className="flex items-center gap-1.5 mt-1">
-                <Hash className="w-3 h-3 text-[#5F624F]" />
-                <span className="text-xs font-black text-[#5F624F] uppercase tracking-wide tabular-nums">
+              <div className="mt-1 flex items-center gap-1.5">
+                <Hash className="h-3 w-3 text-[#5F624F]" />
+                <span className="font-black text-xs tracking-wide text-[#5F624F] uppercase tabular-nums">
                   ID: {selected.id}
                 </span>
               </div>
@@ -371,18 +371,18 @@ export default function TablesClient({
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-5 py-5 min-h-0 touch-pan-y">
+          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-5 py-5">
 
             {/* ── VIEW MODE ── */}
             {!showForm && selected && (
-              <div className="animate-in fade-in duration-200 sm:flex sm:flex-col sm:items-center">
-                <div className="w-full sm:max-w-sm space-y-4">
-                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+              <div className="animate-in duration-200 fade-in sm:flex sm:flex-col sm:items-center">
+                <div className="w-full space-y-4 sm:max-w-sm">
+                  <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                     <DetailRow label="Table Name" value={selected.name} />
                     <DetailRow
                       label="Max Capacity"
                       value={`${selected.max_capacity} guests`}
-                      icon={<Users className="w-4 h-4" />}
+                      icon={<Users className="h-4 w-4" />}
                     />
                     <DetailRow
                       label="Available"
@@ -390,9 +390,9 @@ export default function TablesClient({
                       valueClassName={selected.available ? "text-green-700" : "text-red-600"}
                       icon={
                         selected.available ? (
-                          <CheckCircle2 className="w-4 h-4" />
+                          <CheckCircle2 className="h-4 w-4" />
                         ) : (
-                          <XCircle className="w-4 h-4" />
+                          <XCircle className="h-4 w-4" />
                         )
                       }
                     />
@@ -400,19 +400,19 @@ export default function TablesClient({
                       label="Shape"
                       value={selected.shape === "rect" ? "Rectangular" : "Round"}
                       icon={selected.shape === "rect"
-                        ? <RectangleHorizontal className="w-4 h-4" />
-                        : <Circle className="w-4 h-4" />}
+                        ? <RectangleHorizontal className="h-4 w-4" />
+                        : <Circle className="h-4 w-4" />}
                     />
                     <DetailRow
                       label="Size"
                       value={sizeText(selected)}
-                      icon={<Ruler className="w-4 h-4" />}
+                      icon={<Ruler className="h-4 w-4" />}
                     />
                     {selected.shape === "rect" && (
                       <DetailRow
                         label="Chair Arrangement"
                         value={chairSummaryFull(selected)}
-                        icon={<Armchair className="w-4 h-4" />}
+                        icon={<Armchair className="h-4 w-4" />}
                       />
                     )}
                     {selected.description && (
@@ -430,7 +430,7 @@ export default function TablesClient({
               <form
                 id="table-form"
                 action={handleSubmit}
-                className="animate-in fade-in duration-200 flex flex-col gap-3"
+                className="flex animate-in flex-col gap-3 duration-200 fade-in"
               >
                 {formDefault && (
                   <input type="hidden" name="id" value={formDefault.id} />
@@ -443,7 +443,7 @@ export default function TablesClient({
                   onToggle={() => toggleSection("details")}
                 >
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
+                    <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Table Name <span className="text-red-500">*</span>
                     </Label>
                     <Input
@@ -451,18 +451,18 @@ export default function TablesClient({
                       placeholder="e.g. Window Booth 1"
                       defaultValue={formDefault?.name ?? ""}
                       required
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-base sm:text-sm font-bold focus:border-[#5C4033] transition-all"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-base font-bold transition-all focus:border-[#5C4033] sm:text-sm"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
+                    <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Location / Notes
                     </Label>
                     <Input
                       name="description"
                       placeholder="e.g. Near the fireplace, quiet corner..."
                       defaultValue={formDefault?.description ?? ""}
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold transition-all focus:border-[#5C4033]"
                     />
                   </div>
                 </Section>
@@ -474,12 +474,12 @@ export default function TablesClient({
                   onToggle={() => toggleSection("capacity")}
                 >
                   <div className="space-y-2">
-                    <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
+                    <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Max Capacity <span className="text-red-500">*</span>
                     </Label>
-                    <div className="flex items-center h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white focus-within:border-[#5C4033] transition-all overflow-hidden">
-                      <div className="flex items-center justify-center px-4 h-full border-r-2 border-[#E6DFC8] shrink-0">
-                        <Users className="w-4 h-4 text-[#5F624F]" />
+                    <div className="flex h-14 items-center overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white transition-all focus-within:border-[#5C4033]">
+                      <div className="flex h-full shrink-0 items-center justify-center border-r-2 border-[#E6DFC8] px-4">
+                        <Users className="h-4 w-4 text-[#5F624F]" />
                       </div>
                       <input
                         name="capacity"
@@ -489,18 +489,18 @@ export default function TablesClient({
                         required
                         defaultValue={formDefault?.max_capacity ?? ""}
                         aria-label="Max capacity"
-                        className="flex-1 h-full px-3 text-sm font-bold bg-transparent outline-none text-[#1F1F1A] placeholder:text-[#5F624F]/40"
+                        className="h-full flex-1 bg-transparent px-3 text-sm font-bold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
                       />
                     </div>
                   </div>
 
                   {/* Available toggle */}
-                  <label className="flex items-center justify-between gap-3 cursor-pointer pt-1">
+                  <label className="flex cursor-pointer items-center justify-between gap-3 pt-1">
                     <span>
-                      <span className="block text-sm font-black text-[#1F1F1A]">
+                      <span className="block font-black text-sm text-[#1F1F1A]">
                         Available for booking
                       </span>
-                      <span className="block text-[11px] text-[#5F624F] font-medium mt-0.5">
+                      <span className="mt-0.5 block text-[11px] font-medium text-[#5F624F]">
                         Allow this table to be assigned to bookings
                       </span>
                     </span>
@@ -511,8 +511,8 @@ export default function TablesClient({
                         defaultChecked={formDefault ? formDefault.available : true}
                         className="peer sr-only"
                       />
-                      <span className="block w-11 h-6 rounded-full bg-[#E6DFC8] peer-checked:bg-green-500 transition-colors" />
-                      <span className="pointer-events-none absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
+                      <span className="block h-6 w-11 rounded-full bg-[#E6DFC8] transition-colors peer-checked:bg-green-500" />
+                      <span className="pointer-events-none absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
                     </span>
                   </label>
                 </Section>
@@ -526,7 +526,7 @@ export default function TablesClient({
                   <div className="space-y-2">
                     <Label
                       htmlFor="table-shape"
-                      className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                      className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                     >
                       Shape <span className="text-red-500">*</span>
                     </Label>
@@ -537,7 +537,7 @@ export default function TablesClient({
                       aria-label="Table shape"
                       value={shape}
                       onChange={(e) => setShape(e.target.value as "round" | "rect")}
-                      className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold text-[#1F1F1A] focus:border-[#5C4033] transition-all outline-none"
+                      className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold text-[#1F1F1A] transition-all outline-none focus:border-[#5C4033]"
                     >
                       <option value="round">Round</option>
                       <option value="rect">Rectangular</option>
@@ -548,7 +548,7 @@ export default function TablesClient({
                     <div className="space-y-2">
                       <Label
                         htmlFor="table-diameter"
-                        className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                        className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                       >
                         Diameter (m)
                       </Label>
@@ -560,7 +560,7 @@ export default function TablesClient({
                         step={0.05}
                         placeholder="e.g. 1.2"
                         defaultValue={formDefault?.diameter ?? ""}
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold transition-all focus:border-[#5C4033]"
                       />
                     </div>
                   ) : (
@@ -568,7 +568,7 @@ export default function TablesClient({
                       <div className="space-y-2">
                         <Label
                           htmlFor="table-width"
-                          className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                          className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                         >
                           Width (m)
                         </Label>
@@ -580,13 +580,13 @@ export default function TablesClient({
                           step={0.05}
                           placeholder="e.g. 0.8"
                           defaultValue={formDefault?.width ?? ""}
-                          className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                          className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold transition-all focus:border-[#5C4033]"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label
                           htmlFor="table-length"
-                          className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                          className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                         >
                           Length (m)
                         </Label>
@@ -598,7 +598,7 @@ export default function TablesClient({
                           step={0.05}
                           placeholder="e.g. 1.6"
                           defaultValue={formDefault?.length ?? ""}
-                          className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                          className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold transition-all focus:border-[#5C4033]"
                         />
                       </div>
                     </div>
@@ -615,7 +615,7 @@ export default function TablesClient({
                     <div className="space-y-2">
                       <Label
                         htmlFor="table-chair-mode"
-                        className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                        className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                       >
                         Arrangement
                       </Label>
@@ -626,7 +626,7 @@ export default function TablesClient({
                         aria-label="Chair arrangement"
                         value={chairMode}
                         onChange={(e) => setChairMode(e.target.value as "auto" | "sides" | "bench")}
-                        className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold text-[#1F1F1A] focus:border-[#5C4033] transition-all outline-none"
+                        className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold text-[#1F1F1A] transition-all outline-none focus:border-[#5C4033]"
                       >
                         <option value="auto">Auto — spread around the table</option>
                         <option value="sides">Chairs per side</option>
@@ -639,7 +639,7 @@ export default function TablesClient({
                         <div className="space-y-2">
                           <Label
                             htmlFor="table-chair-per-side"
-                            className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                            className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                           >
                             {chairMode === "bench" ? "Seats per bench" : "Chairs per side"}
                           </Label>
@@ -651,14 +651,14 @@ export default function TablesClient({
                             step={1}
                             placeholder="e.g. 3"
                             defaultValue={formDefault?.chair_layout?.perSide ?? ""}
-                            className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                            className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold transition-all focus:border-[#5C4033]"
                           />
                         </div>
                         {chairMode === "sides" && (
                           <div className="space-y-2">
                             <Label
                               htmlFor="table-chair-ends"
-                              className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1"
+                              className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                             >
                               Chairs per end
                             </Label>
@@ -670,7 +670,7 @@ export default function TablesClient({
                               step={1}
                               placeholder="e.g. 0"
                               defaultValue={formDefault?.chair_layout?.ends ?? ""}
-                              className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold focus:border-[#5C4033] transition-all"
+                              className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold transition-all focus:border-[#5C4033]"
                             />
                           </div>
                         )}
@@ -687,35 +687,35 @@ export default function TablesClient({
           </div>
 
           {/* Sticky footer */}
-          <div className="shrink-0 p-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
+          <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 p-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
 
             {/* View mode */}
             {!showForm && selected && (
-              <div className="grid grid-cols-2 gap-3 sm:max-w-sm sm:mx-auto">
+              <div className="grid grid-cols-2 gap-3 sm:mx-auto sm:max-w-sm">
                 <Button
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-widest text-[10px] bg-white"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-widest text-red-500 uppercase"
                 >
                   {isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <><Trash2 className="w-4 h-4 mr-2" />Delete</>
+                    <><Trash2 className="mr-2 h-4 w-4" />Delete</>
                   )}
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setShape(selected.shape ?? "round"); setChairMode(selected.chair_layout?.mode ?? "auto"); setIsEditing(true); }}
-                  className="h-14 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95"
                 >
-                  <Pencil className="w-4 h-4 mr-2" />Edit
+                  <Pencil className="mr-2 h-4 w-4" />Edit
                 </Button>
               </div>
             )}
 
             {/* Edit / Add mode */}
             {showForm && (
-              <div className="grid grid-cols-2 gap-3 sm:max-w-sm sm:mx-auto">
+              <div className="grid grid-cols-2 gap-3 sm:mx-auto sm:max-w-sm">
                 <Button
                   type="button"
                   variant="outline"
@@ -725,7 +725,7 @@ export default function TablesClient({
                     else setIsEditing(false);
                   }}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                 >
                   Cancel
                 </Button>
@@ -733,12 +733,12 @@ export default function TablesClient({
                   type="submit"
                   form="table-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95"
                 >
                   {isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <><Save className="w-4 h-4 mr-2" />Save</>
+                    <><Save className="mr-2 h-4 w-4" />Save</>
                   )}
                 </Button>
               </div>
@@ -768,10 +768,10 @@ function Chip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "h-11 sm:h-9 px-3 rounded-full text-[10px] font-black uppercase tracking-wide inline-flex items-center gap-1.5 border transition-colors",
+        "inline-flex h-11 items-center gap-1.5 rounded-full border px-3 font-black text-[10px] tracking-wide uppercase transition-colors sm:h-9",
         active
-          ? "bg-[#5C4033] text-white border-[#5C4033]"
-          : "bg-white text-[#5F624F] border-[#E6DFC8] hover:border-[#5C4033]/30"
+          ? "border-[#5C4033] bg-[#5C4033] text-white"
+          : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]/30"
       )}
     >
       {children}
@@ -791,7 +791,7 @@ function InfoBadge({
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 text-[10px] font-black text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-2 py-1 rounded-lg whitespace-nowrap",
+        "inline-flex items-center gap-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2 py-1 font-black text-[10px] whitespace-nowrap text-[#5F624F]",
         className
       )}
     >
@@ -805,13 +805,13 @@ function StatusPill({ available }: { available: boolean }) {
   return (
     <span
       className={cn(
-        "shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide px-2 py-1 rounded-lg border",
+        "inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 font-black text-[9px] tracking-wide uppercase",
         available
-          ? "bg-green-50 text-green-700 border-green-200"
-          : "bg-red-50 text-red-600 border-red-200"
+          ? "border-green-200 bg-green-50 text-green-700"
+          : "border-red-200 bg-red-50 text-red-600"
       )}
     >
-      {available ? <Check className="w-3 h-3" /> : <X className="w-3 h-3" />}
+      {available ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
       {available ? "Available" : "Unavailable"}
     </span>
   );
@@ -829,25 +829,25 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white">
       <button
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="w-full flex items-center justify-between px-5 py-3 bg-[#F7F4EA]"
+        className="flex w-full items-center justify-between bg-[#F7F4EA] px-5 py-3"
       >
-        <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">
+        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
           {title}
         </span>
         <ChevronDown
           className={cn(
-            "w-4 h-4 text-[#5F624F] transition-transform",
+            "h-4 w-4 text-[#5F624F] transition-transform",
             open && "rotate-180"
           )}
         />
       </button>
       {/* Body stays mounted (hidden, not unmounted) so all fields submit. */}
-      <div className={cn("p-4 space-y-4", !open && "hidden")}>{children}</div>
+      <div className={cn("space-y-4 p-4", !open && "hidden")}>{children}</div>
     </div>
   );
 }
@@ -864,16 +864,16 @@ function DetailRow({
   valueClassName?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-3.5 border-b border-[#E6DFC8] last:border-0">
-      <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
+    <div className="flex items-center gap-3 border-b border-[#E6DFC8] px-5 py-3.5 last:border-0">
+      <div className="flex shrink-0 items-center gap-2 text-[#5F624F] opacity-60">
         {icon}
-        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">
+        <span className="font-black text-[10px] tracking-wide whitespace-nowrap uppercase">
           {label}
         </span>
       </div>
       <span
         className={cn(
-          "text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug",
+          "flex-1 text-right font-black text-sm leading-snug text-[#1F1F1A]",
           valueClassName
         )}
       >
@@ -885,9 +885,9 @@ function DetailRow({
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
-      <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-      <p className="text-sm text-red-700 font-bold leading-snug">{message}</p>
+    <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+      <p className="text-sm leading-snug font-bold text-red-700">{message}</p>
     </div>
   );
 }

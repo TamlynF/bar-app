@@ -18,9 +18,9 @@ export function IconPicker({
   label?: string;
 }) {
   return (
-    <div className="px-4 sm:px-5 py-3 sm:py-4 space-y-3">
-      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] opacity-60">{label}</span>
-      <div className="grid grid-cols-5 sm:grid-cols-7 gap-2">
+    <div className="space-y-3 px-4 py-3 sm:px-5 sm:py-4">
+      <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">{label}</span>
+      <div className="grid grid-cols-5 gap-2 sm:grid-cols-7">
         {BOOKING_CARD_ICON_NAMES.map((name) => {
           const Icon = BOOKING_CARD_ICONS[name];
           const selected = value === name;
@@ -33,13 +33,13 @@ export function IconPicker({
               aria-pressed={selected}
               onClick={() => onChange(selected ? null : name)}
               className={cn(
-                "flex items-center justify-center aspect-square rounded-xl border transition-all duration-200 active:scale-95",
+                "flex aspect-square items-center justify-center rounded-xl border transition-all duration-200 active:scale-95",
                 selected
-                  ? "bg-[#5C4033] text-white border-[#5C4033] shadow-md ring-2 ring-[#5C4033]/20 scale-105"
-                  : "hover:bg-[#F7F4EA] bg-white text-[#5F624F] border-[#E6DFC8] hover:border-[#5C4033]/30"
+                  ? "scale-105 border-[#5C4033] bg-[#5C4033] text-white shadow-md ring-2 ring-[#5C4033]/20"
+                  : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]/30 hover:bg-[#F7F4EA]"
               )}
             >
-              <Icon className="w-5 h-5 sm:w-4 sm:h-4" />
+              <Icon className="h-5 w-5 sm:h-4 sm:w-4" />
             </button>
           );
         })}

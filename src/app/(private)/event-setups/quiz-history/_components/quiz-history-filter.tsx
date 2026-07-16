@@ -36,16 +36,16 @@ export default function QuizHistoryFilter({
   }
 
   return (
-    <div className="flex items-center gap-2 bg-white border-2 border-[#E6DFC8] p-1 rounded-2xl shadow-sm min-w-70">
-      <div className="p-2 bg-[#F7F4EA] rounded-xl">
-        <Filter className="w-4 h-4 text-[#5C4033]" />
+    <div className="flex min-w-70 items-center gap-2 rounded-2xl border-2 border-[#E6DFC8] bg-white p-1 shadow-sm">
+      <div className="rounded-xl bg-[#F7F4EA] p-2">
+        <Filter className="h-4 w-4 text-[#5C4033]" />
       </div>
-      <div className="relative flex-1 group">
+      <div className="group relative flex-1">
         <select 
           name="event"
           title="Filter by Event"
           defaultValue={currentFilter}
-          className="w-full bg-transparent border-none text-[10px] font-black uppercase tracking-wide text-[#1F1F1A] h-10 px-2 appearance-none outline-none cursor-pointer"
+          className="h-10 w-full cursor-pointer appearance-none border-none bg-transparent px-2 font-black text-[10px] tracking-wide text-[#1F1F1A] uppercase outline-none"
           onChange={handleChange}
         >
           <option value="all">All Quiz Nights</option>
@@ -55,7 +55,7 @@ export default function QuizHistoryFilter({
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-[#E6DFC8] pointer-events-none" />
+        <ChevronDown className="pointer-events-none absolute top-1/2 right-2 h-4 w-4 -translate-y-1/2 text-[#E6DFC8]" />
       </div>
     </div>
   )

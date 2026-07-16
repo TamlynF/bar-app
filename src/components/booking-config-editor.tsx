@@ -24,14 +24,14 @@ const BUCKET = "booking-images";
 function SectionCard({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
+    <div className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between gap-2.5 px-4 py-3 bg-[#EFEADD] hover:bg-[#E6DFC8] transition-colors text-left"
+        className="flex w-full items-center justify-between gap-2.5 bg-[#EFEADD] px-4 py-3 text-left transition-colors hover:bg-[#E6DFC8]"
       >
-        <span className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">{title}</span>
-        <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform", open && "rotate-180")} />
+        <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+        <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform", open && "rotate-180")} />
       </button>
       {open && <div>{children}</div>}
     </div>
@@ -53,12 +53,12 @@ function Switch({ value, onChange, locked, color = "green", label }: {
       disabled={!interactive}
       onClick={interactive ? () => onChange!(!value) : undefined}
       className={cn(
-        "relative shrink-0 w-11 h-6.25 rounded-full transition-colors",
+        "relative h-6.25 w-11 shrink-0 rounded-full transition-colors",
         value ? onBg : "bg-[#d8d0bb]",
-        !interactive && "opacity-80 cursor-not-allowed",
+        !interactive && "cursor-not-allowed opacity-80",
       )}
     >
-      <span className={cn("absolute top-[2.5px] left-[2.5px] w-5 h-5 rounded-full bg-white shadow transition-transform", value && "translate-x-4.75")} />
+      <span className={cn("absolute top-[2.5px] left-[2.5px] h-5 w-5 rounded-full bg-white shadow transition-transform", value && "translate-x-4.75")} />
     </button>
   );
 }
@@ -81,12 +81,12 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
   onChange: (patch: Partial<GroupSizeFieldConfig>) => void;
 }) {
   return (
-    <div className={cn("rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] overflow-hidden", !field.visible && "opacity-60")}>
+    <div className={cn("overflow-hidden rounded-xl border border-[#E6DFC8] bg-[#F7F4EA]", !field.visible && "opacity-60")}>
       {/* Header: field name + visibility */}
       <div className="flex items-center justify-between gap-2 px-3 py-2.5">
         <span className="text-xs font-extrabold text-[#1F1F1A]">{name}</span>
         <div className="flex items-center gap-2">
-          <span className={cn("text-[9px] font-black uppercase tracking-wide", field.visible ? "text-[#1F8A5B]" : "text-[#5F624F]")}>
+          <span className={cn("font-black text-[9px] tracking-wide uppercase", field.visible ? "text-[#1F8A5B]" : "text-[#5F624F]")}>
             {field.visible ? "Shown" : "Hidden"}
           </span>
           <Switch label={name} value={field.visible} locked={locked} onChange={editable && !locked ? (v) => onChange({ visible: v }) : undefined} />
@@ -94,16 +94,16 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
       </div>
 
       {field.visible && (
-        <div className="bg-white border-t border-[#E6DFC8]">
+        <div className="border-t border-[#E6DFC8] bg-white">
           {/* Label */}
           <div className="flex items-center gap-3 px-4 py-3">
-            <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0">Label</span>
+            <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Label</span>
             {editable ? (
               <input
                 aria-label={`${name} label`}
                 value={field.label}
                 onChange={(e) => onChange({ label: e.target.value })}
-                className="flex-1 min-w-0 text-right text-sm font-semibold text-[#1F1F1A] bg-transparent outline-none"
+                className="min-w-0 flex-1 bg-transparent text-right text-sm font-semibold text-[#1F1F1A] outline-none"
               />
             ) : (
               <span className="flex-1 text-right text-sm font-semibold text-[#1F1F1A]">{field.label || "—"}</span>
@@ -112,9 +112,9 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
 
           {/* Min / max for group size */}
           {isGroupSize && (
-            <div className="flex gap-3 px-4 py-3 border-t border-[#E6DFC8]">
-              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Min size</label>
+            <div className="flex gap-3 border-t border-[#E6DFC8] px-4 py-3">
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <label className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Min size</label>
                 <input
                   type="number"
                   min={1}
@@ -125,8 +125,8 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
                   className="w-full min-w-0 rounded-[10px] border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-sm font-semibold text-[#1F1F1A] outline-none focus-visible:border-[#5C4033] disabled:opacity-70"
                 />
               </div>
-              <div className="flex-1 min-w-0 flex flex-col gap-1.5">
-                <label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Max size</label>
+              <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                <label className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Max size</label>
                 <input
                   type="number"
                   min={1}
@@ -141,8 +141,8 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
           )}
 
           {/* Required */}
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#E6DFC8]">
-            <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Required</span>
+          <div className="flex items-center justify-between border-t border-[#E6DFC8] px-4 py-3">
+            <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Required</span>
             <Switch label={`${name} required`} color="orange" value={field.required} locked={locked} onChange={editable && !locked ? (v) => onChange({ required: v }) : undefined} />
           </div>
         </div>
@@ -183,7 +183,7 @@ export function BookingConfigEditor({
     setUploading(true);
     setUploadError(null);
     const ext = file.name.split(".").pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const path = `${crypto.randomUUID()}.${ext}`;
     const { data, error } = await supabase.storage.from(BUCKET).upload(path, file, { cacheControl: "3600", upsert: false });
     if (error) {
       setUploadError(`Upload failed: ${error.message}`);
@@ -200,41 +200,41 @@ export function BookingConfigEditor({
       {/* Booking page — logo + tagline */}
       <SectionCard title="Booking Page">
         <div className="flex flex-col gap-2 px-4 py-3">
-          <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Booking image (logo)</span>
+          <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Booking image (logo)</span>
           {cfg.booking_image_url ? (
-            <div className="relative rounded-xl overflow-hidden">
+            <div className="relative overflow-hidden rounded-xl">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={cfg.booking_image_url} alt="Booking logo" className="w-full max-h-50 object-contain bg-[#F7F4EA] rounded-xl" />
+              <img src={cfg.booking_image_url} alt="Booking logo" className="max-h-50 w-full rounded-xl bg-[#F7F4EA] object-contain" />
               {editable && (
                 <button
                   type="button"
                   onClick={() => set({ booking_image_url: null })}
                   title="Remove image"
                   aria-label="Remove image"
-                  className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg text-white hover:bg-black/80 transition-colors"
+                  className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
                 >
-                  <Trash2 className="w-3.5 h-3.5" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               )}
             </div>
           ) : editable ? (
-            <label className="flex flex-col items-center justify-center gap-2 py-7 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] cursor-pointer hover:border-[#5C4033] transition-colors">
-              {uploading ? <Loader2 className="w-7 h-7 text-[#5F624F] animate-spin" /> : <Upload className="w-7 h-7 text-[#5F624F] opacity-50" />}
-              <span className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">{uploading ? "Uploading…" : "Upload"}</span>
+            <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] py-7 transition-colors hover:border-[#5C4033]">
+              {uploading ? <Loader2 className="h-7 w-7 animate-spin text-[#5F624F]" /> : <Upload className="h-7 w-7 text-[#5F624F] opacity-50" />}
+              <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{uploading ? "Uploading…" : "Upload"}</span>
               <span className="text-[10px] text-[#5F624F]">Shown as the logo on the booking page</span>
               <input type="file" accept="image/*" className="hidden" onChange={handleUpload} disabled={uploading} />
             </label>
           ) : (
             <div className="flex items-center gap-2 py-3 text-[#5F624F]">
-              <ImageIcon className="w-4 h-4 opacity-50" />
+              <ImageIcon className="h-4 w-4 opacity-50" />
               <span className="text-sm">—</span>
             </div>
           )}
-          {uploadError && <p className="text-[11px] text-red-600 font-bold">{uploadError}</p>}
+          {uploadError && <p className="text-[11px] font-bold text-red-600">{uploadError}</p>}
         </div>
 
-        <div className="flex flex-col gap-2 px-4 py-3 border-t border-[#E6DFC8]">
-          <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">Tagline</span>
+        <div className="flex flex-col gap-2 border-t border-[#E6DFC8] px-4 py-3">
+          <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Tagline</span>
           {editable ? (
             <textarea
               aria-label="Tagline"
@@ -242,7 +242,7 @@ export function BookingConfigEditor({
               rows={2}
               placeholder="Description shown under the logo"
               onChange={(e) => set({ tag_line: e.target.value })}
-              className="w-full rounded-[10px] border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2.5 text-sm font-medium text-[#1F1F1A] outline-none resize-none leading-relaxed focus-visible:border-[#5C4033] focus-visible:ring-[3px] focus-visible:ring-[#5C4033]/10 placeholder:text-[#5F624F]/40"
+              className="w-full resize-none rounded-[10px] border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2.5 text-sm leading-relaxed font-medium text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 focus-visible:border-[#5C4033] focus-visible:ring-[3px] focus-visible:ring-[#5C4033]/10"
             />
           ) : (
             <span className="text-sm font-medium text-[#1F1F1A]">{cfg.tag_line || "—"}</span>
@@ -252,7 +252,7 @@ export function BookingConfigEditor({
 
       {/* Form fields */}
       <SectionCard title="Form Fields">
-        <p className="px-4 pt-3 text-[11px] text-[#5F624F] leading-relaxed">The fields shown on the public booking form.</p>
+        <p className="px-4 pt-3 text-[11px] leading-relaxed text-[#5F624F]">The fields shown on the public booking form.</p>
         <div className="flex flex-col gap-2 p-3.5">
           {FIELD_META.map(({ key, name, locked }) => (
             <FormFieldCard

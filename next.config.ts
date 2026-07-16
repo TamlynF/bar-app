@@ -3,7 +3,7 @@ import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 
 // Config is a phase-aware function so we can reliably detect the dev server.
 // (process.env.NODE_ENV isn't guaranteed to be set when this file is evaluated.)
-export default (phase: string): NextConfig => {
+const config = (phase: string): NextConfig => {
   const isDev = phase === PHASE_DEVELOPMENT_SERVER;
 
   // Kept for parity with the dev-server detection above; no dev-only config
@@ -26,6 +26,11 @@ export default (phase: string): NextConfig => {
           protocol: "https",
           hostname: "*.supabase.co",
         },
+        {
+          // Spotify album art (Web API `album.images[].url`)
+          protocol: "https",
+          hostname: "i.scdn.co",
+        },
       ],
     },
     allowedDevOrigins: [
@@ -36,3 +41,5 @@ export default (phase: string): NextConfig => {
 
   return nextConfig;
 };
+
+export default config;

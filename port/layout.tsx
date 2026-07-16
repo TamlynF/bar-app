@@ -99,7 +99,7 @@ export default function RootLayout({
     >
       <body
         suppressHydrationWarning
-        className="antialiased min-h-screen font-[family-name:var(--font-ui)]"
+        className="min-h-screen font-[family-name:var(--font-ui)] antialiased"
       >
         {children}
         <Toaster />

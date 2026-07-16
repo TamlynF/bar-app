@@ -27,8 +27,8 @@ export function EventCta({
     return (
       <span
         className={cn(
-          "shrink-0 inline-flex items-center justify-center font-black uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 rounded-full",
-          lg ? "w-full h-12 text-xs" : "h-9 px-3.5 text-[10px]"
+          "inline-flex shrink-0 items-center justify-center rounded-full border border-red-500/20 bg-red-500/10 font-black tracking-widest text-red-400 uppercase",
+          lg ? "h-12 w-full text-xs" : "h-9 px-3.5 text-[10px]"
         )}
       >
         Sold Out
@@ -42,7 +42,7 @@ export function EventCta({
         href={event.karaokeRequestUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className={cn(pill, "text-white bg-[#FF6B35] hover:bg-[#FF6B35]/90")}
+        className={cn(pill, "bg-[#FF6B35] text-white hover:bg-[#FF6B35]/90")}
         aria-label="Request a song to sing on Singa"
       >
         <Mic2 className={cn(icon, "shrink-0")} aria-hidden="true" />
@@ -56,7 +56,7 @@ export function EventCta({
       <span
         className={cn(
           pill,
-          "bg-white/5 text-stone-500 border border-white/10 cursor-default"
+          "cursor-default border border-white/10 bg-white/5 text-stone-500"
         )}
         title="Karaoke night hasn't started yet"
       >
@@ -70,7 +70,7 @@ export function EventCta({
     return (
       <a
         href={event.bookingPageUrl}
-        className={cn(pill, "text-[#1a2008] bg-[#FDCC4B] hover:bg-[#FDCC4B]/90")}
+        className={cn(pill, "bg-[#FDCC4B] text-[#1a2008] hover:bg-[#FDCC4B]/90")}
         aria-label={`Book ${event.title}`}
       >
         <CalendarDays className={cn(icon, "shrink-0")} aria-hidden="true" />
@@ -84,7 +84,7 @@ export function EventCta({
     <span
       className={cn(
         pill,
-        "bg-white/5 text-stone-300 border border-white/10 cursor-default"
+        "cursor-default border border-white/10 bg-white/5 text-stone-300"
       )}
     >
       Walk in

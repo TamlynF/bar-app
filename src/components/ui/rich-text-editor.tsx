@@ -46,7 +46,7 @@ function ToolbarButton({ onClick, active, title, children }: ToolbarButtonProps)
       }}
       title={title}
       className={cn(
-        "w-7 h-7 flex items-center justify-center rounded-lg text-[#5C4033] transition-colors",
+        "flex h-7 w-7 items-center justify-center rounded-lg text-[#5C4033] transition-colors",
         active
           ? "bg-[#5C4033] text-white"
           : "hover:bg-[#E6DFC8]"
@@ -91,18 +91,18 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
   if (!editor) return null;
 
   return (
-    <div className="flex-1 flex flex-col gap-0">
+    <div className="flex flex-1 flex-col gap-0">
       {/* Hidden input carries the HTML value in the form */}
       <input type="hidden" name={name} ref={hiddenRef} defaultValue={defaultValue} />
 
       {/* Toolbar */}
-      <div className="flex items-center gap-0.5 flex-wrap px-2 py-1.5 border-b border-[#E6DFC8] bg-[#F7F4EA] rounded-t-2xl">
+      <div className="flex flex-wrap items-center gap-0.5 rounded-t-2xl border-b border-[#E6DFC8] bg-[#F7F4EA] px-2 py-1.5">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive("bold")}
           title="Bold"
         >
-          <Bold className="w-3.5 h-3.5" />
+          <Bold className="h-3.5 w-3.5" />
         </ToolbarButton>
 
         <ToolbarButton
@@ -110,7 +110,7 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
           active={editor.isActive("italic")}
           title="Italic"
         >
-          <Italic className="w-3.5 h-3.5" />
+          <Italic className="h-3.5 w-3.5" />
         </ToolbarButton>
 
         <ToolbarButton
@@ -118,17 +118,17 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
           active={editor.isActive("underline")}
           title="Underline"
         >
-          <UnderlineIcon className="w-3.5 h-3.5" />
+          <UnderlineIcon className="h-3.5 w-3.5" />
         </ToolbarButton>
 
-        <div className="w-px h-5 bg-[#E6DFC8] mx-0.5" />
+        <div className="mx-0.5 h-5 w-px bg-[#E6DFC8]" />
 
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
           active={editor.isActive("heading", { level: 1 })}
           title="Heading 1"
         >
-          <Heading1 className="w-3.5 h-3.5" />
+          <Heading1 className="h-3.5 w-3.5" />
         </ToolbarButton>
 
         <ToolbarButton
@@ -136,7 +136,7 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
           active={editor.isActive("heading", { level: 2 })}
           title="Heading 2"
         >
-          <Heading2 className="w-3.5 h-3.5" />
+          <Heading2 className="h-3.5 w-3.5" />
         </ToolbarButton>
 
         <ToolbarButton
@@ -144,17 +144,17 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
           active={editor.isActive("paragraph")}
           title="Normal text"
         >
-          <Pilcrow className="w-3.5 h-3.5" />
+          <Pilcrow className="h-3.5 w-3.5" />
         </ToolbarButton>
 
-        <div className="w-px h-5 bg-[#E6DFC8] mx-0.5" />
+        <div className="mx-0.5 h-5 w-px bg-[#E6DFC8]" />
 
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           active={editor.isActive("bulletList")}
           title="Bullet list"
         >
-          <List className="w-3.5 h-3.5" />
+          <List className="h-3.5 w-3.5" />
         </ToolbarButton>
 
         <ToolbarButton
@@ -162,10 +162,10 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
           active={editor.isActive("orderedList")}
           title="Numbered list"
         >
-          <ListOrdered className="w-3.5 h-3.5" />
+          <ListOrdered className="h-3.5 w-3.5" />
         </ToolbarButton>
 
-        <div className="w-px h-5 bg-[#E6DFC8] mx-0.5" />
+        <div className="mx-0.5 h-5 w-px bg-[#E6DFC8]" />
 
         {/* Colour swatches */}
         {COLORS.map((c) => (
@@ -182,44 +182,44 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
               }
             }}
             className={cn(
-              "w-5 h-5 rounded-full border-2 transition-transform hover:scale-110",
+              "h-5 w-5 rounded-full border-2 transition-transform hover:scale-110",
               c.value === "" && "bg-[#1F1F1A]",
               editor.isActive("textStyle", { color: c.value }) && c.value
-                ? "border-[#5C4033] scale-110"
+                ? "scale-110 border-[#5C4033]"
                 : "border-transparent"
             )}
             style={c.value ? { "--swatch": c.value } as React.CSSProperties : undefined}
           >
             {c.value && (
               <span
-                className="block w-full h-full rounded-full"
+                className="block h-full w-full rounded-full"
                 style={{ backgroundColor: c.value }}
               />
             )}
           </button>
         ))}
 
-        <div className="w-px h-5 bg-[#E6DFC8] mx-0.5" />
+        <div className="mx-0.5 h-5 w-px bg-[#E6DFC8]" />
 
         <ToolbarButton
           onClick={() => editor.chain().focus().undo().run()}
           title="Undo"
         >
-          <Undo2 className="w-3.5 h-3.5" />
+          <Undo2 className="h-3.5 w-3.5" />
         </ToolbarButton>
 
         <ToolbarButton
           onClick={() => editor.chain().focus().redo().run()}
           title="Redo"
         >
-          <Redo2 className="w-3.5 h-3.5" />
+          <Redo2 className="h-3.5 w-3.5" />
         </ToolbarButton>
       </div>
 
       {/* Editor area */}
       <EditorContent
         editor={editor}
-        className="rich-editor min-h-30 px-3 py-2 text-sm text-[#1F1F1A] leading-snug outline-none bg-white rounded-b-2xl overflow-y-auto"
+        className="rich-editor min-h-30 overflow-y-auto rounded-b-2xl bg-white px-3 py-2 text-sm leading-snug text-[#1F1F1A] outline-none"
       />
     </div>
   );

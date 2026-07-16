@@ -4,7 +4,7 @@ import React, { useState, useTransition } from "react";
 import { createPrivateHire } from "@/app/(public)/_actions/create-private-hire";
 import { privateHireSubtypeLabel, type PrivateHireSubtype } from "@/lib/private-hire-subtype";
 import {
-  CheckCircle2, ArrowLeft, ChevronRight, Calendar, Clock, Users, Info,
+  CheckCircle2, ArrowLeft, ChevronRight, Calendar, Clock, Users,
   User, Mail, Phone, MessageSquareQuote, Tag,
 } from "lucide-react";
 
@@ -96,10 +96,10 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
 
   if (submitted) {
     return (
-      <div className="flex flex-col items-center text-center py-8 gap-4">
-        <CheckCircle2 className="w-12 h-12 text-[#FDCC4B]" />
-        <h3 className="text-white font-black text-xl uppercase tracking-tight">Enquiry Submitted!</h3>
-        <p className="text-stone-400 text-sm max-w-xs leading-relaxed">
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
+        <CheckCircle2 className="h-12 w-12 text-[#FDCC4B]" />
+        <h3 className="font-black text-xl tracking-tight text-white uppercase">Enquiry Submitted!</h3>
+        <p className="max-w-xs text-sm leading-relaxed text-stone-400">
           We&apos;ve received your private hire enquiry. Our team will be in touch shortly to discuss availability and next steps.
         </p>
       </div>
@@ -112,7 +112,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
     <form onSubmit={handleSubmit} className="space-y-0 overflow-hidden">
 
       {/* Step indicator */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {STEPS.map((s) => (
             <div
@@ -127,28 +127,28 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
             />
           ))}
         </div>
-        <span className="text-[10px] font-black uppercase tracking-widest text-stone-600">
+        <span className="font-black text-[10px] tracking-widest text-stone-600 uppercase">
           {step} of {STEPS.length}
         </span>
       </div>
 
       {/* Step heading */}
       <div className="mb-7">
-        <h4 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">
+        <h4 className="mb-1 font-black text-2xl leading-none tracking-tight text-white uppercase">
           {currentStep.title}
         </h4>
-        <p className="text-stone-500 text-xs font-medium">{currentStep.subtitle}</p>
+        <p className="text-xs font-medium text-stone-500">{currentStep.subtitle}</p>
       </div>
 
       {/* Step content */}
-      <div key={step} className="space-y-4 animate-in fade-in duration-200">
+      <div key={step} className="animate-in space-y-4 duration-200 fade-in">
 
         {/* Step 1: Your Details */}
         {step === 1 && (
           <>
             <div className="space-y-1">
               <label className={labelClass}>Full Name <span className="text-red-500">*</span></label>
-              <div className="relative group">
+              <div className="group relative">
                 <div className={iconContainerClass}>
                   <User className={iconClass} />
                 </div>
@@ -160,10 +160,10 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
                 />
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
               <div className="space-y-1">
                 <label className={labelClass}>Email <span className="text-red-500">*</span></label>
-                <div className="relative group">
+                <div className="group relative">
                   <div className={iconContainerClass}>
                     <Mail className={iconClass} />
                   </div>
@@ -178,7 +178,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
               </div>
               <div className="space-y-1">
                 <label className={labelClass}>Phone</label>
-                <div className="relative group">
+                <div className="group relative">
                   <div className={iconContainerClass}>
                     <Phone className={iconClass} />
                   </div>
@@ -200,7 +200,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
           <>
             <div className="space-y-1">
               <label className={labelClass}>Number of Guests <span className="text-red-500">*</span></label>
-              <div className="relative group">
+              <div className="group relative">
                 <div className={iconContainerClass}>
                   <Users className={iconClass} />
                 </div>
@@ -218,7 +218,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
 
             <div className="space-y-1">
               <label className={labelClass}>Date <span className="text-red-500">*</span></label>
-              <div className="relative group">
+              <div className="group relative">
                 <div className={iconContainerClass}>
                   <Calendar className={iconClass} />
                 </div>
@@ -227,15 +227,15 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
                   type="date"
                   value={preferredDate}
                   onChange={(e) => setPreferredDate(e.target.value)}
-                  className={`${inputClass} min-w-0 input-scheme-dark`}
+                  className={`${inputClass} input-scheme-dark min-w-0`}
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 sm:gap-6 overflow-hidden">
-              <div className="space-y-1 min-w-0">
+            <div className="grid grid-cols-2 gap-3 overflow-hidden sm:gap-6">
+              <div className="min-w-0 space-y-1">
                 <label className={labelClass}>Start Time <span className="text-red-500">*</span></label>
-                <div className="relative group">
+                <div className="group relative">
                   <div className={iconContainerClass}>
                     <Clock className={iconClass} />
                   </div>
@@ -244,13 +244,13 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
                     type="time"
                     value={preferredStartTime}
                     onChange={(e) => setPreferredStartTime(e.target.value)}
-                    className={`${inputClass} min-w-0 pl-9 sm:pl-11 input-scheme-dark`}
+                    className={`${inputClass} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
                   />
                 </div>
               </div>
-              <div className="space-y-1 min-w-0">
+              <div className="min-w-0 space-y-1">
                 <label className={labelClass}>End Time <span className="text-red-500">*</span></label>
-                <div className="relative group">
+                <div className="group relative">
                   <div className={iconContainerClass}>
                     <Clock className={iconClass} />
                   </div>
@@ -259,7 +259,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
                     type="time"
                     value={preferredEndTime}
                     onChange={(e) => setPreferredEndTime(e.target.value)}
-                    className={`${inputClass} min-w-0 pl-9 sm:pl-11 input-scheme-dark`}
+                    className={`${inputClass} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
                   />
                 </div>
               </div>
@@ -267,7 +267,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
 
             <div className="space-y-1">
               <label className={labelClass}>Reason for Hire <span className="text-red-500">*</span></label>
-              <div className="relative group">
+              <div className="group relative">
                 <div className={iconContainerClass}>
                   <Tag className={iconClass} />
                 </div>
@@ -275,7 +275,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
                   title="Reason for Hire"
                   value={eventSubtypeId}
                   onChange={(e) => setEventSubtypeId(e.target.value)}
-                  className={`${inputClass} appearance-none pr-10 cursor-pointer`}
+                  className={`${inputClass} cursor-pointer appearance-none pr-10`}
                 >
                   <option value="">Select a reason</option>
                   {subtypes.map((s) => (
@@ -284,7 +284,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
                     </option>
                   ))}
                 </select>
-                <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 rotate-90 pointer-events-none" />
+                <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
               </div>
             </div>
           </>
@@ -295,7 +295,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
           <>
             <div className="space-y-1">
               <label className={labelClass}>Additional Requests</label>
-              <div className="relative group">
+              <div className="group relative">
                 <div className={iconContainerClass}>
                   <MessageSquareQuote className={iconClass} />
                 </div>
@@ -305,7 +305,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
                   onChange={(e) => setAdditionalReqs(e.target.value)}
                   placeholder=""
                   rows={4}
-                  className={`${inputClass} min-h-25 py-3 resize-none`}
+                  className={`${inputClass} min-h-25 resize-none py-3`}
                 />
               </div>
             </div>
@@ -324,27 +324,27 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
 
       {/* Step error */}
       {stepError && (
-        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
+        <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {stepError}
         </p>
       )}
 
       {/* Submit error */}
       {error && step === 3 && (
-        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-2xl px-4 py-3">
+        <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {error}
         </p>
       )}
 
       {/* Navigation */}
-      <div className="flex gap-3 mt-8">
+      <div className="mt-8 flex gap-3">
         {step > 1 && (
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center gap-2 h-16 px-5 rounded-2xl border border-white/10 text-stone-400 font-black text-xs uppercase tracking-widest hover:bg-white/5 transition-all"
+            className="flex h-16 items-center gap-2 rounded-2xl border border-white/10 px-5 font-black text-xs tracking-widest text-stone-400 uppercase transition-all hover:bg-white/5"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" />
             Back
           </button>
         )}
@@ -354,17 +354,17 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
             type="button"
             onClick={handleNext}
             disabled={!canProceed}
-            className="flex-1 flex items-center justify-center gap-2 h-16 bg-[#fdcc4b] text-[#26300D] font-black text-lg uppercase tracking-widest rounded-2xl transition-all hover:bg-[#e5b843] active:scale-95 shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-[#fdcc4b] disabled:active:scale-100"
+            className="flex h-16 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#fdcc4b] disabled:active:scale-100"
           >
             Next
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         ) : (
           <button
             key="submit"
             type="submit"
             disabled={isPending}
-            className="flex-1 h-16 bg-[#fdcc4b] text-[#26300D] font-black text-lg uppercase tracking-widest rounded-2xl transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)]"
+            className="h-16 flex-1 rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? "Submitting…" : "Send Enquiry"}
           </button>

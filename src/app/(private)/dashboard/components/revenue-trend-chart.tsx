@@ -4,8 +4,8 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "rec
 
 export function RevenueTrendChart({ data }: { data: { week: string; revenue: number; bookings: number }[] }) {
   return (
-    <div className="bg-white shadow-sm p-4 sm:p-5 border border-[#E6DFC8] rounded-2xl">
-      <p className="mb-3 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
+    <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
+      <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         Revenue · last 12 weeks
       </p>
       <div className="h-44">

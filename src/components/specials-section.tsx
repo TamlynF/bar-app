@@ -52,7 +52,7 @@ export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
     <section id="specials" className="scroll-mt-24">
       <SectionHeading eyebrow="At the bar" title="Specials" />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+      <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
         {specials.map((s) => (
           <SpecialStub key={s.id} special={s} onOpen={() => setSelected(s)} />
         ))}
@@ -79,44 +79,44 @@ function SpecialStub({
     <button
       type="button"
       onClick={onOpen}
-      className="group relative text-left overflow-hidden rounded-2xl bg-[#7A1F1F] text-[#ffeede] p-5 pl-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50 active:scale-[0.99] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDCC4B]"
+      className="group relative overflow-hidden rounded-2xl bg-[#7A1F1F] p-5 pl-7 text-left text-[#ffeede] transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDCC4B] active:scale-[0.99]"
     >
       {/* Perforated ticket edge */}
       <span
-        className="ad-stub-perf absolute left-0 top-0 bottom-0 w-3.5"
+        className="ad-stub-perf absolute top-0 bottom-0 left-0 w-3.5"
         aria-hidden="true"
       />
 
       {tag && (
-        <span className="absolute top-4 right-4 text-[10px] font-black uppercase tracking-[0.12em] text-[#ffd9b0]/80">
+        <span className="absolute top-4 right-4 font-black text-[10px] tracking-[0.12em] text-[#ffd9b0]/80 uppercase">
           {tag}
         </span>
       )}
 
-      <Sparkles className="w-6 h-6 text-[#FDCC4B]" aria-hidden="true" />
+      <Sparkles className="h-6 w-6 text-[#FDCC4B]" aria-hidden="true" />
 
-      <h4 className="mt-3 font-black uppercase tracking-tight leading-none text-xl">
+      <h4 className="mt-3 font-black text-xl leading-none tracking-tight uppercase">
         {special.title}
       </h4>
 
       {range && (
-        <p className="mt-2 text-[11px] font-bold tabular-nums uppercase tracking-wide text-[#ffd9b0]">
+        <p className="mt-2 text-[11px] font-bold tracking-wide text-[#ffd9b0] uppercase tabular-nums">
           {range}
         </p>
       )}
 
       <div className="mt-4 flex items-center justify-between gap-2">
         {special.badges[0] ? (
-          <span className="text-[10px] font-black uppercase tracking-wide bg-white/15 px-2.5 py-1 rounded-md">
+          <span className="rounded-md bg-white/15 px-2.5 py-1 font-black text-[10px] tracking-wide uppercase">
             {special.badges[0]}
           </span>
         ) : (
           <span />
         )}
-        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-widest text-[#ffd9b0]">
+        <span className="inline-flex items-center gap-1 font-black text-[10px] tracking-widest text-[#ffd9b0] uppercase">
           View details
           <ArrowRight
-            className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
+            className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
             aria-hidden="true"
           />
         </span>

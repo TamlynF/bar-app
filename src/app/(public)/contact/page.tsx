@@ -46,7 +46,7 @@ export default async function ContactPage() {
     .toLowerCase();
 
   return (
-    <main className="bg-[#1a2008] selection:bg-[#FDCC4B] w-full min-h-dvh text-white selection:text-[#1a2008] antialiased">
+    <main className="min-h-dvh w-full bg-[#1a2008] text-white antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <style
         dangerouslySetInnerHTML={{
           __html: `html, body { background-color: #1a2008 !important; margin: 0; padding: 0; overflow-x: hidden; }`,
@@ -55,11 +55,11 @@ export default async function ContactPage() {
 
       <PublicNav currentPath="/contact" />
 
-      <div className="mx-auto px-4 py-6 sm:py-10 max-w-xl">
+      <div className="mx-auto max-w-xl px-4 py-6 sm:py-10">
         {/* Page header */}
         <SectionHeading eyebrow="Find us · get in touch" title="About Us" />
         {info?.description && (
-          <p className="-mt-2 mb-8 font-medium text-stone-400 text-sm leading-relaxed">
+          <p className="-mt-2 mb-8 text-sm leading-relaxed font-medium text-stone-400">
             {info.description}
           </p>
         )}
@@ -97,7 +97,7 @@ export default async function ContactPage() {
         {hasHours && (
           <section className="mt-8">
             <SectionLabel icon={Clock} label="Opening Hours" />
-            <div className="bg-white/5 mt-3 border border-white/10 rounded-2xl divide-y divide-white/5 overflow-hidden">
+            <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
               {DAYS.map((day) => {
                 const hours = openingHours[day];
                 const isToday = todayName === day;
@@ -111,13 +111,13 @@ export default async function ContactPage() {
                   >
                     <div className="flex items-center gap-2">
                       {isToday && (
-                        <span className="relative flex w-1.5 h-1.5">
-                          <span className="inline-flex absolute opacity-75 rounded-full w-full h-full animate-ping neon-bg" />
-                          <span className="inline-flex relative rounded-full w-1.5 h-1.5 neon-bg" />
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="neon-bg absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                          <span className="neon-bg relative inline-flex h-1.5 w-1.5 rounded-full" />
                         </span>
                       )}
                       <span
-                        className={`text-xs font-bold uppercase tracking-wide ${
+                        className={`text-xs font-bold tracking-wide uppercase ${
                           isToday ? "text-[#FDCC4B]" : closed ? "text-stone-500" : "text-stone-300"
                         }`}
                       >
@@ -125,9 +125,9 @@ export default async function ContactPage() {
                       </span>
                     </div>
                     {closed ? (
-                      <span className="font-bold text-stone-600 text-xs">Closed</span>
+                      <span className="text-xs font-bold text-stone-600">Closed</span>
                     ) : (
-                      <span className="font-black tabular-nums text-white text-xs">
+                      <span className="font-black text-xs text-white tabular-nums">
                         {hours!.open} &ndash; {hours!.close}
                       </span>
                     )}
@@ -149,7 +149,7 @@ export default async function ContactPage() {
         {(info?.instagram || info?.facebook || info?.twitter || info?.tiktok || info?.youtube) && (
           <section className="mt-8">
             <SectionLabel icon={Instagram} label="Follow Us" />
-            <div className="gap-3 grid grid-cols-2 mt-3">
+            <div className="mt-3 grid grid-cols-2 gap-3">
               {info?.instagram && (
                 <SocialCard
                   icon={Instagram}
@@ -201,12 +201,12 @@ export default async function ContactPage() {
 
         {/* Fallback if nothing configured */}
         {!info?.address && !info?.phone && !info?.email && (
-          <div className="bg-white/3 py-16 border border-white/5 rounded-2xl text-center">
-            <Mail className="mx-auto mb-3 w-8 h-8 text-stone-700" />
-            <p className="font-bold text-stone-500 text-sm uppercase tracking-tight">
+          <div className="rounded-2xl border border-white/5 bg-white/3 py-16 text-center">
+            <Mail className="mx-auto mb-3 h-8 w-8 text-stone-700" />
+            <p className="text-sm font-bold tracking-tight text-stone-500 uppercase">
               Contact details coming soon
             </p>
-            <p className="mt-1 text-stone-600 text-xs">
+            <p className="mt-1 text-xs text-stone-600">
               Check back later or visit us in person
             </p>
           </div>
@@ -214,12 +214,12 @@ export default async function ContactPage() {
 
         {/* Footer */}
         <div className="mt-16 text-center">
-          <div className="flex justify-center items-center gap-3 text-stone-800">
-            <div className="bg-stone-800/50 w-6 h-px" />
-            <span className="font-bold text-[9px] uppercase tracking-[0.4em]">
+          <div className="flex items-center justify-center gap-3 text-stone-800">
+            <div className="h-px w-6 bg-stone-800/50" />
+            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">
               Don Fenticas
             </span>
-            <div className="bg-stone-800/50 w-6 h-px" />
+            <div className="h-px w-6 bg-stone-800/50" />
           </div>
         </div>
       </div>
@@ -236,11 +236,11 @@ function SectionLabel({
 }) {
   return (
     <div className="flex items-center gap-2 px-1">
-      <Icon className="w-3 h-3 text-[#FDCC4B]" />
-      <span className="font-black text-[10px] text-stone-500 uppercase tracking-[0.25em]">
+      <Icon className="h-3 w-3 text-[#FDCC4B]" />
+      <span className="font-black text-[10px] tracking-[0.25em] text-stone-500 uppercase">
         {label}
       </span>
-      <div className="flex-1 bg-stone-800/50 h-px" />
+      <div className="h-px flex-1 bg-stone-800/50" />
     </div>
   );
 }
@@ -259,23 +259,23 @@ function ContactCard({
   action?: string;
 }) {
   return (
-    <div className="flex items-start gap-4 bg-white/5 p-4 sm:p-5 border border-white/10 rounded-2xl">
-      <div className="flex justify-center items-center bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-xl w-11 h-11 shrink-0">
-        <Icon className="w-5 h-5 text-[#FDCC4B]" />
+    <div className="flex items-start gap-4 rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5">
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#FDCC4B]/20 bg-[#FDCC4B]/10">
+        <Icon className="h-5 w-5 text-[#FDCC4B]" />
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-black text-[10px] text-stone-500 uppercase tracking-[0.2em]">
+      <div className="min-w-0 flex-1">
+        <p className="font-black text-[10px] tracking-[0.2em] text-stone-500 uppercase">
           {label}
         </p>
-        <p className="mt-1 font-bold text-white text-sm break-all whitespace-pre-line">
+        <p className="mt-1 text-sm font-bold break-all whitespace-pre-line text-white">
           {value}
         </p>
         {href && action && (
           <a
             href={href}
-            className="inline-flex items-center gap-1 mt-2 font-black text-[#FDCC4B] text-[10px] hover:text-white uppercase tracking-widest transition-colors"
+            className="mt-2 inline-flex items-center gap-1 font-black text-[10px] tracking-widest text-[#FDCC4B] uppercase transition-colors hover:text-white"
           >
-            {action} <ExternalLink className="w-3 h-3" />
+            {action} <ExternalLink className="h-3 w-3" />
           </a>
         )}
       </div>
@@ -299,24 +299,24 @@ function SocialCard({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-3 bg-white/5 hover:bg-white/8 p-4 border border-white/10 hover:border-white/20 rounded-2xl transition-all"
+      className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/8"
     >
-      <div className="flex justify-center items-center bg-white/5 group-hover:bg-white/10 border border-white/10 rounded-xl w-9 h-9 transition-colors shrink-0">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition-colors group-hover:bg-white/10">
         {Icon ? (
-          <Icon className="w-4 h-4 text-stone-400" />
+          <Icon className="h-4 w-4 text-stone-400" />
         ) : (
-          <span className="font-black text-stone-400 text-xs">
+          <span className="font-black text-xs text-stone-400">
             {label.charAt(0)}
           </span>
         )}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="font-black text-white text-xs uppercase tracking-tight">
+      <div className="min-w-0 flex-1">
+        <p className="font-black text-xs tracking-tight text-white uppercase">
           {label}
         </p>
-        <p className="font-bold text-[11px] text-stone-500 truncate">{handle}</p>
+        <p className="truncate text-[11px] font-bold text-stone-500">{handle}</p>
       </div>
-      <ExternalLink className="w-3.5 h-3.5 text-stone-600 group-hover:text-stone-400 transition-colors shrink-0" />
+      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-stone-600 transition-colors group-hover:text-stone-400" />
     </a>
   );
 }

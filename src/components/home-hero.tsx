@@ -25,18 +25,18 @@ export function HomeHero({
   isTonight: boolean;
 }) {
   return (
-    <section className="relative pt-10 pb-4 sm:pt-14 sm:pb-6 text-center">
+    <section className="relative pt-10 pb-4 text-center sm:pt-14 sm:pb-6">
       <div className="relative z-10 flex flex-col items-center">
         {/* Live open pill */}
-        <div className="animate-reveal inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/25 rounded-full px-3.5 py-1.5">
-          <span className="ad-ping w-1.5 h-1.5 rounded-full bg-[#FDCC4B]" aria-hidden="true" />
-          <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#FDCC4B]">
+        <div className="animate-reveal inline-flex items-center gap-2 rounded-full border border-[#FDCC4B]/25 bg-[#FDCC4B]/10 px-3.5 py-1.5">
+          <span className="ad-ping h-1.5 w-1.5 rounded-full bg-[#FDCC4B]" aria-hidden="true" />
+          <span className="font-black text-[10px] tracking-[0.2em] text-[#FDCC4B] uppercase">
             {openLabel}
           </span>
         </div>
 
         {/* Brand wordmark — lit from above */}
-        <h1 className="animate-reveal [animation-delay:80ms] m-0 mt-6 w-full">
+        <h1 className="animate-reveal m-0 mt-6 w-full [animation-delay:80ms]">
           <Image
             src="/CompanyName.png"
             alt="Don Fenticas — live music bar in Hinckley"
@@ -47,7 +47,7 @@ export function HomeHero({
           />
         </h1>
 
-        <p className="animate-reveal [animation-delay:160ms] mt-4 max-w-md text-ink-2 text-sm sm:text-base font-medium leading-relaxed">
+        <p className="animate-reveal mt-4 max-w-md text-sm leading-relaxed font-medium text-ink-2 [animation-delay:160ms] sm:text-base">
           {tagline}
         </p>
 
@@ -73,42 +73,42 @@ function FeaturedCard({
     : null;
 
   return (
-    <div className="animate-reveal [animation-delay:240ms] mt-8 w-full max-w-150 text-left bg-canvas-2 border border-hairline rounded-3xl p-6 shadow-2xl shadow-black/40">
+    <div className="animate-reveal mt-8 w-full max-w-150 rounded-3xl border border-hairline bg-canvas-2 p-6 text-left shadow-2xl shadow-black/40 [animation-delay:240ms]">
       <div className="flex items-center gap-2">
-        <span className="ad-blink w-2 h-2 rounded-full bg-[#FF6B35] shadow-[0_0_10px_#FF6B35]" aria-hidden="true" />
-        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-neon">
+        <span className="ad-blink h-2 w-2 rounded-full bg-[#FF6B35] shadow-[0_0_10px_#FF6B35]" aria-hidden="true" />
+        <span className="font-black text-[10px] tracking-[0.2em] text-neon uppercase">
           {isTonight ? "On tonight" : "Next up"}
         </span>
       </div>
 
       <div className="mt-3 flex items-center gap-4">
         {/* Gold date chip */}
-        <div className="shrink-0 w-18 h-18 rounded-2xl bg-[#FDCC4B] text-[#1a2008] flex flex-col items-center justify-center shadow-lg shadow-[#FDCC4B]/30">
-          <span className="text-[11px] font-black uppercase tracking-widest">
+        <div className="flex h-18 w-18 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#FDCC4B] text-[#1a2008] shadow-lg shadow-[#FDCC4B]/30">
+          <span className="font-black text-[11px] tracking-widest uppercase">
             {format(dateObj, "EEE")}
           </span>
-          <span className="text-3xl font-black tabular-nums leading-none mt-0.5">
+          <span className="mt-0.5 font-black text-3xl leading-none tabular-nums">
             {format(dateObj, "d")}
           </span>
         </div>
 
         <div className="min-w-0 flex-1">
           {event.subType && (
-            <p className="text-stone-400 text-[9px] font-black uppercase tracking-[0.25em]">
+            <p className="font-black text-[9px] tracking-[0.25em] text-stone-400 uppercase">
               {event.subType}
             </p>
           )}
           <p
-            className="ev-text font-black uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl line-clamp-2 mt-0.5"
+            className="ev-text mt-0.5 line-clamp-2 font-black text-2xl leading-[0.95] tracking-tight uppercase sm:text-3xl"
             style={{ "--ev-c": event.color } as React.CSSProperties}
           >
             {event.title}
           </p>
           {(event.tagline || timeLabel) && (
-            <p className="mt-1 flex items-center gap-1.5 text-stone-400 text-xs font-medium">
+            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-stone-400">
               {timeLabel && (
-                <span className="inline-flex items-center gap-1 tabular-nums font-bold">
-                  <Clock className="w-3 h-3 shrink-0" aria-hidden="true" />
+                <span className="inline-flex items-center gap-1 font-bold tabular-nums">
+                  <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
                   {timeLabel}
                 </span>
               )}

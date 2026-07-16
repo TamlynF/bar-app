@@ -23,12 +23,12 @@ export default function LeaderboardEventFilter({
 
   return (
     <div className="relative w-full sm:w-80">
-      <CalendarDays className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5C4033] pointer-events-none" />
+      <CalendarDays className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-[#5C4033]" />
       <select
         aria-label="Select quiz event"
         value={selectedEventId ?? ""}
         onChange={(e) => router.push(`/event-setups/quiz-leaderboards?event=${encodeURIComponent(e.target.value)}`)}
-        className="w-full h-11 rounded-xl bg-white border border-[#E6DFC8] pl-10 pr-9 text-sm font-bold text-[#1F1F1A] appearance-none outline-none focus:border-[#5C4033] transition-colors"
+        className="h-11 w-full appearance-none rounded-xl border border-[#E6DFC8] bg-white pr-9 pl-10 text-sm font-bold text-[#1F1F1A] transition-colors outline-none focus:border-[#5C4033]"
       >
         {events.map((e) => (
           <option key={e.id} value={e.id}>
@@ -36,7 +36,7 @@ export default function LeaderboardEventFilter({
           </option>
         ))}
       </select>
-      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#5F624F] pointer-events-none" />
+      <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5F624F]" />
     </div>
   );
 }

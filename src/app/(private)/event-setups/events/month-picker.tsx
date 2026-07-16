@@ -111,33 +111,33 @@ export function DatePicker({
           type="button"
           title="Filter by date"
           className={cn(
-            "h-11 px-3 inline-flex items-center gap-2 rounded-xl border text-xs font-bold outline-none transition-colors shrink-0",
+            "inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-colors outline-none",
             active
-              ? "bg-[#5C4033] text-white border-[#5C4033]"
-              : "bg-transparent text-[#1F1F1A] border-[#E6DFC8] hover:border-[#5C4033] focus:border-[#5C4033]",
+              ? "border-[#5C4033] bg-[#5C4033] text-white"
+              : "border-[#E6DFC8] bg-transparent text-[#1F1F1A] hover:border-[#5C4033] focus:border-[#5C4033]",
             className
           )}
         >
-          <CalendarIcon className={cn("w-3.5 h-3.5 shrink-0", active ? "text-white/80" : "text-[#5F624F]/60")} />
+          <CalendarIcon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-white/80" : "text-[#5F624F]/60")} />
           {dateRangeLabel(value)}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 p-3 bg-white border-2 border-[#E6DFC8] rounded-2xl">
+      <PopoverContent align="end" className="w-72 rounded-2xl border-2 border-[#E6DFC8] bg-white p-3">
         {/* Month navigation */}
-        <div className="flex items-center justify-between mb-2">
-          <button type="button" onClick={() => shift(-1)} title="Previous month" className="h-8 w-8 rounded-lg hover:bg-[#F7F4EA] flex items-center justify-center">
-            <ChevronLeft className="w-4 h-4 text-[#5C4033]" />
+        <div className="mb-2 flex items-center justify-between">
+          <button type="button" onClick={() => shift(-1)} title="Previous month" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#F7F4EA]">
+            <ChevronLeft className="h-4 w-4 text-[#5C4033]" />
           </button>
-          <span className="text-sm font-black text-[#1F1F1A] uppercase tracking-wide tabular-nums">{MONTHS[view.m]} {view.y}</span>
-          <button type="button" onClick={() => shift(1)} title="Next month" className="h-8 w-8 rounded-lg hover:bg-[#F7F4EA] flex items-center justify-center">
-            <ChevronRight className="w-4 h-4 text-[#5C4033]" />
+          <span className="font-black text-sm tracking-wide text-[#1F1F1A] uppercase tabular-nums">{MONTHS[view.m]} {view.y}</span>
+          <button type="button" onClick={() => shift(1)} title="Next month" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#F7F4EA]">
+            <ChevronRight className="h-4 w-4 text-[#5C4033]" />
           </button>
         </div>
 
         {/* Weekday header */}
-        <div className="grid grid-cols-7 mb-1">
+        <div className="mb-1 grid grid-cols-7">
           {WD.map((w, i) => (
-            <span key={i} className="text-center text-[10px] font-black uppercase tracking-wide text-[#5F624F] py-1">{w}</span>
+            <span key={i} className="py-1 text-center font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{w}</span>
           ))}
         </div>
 
@@ -154,11 +154,11 @@ export function DatePicker({
                 type="button"
                 onClick={() => tapDay(d)}
                 className={cn(
-                  "aspect-square rounded-lg text-xs font-black flex items-center justify-center transition-colors",
+                  "flex aspect-square items-center justify-center rounded-lg font-black text-xs transition-colors",
                   r === 2 && "bg-[#5C4033] text-white",
-                  r === 1 && "bg-[#5C4033]/15 text-[#5C4033] rounded-none",
+                  r === 1 && "rounded-none bg-[#5C4033]/15 text-[#5C4033]",
                   r === 0 && "text-[#1F1F1A] hover:bg-[#F7F4EA]",
-                  isToday && r === 0 && "ring-1 ring-inset ring-[#FF6B35]"
+                  isToday && r === 0 && "ring-1 ring-[#FF6B35] ring-inset"
                 )}
               >
                 {d}
@@ -167,14 +167,14 @@ export function DatePicker({
           })}
         </div>
 
-        <p className="text-center text-[11px] font-black text-[#5C4033] mt-3 mb-2">{summary}</p>
+        <p className="mt-3 mb-2 text-center font-black text-[11px] text-[#5C4033]">{summary}</p>
 
         {/* Actions */}
         <div className="flex gap-2">
-          <button type="button" onClick={clear} className="flex-1 h-9 rounded-lg border border-[#E6DFC8] text-[10px] font-black uppercase tracking-wide text-[#5F624F] hover:bg-[#F7F4EA]">
+          <button type="button" onClick={clear} className="h-9 flex-1 rounded-lg border border-[#E6DFC8] font-black text-[10px] tracking-wide text-[#5F624F] uppercase hover:bg-[#F7F4EA]">
             All dates
           </button>
-          <button type="button" onClick={apply} className="flex-1 h-9 rounded-lg bg-[#5C4033] text-white text-[10px] font-black uppercase tracking-wide hover:bg-[#5C4033]/85">
+          <button type="button" onClick={apply} className="h-9 flex-1 rounded-lg bg-[#5C4033] font-black text-[10px] tracking-wide text-white uppercase hover:bg-[#5C4033]/85">
             Apply
           </button>
         </div>

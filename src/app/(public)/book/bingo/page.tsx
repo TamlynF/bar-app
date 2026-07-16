@@ -80,7 +80,7 @@ export default async function BingoBookingPage({
   ];
 
   return (
-    <main className="min-h-dvh w-full overflow-x-hidden bg-[#26300D] text-stone-300 flex flex-col selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
+    <main className="flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{ __html: `
         html, body {
           background-color: #26300D !important;
@@ -98,53 +98,53 @@ export default async function BingoBookingPage({
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-      <div className="flex-1 w-full max-w-3xl mx-auto py-4 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-4 sm:px-6 sm:py-12 lg:px-8">
 
         {/* Header */}
-        <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
-          <div className="w-full max-w-45 sm:max-w-xs transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98]">
+        <div className="mb-6 flex flex-col items-center text-center sm:mb-10">
+          <div className="w-full max-w-45 transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98] sm:max-w-xs">
             <Image
               src="/CompanyName.png"
               alt="Don Fenticas"
               width={300}
               height={90}
-              className="w-full h-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
+              className="h-auto w-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
               priority
             />
           </div>
-          <div className="mt-5 sm:mt-7 space-y-2 px-2">
-            <div className="inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-4 py-1.5 mb-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]">Music Bingo</span>
+          <div className="mt-5 space-y-2 px-2 sm:mt-7">
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-[#FDCC4B]/20 bg-[#FDCC4B]/10 px-4 py-1.5">
+              <span className="font-black text-[10px] tracking-widest text-[#FDCC4B] uppercase">Music Bingo</span>
             </div>
-            <p className="text-stone-400 text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic opacity-80 text-center">
+            <p className="mx-auto max-w-sm text-center text-xs leading-relaxed font-medium text-stone-400 italic opacity-80 sm:text-base">
               {tagline}
             </p>
           </div>
         </div>
 
         {/* Event Badges */}
-        <div className="flex flex-row overflow-x-auto no-scrollbar gap-2 pb-4 -mx-4 px-4 mb-4 sm:mb-12 sm:flex-wrap sm:overflow-visible sm:mx-0 sm:px-0 sm:justify-center sm:gap-3">
+        <div className="no-scrollbar -mx-4 mb-4 flex flex-row gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:mb-12 sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0">
           {eventBadges.map((badge, index) => (
             <div
               key={index}
               className={cn(
-                "flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 hover:border-white/20",
-                "flex-none sm:flex-1 sm:min-w-37.5"
+                "flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-black text-[10px] tracking-wider uppercase transition-all hover:border-white/20 hover:bg-white/8 sm:py-3 sm:text-[11px]",
+                "flex-none sm:min-w-37.5 sm:flex-1"
               )}
             >
-              <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />
-              <span className="text-stone-200 whitespace-nowrap">{badge.text}</span>
+              <badge.icon className="mr-2 h-3.5 w-3.5 shrink-0 text-[#fdcc4b]" />
+              <span className="whitespace-nowrap text-stone-200">{badge.text}</span>
             </div>
           ))}
         </div>
 
         {/* Booking Form Card */}
-        <div className="bg-white/3 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5 mb-12">
-          <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#fdcc4b]/10 blur-[100px] rounded-full pointer-events-none" />
+        <div className="relative mb-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/3 p-6 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl sm:p-10">
+          <div className="pointer-events-none absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]" />
 
-          <div className="mb-8 text-center relative z-10">
-            <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">Book Your Spot</h3>
-            <p className="text-stone-500 text-xs sm:text-base mt-2 font-medium">
+          <div className="relative z-10 mb-8 text-center">
+            <h3 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">Book Your Spot</h3>
+            <p className="mt-2 text-xs font-medium text-stone-500 sm:text-base">
               {events.length > 0
                 ? "Select a date below and lock in your place."
                 : "Check back soon for upcoming events."}
@@ -155,22 +155,22 @@ export default async function BingoBookingPage({
             {events.length > 0 ? (
               <BingoBookingForm events={events} />
             ) : (
-              <div className="text-center py-8">
-                <p className="text-stone-300 font-black text-lg uppercase tracking-tight mb-2">No Upcoming Events</p>
-                <p className="text-stone-500 text-sm font-medium">There are no bingo nights scheduled yet. Please check back soon!</p>
+              <div className="py-8 text-center">
+                <p className="mb-2 font-black text-lg tracking-tight text-stone-300 uppercase">No Upcoming Events</p>
+                <p className="text-sm font-medium text-stone-500">There are no bingo nights scheduled yet. Please check back soon!</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="pt-8 mt-auto mb-6 flex flex-col items-center gap-4">
+        <div className="mt-auto mb-6 flex flex-col items-center gap-4 pt-8">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
+            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
-          <p className="text-[8px] text-stone-600 uppercase tracking-widest opacity-30">
+          <p className="text-[8px] tracking-widest text-stone-600 uppercase opacity-30">
             Licensed Venue • Please Drink Responsibly
           </p>
         </div>

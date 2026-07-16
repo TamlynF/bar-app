@@ -16,7 +16,7 @@ export function MarqueeTicker() {
   return (
     <div
       aria-hidden="true"
-      className="relative my-10 sm:my-14 overflow-hidden border-y border-hairline bg-[#FDCC4B]/5 py-3.5"
+      className="relative my-10 overflow-hidden border-y border-hairline bg-[#FDCC4B]/5 py-3.5 sm:my-14"
     >
       <div className="ad-marquee-track">
         {[0, 1].map((row) => (
@@ -24,10 +24,10 @@ export function MarqueeTicker() {
             {PHRASES.map((phrase, i) => (
               <span
                 key={i}
-                className="inline-flex items-center gap-6 pr-6 whitespace-nowrap text-2xl sm:text-3xl font-black uppercase tracking-tight text-ink-2"
+                className="inline-flex items-center gap-6 pr-6 font-black text-2xl tracking-tight whitespace-nowrap text-ink-2 uppercase sm:text-3xl"
               >
                 {phrase}
-                <span className="text-[#FDCC4B] text-lg not-italic">✦</span>
+                <span className="text-lg text-[#FDCC4B] not-italic">✦</span>
               </span>
             ))}
           </div>

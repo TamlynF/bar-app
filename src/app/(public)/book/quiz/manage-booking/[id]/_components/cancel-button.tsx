@@ -213,55 +213,55 @@ export default function CancelButton({
   return (
     <div className="w-full">
       {/* 1. STATUS HEADER */}
-      <div className="text-center mb-8 animate-in fade-in duration-500">
+      <div className="mb-8 animate-in text-center duration-500 fade-in">
         {isEditing ? (
-           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#fdcc4b]/10 border border-[#fdcc4b]/20 mb-3">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#fdcc4b] animate-pulse" />
-              <span className="text-[10px] font-black text-[#fdcc4b] uppercase tracking-widest">Editing Mode</span>
+           <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#fdcc4b]/20 bg-[#fdcc4b]/10 px-3 py-1">
+              <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#fdcc4b]" />
+              <span className="font-black text-[10px] tracking-widest text-[#fdcc4b] uppercase">Editing Mode</span>
            </div>
         ) : (
           <>
             {isCancelled ? (
-              <XCircle className="mx-auto h-16 w-16 text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
+              <XCircle className="mx-auto mb-4 h-16 w-16 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
             ) : (
-              <CheckCircle className="mx-auto h-16 w-16 text-[#fdcc4b] mb-4 drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
+              <CheckCircle className="mx-auto mb-4 h-16 w-16 text-[#fdcc4b] drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
             )}
           </>
         )}
 
-        <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">
+        <h1 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">
           {isEditing ? "Modify Team" : isCancelled ? "Booking Cancelled" : "Your Booking"}
         </h1>
 
         {!isEditing && (
-          <p className="text-stone-500 mt-2 font-bold text-xs sm:text-sm uppercase tracking-widest">Ref: #{booking.id}</p>
+          <p className="mt-2 text-xs font-bold tracking-widest text-stone-500 uppercase sm:text-sm">Ref: #{booking.id}</p>
         )}
       </div>
 
       {/* 2. ERROR & FEEDBACK MESSAGES */}
       {(error || nameError) && (
-        <div className="flex items-center gap-3 mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-          <p className="text-red-400 text-xs font-bold uppercase tracking-tight leading-snug">{error || nameError}</p>
+        <div className="mb-6 flex animate-in items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 slide-in-from-top-2">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
+          <p className="text-xs leading-snug font-bold tracking-tight text-red-400 uppercase">{error || nameError}</p>
         </div>
       )}
 
       {seatingWarning && isEditing && (
-        <div className="flex items-start gap-3 mb-6 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
-          <Info className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-amber-400 text-xs font-bold uppercase tracking-tight leading-snug">{seatingWarning}</p>
+        <div className="mb-6 flex animate-in items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 slide-in-from-top-2">
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+          <p className="text-xs leading-snug font-bold tracking-tight text-amber-400 uppercase">{seatingWarning}</p>
         </div>
       )}
 
       {blockedMsg && (
-        <div className="mb-6 bg-[#7A1F1F]/20 border border-[#FF6B35]/30 p-4 rounded-2xl animate-in slide-in-from-top-2">
+        <div className="mb-6 animate-in rounded-2xl border border-[#FF6B35]/30 bg-[#7A1F1F]/20 p-4 slide-in-from-top-2">
           <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-[#FF6B35] shrink-0 mt-0.5" />
-            <p className="text-[#FFF4CC] text-xs font-bold uppercase tracking-tight leading-snug">{blockedMsg}</p>
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#FF6B35]" />
+            <p className="text-xs leading-snug font-bold tracking-tight text-[#FFF4CC] uppercase">{blockedMsg}</p>
           </div>
           <a
             href="/contact"
-            className="mt-3 inline-flex items-center justify-center h-11 px-5 rounded-xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-xs uppercase tracking-widest transition-colors"
+            className="mt-3 inline-flex h-11 items-center justify-center rounded-xl bg-[#fdcc4b] px-5 font-black text-xs tracking-widest text-[#26300D] uppercase transition-colors hover:bg-[#e5b843]"
           >
             Contact the bar
           </a>
@@ -269,19 +269,19 @@ export default function CancelButton({
       )}
 
       {successMsg && !isEditing && (
-        <div className="flex items-center justify-center gap-2 mb-6 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl animate-in fade-in">
-           <CheckCircle className="w-4 h-4 text-emerald-400" />
-           <p className="text-emerald-400 text-xs font-black uppercase tracking-widest">{successMsg}</p>
+        <div className="mb-6 flex animate-in items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 fade-in">
+           <CheckCircle className="h-4 w-4 text-emerald-400" />
+           <p className="font-black text-xs tracking-widest text-emerald-400 uppercase">{successMsg}</p>
         </div>
       )}
 
       {/* 3. MAIN CONTENT: VIEW OR EDIT */}
       {isEditing ? (
         /* EDIT MODE FORM */
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="animate-in space-y-6 duration-300 fade-in slide-in-from-bottom-4">
           <div className="space-y-1.5">
             <label htmlFor="teamName" className={labelClasses}>Team Name</label>
-            <div className="relative group">
+            <div className="group relative">
               <div className={iconContainerClasses}>
                 <Beer className={iconClasses} />
               </div>
@@ -295,8 +295,8 @@ export default function CancelButton({
                 autoFocus
               />
               {isCheckingName && (
-                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  <Loader2 className="w-4 h-4 text-[#fdcc4b] animate-spin" />
+                <div className="absolute top-1/2 right-4 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin text-[#fdcc4b]" />
                 </div>
               )}
             </div>
@@ -304,7 +304,7 @@ export default function CancelButton({
 
           <div className="space-y-1.5">
             <label htmlFor="teamSize" className={labelClasses}>Team Size</label>
-            <div className="relative group">
+            <div className="group relative">
               <div className={iconContainerClasses}>
                 <Users className={iconClasses} />
               </div>
@@ -318,7 +318,7 @@ export default function CancelButton({
                   <option key={num} value={num}>{num} People</option>
                 ))}
               </select>
-              <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-[#fdcc4b]/40">
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-4 text-[#fdcc4b]/40">
                 {isCheckingSeating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-5 w-5" />}
               </div>
             </div>
@@ -327,7 +327,7 @@ export default function CancelButton({
           {/* Added Special Requests Input in Edit Mode */}
           <div className="space-y-1.5">
             <label htmlFor="specialRequests" className={labelClasses}>Additional Requests</label>
-            <div className="relative group">
+            <div className="group relative">
               <div className={iconContainerClasses}>
                 <MessageSquareQuote className={iconClasses} />
               </div>
@@ -335,7 +335,7 @@ export default function CancelButton({
                 id="specialRequests"
                 value={specialRequests}
                 onChange={(e) => setSpecialRequests(e.target.value)}
-                className={`${inputBaseClasses} min-h-25 py-3 text-sm resize-none`}
+                className={`${inputBaseClasses} min-h-25 resize-none py-3 text-sm`}
                 placeholder="Dietary requirements, table preference..."
               />
             </div>
@@ -346,9 +346,9 @@ export default function CancelButton({
               type="button"
               onClick={handleUpdate}
               disabled={isUpdating || !!nameError || isCheckingName || isCheckingSeating}
-              className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
+              className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
             >
-              {isUpdating ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6 mr-2" /> Update Record</>}
+              {isUpdating ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Save className="mr-2 h-6 w-6" /> Update Record</>}
             </button>
             <button
               type="button"
@@ -362,7 +362,7 @@ export default function CancelButton({
                 setBlockedMsg("");
               }}
               disabled={isUpdating}
-              className="w-full h-14 rounded-2xl border-2 border-white/10 text-stone-400 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all"
+              className="h-14 w-full rounded-2xl border-2 border-white/10 font-black text-xs tracking-widest text-stone-400 uppercase transition-all hover:bg-white/5"
             >
               Discard Changes
             </button>
@@ -370,9 +370,9 @@ export default function CancelButton({
         </div>
       ) : (
         /* VIEW MODE DETAILS CARD */
-        <div className="space-y-8 animate-in fade-in duration-500">
-          <div className="bg-white/5 rounded-3xl p-6 sm:p-8 border border-white/10 space-y-6 shadow-inner relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#fdcc4b]/5 blur-3xl pointer-events-none group-hover:bg-[#fdcc4b]/10 transition-colors" />
+        <div className="animate-in space-y-8 duration-500 fade-in">
+          <div className="group relative space-y-6 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-inner sm:p-8">
+            <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 bg-[#fdcc4b]/5 blur-3xl transition-colors group-hover:bg-[#fdcc4b]/10" />
 
             <DetailRow icon={<CalendarDays />} label="Quiz Night" value={eventDate ? format(eventDate, "do MMMM yyyy") : "TBD"} />
             <DetailRow icon={<Beer />} label="Team Name" value={booking.group_name || "Guest Team"} />
@@ -390,12 +390,12 @@ export default function CancelButton({
           </div>
 
           {!isCancelled && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
                 onClick={() => setIsEditing(true)}
                 disabled={isCancelling}
-                className="flex items-center justify-center w-full h-16 rounded-2xl bg-[#fdcc4b] text-[#26300D] font-black text-sm uppercase tracking-widest transition-all hover:bg-[#e5b843] hover:-translate-y-0.5 shadow-lg active:scale-95 disabled:opacity-50"
+                className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-sm tracking-widest text-[#26300D] uppercase shadow-lg transition-all hover:-translate-y-0.5 hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
               >
                 Modify Team
               </button>
@@ -404,15 +404,15 @@ export default function CancelButton({
                 type="button"
                 onClick={handleCancel}
                 disabled={isCancelling}
-                className="flex items-center justify-center w-full h-16 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-xs uppercase tracking-widest transition-all hover:bg-red-500 hover:text-white hover:-translate-y-0.5 active:scale-95 disabled:opacity-50"
+                className="flex h-16 w-full items-center justify-center rounded-2xl border-2 border-red-500/30 font-black text-xs tracking-widest text-red-500 uppercase transition-all hover:-translate-y-0.5 hover:bg-red-500 hover:text-white active:scale-95 disabled:opacity-50"
               >
-                {isCancelling ? <Loader2 className="w-5 h-5 animate-spin" /> : "Cancel Booking"}
+                {isCancelling ? <Loader2 className="h-5 w-5 animate-spin" /> : "Cancel Booking"}
               </button>
             </div>
           )}
 
           <div className="text-center">
-            <p className="text-[9px] font-black text-stone-600 uppercase tracking-[0.4em] opacity-40">
+            <p className="font-black text-[9px] tracking-[0.4em] text-stone-600 uppercase opacity-40">
               Booking Management Portal
             </p>
           </div>
@@ -429,16 +429,16 @@ export default function CancelButton({
 function DetailRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
     <div className="flex items-start">
-      <div className="bg-[#26300D] p-3 rounded-2xl mr-4 border border-[#fdcc4b]/20 text-[#fdcc4b] shrink-0 shadow-lg">
+      <div className="mr-4 shrink-0 rounded-2xl border border-[#fdcc4b]/20 bg-[#26300D] p-3 text-[#fdcc4b] shadow-lg">
         {React.isValidElement(icon)
           ? React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
               className: "w-5 h-5"
             })
           : icon}
       </div>
-      <div className="text-left min-w-0 pt-1">
-        <p className="text-[10px] font-black text-[#fdcc4b]/50 uppercase tracking-[0.15em] mb-0.5 leading-none">{label}</p>
-        <p className="text-white font-black text-lg sm:text-xl tracking-tight leading-tight whitespace-pre-wrap wrap-break-word">{value}</p>
+      <div className="min-w-0 pt-1 text-left">
+        <p className="mb-0.5 font-black text-[10px] leading-none tracking-[0.15em] text-[#fdcc4b]/50 uppercase">{label}</p>
+        <p className="font-black text-lg leading-tight tracking-tight wrap-break-word whitespace-pre-wrap text-white sm:text-xl">{value}</p>
       </div>
     </div>
   );

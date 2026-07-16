@@ -101,7 +101,7 @@ export function WhatsOnGrid({
           Search events
         </label>
         <Search
-          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-ink-2"
+          className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-ink-2"
           aria-hidden="true"
         />
         <input
@@ -110,7 +110,7 @@ export function WhatsOnGrid({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search what's on…"
-          className="w-full h-11 pl-11 pr-4 rounded-full bg-canvas-2 border border-hairline text-ink placeholder:text-ink-2/60 text-sm font-medium outline-none focus:border-white/25 transition-colors"
+          className="h-11 w-full rounded-full border border-hairline bg-canvas-2 pr-4 pl-11 text-sm font-medium text-ink transition-colors outline-none placeholder:text-ink-2/60 focus:border-white/25"
         />
       </div>
 
@@ -128,22 +128,22 @@ export function WhatsOnGrid({
             type="button"
             onClick={() => setShowPast((v) => !v)}
             aria-expanded={pastOpen}
-            className="group w-full flex items-center justify-center gap-2 bg-white/4 hover:bg-white/7 border border-hairline hover:border-white/20 rounded-2xl py-3.5 transition-all"
+            className="group flex w-full items-center justify-center gap-2 rounded-2xl border border-hairline bg-white/4 py-3.5 transition-all hover:border-white/20 hover:bg-white/7"
           >
-            <span className="text-ink-2 text-[11px] font-black uppercase tracking-[0.2em]">
+            <span className="font-black text-[11px] tracking-[0.2em] text-ink-2 uppercase">
               {pastOpen
                 ? "Hide earlier this month"
                 : `Earlier this month (${filteredPast.length})`}
             </span>
             <ChevronDown
-              className={`w-4 h-4 text-ink-2 transition-transform ${pastOpen ? "rotate-180" : ""}`}
+              className={`h-4 w-4 text-ink-2 transition-transform ${pastOpen ? "rotate-180" : ""}`}
               aria-hidden="true"
             />
           </button>
 
           {pastOpen &&
             (filteredPast.length > 0 ? (
-              <div className="flex flex-col gap-4 mt-4 opacity-60">
+              <div className="mt-4 flex flex-col gap-4 opacity-60">
                 {filteredPast.map((ev) => (
                   <EventCard
                     key={ev.id}
@@ -155,7 +155,7 @@ export function WhatsOnGrid({
                 ))}
               </div>
             ) : (
-              <p className="text-center text-ink-2/70 text-xs mt-4">
+              <p className="mt-4 text-center text-xs text-ink-2/70">
                 No earlier events match.
               </p>
             ))}
@@ -163,12 +163,12 @@ export function WhatsOnGrid({
       )}
 
       {/* Coming up */}
-      <div className="flex items-center gap-4 mb-4">
-        <h3 className="shrink-0 text-[10px] font-black uppercase tracking-[0.25em] text-ink-2">
+      <div className="mb-4 flex items-center gap-4">
+        <h3 className="shrink-0 font-black text-[10px] tracking-[0.25em] text-ink-2 uppercase">
           Coming up
         </h3>
-        <div className="flex-1 h-px bg-hairline" />
-        <span className="shrink-0 text-ink-2 text-[11px] font-bold tabular-nums">
+        <div className="h-px flex-1 bg-hairline" />
+        <span className="shrink-0 text-[11px] font-bold text-ink-2 tabular-nums">
           {filteredUpcoming.length} {filteredUpcoming.length === 1 ? "event" : "events"}
         </span>
       </div>
@@ -181,10 +181,10 @@ export function WhatsOnGrid({
                 {isNext && (
                   <div className="ad-blink flex items-center gap-2 px-1">
                     <span
-                      className="w-1.5 h-1.5 rounded-full bg-neon shrink-0"
+                      className="h-1.5 w-1.5 shrink-0 rounded-full bg-neon"
                       aria-hidden="true"
                     />
-                    <span className="text-neon text-[10px] font-black uppercase tracking-[0.25em]">
+                    <span className="font-black text-[10px] tracking-[0.25em] text-neon uppercase">
                       Next up · {format(parseDate(ev.date), "EEE d MMM")}
                     </span>
                   </div>
@@ -200,12 +200,12 @@ export function WhatsOnGrid({
           })}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white/3 border border-hairline rounded-2xl">
-          <CalendarX2 className="w-7 h-7 text-ink-2/50 mx-auto mb-2" aria-hidden="true" />
-          <p className="text-ink-2 font-black text-sm uppercase tracking-tight">
+        <div className="rounded-2xl border border-hairline bg-white/3 py-12 text-center">
+          <CalendarX2 className="mx-auto mb-2 h-7 w-7 text-ink-2/50" aria-hidden="true" />
+          <p className="font-black text-sm tracking-tight text-ink-2 uppercase">
             Nothing coming up here
           </p>
-          <p className="text-ink-2/70 text-xs mt-1">Try another filter or search</p>
+          <p className="mt-1 text-xs text-ink-2/70">Try another filter or search</p>
         </div>
       )}
 
@@ -216,20 +216,20 @@ export function WhatsOnGrid({
             type="button"
             onClick={() => setShowLater((v) => !v)}
             aria-expanded={laterOpen}
-            className="group w-full flex items-center justify-center gap-2 bg-white/4 hover:bg-white/7 border border-hairline hover:border-gold/30 rounded-2xl py-3.5 transition-all"
+            className="group flex w-full items-center justify-center gap-2 rounded-2xl border border-hairline bg-white/4 py-3.5 transition-all hover:border-gold/30 hover:bg-white/7"
           >
-            <span className="text-gold text-[11px] font-black uppercase tracking-[0.2em]">
+            <span className="font-black text-[11px] tracking-[0.2em] text-gold uppercase">
               {laterOpen ? `Hide ${nextMonthLabel}` : `${nextMonthLabel} (${filteredLater.length})`}
             </span>
             <ChevronDown
-              className={`w-4 h-4 text-gold transition-transform ${laterOpen ? "rotate-180" : ""}`}
+              className={`h-4 w-4 text-gold transition-transform ${laterOpen ? "rotate-180" : ""}`}
               aria-hidden="true"
             />
           </button>
 
           {laterOpen &&
             (filteredLater.length > 0 ? (
-              <div className="flex flex-col gap-4 mt-4">
+              <div className="mt-4 flex flex-col gap-4">
                 {filteredLater.map((ev) => (
                   <EventCard
                     key={ev.id}
@@ -240,7 +240,7 @@ export function WhatsOnGrid({
                 ))}
               </div>
             ) : (
-              <p className="text-center text-ink-2/70 text-xs mt-4">
+              <p className="mt-4 text-center text-xs text-ink-2/70">
                 No {nextMonthLabel} events match.
               </p>
             ))}

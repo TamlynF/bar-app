@@ -27,7 +27,7 @@ export function Slider({
     <div className="relative">
       <div
         ref={scrollerRef}
-        className="flex gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory -mx-4 px-4 sm:mx-0 sm:px-0"
+        className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 sm:mx-0 sm:px-0"
         aria-label={ariaLabel}
       >
         {children}
@@ -38,17 +38,17 @@ export function Slider({
         type="button"
         onClick={() => nudge(-1)}
         aria-label="Scroll left"
-        className="hidden sm:flex absolute -left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center bg-[#26300D] border border-white/15 text-white hover:bg-[#FDCC4B] hover:text-[#1a2008] active:scale-95 transition-colors shadow-lg shadow-black/30"
+        className="absolute top-1/2 -left-4 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#26300D] text-white shadow-lg shadow-black/30 transition-colors hover:bg-[#FDCC4B] hover:text-[#1a2008] active:scale-95 sm:flex"
       >
-        <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+        <ChevronLeft className="h-5 w-5" aria-hidden="true" />
       </button>
       <button
         type="button"
         onClick={() => nudge(1)}
         aria-label="Scroll right"
-        className="hidden sm:flex absolute -right-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full items-center justify-center bg-[#26300D] border border-white/15 text-white hover:bg-[#FDCC4B] hover:text-[#1a2008] active:scale-95 transition-colors shadow-lg shadow-black/30"
+        className="absolute top-1/2 -right-4 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-[#26300D] text-white shadow-lg shadow-black/30 transition-colors hover:bg-[#FDCC4B] hover:text-[#1a2008] active:scale-95 sm:flex"
       >
-        <ChevronRight className="w-5 h-5" aria-hidden="true" />
+        <ChevronRight className="h-5 w-5" aria-hidden="true" />
       </button>
     </div>
   );

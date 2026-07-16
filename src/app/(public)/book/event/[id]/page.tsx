@@ -92,7 +92,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
   });
 
   return (
-    <main className="relative min-h-dvh w-full overflow-x-hidden bg-[#26300D] text-stone-300 flex flex-col selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
+    <main className="relative flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{ __html: `
         html, body {
           background-color: #26300D !important;
@@ -118,30 +118,30 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
           most of the page (past 75%) before resolving into the olive base. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-0 z-0 opacity-80 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_35%,transparent_82%)]"
+        className="pointer-events-none absolute inset-0 z-0 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_35%,transparent_82%)] opacity-80"
       />
 
       <PublicNav currentPath="/book/event" />
 
-      <div className="relative z-10 flex-1 w-full max-w-3xl mx-auto pt-12 pb-4 sm:pt-14 sm:pb-6 px-4 sm:px-6 lg:px-8 flex flex-col">
+      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-12 pb-4 sm:px-6 sm:pt-14 sm:pb-6 lg:px-8">
 
         {/* Header */}
-        <div className="flex flex-col items-center text-center mb-4 sm:mb-6">
+        <div className="mb-4 flex flex-col items-center text-center sm:mb-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={bannerImage}
             alt={eventTitle}
-            className="w-full sm:max-w-md h-auto mx-auto object-contain -mt-2"
+            className="mx-auto -mt-2 h-auto w-full object-contain sm:max-w-md"
           />
-          <div className="mt-4 sm:mt-5 space-y-2 px-2">
-            <div className="inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-4 py-1.5 mb-1">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]">{eventTitle}</span>
+          <div className="mt-4 space-y-2 px-2 sm:mt-5">
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-[#FDCC4B]/20 bg-[#FDCC4B]/10 px-4 py-1.5">
+              <span className="font-black text-[10px] tracking-widest text-[#FDCC4B] uppercase">{eventTitle}</span>
             </div>
-            <p className="text-(--ev-fg,#d6d3d1) text-xs sm:text-sm font-bold">
+            <p className="text-xs font-bold text-(--ev-fg,#d6d3d1) sm:text-sm">
               {eventDate}{timeStr ? ` · ${timeStr}` : ""}
             </p>
             {tagline && (
-              <p className="text-(--ev-fg-dim,#a8a29e) text-xs sm:text-base font-medium max-w-sm sm:max-w-2xl mx-auto leading-relaxed italic text-center">
+              <p className="mx-auto max-w-sm text-center text-xs leading-relaxed font-medium text-(--ev-fg-dim,#a8a29e) italic sm:max-w-2xl sm:text-base">
                 {tagline}
               </p>
             )}
@@ -150,33 +150,33 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
 
         {/* Event Badges */}
         {eventBadges.length > 0 && (
-          <div className="flex flex-row overflow-x-auto no-scrollbar gap-2 pb-4 -mx-4 px-4 mb-4 sm:mb-5 sm:flex-wrap sm:overflow-visible sm:mx-0 sm:px-0 sm:justify-center sm:gap-3">
+          <div className="no-scrollbar -mx-4 mb-4 flex flex-row gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:mb-5 sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0">
             {eventBadges.map((badge, index) => (
               <div
                 key={index}
                 className={cn(
-                  "flex items-center justify-center bg-black/30 border border-white/25 backdrop-blur-sm shadow-lg shadow-black/20 rounded-xl px-4 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-black/40 hover:border-white/40",
-                  "flex-none sm:flex-1 sm:min-w-37.5"
+                  "flex items-center justify-center rounded-xl border border-white/25 bg-black/30 px-4 py-2.5 font-black text-[10px] tracking-wider uppercase shadow-lg shadow-black/20 backdrop-blur-sm transition-all hover:border-white/40 hover:bg-black/40 sm:py-3 sm:text-[11px]",
+                  "flex-none sm:min-w-37.5 sm:flex-1"
                 )}
               >
-                <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />
-                <span className="text-stone-200 whitespace-nowrap">{badge.text}</span>
+                <badge.icon className="mr-2 h-3.5 w-3.5 shrink-0 text-[#fdcc4b]" />
+                <span className="whitespace-nowrap text-stone-200">{badge.text}</span>
               </div>
             ))}
           </div>
         )}
 
         {/* Booking Form Card */}
-        <div className="bg-white/3 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5 mb-12">
-          <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#fdcc4b]/10 blur-[100px] rounded-full pointer-events-none" />
+        <div className="relative mb-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/3 p-6 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl sm:p-10">
+          <div className="pointer-events-none absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]" />
           {/* Image-colour glow, complements the gold one and ties the card to the theme */}
           {cfg.booking_image_url && (
-            <div className="absolute -bottom-28 -right-28 w-64 h-64 rounded-full blur-[100px] opacity-12 bg-(--ev-theme) pointer-events-none" />
+            <div className="pointer-events-none absolute -right-28 -bottom-28 h-64 w-64 rounded-full bg-(--ev-theme) opacity-12 blur-[100px]" />
           )}
 
-          <div className="mb-8 text-center relative z-10">
-            <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">Book Your Spot</h3>
-            <p className="text-(--ev-fg-dim,#78716c) text-xs sm:text-base mt-2 font-medium">
+          <div className="relative z-10 mb-8 text-center">
+            <h3 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">Book Your Spot</h3>
+            <p className="mt-2 text-xs font-medium text-(--ev-fg-dim,#78716c) sm:text-base">
               Fill in the details below to reserve your place.
             </p>
           </div>
@@ -197,13 +197,13 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         </div>
 
         {/* Footer */}
-        <div className="pt-8 mt-auto mb-6 flex flex-col items-center gap-4">
+        <div className="mt-auto mb-6 flex flex-col items-center gap-4 pt-8">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
+            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
-          <p className="text-[8px] text-stone-600 uppercase tracking-widest opacity-30">
+          <p className="text-[8px] tracking-widest text-stone-600 uppercase opacity-30">
             Licensed Venue · Please Drink Responsibly
           </p>
         </div>

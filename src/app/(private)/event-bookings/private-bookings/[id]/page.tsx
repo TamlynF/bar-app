@@ -40,11 +40,11 @@ const STATUS_STYLES: Record<
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
-      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
+    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3 last:border-0">
+      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
-      <span className="text-sm font-bold text-[#1F1F1A] text-right">{value || "—"}</span>
+      <span className="text-right text-sm font-bold text-[#1F1F1A]">{value || "—"}</span>
     </div>
   );
 }
@@ -102,46 +102,46 @@ export default async function PrivateHireDetailPage({
     (request as Record<string, unknown>).paid_amount as number | null;
 
   return (
-    <div className="flex-1 bg-background min-h-screen">
-      <div className="px-4 py-4 md:px-8 sm:py-0 max-w-4xl mx-auto space-y-6">
+    <div className="min-h-screen flex-1 bg-background">
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-4 sm:py-0 md:px-8">
 
         {/* Back link + header */}
         <div className="space-y-3">
 
-          <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tight leading-tight">
+              <h1 className="font-black text-2xl leading-tight tracking-tight text-[#1F1F1A] uppercase">
                 {request.full_name}
               </h1>
-              <p className="text-sm text-[#5F624F] mt-0.5">{reasonLabel}</p>
+              <p className="mt-0.5 text-sm text-[#5F624F]">{reasonLabel}</p>
             </div>
             <span
               className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider shrink-0",
+                "inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-[10px] tracking-wider uppercase",
                 cfg.badge
               )}
             >
-              <StatusIcon className="w-3.5 h-3.5" />
+              <StatusIcon className="h-3.5 w-3.5" />
               {cfg.label}
             </span>
           </div>
         </div>
 
         {/* Event details + Contact — two-column on sm+ */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
           {/* Event details */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Event Details
             </p>
-            <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white px-4 shadow-sm">
               {displayDate && (
-                <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8]">
-                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
-                    <CalendarDays className="w-3 h-3" /> Date
+                <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3">
+                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                    <CalendarDays className="h-3 w-3" /> Date
                   </span>
-                  <span className="text-sm font-bold text-[#1F1F1A] text-right">
+                  <span className="text-right text-sm font-bold text-[#1F1F1A]">
                     {formatDate(displayDate)}
                   </span>
                 </div>
@@ -152,9 +152,9 @@ export default async function PrivateHireDetailPage({
                   value={`${formatTime(displayStartTime)}${displayEndTime ? ` – ${formatTime(displayEndTime)}` : ""}`}
                 />
               )}
-              <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8]">
-                <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
-                  <Users className="w-3 h-3" /> Guests
+              <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3">
+                <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                  <Users className="h-3 w-3" /> Guests
                 </span>
                 <span className="text-sm font-bold text-[#1F1F1A]">
                   {request.guest_count}
@@ -162,22 +162,22 @@ export default async function PrivateHireDetailPage({
               </div>
               <DetailRow label="Reason for Hire" value={reasonLabel} />
               {depositAmount != null && (
-                <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8] last:border-0">
-                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
-                    <DollarSign className="w-3 h-3" /> Deposit
+                <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3 last:border-0">
+                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                    <DollarSign className="h-3 w-3" /> Deposit
                   </span>
-                  <div className="flex items-center gap-2 text-right flex-wrap justify-end">
-                    <span className="text-sm font-black text-[#1F1F1A]">
+                  <div className="flex flex-wrap items-center justify-end gap-2 text-right">
+                    <span className="font-black text-sm text-[#1F1F1A]">
                       £{depositAmount.toFixed(2)}
                     </span>
                     {paidAmount != null && (
                       <span className={cn(
-                        "text-[9px] font-black uppercase tracking-tight px-1.5 py-0.5 rounded border",
+                        "rounded border px-1.5 py-0.5 font-black text-[9px] tracking-tight uppercase",
                         paidAmount >= depositAmount
-                          ? "bg-green-50 border-green-200 text-green-700"
+                          ? "border-green-200 bg-green-50 text-green-700"
                           : paidAmount > 0
-                          ? "bg-amber-50 border-amber-200 text-amber-700"
-                          : "bg-red-50 border-red-200 text-red-700"
+                          ? "border-amber-200 bg-amber-50 text-amber-700"
+                          : "border-red-200 bg-red-50 text-red-700"
                       )}>
                         £{paidAmount.toFixed(2)} paid
                       </span>
@@ -190,26 +190,26 @@ export default async function PrivateHireDetailPage({
 
           {/* Contact */}
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Contact Information
             </p>
-            <div className="bg-white border border-[#E6DFC8] rounded-2xl px-4 overflow-hidden shadow-sm">
+            <div className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white px-4 shadow-sm">
               <DetailRow label="Name" value={request.full_name} />
-              <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8]">
-                <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
-                  <Mail className="w-3 h-3" /> Email
+              <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3">
+                <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                  <Mail className="h-3 w-3" /> Email
                 </span>
                 <a
                   href={`mailto:${request.email}`}
-                  className="text-sm font-bold text-[#5C4033] underline underline-offset-2 text-right break-all"
+                  className="text-right text-sm font-bold break-all text-[#5C4033] underline underline-offset-2"
                 >
                   {request.email}
                 </a>
               </div>
               {request.phone_no && (
-                <div className="flex items-start justify-between gap-4 py-3 border-b border-[#E6DFC8]">
-                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
-                    <Phone className="w-3 h-3" /> Phone
+                <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3">
+                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                    <Phone className="h-3 w-3" /> Phone
                   </span>
                   <a
                     href={`tel:${request.phone_no}`}
@@ -220,8 +220,8 @@ export default async function PrivateHireDetailPage({
                 </div>
               )}
               <div className="flex items-start justify-between gap-4 py-3">
-                <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5 flex items-center gap-1.5">
-                  <CalendarDays className="w-3 h-3" /> Submitted
+                <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                  <CalendarDays className="h-3 w-3" /> Submitted
                 </span>
                 <span className="text-sm font-bold text-[#1F1F1A]">
                   {new Date(request.created_at).toLocaleDateString("en-GB", {
@@ -238,10 +238,10 @@ export default async function PrivateHireDetailPage({
         {/* Additional requirements */}
         {request.additional_requirements && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Additional Requirements
             </p>
-            <p className="text-sm text-[#1F1F1A] bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3 shadow-sm">
+            <p className="rounded-2xl border border-[#E6DFC8] bg-white px-4 py-3 text-sm text-[#1F1F1A] shadow-sm">
               {request.additional_requirements}
             </p>
           </div>
@@ -250,10 +250,10 @@ export default async function PrivateHireDetailPage({
         {/* Admin notes — read-only when resolved */}
         {request.status !== "pending" && request.admin_notes && (
           <div className="space-y-2">
-            <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Admin Notes
             </p>
-            <p className="text-sm text-[#1F1F1A] bg-[#F7F4EA] border border-[#E6DFC8] rounded-2xl px-4 py-3">
+            <p className="rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-4 py-3 text-sm text-[#1F1F1A]">
               {request.admin_notes}
             </p>
           </div>

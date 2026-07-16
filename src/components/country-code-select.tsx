@@ -60,9 +60,9 @@ export function CountryCodeSelect({
     : TEN_ROWS;
 
   return (
-    <div className="relative group shrink-0 w-24">
-      <span className="pointer-events-none absolute inset-y-0 left-0 pl-3.5 flex items-center z-10">
-        <Flag className={cn("w-4 h-4 transition-colors duration-200", open ? "text-[#fdcc4b]" : "text-(--ev-fg,#57534e)")} />
+    <div className="group relative w-24 shrink-0">
+      <span className="pointer-events-none absolute inset-y-0 left-0 z-10 flex items-center pl-3.5">
+        <Flag className={cn("h-4 w-4 transition-colors duration-200", open ? "text-[#fdcc4b]" : "text-(--ev-fg,#57534e)")} />
       </span>
       <button
         ref={btnRef}
@@ -72,7 +72,7 @@ export function CountryCodeSelect({
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "w-full bg-black/40 border rounded-2xl pl-11 pr-2 py-4 text-white text-center text-sm font-bold tabular-nums cursor-pointer transition-all duration-300",
+          "w-full cursor-pointer rounded-2xl border bg-black/40 py-4 pr-2 pl-11 text-center text-sm font-bold text-white tabular-nums transition-all duration-300",
           open ? "border-[#fdcc4b] ring-1 ring-[#fdcc4b]" : "border-white/10"
         )}
       >
@@ -85,7 +85,7 @@ export function CountryCodeSelect({
           role="listbox"
           aria-label="Country dialing codes"
           style={{ "--x": `${rect.left}px`, "--y": `${rect.bottom + 6}px`, "--w": `${rect.width}px`, "--mh": `${maxH}px` } as React.CSSProperties}
-          className="fixed left-(--x) top-(--y) z-100 min-w-(--w) w-max max-h-(--mh) overflow-y-scroll rounded-2xl border border-white/15 bg-[#26300D] shadow-2xl py-1 [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.4)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/40"
+          className="fixed top-(--y) left-(--x) z-100 max-h-(--mh) w-max min-w-(--w) overflow-y-scroll rounded-2xl border border-white/15 bg-[#26300D] py-1 shadow-2xl [scrollbar-color:rgba(255,255,255,0.4)_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/40 [&::-webkit-scrollbar-track]:bg-transparent"
         >
           {COUNTRY_CODES.map((c) => {
             const isSel = c.code === value;
@@ -100,7 +100,7 @@ export function CountryCodeSelect({
                   setOpen(false);
                 }}
                 className={cn(
-                  "block w-full text-center px-5 py-2 text-xs font-bold tracking-wide whitespace-nowrap transition-colors",
+                  "block w-full px-5 py-2 text-center text-xs font-bold tracking-wide whitespace-nowrap transition-colors",
                   isSel ? "bg-[#fdcc4b] text-[#26300D]" : "text-stone-200 hover:bg-white/10"
                 )}
               >

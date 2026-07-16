@@ -28,12 +28,12 @@ export default function EnquiryForm() {
 
   if (sent) {
     return (
-      <div className="space-y-3 bg-white/5 p-8 border border-[#FDCC4B]/20 rounded-2xl text-center">
-        <CheckCircle2 className="mx-auto w-10 h-10 text-[#FDCC4B]" />
-        <h3 className="font-black text-white text-lg uppercase tracking-tight">
+      <div className="space-y-3 rounded-2xl border border-[#FDCC4B]/20 bg-white/5 p-8 text-center">
+        <CheckCircle2 className="mx-auto h-10 w-10 text-[#FDCC4B]" />
+        <h3 className="font-black text-lg tracking-tight text-white uppercase">
           Message Sent!
         </h3>
-        <p className="font-medium text-stone-400 text-sm leading-relaxed">
+        <p className="text-sm leading-relaxed font-medium text-stone-400">
           Thanks for getting in touch — we&apos;ll get back to you as soon as
           we can. Check your inbox for a confirmation.
         </p>
@@ -43,9 +43,9 @@ export default function EnquiryForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="gap-4 grid grid-cols-1 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <label htmlFor="enquiry-name" className="block font-black text-[11px] text-stone-400 uppercase tracking-widest">
+          <label htmlFor="enquiry-name" className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
             Name *
           </label>
           <input
@@ -59,7 +59,7 @@ export default function EnquiryForm() {
           />
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="enquiry-email" className="block font-black text-[11px] text-stone-400 uppercase tracking-widest">
+          <label htmlFor="enquiry-email" className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
             Email *
           </label>
           <input
@@ -74,9 +74,9 @@ export default function EnquiryForm() {
         </div>
       </div>
 
-      <div className="gap-4 grid grid-cols-1 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <label htmlFor="enquiry-phone" className="block font-black text-[11px] text-stone-400 uppercase tracking-widest">
+          <label htmlFor="enquiry-phone" className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
             Phone
           </label>
           <input
@@ -89,7 +89,7 @@ export default function EnquiryForm() {
           />
         </div>
         <div className="space-y-1.5">
-          <label htmlFor="enquiry-subject" className="block font-black text-[11px] text-stone-400 uppercase tracking-widest">
+          <label htmlFor="enquiry-subject" className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
             Subject
           </label>
           <input
@@ -103,7 +103,7 @@ export default function EnquiryForm() {
       </div>
 
       <div className="space-y-1.5">
-        <label htmlFor="enquiry-message" className="block font-black text-[11px] text-stone-400 uppercase tracking-widest">
+        <label htmlFor="enquiry-message" className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
           Message *
         </label>
         <textarea
@@ -118,7 +118,7 @@ export default function EnquiryForm() {
       </div>
 
       {error && (
-        <p className="bg-red-500/10 px-4 py-3 border border-red-500/20 rounded-xl font-medium text-red-400 text-xs">
+        <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {error}
         </p>
       )}
@@ -126,12 +126,12 @@ export default function EnquiryForm() {
       <button
         type="submit"
         disabled={isPending}
-        className="flex justify-center items-center gap-2 bg-[#FDCC4B] hover:bg-[#FDCC4B]/90 disabled:opacity-50 shadow-[#FDCC4B]/20 shadow-lg py-3.5 rounded-xl w-full font-black text-[#26300D] text-sm uppercase tracking-wider active:scale-[0.98] transition-all disabled:cursor-not-allowed"
+        className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#FDCC4B] py-3.5 font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
       >
         {isPending ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="h-4 w-4 animate-spin" />
         ) : (
-          <Send className="w-4 h-4" />
+          <Send className="h-4 w-4" />
         )}
         {isPending ? "Sending…" : "Send Message"}
       </button>

@@ -53,35 +53,35 @@ export function FindUs({ info }: { info: CompanyInfo }) {
         action={{ href: "/contact", label: "Contact" }}
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
         {/* Left — address + socials */}
-        <div className="bg-canvas-2 border border-hairline rounded-2xl p-5">
+        <div className="rounded-2xl border border-hairline bg-canvas-2 p-5">
           {info.address && (
             <div className="flex items-start gap-3">
-              <div className="shrink-0 w-10 h-10 rounded-xl bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 flex items-center justify-center">
-                <MapPin className="w-4 h-4 text-[#FDCC4B]" aria-hidden="true" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#FDCC4B]/20 bg-[#FDCC4B]/10">
+                <MapPin className="h-4 w-4 text-[#FDCC4B]" aria-hidden="true" />
               </div>
               <div className="min-w-0">
-                <p className="text-stone-500 text-[10px] font-black uppercase tracking-[0.2em]">
+                <p className="font-black text-[10px] tracking-[0.2em] text-stone-500 uppercase">
                   Address
                 </p>
-                <p className="text-ink text-sm font-bold whitespace-pre-line mt-0.5">
+                <p className="mt-0.5 text-sm font-bold whitespace-pre-line text-ink">
                   {info.address}
                 </p>
               </div>
             </div>
           )}
 
-          <div className="flex flex-wrap items-center gap-2 mt-5">
+          <div className="mt-5 flex flex-wrap items-center gap-2">
             {ig && (
               <a
                 href={`https://instagram.com/${ig}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
-                className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-canvas-2 border border-hairline text-ink-2 hover:text-ink hover:bg-white/10 transition-colors"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-hairline bg-canvas-2 text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
               >
-                <Instagram className="w-5 h-5" aria-hidden="true" />
+                <Instagram className="h-5 w-5" aria-hidden="true" />
               </a>
             )}
             {fb && (
@@ -90,9 +90,9 @@ export function FindUs({ info }: { info: CompanyInfo }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Facebook"
-                className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-canvas-2 border border-hairline text-ink-2 hover:text-ink hover:bg-white/10 transition-colors"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-hairline bg-canvas-2 text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
               >
-                <Facebook className="w-5 h-5" aria-hidden="true" />
+                <Facebook className="h-5 w-5" aria-hidden="true" />
               </a>
             )}
             {mapsHref && (
@@ -100,25 +100,25 @@ export function FindUs({ info }: { info: CompanyInfo }) {
                 href={mapsHref}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 h-11 px-4 rounded-xl bg-[#FDCC4B] text-[#1a2008] text-[11px] font-black uppercase tracking-wide hover:bg-[#e5b843] active:scale-95 transition-all"
+                className="inline-flex h-11 items-center gap-1.5 rounded-xl bg-[#FDCC4B] px-4 font-black text-[11px] tracking-wide text-[#1a2008] uppercase transition-all hover:bg-[#e5b843] active:scale-95"
               >
                 Directions
-                <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
               </a>
             )}
             <Link
               href="/contact"
-              className="inline-flex items-center gap-1.5 h-11 px-4 rounded-xl bg-canvas-2 border border-hairline text-ink-2 hover:text-ink hover:bg-white/10 text-[11px] font-black uppercase tracking-wide transition-colors ml-auto"
+              className="ml-auto inline-flex h-11 items-center gap-1.5 rounded-xl border border-hairline bg-canvas-2 px-4 font-black text-[11px] tracking-wide text-ink-2 uppercase transition-colors hover:bg-white/10 hover:text-ink"
             >
               Contact
-              <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
             </Link>
           </div>
         </div>
 
         {/* Right — opening hours */}
         {hasAnyHours ? (
-          <div className="bg-canvas-2 border border-hairline rounded-2xl px-5 py-2">
+          <div className="rounded-2xl border border-hairline bg-canvas-2 px-5 py-2">
             {DAYS.map((d) => {
               const h = hours[d.key];
               const open = Boolean(h?.open && h?.close);
@@ -126,23 +126,23 @@ export function FindUs({ info }: { info: CompanyInfo }) {
               return (
                 <div
                   key={d.key}
-                  className="flex items-center gap-3 py-3 border-b border-hairline last:border-0"
+                  className="flex items-center gap-3 border-b border-hairline py-3 last:border-0"
                 >
                   <span
                     className={
                       isToday
-                        ? "text-[#FDCC4B] text-[13px] font-black uppercase tracking-wide"
-                        : "text-ink text-[13px] font-bold uppercase tracking-wide"
+                        ? "font-black text-[13px] tracking-wide text-[#FDCC4B] uppercase"
+                        : "text-[13px] font-bold tracking-wide text-ink uppercase"
                     }
                   >
                     {d.label}
                   </span>
-                  <span className="flex-1 border-b border-dotted border-hairline self-end mb-1.5" />
+                  <span className="mb-1.5 flex-1 self-end border-b border-dotted border-hairline" />
                   <span
                     className={
                       open
-                        ? "text-ink-2 text-[13px] font-bold tabular-nums"
-                        : "text-stone-500 text-[13px] font-bold"
+                        ? "text-[13px] font-bold text-ink-2 tabular-nums"
+                        : "text-[13px] font-bold text-stone-500"
                     }
                   >
                     {open ? `${h!.open} – ${h!.close}` : "Closed"}
@@ -152,8 +152,8 @@ export function FindUs({ info }: { info: CompanyInfo }) {
             })}
           </div>
         ) : (
-          <div className="bg-canvas-2 border border-hairline rounded-2xl p-5 flex items-center">
-            <p className="text-stone-400 text-sm font-medium">
+          <div className="flex items-center rounded-2xl border border-hairline bg-canvas-2 p-5">
+            <p className="text-sm font-medium text-stone-400">
               Opening hours coming soon — give us a call or check our socials.
             </p>
           </div>

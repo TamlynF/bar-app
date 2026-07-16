@@ -31,9 +31,9 @@ export default function PrivateHireDetailClient({
   }
 
   return (
-    <div className="space-y-3 pt-4 border-t border-[#E6DFC8]">
+    <div className="space-y-3 border-t border-[#E6DFC8] pt-4">
       <div>
-        <label className="block text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1.5">
+        <label className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
           Note to Enquirer (optional)
         </label>
         <textarea
@@ -41,23 +41,23 @@ export default function PrivateHireDetailClient({
           onChange={(e) => setAdminNotes(e.target.value)}
           placeholder="Add a message to include in the outcome email…"
           rows={3}
-          className="w-full bg-white border border-[#E6DFC8] rounded-2xl px-4 py-3 text-sm text-[#1F1F1A] placeholder:text-[#5F624F]/50 focus:outline-none focus:border-[#5C4033]/30 resize-none transition-all"
+          className="w-full resize-none rounded-2xl border border-[#E6DFC8] bg-white px-4 py-3 text-sm text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
         />
       </div>
 
-      {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
+      {error && <p className="text-xs font-bold text-red-500">{error}</p>}
 
       <div className="flex gap-3">
         <button
           type="button"
           onClick={() => handleAction("confirmed")}
           disabled={isPending}
-          className="flex-1 flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-black text-xs uppercase tracking-wider rounded-2xl py-4 transition-all disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-green-600 py-4 font-black text-xs tracking-wider text-white uppercase transition-all hover:bg-green-700 disabled:opacity-50"
         >
           {isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <CheckCircle className="w-4 h-4" />
+            <CheckCircle className="h-4 w-4" />
           )}
           Confirm
         </button>
@@ -65,12 +65,12 @@ export default function PrivateHireDetailClient({
           type="button"
           onClick={() => handleAction("cancelled")}
           disabled={isPending}
-          className="flex-1 flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-700 border border-red-200 font-black text-xs uppercase tracking-wider rounded-2xl py-4 transition-all disabled:opacity-50"
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 py-4 font-black text-xs tracking-wider text-red-700 uppercase transition-all hover:bg-red-100 disabled:opacity-50"
         >
           {isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <XCircle className="w-4 h-4" />
+            <XCircle className="h-4 w-4" />
           )}
           Cancel
         </button>

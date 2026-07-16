@@ -30,20 +30,20 @@ function StatusCircle({
 }) {
   const theme = statusTheme[status] || statusTheme.pending;
   return (
-    <div className="flex flex-col items-center gap-1.5 min-w-14 shrink-0">
+    <div className="flex min-w-14 shrink-0 flex-col items-center gap-1.5">
       <button
         type="button"
         onClick={onClick}
         className={cn(
-          "relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all touch-manipulation hover:scale-105 active:scale-95",
+          "relative flex h-12 w-12 touch-manipulation items-center justify-center rounded-full border-2 transition-all hover:scale-105 active:scale-95",
           isActive ? `${theme.dot} ${theme.border} shadow-lg ring-4 ${theme.ring}` : `bg-white ${theme.border}`
         )}
       >
-        <span className={cn("text-sm font-black leading-none", isActive ? "text-white" : theme.text)}>
+        <span className={cn("font-black text-sm leading-none", isActive ? "text-white" : theme.text)}>
           {count}
         </span>
       </button>
-      <span className={cn("text-[10px] sm:text-[11px] font-black uppercase tracking-tight", isActive ? theme.text : "text-[#5F624F]")}>
+      <span className={cn("font-black text-[10px] tracking-tight uppercase sm:text-[11px]", isActive ? theme.text : "text-[#5F624F]")}>
         {label}
       </span>
     </div>
@@ -110,13 +110,13 @@ export default function PrivateHireListClient({
   }, [initialRequests]);
 
   return (
-    <div className="space-y-3 animate-in fade-in duration-500">
+    <div className="animate-in space-y-3 duration-500 fade-in">
       {/* Stats + Search grouped card */}
-      <div className="bg-white border border-[#E6DFC8] rounded-2xl shadow-sm">
+      <div className="rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center">
           {/* Stats Bar */}
-          <div className="overflow-x-auto no-scrollbar px-2 pt-2 sm:flex-1 sm:pt-0">
-            <div className="flex items-stretch gap-3 w-full px-2 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
+          <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:flex-1 sm:pt-0">
+            <div className="flex w-full min-w-max items-stretch gap-3 px-2 py-3 sm:min-w-0 sm:justify-evenly sm:gap-0">
               <StatusCircle
                 count={stats.total}
                 status="all"
@@ -149,20 +149,20 @@ export default function PrivateHireListClient({
           </div>
 
           {/* Divider */}
-          <div className="border-t border-[#E6DFC8] mx-3 sm:hidden" />
-          <div className="hidden sm:block w-px bg-[#E6DFC8] sm:self-stretch sm:my-2" />
+          <div className="mx-3 border-t border-[#E6DFC8] sm:hidden" />
+          <div className="hidden w-px bg-[#E6DFC8] sm:my-2 sm:block sm:self-stretch" />
 
           {/* Search */}
-          <div className="flex justify-center px-4 mb-3 sm:mb-0 sm:py-2 sm:px-3 sm:shrink-0">
-            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-[#5C4033] transition-colors">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
+          <div className="mb-3 flex justify-center px-4 sm:mb-0 sm:shrink-0 sm:px-3 sm:py-2">
+            <div className="flex h-10 w-full max-w-sm items-center gap-3 rounded-xl border border-[#E6DFC8] px-4 transition-colors focus-within:border-[#5C4033] sm:w-56">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
                 <input
                   type="text"
                   placeholder="Search names, emails..."
                   value={searchQuery}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="flex-1 min-w-0 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-[#5F624F]/40 placeholder:normal-case"
                 />
               </div>
               {(activeStatusFilters.size > 0 || searchQuery.length > 0) && (
@@ -173,9 +173,9 @@ export default function PrivateHireListClient({
                     setActiveStatusFilters(new Set());
                     setSearchQuery("");
                   }}
-                  className="shrink-0 p-1 rounded-lg hover:bg-[#E6DFC8] transition-colors"
+                  className="shrink-0 rounded-lg p-1 transition-colors hover:bg-[#E6DFC8]"
                 >
-                  <X className="w-3.5 h-3.5 text-[#5F624F]/50" />
+                  <X className="h-3.5 w-3.5 text-[#5F624F]/50" />
                 </button>
               )}
             </div>
@@ -186,9 +186,9 @@ export default function PrivateHireListClient({
       {/* Cards */}
       <div className="space-y-2 pb-2">
         {filteredRequests.length === 0 ? (
-          <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-[#E6DFC8]">
-            <Inbox className="w-10 h-10 text-[#5F624F]/50 mx-auto mb-3" />
-            <p className="text-[#5F624F] text-sm font-medium">No private hire enquiries found</p>
+          <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">
+            <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5F624F]/50" />
+            <p className="text-sm font-medium text-[#5F624F]">No private hire enquiries found</p>
           </div>
         ) : (
           filteredRequests.map((req) => <PrivateHireCard key={req.id} request={req} />)

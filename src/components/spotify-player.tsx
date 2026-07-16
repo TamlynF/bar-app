@@ -1,6 +1,7 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef, useSyncExternalStore } from 'react'
+import Image from 'next/image'
 import { Play, Pause, Music, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -15,7 +16,6 @@ let globalPlayer: Spotify.Player | null = null
 let globalDeviceId: string | null = null
 let refreshAttempted = false
 let refreshedToken: string | null = null
-let currentPlayingTrackId: string | null = null
 let sdkLoading = false
 let playerConnecting = false
 
@@ -103,13 +103,11 @@ async function connectPlayer(): Promise<string | null> {
     globalPlayer.addListener('player_state_changed', (data: unknown) => {
       const state = data as Spotify.PlaybackState | null
       if (!state) {
-        currentPlayingTrackId = null
         playingListeners.forEach(fn => fn(null, false))
         return
       }
       const tid = state.track_window?.current_track?.id || null
       const playing = !state.paused
-      currentPlayingTrackId = playing ? tid : null
       playingListeners.forEach(fn => fn(tid, playing))
     })
 
@@ -131,21 +129,35 @@ type SpotifyPlayerProps = {
 }
 
 export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayerProps) {
-  const [connected, setConnected] = useState(false)
+  // Read the auth cookie into React in an SSR-safe way: the server snapshot is
+  // always `false` (no `document` on the server), the client reads the cookie.
+  // Avoids a post-mount setState (react-hooks/set-state-in-effect).
+  const connected = useSyncExternalStore(
+    () => () => {},
+    () => !!getCookie('spotify_access_token'),
+    () => false,
+  )
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [trackInfo, setTrackInfo] = useState<{ name: string; artist: string; albumArt: string; durationMs: number } | null>(null)
   const [progress, setProgress] = useState(0)
+  const [wasPlaying, setWasPlaying] = useState(isPlaying)
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
   const activatedRef = useRef(false)
 
-  // On mount: check auth + preload SDK
+  // Reset the (fake) progress bar whenever playback starts or stops. Done during
+  // render — React's supported "adjust state when a value changes" pattern — so it
+  // doesn't trip react-hooks/set-state-in-effect.
+  if (isPlaying !== wasPlaying) {
+    setWasPlaying(isPlaying)
+    setProgress(0)
+  }
+
+  // Preload the SDK once we know a token is present.
   useEffect(() => {
-    const hasToken = !!getCookie('spotify_access_token')
-    setConnected(hasToken)
-    if (hasToken) preloadSdk()
-  }, [])
+    if (connected) preloadSdk()
+  }, [connected])
 
   // Listen for playback state
   useEffect(() => {
@@ -194,8 +206,6 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
       progressInterval.current = setInterval(() => {
         setProgress(prev => Math.min(prev + 500, trackInfo.durationMs))
       }, 500)
-    } else if (!isPlaying) {
-      setProgress(0)
     }
     return () => { if (progressInterval.current) clearInterval(progressInterval.current) }
   }, [isPlaying, trackInfo])
@@ -277,10 +287,10 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
 
   if (!connected) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 bg-[#282828] rounded-lg">
-        <Music className="w-3.5 h-3.5 text-white/30 shrink-0" />
-        <div className="flex-1 min-w-0">
-          <p className={cn("font-bold text-white/70 truncate", compact ? "text-[10px]" : "text-[11px]")}>{title}</p>
+      <div className="flex items-center gap-2 rounded-lg bg-[#282828] px-3 py-2">
+        <Music className="h-3.5 w-3.5 shrink-0 text-white/30" />
+        <div className="min-w-0 flex-1">
+          <p className={cn("truncate font-bold text-white/70", compact ? "text-[10px]" : "text-[11px]")}>{title}</p>
           <span className="text-[9px] text-white/40">Connect Spotify to play</span>
         </div>
       </div>
@@ -289,30 +299,30 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
 
   return (
     <div className={cn(
-      "flex items-center gap-2.5 rounded-lg border border-[#E6DFC8] bg-[#1a1a1a] overflow-hidden",
+      "flex items-center gap-2.5 overflow-hidden rounded-lg border border-[#E6DFC8] bg-[#1a1a1a]",
       compact ? "p-1.5" : "p-2"
     )}>
       {trackInfo?.albumArt ? (
-        <img src={trackInfo.albumArt} alt="" className={cn("rounded-md object-cover shrink-0", compact ? "w-10 h-10" : "w-12 h-12")} />
+        <Image src={trackInfo.albumArt} alt="" width={compact ? 40 : 48} height={compact ? 40 : 48} className={cn("shrink-0 rounded-md object-cover", compact ? "h-10 w-10" : "h-12 w-12")} />
       ) : (
-        <div className={cn("rounded-md bg-[#282828] flex items-center justify-center shrink-0", compact ? "w-10 h-10" : "w-12 h-12")}>
-          <Music className="w-4 h-4 text-white/30" />
+        <div className={cn("flex shrink-0 items-center justify-center rounded-md bg-[#282828]", compact ? "h-10 w-10" : "h-12 w-12")}>
+          <Music className="h-4 w-4 text-white/30" />
         </div>
       )}
 
-      <div className="flex-1 min-w-0">
-        <p className={cn("font-bold text-white truncate", compact ? "text-[10px]" : "text-[11px]")}>
+      <div className="min-w-0 flex-1">
+        <p className={cn("truncate font-bold text-white", compact ? "text-[10px]" : "text-[11px]")}>
           {trackInfo?.name || title}
         </p>
         {error ? (
-          <p className="text-[8px] text-red-400 font-bold">{error}</p>
+          <p className="text-[8px] font-bold text-red-400">{error}</p>
         ) : (
-          <p className={cn("text-white/50 truncate", compact ? "text-[8px]" : "text-[9px]")}>
+          <p className={cn("truncate text-white/50", compact ? "text-[8px]" : "text-[9px]")}>
             {trackInfo?.artist || ''}
           </p>
         )}
-        <div className="mt-1 h-1 w-full rounded-full bg-white/10 overflow-hidden">
-          <div className="h-full bg-[#1DB954] rounded-full transition-all duration-500" style={{ width: `${progressPercent}%` }} />
+        <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/10">
+          <div className="h-full rounded-full bg-[#1DB954] transition-all duration-500" style={{ width: `${progressPercent}%` }} />
         </div>
       </div>
 
@@ -320,11 +330,11 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
         type="button"
         onClick={(e) => { e.stopPropagation(); handlePlayPause() }}
         className={cn(
-          "shrink-0 rounded-full bg-white flex items-center justify-center text-black transition-transform hover:scale-105 active:scale-95",
-          compact ? "w-8 h-8" : "w-9 h-9"
+          "flex shrink-0 items-center justify-center rounded-full bg-white text-black transition-transform hover:scale-105 active:scale-95",
+          compact ? "h-8 w-8" : "h-9 w-9"
         )}
       >
-        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isPlaying ? <Pause className="w-4 h-4 fill-current" /> : <Play className="w-4 h-4 fill-current ml-0.5" />}
+        {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : isPlaying ? <Pause className="h-4 w-4 fill-current" /> : <Play className="ml-0.5 h-4 w-4 fill-current" />}
       </button>
     </div>
   )

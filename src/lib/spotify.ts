@@ -66,7 +66,7 @@ export async function getUserSpotifyToken(): Promise<string | null> {
  * SpotifyScopeError on 403 (token lacks playlist-modify scope → reconnect).
  */
 async function spotifyUserFetch(path: string, init?: RequestInit): Promise<Response> {
-  let token = (await getUserSpotifyToken()) ?? (await refreshUserToken());
+  const token = (await getUserSpotifyToken()) ?? (await refreshUserToken());
   if (!token) throw new SpotifyNotConnectedError();
 
   const doFetch = (t: string) =>

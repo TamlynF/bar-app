@@ -23,23 +23,23 @@ export default function TonightCard({
     .join(" · ");
 
   return (
-    <div className="bg-white border border-[#E6DFC8] rounded-2xl p-3.5 flex items-center gap-3 shadow-sm">
+    <div className="flex items-center gap-3 rounded-2xl border border-[#E6DFC8] bg-white p-3.5 shadow-sm">
       {/* Time block */}
-      <div className="w-12 h-12 rounded-xl bg-[#5C4033] flex flex-col items-center justify-center shrink-0 leading-none text-white">
-        <span className="text-xs font-black tracking-wide tabular-nums">{start ?? "TBC"}</span>
-        {end && <span className="text-[9px] font-bold text-white/60 mt-0.5 tabular-nums">{end}</span>}
+      <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[#5C4033] leading-none text-white">
+        <span className="font-black text-xs tracking-wide tabular-nums">{start ?? "TBC"}</span>
+        {end && <span className="mt-0.5 text-[9px] font-bold text-white/60 tabular-nums">{end}</span>}
       </div>
 
       {/* Body */}
-      <div className="flex-1 min-w-0">
-        <div className="text-[15px] font-black uppercase tracking-tight text-[#1F1F1A] truncate">
+      <div className="min-w-0 flex-1">
+        <div className="truncate font-black text-[15px] tracking-tight text-[#1F1F1A] uppercase">
           {event.title}
         </div>
-        <div className="text-[11px] font-semibold text-[#5F624F] mt-0.5 truncate">{meta}</div>
+        <div className="mt-0.5 truncate text-[11px] font-semibold text-[#5F624F]">{meta}</div>
         {capacity > 0 && (
-          <div className="h-2 mt-2 rounded-full bg-[#F7F4EA] border border-[#E6DFC8] overflow-hidden">
+          <div className="mt-2 h-2 overflow-hidden rounded-full border border-[#E6DFC8] bg-[#F7F4EA]">
             <div
-              className="h-full bg-[#5C4033] rounded-full w-(--w)"
+              className="h-full w-(--w) rounded-full bg-[#5C4033]"
               style={{ "--w": `${capacityPercent}%` } as React.CSSProperties}
             />
           </div>
@@ -49,7 +49,7 @@ export default function TonightCard({
       {/* Open */}
       <Link
         href={event.href}
-        className="shrink-0 inline-flex items-center justify-center h-10 px-4 rounded-xl bg-[#5C4033] hover:bg-[#5C4033]/85 text-white text-[11px] font-black uppercase tracking-wide transition-colors"
+        className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-[#5C4033] px-4 font-black text-[11px] tracking-wide text-white uppercase transition-colors hover:bg-[#5C4033]/85"
       >
         Open
       </Link>

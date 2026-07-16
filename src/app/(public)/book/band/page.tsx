@@ -34,7 +34,7 @@ export default async function BandBookingPage() {
     text: item.title,
   }));
 
-  const eventBadges = dbBadges.length > 0 ? dbBadges : [
+  const _eventBadges = dbBadges.length > 0 ? dbBadges : [
     { icon: Music, text: "Live Music" },
     { icon: Calendar, text: "Apply Now" },
   ];
@@ -60,7 +60,7 @@ export default async function BandBookingPage() {
 
       <PublicNav currentPath="/book/band" />
 
-      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-12 pt-14 pb-4 pb-12 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-14 pb-12 sm:px-6 lg:px-8">
 
         {/* Header */}
         {/* <div className="flex flex-col items-center mb-6 text-center sm:mb-10">

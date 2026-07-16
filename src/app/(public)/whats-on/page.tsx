@@ -71,14 +71,14 @@ export default async function WhatsOnPage() {
   const nextMonthLabel = format(addMonths(today, 1), "MMMM");
 
   return (
-    <main className="relative isolate min-h-dvh w-full overflow-hidden bg-canvas text-ink-2 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
+    <main className="relative isolate min-h-dvh w-full overflow-hidden bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       {/* Ambient glow wash across the top — matches the home hero band */}
-      <div className="pointer-events-none absolute -top-40 -left-30 w-130 h-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
-      <div className="pointer-events-none absolute top-20 -right-40 w-110 h-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
+      <div className="pointer-events-none absolute top-20 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
       <PublicNav currentPath="/whats-on" />
 
-      <div className="relative z-10 max-w-5xl mx-auto px-4 py-6 sm:py-10">
+      <div className="relative z-10 mx-auto max-w-5xl px-4 py-6 sm:py-10">
         <SectionHeading eyebrow={`${thisMonthLabel} · The schedule`} title="What's On" />
 
         {/* Search + filterable flip-card grid: past (collapsed, above) →
@@ -95,22 +95,22 @@ export default async function WhatsOnPage() {
         )}
 
         {events.length === 0 && (
-          <div className="text-center py-16 bg-white/3 border border-hairline rounded-2xl">
-            <Calendar className="w-8 h-8 text-ink-2/50 mx-auto mb-3" aria-hidden="true" />
-            <p className="text-ink-2 font-black text-sm uppercase tracking-tight">
+          <div className="rounded-2xl border border-hairline bg-white/3 py-16 text-center">
+            <Calendar className="mx-auto mb-3 h-8 w-8 text-ink-2/50" aria-hidden="true" />
+            <p className="font-black text-sm tracking-tight text-ink-2 uppercase">
               No Events Scheduled Yet
             </p>
-            <p className="text-ink-2/70 text-xs mt-1">Check back soon</p>
+            <p className="mt-1 text-xs text-ink-2/70">Check back soon</p>
           </div>
         )}
 
         <footer className="mt-16 text-center">
           <div className="flex items-center justify-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
+            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
-          <p className="text-[9px] text-stone-700 uppercase tracking-widest mt-2">
+          <p className="mt-2 text-[9px] tracking-widest text-stone-700 uppercase">
             &copy; {new Date().getFullYear()} &middot; Licensed Venue &middot; Drink Responsibly
           </p>
         </footer>

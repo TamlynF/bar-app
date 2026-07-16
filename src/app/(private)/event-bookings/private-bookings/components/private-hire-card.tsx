@@ -52,7 +52,7 @@ const STATUS_THEME: Record<
     text: "text-amber-700",
     border: "border-amber-200",
     dot: "bg-amber-500",
-    icon: <Clock className="w-5 h-5" />,
+    icon: <Clock className="h-5 w-5" />,
     label: "Pending",
   },
   confirmed: {
@@ -60,7 +60,7 @@ const STATUS_THEME: Record<
     text: "text-green-700",
     border: "border-green-200",
     dot: "bg-green-500",
-    icon: <CheckCircle className="w-5 h-5" />,
+    icon: <CheckCircle className="h-5 w-5" />,
     label: "Confirmed",
   },
   cancelled: {
@@ -68,7 +68,7 @@ const STATUS_THEME: Record<
     text: "text-red-700",
     border: "border-red-200",
     dot: "bg-red-500",
-    icon: <XCircle className="w-5 h-5" />,
+    icon: <XCircle className="h-5 w-5" />,
     label: "Cancelled",
   },
 };
@@ -92,11 +92,11 @@ const formatTimeRange = (start?: string | null, end?: string | null) =>
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 px-4 sm:px-5 py-3 border-b border-[#E6DFC8] last:border-0">
-      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0 pt-0.5">
+    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
-      <span className="text-sm font-bold text-[#1F1F1A] text-right">{value || "—"}</span>
+      <span className="text-right text-sm font-bold text-[#1F1F1A]">{value || "—"}</span>
     </div>
   );
 }
@@ -128,16 +128,16 @@ function EditRow({
   readOnlyValue?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-[#E6DFC8] last:border-0">
-      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0">{label}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
       {!editable ? (
-        <span className="flex-1 min-w-0 text-sm font-bold text-[#1F1F1A] text-right truncate">{readOnlyValue ?? (value || "—")}</span>
+        <span className="min-w-0 flex-1 truncate text-right text-sm font-bold text-[#1F1F1A]">{readOnlyValue ?? (value || "—")}</span>
       ) : options ? (
         <select
           aria-label={label}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 bg-transparent outline-none text-sm font-bold text-[#1F1F1A] text-right [text-align-last:right] cursor-pointer"
+          className="flex-1 cursor-pointer bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none [text-align-last:right]"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -150,7 +150,7 @@ function EditRow({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 min-w-0 bg-transparent outline-none text-sm font-bold text-[#1F1F1A] text-right placeholder:text-[#5F624F]/40"
+          className="min-w-0 flex-1 bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
         />
       )}
     </div>
@@ -161,19 +161,19 @@ function EditRow({
 function RequestedRow({ label, value, canApply, onApply }: { label: string; value?: string; canApply: boolean; onApply: () => void }) {
   const content = (
     <>
-      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0">{label}</span>
-      <span className="text-sm font-bold text-[#1F1F1A] text-right">{value || "—"}</span>
+      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
+      <span className="text-right text-sm font-bold text-[#1F1F1A]">{value || "—"}</span>
     </>
   );
   if (!canApply || !value) {
-    return <div className="flex items-center justify-between gap-4 px-4 sm:px-5 py-3 border-b border-[#E6DFC8] last:border-0">{content}</div>;
+    return <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">{content}</div>;
   }
   return (
     <button
       type="button"
       onClick={onApply}
       title="Use as the selected slot"
-      className="w-full flex items-center justify-between gap-4 px-4 sm:px-5 py-3 border-b border-[#E6DFC8] last:border-0 hover:bg-[#F7F4EA] transition-colors text-left"
+      className="flex w-full items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 text-left transition-colors last:border-0 hover:bg-[#F7F4EA] sm:px-5"
     >
       {content}
     </button>
@@ -183,19 +183,19 @@ function RequestedRow({ label, value, canApply, onApply }: { label: string; valu
 /** Contact row whose value links out to the mail app / phone dialer via an icon. */
 function ContactRow({ label, value, href, icon: Icon }: { label: string; value: string | null; href: string | null; icon: React.ElementType }) {
   return (
-    <div className="flex items-center justify-between gap-3 px-4 sm:px-5 py-3 border-b border-[#E6DFC8] last:border-0">
-      <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0">{label}</span>
-      <div className="flex items-center gap-2 min-w-0">
-        <span className="text-sm font-bold text-[#1F1F1A] text-right truncate">{value || "—"}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
+      <div className="flex min-w-0 items-center gap-2">
+        <span className="truncate text-right text-sm font-bold text-[#1F1F1A]">{value || "—"}</span>
         {href && (
           <a
             href={href}
             aria-label={`${label}: ${value}`}
             title={`Open ${label.toLowerCase()}`}
             onClick={(e) => e.stopPropagation()}
-            className="shrink-0 grid place-items-center w-7 h-7 rounded-lg bg-[#F7F4EA] border border-[#E6DFC8] text-[#5C4033] hover:bg-[#5C4033] hover:text-white transition-colors"
+            className="grid h-7 w-7 shrink-0 place-items-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
           >
-            <Icon className="w-3.5 h-3.5" />
+            <Icon className="h-3.5 w-3.5" />
           </a>
         )}
       </div>
@@ -217,14 +217,14 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={cn("bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden", className)}>
+    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 sm:px-5 py-3 bg-[#F7F4EA] hover:bg-[#F0EDE0] transition-colors text-left"
+        className="flex w-full items-center justify-between bg-[#F7F4EA] px-4 py-3 text-left transition-colors hover:bg-[#F0EDE0] sm:px-5"
       >
-        <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">{title}</span>
-        <ChevronDown className={cn("w-4 h-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+        <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
       </button>
       <div className={cn(!open && "hidden")}>{children}</div>
     </div>
@@ -349,15 +349,15 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "w-full bg-white rounded-2xl border-2 border-[#E6DFC8] overflow-hidden",
+          "w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
           "flex items-center gap-3 px-3 py-3.5 text-left",
-          "hover:bg-[#F7F4EA]/60 transition-all active:scale-[0.98] shadow-sm"
+          "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]"
         )}
       >
         {/* Status badge circle (left) */}
         <div
           className={cn(
-            "w-11 h-11 rounded-full flex items-center justify-center shrink-0 border",
+            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border",
             theme.bg,
             theme.text,
             theme.border
@@ -367,27 +367,27 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
         </div>
 
         {/* Name + email + guests */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <p className="font-black text-sm text-[#1F1F1A] uppercase tracking-tight truncate">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-center gap-1.5">
+            <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
               {request.full_name}
             </p>
             {request.admin_notes && (
-              <span className="shrink-0 text-[10px] font-black text-purple-700 uppercase bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+              <span className="shrink-0 rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 font-black text-[10px] text-purple-700 uppercase">
                 ADMIN
               </span>
             )}
           </div>
-          <div className="flex items-center gap-2 mt-0.5 text-[#5F624F]">
-            <p className="text-xs truncate font-semibold">{request.email}</p>
-            <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold opacity-60">
-              <Users className="w-3 h-3" />
+          <div className="mt-0.5 flex items-center gap-2 text-[#5F624F]">
+            <p className="truncate text-xs font-semibold">{request.email}</p>
+            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold opacity-60">
+              <Users className="h-3 w-3" />
               {request.guest_count}
             </span>
           </div>
         </div>
 
-        <ChevronRight className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
       </button>
 
       {/* Bottom sheet */}
@@ -395,38 +395,38 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
-            flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140 lg:w-6xl xl:w-7xl
-            sm:h-auto sm:max-h-[80vh] lg:max-h-[90vh] sm:rounded-4xl sm:bottom-6
-            sm:border-2 sm:border-[#E6DFC8]"
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8]
+            bg-[#F7F4EA] p-0 shadow-2xl outline-none
+            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto sm:max-h-[80vh] sm:w-140
+            sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 sm:border-[#E6DFC8] lg:max-h-[90vh]
+            lg:w-6xl xl:w-7xl"
         >
           {/* Sheet header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="text-lg font-black text-[#1F1F1A] uppercase tracking-tight leading-tight truncate">
+                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#1F1F1A] uppercase">
                   {request.full_name}
                 </SheetTitle>
-                <p className="text-xs text-[#5F624F] mt-0.5">{request.email}</p>
+                <p className="mt-0.5 text-xs text-[#5F624F]">{request.email}</p>
               </div>
               <span
                 className={cn(
-                  "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[10px] font-black uppercase tracking-wider shrink-0",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-[10px] tracking-wider uppercase",
                   theme.bg,
                   theme.text,
                   theme.border
                 )}
               >
-                <span className={cn("w-2 h-2 rounded-full", theme.dot)} />
+                <span className={cn("h-2 w-2 rounded-full", theme.dot)} />
                 {theme.label}
               </span>
             </div>
           </div>
 
           {/* Scrollable body */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y">
-            <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5 lg:grid lg:grid-cols-2 lg:gap-5 lg:space-y-0 lg:items-start">
+          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
+            <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
               {/* Event details */}
               <Section title="Event Details">
                 <SheetRow label="Reason for Hire" value={reasonLabel} />
@@ -462,26 +462,26 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                   <button
                     type="button"
                     onClick={applyPreferred}
-                    className="w-full flex items-center justify-center gap-2 px-4 sm:px-5 py-2.5 text-[10px] font-black uppercase tracking-wide text-[#5C4033] hover:bg-[#F7F4EA] transition-colors"
+                    className="flex w-full items-center justify-center gap-2 px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:bg-[#F7F4EA] sm:px-5"
                   >
-                    <CalendarDays className="w-3.5 h-3.5" /> Use requested date &amp; time
+                    <CalendarDays className="h-3.5 w-3.5" /> Use requested date &amp; time
                   </button>
                 )}
               </Section>
 
               {/* Selected time — editable: calendar popover + time inputs */}
               <Section title="Selected Time">
-                <div className="flex items-center justify-between gap-4 px-4 sm:px-5 py-3 border-b border-[#E6DFC8]">
-                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0">Date</span>
+                <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 sm:px-5">
+                  <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Date</span>
                   {editable ? (
                     <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                       <PopoverTrigger asChild>
-                        <button type="button" className="inline-flex items-center gap-2 text-sm font-bold text-[#1F1F1A] hover:text-[#5C4033] transition-colors">
+                        <button type="button" className="inline-flex items-center gap-2 text-sm font-bold text-[#1F1F1A] transition-colors hover:text-[#5C4033]">
                           {selectedDate ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy") : "Pick a date"}
-                          <CalendarDays className="w-4 h-4 text-[#5F624F]/60 shrink-0" />
+                          <CalendarDays className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent align="end" className="w-auto p-0 bg-white border-2 border-[#E6DFC8] rounded-2xl">
+                      <PopoverContent align="end" className="w-auto rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
                         <Calendar
                           mode="single"
                           selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
@@ -494,19 +494,19 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                       </PopoverContent>
                     </Popover>
                   ) : (
-                    <span className="text-sm font-bold text-[#1F1F1A] text-right">{formatDate(request.selected_date) || "—"}</span>
+                    <span className="text-right text-sm font-bold text-[#1F1F1A]">{formatDate(request.selected_date) || "—"}</span>
                   )}
                 </div>
-                <div className="flex items-center justify-between gap-4 px-4 sm:px-5 py-3 border-b border-[#E6DFC8] last:border-0">
-                  <span className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] shrink-0">Time</span>
+                <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                  <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Time</span>
                   {editable ? (
                     <div className="flex items-center gap-1.5">
-                      <input type="time" aria-label="Selected start time" value={selectedStartTime} onChange={(e) => setSelectedStartTime(e.target.value)} className="bg-transparent outline-none text-sm font-bold text-[#1F1F1A] text-right" />
-                      <span className="text-[#5F624F]/50 text-xs">-</span>
-                      <input type="time" aria-label="Selected end time" value={selectedEndTime} onChange={(e) => setSelectedEndTime(e.target.value)} className="bg-transparent outline-none text-sm font-bold text-[#1F1F1A] text-right" />
+                      <input type="time" aria-label="Selected start time" value={selectedStartTime} onChange={(e) => setSelectedStartTime(e.target.value)} className="bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none" />
+                      <span className="text-xs text-[#5F624F]/50">-</span>
+                      <input type="time" aria-label="Selected end time" value={selectedEndTime} onChange={(e) => setSelectedEndTime(e.target.value)} className="bg-transparent text-right text-sm font-bold text-[#1F1F1A] outline-none" />
                     </div>
                   ) : (
-                    <span className="text-sm font-bold text-[#1F1F1A] text-right">{formatTimeRange(request.selected_start_time, request.selected_end_time) || "—"}</span>
+                    <span className="text-right text-sm font-bold text-[#1F1F1A]">{formatTimeRange(request.selected_start_time, request.selected_end_time) || "—"}</span>
                   )}
                 </div>
               </Section>
@@ -514,7 +514,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
               {/* Additional requirements */}
               {request.additional_requirements && (
                 <Section title="Additional Requirements" className="lg:col-span-2">
-                  <p className="px-4 sm:px-5 py-3 text-sm text-[#1F1F1A]">
+                  <p className="px-4 py-3 text-sm text-[#1F1F1A] sm:px-5">
                     {request.additional_requirements}
                   </p>
                 </Section>
@@ -552,15 +552,15 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
               {/* Admin notes (read-only once cancelled; pending & confirmed edit it in the footer) */}
               {status === "cancelled" && request.admin_notes && (
                 <Section title="Admin Notes" className="lg:col-span-2">
-                  <div className="px-4 sm:px-5 py-3">
-                    <div className="bg-[#5C4033]/5 p-4 rounded-2xl border border-[#5C4033]/15">
-                      <div className="flex items-center gap-2 mb-2">
-                        <MessageSquareQuote className="w-4 h-4 text-[#5C4033] opacity-40" />
-                        <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">
+                  <div className="px-4 py-3 sm:px-5">
+                    <div className="rounded-2xl border border-[#5C4033]/15 bg-[#5C4033]/5 p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <MessageSquareQuote className="h-4 w-4 text-[#5C4033] opacity-40" />
+                        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
                           Staff Note
                         </span>
                       </div>
-                      <p className="text-sm text-[#1F1F1A] italic leading-relaxed">
+                      <p className="text-sm leading-relaxed text-[#1F1F1A] italic">
                         &quot;{request.admin_notes}&quot;
                       </p>
                     </div>
@@ -573,10 +573,10 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
 
           {/* Footer — actions for pending (confirm/cancel) and confirmed (cancel) enquiries */}
           {(status === "pending" || status === "confirmed") && (
-            <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
+            <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
               <div className="space-y-3">
                 <div>
-                  <label className="block text-[10px] font-black uppercase tracking-wide text-[#5F624F] mb-1.5">
+                  <label className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                     Note to Enquirer (optional)
                   </label>
                   <textarea
@@ -584,31 +584,31 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                     onChange={(e) => setAdminNotes(e.target.value)}
                     placeholder="Add a message to include in the outcome email..."
                     rows={2}
-                    className="w-full bg-[#F7F4EA] border border-[#E6DFC8] rounded-2xl px-4 py-3 text-sm text-[#1F1F1A] placeholder:text-[#5F624F]/50 focus:outline-none focus:border-[#5C4033]/30 resize-none transition-all"
+                    className="w-full resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-4 py-3 text-sm text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
                   />
                 </div>
 
-                {error && <p className="text-red-500 text-xs font-bold">{error}</p>}
+                {error && <p className="text-xs font-bold text-red-500">{error}</p>}
 
                 {status === "pending" ? (
-                  <div className="gap-3 grid grid-cols-2">
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
                       onClick={() => handleAction("confirmed")}
                       disabled={isPending || !selectedDate}
                       title={!selectedDate ? "Set a selected date before confirming" : undefined}
-                      className="flex justify-center items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-50 rounded-2xl h-14 font-black text-white text-[10px] uppercase tracking-widest transition-all active:scale-95"
+                      className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-green-600 font-black text-[10px] tracking-widest text-white uppercase transition-all hover:bg-green-700 active:scale-95 disabled:opacity-50"
                     >
-                      {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle className="w-3.5 h-3.5" />}
+                      {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle className="h-3.5 w-3.5" />}
                       Confirm
                     </button>
                     <button
                       type="button"
                       onClick={() => handleAction("cancelled")}
                       disabled={isPending}
-                      className="flex justify-center items-center gap-2 bg-red-50 hover:bg-red-100 disabled:opacity-50 border border-red-200 rounded-2xl h-14 font-black text-red-700 text-[10px] uppercase tracking-widest transition-all"
+                      className="flex h-14 items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 font-black text-[10px] tracking-widest text-red-700 uppercase transition-all hover:bg-red-100 disabled:opacity-50"
                     >
-                      {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                      {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
                       Reject
                     </button>
                   </div>
@@ -617,20 +617,20 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                     type="button"
                     onClick={() => handleAction("cancelled")}
                     disabled={isPending}
-                    className="flex justify-center items-center gap-2 bg-red-50 hover:bg-red-100 disabled:opacity-50 border border-red-200 rounded-2xl w-full h-14 font-black text-red-700 text-[10px] uppercase tracking-widest transition-all"
+                    className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border border-red-200 bg-red-50 font-black text-[10px] tracking-widest text-red-700 uppercase transition-all hover:bg-red-100 disabled:opacity-50"
                   >
-                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                    {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />}
                     Reject
                   </button>
                 )}
 
                 {/* Cancel / Save Changes */}
-                <div className="gap-3 grid grid-cols-2">
+                <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
                     onClick={handleCancel}
                     disabled={isPending}
-                    className="flex justify-center items-center bg-white disabled:opacity-50 border-[#E6DFC8] border-2 rounded-2xl h-14 font-black text-[#5F624F] text-[10px] uppercase tracking-wide"
+                    className="flex h-14 items-center justify-center rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -638,9 +638,9 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                     type="button"
                     onClick={handleSave}
                     disabled={isPending || !hasChanges}
-                    className="flex justify-center items-center gap-2 bg-[#1B4332] hover:bg-[#1B4332]/85 disabled:opacity-50 disabled:pointer-events-none shadow-lg rounded-2xl h-14 font-black text-white text-[10px] uppercase tracking-widest active:scale-95"
+                    className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50"
                   >
-                    {isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                    {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                     Save Changes
                   </button>
                 </div>

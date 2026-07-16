@@ -130,16 +130,16 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
 
   if (booked) {
     return (
-      <div className="text-center py-4 animate-in fade-in zoom-in duration-300">
-        <div className="flex justify-center mb-6">
-          <div className="p-4 rounded-full bg-emerald-500/20">
-            <CheckCircle className="w-10 h-10 text-emerald-500" />
+      <div className="animate-in py-4 text-center duration-300 fade-in zoom-in">
+        <div className="mb-6 flex justify-center">
+          <div className="rounded-full bg-emerald-500/20 p-4">
+            <CheckCircle className="h-10 w-10 text-emerald-500" />
           </div>
         </div>
-        <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">
+        <h2 className="mb-2 font-black text-2xl tracking-tight text-white uppercase">
           You&apos;re Booked!
         </h2>
-        <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
+        <p className="mx-auto mb-8 max-w-xs text-xs leading-relaxed text-stone-400 sm:text-sm">
           Your spot has been reserved for{" "}
           <span className="font-black text-white">{formatEventDate(selectedEvent?.date ?? "")}</span>.
           A confirmation email is on its way.
@@ -149,7 +149,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
             setBooked(false);
             setFormData(emptyForm);
           }}
-          className="w-full bg-white text-[#26300D] font-black h-14 rounded-2xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
+          className="h-14 w-full rounded-2xl bg-white font-black tracking-widest text-[#26300D] uppercase shadow-lg transition-all hover:bg-stone-200"
         >
           Book Another Spot
         </Button>
@@ -159,20 +159,20 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
 
   if (fullyBooked) {
     return (
-      <div className="text-center py-4 animate-in fade-in zoom-in duration-300">
-        <div className="flex justify-center mb-6">
-          <div className="p-4 rounded-full bg-red-500/20">
-            <AlertCircle className="w-10 h-10 text-red-500" />
+      <div className="animate-in py-4 text-center duration-300 fade-in zoom-in">
+        <div className="mb-6 flex justify-center">
+          <div className="rounded-full bg-red-500/20 p-4">
+            <AlertCircle className="h-10 w-10 text-red-500" />
           </div>
         </div>
-        <h2 className="text-2xl font-black text-white mb-2 uppercase tracking-tight">Fully Booked</h2>
-        <p className="text-stone-400 mb-8 text-xs sm:text-sm leading-relaxed max-w-xs mx-auto">
+        <h2 className="mb-2 font-black text-2xl tracking-tight text-white uppercase">Fully Booked</h2>
+        <p className="mx-auto mb-8 max-w-xs text-xs leading-relaxed text-stone-400 sm:text-sm">
           Sorry, we are fully booked for {formatEventDate(selectedEvent?.date ?? "")}. Please keep an eye on our Instagram page{" "}
           <a
             href="https://www.instagram.com/donfenticas"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-[#fdcc4b] font-black hover:underline"
+            className="font-black text-[#fdcc4b] hover:underline"
           >
             @donfenticas
           </a>{" "}
@@ -184,7 +184,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
               const available = events.find((e) => !e.is_fully_booked);
               if (available) setEventId(String(available.id));
             }}
-            className="w-full bg-white text-[#26300D] font-black h-14 rounded-2xl uppercase tracking-widest hover:bg-stone-200 transition-all shadow-lg"
+            className="h-14 w-full rounded-2xl bg-white font-black tracking-widest text-[#26300D] uppercase shadow-lg transition-all hover:bg-stone-200"
           >
             Try Another Date
           </Button>
@@ -209,12 +209,12 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
       <input type="hidden" name="special_requests" value={formData.specialRequests} />
 
       {/* Date selector + group size */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-1">
           <label className={labelClasses}>
             Select Date <span className="text-red-500">*</span>
           </label>
-          <div className="relative group">
+          <div className="group relative">
             <div className={iconContainerClasses}>
               <CalendarDays className={iconClasses} />
             </div>
@@ -223,7 +223,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
               value={eventId}
               onChange={(e) => setEventId(e.target.value)}
               required
-              className={cn(inputBaseClasses, "appearance-none pr-10 cursor-pointer")}
+              className={cn(inputBaseClasses, "cursor-pointer appearance-none pr-10")}
             >
               {events.map((ev) => (
                 <option key={ev.id} value={ev.id}>
@@ -231,7 +231,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
                 </option>
               ))}
             </select>
-            <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 rotate-90 pointer-events-none" />
+            <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
           </div>
         </div>
 
@@ -240,7 +240,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
             <label className={labelClasses}>
               {f.group_size.label} {f.group_size.required && <span className="text-red-500">*</span>}
             </label>
-            <div className="relative group">
+            <div className="group relative">
               <div className={iconContainerClasses}>
                 <Users className={iconClasses} />
               </div>
@@ -250,7 +250,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
                 required={f.group_size.required}
                 value={formData.groupSize}
                 onChange={handleInputChange}
-                className={cn(inputBaseClasses, "appearance-none pr-10 cursor-pointer")}
+                className={cn(inputBaseClasses, "cursor-pointer appearance-none pr-10")}
               >
                 {groupSizeOptions.map((n) => (
                   <option key={n} value={n}>
@@ -258,7 +258,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
                   </option>
                 ))}
               </select>
-              <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 rotate-90 pointer-events-none" />
+              <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
             </div>
           </div>
         )}
@@ -269,7 +269,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         <label className={labelClasses}>
           {f.name.label} <span className="text-red-500">*</span>
         </label>
-        <div className="relative group">
+        <div className="group relative">
           <div className={iconContainerClasses}>
             <User className={iconClasses} />
           </div>
@@ -290,7 +290,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         <label className={labelClasses}>
           {f.email.label} <span className="text-red-500">*</span>
         </label>
-        <div className="relative group">
+        <div className="group relative">
           <div className={iconContainerClasses}>
             <Mail className={iconClasses} />
           </div>
@@ -317,7 +317,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
               value={formData.countryCode}
               onChange={(code) => setFormData((prev) => ({ ...prev, countryCode: code }))}
             />
-            <div className="relative group flex-1">
+            <div className="group relative flex-1">
               <div className={iconContainerClasses}>
                 <Phone className={iconClasses} />
               </div>
@@ -341,7 +341,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
           <label className={labelClasses}>
             {f.group_name.label} {f.group_name.required && <span className="text-red-500">*</span>}
           </label>
-          <div className="relative group">
+          <div className="group relative">
             <div className={iconContainerClasses}>
               <Tag className={iconClasses} />
             </div>
@@ -360,12 +360,12 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
 
       {/* Price Preview */}
       {hasPricing && (
-        <div className="bg-black/40 border border-white/10 rounded-2xl px-5 py-4 flex items-center justify-between">
+        <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/40 px-5 py-4">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#fdcc4b]/70">Total to Pay</p>
-            <p className="text-2xl font-black text-white tabular-nums">£{total.toFixed(2)}</p>
+            <p className="font-black text-[10px] tracking-widest text-[#fdcc4b]/70 uppercase">Total to Pay</p>
+            <p className="font-black text-2xl text-white tabular-nums">£{total.toFixed(2)}</p>
           </div>
-          <p className="text-[11px] font-bold text-stone-500 text-right leading-snug">
+          <p className="text-right text-[11px] leading-snug font-bold text-stone-500">
             £{pricePerPerson.toFixed(2)} per person
             <br />× {formData.groupSize} {parseInt(formData.groupSize) === 1 ? "person" : "people"}
           </p>
@@ -378,7 +378,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
           <label className={labelClasses}>
             {f.special_requests.label} {f.special_requests.required ? <span className="text-red-500">*</span> : "(Optional)"}
           </label>
-          <div className="relative group">
+          <div className="group relative">
             <div className={iconContainerClasses}>
               <MessageSquareQuote className={iconClasses} />
             </div>
@@ -387,7 +387,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
               required={f.special_requests.required}
               value={formData.specialRequests}
               onChange={handleInputChange}
-              className={`${inputBaseClasses} min-h-25 py-3 text-sm resize-none`}
+              className={`${inputBaseClasses} min-h-25 resize-none py-3 text-sm`}
               placeholder="Dietary requirements, accessibility needs..."
             />
           </div>
@@ -395,9 +395,9 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
       )}
 
       {error && (
-        <div className="flex items-start gap-3 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
-          <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-400 font-bold leading-snug">{error}</p>
+        <div className="flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+          <p className="text-sm leading-snug font-bold text-red-400">{error}</p>
         </div>
       )}
 
@@ -405,26 +405,26 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         <button
           type="submit"
           disabled={isPending}
-          className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
+          className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
         >
           {isPending ? (
-            <Loader2 className="w-6 h-6 animate-spin" />
+            <Loader2 className="h-6 w-6 animate-spin" />
           ) : hasPricing ? (
             <span className="flex items-center">
-              Pay &amp; Book — £{total.toFixed(2)} <ChevronRight className="ml-2 w-6 h-6" />
+              Pay &amp; Book — £{total.toFixed(2)} <ChevronRight className="ml-2 h-6 w-6" />
             </span>
           ) : (
             <span className="flex items-center">
-              Confirm Booking <ChevronRight className="ml-2 w-6 h-6" />
+              Confirm Booking <ChevronRight className="ml-2 h-6 w-6" />
             </span>
           )}
         </button>
         {hasPricing ? (
-          <p className="text-center text-stone-600 text-[9px] mt-6 uppercase tracking-[0.2em] font-bold opacity-60 px-4">
+          <p className="mt-6 px-4 text-center text-[9px] font-bold tracking-[0.2em] text-stone-600 uppercase opacity-60">
             You&apos;ll be taken to a secure Square checkout to complete payment.
           </p>
         ) : (
-          <p className="text-center text-stone-600 text-[9px] mt-6 uppercase tracking-[0.2em] font-bold opacity-60 px-4">
+          <p className="mt-6 px-4 text-center text-[9px] font-bold tracking-[0.2em] text-stone-600 uppercase opacity-60">
             By booking, you agree to show up or cancel at least 24 hours in advance.
           </p>
         )}

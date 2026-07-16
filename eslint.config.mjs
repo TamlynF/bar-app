@@ -14,6 +14,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Generated/vendored design-system bundle + sync tooling — not source.
+    "ds-bundle/**",
+    ".ds-sync/**",
   ]),
   {
     plugins: {

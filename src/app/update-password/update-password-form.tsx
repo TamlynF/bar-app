@@ -12,11 +12,11 @@ function SubmitButton() {
     <button
       type="submit"
       disabled={pending}
-      className="w-full h-12 bg-[#26300D] hover:bg-[#1a2109] disabled:bg-[#26300D]/70 text-white text-[11px] font-black uppercase tracking-widest rounded-xl transition-colors mt-2 flex items-center justify-center gap-2"
+      className="mt-2 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#26300D] font-black text-[11px] tracking-widest text-white uppercase transition-colors hover:bg-[#1a2109] disabled:bg-[#26300D]/70"
     >
       {pending ? (
         <>
-          <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
           Saving Password...
         </>
       ) : (
@@ -42,13 +42,13 @@ export function UpdatePasswordForm() {
   return (
     <form action={handleAction} className="space-y-4">
       {error && (
-        <div className="p-3 bg-red-50 text-red-600 text-sm rounded-xl border border-red-100 font-medium">
+        <div className="rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600">
           {error}
         </div>
       )}
       
       <div className="space-y-1.5">
-        <label className="text-xs font-black uppercase tracking-widest text-[#26300D]">
+        <label className="font-black text-xs tracking-widest text-[#26300D] uppercase">
           New Password
         </label>
         <input
@@ -57,12 +57,12 @@ export function UpdatePasswordForm() {
                   required
                   placeholder="••••••••"
           minLength={6}
-          className="w-full px-4 py-3 bg-white border border-[#E6DFC8] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#26300D]"
+          className="w-full rounded-xl border border-[#E6DFC8] bg-white px-4 py-3 text-sm focus:ring-2 focus:ring-[#26300D] focus:outline-none"
         />
       </div>
       
       <div className="space-y-1.5">
-        <label className="text-xs font-black uppercase tracking-widest text-[#26300D]">
+        <label className="font-black text-xs tracking-widest text-[#26300D] uppercase">
           Confirm Password
         </label>
         <input
@@ -71,7 +71,7 @@ export function UpdatePasswordForm() {
                   required
                   placeholder="••••••••"
           minLength={6}
-          className="w-full px-4 py-3 bg-white border border-[#E6DFC8] rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#26300D]"
+          className="w-full rounded-xl border border-[#E6DFC8] bg-white px-4 py-3 text-sm focus:ring-2 focus:ring-[#26300D] focus:outline-none"
         />
       </div>
 

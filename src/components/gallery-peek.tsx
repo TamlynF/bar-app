@@ -27,7 +27,7 @@ export function GalleryPeek({ items }: { items: GalleryPeekItem[] }) {
         action={{ href: "/gallery", label: "View gallery" }}
       />
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 auto-rows-[120px] sm:auto-rows-[140px] gap-2.5">
+      <div className="grid auto-rows-[120px] grid-cols-2 gap-2.5 sm:auto-rows-[140px] sm:grid-cols-3">
         {shots.map((item, i) => (
           <Link
             key={item.id}
@@ -43,11 +43,11 @@ export function GalleryPeek({ items }: { items: GalleryPeekItem[] }) {
               alt={item.title ?? ""}
               fill
               sizes="(max-width: 640px) 50vw, 33vw"
-              className="object-cover group-hover:scale-105 transition-transform duration-500"
+              className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
-            <div className="absolute inset-0 bg-linear-to-t from-black/55 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-linear-to-t from-black/55 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
             {item.title && (
-              <span className="absolute bottom-2 left-3 right-3 text-ink text-[10px] font-black uppercase tracking-wide opacity-0 group-hover:opacity-100 transition-opacity">
+              <span className="absolute right-3 bottom-2 left-3 font-black text-[10px] tracking-wide text-ink uppercase opacity-0 transition-opacity group-hover:opacity-100">
                 {item.title}
               </span>
             )}

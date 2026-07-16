@@ -53,28 +53,28 @@ export function useConfirm() {
       />
       {/* Dialog box */}
       <div
-        className={`${styles.dialog} rounded-3xl border-2 border-[#E6DFC8] bg-[#F7F4EA] overflow-hidden shadow-2xl`}
+        className={`${styles.dialog} overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-[#F7F4EA] shadow-2xl`}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="px-6 pt-6 pb-4 flex flex-col gap-1.5">
-          <h2 className="text-base font-black uppercase tracking-tight text-[#1F1F1A]">
+        <div className="flex flex-col gap-1.5 px-6 pt-6 pb-4">
+          <h2 className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">
             {options.title}
           </h2>
           {options.description && (
-            <p className="text-xs text-[#5F624F] font-medium leading-relaxed">
+            <p className="text-xs leading-relaxed font-medium text-[#5F624F]">
               {options.description}
             </p>
           )}
         </div>
         {options.content && (
-          <div className="px-6 pb-2 max-h-[45vh] overflow-y-auto">{options.content}</div>
+          <div className="max-h-[45vh] overflow-y-auto px-6 pb-2">{options.content}</div>
         )}
-        <div className="px-6 pb-6 flex flex-row gap-2">
+        <div className="flex flex-row gap-2 px-6 pb-6">
           {!options.hideCancel && (
             <button
               type="button"
               onClick={handleCancel}
-              className="flex-1 h-11 rounded-xl border-2 border-[#E6DFC8] bg-white text-[10px] font-black uppercase tracking-widest text-[#5F624F] hover:bg-[#F7F4EA] transition-colors"
+              className="h-11 flex-1 rounded-xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-widest text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA]"
             >
               {options.cancelLabel ?? "Cancel"}
             </button>
@@ -84,8 +84,8 @@ export function useConfirm() {
             onClick={handleConfirm}
             className={
               isDestructive
-                ? "flex-1 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-red-600 hover:bg-red-700 transition-colors"
-                : "flex-1 h-11 rounded-xl text-[10px] font-black uppercase tracking-widest text-white bg-[#5C4033] hover:bg-[#5C4033]/90 transition-colors"
+                ? "h-11 flex-1 rounded-xl bg-red-600 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-red-700"
+                : "h-11 flex-1 rounded-xl bg-[#5C4033] font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#5C4033]/90"
             }
           >
             {options.confirmLabel ?? "Confirm"}

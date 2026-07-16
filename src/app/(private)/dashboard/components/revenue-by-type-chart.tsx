@@ -10,20 +10,20 @@ export function RevenueByTypeChart({
   bandSpend: number;
 }) {
   return (
-    <div className="bg-white shadow-sm p-4 sm:p-5 border border-[#E6DFC8] rounded-2xl">
-      <div className="flex justify-between items-baseline mb-3">
-        <p className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
+    <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-3 flex items-baseline justify-between">
+        <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
           Revenue by type · this month
         </p>
         {bandSpend > 0 && (
-          <p className="font-bold tabular-nums text-[#5F624F] text-[10px]">
+          <p className="text-[10px] font-bold text-[#5F624F] tabular-nums">
             Band spend £{bandSpend.toFixed(0)}
           </p>
         )}
       </div>
       {data.length === 0 ? (
-        <div className="flex justify-center items-center h-44">
-          <p className="opacity-40 font-black text-[#5F624F] text-[9px] uppercase tracking-wide">
+        <div className="flex h-44 items-center justify-center">
+          <p className="font-black text-[9px] tracking-wide text-[#5F624F] uppercase opacity-40">
             No paid revenue yet
           </p>
         </div>

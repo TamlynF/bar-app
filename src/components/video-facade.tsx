@@ -45,10 +45,10 @@ export function VideoFacade({
         href={url}
         target="_blank"
         rel="noopener noreferrer"
-        className={`group flex aspect-video w-full items-center justify-center gap-2 rounded-2xl border border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA] transition-colors ${className}`}
+        className={`group flex aspect-video w-full items-center justify-center gap-2 rounded-2xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] ${className}`}
       >
-        <ExternalLink className="w-4 h-4" aria-hidden="true" />
-        <span className="text-xs font-black uppercase tracking-wide">{title}</span>
+        <ExternalLink className="h-4 w-4" aria-hidden="true" />
+        <span className="font-black text-xs tracking-wide uppercase">{title}</span>
       </a>
     );
   }
@@ -78,7 +78,7 @@ export function VideoFacade({
       type="button"
       onClick={() => setActive(true)}
       aria-label={`Play ${title}`}
-      className={`group relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#1F1F1A] active:scale-[0.99] transition-transform ${className}`}
+      className={`group relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#1F1F1A] transition-transform active:scale-[0.99] ${className}`}
     >
       {/* Poster: YouTube thumbnail, or the video's first frame for direct files. */}
       {ytId ? (
@@ -101,12 +101,12 @@ export function VideoFacade({
         />
       )}
       {/* Dim so the white play control stays legible over any poster. */}
-      <span className="absolute inset-0 bg-black/25 group-hover:bg-black/15 transition-colors" />
-      <span className="relative grid h-14 w-14 place-items-center rounded-full bg-white/90 text-[#1F1F1A] group-hover:scale-110 transition-transform">
-        <Play className="w-5 h-5 ml-0.5" fill="currentColor" aria-hidden="true" />
+      <span className="absolute inset-0 bg-black/25 transition-colors group-hover:bg-black/15" />
+      <span className="relative grid h-14 w-14 place-items-center rounded-full bg-white/90 text-[#1F1F1A] transition-transform group-hover:scale-110">
+        <Play className="ml-0.5 h-5 w-5" fill="currentColor" aria-hidden="true" />
       </span>
-      <span className="absolute bottom-0 inset-x-0 p-3 bg-linear-to-t from-black/70 to-transparent text-left">
-        <span className="text-white text-xs font-black uppercase tracking-tight line-clamp-1">
+      <span className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent p-3 text-left">
+        <span className="line-clamp-1 font-black text-xs tracking-tight text-white uppercase">
           {title}
         </span>
       </span>

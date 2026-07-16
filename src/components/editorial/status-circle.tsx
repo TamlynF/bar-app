@@ -22,21 +22,21 @@ export default function StatusCircle({
   const theme = statusTheme[status] || statusTheme.pending
 
   return (
-    <div className="flex flex-col items-center gap-1.5 min-w-14 shrink-0">
+    <div className="flex min-w-14 shrink-0 flex-col items-center gap-1.5">
       <button
         type="button"
         onClick={onClick}
         className={cn(
-          "relative flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all touch-manipulation hover:scale-105 active:scale-95",
+          "relative flex h-12 w-12 touch-manipulation items-center justify-center rounded-full border-2 transition-all hover:scale-105 active:scale-95",
           isActive ? `${theme.dot} ${theme.border} shadow-lg ring-4 ${theme.ring}` : `bg-white ${theme.border}`,
         )}
       >
-        <div className="flex flex-col items-center leading-none gap-0.5">
-          <span className={cn("text-sm font-black leading-none", isActive ? "text-white" : theme.text)}>
+        <div className="flex flex-col items-center gap-0.5 leading-none">
+          <span className={cn("font-black text-sm leading-none", isActive ? "text-white" : theme.text)}>
             {teamCount}
           </span>
           <span className={cn(
-            "hidden sm:block text-[9px] font-bold uppercase tracking-tight opacity-70",
+            "hidden text-[9px] font-bold tracking-tight uppercase opacity-70 sm:block",
             isActive ? "text-white" : theme.text
           )}>
             {unit}
@@ -44,10 +44,10 @@ export default function StatusCircle({
         </div>
       </button>
       <div className="flex flex-col items-center leading-none">
-        <span className={cn("text-[10px] sm:text-[11px] font-black uppercase tracking-tight", isActive ? theme.text : "text-[#5F624F]")}>
+        <span className={cn("font-black text-[10px] tracking-tight uppercase sm:text-[11px]", isActive ? theme.text : "text-[#5F624F]")}>
           {label}
         </span>
-        <span className="text-[9px] sm:text-[10px] font-bold text-[#5F624F] uppercase mt-0.5">
+        <span className="mt-0.5 text-[9px] font-bold text-[#5F624F] uppercase sm:text-[10px]">
           {guestCount} Guests
         </span>
       </div>

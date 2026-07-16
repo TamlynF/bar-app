@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
-import PrintButton from "@/components/ui/print-button";
 import { Wine } from "lucide-react";
 
 export const metadata = {
@@ -122,34 +121,34 @@ export default async function MenuPage() {
       </div>
 
       {/* Menu frame — the bordered page (kept for the print aesthetic) */}
-      <div className="menu-frame max-w-4xl my-4 sm:my-8 mx-3 sm:mx-auto rounded-sm border-[5px] border-[#4a5a28] relative">
+      <div className="menu-frame relative mx-3 my-4 max-w-4xl rounded-sm border-[5px] border-[#4a5a28] sm:mx-auto sm:my-8">
         <div className="menu-inner border-2 border-[#B8962E] bg-[#2a3612] p-4 sm:p-8">
 
           {/* Page header — H1 is "MENU", not the bar's name */}
-          <header className="menu-header text-center mb-5 sm:mb-7">
-            <div className="inline-flex items-center gap-1.5 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-3 py-1 mb-3">
-              <Wine className="w-3 h-3 text-[#FDCC4B]" />
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
+          <header className="menu-header mb-5 text-center sm:mb-7">
+            <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[#FDCC4B]/20 bg-[#FDCC4B]/10 px-3 py-1">
+              <Wine className="h-3 w-3 text-[#FDCC4B]" />
+              <span className="font-black text-[10px] tracking-[0.25em] text-[#FDCC4B] uppercase">
                 Drinks &amp; Snacks
               </span>
             </div>
-            <h1 className="menu-h1 text-white font-black text-4xl sm:text-6xl uppercase tracking-tighter leading-none">
+            <h1 className="menu-h1 font-black text-4xl leading-none tracking-tighter text-white uppercase sm:text-6xl">
               Menu
             </h1>
-            <p className="menu-subtitle text-[#FDCC4B]/50 text-[10px] sm:text-xs font-bold uppercase tracking-[0.25em] mt-2">
+            <p className="menu-subtitle mt-2 text-[10px] font-bold tracking-[0.25em] text-[#FDCC4B]/50 uppercase sm:text-xs">
               Updated regularly &middot; Tap to print
             </p>
           </header>
 
           {/* Spirits note */}
-          <div className="text-center mb-5">
-            <span className="spirits-pill inline-block bg-[#FDCC4B] text-[#26300D] text-[10px] sm:text-xs font-black uppercase tracking-wide px-3 sm:px-4 py-1 rounded-sm">
+          <div className="mb-5 text-center">
+            <span className="spirits-pill inline-block rounded-sm bg-[#FDCC4B] px-3 py-1 font-black text-[10px] tracking-wide text-[#26300D] uppercase sm:px-4 sm:text-xs">
               Spirits* — (+ £1.45 for mixers, + £1.95 for tonic)
             </span>
           </div>
 
           {/* Two-column grid */}
-          <div className="menu-grid grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+          <div className="menu-grid grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
             <div className="menu-col flex flex-col gap-3 sm:gap-4">
               {col1.map((cat) => (
                 <CategoryBlock key={cat.id} category={cat} />
@@ -166,8 +165,8 @@ export default async function MenuPage() {
       </div>
 
       {/* Screen-only footer */}
-      <div className="no-print max-w-4xl mx-auto px-4 pb-10 text-center">
-        <p className="text-[#4a5a28] text-[9px] font-bold uppercase tracking-widest">
+      <div className="no-print mx-auto max-w-4xl px-4 pb-10 text-center">
+        <p className="text-[9px] font-bold tracking-widest text-[#4a5a28] uppercase">
           &copy; {new Date().getFullYear()} Don Fenticas &middot; Regent Street, Hinckley
         </p>
       </div>
@@ -180,27 +179,27 @@ function CategoryBlock({ category }: { category: MenuCategory }) {
 
   return (
     <div>
-      <div className="cat-banner bg-[#FDCC4B] border-y-[3px] border-[#2a3612] py-0.5 sm:py-1">
-        <h2 className="text-[#2a3612] font-black text-xs sm:text-sm uppercase tracking-wide text-center leading-tight">
+      <div className="cat-banner border-y-[3px] border-[#2a3612] bg-[#FDCC4B] py-0.5 sm:py-1">
+        <h2 className="text-center font-black text-xs leading-tight tracking-wide text-[#2a3612] uppercase sm:text-sm">
           {category.name}
         </h2>
       </div>
 
-      <div className="cat-items px-2 sm:px-3 py-1">
+      <div className="cat-items px-2 py-1 sm:px-3">
         {category.note && (
-          <p className="cat-note text-[#FDCC4B]/50 text-[7px] sm:text-[8px] font-bold uppercase tracking-wide text-center py-0.5">
+          <p className="cat-note py-0.5 text-center text-[7px] font-bold tracking-wide text-[#FDCC4B]/50 uppercase sm:text-[8px]">
             {category.note}
           </p>
         )}
         {category.menu_items.map((item) => (
           <div
             key={item.id}
-            className="menu-row flex items-baseline justify-between py-0.75 sm:py-1 gap-2"
+            className="menu-row flex items-baseline justify-between gap-2 py-0.75 sm:py-1"
           >
-            <span className="menu-row-name text-white text-[11px] sm:text-xs font-medium leading-tight flex-1 min-w-0">
+            <span className="menu-row-name min-w-0 flex-1 text-[11px] leading-tight font-medium text-white sm:text-xs">
               {item.name}
             </span>
-            <span className="menu-row-price text-[#FDCC4B] text-[10px] sm:text-[11px] font-bold shrink-0 text-right leading-tight">
+            <span className="menu-row-price shrink-0 text-right text-[10px] leading-tight font-bold text-[#FDCC4B] sm:text-[11px]">
               {item.price}
             </span>
           </div>

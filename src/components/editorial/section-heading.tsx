@@ -20,24 +20,24 @@ export function SectionHeading({
   return (
     <div
       id={id}
-      className="flex items-end justify-between gap-4 border-b border-white/10 pb-4 mb-6 sm:mb-8 scroll-mt-24"
+      className="mb-6 flex scroll-mt-24 items-end justify-between gap-4 border-b border-white/10 pb-4 sm:mb-8"
     >
       <div className="min-w-0">
-        <span className="block text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-[#FDCC4B] mb-2">
+        <span className="mb-2 block font-black text-[10px] tracking-[0.3em] text-[#FDCC4B] uppercase sm:text-xs">
           {eyebrow}
         </span>
-        <h2 className="text-white font-black uppercase tracking-tighter leading-[0.9] text-[clamp(2rem,8vw,4rem)]">
+        <h2 className="font-black text-[clamp(2rem,8vw,4rem)] leading-[0.9] tracking-tighter text-white uppercase">
           {title}
         </h2>
       </div>
       {action && (
         <Link
           href={action.href}
-          className="group shrink-0 inline-flex items-center gap-1.5 text-[10px] sm:text-xs font-black uppercase tracking-widest text-stone-400 hover:text-white transition-colors pb-1"
+          className="group inline-flex shrink-0 items-center gap-1.5 pb-1 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:text-white sm:text-xs"
         >
           {action.label}
           <ArrowRight
-            className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform"
+            className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5"
             aria-hidden="true"
           />
         </Link>

@@ -122,7 +122,7 @@ export default function MenuClient({
   };
 
   return (
-    <div className="px-2 py-3 sm:px-4 md:px-6 sm:py-0 space-y-3 sm:space-y-4 max-w-2xl">
+    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {/* Hidden iframe for printing the public menu page */}
       <iframe
         id="menu-print-frame"
@@ -134,10 +134,10 @@ export default function MenuClient({
       {/* Header + Actions */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-base font-black text-[#1F1F1A] uppercase tracking-tight">
+          <h3 className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">
             Menu
           </h3>
-          <p className="text-[11px] text-[#5F624F] font-medium">
+          <p className="text-[11px] font-medium text-[#5F624F]">
             {initialCategories.length} categories &middot;{" "}
             {initialCategories.reduce(
               (sum, c) => sum + c.menu_items.length,
@@ -146,31 +146,31 @@ export default function MenuClient({
             items
           </p>
         </div>
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={() => printMenuPage()}
             title="Print menu"
-            className="w-7 h-7 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F7F4EA] transition-colors flex items-center justify-center"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E6DFC8] bg-white transition-colors hover:bg-[#F7F4EA]"
           >
-            <Printer className="w-3.5 h-3.5 text-[#5F624F]" />
+            <Printer className="h-3.5 w-3.5 text-[#5F624F]" />
           </button>
           <button
             type="button"
             onClick={() => printMenuPage()}
             title="Save menu as PDF"
-            className="w-7 h-7 rounded-lg border border-[#E6DFC8] bg-white hover:bg-[#F7F4EA] transition-colors flex items-center justify-center"
+            className="flex h-7 w-7 items-center justify-center rounded-lg border border-[#E6DFC8] bg-white transition-colors hover:bg-[#F7F4EA]"
           >
-            <Download className="w-3.5 h-3.5 text-[#5F624F]" />
+            <Download className="h-3.5 w-3.5 text-[#5F624F]" />
           </button>
           <button
             type="button"
             onClick={() =>
               setSheet({ type: "edit-category", category: null })
             }
-            className="h-7 px-2.5 rounded-lg bg-[#1B4332] text-white hover:bg-[#1B4332]/85 transition-colors flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest"
+            className="flex h-7 items-center gap-1.5 rounded-lg bg-[#1B4332] px-2.5 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85"
           >
-            <Plus className="w-3.5 h-3.5" />
+            <Plus className="h-3.5 w-3.5" />
             Category
           </button>
         </div>
@@ -178,12 +178,12 @@ export default function MenuClient({
 
       {/* Categories */}
       {initialCategories.length === 0 ? (
-        <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
-          <UtensilsCrossed className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
-          <p className="text-sm font-black text-[#1F1F1A]">
+        <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
+          <UtensilsCrossed className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
+          <p className="font-black text-sm text-[#1F1F1A]">
             No menu categories yet
           </p>
-          <p className="text-[11px] text-[#5F624F] mt-1">
+          <p className="mt-1 text-[11px] text-[#5F624F]">
             Add a category to start building your menu
           </p>
         </div>
@@ -194,10 +194,10 @@ export default function MenuClient({
             return (
               <section
                 key={cat.id}
-                className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden"
+                className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white"
               >
                 {/* Category header */}
-                <div className="flex items-center bg-[#F7F4EA] px-3 sm:px-4 py-2.5 gap-1.5">
+                <div className="flex items-center gap-1.5 bg-[#F7F4EA] px-3 py-2.5 sm:px-4">
                   <button
                     type="button"
                     onClick={() =>
@@ -206,16 +206,16 @@ export default function MenuClient({
                         [cat.id]: !isCollapsed,
                       }))
                     }
-                    className="flex-1 min-w-0 text-left"
+                    className="min-w-0 flex-1 text-left"
                   >
-                    <p className="text-[11px] font-bold uppercase tracking-wide text-[#5C4033] truncate">
+                    <p className="truncate text-[11px] font-bold tracking-wide text-[#5C4033] uppercase">
                       {cat.name}{" "}
                       <span className="text-[#5F624F]">
                         ({cat.menu_items.length})
                       </span>
                     </p>
                     {cat.note && (
-                      <p className="text-[9px] text-[#5F624F] font-medium truncate mt-0.5">
+                      <p className="mt-0.5 truncate text-[9px] font-medium text-[#5F624F]">
                         {cat.note}
                       </p>
                     )}
@@ -225,10 +225,10 @@ export default function MenuClient({
                     onClick={() =>
                       setSheet({ type: "view-category", category: cat })
                     }
-                    className="shrink-0 w-6 h-6 rounded-md hover:bg-[#E6DFC8] flex items-center justify-center transition-colors"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[#E6DFC8]"
                     title="Edit category"
                   >
-                    <Pencil className="w-3 h-3 text-[#5F624F]" />
+                    <Pencil className="h-3 w-3 text-[#5F624F]" />
                   </button>
                   <button
                     type="button"
@@ -239,10 +239,10 @@ export default function MenuClient({
                         category: cat,
                       })
                     }
-                    className="shrink-0 w-6 h-6 rounded-md bg-[#1B4332] text-white flex items-center justify-center hover:bg-[#1B4332]/85 transition-colors"
+                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#1B4332] text-white transition-colors hover:bg-[#1B4332]/85"
                     title="Add item"
                   >
-                    <Plus className="w-3 h-3" />
+                    <Plus className="h-3 w-3" />
                   </button>
                   <button
                     type="button"
@@ -257,7 +257,7 @@ export default function MenuClient({
                   >
                     <ChevronDown
                       className={cn(
-                        "w-4 h-4 text-[#5F624F] transition-transform duration-200",
+                        "h-4 w-4 text-[#5F624F] transition-transform duration-200",
                         !isCollapsed && "rotate-180"
                       )}
                     />
@@ -278,15 +278,15 @@ export default function MenuClient({
                           })
                         }
                         className={cn(
-                          "px-3 sm:px-4 py-2 flex items-center gap-2 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors",
+                          "flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors hover:bg-[#F7F4EA]/50 sm:px-4",
                           !item.is_active && "opacity-40"
                         )}
                       >
-                        <GripVertical className="w-3 h-3 text-[#E6DFC8] shrink-0" />
-                        <span className="text-xs font-bold text-[#1F1F1A] flex-1 min-w-0 truncate">
+                        <GripVertical className="h-3 w-3 shrink-0 text-[#E6DFC8]" />
+                        <span className="min-w-0 flex-1 truncate text-xs font-bold text-[#1F1F1A]">
                           {item.name}
                         </span>
-                        <span className="text-[11px] font-bold text-[#5F624F] shrink-0 text-right">
+                        <span className="shrink-0 text-right text-[11px] font-bold text-[#5F624F]">
                           {item.price}
                         </span>
                       </div>
@@ -315,15 +315,15 @@ export default function MenuClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-auto max-h-[75vh]
-            flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
-            sm:max-h-[70vh] sm:rounded-4xl sm:bottom-6
+          className="flex h-auto max-h-[75vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8]
+            bg-[#F7F4EA] p-0 shadow-2xl outline-none
+            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:max-h-[70vh]
+            sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
-            <SheetTitle className="text-lg font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+            <SheetTitle className="font-black text-lg leading-tight tracking-tighter text-[#1F1F1A] uppercase">
               {sheet?.type === "edit-category"
                 ? sheet.category
                   ? "Edit Category"
@@ -339,7 +339,7 @@ export default function MenuClient({
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 min-h-0 touch-pan-y space-y-4">
+          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
             {/* View Category */}
             {sheet?.type === "view-category" && (
               <div className="space-y-3">
@@ -356,18 +356,18 @@ export default function MenuClient({
             {sheet?.type === "edit-category" && (
               <form id="menu-form" action={handleCategorySave} className="space-y-3">
                 {sheet.category && <input type="hidden" name="id" value={sheet.category.id} />}
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white">
                   <FormRow label="Name" required>
-                    <input name="name" required placeholder="e.g. Cocktails" defaultValue={sheet.category?.name ?? ""} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    <input name="name" required placeholder="e.g. Cocktails" defaultValue={sheet.category?.name ?? ""} className="flex-1 bg-transparent text-right font-black text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
                   <FormRow label="Note">
-                    <input name="note" placeholder="e.g. +£1.45 for mixers" defaultValue={sheet.category?.note ?? ""} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    <input name="note" placeholder="e.g. +£1.45 for mixers" defaultValue={sheet.category?.note ?? ""} className="flex-1 bg-transparent text-right font-black text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
                   <FormRow label="Order">
-                    <input name="display_order" type="number" min="0" defaultValue={sheet.category?.display_order ?? 0} title="Order" placeholder="0" className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none w-16" />
+                    <input name="display_order" type="number" min="0" defaultValue={sheet.category?.display_order ?? 0} title="Order" placeholder="0" className="w-16 flex-1 bg-transparent text-right font-black text-sm text-[#1F1F1A] outline-none" />
                   </FormRow>
                   <FormRow label="Status">
-                    <select name="is_active" title="Status" defaultValue={sheet.category?.is_active === false ? "false" : "true"} className="text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl">
+                    <select name="is_active" title="Status" defaultValue={sheet.category?.is_active === false ? "false" : "true"} className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-sm text-[#1F1F1A] outline-none">
                       <option value="true" className="dir-ltr">Active</option>
                       <option value="false" className="dir-ltr">Inactive</option>
                     </select>
@@ -394,18 +394,18 @@ export default function MenuClient({
               <form id="menu-form" action={handleItemSave} className="space-y-3">
                 {sheet.item && <input type="hidden" name="id" value={sheet.item.id} />}
                 <input type="hidden" name="category_id" value={sheet.category.id} />
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white">
                   <FormRow label="Name" required>
-                    <input name="name" required placeholder="e.g. Espresso Martini" defaultValue={sheet.item?.name ?? ""} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    <input name="name" required placeholder="e.g. Espresso Martini" defaultValue={sheet.item?.name ?? ""} className="flex-1 bg-transparent text-right font-black text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
                   <FormRow label="Price" required>
-                    <input name="price" required placeholder="e.g. £8.95" defaultValue={sheet.item?.price ?? ""} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40" />
+                    <input name="price" required placeholder="e.g. £8.95" defaultValue={sheet.item?.price ?? ""} className="flex-1 bg-transparent text-right font-black text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
                   <FormRow label="Order">
-                    <input name="display_order" type="number" min="0" title="Order" defaultValue={sheet.item?.display_order ?? 0} className="text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none w-16" />
+                    <input name="display_order" type="number" min="0" title="Order" defaultValue={sheet.item?.display_order ?? 0} className="w-16 flex-1 bg-transparent text-right font-black text-sm text-[#1F1F1A] outline-none" />
                   </FormRow>
                   <FormRow label="Status">
-                    <select name="is_active" title="Status" defaultValue={sheet.item?.is_active === false ? "false" : "true"} className="text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl">
+                    <select name="is_active" title="Status" defaultValue={sheet.item?.is_active === false ? "false" : "true"} className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-sm text-[#1F1F1A] outline-none">
                       <option value="true" className="dir-ltr">Active</option>
                       <option value="false" className="dir-ltr">Inactive</option>
                     </select>
@@ -417,7 +417,7 @@ export default function MenuClient({
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-6 py-4 pb-8 sm:pb-4 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
+          <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-4 pb-8 backdrop-blur-md sm:rounded-b-4xl sm:pb-4">
             {(sheet?.type === "view-category" || sheet?.type === "view-item") && (
               <div className="grid grid-cols-2 gap-3">
                 <Button
@@ -427,9 +427,9 @@ export default function MenuClient({
                     else handleItemDelete(sheet.item.id);
                   }}
                   disabled={isPending}
-                  className="h-12 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-wide text-[10px] bg-white hover:bg-red-50 hover:border-red-200"
+                  className="h-12 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
                 >
-                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4 mr-1.5" />}
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />}
                   Delete
                 </Button>
                 <Button
@@ -440,9 +440,9 @@ export default function MenuClient({
                     else
                       setSheet({ type: "edit-item", item: sheet.item, category: sheet.category });
                   }}
-                  className="h-12 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                  className="h-12 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95"
                 >
-                  <Pencil className="w-4 h-4 mr-1.5" />
+                  <Pencil className="mr-1.5 h-4 w-4" />
                   Edit
                 </Button>
               </div>
@@ -455,7 +455,7 @@ export default function MenuClient({
                   variant="outline"
                   onClick={closeSheet}
                   disabled={isPending}
-                  className="h-12 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white"
+                  className="h-12 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                 >
                   Cancel
                 </Button>
@@ -463,9 +463,9 @@ export default function MenuClient({
                   type="submit"
                   form="menu-form"
                   disabled={isPending}
-                  className="h-12 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                  className="h-12 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95"
                 >
-                  {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-1.5" />Save</>}
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-1.5 h-4 w-4" />Save</>}
                 </Button>
               </div>
             )}
@@ -480,9 +480,9 @@ export default function MenuClient({
 function FormRow({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2 px-4 py-2.5">
-      <div className="flex items-center gap-1.5 text-[#5F624F] opacity-60 shrink-0">
-        <span className="text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">{label}</span>
-        {required && <span className="text-red-500 text-[10px] font-bold">*</span>}
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60">
+        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">{label}</span>
+        {required && <span className="text-[10px] font-bold text-red-500">*</span>}
       </div>
       {children}
     </div>
@@ -491,18 +491,18 @@ function FormRow({ label, required, children }: { label: string; required?: bool
 
 function DetailCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 bg-white border border-[#E6DFC8] rounded-xl px-4 py-2.5">
-      <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] opacity-60 shrink-0">{label}</span>
-      <span className="text-sm font-black text-[#1F1F1A] text-right flex-1 break-all">{value}</span>
+    <div className="flex items-center gap-2 rounded-xl border border-[#E6DFC8] bg-white px-4 py-2.5">
+      <span className="shrink-0 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">{label}</span>
+      <span className="flex-1 text-right font-black text-sm break-all text-[#1F1F1A]">{value}</span>
     </div>
   );
 }
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="p-3 rounded-xl bg-red-50 border border-red-200 flex items-start gap-2">
-      <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-      <p className="text-xs text-red-700 font-bold leading-snug">{message}</p>
+    <div className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3">
+      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+      <p className="text-xs leading-snug font-bold text-red-700">{message}</p>
     </div>
   );
 }

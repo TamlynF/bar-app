@@ -4,8 +4,7 @@ import React, { useState } from "react";
 import { format } from "date-fns";
 import { 
   CalendarDays, 
-  ChevronDown, 
-  Sparkles,
+  ChevronDown,
   RotateCcw
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,8 +15,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
 
 /**
  * BookingCalendarFilter
@@ -49,29 +46,29 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
   };
 
   return (
-    <div className="flex items-center gap-2 w-full">
+    <div className="flex w-full items-center gap-2">
       <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className="h-12 w-full px-4 rounded-xl bg-slate-50 border-transparent text-slate-700 hover:bg-slate-100 transition-all shadow-sm flex items-center justify-between group"
+            className="group flex h-12 w-full items-center justify-between rounded-xl border-transparent bg-slate-50 px-4 text-slate-700 shadow-sm transition-all hover:bg-slate-100"
           >
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-white rounded-lg shadow-xs group-hover:scale-110 transition-transform">
-                <CalendarDays className="w-4 h-4 text-[#5C4033]" />
+              <div className="rounded-lg bg-white p-2 shadow-xs transition-transform group-hover:scale-110">
+                <CalendarDays className="h-4 w-4 text-[#5C4033]" />
               </div>
               <div className="flex flex-col text-left">
-                <span className="text-[8px] font-black uppercase tracking-widest text-slate-400 leading-none mb-1">Active Date</span>
-                <span className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                <span className="mb-1 font-black text-[8px] leading-none tracking-widest text-slate-400 uppercase">Active Date</span>
+                <span className="font-black text-sm tracking-tight text-slate-900 uppercase">
                   {dateValue ? format(dateValue, "eeee, do MMMM") : "All History"}
                 </span>
               </div>
             </div>
-            <ChevronDown className="w-4 h-4 text-slate-300 group-hover:text-slate-600 transition-colors" />
+            <ChevronDown className="h-4 w-4 text-slate-300 transition-colors group-hover:text-slate-600" />
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="p-0 w-screen max-w-80 shadow-2xl rounded-2xl overflow-hidden z-9999"
+          className="z-9999 w-screen max-w-80 overflow-hidden rounded-2xl p-0 shadow-2xl"
           align="start"
           sideOffset={8}
         >
@@ -79,17 +76,17 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
             mode="single"
             selected={dateValue}
             onSelect={handleSelect}
-            className="bg-transparent isolate z-9999"
+            className="isolate z-9999 bg-transparent"
             defaultMonth={dateValue || new Date()}
           />
-          <div className="p-3 border-t border-black/5 bg-black/5 flex flex-col gap-1">
+          <div className="flex flex-col gap-1 border-t border-black/5 bg-black/5 p-3">
             <Button
               variant="ghost"
               size="sm"
-              className="w-full h-10 text-[10px] font-black uppercase tracking-widest text-[#5C4033] hover:bg-white/50 rounded-xl"
+              className="h-10 w-full rounded-xl font-black text-[10px] tracking-widest text-[#5C4033] uppercase hover:bg-white/50"
               onClick={clearFilter}
             >
-              <RotateCcw className="w-3.5 h-3.5 mr-2" />
+              <RotateCcw className="mr-2 h-3.5 w-3.5" />
               Reset to All History
             </Button>
           </div>

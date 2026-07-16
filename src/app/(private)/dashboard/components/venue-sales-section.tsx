@@ -16,9 +16,9 @@ const CATEGORY_COLORS: Record<string, string> = {
 export function VenueSalesSection({ data }: { data: VenueSalesData }) {
   if (!data.connected) {
     return (
-      <div className="bg-white p-8 border border-[#E6DFC8] rounded-2xl text-center">
-        <p className="font-black text-[#1F1F1A] text-sm">No Square sales yet</p>
-        <p className="mt-1 font-medium text-[#5F624F] text-[11px] leading-relaxed">
+      <div className="rounded-2xl border border-[#E6DFC8] bg-white p-8 text-center">
+        <p className="font-black text-sm text-[#1F1F1A]">No Square sales yet</p>
+        <p className="mt-1 text-[11px] leading-relaxed font-medium text-[#5F624F]">
           Takings appear here once the hourly Square sync has run against live
           sales data. Bar, food and POS sales are shown separately from
           pre-booked booking revenue.
@@ -32,7 +32,7 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
   return (
     <div className="space-y-3">
       {/* Headline stats */}
-      <div className="gap-3 grid grid-cols-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
           label="Takings"
           value={`£${thisMonth.takings.toFixed(2)}`}
@@ -60,10 +60,10 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
         />
       </div>
 
-      <div className="gap-3 grid grid-cols-1 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {/* Daily takings trend */}
-        <div className="bg-white shadow-sm p-4 sm:p-5 border border-[#E6DFC8] rounded-2xl">
-          <p className="mb-3 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
+        <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
+          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
             Takings · last 30 days
           </p>
           <div className="h-44">
@@ -100,13 +100,13 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
         </div>
 
         {/* Category split */}
-        <div className="bg-white shadow-sm p-4 sm:p-5 border border-[#E6DFC8] rounded-2xl">
-          <p className="mb-3 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
+        <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
+          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
             Sales by category · this month
           </p>
           {categories.length === 0 ? (
-            <div className="flex justify-center items-center h-44">
-              <p className="opacity-40 font-black text-[#5F624F] text-[9px] uppercase tracking-wide">
+            <div className="flex h-44 items-center justify-center">
+              <p className="font-black text-[9px] tracking-wide text-[#5F624F] uppercase opacity-40">
                 No categorised sales yet
               </p>
             </div>
@@ -142,16 +142,16 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
 
       {/* Takings per event night */}
       {byEvent.length > 0 && (
-        <div className="bg-white shadow-sm p-4 sm:p-5 border border-[#E6DFC8] rounded-2xl">
-          <p className="mb-3 font-black text-[#5F624F] text-[10px] uppercase tracking-wide">
+        <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
+          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
             Takings by event night · this month
           </p>
           <ul className="divide-y divide-[#E6DFC8]">
             {byEvent.map((e) => (
-              <li key={`${e.date}-${e.title}`} className="flex justify-between items-center gap-3 py-2">
+              <li key={`${e.date}-${e.title}`} className="flex items-center justify-between gap-3 py-2">
                 <div className="min-w-0">
-                  <p className="font-black text-[#1F1F1A] text-xs truncate">{e.title}</p>
-                  <p className="font-bold text-[#5F624F] text-[10px] uppercase tracking-wide">
+                  <p className="truncate font-black text-xs text-[#1F1F1A]">{e.title}</p>
+                  <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">
                     {new Date(e.date + "T00:00:00").toLocaleDateString("en-GB", {
                       weekday: "short",
                       day: "numeric",
@@ -159,10 +159,10 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
                     })}
                   </p>
                 </div>
-                <div className="text-right shrink-0">
-                  <p className="font-black tabular-nums text-[#1B4332] text-sm">£{e.takings.toFixed(2)}</p>
+                <div className="shrink-0 text-right">
+                  <p className="font-black text-sm text-[#1B4332] tabular-nums">£{e.takings.toFixed(2)}</p>
                   {e.tips > 0 && (
-                    <p className="font-bold tabular-nums text-[#5F624F] text-[10px]">£{e.tips.toFixed(2)} tips</p>
+                    <p className="text-[10px] font-bold text-[#5F624F] tabular-nums">£{e.tips.toFixed(2)} tips</p>
                   )}
                 </div>
               </li>
@@ -172,7 +172,7 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
       )}
 
       {data.lastSyncedAt && (
-        <p className="text-right font-bold text-[#8A8266] text-[9px] uppercase tracking-wide">
+        <p className="text-right text-[9px] font-bold tracking-wide text-[#8A8266] uppercase">
           Synced {formatDistanceToNow(new Date(data.lastSyncedAt), { addSuffix: true })}
         </p>
       )}

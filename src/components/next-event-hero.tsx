@@ -37,30 +37,30 @@ export function NextEventHero({
 
   return (
     <section className="mb-6">
-      <div className="flex items-center gap-2 px-1 mb-2">
-        <span className="neon-text text-[10px] font-black uppercase tracking-[0.25em]">
+      <div className="mb-2 flex items-center gap-2 px-1">
+        <span className="neon-text font-black text-[10px] tracking-[0.25em] uppercase">
           {eyebrow}
         </span>
-        <div className="flex-1 h-px neon-bg-muted" />
+        <div className="neon-bg-muted h-px flex-1" />
       </div>
 
-      <div className="olive-bg border neon-border rounded-2xl neon-glow overflow-hidden">
+      <div className="olive-bg neon-border neon-glow overflow-hidden rounded-2xl border">
         {/* Main event row */}
-        <div className="px-4 py-3.5 flex items-center gap-3">
+        <div className="flex items-center gap-3 px-4 py-3.5">
           {/* Date column */}
-          <div className="shrink-0 w-10 text-center">
-            <p className="text-stone-500 text-[9px] font-black uppercase tracking-widest leading-tight">
+          <div className="w-10 shrink-0 text-center">
+            <p className="font-black text-[9px] leading-tight tracking-widest text-stone-500 uppercase">
               {format(dateObj, "EEE")}
             </p>
-            <p className="text-base font-black tabular-nums leading-none text-white">
+            <p className="font-black text-base leading-none text-white tabular-nums">
               {format(dateObj, "d")}
             </p>
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             {event.subType && (
-              <p className="text-stone-500 text-[9px] font-black uppercase tracking-widest leading-tight mb-0.5">
+              <p className="mb-0.5 font-black text-[9px] leading-tight tracking-widest text-stone-500 uppercase">
                 {event.subType}
               </p>
             )}
@@ -70,19 +70,19 @@ export function NextEventHero({
                 href={event.externalLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 min-w-0 max-w-full"
+                className="inline-flex max-w-full min-w-0 items-center gap-1"
               >
                 <p
-                  className="ev-text text-sm font-black leading-tight truncate underline underline-offset-2 pb-px"
+                  className="ev-text truncate pb-px font-black text-sm leading-tight underline underline-offset-2"
                   style={{ "--ev-c": event.color } as React.CSSProperties}
                 >
                   {event.title}
                 </p>
-                <ExternalLink className="w-3 h-3 shrink-0 text-stone-500" aria-hidden="true" />
+                <ExternalLink className="h-3 w-3 shrink-0 text-stone-500" aria-hidden="true" />
               </a>
             ) : (
               <p
-                className="ev-text text-sm font-black leading-tight truncate"
+                className="ev-text truncate font-black text-sm leading-tight"
                 style={{ "--ev-c": event.color } as React.CSSProperties}
               >
                 {event.title}
@@ -90,8 +90,8 @@ export function NextEventHero({
             )}
 
             {event.startTimeLabel && (
-              <p className="flex items-center gap-1 text-stone-400 text-[10px] font-bold tabular-nums mt-0.5">
-                <Clock className="w-3 h-3 shrink-0" aria-hidden="true" />
+              <p className="mt-0.5 flex items-center gap-1 text-[10px] font-bold text-stone-400 tabular-nums">
+                <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
                 {event.startTimeLabel}
                 {event.endTimeLabel ? ` – ${event.endTimeLabel}` : ""}
               </p>
@@ -100,7 +100,7 @@ export function NextEventHero({
 
           {/* Right side */}
           {event.isFullyBooked && (
-            <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">
+            <span className="shrink-0 rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-400 uppercase">
               Sold Out
             </span>
           )}
@@ -110,20 +110,20 @@ export function NextEventHero({
               href={event.karaokeRequestUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-white bg-[#FF6B35] px-2.5 py-1.5 rounded-full hover:bg-[#FF6B35]/90 active:scale-95 transition-all"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FF6B35] px-2.5 py-1.5 font-black text-[9px] tracking-wide text-white uppercase transition-all hover:bg-[#FF6B35]/90 active:scale-95"
               aria-label="Request a song to sing on Singa"
             >
-              <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+              <Mic2 className="h-3 w-3 shrink-0" aria-hidden="true" />
               Sing
             </a>
           )}
 
           {!event.isFullyBooked && event.isKaraoke && !event.karaokeRequestUrl && (
             <span
-              className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide px-2.5 py-1.5 rounded-full bg-white/5 text-stone-500 border border-white/10"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 font-black text-[9px] tracking-wide text-stone-500 uppercase"
               title="Karaoke night hasn't started yet"
             >
-              <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+              <Mic2 className="h-3 w-3 shrink-0" aria-hidden="true" />
               Not Started
             </span>
           )}
@@ -131,10 +131,10 @@ export function NextEventHero({
           {!event.isFullyBooked && !event.isKaraoke && event.isBookable && event.bookingPageUrl && (
             <a
               href={event.bookingPageUrl}
-              className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-[#1a2008] bg-[#FDCC4B] px-2.5 py-1.5 rounded-full hover:bg-[#FDCC4B]/90 active:scale-95 transition-all"
+              className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FDCC4B] px-2.5 py-1.5 font-black text-[9px] tracking-wide text-[#1a2008] uppercase transition-all hover:bg-[#FDCC4B]/90 active:scale-95"
               aria-label={`Book ${event.title}`}
             >
-              <CalendarDays className="w-3 h-3 shrink-0" aria-hidden="true" />
+              <CalendarDays className="h-3 w-3 shrink-0" aria-hidden="true" />
               Book
             </a>
           )}
@@ -142,16 +142,16 @@ export function NextEventHero({
 
         {/* Also on the night — sibling events on the same date */}
         {siblings.length > 0 && (
-          <div className="border-t neon-border px-4 pb-3">
+          <div className="neon-border border-t px-4 pb-3">
             <div className="flex gap-3">
               {/* Spacer — matches the date column width so siblings align with the title */}
-              <div className="shrink-0 w-10" />
-              <div className="flex-1 min-w-0 pt-2.5">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-stone-500 text-[9px] font-black uppercase tracking-[0.25em]">
+              <div className="w-10 shrink-0" />
+              <div className="min-w-0 flex-1 pt-2.5">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="font-black text-[9px] tracking-[0.25em] text-stone-500 uppercase">
                     Also on the night
                   </span>
-                  <div className="flex-1 h-px bg-white/10" />
+                  <div className="h-px flex-1 bg-white/10" />
                 </div>
                 <div className="space-y-2">
                   {siblings.map((s) => {
@@ -160,43 +160,43 @@ export function NextEventHero({
                       : null;
                     const subLine = [s.subType, timeLabel].filter(Boolean).join(" · ");
                     return (
-                      <div key={s.id} className="flex items-center gap-2 min-w-0">
+                      <div key={s.id} className="flex min-w-0 items-center gap-2">
                         <span
-                          className="ev-dot w-1.5 h-1.5 rounded-full shrink-0"
+                          className="ev-dot h-1.5 w-1.5 shrink-0 rounded-full"
                           style={{ "--ev-c": s.color } as React.CSSProperties}
                         />
-                        <div className="flex-1 min-w-0">
+                        <div className="min-w-0 flex-1">
                           {s.externalLink ? (
                             <a
                               href={s.externalLink}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center gap-1 min-w-0 max-w-full"
+                              className="inline-flex max-w-full min-w-0 items-center gap-1"
                             >
                               <p
-                                className="ev-text text-xs font-black leading-tight truncate underline underline-offset-2 pb-px"
+                                className="ev-text truncate pb-px font-black text-xs leading-tight underline underline-offset-2"
                                 style={{ "--ev-c": s.color } as React.CSSProperties}
                               >
                                 {s.title}
                               </p>
-                              <ExternalLink className="w-3 h-3 shrink-0 text-stone-500" aria-hidden="true" />
+                              <ExternalLink className="h-3 w-3 shrink-0 text-stone-500" aria-hidden="true" />
                             </a>
                           ) : (
                             <p
-                              className="ev-text text-xs font-black leading-tight truncate"
+                              className="ev-text truncate font-black text-xs leading-tight"
                               style={{ "--ev-c": s.color } as React.CSSProperties}
                             >
                               {s.title}
                             </p>
                           )}
                           {subLine && (
-                            <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wide truncate">
+                            <p className="truncate text-[10px] font-bold tracking-wide text-stone-500 uppercase">
                               {subLine}
                             </p>
                           )}
                         </div>
                         {s.isFullyBooked && (
-                          <span className="shrink-0 text-[8px] font-black uppercase tracking-widest text-red-400">
+                          <span className="shrink-0 font-black text-[8px] tracking-widest text-red-400 uppercase">
                             Full
                           </span>
                         )}
@@ -205,29 +205,29 @@ export function NextEventHero({
                             href={s.karaokeRequestUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-white bg-[#FF6B35] px-2.5 py-1.5 rounded-full hover:bg-[#FF6B35]/90 active:scale-95 transition-all"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FF6B35] px-2.5 py-1.5 font-black text-[9px] tracking-wide text-white uppercase transition-all hover:bg-[#FF6B35]/90 active:scale-95"
                             aria-label="Request a song to sing on Singa"
                           >
-                            <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+                            <Mic2 className="h-3 w-3 shrink-0" aria-hidden="true" />
                             Sing
                           </a>
                         )}
                         {!s.isFullyBooked && s.isKaraoke && !s.karaokeRequestUrl && (
                           <span
-                            className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide px-2.5 py-1.5 rounded-full bg-white/5 text-stone-500 border border-white/10"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 font-black text-[9px] tracking-wide text-stone-500 uppercase"
                             title="Karaoke night hasn't started yet"
                           >
-                            <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+                            <Mic2 className="h-3 w-3 shrink-0" aria-hidden="true" />
                             Not Started
                           </span>
                         )}
                         {!s.isFullyBooked && !s.isKaraoke && s.isBookable && s.bookingPageUrl && (
                           <a
                             href={s.bookingPageUrl}
-                            className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-[#1a2008] bg-[#FDCC4B] px-2.5 py-1.5 rounded-full hover:bg-[#FDCC4B]/90 active:scale-95 transition-all"
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FDCC4B] px-2.5 py-1.5 font-black text-[9px] tracking-wide text-[#1a2008] uppercase transition-all hover:bg-[#FDCC4B]/90 active:scale-95"
                             aria-label={`Book ${s.title}`}
                           >
-                            <CalendarDays className="w-3 h-3 shrink-0" aria-hidden="true" />
+                            <CalendarDays className="h-3 w-3 shrink-0" aria-hidden="true" />
                             Book
                           </a>
                         )}

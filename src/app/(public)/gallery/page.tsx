@@ -28,7 +28,7 @@ export default async function GalleryPage() {
   }[];
 
   return (
-    <main className="min-h-dvh w-full bg-[#1a2008] text-stone-300 flex flex-col selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased">
+    <main className="flex min-h-dvh w-full flex-col bg-[#1a2008] text-stone-300 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -44,31 +44,31 @@ export default async function GalleryPage() {
 
       <PublicNav currentPath="/gallery" />
 
-      <div className="w-full max-w-5xl mx-auto py-6 sm:py-10 px-4 sm:px-6">
+      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
         {/* Page header — H1 is "GALLERY", not the bar's name */}
         <SectionHeading eyebrow="Photos & videos" title="Gallery" />
 
         {/* Gallery */}
         {galleryItems.length === 0 ? (
-          <div className="text-center py-20 bg-white/3 border border-white/5 rounded-2xl">
-            <Camera className="w-8 h-8 text-stone-700 mx-auto mb-3" />
-            <p className="text-stone-500 font-black text-sm uppercase tracking-tight">
+          <div className="rounded-2xl border border-white/5 bg-white/3 py-20 text-center">
+            <Camera className="mx-auto mb-3 h-8 w-8 text-stone-700" />
+            <p className="font-black text-sm tracking-tight text-stone-500 uppercase">
               No Photos Yet
             </p>
-            <p className="text-stone-600 text-xs mt-1">Check back soon</p>
+            <p className="mt-1 text-xs text-stone-600">Check back soon</p>
           </div>
         ) : (
           <GalleryGrid items={galleryItems} />
         )}
 
         {/* Footer */}
-        <div className="pt-12 mt-8 flex flex-col items-center gap-4">
+        <div className="mt-8 flex flex-col items-center gap-4 pt-12">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
+            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
-          <p className="text-[8px] text-stone-600 uppercase tracking-widest opacity-30">
+          <p className="text-[8px] tracking-widest text-stone-600 uppercase opacity-30">
             Licensed Venue &middot; Please Drink Responsibly
           </p>
         </div>

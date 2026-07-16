@@ -58,48 +58,48 @@ function StatusBanner({ status, paymentStatus }: { status: string | null; paymen
 
   if (s === "cancelled") {
     return (
-      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-red-500/10 border border-red-500/20 mb-6">
-        <XCircle className="w-5 h-5 text-red-400 shrink-0" />
-        <span className="text-xs font-black text-red-400 uppercase tracking-widest">Booking Cancelled</span>
+      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-4">
+        <XCircle className="h-5 w-5 shrink-0 text-red-400" />
+        <span className="font-black text-xs tracking-widest text-red-400 uppercase">Booking Cancelled</span>
       </div>
     );
   }
   if (p === "refunded") {
     return (
-      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-stone-500/10 border border-stone-500/20 mb-6">
-        <CreditCard className="w-5 h-5 text-stone-400 shrink-0" />
-        <span className="text-xs font-black text-stone-400 uppercase tracking-widest">Refunded</span>
+      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-stone-500/20 bg-stone-500/10 px-5 py-4">
+        <CreditCard className="h-5 w-5 shrink-0 text-stone-400" />
+        <span className="font-black text-xs tracking-widest text-stone-400 uppercase">Refunded</span>
       </div>
     );
   }
   if (p === "paid" && s === "confirmed") {
     return (
-      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-6">
-        <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
-        <span className="text-xs font-black text-emerald-400 uppercase tracking-widest">Confirmed &amp; Paid</span>
+      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-5 py-4">
+        <CheckCircle className="h-5 w-5 shrink-0 text-emerald-400" />
+        <span className="font-black text-xs tracking-widest text-emerald-400 uppercase">Confirmed &amp; Paid</span>
       </div>
     );
   }
   if (p === "paid") {
     return (
-      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 mb-6">
-        <CreditCard className="w-5 h-5 text-blue-400 shrink-0" />
-        <span className="text-xs font-black text-blue-400 uppercase tracking-widest">Paid</span>
+      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-blue-500/20 bg-blue-500/10 px-5 py-4">
+        <CreditCard className="h-5 w-5 shrink-0 text-blue-400" />
+        <span className="font-black text-xs tracking-widest text-blue-400 uppercase">Paid</span>
       </div>
     );
   }
   if (s === "waitlisted") {
     return (
-      <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 mb-6">
-        <Clock className="w-5 h-5 text-amber-400 shrink-0" />
-        <span className="text-xs font-black text-amber-400 uppercase tracking-widest">On Waitlist</span>
+      <div className="mb-6 flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-5 py-4">
+        <Clock className="h-5 w-5 shrink-0 text-amber-400" />
+        <span className="font-black text-xs tracking-widest text-amber-400 uppercase">On Waitlist</span>
       </div>
     );
   }
   return (
-    <div className="flex items-center gap-3 px-5 py-4 rounded-2xl bg-[#fdcc4b]/10 border border-[#fdcc4b]/20 mb-6">
-      <Clock className="w-5 h-5 text-[#fdcc4b]/70 shrink-0" />
-      <span className="text-xs font-black text-[#fdcc4b]/70 uppercase tracking-widest">Pending Payment</span>
+    <div className="mb-6 flex items-center gap-3 rounded-2xl border border-[#fdcc4b]/20 bg-[#fdcc4b]/10 px-5 py-4">
+      <Clock className="h-5 w-5 shrink-0 text-[#fdcc4b]/70" />
+      <span className="font-black text-xs tracking-widest text-[#fdcc4b]/70 uppercase">Pending Payment</span>
     </div>
   );
 }
@@ -151,17 +151,17 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
   return (
     <div className="w-full">
       {/* Status header */}
-      <div className="text-center mb-8 animate-in fade-in duration-500">
+      <div className="mb-8 animate-in text-center duration-500 fade-in">
         {isCancelled ? (
-          <XCircle className="mx-auto h-16 w-16 text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
+          <XCircle className="mx-auto mb-4 h-16 w-16 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
         ) : (
-          <CheckCircle className="mx-auto h-16 w-16 text-[#fdcc4b] mb-4 drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
+          <CheckCircle className="mx-auto mb-4 h-16 w-16 text-[#fdcc4b] drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
         )}
-        <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">
+        <h1 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">
           {isCancelled ? "Booking Cancelled" : isEditing ? "Edit Requests" : "Your Booking"}
         </h1>
         {!isEditing && (
-          <p className="text-stone-500 mt-2 font-bold text-xs sm:text-sm uppercase tracking-widest">
+          <p className="mt-2 text-xs font-bold tracking-widest text-stone-500 uppercase sm:text-sm">
             Ref: #{booking.id}
           </p>
         )}
@@ -172,21 +172,21 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
 
       {/* Error / success feedback */}
       {error && (
-        <div className="flex items-center gap-3 mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-          <p className="text-red-400 text-xs font-bold uppercase tracking-tight">{error}</p>
+        <div className="mb-6 flex animate-in items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 slide-in-from-top-2">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
+          <p className="text-xs font-bold tracking-tight text-red-400 uppercase">{error}</p>
         </div>
       )}
       {successMsg && !isEditing && (
-        <div className="flex items-center justify-center gap-2 mb-6 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl animate-in fade-in">
-          <CheckCircle className="w-4 h-4 text-emerald-400" />
-          <p className="text-emerald-400 text-xs font-black uppercase tracking-widest">{successMsg}</p>
+        <div className="mb-6 flex animate-in items-center justify-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3 fade-in">
+          <CheckCircle className="h-4 w-4 text-emerald-400" />
+          <p className="font-black text-xs tracking-widest text-emerald-400 uppercase">{successMsg}</p>
         </div>
       )}
 
       {/* Edit mode — special requests only */}
       {isEditing ? (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="animate-in space-y-6 duration-300 fade-in slide-in-from-bottom-4">
           <div className="space-y-1.5">
             <label className={labelClasses}>Special Requests</label>
             <textarea
@@ -203,15 +203,15 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
               type="button"
               onClick={handleSave}
               disabled={isPending}
-              className="w-full flex items-center justify-center h-16 rounded-2xl bg-[#fdcc4b] hover:bg-[#e5b843] text-[#26300D] font-black text-lg uppercase tracking-widest transition-all shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] active:scale-95 disabled:opacity-50"
+              className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
             >
-              {isPending ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6 mr-2" />Save Changes</>}
+              {isPending ? <Loader2 className="h-6 w-6 animate-spin" /> : <><Save className="mr-2 h-6 w-6" />Save Changes</>}
             </button>
             <button
               type="button"
               onClick={() => { setIsEditing(false); setSpecialRequests(booking.special_requests ?? ""); }}
               disabled={isPending}
-              className="w-full h-14 rounded-2xl border-2 border-white/10 text-stone-400 font-black uppercase tracking-widest text-xs hover:bg-white/5 transition-all"
+              className="h-14 w-full rounded-2xl border-2 border-white/10 font-black text-xs tracking-widest text-stone-400 uppercase transition-all hover:bg-white/5"
             >
               Discard Changes
             </button>
@@ -219,9 +219,9 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
         </div>
       ) : (
         /* View mode */
-        <div className="space-y-8 animate-in fade-in duration-500">
-          <div className="bg-white/5 rounded-3xl p-6 sm:p-8 border border-white/10 space-y-6 shadow-inner relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-[#fdcc4b]/5 blur-3xl pointer-events-none group-hover:bg-[#fdcc4b]/10 transition-colors" />
+        <div className="animate-in space-y-8 duration-500 fade-in">
+          <div className="group relative space-y-6 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-inner sm:p-8">
+            <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 bg-[#fdcc4b]/5 blur-3xl transition-colors group-hover:bg-[#fdcc4b]/10" />
 
             <DetailRow
               icon={<CalendarDays />}
@@ -270,7 +270,7 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
                 type="button"
                 onClick={() => setIsEditing(true)}
                 disabled={isPending}
-                className="flex items-center justify-center w-full h-16 rounded-2xl bg-[#fdcc4b] text-[#26300D] font-black text-sm uppercase tracking-widest transition-all hover:bg-[#e5b843] hover:-translate-y-0.5 shadow-lg active:scale-95 disabled:opacity-50"
+                className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-sm tracking-widest text-[#26300D] uppercase shadow-lg transition-all hover:-translate-y-0.5 hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
               >
                 Edit Special Requests
               </button>
@@ -278,14 +278,14 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
                 type="button"
                 onClick={handleCancel}
                 disabled={isPending}
-                className="flex items-center justify-center w-full h-16 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-xs uppercase tracking-widest transition-all hover:bg-red-500 hover:text-white hover:-translate-y-0.5 active:scale-95 disabled:opacity-50"
+                className="flex h-16 w-full items-center justify-center rounded-2xl border-2 border-red-500/30 font-black text-xs tracking-widest text-red-500 uppercase transition-all hover:-translate-y-0.5 hover:bg-red-500 hover:text-white active:scale-95 disabled:opacity-50"
               >
-                {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : "Cancel Booking"}
+                {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Cancel Booking"}
               </button>
               {booking.payment_status === "paid" && (
-                <div className="flex items-start gap-2 px-4 py-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
-                  <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                  <p className="text-[11px] text-amber-400 font-bold leading-snug">
+                <div className="flex items-start gap-2 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+                  <p className="text-[11px] leading-snug font-bold text-amber-400">
                     If you cancel, refunds are processed by our team. Please allow 3–5 business days.
                   </p>
                 </div>
@@ -294,7 +294,7 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
           )}
 
           <div className="text-center">
-            <p className="text-[9px] font-black text-stone-600 uppercase tracking-[0.4em] opacity-40">
+            <p className="font-black text-[9px] tracking-[0.4em] text-stone-600 uppercase opacity-40">
               Booking Management Portal
             </p>
           </div>
@@ -308,14 +308,14 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
 function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start">
-      <div className="bg-[#26300D] p-3 rounded-2xl mr-4 border border-[#fdcc4b]/20 text-[#fdcc4b] shrink-0 shadow-lg">
+      <div className="mr-4 shrink-0 rounded-2xl border border-[#fdcc4b]/20 bg-[#26300D] p-3 text-[#fdcc4b] shadow-lg">
         {React.isValidElement(icon)
           ? React.cloneElement(icon as React.ReactElement<{ className?: string }>, { className: "w-5 h-5" })
           : icon}
       </div>
-      <div className="text-left min-w-0 pt-1">
-        <p className="text-[10px] font-black text-[#fdcc4b]/50 uppercase tracking-[0.15em] mb-0.5 leading-none">{label}</p>
-        <p className="text-white font-black text-lg sm:text-xl tracking-tight leading-tight wrap-break-word">{value}</p>
+      <div className="min-w-0 pt-1 text-left">
+        <p className="mb-0.5 font-black text-[10px] leading-none tracking-[0.15em] text-[#fdcc4b]/50 uppercase">{label}</p>
+        <p className="font-black text-lg leading-tight tracking-tight wrap-break-word text-white sm:text-xl">{value}</p>
       </div>
     </div>
   );

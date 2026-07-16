@@ -27,8 +27,8 @@ export function FilterTabs({
     // Full-bleed: -mx-[50vw-50%] expands to the viewport edges. The track is
     // w-max + mx-auto so it centres when the chips fit, and still scrolls from
     // the start (no left clipping) when they overflow.
-    <div className="-mx-[calc(50vw-50%)] overflow-x-auto no-scrollbar">
-      <div className="flex w-max gap-2 mx-auto px-4 py-1">
+    <div className="no-scrollbar -mx-[calc(50vw-50%)] overflow-x-auto">
+      <div className="mx-auto flex w-max gap-2 px-4 py-1">
         {tabs.map((tab) => {
           const isActive = tab.key === active;
           return (
@@ -38,15 +38,15 @@ export function FilterTabs({
               onClick={() => onChange(tab.key)}
               aria-pressed={isActive}
               className={
-                "flex-none whitespace-nowrap inline-flex items-center gap-1.5 h-9 px-4 rounded-full text-[11px] font-black uppercase tracking-wide transition-colors " +
+                "inline-flex h-9 flex-none items-center gap-1.5 rounded-full px-4 font-black text-[11px] tracking-wide whitespace-nowrap uppercase transition-colors " +
                 (isActive
                   ? "bg-gold text-on-gold"
-                  : "bg-canvas-2 text-ink-2 border border-hairline hover:text-ink hover:bg-white/10")
+                  : "border border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink")
               }
             >
               {tab.color && (
                 <span
-                  className="ev-dot w-2 h-2 rounded-full shrink-0"
+                  className="ev-dot h-2 w-2 shrink-0 rounded-full"
                   style={{ "--ev-c": tab.color } as React.CSSProperties}
                 />
               )}

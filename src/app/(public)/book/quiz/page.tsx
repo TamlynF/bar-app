@@ -89,7 +89,7 @@ export default async function QuizBookingPage({
   ];
 
   return (
-    <main className="min-h-dvh w-full overflow-x-hidden bg-[#26300D] text-stone-300 flex flex-col selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
+    <main className="flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{ __html: `
         html, body { 
           background-color: #26300D !important; 
@@ -113,53 +113,53 @@ export default async function QuizBookingPage({
         }
       `}} />
       
-      <div className="flex-1 w-full max-w-3xl mx-auto py-4 sm:py-12 px-4 sm:px-6 lg:px-8 flex flex-col">
+      <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-4 sm:px-6 sm:py-12 lg:px-8">
 
         {/* Header Section 
             - Constrained image size on mobile to prevent a 'messy' or oversized appearance.
             - Added 'priority' for LCP optimization.
         */}
-        <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
-          <div className="w-full max-w-50 sm:max-w-md transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98] relative aspect-600/260">
+        <div className="mb-6 flex flex-col items-center text-center sm:mb-10">
+          <div className="relative aspect-600/260 w-full max-w-50 transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98] sm:max-w-md">
             <Image
               src="/DF X PJ Quiz Night.png"
               alt="Don Fenticas x Papa Johns Quiz Night"
               width={300}
               height={150}
-              className="w-full h-auto object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
+              className="h-auto w-full object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
               priority
             />
           </div>
-          <div className="mt-4 sm:mt-6 space-y-2 px-2">
-            <p className="text-stone-400 text-xs sm:text-base font-medium max-w-sm mx-auto leading-relaxed italic opacity-80 text-center">
+          <div className="mt-4 space-y-2 px-2 sm:mt-6">
+            <p className="mx-auto max-w-sm text-center text-xs leading-relaxed font-medium text-stone-400 italic opacity-80 sm:text-base">
               {tagline}
             </p>
           </div>
         </div>
 
         {/* Event Badges - Horizontal Scroll on Mobile, Full Width Dynamic Grid on Desktop */}
-        <div className="flex flex-row overflow-x-auto no-scrollbar gap-2 pb-4 -mx-4 px-4 mb-4 sm:mb-12 sm:flex-wrap sm:overflow-visible sm:mx-0 sm:px-0 sm:justify-center sm:gap-3">
+        <div className="no-scrollbar -mx-4 mb-4 flex flex-row gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:mb-12 sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0">
           {eventBadges.map((badge, index) => (
             <div
               key={index}
               className={cn(
-                "flex items-center justify-center bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 sm:py-3 text-[10px] sm:text-[11px] font-black uppercase tracking-wider transition-all hover:bg-white/8 hover:border-white/20",
-                "flex-none sm:flex-1 sm:min-w-37.5"
+                "flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 font-black text-[10px] tracking-wider uppercase transition-all hover:border-white/20 hover:bg-white/8 sm:py-3 sm:text-[11px]",
+                "flex-none sm:min-w-37.5 sm:flex-1"
               )}
             >
-              <badge.icon className="w-3.5 h-3.5 mr-2 text-[#fdcc4b] shrink-0" />
-              <span className="text-stone-200 whitespace-nowrap">{badge.text}</span>
+              <badge.icon className="mr-2 h-3.5 w-3.5 shrink-0 text-[#fdcc4b]" />
+              <span className="whitespace-nowrap text-stone-200">{badge.text}</span>
             </div>
           ))}
         </div>
 
         {/* Booking Form Card */}
-        <div className="bg-white/3 backdrop-blur-xl rounded-[2.5rem] p-6 sm:p-10 border border-white/10 shadow-2xl relative overflow-hidden ring-1 ring-white/5 mb-12">
-          <div className="absolute -top-32 -left-32 w-64 h-64 bg-[#fdcc4b]/10 blur-[100px] rounded-full pointer-events-none"></div>
+        <div className="relative mb-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/3 p-6 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl sm:p-10">
+          <div className="pointer-events-none absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]"></div>
 
-          <div className="mb-8 text-center relative z-10">
-            <h3 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">Book Your Table</h3>
-            <p className="text-stone-500 text-xs sm:text-base mt-2 font-medium">
+          <div className="relative z-10 mb-8 text-center">
+            <h3 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">Book Your Table</h3>
+            <p className="mt-2 text-xs font-medium text-stone-500 sm:text-base">
               {events.length > 0
                 ? "Lock in your team before we are fully booked."
                 : "Check back soon for upcoming events."}
@@ -170,22 +170,22 @@ export default async function QuizBookingPage({
             {events.length > 0 ? (
               <BookingForm events={events} />
             ) : (
-              <div className="text-center py-8">
-                <p className="text-stone-300 font-black text-lg uppercase tracking-tight mb-2">No Upcoming Events</p>
-                <p className="text-stone-500 text-sm font-medium">There are no quiz nights scheduled yet. Please check back soon!</p>
+              <div className="py-8 text-center">
+                <p className="mb-2 font-black text-lg tracking-tight text-stone-300 uppercase">No Upcoming Events</p>
+                <p className="text-sm font-medium text-stone-500">There are no quiz nights scheduled yet. Please check back soon!</p>
               </div>
             )}
           </div>
         </div>
 
         {/* Footer info */}
-        <div className="pt-8 mt-auto mb-6 flex flex-col items-center gap-4">
+        <div className="mt-auto mb-6 flex flex-col items-center gap-4 pt-8">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50"></div>
-            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
+            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
             <div className="h-px w-6 bg-stone-800/50"></div>
           </div>
-          <p className="text-[8px] text-stone-600 uppercase tracking-widest opacity-30">
+          <p className="text-[8px] tracking-widest text-stone-600 uppercase opacity-30">
             Licensed Venue • Please Drink Responsibly
           </p>
         </div>

@@ -43,56 +43,56 @@ export function ScheduleMore({
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="group w-full flex items-center justify-center gap-2 bg-white/4 hover:bg-white/7 border border-white/10 hover:border-[#FDCC4B]/30 rounded-2xl py-3.5 transition-all"
+        className="group flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/4 py-3.5 transition-all hover:border-[#FDCC4B]/30 hover:bg-white/7"
       >
-        <span className="text-[#FDCC4B] text-[11px] font-black uppercase tracking-[0.2em]">
+        <span className="font-black text-[11px] tracking-[0.2em] text-[#FDCC4B] uppercase">
           {open ? `Hide ${nextMonthLabel}` : `View ${nextMonthLabel}`}
         </span>
         <ChevronDown
-          className={`w-4 h-4 text-[#FDCC4B] transition-transform ${open ? "rotate-180" : ""}`}
+          className={`h-4 w-4 text-[#FDCC4B] transition-transform ${open ? "rotate-180" : ""}`}
         />
       </button>
 
       {open && (
-        <div className="mt-3 bg-white/3 border border-white/8 rounded-2xl divide-y divide-white/5 overflow-hidden">
+        <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/8 bg-white/3">
           {events.map((ev) => {
             const dateObj = parseDate(ev.date);
             const inner = (
-              <div className="flex items-center gap-3 px-4 py-4 hover:bg-white/4 transition-colors">
+              <div className="flex items-center gap-3 px-4 py-4 transition-colors hover:bg-white/4">
                 <span
-                  className="ev-dot shrink-0 w-2 h-2 rounded-full"
+                  className="ev-dot h-2 w-2 shrink-0 rounded-full"
                   style={{ "--ev-c": ev.color } as React.CSSProperties}
                 />
-                <div className="shrink-0 w-12">
-                  <p className="text-stone-500 text-[10px] font-black uppercase tracking-widest leading-tight">
+                <div className="w-12 shrink-0">
+                  <p className="font-black text-[10px] leading-tight tracking-widest text-stone-500 uppercase">
                     {format(dateObj, "EEE")}
                   </p>
-                  <p className="text-white text-base font-black tabular-nums leading-none">
+                  <p className="font-black text-base leading-none text-white tabular-nums">
                     {format(dateObj, "d")}
                   </p>
                 </div>
-                <div className="flex-1 min-w-0">
+                <div className="min-w-0 flex-1">
                   <p
-                    className="ev-text text-sm font-black leading-tight truncate"
+                    className="ev-text truncate font-black text-sm leading-tight"
                     style={{ "--ev-c": ev.color } as React.CSSProperties}
                   >
                     {ev.title}
                   </p>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="mt-0.5 flex items-center gap-2">
                     {ev.subType && (
-                      <span className="text-stone-500 text-[10px] font-bold uppercase tracking-wide truncate">
+                      <span className="truncate text-[10px] font-bold tracking-wide text-stone-500 uppercase">
                         {ev.subType}
                       </span>
                     )}
                     {ev.startTimeLabel && (
-                      <span className="text-stone-400 text-xs font-bold tabular-nums shrink-0">
+                      <span className="shrink-0 text-xs font-bold text-stone-400 tabular-nums">
                         {ev.startTimeLabel}
                       </span>
                     )}
                   </div>
                 </div>
                 {ev.externalLink && (
-                  <ExternalLink className="w-3.5 h-3.5 text-stone-600 shrink-0" />
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-stone-600" />
                 )}
               </div>
             );

@@ -505,12 +505,12 @@ export default async function DashboardPage() {
         <div className="grid items-start gap-5 lg:grid-cols-[1.6fr_1fr]">
 
           {/* Bookings trend — full width, matching the needs-action hero */}
-          <div className="lg:col-span-2 lg:row-start-1">
+          <div className="row-start-1 lg:col-span-2">
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
           {/* SECTION: TRENDS — wide left column */}
-          <section className="space-y-2 lg:col-start-1 lg:row-start-2">
+          <section className="row-start-2 space-y-2 lg:col-start-1">
             <SectionLabel icon={BarChart3} label="Trends" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <RevenueTrendChart data={analytics.weekly} />
@@ -540,7 +540,7 @@ export default async function DashboardPage() {
           </section>
 
           {/* Right column: this month "at a Glance", then "Coming Up" beneath it */}
-          <div className="space-y-5 lg:col-start-2 lg:row-start-2">
+          <div className="row-start-2 space-y-5 lg:col-start-2">
             <section className="space-y-2">
               <SectionLabel
                 icon={TrendingUp}
@@ -602,7 +602,7 @@ export default async function DashboardPage() {
         <section className="space-y-2">
           <SectionLabel icon={Zap} label="Quick Links" />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <QuickLink href="/book/bingo" label="Walk-in" icon={Plus} />
+            <QuickLink href="/book" label="Walk-in" icon={Plus} />
             <QuickLink href="/settings/tables" label="Floor Plan" icon={Grid2X2} />
             <QuickLink href="/event-setups/quiz-generator" label="Quiz" icon={Trophy} />
             <QuickLink href="/event-setups/events" label="Schedule" icon={CalendarDays} />

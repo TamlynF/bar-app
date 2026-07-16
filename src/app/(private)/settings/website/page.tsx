@@ -41,28 +41,28 @@ const websiteItems = [
 
 export default function WebsiteBasePage() {
   return (
-    <div className="px-2 py-2 sm:px-8 sm:py-0 space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="space-y-6 px-2 py-2 sm:px-8 sm:py-0">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {websiteItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className="group flex items-center justify-between p-3 bg-white border border-[#E6DFC8] rounded-3xl shadow-sm hover:border-[#5C4033] hover:shadow-md transition-all active:scale-[0.98]"
+            className="group flex items-center justify-between rounded-3xl border border-[#E6DFC8] bg-white p-3 shadow-sm transition-all hover:border-[#5C4033] hover:shadow-md active:scale-[0.98]"
           >
             <div className="flex items-center gap-4">
-              <div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center shrink-0 transition-transform group-hover:scale-110`}>
-                <item.icon className="w-6 h-6" />
+              <div className={`h-12 w-12 rounded-2xl ${item.color} flex shrink-0 items-center justify-center transition-transform group-hover:scale-110`}>
+                <item.icon className="h-6 w-6" />
               </div>
               <div className="flex flex-col">
-                <span className="font-black text-[#1F1F1A] uppercase tracking-tight leading-none">
+                <span className="font-black leading-none tracking-tight text-[#1F1F1A] uppercase">
                   {item.title}
                 </span>
-                <span className="text-[11px] text-[#5F624F] font-bold opacity-60 uppercase mt-1.5 tracking-wider">
+                <span className="mt-1.5 text-[11px] font-bold tracking-wider text-[#5F624F] uppercase opacity-60">
                   {item.description}
                 </span>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-[#E6DFC8] group-hover:text-[#5C4033] transition-colors" />
+            <ChevronRight className="h-5 w-5 text-[#E6DFC8] transition-colors group-hover:text-[#5C4033]" />
           </Link>
         ))}
       </div>

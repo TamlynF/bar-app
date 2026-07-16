@@ -162,33 +162,33 @@ export default function PromoContentClient({
   const formDefault = isEditing ? selected : null;
 
   return (
-    <div className="px-2 py-3 sm:px-4 md:px-6 sm:py-0 space-y-3 sm:space-y-4 max-w-2xl">
+    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {/* List */}
       {initialPromos.length === 0 ? (
-        <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
-          <ImageIcon className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
-          <p className="text-sm font-black text-[#1F1F1A]">No promo content yet</p>
-          <p className="text-[11px] text-[#5F624F] mt-1">
+        <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
+          <ImageIcon className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
+          <p className="font-black text-sm text-[#1F1F1A]">No promo content yet</p>
+          <p className="mt-1 text-[11px] text-[#5F624F]">
             Upload social media posts and event promos
           </p>
           <button
             type="button"
             onClick={openAdd}
-            className="mt-4 h-8 px-4 rounded-lg bg-[#1B4332] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#1B4332]/85 transition-colors"
+            className="mt-4 h-8 rounded-lg bg-[#1B4332] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85"
           >
-            <Plus className="w-3.5 h-3.5 inline mr-1" />
+            <Plus className="mr-1 inline h-3.5 w-3.5" />
             Add Promo
           </button>
         </div>
       ) : (
-        <section className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
-          <div className="flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3 gap-2">
+        <section className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
+          <div className="flex items-center gap-2 bg-[#F7F4EA] px-4 py-3 sm:px-5">
             <button
               type="button"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="flex-1 min-w-0 text-left"
+              className="min-w-0 flex-1 text-left"
             >
-              <p className="text-[11px] font-bold uppercase tracking-wide text-[#5C4033] truncate">
+              <p className="truncate text-[11px] font-bold tracking-wide text-[#5C4033] uppercase">
                 Promo Content{" "}
                 <span className="text-[#5F624F]">({initialPromos.length})</span>
               </p>
@@ -196,11 +196,11 @@ export default function PromoContentClient({
             <button
               type="button"
               onClick={openAdd}
-              className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#1B4332] text-white hover:bg-[#1B4332]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+              className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1B4332] text-white transition-colors hover:bg-[#1B4332]/85 sm:h-7 sm:w-auto sm:px-2.5"
               title="Add Promo"
             >
-              <Plus className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden font-black text-[10px] tracking-widest uppercase sm:inline">
                 Create
               </span>
             </button>
@@ -212,7 +212,7 @@ export default function PromoContentClient({
             >
               <ChevronDown
                 className={cn(
-                  "w-4 h-4 text-[#5F624F] transition-transform duration-200",
+                  "h-4 w-4 text-[#5F624F] transition-transform duration-200",
                   !isCollapsed && "rotate-180"
                 )}
               />
@@ -227,25 +227,25 @@ export default function PromoContentClient({
                   <div
                     key={promo.id}
                     onClick={() => openView(promo)}
-                    className="px-3 sm:px-4 py-3 flex items-center gap-2 sm:gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
+                    className="flex cursor-pointer items-center gap-2 px-3 py-3 transition-colors hover:bg-[#F7F4EA]/50 active:scale-[0.99] sm:gap-3 sm:px-4"
                   >
-                    <div className="w-10 h-10 rounded-lg bg-[#F7F4EA] border border-[#E6DFC8] flex items-center justify-center shrink-0 overflow-hidden">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#E6DFC8] bg-[#F7F4EA]">
                       {promo.media_type === "video" ? (
-                        <Film className="w-4 h-4 text-[#5F624F]" />
+                        <Film className="h-4 w-4 text-[#5F624F]" />
                       ) : (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={promo.media_url}
                           alt=""
-                          className="w-full h-full object-cover"
+                          className="h-full w-full object-cover"
                         />
                       )}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p
                           className={cn(
-                            "text-xs sm:text-sm font-black leading-snug truncate flex-1 min-w-0",
+                            "min-w-0 flex-1 truncate font-black text-xs leading-snug sm:text-sm",
                             inactive ? "text-[#5F624F]" : "text-[#1F1F1A]"
                           )}
                         >
@@ -253,26 +253,26 @@ export default function PromoContentClient({
                         </p>
                         <span
                           className={cn(
-                            "text-[10px] font-bold shrink-0",
+                            "shrink-0 text-[10px] font-bold",
                             promo.is_active ? "text-green-600" : "text-red-500"
                           )}
                         >
                           {promo.is_active ? "Active" : "Inactive"}
                         </span>
                       </div>
-                      <div className="flex items-center mt-0.5 gap-1.5">
-                        <span className="text-[9px] font-bold text-[#5F624F] bg-[#F7F4EA] border border-[#E6DFC8] px-1.5 py-0.5 rounded uppercase">
+                      <div className="mt-0.5 flex items-center gap-1.5">
+                        <span className="rounded border border-[#E6DFC8] bg-[#F7F4EA] px-1.5 py-0.5 text-[9px] font-bold text-[#5F624F] uppercase">
                           {promo.media_type}
                         </span>
                         {promo.external_url && (
-                          <ExternalLink className="w-3 h-3 text-[#5F624F] opacity-50" />
+                          <ExternalLink className="h-3 w-3 text-[#5F624F] opacity-50" />
                         )}
-                        <span className="text-[10px] text-[#5F624F] font-medium truncate">
+                        <span className="truncate text-[10px] font-medium text-[#5F624F]">
                           Order: {promo.display_order}
                         </span>
                       </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F] opacity-40" />
                   </div>
                 );
               })}
@@ -287,23 +287,23 @@ export default function PromoContentClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
-            flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
-            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8]
+            bg-[#F7F4EA] p-0 shadow-2xl outline-none
+            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
+            sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase">
                   {isAdding ? "New Promo" : isEditing ? "Edit Promo" : "View Promo"}
                 </SheetTitle>
                 {selected && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <Hash className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-xs font-bold text-[#5F624F] uppercase tracking-wide tabular-nums">
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Hash className="h-3 w-3 text-[#5F624F]" />
+                    <span className="text-xs font-bold tracking-wide text-[#5F624F] uppercase tabular-nums">
                       ID: {selected.id}
                     </span>
                   </div>
@@ -313,11 +313,11 @@ export default function PromoContentClient({
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y space-y-4 sm:space-y-5">
+          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
             {/* View mode */}
             {!showForm && selected && (
-              <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+              <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+                <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                   <DetailCell label="Title" value={selected.title} />
                   <DetailCell label="Description" value={selected.description || "—"} />
                   <DetailCell label="Media Type" value={selected.media_type} />
@@ -327,10 +327,10 @@ export default function PromoContentClient({
                 </div>
 
                 {/* Media preview */}
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden p-3">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <ImageIcon className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">
+                <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white p-3">
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <ImageIcon className="h-3 w-3 text-[#5F624F]" />
+                    <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">
                       Preview
                     </span>
                   </div>
@@ -339,14 +339,14 @@ export default function PromoContentClient({
                       src={selected.media_url}
                       controls
                       preload="metadata"
-                      className="w-full rounded-xl max-h-60"
+                      className="max-h-60 w-full rounded-xl"
                     />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={selected.media_url}
                       alt={selected.title}
-                      className="w-full h-40 object-cover rounded-xl"
+                      className="h-40 w-full rounded-xl object-cover"
                     />
                   )}
                 </div>
@@ -360,18 +360,18 @@ export default function PromoContentClient({
               <form
                 id="promo-form"
                 onSubmit={handleSubmit}
-                className="animate-in fade-in duration-200 space-y-4 sm:space-y-5"
+                className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
               >
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
 
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                   <FormRow label="Title" required>
                     <input
                       name="title"
                       required
                       placeholder="e.g. June Band Night"
                       defaultValue={formDefault?.title ?? ""}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
                     />
                   </FormRow>
 
@@ -380,14 +380,14 @@ export default function PromoContentClient({
                       name="description"
                       placeholder="e.g. Sat 6th June at DF"
                       defaultValue={formDefault?.description ?? ""}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
                     />
                   </FormRow>
 
                   {/* Media upload */}
-                  <div className="px-4 sm:px-5 py-2.5 sm:py-4">
-                    <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wide">
+                  <div className="px-4 py-2.5 sm:px-5 sm:py-4">
+                    <div className="mb-2 flex items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+                      <span className="text-[10px] font-bold tracking-wide uppercase">
                         Media <span className="text-red-500">*</span>
                       </span>
                     </div>
@@ -398,20 +398,20 @@ export default function PromoContentClient({
                             src={mediaUrl}
                             controls
                             preload="metadata"
-                            className="w-full rounded-xl max-h-40"
+                            className="max-h-40 w-full rounded-xl"
                           />
                         ) : (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={mediaUrl}
                             alt="Preview"
-                            className="w-full h-32 object-cover rounded-xl"
+                            className="h-32 w-full rounded-xl object-cover"
                           />
                         )}
                         <button
                           type="button"
                           onClick={() => { setMediaUrl(""); setMediaType("image"); }}
-                          className="absolute top-2 right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center text-xs font-bold"
+                          className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white"
                         >
                           x
                         </button>
@@ -421,14 +421,14 @@ export default function PromoContentClient({
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading}
-                        className="w-full flex items-center justify-center gap-2 py-6 border-2 border-dashed border-[#E6DFC8] rounded-xl text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033] transition-colors"
+                        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E6DFC8] py-6 text-[#5F624F] transition-colors hover:border-[#5C4033] hover:text-[#5C4033]"
                       >
                         {uploading ? (
-                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <Loader2 className="h-5 w-5 animate-spin" />
                         ) : (
-                          <Upload className="w-5 h-5" />
+                          <Upload className="h-5 w-5" />
                         )}
-                        <span className="text-xs font-bold uppercase tracking-wide">
+                        <span className="text-xs font-bold tracking-wide uppercase">
                           {uploading ? "Uploading..." : "Upload Image or Video"}
                         </span>
                       </button>
@@ -449,7 +449,7 @@ export default function PromoContentClient({
                       type="url"
                       placeholder="https://instagram.com/p/..."
                       defaultValue={formDefault?.external_url ?? ""}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
                     />
                   </FormRow>
 
@@ -458,7 +458,7 @@ export default function PromoContentClient({
                       title="Status"
                       name="is_active"
                       defaultValue={formDefault?.is_active === false ? "false" : "true"}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
+                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
                     >
                       <option value="true" className="dir-ltr">Active</option>
                       <option value="false" className="dir-ltr">Inactive</option>
@@ -472,7 +472,7 @@ export default function PromoContentClient({
                       type="number"
                       min="0"
                       defaultValue={formDefault?.display_order ?? 0}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none w-16"
+                      className="w-16 flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
                     />
                   </FormRow>
                 </div>
@@ -485,27 +485,27 @@ export default function PromoContentClient({
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
+          <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-wide text-[10px] bg-white hover:bg-red-50 hover:border-red-200"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
                 >
                   {isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Trash2 className="w-4 h-4 mr-2" />
+                    <Trash2 className="mr-2 h-4 w-4" />
                   )}
                   Delete
                 </Button>
                 <Button
                   onClick={startEdit}
-                  className="h-14 flex-1 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95"
                 >
-                  <Pencil className="w-4 h-4 mr-2" />
+                  <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </Button>
               </div>
@@ -522,7 +522,7 @@ export default function PromoContentClient({
                     else setIsEditing(false);
                   }}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                 >
                   Cancel
                 </Button>
@@ -530,13 +530,13 @@ export default function PromoContentClient({
                   type="submit"
                   form="promo-form"
                   disabled={isPending || uploading}
-                  className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95"
                 >
                   {isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>
-                      <Save className="w-4 h-4 mr-2" />
+                      <Save className="mr-2 h-4 w-4" />
                       Save
                     </>
                   )}
@@ -561,12 +561,12 @@ function FormRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4">
-      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
-        <span className="text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
+    <div className="flex items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4">
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
           {label}
         </span>
-        {required && <span className="text-red-500 text-[10px] font-bold">*</span>}
+        {required && <span className="text-[10px] font-bold text-red-500">*</span>}
       </div>
       {children}
     </div>
@@ -575,13 +575,13 @@ function FormRow({
 
 function DetailCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-b border-[#E6DFC8] last:border-0">
-      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
-        <span className="text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
+    <div className="flex items-center gap-2 border-b border-[#E6DFC8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
           {label}
         </span>
       </div>
-      <span className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug break-all">
+      <span className="flex-1 text-right font-black text-base leading-snug break-all text-[#1F1F1A] sm:text-sm">
         {value}
       </span>
     </div>
@@ -590,9 +590,9 @@ function DetailCell({ label, value }: { label: string; value: string }) {
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
-      <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-      <p className="text-sm text-red-700 font-bold leading-snug">{message}</p>
+    <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+      <p className="text-sm leading-snug font-bold text-red-700">{message}</p>
     </div>
   );
 }

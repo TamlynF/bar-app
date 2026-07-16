@@ -80,45 +80,45 @@ export default function ManageBookingView({
   return (
     <div className="w-full">
       {/* STATUS HEADER */}
-      <div className="text-center mb-8 animate-in fade-in duration-500">
+      <div className="mb-8 animate-in text-center duration-500 fade-in">
         {isCancelled ? (
-          <XCircle className="mx-auto h-16 w-16 text-red-500 mb-4 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
+          <XCircle className="mx-auto mb-4 h-16 w-16 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
         ) : isPending ? (
-          <Clock3 className="mx-auto h-16 w-16 text-amber-400 mb-4 drop-shadow-[0_0_15px_rgba(251,191,36,0.3)]" />
+          <Clock3 className="mx-auto mb-4 h-16 w-16 text-amber-400 drop-shadow-[0_0_15px_rgba(251,191,36,0.3)]" />
         ) : (
-          <CheckCircle className="mx-auto h-16 w-16 text-[#fdcc4b] mb-4 drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
+          <CheckCircle className="mx-auto mb-4 h-16 w-16 text-[#fdcc4b] drop-shadow-[0_0_15px_rgba(253,204,75,0.3)]" />
         )}
 
-        <h1 className="text-2xl sm:text-4xl font-black text-white tracking-tighter uppercase leading-none">
+        <h1 className="font-black text-2xl leading-none tracking-tighter text-white uppercase sm:text-4xl">
           {isCancelled ? "Booking Cancelled" : "Your Booking"}
         </h1>
-        <p className="text-stone-500 mt-2 font-bold text-xs sm:text-sm uppercase tracking-widest">
+        <p className="mt-2 text-xs font-bold tracking-widest text-stone-500 uppercase sm:text-sm">
           Ref: #{booking.id}
         </p>
       </div>
 
       {/* ERROR */}
       {error && (
-        <div className="flex items-center gap-3 mb-6 bg-red-500/10 border border-red-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
-          <AlertCircle className="w-5 h-5 text-red-400 shrink-0" />
-          <p className="text-red-400 text-xs font-bold uppercase tracking-tight leading-snug">{error}</p>
+        <div className="mb-6 flex animate-in items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 slide-in-from-top-2">
+          <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
+          <p className="text-xs leading-snug font-bold tracking-tight text-red-400 uppercase">{error}</p>
         </div>
       )}
 
       {/* PENDING-PAYMENT NOTICE */}
       {isPending && isUnpaid && (
-        <div className="flex items-start gap-3 mb-6 bg-amber-500/10 border border-amber-500/20 p-4 rounded-2xl animate-in slide-in-from-top-2">
-          <Clock3 className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-          <p className="text-amber-400 text-xs font-bold uppercase tracking-tight leading-snug">
+        <div className="mb-6 flex animate-in items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 slide-in-from-top-2">
+          <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+          <p className="text-xs leading-snug font-bold tracking-tight text-amber-400 uppercase">
             Payment not yet completed. If you didn&apos;t finish checkout, please rebook or contact the bar.
           </p>
         </div>
       )}
 
       {/* DETAILS */}
-      <div className="space-y-8 animate-in fade-in duration-500">
-        <div className="bg-white/5 rounded-3xl p-6 sm:p-8 border border-white/10 space-y-6 shadow-inner relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-[#fdcc4b]/5 blur-3xl pointer-events-none group-hover:bg-[#fdcc4b]/10 transition-colors" />
+      <div className="animate-in space-y-8 duration-500 fade-in">
+        <div className="group relative space-y-6 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-inner sm:p-8">
+          <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 bg-[#fdcc4b]/5 blur-3xl transition-colors group-hover:bg-[#fdcc4b]/10" />
 
           <DetailRow icon={<Ticket />} label="Event" value={booking.events?.event_title || "Event"} />
           <DetailRow
@@ -145,14 +145,14 @@ export default function ManageBookingView({
             type="button"
             onClick={handleCancel}
             disabled={isCancelling}
-            className="flex items-center justify-center w-full h-16 rounded-2xl border-2 border-red-500/30 text-red-500 font-black text-xs uppercase tracking-widest transition-all hover:bg-red-500 hover:text-white hover:-translate-y-0.5 active:scale-95 disabled:opacity-50"
+            className="flex h-16 w-full items-center justify-center rounded-2xl border-2 border-red-500/30 font-black text-xs tracking-widest text-red-500 uppercase transition-all hover:-translate-y-0.5 hover:bg-red-500 hover:text-white active:scale-95 disabled:opacity-50"
           >
-            {isCancelling ? <Loader2 className="w-5 h-5 animate-spin" /> : "Cancel Booking"}
+            {isCancelling ? <Loader2 className="h-5 w-5 animate-spin" /> : "Cancel Booking"}
           </button>
         )}
 
         <div className="text-center">
-          <p className="text-[9px] font-black text-stone-600 uppercase tracking-[0.4em] opacity-40">
+          <p className="font-black text-[9px] tracking-[0.4em] text-stone-600 uppercase opacity-40">
             Booking Management Portal
           </p>
         </div>
@@ -165,16 +165,16 @@ export default function ManageBookingView({
 function DetailRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex items-start">
-      <div className="bg-[#26300D] p-3 rounded-2xl mr-4 border border-[#fdcc4b]/20 text-[#fdcc4b] shrink-0 shadow-lg">
+      <div className="mr-4 shrink-0 rounded-2xl border border-[#fdcc4b]/20 bg-[#26300D] p-3 text-[#fdcc4b] shadow-lg">
         {React.isValidElement(icon)
           ? React.cloneElement(icon as React.ReactElement<{ className?: string }>, {
               className: "w-5 h-5",
             })
           : icon}
       </div>
-      <div className="text-left min-w-0 pt-1">
-        <p className="text-[10px] font-black text-[#fdcc4b]/50 uppercase tracking-[0.15em] mb-0.5 leading-none">{label}</p>
-        <p className="text-white font-black text-lg sm:text-xl tracking-tight leading-tight whitespace-pre-wrap wrap-break-word">{value}</p>
+      <div className="min-w-0 pt-1 text-left">
+        <p className="mb-0.5 font-black text-[10px] leading-none tracking-[0.15em] text-[#fdcc4b]/50 uppercase">{label}</p>
+        <p className="font-black text-lg leading-tight tracking-tight wrap-break-word whitespace-pre-wrap text-white sm:text-xl">{value}</p>
       </div>
     </div>
   );

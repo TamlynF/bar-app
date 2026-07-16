@@ -189,52 +189,52 @@ export default async function BookingHubPage() {
         key={card.key}
         href={card.href}
         style={{ "--cc": card.colorHex } as React.CSSProperties}
-        className="group flex flex-col bg-white/5 hover:bg-white/12 shadow-black/20 shadow-lg p-6 border border-white/15 hover:border-white/30 rounded-2xl min-h-44 active:scale-[0.99] transition-all hover:-translate-y-1 duration-300"
+        className="group flex min-h-44 flex-col rounded-2xl border border-white/15 bg-white/5 p-6 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:bg-white/12 active:scale-[0.99]"
       >
-        <div className="flex justify-between items-start gap-3 mb-5">
-          <div className="flex items-center justify-center w-8 h-8 bg-(--cc)/12 rounded-lg border-(--cc)/25 shrink-0 border">
-            <Icon className="w-4 h-4 text-(--cc)" />
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-(--cc)/25 bg-(--cc)/12">
+            <Icon className="h-4 w-4 text-(--cc)" />
           </div>
           <span
             className={
               isFullBadge
-                ? "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30"
-                : "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full bg-(--cc)/12 text-(--cc) border border-(--cc)/25"
+                ? "rounded-full border border-red-500/30 bg-red-500/20 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-400 uppercase"
+                : "rounded-full border border-(--cc)/25 bg-(--cc)/12 px-2 py-0.5 font-black text-[9px] tracking-widest text-(--cc) uppercase"
             }
           >
             {badgeText}
           </span>
         </div>
 
-        <span className="font-black text-white text-2xl sm:text-3xl uppercase line-clamp-2 leading-[0.95] tracking-tighter">
+        <span className="line-clamp-2 font-black text-2xl leading-[0.95] tracking-tighter text-white uppercase sm:text-3xl">
           {card.title}
         </span>
         {card.tagline && (
-          <p className="mt-2 text-stone-400 text-xs line-clamp-2 leading-relaxed">{card.tagline}</p>
+          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-stone-400">{card.tagline}</p>
         )}
 
-        <span className="inline-flex items-center gap-1.5 mt-auto pt-4 text-[10px] font-black tracking-widest text-(--cc) transition-all uppercase group-hover:gap-2.5">
+        <span className="mt-auto inline-flex items-center gap-1.5 pt-4 font-black text-[10px] tracking-widest text-(--cc) uppercase transition-all group-hover:gap-2.5">
           {card.requestKind ? "Enquire now" : isGroup ? `Next: ${dateStr}` : dateStr}
-          <ArrowRight className="w-3.5 h-3.5" aria-hidden="true" />
+          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
       </Link>
     );
   };
 
   return (
-    <main className="bg-[#26300D] selection:bg-[#fdcc4b] px-4 pb-12 w-full min-h-dvh selection:text-[#26300D]">
+    <main className="min-h-dvh w-full bg-[#26300D] px-4 pb-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{
         __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }`
       }} />
 
       <PublicNav currentPath="/book" />
 
-      <div className="mx-auto pt-1 sm:pt-1 max-w-5xl">
+      <div className="mx-auto max-w-5xl pt-1 sm:pt-1">
         {/* Upcoming Bookable Events (ticketed) */}
         {ticketCards.length > 0 && (
           <div className="mt-1 sm:mt-1">
             <SectionHeading eyebrow="Tickets" title="Upcoming Events" />
-            <div className="gap-4 grid grid-cols-1 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {ticketCards.map(renderCard)}
             </div>
           </div>
@@ -244,20 +244,20 @@ export default async function BookingHubPage() {
         {requestCards.length > 0 && (
           <div className="mt-16 sm:mt-20">
             <SectionHeading eyebrow="Get in touch" title="Requests & Enquiries" />
-            <div className="gap-4 grid grid-cols-1 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {requestCards.map(renderCard)}
             </div>
           </div>
         )}
 
         {/* Footer */}
-        <div className="flex flex-col items-center gap-2 mt-16">
+        <div className="mt-16 flex flex-col items-center gap-2">
           <div className="flex items-center gap-3 text-stone-800">
-            <div className="bg-stone-800/50 w-6 h-px" />
-            <span className="font-bold text-[9px] uppercase tracking-[0.4em]">Don Fenticas</span>
-            <div className="bg-stone-800/50 w-6 h-px" />
+            <div className="h-px w-6 bg-stone-800/50" />
+            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
+            <div className="h-px w-6 bg-stone-800/50" />
           </div>
-          <p className="opacity-40 font-bold text-[8px] text-stone-700 uppercase tracking-widest">
+          <p className="text-[8px] font-bold tracking-widest text-stone-700 uppercase opacity-40">
             Licensed Venue · Please Drink Responsibly
           </p>
         </div>

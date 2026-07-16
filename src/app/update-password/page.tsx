@@ -13,12 +13,12 @@ export default async function UpdatePasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F4EA] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-sm border border-[#E6DFC8]">
-        <h1 className="text-2xl font-black uppercase tracking-tight text-[#26300D] mb-2">
+    <div className="flex min-h-screen items-center justify-center bg-[#F7F4EA] p-4">
+      <div className="w-full max-w-md rounded-2xl border border-[#E6DFC8] bg-white p-8 shadow-sm">
+        <h1 className="mb-2 font-black text-2xl tracking-tight text-[#26300D] uppercase">
           Update Password
         </h1>
-        <p className="text-sm font-medium text-[#5F624F] mb-6">
+        <p className="mb-6 text-sm font-medium text-[#5F624F]">
           Please enter your new password below.
         </p>
 

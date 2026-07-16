@@ -386,14 +386,14 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
   const showEventMoveHint = originalEventIdFromRec !== editForm.event_id;
 
   return (
-    <div className="space-y-3 animate-in fade-in duration-500">
+    <div className="animate-in space-y-3 duration-500 fade-in">
       {/* Stats + Search grouped card */}
-      <div className="bg-white border border-[#E6DFC8] rounded-2xl shadow-sm">
+      <div className="rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center">
 
           {/* Stats Bar — scrolls on mobile, evenly spaced on sm+ */}
-          <div className="overflow-x-auto no-scrollbar px-2 pt-2 sm:flex-1 sm:pt-0">
-            <div className="flex items-stretch gap-3 w-full px-2 py-3 min-w-max sm:min-w-0 sm:justify-evenly sm:gap-0">
+          <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:flex-1 sm:pt-0">
+            <div className="flex w-full min-w-max items-stretch gap-3 px-2 py-3 sm:min-w-0 sm:justify-evenly sm:gap-0">
               <StatusCircle
                 guestCount={stats.total.guests}
                 teamCount={stats.total.teams}
@@ -438,20 +438,20 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
           </div>
 
           {/* Divider: horizontal on mobile, vertical on sm+ */}
-          <div className="border-t border-[#E6DFC8] mx-3 sm:hidden" />
-          <div className="hidden sm:block w-px bg-[#E6DFC8] sm:self-stretch sm:my-2" />
+          <div className="mx-3 border-t border-[#E6DFC8] sm:hidden" />
+          <div className="hidden w-px bg-[#E6DFC8] sm:my-2 sm:block sm:self-stretch" />
 
           {/* Search */}
-          <div className="flex justify-center px-4 mb-3 sm:mb-0 sm:py-2 sm:px-3 sm:shrink-0">
-            <div className="flex items-center gap-3 h-10 px-4 w-full max-w-sm sm:w-56 rounded-xl border border-[#E6DFC8] focus-within:border-[#5C4033] transition-colors">
-              <div className="flex items-center gap-2 flex-1 min-w-0">
-                <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
+          <div className="mb-3 flex justify-center px-4 sm:mb-0 sm:shrink-0 sm:px-3 sm:py-2">
+            <div className="flex h-10 w-full max-w-sm items-center gap-3 rounded-xl border border-[#E6DFC8] px-4 transition-colors focus-within:border-[#5C4033] sm:w-56">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
                 <input
                   type="text"
                   placeholder="Search team names or guests..."
                   value={searchQuery}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="flex-1 min-w-0 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 placeholder:normal-case placeholder:font-normal placeholder:tracking-normal"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-[#5F624F]/40 placeholder:normal-case"
                 />
               </div>
               {(activeStatusFilters.size > 0 || searchQuery.length > 0) && (
@@ -459,9 +459,9 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                   type="button"
                   title="Cancel"
                   onClick={() => { setActiveStatusFilters(new Set()); setSearchQuery(""); }}
-                  className="shrink-0 p-1 rounded-lg hover:bg-[#E6DFC8] transition-colors"
+                  className="shrink-0 rounded-lg p-1 transition-colors hover:bg-[#E6DFC8]"
                 >
-                  <X className="w-3.5 h-3.5 text-[#5F624F]/50" />
+                  <X className="h-3.5 w-3.5 text-[#5F624F]/50" />
                 </button>
               )}
             </div>
@@ -473,9 +473,9 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
       {/* Booking Cards */}
       <div className="space-y-2 pb-2">
         {filteredBookings.length === 0 ? (
-          <div className="py-16 text-center bg-white rounded-2xl border border-dashed border-[#E6DFC8]">
-            <Inbox className="w-10 h-10 text-[#5F624F]/50 mx-auto mb-3" />
-            <p className="text-[#5F624F] text-sm font-medium">No bookings found</p>
+          <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">
+            <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5F624F]/50" />
+            <p className="text-sm font-medium text-[#5F624F]">No bookings found</p>
           </div>
         ) : (
           filteredBookings.map((b) => (
@@ -497,23 +497,23 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh] flex flex-col outline-none shadow-2xl"
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none"
         >
           {selectedBooking && (
             <>
               <span ref={topFocusRef} tabIndex={-1} className="sr-only" />
               
               {/* HEADER: Reference visible + Edit/Delete buttons top right */}
-              <div className="shrink-0 p-2 pb-2 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 flex flex-row items-start justify-between gap-2">
-                <div className="flex-1 min-w-0 text-left">
-                  <SheetTitle className="text-xl sm:text-2xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+              <div className="sticky top-0 z-30 flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#E6DFC8] bg-white/80 p-2 pb-2 backdrop-blur-md">
+                <div className="min-w-0 flex-1 text-left">
+                  <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase sm:text-2xl">
                     {isEditing ? "Modify Record" : (selectedBooking.group_name || "Guest Team")}
                   </SheetTitle>
                   
                   {/* REFERENCE ID */}
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <Hash className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-xs font-black text-[#5F624F] uppercase tracking-wide tabular-nums">
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Hash className="h-3 w-3 text-[#5F624F]" />
+                    <span className="font-black text-xs tracking-wide text-[#5F624F] uppercase tabular-nums">
                       Ref: {selectedBooking.id}
                     </span>
                   </div>
@@ -521,40 +521,40 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               </div>
 
               {/* Scrollable Body */}
-              <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-6 py-6 space-y-6 min-h-0 touch-pan-y overscroll-contain text-left">
+              <div ref={scrollContainerRef} className="min-h-0 flex-1 touch-pan-y space-y-6 overflow-y-auto overscroll-contain px-6 py-6 text-left">
                 
                 {/* STATUS + GROUP SIZE BANNER */}
                 {!isEditing && (
                   <div className={cn(
-                    "flex items-center justify-between w-full px-5 py-4 rounded-2xl border-2 animate-in fade-in slide-in-from-top-2 duration-300",
+                    "flex w-full animate-in items-center justify-between rounded-2xl border-2 px-5 py-4 duration-300 fade-in slide-in-from-top-2",
                     statusTheme[normStatus(selectedBooking.status) || "pending"]?.bg,
                     statusTheme[normStatus(selectedBooking.status) || "pending"]?.border,
                   )}>
                     <div className="flex items-center gap-2.5">
-                      <div className={cn("w-2.5 h-2.5 rounded-full shrink-0", statusTheme[normStatus(selectedBooking.status) || "pending"]?.dot)} />
-                      <span className={cn("text-sm font-black uppercase tracking-wide", statusTheme[normStatus(selectedBooking.status) || "pending"]?.text)}>
+                      <div className={cn("h-2.5 w-2.5 shrink-0 rounded-full", statusTheme[normStatus(selectedBooking.status) || "pending"]?.dot)} />
+                      <span className={cn("font-black text-sm tracking-wide uppercase", statusTheme[normStatus(selectedBooking.status) || "pending"]?.text)}>
                         {normStatus(selectedBooking.status) || "pending"}
                       </span>
                     </div>
                     <div className={cn("flex items-center gap-1.5", statusTheme[normStatus(selectedBooking.status) || "pending"]?.text)}>
-                      <Users className="w-4 h-4 opacity-50" />
-                      <span className="text-2xl font-black tabular-nums leading-none">{selectedBooking.group_size}</span>
-                      <span className="text-[10px] font-bold opacity-50 uppercase self-end mb-0.5">guests</span>
+                      <Users className="h-4 w-4 opacity-50" />
+                      <span className="font-black text-2xl leading-none tabular-nums">{selectedBooking.group_size}</span>
+                      <span className="mb-0.5 self-end text-[10px] font-bold uppercase opacity-50">guests</span>
                     </div>
                   </div>
                 )}
 
                 {isEditing ? (
                   // EDIT MODE FORM - Consistent with Quiz Generator inline editor
-                  <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="animate-in space-y-6 duration-300 fade-in slide-in-from-bottom-2">
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Event Date & Session</Label>
-                      <div className="relative group">
+                      <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Event Date & Session</Label>
+                      <div className="group relative">
                         <select 
                           title="Select Event"
                           value={editForm.event_id}
                           onChange={(e) => handleEventChange(e.target.value)}
-                          className="w-full h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold appearance-none outline-none focus:border-[#5C4033] transition-all"
+                          className="h-14 w-full appearance-none rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold transition-all outline-none focus:border-[#5C4033]"
                         >
                           {availableEvents.map(e => (
                             <option key={e.id} value={e.id}>
@@ -562,27 +562,27 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                             </option>
                           ))}
                         </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5F624F] opacity-40 pointer-events-none" />
+                        <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 text-[#5F624F] opacity-40" />
                       </div>
                       {showEventMoveHint && (
-                        <div className="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-xl animate-in fade-in slide-in-from-top-1">
-                          <CalendarDays className="w-3.5 h-3.5 text-blue-600" />
-                          <p className="text-[10px] font-black uppercase text-blue-700 tracking-tight">Moving event. Table assignment has been reset.</p>
+                        <div className="flex animate-in items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 fade-in slide-in-from-top-1">
+                          <CalendarDays className="h-3.5 w-3.5 text-blue-600" />
+                          <p className="font-black text-[10px] tracking-tight text-blue-700 uppercase">Moving event. Table assignment has been reset.</p>
                         </div>
                       )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Team Name</Label>
+                      <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Team Name</Label>
                       <Input 
                         value={editForm.group_name} 
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm(prev => ({...prev, group_name: e.target.value}))}
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-base font-bold px-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033]"
+                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-base font-bold focus:border-[#5C4033] focus:ring-2 focus:ring-[#5C4033]/10"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Team Size</Label>
+                      <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Team Size</Label>
                       <div className="grid grid-cols-5 gap-2">
                         {[4, 5, 6].map(size => (
                           <button
@@ -592,8 +592,8 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                             className={cn(
                               "h-12 rounded-xl border-2 font-black text-xs transition-all",
                               editForm.group_size === size 
-                                ? "bg-[#5C4033] border-[#5C4033] text-white scale-105 shadow-md" 
-                                : "bg-white border-[#E6DFC8] text-[#5F624F] hover:border-[#5C4033]/30"
+                                ? "scale-105 border-[#5C4033] bg-[#5C4033] text-white shadow-md" 
+                                : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]/30"
                             )}
                           >
                             {size}
@@ -604,15 +604,15 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
                     {/* SEATING SELECTION */}
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Table Assignment</Label>
-                      <div className="relative group">
+                      <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Table Assignment</Label>
+                      <div className="group relative">
                         <select 
                           title="Select Table"
                           value={editForm.table_id}
                           onChange={(e) => handleTableChange(e.target.value)}
                           className={cn(
-                            "w-full h-14 rounded-2xl border-2 px-4 text-sm font-bold appearance-none outline-none transition-all",
-                            editForm.table_id ? "bg-white border-[#E6DFC8] focus:border-[#5C4033]" : "bg-[#F7F4EA] border-dashed border-[#E6DFC8]"
+                            "h-14 w-full appearance-none rounded-2xl border-2 px-4 text-sm font-bold transition-all outline-none",
+                            editForm.table_id ? "border-[#E6DFC8] bg-white focus:border-[#5C4033]" : "border-dashed border-[#E6DFC8] bg-[#F7F4EA]"
                           )}
                         >
                           <option value="">Unassigned / No Table</option>
@@ -620,100 +620,100 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                             <option key={t.id} value={t.id}>{t.name} (Cap: {t.max_capacity})</option>
                           ))}
                         </select>
-                        <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[#5F624F] opacity-40 pointer-events-none" />
+                        <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 text-[#5F624F] opacity-40" />
                       </div>
                       
                       {/* TABLE TO STATUS INDICATORS */}
                       {showTableConfirmedHint && (
-                        <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-xl animate-in fade-in slide-in-from-top-1">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-green-600" />
-                          <p className="text-[10px] font-black uppercase text-green-700 tracking-tight">Table selected. Status will update to Confirmed.</p>
+                        <div className="flex animate-in items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-3 fade-in slide-in-from-top-1">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                          <p className="font-black text-[10px] tracking-tight text-green-700 uppercase">Table selected. Status will update to Confirmed.</p>
                         </div>
                       )}
                       {showTableCancelledHint && (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl animate-in fade-in slide-in-from-top-1">
-                          <AlertCircle className="w-3.5 h-3.5 text-red-600" />
-                          <p className="text-[10px] font-black uppercase text-red-700 tracking-tight">Table removed. Status will update to Cancelled.</p>
+                        <div className="flex animate-in items-center gap-2 rounded-xl border border-red-200 bg-red-50 p-3 fade-in slide-in-from-top-1">
+                          <AlertCircle className="h-3.5 w-3.5 text-red-600" />
+                          <p className="font-black text-[10px] tracking-tight text-red-700 uppercase">Table removed. Status will update to Cancelled.</p>
                         </div>
                       )}
                     </div>
                     
-                    <div className="pt-6 border-t border-[#E6DFC8]">
-                       <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1 mb-3 block">Status</Label>
+                    <div className="border-t border-[#E6DFC8] pt-6">
+                       <Label className="mb-3 ml-1 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Status</Label>
                        <div className={cn(
-                         "flex items-center h-14 rounded-2xl border-2 overflow-hidden transition-all",
+                         "flex h-14 items-center overflow-hidden rounded-2xl border-2 transition-all",
                          statusTheme[editForm.status]?.border || "border-[#E6DFC8]",
                          statusTheme[editForm.status]?.bg || "bg-white",
                        )}>
-                         <div className={cn("w-2.5 h-2.5 rounded-full shrink-0 ml-4", statusTheme[editForm.status]?.dot)} />
+                         <div className={cn("ml-4 h-2.5 w-2.5 shrink-0 rounded-full", statusTheme[editForm.status]?.dot)} />
                         <select
                           title="Status"
                            value={editForm.status}
                            onChange={(e) => handleStatusChangeInEdit(e.target.value)}
                            className={cn(
-                             "flex-1 h-full px-3 bg-transparent outline-none text-sm font-black uppercase tracking-wide cursor-pointer appearance-none",
+                             "h-full flex-1 cursor-pointer appearance-none bg-transparent px-3 font-black text-sm tracking-wide uppercase outline-none",
                              statusTheme[editForm.status]?.text || "text-[#1F1F1A]",
                            )}
                          >
                            {Object.keys(statusTheme).filter(s => s !== 'all').map(s => (
-                             <option key={s} value={s} className="text-[#1F1F1A] bg-white normal-case font-bold">
+                             <option key={s} value={s} className="bg-white font-bold text-[#1F1F1A] normal-case">
                                {s.charAt(0).toUpperCase() + s.slice(1)}
                              </option>
                            ))}
                          </select>
-                         <svg className={cn("w-4 h-4 mr-4 shrink-0 opacity-60", statusTheme[editForm.status]?.text)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+                         <svg className={cn("mr-4 h-4 w-4 shrink-0 opacity-60", statusTheme[editForm.status]?.text)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
                        </div>
                        
                        {/* STATUS TO TABLE INDICATOR */}
                        {showStatusTableUnassignedHint && (
-                        <div className="mt-3 flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl animate-in fade-in slide-in-from-top-1">
-                          <RefreshCw className="w-3.5 h-3.5 text-amber-600 animate-spin-slow" />
-                          <p className="text-[10px] font-black uppercase text-amber-700 tracking-tight">Status changed. Table assignment will be cleared.</p>
+                        <div className="mt-3 flex animate-in items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 fade-in slide-in-from-top-1">
+                          <RefreshCw className="animate-spin-slow h-3.5 w-3.5 text-amber-600" />
+                          <p className="font-black text-[10px] tracking-tight text-amber-700 uppercase">Status changed. Table assignment will be cleared.</p>
                         </div>
                        )}
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Special Requests</Label>
+                      <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Special Requests</Label>
                       <Textarea 
                         value={editForm.special_requests} 
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({...prev, special_requests: e.target.value}))}
                         placeholder="Dietary requirements, table preference..."
-                        className="min-h-35 rounded-2xl border-2 border-[#E6DFC8] bg-white text-sm font-medium p-4 focus:ring-2 focus:ring-[#5C4033]/10 focus:border-[#5C4033] resize-none"
+                        className="min-h-35 resize-none rounded-2xl border-2 border-[#E6DFC8] bg-white p-4 text-sm font-medium focus:border-[#5C4033] focus:ring-2 focus:ring-[#5C4033]/10"
                       />
                     </div>
                   </div>
                 ) : (
                   // VIEW MODE DETAILS
-                  <div className="space-y-8 animate-in fade-in duration-300">
+                  <div className="animate-in space-y-8 duration-300 fade-in">
                     {/* Score Summary - High Contrast Theme */}
                     {selectedBooking.booking_scores?.[0] && (
-                      <div className="bg-[#5C4033] text-white p-6 rounded-[2.5rem] shadow-xl flex items-center justify-between border border-white/10 relative overflow-hidden group">
-                        <div className="absolute top-0 left-0 w-full h-full bg-[#5C4033]/5 pointer-events-none group-hover:bg-[#5C4033]/10 transition-colors" />
+                      <div className="group relative flex items-center justify-between overflow-hidden rounded-[2.5rem] border border-white/10 bg-[#5C4033] p-6 text-white shadow-xl">
+                        <div className="pointer-events-none absolute top-0 left-0 h-full w-full bg-[#5C4033]/5 transition-colors group-hover:bg-[#5C4033]/10" />
                         <div className="relative z-10">
-                          <p className="text-[10px] font-black text-white uppercase tracking-[0.3em] opacity-60 mb-1">Game Performance</p>
-                          <h3 className="text-5xl font-black tracking-tighter tabular-nums">{selectedBooking.booking_scores[0].score} <span className="text-sm font-bold opacity-30 tracking-normal ml-1">pts</span></h3>
+                          <p className="mb-1 font-black text-[10px] tracking-[0.3em] text-white uppercase opacity-60">Game Performance</p>
+                          <h3 className="font-black text-5xl tracking-tighter tabular-nums">{selectedBooking.booking_scores[0].score} <span className="ml-1 text-sm font-bold tracking-normal opacity-30">pts</span></h3>
                         </div>
                         {selectedBooking.booking_scores[0].is_winner && (
-                          <div className="bg-[#C8956D] p-4 rounded-2xl shadow-lg rotate-12 group-hover:rotate-0 transition-transform">
-                            <Trophy className="w-10 h-10 text-[#5C4033]" />
+                          <div className="rotate-12 rounded-2xl bg-[#C8956D] p-4 shadow-lg transition-transform group-hover:rotate-0">
+                            <Trophy className="h-10 w-10 text-[#5C4033]" />
                           </div>
                         )}
                       </div>
                     )}
 
-                    <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden shadow-sm">
-                      <InfoRow icon={<Calendar className="w-4 h-4" />}      label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMMM yyyy") : "—"} />
-                      <InfoRow icon={<Users className="w-4 h-4" />}      label="Group Size" value={`${selectedBooking.group_size} Guests`} />
+                    <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white shadow-sm">
+                      <InfoRow icon={<Calendar className="h-4 w-4" />}      label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMMM yyyy") : "—"} />
+                      <InfoRow icon={<Users className="h-4 w-4" />}      label="Group Size" value={`${selectedBooking.group_size} Guests`} />
                       
-                        <InfoRow icon={<TableIcon className="w-4 h-4" />} label="Table" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
-                      <InfoRow icon={<Clock3 className="w-4 h-4" />}        label="Booked On"  value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "—"} />
+                        <InfoRow icon={<TableIcon className="h-4 w-4" />} label="Table" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
+                      <InfoRow icon={<Clock3 className="h-4 w-4" />}        label="Booked On"  value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "—"} />
                       {selectedBooking.updated_at && (
-                        <InfoRow icon={<History className="w-4 h-4" />} label="Last Modified" value={format(new Date(selectedBooking.updated_at), "dd MMM yyyy · HH:mm")} />
+                        <InfoRow icon={<History className="h-4 w-4" />} label="Last Modified" value={format(new Date(selectedBooking.updated_at), "dd MMM yyyy · HH:mm")} />
                       )}
                       {(selectedBooking.updated_by_employee || selectedBooking.updated_by_contact) && (
                         <InfoRow
-                          icon={<UserCheck className="w-4 h-4" />}
+                          icon={<UserCheck className="h-4 w-4" />}
                           label="Modified By"
                           value={
                             selectedBooking.updated_by_employee?.full_name
@@ -724,28 +724,28 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     </div>
 
                     <div className="space-y-3">
-                      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#5F624F] opacity-40 px-1">Primary Contact</h3>
-                      <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl p-5 shadow-sm flex items-center gap-4 transition-all hover:border-[#5C4033]/30 group/contact">
-                        <div className="w-14 h-14 rounded-2xl bg-[#F7F4EA] flex items-center justify-center font-black text-xl text-[#5C4033] border border-[#E6DFC8]">
+                      <h3 className="px-1 font-black text-[10px] tracking-[0.2em] text-[#5F624F] uppercase opacity-40">Primary Contact</h3>
+                      <div className="group/contact flex items-center gap-4 rounded-3xl border-2 border-[#E6DFC8] bg-white p-5 shadow-sm transition-all hover:border-[#5C4033]/30">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] font-black text-xl text-[#5C4033]">
                           {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
                         </div>
                         <div className="min-w-0 flex-1 text-left">
-                          <p className="text-base font-black text-[#1F1F1A] uppercase tracking-tight truncate">{selectedBooking.contacts?.full_name}</p>
-                          <p className="text-xs font-bold text-[#5F624F] opacity-60 break-all mt-0.5">{selectedBooking.contacts?.email}</p>
+                          <p className="truncate font-black text-base tracking-tight text-[#1F1F1A] uppercase">{selectedBooking.contacts?.full_name}</p>
+                          <p className="mt-0.5 text-xs font-bold break-all text-[#5F624F] opacity-60">{selectedBooking.contacts?.email}</p>
                         </div>
-                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="p-4 bg-[#5C4033]/5 rounded-2xl text-[#5C4033] hover:bg-[#5C4033] hover:text-white transition-all active:scale-95 shadow-xs">
-                          <ExternalLink className="w-5 h-5" />
+                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="rounded-2xl bg-[#5C4033]/5 p-4 text-[#5C4033] shadow-xs transition-all hover:bg-[#5C4033] hover:text-white active:scale-95">
+                          <ExternalLink className="h-5 w-5" />
                         </Link>
                       </div>
                     </div>
 
                     {selectedBooking.special_requests && (
-                      <div className="bg-[#5C4033]/5 p-6 rounded-3xl border-2 border-[#5C4033]/15 shadow-sm relative overflow-hidden">
-                        <div className="flex items-center gap-2 mb-4 relative z-10">
-                          <MessageSquareQuote className="w-5 h-5 text-[#5C4033] opacity-40" />
-                          <span className="text-[10px] font-black uppercase tracking-wide text-[#5C4033]">Staff Instructions</span>
+                      <div className="relative overflow-hidden rounded-3xl border-2 border-[#5C4033]/15 bg-[#5C4033]/5 p-6 shadow-sm">
+                        <div className="relative z-10 mb-4 flex items-center gap-2">
+                          <MessageSquareQuote className="h-5 w-5 text-[#5C4033] opacity-40" />
+                          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Staff Instructions</span>
                         </div>
-                        <p className="text-[15px] text-[#1F1F1A] italic leading-relaxed font-bold relative z-10 text-left">
+                        <p className="relative z-10 text-left text-[15px] leading-relaxed font-bold text-[#1F1F1A] italic">
                           &quot;{selectedBooking.special_requests}&quot;
                         </p>
                       </div>
@@ -756,20 +756,20 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
               </div>
 
               {/* STICKY FOOTER ACTIONS - Consistent spacing and shadow */}
-              <div className="shrink-0 p-6 pt-4 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.05)] z-40">
+              <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 p-6 pt-4 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.05)] backdrop-blur-md">
                 {isEditing ? (
                   <div className="grid grid-cols-2 gap-3">
                     <Button 
                       onClick={handleSaveDetails} 
                       disabled={isPending}
-                      className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-xs shadow-lg active:scale-95 transition-transform"
+                      className="h-14 rounded-2xl bg-[#1B4332] font-black text-xs tracking-widest text-white uppercase shadow-lg transition-transform hover:bg-[#1B4332]/85 active:scale-95"
                     >
-                      {isPending ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save</>}
+                      {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save</>}
                     </Button>
                     <Button 
                       variant="outline" 
                       onClick={() => setIsEditing(false)}
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white shadow-sm"
+                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase shadow-sm"
                     >
                       Discard
                     </Button>
@@ -779,7 +779,7 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     <div className="grid grid-cols-2 gap-3">
                         <Button
                           variant="ghost"
-                          className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase tracking-widest text-[10px] bg-white"
+                          className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-widest text-[#5C4033] uppercase"
                            onClick={async (e) => {
                           e.stopPropagation();
                           const ok = await confirm({ title: "Delete booking", description: "Permanently delete this booking? This cannot be undone.", confirmLabel: "Delete", variant: "destructive" })
@@ -787,17 +787,17 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                           }}
                           title="Delete Record"
                         >
-                          <><Trash2 className="w-4 h-4 mr-2" />Delete</>
+                          <><Trash2 className="mr-2 h-4 w-4" />Delete</>
                             
                       </Button>
                       <Button 
                           variant="outline" 
                           title="Edit Details"
                           onClick={handleEnterEditMode}
-                          className="h-14 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                          className="h-14 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95"
                         
                       >
-                        <><Pencil className="w-4 h-4 mr-2" />Edit</>
+                        <><Pencil className="mr-2 h-4 w-4" />Edit</>
                       </Button>
                     </div>
                   </div>
@@ -810,8 +810,8 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
 
       {/* Global Transition Overlay */}
       {isPending && (
-        <div className="fixed bottom-10 left-1/2 -translate-x-1/2 z-100 bg-[#5C4033] text-white px-6 py-3.5 rounded-full text-[11px] font-black uppercase tracking-wide shadow-2xl flex items-center gap-3 border border-white/10 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <Loader2 className="w-4 h-4 animate-spin" /> Syncing with DB...
+        <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#5C4033] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
+          <Loader2 className="h-4 w-4 animate-spin" /> Syncing with DB...
         </div>
       )}
       {ConfirmDialogUI}
@@ -831,57 +831,57 @@ function BookingCard({ booking, onClick, showDate }: { booking: Booking, onClick
     <div
       onClick={onClick}
       className={cn(
-        "group active:scale-[0.98] active:bg-[#F7F4EA] transition-all border-2 border-[#E6DFC8] rounded-2xl p-3 flex items-center justify-between cursor-pointer bg-white shadow-sm gap-3"
+        "group flex cursor-pointer items-center justify-between gap-3 rounded-2xl border-2 border-[#E6DFC8] bg-white p-3 shadow-sm transition-all active:scale-[0.98] active:bg-[#F7F4EA]"
       )}
     >
-      <div className="flex items-center gap-2 min-w-0 flex-1 text-left">
-        <div className={cn("w-11 h-11 rounded-full flex flex-col items-center justify-center shrink-0 border", theme.bg, theme.text, theme.border)}>
+      <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
+        <div className={cn("flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full border", theme.bg, theme.text, theme.border)}>
           {showDate && booking.events?.event_date ? (
-            <div className="flex flex-col leading-none items-center justify-center">
-              <span className="text-[10px] font-black uppercase tracking-tighter opacity-80 mb-0.5">{format(new Date(booking.events.event_date), "MMM")}</span>
-              <span className="text-base font-black tracking-tighter">{format(new Date(booking.events.event_date), "dd")}</span>
+            <div className="flex flex-col items-center justify-center leading-none">
+              <span className="mb-0.5 font-black text-[10px] tracking-tighter uppercase opacity-80">{format(new Date(booking.events.event_date), "MMM")}</span>
+              <span className="font-black text-base tracking-tighter">{format(new Date(booking.events.event_date), "dd")}</span>
             </div>
           ) : (
-            booking.booking_scores?.[0]?.is_winner ? <Trophy className="w-5 h-5" /> : <theme.icon className="w-5 h-5" />
+            booking.booking_scores?.[0]?.is_winner ? <Trophy className="h-5 w-5" /> : <theme.icon className="h-5 w-5" />
           )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between min-w-0">
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <h4 className="text-sm font-black text-[#1F1F1A] truncate uppercase tracking-tight">{booking.group_name || "Guest Team"}</h4>
+          <div className="flex min-w-0 items-center justify-between">
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+              <h4 className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">{booking.group_name || "Guest Team"}</h4>
               {booking.special_requests && (
-                <span className="shrink-0 text-[10px] font-black text-red-700 uppercase bg-red-50 px-1.5 py-0.5 rounded border border-red-200">★</span>
+                <span className="shrink-0 rounded border border-red-200 bg-red-50 px-1.5 py-0.5 font-black text-[10px] text-red-700 uppercase">★</span>
               )}
             </div>
-            <span className="shrink-0 text-[11px] font-black text-blue-700 uppercase bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100 ml-2">T: {tableName}</span>
+            <span className="ml-2 shrink-0 rounded-md border border-blue-100 bg-blue-50 px-2 py-0.5 font-black text-[11px] text-blue-700 uppercase">T: {tableName}</span>
           </div>
-          <div className="flex items-center justify-between text-[#5F624F] mt-1">
-             <p className="text-xs truncate font-semibold">{booking.contacts?.full_name}</p>
+          <div className="mt-1 flex items-center justify-between text-[#5F624F]">
+             <p className="truncate text-xs font-semibold">{booking.contacts?.full_name}</p>
              <div className="flex items-center gap-1.5 text-[#1F1F1A]">
-                <Users className="w-3.5 h-3.5 text-[#5F624F]/50" />
-                <span className="text-sm font-black">{booking.group_size}</span>
-                <span className="text-sm font-black">/ {group_max_capacity}</span>
+                <Users className="h-3.5 w-3.5 text-[#5F624F]/50" />
+                <span className="font-black text-sm">{booking.group_size}</span>
+                <span className="font-black text-sm">/ {group_max_capacity}</span>
              </div>
           </div>
         </div>
       </div>
-      <ChevronRight className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
+      <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
     </div>
   )
 }
 
 function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 px-5 py-4 border-b border-[#E6DFC8] last:border-0">
-      <div className="flex items-center gap-2 text-[#5F624F] opacity-60 shrink-0">
+    <div className="flex items-center gap-3 border-b border-[#E6DFC8] px-5 py-4 last:border-0">
+      <div className="flex shrink-0 items-center gap-2 text-[#5F624F] opacity-60">
         {icon}
-        <span className="text-[10px] font-black uppercase tracking-wide whitespace-nowrap">{label}</span>
+        <span className="font-black text-[10px] tracking-wide whitespace-nowrap uppercase">{label}</span>
       </div>
       {label === "Booked On" || label === "Last Modified" || label === "Modified By" ? (
-        <span className="text-sm font-black text-[#5F624F] text-right flex-1 leading-snug">{value}</span>
+        <span className="flex-1 text-right font-black text-sm leading-snug text-[#5F624F]">{value}</span>
       ) : (
-        <span className="text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug">{value}</span>
+        <span className="flex-1 text-right font-black text-sm leading-snug text-[#1F1F1A]">{value}</span>
       )}
       </div>
   )

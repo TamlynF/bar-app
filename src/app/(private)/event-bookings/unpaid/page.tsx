@@ -172,105 +172,105 @@ export default async function UnpaidBookingsPage() {
   const totalBookings = groups.reduce((s, g) => s + g.bookings.length, 0);
 
   return (
-    <div className="flex-1 bg-background min-h-screen">
-      <div className="space-y-4 mx-auto px-3 md:px-8 py-3 sm:py-0 max-w-4xl">
+    <div className="min-h-screen flex-1 bg-background">
+      <div className="mx-auto max-w-4xl space-y-4 px-3 py-3 sm:py-0 md:px-8">
 
         {/* Header */}
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-black text-[#1F1F1A] text-xl uppercase tracking-tight">Unpaid Bookings</h2>
-            <p className="mt-0.5 text-[#5F624F] text-xs">
+            <h2 className="font-black text-xl tracking-tight text-[#1F1F1A] uppercase">Unpaid Bookings</h2>
+            <p className="mt-0.5 text-xs text-[#5F624F]">
               Confirmed bookings with an outstanding balance on active events, grouped by event.
             </p>
           </div>
         </div>
 
         {/* Summary bar */}
-        <div className="flex items-stretch gap-3 bg-white p-3 border border-[#E6DFC8] rounded-2xl shadow-sm">
-          <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
-            <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide opacity-60">Outstanding</span>
-            <span className={cn("font-black tabular-nums text-lg", totalOutstanding > 0 ? "text-[#b45309]" : "text-[#5F624F]")}>
+        <div className="flex items-stretch gap-3 rounded-2xl border border-[#E6DFC8] bg-white p-3 shadow-sm">
+          <div className="flex flex-1 flex-col items-center justify-center gap-0.5">
+            <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">Outstanding</span>
+            <span className={cn("font-black text-lg tabular-nums", totalOutstanding > 0 ? "text-[#b45309]" : "text-[#5F624F]")}>
               £{totalOutstanding.toFixed(2)}
             </span>
           </div>
-          <div className="self-stretch bg-[#E6DFC8] w-px" />
-          <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
-            <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide opacity-60">Bookings</span>
-            <span className="font-black text-[#1F1F1A] tabular-nums text-lg">{totalBookings}</span>
+          <div className="w-px self-stretch bg-[#E6DFC8]" />
+          <div className="flex flex-1 flex-col items-center justify-center gap-0.5">
+            <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">Bookings</span>
+            <span className="font-black text-lg text-[#1F1F1A] tabular-nums">{totalBookings}</span>
           </div>
-          <div className="self-stretch bg-[#E6DFC8] w-px" />
-          <div className="flex flex-col items-center justify-center flex-1 gap-0.5">
-            <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-wide opacity-60">Events</span>
-            <span className="font-black text-[#1F1F1A] tabular-nums text-lg">{groups.length}</span>
+          <div className="w-px self-stretch bg-[#E6DFC8]" />
+          <div className="flex flex-1 flex-col items-center justify-center gap-0.5">
+            <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">Events</span>
+            <span className="font-black text-lg text-[#1F1F1A] tabular-nums">{groups.length}</span>
           </div>
         </div>
 
         {/* Grouped list */}
         {groups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 bg-white p-10 border border-[#E6DFC8] border-dashed rounded-2xl text-center">
-            <div className="bg-[#F7F4EA] p-3 rounded-2xl">
-              <Wallet className="w-6 h-6 text-[#5C4033] opacity-30" />
+          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E6DFC8] bg-white p-10 text-center">
+            <div className="rounded-2xl bg-[#F7F4EA] p-3">
+              <Wallet className="h-6 w-6 text-[#5C4033] opacity-30" />
             </div>
-            <p className="font-black text-[#1F1F1A] text-sm">Nothing outstanding</p>
-            <p className="max-w-64 text-[#5F624F] text-[11px] leading-relaxed">
+            <p className="font-black text-sm text-[#1F1F1A]">Nothing outstanding</p>
+            <p className="max-w-64 text-[11px] leading-relaxed text-[#5F624F]">
               Every confirmed booking on an active event is fully paid.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
             {groups.map((g) => (
-              <section key={g.eventId} className="bg-white border border-[#E6DFC8] rounded-2xl shadow-sm overflow-hidden">
+              <section key={g.eventId} className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
                 {/* Event header */}
                 <Link
                   href={g.href}
-                  className="flex items-center gap-3 px-4 py-3 border-b border-[#E6DFC8] hover:bg-[#F7F4EA] transition-colors"
+                  className="flex items-center gap-3 border-b border-[#E6DFC8] px-4 py-3 transition-colors hover:bg-[#F7F4EA]"
                 >
-                  <div className="flex flex-col justify-center items-center bg-[#F7F4EA] rounded-xl w-11 h-11 shrink-0">
-                    <CalendarDays className="w-4 h-4 text-[#5C4033] opacity-60" />
+                  <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-[#F7F4EA]">
+                    <CalendarDays className="h-4 w-4 text-[#5C4033] opacity-60" />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-1.5 mb-0.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
                       {g.subName && (
-                        <span className={cn("px-1.5 py-0.5 rounded font-black text-[9px] uppercase tracking-wide", badgeClassFromColor(g.color))}>
+                        <span className={cn("rounded px-1.5 py-0.5 font-black text-[9px] tracking-wide uppercase", badgeClassFromColor(g.color))}>
                           {toTitleCase(g.subName)}
                         </span>
                       )}
                     </div>
-                    <p className="font-black text-[#1F1F1A] text-sm truncate leading-tight">{g.title}</p>
-                    <div className="flex flex-wrap items-center gap-2.5 mt-1 font-semibold text-[#5F624F] text-[11px]">
+                    <p className="truncate font-black text-sm leading-tight text-[#1F1F1A]">{g.title}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[11px] font-semibold text-[#5F624F]">
                       <span className="inline-flex items-center gap-1">
-                        <CalendarDays className="w-3 h-3" />{formatDate(g.date)}
+                        <CalendarDays className="h-3 w-3" />{formatDate(g.date)}
                       </span>
                       {g.startTime && (
                         <span className="inline-flex items-center gap-1">
-                          <Clock className="w-3 h-3" />{formatTime(g.startTime)}
+                          <Clock className="h-3 w-3" />{formatTime(g.startTime)}
                         </span>
                       )}
                     </div>
                   </div>
-                  <div className="flex flex-col items-end gap-0.5 shrink-0">
-                    <span className="font-black text-[#b45309] tabular-nums text-sm">£{g.outstanding.toFixed(2)}</span>
-                    <span className="font-bold text-[#5F624F] text-[10px] uppercase tracking-wide opacity-60">owed</span>
+                  <div className="flex shrink-0 flex-col items-end gap-0.5">
+                    <span className="font-black text-sm text-[#b45309] tabular-nums">£{g.outstanding.toFixed(2)}</span>
+                    <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">owed</span>
                   </div>
-                  <ChevronRight className="opacity-40 w-4 h-4 text-[#5F624F] shrink-0" />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F] opacity-40" />
                 </Link>
 
                 {/* Bookings */}
                 <ul className="divide-y divide-[#E6DFC8]/60">
                   {g.bookings.map((bk) => (
                     <li key={bk.id} className="flex items-center gap-3 px-4 py-2.5">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-bold text-[#1F1F1A] text-[13px] truncate">{bk.groupName}</p>
-                        <div className="flex items-center gap-2.5 mt-0.5 font-semibold text-[#5F624F] text-[11px]">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[13px] font-bold text-[#1F1F1A]">{bk.groupName}</p>
+                        <div className="mt-0.5 flex items-center gap-2.5 text-[11px] font-semibold text-[#5F624F]">
                           <span className="inline-flex items-center gap-1">
-                            <Users className="w-3 h-3" />{bk.guests}
+                            <Users className="h-3 w-3" />{bk.guests}
                           </span>
                           <span className="tabular-nums">
                             £{bk.paid.toFixed(2)} <span className="opacity-50">/ £{bk.total.toFixed(2)}</span>
                           </span>
                         </div>
                       </div>
-                      <span className="font-black text-[#b45309] tabular-nums text-[13px] shrink-0">
+                      <span className="shrink-0 font-black text-[13px] text-[#b45309] tabular-nums">
                         £{bk.outstanding.toFixed(2)}
                       </span>
                     </li>

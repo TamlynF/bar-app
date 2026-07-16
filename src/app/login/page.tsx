@@ -19,7 +19,7 @@ export default async function LoginPage() {
   if (user) redirect("/dashboard");
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] flex items-center justify-center px-4">
+    <main className="flex min-h-dvh w-full items-center justify-center bg-[#26300D] px-4">
       <style dangerouslySetInnerHTML={{
         __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; }`
       }} />
@@ -27,19 +27,19 @@ export default async function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Brand */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#FDCC4B] mb-4 shadow-lg">
-            <span className="text-[#26300D] font-black text-xl">DF</span>
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FDCC4B] shadow-lg">
+            <span className="font-black text-xl text-[#26300D]">DF</span>
           </div>
-          <h1 className="text-white font-black text-2xl uppercase tracking-widest">Don Fenticas</h1>
-          <p className="text-stone-500 text-xs mt-1 uppercase tracking-widest font-medium">Staff Portal</p>
+          <h1 className="font-black text-2xl tracking-widest text-white uppercase">Don Fenticas</h1>
+          <p className="mt-1 text-xs font-medium tracking-widest text-stone-500 uppercase">Staff Portal</p>
         </div>
 
         {/* Form Card */}
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
           <LoginForm signIn={signIn} />
         </div>
 
-        <p className="text-center text-stone-700 text-[10px] uppercase tracking-widest mt-6 font-bold">
+        <p className="mt-6 text-center text-[10px] font-bold tracking-widest text-stone-700 uppercase">
           Authorised Staff Only
         </p>
       </div>

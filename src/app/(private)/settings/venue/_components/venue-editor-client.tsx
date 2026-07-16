@@ -488,53 +488,53 @@ export default function VenueEditorClient({
   const benchSeatTotal = features.filter((f) => f.kind === "bench").reduce((sum, f) => sum + (f.seats ?? 0), 0);
 
   return (
-    <div className="px-2 py-2 sm:px-4 sm:py-0 space-y-4 max-w-5xl">
+    <div className="max-w-5xl space-y-4 px-2 py-2 sm:px-4 sm:py-0">
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-3 flex-wrap">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-black uppercase tracking-tight text-[#1F1F1A]">Venue Layout</h2>
-          <p className="text-[11px] font-bold text-[#5F624F] mt-0.5">
+          <h2 className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">Venue Layout</h2>
+          <p className="mt-0.5 text-[11px] font-bold text-[#5F624F]">
             {companyName ? `${companyName} — ` : ""}draw the room, drop obstacles, place fixtures, doors &amp; seating.
             Reused by every event&apos;s floor-plan calculator.
           </p>
         </div>
         {dirty ? (
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-amber-700 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded-lg">
-            <AlertCircle className="w-3 h-3" /> Unsaved
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-1 font-black text-[10px] tracking-widest text-amber-700 uppercase">
+            <AlertCircle className="h-3 w-3" /> Unsaved
           </span>
         ) : savedAt ? (
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-lg">
-            <CheckCircle2 className="w-3 h-3" /> Saved
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-green-200 bg-green-50 px-2.5 py-1 font-black text-[10px] tracking-widest text-green-700 uppercase">
+            <CheckCircle2 className="h-3 w-3" /> Saved
           </span>
         ) : null}
       </div>
 
       {/* ── Mode toolbar ── */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <ModeButton active={mode === "outline"} onClick={() => { setMode("outline"); setSelection(null); setDrawingPoly(null); }} icon={<Pentagon className="w-4 h-4" />} label="Room" />
-        <ModeButton active={mode === "obstacles"} onClick={() => { setMode("obstacles"); setSelection(null); }} icon={<Ban className="w-4 h-4" />} label="Obstacles" />
-        <ModeButton active={mode === "fixtures"} onClick={() => { setMode("fixtures"); setSelection(null); setDrawingPoly(null); }} icon={<Sofa className="w-4 h-4" />} label="Fixtures" />
-        <ModeButton active={mode === "features"} onClick={() => { setMode("features"); setSelection(null); setDrawingPoly(null); }} icon={<DoorOpen className="w-4 h-4" />} label="Doors & Seating" />
+      <div className="flex flex-wrap items-center gap-2">
+        <ModeButton active={mode === "outline"} onClick={() => { setMode("outline"); setSelection(null); setDrawingPoly(null); }} icon={<Pentagon className="h-4 w-4" />} label="Room" />
+        <ModeButton active={mode === "obstacles"} onClick={() => { setMode("obstacles"); setSelection(null); }} icon={<Ban className="h-4 w-4" />} label="Obstacles" />
+        <ModeButton active={mode === "fixtures"} onClick={() => { setMode("fixtures"); setSelection(null); setDrawingPoly(null); }} icon={<Sofa className="h-4 w-4" />} label="Fixtures" />
+        <ModeButton active={mode === "features"} onClick={() => { setMode("features"); setSelection(null); setDrawingPoly(null); }} icon={<DoorOpen className="h-4 w-4" />} label="Doors & Seating" />
       </div>
 
       {/* ── Mode controls ── */}
-      <div className="bg-white border border-[#E6DFC8] rounded-2xl p-3">
+      <div className="rounded-2xl border border-[#E6DFC8] bg-white p-3">
         {mode === "outline" && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
               <DimInput id="room-w" label="Room width (m)" value={roomW} onChange={(v) => { setRoomW(v); markDirty(); }} />
               <DimInput id="room-l" label="Room length (m)" value={roomL} onChange={(v) => { setRoomL(v); markDirty(); }} />
             </div>
-            <p className="text-[11px] font-bold text-[#5F624F] flex items-center gap-1.5">
-              <Info className="w-3 h-3 shrink-0" />
+            <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5F624F]">
+              <Info className="h-3 w-3 shrink-0" />
               Tap the canvas to add corner points (clockwise). Drag a point to move it.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={resetRectangle} className="h-9 px-3 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] font-black uppercase tracking-wide text-[10px] hover:bg-[#F7F4EA]">
-                <RotateCcw className="w-3.5 h-3.5 mr-1.5" /> Reset to rectangle
+              <Button type="button" onClick={resetRectangle} className="h-9 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5C4033] uppercase hover:bg-[#F7F4EA]">
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset to rectangle
               </Button>
-              <Button type="button" onClick={clearOutline} disabled={points.length === 0} className="h-9 px-3 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5F624F] font-black uppercase tracking-wide text-[10px] hover:bg-[#F7F4EA] disabled:opacity-40">
-                <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Clear
+              <Button type="button" onClick={clearOutline} disabled={points.length === 0} className="h-9 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase hover:bg-[#F7F4EA] disabled:opacity-40">
+                <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Clear
               </Button>
             </div>
           </div>
@@ -544,26 +544,26 @@ export default function VenueEditorClient({
           <div className="space-y-3">
             {drawingPoly ? (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] font-black uppercase tracking-wide text-[#5C4033]">
+                <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">
                   Drawing polygon — tap to add points ({drawingPoly.length})
                 </span>
-                <Button type="button" onClick={finishPolygonObstacle} disabled={drawingPoly.length < 3} className="h-9 px-3 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] disabled:opacity-40">
-                  <Check className="w-3.5 h-3.5 mr-1.5" /> Finish
+                <Button type="button" onClick={finishPolygonObstacle} disabled={drawingPoly.length < 3} className="h-9 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85 disabled:opacity-40">
+                  <Check className="mr-1.5 h-3.5 w-3.5" /> Finish
                 </Button>
-                <Button type="button" onClick={cancelPolygonObstacle} className="h-9 px-3 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5F624F] font-black uppercase tracking-wide text-[10px]">
-                  <X className="w-3.5 h-3.5 mr-1.5" /> Cancel
+                <Button type="button" onClick={cancelPolygonObstacle} className="h-9 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                  <X className="mr-1.5 h-3.5 w-3.5" /> Cancel
                 </Button>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                <Button type="button" onClick={() => addRectObstacle("rect")} className="h-10 px-3 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px]">
-                  <SquareIcon className="w-3.5 h-3.5 mr-1" /> Rectangle
+                <Button type="button" onClick={() => addRectObstacle("rect")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                  <SquareIcon className="mr-1 h-3.5 w-3.5" /> Rectangle
                 </Button>
-                <Button type="button" onClick={() => addRectObstacle("circle")} className="h-10 px-3 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px]">
-                  <CircleIcon className="w-3.5 h-3.5 mr-1" /> Circle
+                <Button type="button" onClick={() => addRectObstacle("circle")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                  <CircleIcon className="mr-1 h-3.5 w-3.5" /> Circle
                 </Button>
-                <Button type="button" onClick={startPolygonObstacle} className="h-10 px-3 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px]">
-                  <Spline className="w-3.5 h-3.5 mr-1" /> Polygon
+                <Button type="button" onClick={startPolygonObstacle} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                  <Spline className="mr-1 h-3.5 w-3.5" /> Polygon
                 </Button>
               </div>
             )}
@@ -577,8 +577,8 @@ export default function VenueEditorClient({
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {FIXTURE_ORDER.map((t) => (
-                <Button key={t} type="button" onClick={() => addFixture(t)} className="h-10 px-3 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px]">
-                  <Plus className="w-3.5 h-3.5 mr-1" /> {FIXTURE_META[t].label}
+                <Button key={t} type="button" onClick={() => addFixture(t)} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                  <Plus className="mr-1 h-3.5 w-3.5" /> {FIXTURE_META[t].label}
                 </Button>
               ))}
             </div>
@@ -596,18 +596,18 @@ export default function VenueEditorClient({
         {mode === "features" && (
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => addFeature("door")} className="h-10 px-3 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px]">
-                <DoorOpen className="w-3.5 h-3.5 mr-1" /> Door
+              <Button type="button" onClick={() => addFeature("door")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                <DoorOpen className="mr-1 h-3.5 w-3.5" /> Door
               </Button>
-              <Button type="button" onClick={() => addFeature("window")} className="h-10 px-3 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px]">
-                <RectangleHorizontal className="w-3.5 h-3.5 mr-1" /> Window
+              <Button type="button" onClick={() => addFeature("window")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                <RectangleHorizontal className="mr-1 h-3.5 w-3.5" /> Window
               </Button>
-              <Button type="button" onClick={() => addFeature("bench")} className="h-10 px-3 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px]">
-                <Armchair className="w-3.5 h-3.5 mr-1" /> Bench
+              <Button type="button" onClick={() => addFeature("bench")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                <Armchair className="mr-1 h-3.5 w-3.5" /> Bench
               </Button>
             </div>
-            <p className="text-[11px] font-bold text-[#5F624F] flex items-center gap-1.5">
-              <Info className="w-3 h-3 shrink-0" />
+            <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5F624F]">
+              <Info className="h-3 w-3 shrink-0" />
               Doors get a keep-clear zone (their facing direction). Benches add {benchSeatTotal} seat{benchSeatTotal !== 1 ? "s" : ""} to the venue.
             </p>
             {selectedFeature && (
@@ -619,13 +619,13 @@ export default function VenueEditorClient({
 
       {/* ── Canvas ── */}
       <div
-        className="w-full rounded-2xl border-2 border-[#E6DFC8] bg-[#FFFDF7] overflow-hidden aspect-(--venue-ar)"
+        className="aspect-(--venue-ar) w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-[#FFFDF7]"
         style={{ "--venue-ar": `${view.width} / ${view.length}` } as React.CSSProperties}
       >
         <svg
           ref={svgRef}
           viewBox={`0 0 ${view.width} ${view.length}`}
-          className="w-full h-full touch-none select-none"
+          className="h-full w-full touch-none select-none"
           onPointerDown={onSvgPointerDown}
           onPointerMove={onSvgPointerMove}
           onPointerUp={onSvgPointerUp}
@@ -789,26 +789,26 @@ export default function VenueEditorClient({
 
       {/* Outline vertex inspector */}
       {mode === "outline" && selection?.kind === "vertex" && points[selection.index] && (
-        <div className="bg-white border border-[#E6DFC8] rounded-2xl p-3 flex flex-wrap items-end gap-3">
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-[#E6DFC8] bg-white p-3">
           <DimInput id="vx" label="Point X (m)" value={points[selection.index].x} onChange={(v) => setPoints((prev) => prev.map((p, i) => (i === selection.index ? { ...p, x: v } : p)))} />
           <DimInput id="vy" label="Point Y (m)" value={points[selection.index].y} onChange={(v) => setPoints((prev) => prev.map((p, i) => (i === selection.index ? { ...p, y: v } : p)))} />
-          <Button type="button" onClick={() => deleteVertex(selection.index)} disabled={points.length <= 3} className="h-11 px-3 rounded-xl border-2 border-[#E6DFC8] bg-white text-red-600 font-black uppercase tracking-wide text-[10px] disabled:opacity-40">
-            <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete point
+          <Button type="button" onClick={() => deleteVertex(selection.index)} disabled={points.length <= 3} className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-red-600 uppercase disabled:opacity-40">
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete point
           </Button>
         </div>
       )}
 
       {formError && (
-        <div className="p-3 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-2">
-          <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-          <p className="text-sm text-red-700 font-bold">{formError}</p>
+        <div className="flex items-start gap-2 rounded-2xl border border-red-200 bg-red-50 p-3">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+          <p className="text-sm font-bold text-red-700">{formError}</p>
         </div>
       )}
 
       {/* ── Save ── */}
       <div className="flex justify-end">
-        <Button type="button" onClick={handleSave} disabled={isPending || !companyId} className="h-12 px-6 rounded-xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95 disabled:opacity-50">
-          {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-4 h-4 mr-2" /> Save layout</>}
+        <Button type="button" onClick={handleSave} disabled={isPending || !companyId} className="h-12 rounded-xl bg-[#1B4332] px-6 font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:opacity-50">
+          {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save layout</>}
         </Button>
       </div>
     </div>
@@ -823,8 +823,8 @@ function ModeButton({ active, onClick, icon, label }: { active: boolean; onClick
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 h-10 px-4 rounded-xl font-black uppercase tracking-wide text-[10px] border-2 transition-all",
-        active ? "bg-[#5C4033] text-white border-[#5C4033] shadow-sm" : "bg-white text-[#5F624F] border-[#E6DFC8] hover:border-[#5C4033]/40"
+        "flex h-10 items-center gap-2 rounded-xl border-2 px-4 font-black text-[10px] tracking-wide uppercase transition-all",
+        active ? "border-[#5C4033] bg-[#5C4033] text-white shadow-sm" : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]/40"
       )}
     >
       {icon}
@@ -836,7 +836,7 @@ function ModeButton({ active, onClick, icon, label }: { active: boolean; onClick
 function DimInput({ id, label, value, onChange }: { id: string; label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
+      <Label htmlFor={id} className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </Label>
       <Input
@@ -857,13 +857,13 @@ function DimInput({ id, label, value, onChange }: { id: string; label: string; v
 
 function ShapeToggle({ value, onChange }: { value: Shape; onChange: (s: Shape) => void }) {
   const opts: { s: Shape; icon: React.ReactNode; label: string }[] = [
-    { s: "rect", icon: <SquareIcon className="w-3.5 h-3.5" />, label: "Rect" },
-    { s: "circle", icon: <CircleIcon className="w-3.5 h-3.5" />, label: "Circle" },
-    { s: "polygon", icon: <Spline className="w-3.5 h-3.5" />, label: "Polygon" },
+    { s: "rect", icon: <SquareIcon className="h-3.5 w-3.5" />, label: "Rect" },
+    { s: "circle", icon: <CircleIcon className="h-3.5 w-3.5" />, label: "Circle" },
+    { s: "polygon", icon: <Spline className="h-3.5 w-3.5" />, label: "Polygon" },
   ];
   return (
     <div className="space-y-1.5">
-      <Label className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Shape</Label>
+      <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Shape</Label>
       <div className="flex gap-1.5">
         {opts.map((o) => (
           <button
@@ -873,8 +873,8 @@ function ShapeToggle({ value, onChange }: { value: Shape; onChange: (s: Shape) =
             aria-label={`${o.label} shape`}
             aria-pressed={value === o.s}
             className={cn(
-              "flex items-center gap-1 h-11 px-2.5 rounded-xl border-2 font-black uppercase tracking-wide text-[10px] transition-all",
-              value === o.s ? "bg-[#5C4033] text-white border-[#5C4033]" : "bg-white text-[#5F624F] border-[#E6DFC8] hover:border-[#5C4033]/40"
+              "flex h-11 items-center gap-1 rounded-xl border-2 px-2.5 font-black text-[10px] tracking-wide uppercase transition-all",
+              value === o.s ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]/40"
             )}
           >
             {o.icon}
@@ -890,12 +890,12 @@ function RotationField({ value, onChange }: { value: number; onChange: (v: numbe
   const set = (v: number) => onChange(Math.round(((v % 360) + 360) % 360));
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="rot-input" className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">
+      <Label htmlFor="rot-input" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         Rotation (°)
       </Label>
       <div className="flex items-center gap-1">
-        <button type="button" onClick={() => set(value - 15)} aria-label="Rotate 15 degrees left" title="Rotate left" className="h-11 w-10 shrink-0 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] flex items-center justify-center hover:bg-[#F7F4EA]">
-          <RotateCcw className="w-4 h-4" />
+        <button type="button" onClick={() => set(value - 15)} aria-label="Rotate 15 degrees left" title="Rotate left" className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] hover:bg-[#F7F4EA]">
+          <RotateCcw className="h-4 w-4" />
         </button>
         <Input
           id="rot-input"
@@ -910,8 +910,8 @@ function RotationField({ value, onChange }: { value: number; onChange: (v: numbe
           }}
           className="h-11 w-full rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold tabular-nums focus:border-[#5C4033]"
         />
-        <button type="button" onClick={() => set(value + 15)} aria-label="Rotate 15 degrees right" title="Rotate right" className="h-11 w-10 shrink-0 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] flex items-center justify-center hover:bg-[#F7F4EA]">
-          <RotateCw className="w-4 h-4" />
+        <button type="button" onClick={() => set(value + 15)} aria-label="Rotate 15 degrees right" title="Rotate right" className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] hover:bg-[#F7F4EA]">
+          <RotateCw className="h-4 w-4" />
         </button>
       </div>
     </div>
@@ -922,27 +922,27 @@ function ObstacleInspector({ obstacle, onChange, onDelete }: { obstacle: Obstacl
   const isCircle = obstacle.shape === "circle";
   const isPolygon = obstacle.shape === "polygon";
   return (
-    <div className="bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl p-3 space-y-3">
+    <div className="space-y-3 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="space-y-1.5 flex-1">
-          <Label htmlFor="ob-label" className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Label</Label>
+        <div className="flex-1 space-y-1.5">
+          <Label htmlFor="ob-label" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Label</Label>
           <Input id="ob-label" value={obstacle.label} onChange={(e) => onChange({ label: e.target.value })} className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#5C4033]" />
         </div>
-        <span className="self-end mb-2.5 text-[10px] font-black uppercase tracking-widest text-[#5F624F] bg-white border border-[#E6DFC8] rounded-lg px-2 py-1">{obstacle.shape}</span>
+        <span className="mb-2.5 self-end rounded-lg border border-[#E6DFC8] bg-white px-2 py-1 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">{obstacle.shape}</span>
       </div>
       {isPolygon ? (
-        <p className="text-[11px] font-bold text-[#5F624F] flex items-center gap-1.5">
-          <Info className="w-3 h-3 shrink-0" />
+        <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5F624F]">
+          <Info className="h-3 w-3 shrink-0" />
           Drag the red points on the canvas to reshape. Bounds {round(obstacle.width, 1)} × {round(obstacle.length, 1)} m.
         </p>
       ) : isCircle ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <NumField id="ob-x" label="X (m)" value={obstacle.x} onChange={(v) => onChange({ x: v })} />
           <NumField id="ob-y" label="Y (m)" value={obstacle.y} onChange={(v) => onChange({ y: v })} />
           <NumField id="ob-d" label="Diameter (m)" value={obstacle.width} min={MIN_SIZE} onChange={(v) => onChange({ width: v, length: v })} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <NumField id="ob-x" label="X (m)" value={obstacle.x} onChange={(v) => onChange({ x: v })} />
           <NumField id="ob-y" label="Y (m)" value={obstacle.y} onChange={(v) => onChange({ y: v })} />
           <NumField id="ob-w" label="Width (m)" value={obstacle.width} min={MIN_SIZE} onChange={(v) => onChange({ width: v })} />
@@ -954,8 +954,8 @@ function ObstacleInspector({ obstacle, onChange, onDelete }: { obstacle: Obstacl
           <RotationField value={rotOf(obstacle.rotation)} onChange={(v) => onChange({ rotation: v })} />
         </div>
       )}
-      <Button type="button" onClick={onDelete} className="h-10 px-3 rounded-xl border-2 border-red-200 bg-white text-red-600 font-black uppercase tracking-wide text-[10px] hover:bg-red-50">
-        <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete obstacle
+      <Button type="button" onClick={onDelete} className="h-10 rounded-xl border-2 border-red-200 bg-white px-3 font-black text-[10px] tracking-wide text-red-600 uppercase hover:bg-red-50">
+        <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete obstacle
       </Button>
     </div>
   );
@@ -965,10 +965,10 @@ function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: F
   const showFacing = fixture.facing != null;
   const shape = shapeOf(fixture.shape);
   return (
-    <div className="bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl p-3 space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+    <div className="space-y-3 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="fx-type" className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Type</Label>
+          <Label htmlFor="fx-type" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Type</Label>
           <select
             id="fx-type"
             title="Fixture type"
@@ -979,7 +979,7 @@ function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: F
               const facing = FIXTURE_META[type].facing;
               onChange({ type, facing: facing == null ? null : fixture.facing ?? facing });
             }}
-            className="h-11 w-full rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold text-[#1F1F1A] focus:border-[#5C4033] outline-none"
+            className="h-11 w-full rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold text-[#1F1F1A] outline-none focus:border-[#5C4033]"
           >
             {FIXTURE_ORDER.map((t) => (
               <option key={t} value={t}>{FIXTURE_META[t].label}</option>
@@ -987,37 +987,37 @@ function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: F
           </select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="fx-label" className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Label</Label>
+          <Label htmlFor="fx-label" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Label</Label>
           <Input id="fx-label" value={fixture.label} onChange={(e) => onChange({ label: e.target.value })} className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#5C4033]" />
         </div>
       </div>
       <ShapeToggle value={shape} onChange={onShape} />
       {shape === "polygon" ? (
-        <p className="text-[11px] font-bold text-[#5F624F] flex items-center gap-1.5">
-          <Info className="w-3 h-3 shrink-0" />
+        <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5F624F]">
+          <Info className="h-3 w-3 shrink-0" />
           Drag the points on the canvas to reshape. Bounds {round(fixture.width, 1)} × {round(fixture.length, 1)} m.
         </p>
       ) : shape === "circle" ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
           <NumField id="fx-x" label="X (m)" value={fixture.x} onChange={(v) => onChange({ x: v })} />
           <NumField id="fx-y" label="Y (m)" value={fixture.y} onChange={(v) => onChange({ y: v })} />
           <NumField id="fx-d" label="Diameter (m)" value={fixture.width} min={MIN_SIZE} onChange={(v) => onChange({ width: v, length: v })} />
         </div>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
           <NumField id="fx-x" label="X (m)" value={fixture.x} onChange={(v) => onChange({ x: v })} />
           <NumField id="fx-y" label="Y (m)" value={fixture.y} onChange={(v) => onChange({ y: v })} />
           <NumField id="fx-w" label="Width (m)" value={fixture.width} min={MIN_SIZE} onChange={(v) => onChange({ width: v })} />
           <NumField id="fx-l" label="Length (m)" value={fixture.length} min={MIN_SIZE} onChange={(v) => onChange({ length: v })} />
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
+      <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2">
         {shape !== "polygon" && <RotationField value={rotOf(fixture.rotation)} onChange={(v) => onChange({ rotation: v })} />}
         {showFacing && <NumField id="fx-facing" label="Facing (°)" value={fixture.facing ?? 0} min={0} max={359} step={5} onChange={(v) => onChange({ facing: Math.round(((v % 360) + 360) % 360) })} />}
       </div>
       {showFacing && <p className="text-[10px] font-bold text-[#5F624F]">Facing: 0° up · 90° right · 180° down · 270° left (sightline direction)</p>}
-      <Button type="button" onClick={onDelete} className="h-10 px-3 rounded-xl border-2 border-red-200 bg-white text-red-600 font-black uppercase tracking-wide text-[10px] hover:bg-red-50">
-        <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete fixture
+      <Button type="button" onClick={onDelete} className="h-10 rounded-xl border-2 border-red-200 bg-white px-3 font-black text-[10px] tracking-wide text-red-600 uppercase hover:bg-red-50">
+        <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete fixture
       </Button>
     </div>
   );
@@ -1027,28 +1027,28 @@ function FeatureInspector({ feature, onChange, onDelete }: { feature: Feature; o
   const showFacing = feature.kind !== "window";
   const isBench = feature.kind === "bench";
   return (
-    <div className="bg-[#F7F4EA] border border-[#E6DFC8] rounded-xl p-3 space-y-3">
+    <div className="space-y-3 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="space-y-1.5 flex-1">
-          <Label htmlFor="ft-label" className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">Label</Label>
+        <div className="flex-1 space-y-1.5">
+          <Label htmlFor="ft-label" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Label</Label>
           <Input id="ft-label" value={feature.label} onChange={(e) => onChange({ label: e.target.value })} className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#5C4033]" />
         </div>
-        <span className="self-end mb-2.5 text-[10px] font-black uppercase tracking-widest text-[#5F624F] bg-white border border-[#E6DFC8] rounded-lg px-2 py-1">{feature.kind}</span>
+        <span className="mb-2.5 self-end rounded-lg border border-[#E6DFC8] bg-white px-2 py-1 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">{feature.kind}</span>
       </div>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <NumField id="ft-x" label="X (m)" value={feature.x} onChange={(v) => onChange({ x: v })} />
         <NumField id="ft-y" label="Y (m)" value={feature.y} onChange={(v) => onChange({ y: v })} />
         <NumField id="ft-w" label="Width (m)" value={feature.width} min={MIN_SIZE} onChange={(v) => onChange({ width: v })} />
         <NumField id="ft-l" label="Length (m)" value={feature.length} min={MIN_SIZE} onChange={(v) => onChange({ length: v })} />
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-end">
+      <div className="grid grid-cols-1 items-end gap-2 sm:grid-cols-2">
         <RotationField value={rotOf(feature.rotation)} onChange={(v) => onChange({ rotation: v })} />
         {showFacing && <NumField id="ft-facing" label="Facing (°)" value={feature.facing ?? 0} min={0} max={359} step={5} onChange={(v) => onChange({ facing: Math.round(((v % 360) + 360) % 360) })} />}
         {isBench && <NumField id="ft-seats" label="Seats" value={feature.seats ?? 0} min={0} step={1} onChange={(v) => onChange({ seats: Math.round(v) })} />}
       </div>
       {showFacing && <p className="text-[10px] font-bold text-[#5F624F]">Facing: 0° up · 90° right · 180° down · 270° left</p>}
-      <Button type="button" onClick={onDelete} className="h-10 px-3 rounded-xl border-2 border-red-200 bg-white text-red-600 font-black uppercase tracking-wide text-[10px] hover:bg-red-50">
-        <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete {feature.kind}
+      <Button type="button" onClick={onDelete} className="h-10 rounded-xl border-2 border-red-200 bg-white px-3 font-black text-[10px] tracking-wide text-red-600 uppercase hover:bg-red-50">
+        <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete {feature.kind}
       </Button>
     </div>
   );
@@ -1057,7 +1057,7 @@ function FeatureInspector({ feature, onChange, onDelete }: { feature: Feature; o
 function NumField({ id, label, value, min = 0, max, step = 0.1, onChange }: { id: string; label: string; value: number; min?: number; max?: number; step?: number; onChange: (v: number) => void }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="text-[10px] font-black uppercase tracking-wide text-[#5F624F] ml-1">{label}</Label>
+      <Label htmlFor={id} className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</Label>
       <Input
         id={id}
         type="number"

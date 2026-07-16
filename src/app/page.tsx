@@ -100,17 +100,17 @@ export default async function HomePage() {
   ].filter((s) => s.show);
 
   return (
-    <main className="relative isolate min-h-dvh w-full bg-canvas text-ink-2 selection:bg-[#FDCC4B] selection:text-[#1a2008] antialiased pb-24">
+    <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <SmoothScroll />
       <PublicNav currentPath="/" />
 
       {/* Hero band — full-bleed so the ambient glow washes across the whole
           top of the page (not trapped inside the centred hero column). */}
       <div className="relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-40 -left-30 w-130 h-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
-        <div className="pointer-events-none absolute top-95 -right-40 w-110 h-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
+        <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
+        <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
-        <div className="relative z-10 max-w-5xl mx-auto px-4 pt-4 sm:pt-6">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 pt-4 sm:pt-6">
           <HomeHero
             tagline={tagline}
             openLabel={openLabel}
@@ -127,14 +127,14 @@ export default async function HomePage() {
       {/* Sticky section sub-nav (awwwards-style category bar) */}
       <nav
         aria-label="Page sections"
-        className="sticky top-14 sm:top-16 z-30 bg-canvas/85 backdrop-blur-xl border-y border-hairline"
+        className="sticky top-14 z-30 border-y border-hairline bg-canvas/85 backdrop-blur-xl sm:top-16"
       >
-        <div className="max-w-5xl mx-auto px-4 flex gap-2 overflow-x-auto no-scrollbar py-3">
+        <div className="no-scrollbar mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-3">
           {sections.map((s) => (
             <a
               key={s.id}
               href={`#${s.id}`}
-              className="shrink-0 inline-flex items-center h-9 px-4 rounded-full text-[11px] font-black uppercase tracking-wide bg-canvas-2 text-stone-400 border border-hairline hover:text-ink hover:bg-white/10 transition-colors"
+              className="inline-flex h-9 shrink-0 items-center rounded-full border border-hairline bg-canvas-2 px-4 font-black text-[11px] tracking-wide text-stone-400 uppercase transition-colors hover:bg-white/10 hover:text-ink"
             >
               {s.label}
             </a>
@@ -142,7 +142,7 @@ export default async function HomePage() {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 space-y-16 sm:space-y-24 mt-12 sm:mt-16">
+      <div className="mx-auto mt-12 max-w-5xl space-y-16 px-4 sm:mt-16 sm:space-y-24">
         <HighlightedEvents events={scheduleEvents} />
 
         {specials.length > 0 && <SpecialsSection specials={specials} />}
@@ -154,20 +154,20 @@ export default async function HomePage() {
           <SectionHeading eyebrow="Eat & drink" title="The Menu" action={{ href: "/menu", label: "Full menu" }} />
           <Link
             href="/menu"
-            className="group flex items-center gap-4 bg-canvas-2 hover:bg-white/15 border border-hairline hover:border-white/30 rounded-2xl p-5 sm:p-6 shadow-lg shadow-black/20 transition-all duration-300 active:scale-[0.99]"
+            className="group flex items-center gap-4 rounded-2xl border border-hairline bg-canvas-2 p-5 shadow-lg shadow-black/20 transition-all duration-300 hover:border-white/30 hover:bg-white/15 active:scale-[0.99] sm:p-6"
           >
-            <div className="shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center bg-[#FDCC4B]/10 border border-[#FDCC4B]/20">
-              <UtensilsCrossed className="w-6 h-6 text-[#FDCC4B]" aria-hidden="true" />
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#FDCC4B]/20 bg-[#FDCC4B]/10">
+              <UtensilsCrossed className="h-6 w-6 text-[#FDCC4B]" aria-hidden="true" />
             </div>
-            <div className="flex-1 min-w-0">
-              <span className="block text-ink font-black text-base uppercase tracking-tight">
+            <div className="min-w-0 flex-1">
+              <span className="block font-black text-base tracking-tight text-ink uppercase">
                 Drinks, Cocktails &amp; Snacks
               </span>
-              <p className="text-stone-400 text-xs leading-relaxed mt-0.5">
+              <p className="mt-0.5 text-xs leading-relaxed text-stone-400">
                 Draught, spirits, wine and bar bites — updated regularly.
               </p>
             </div>
-            <ArrowRight className="shrink-0 w-4 h-4 text-stone-500 group-hover:text-ink group-hover:translate-x-0.5 transition-all" />
+            <ArrowRight className="h-4 w-4 shrink-0 text-stone-500 transition-all group-hover:translate-x-0.5 group-hover:text-ink" />
           </Link>
         </section>
 
@@ -175,13 +175,13 @@ export default async function HomePage() {
         <FindUs info={companyInfo} />
 
         {/* Footer */}
-        <footer className="text-center pt-4">
+        <footer className="pt-4 text-center">
           <div className="flex items-center justify-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold uppercase tracking-[0.4em]">Don Fenticas</span>
+            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
             <div className="h-px w-6 bg-stone-800/50" />
           </div>
-          <p className="text-[9px] text-stone-700 uppercase tracking-widest mt-2">
+          <p className="mt-2 text-[9px] tracking-widest text-stone-700 uppercase">
             &copy; {new Date().getFullYear()} &middot; Licensed Venue &middot; Drink Responsibly
           </p>
         </footer>

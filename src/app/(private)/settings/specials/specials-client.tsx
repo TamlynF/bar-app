@@ -174,33 +174,33 @@ export default function SpecialsClient({
   const formDefault = isEditing ? selected : null;
 
   return (
-    <div className="px-2 py-3 sm:px-4 md:px-6 sm:py-0 space-y-3 sm:space-y-4 max-w-2xl">
+    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {/* List */}
       {initialSpecials.length === 0 ? (
-        <div className="border border-dashed border-[#E6DFC8] rounded-2xl py-14 text-center">
-          <Sparkles className="w-8 h-8 text-[#5F624F] opacity-30 mx-auto mb-3" />
-          <p className="text-sm font-black text-[#1F1F1A]">No specials yet</p>
-          <p className="text-[11px] text-[#5F624F] mt-1">
+        <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
+          <Sparkles className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
+          <p className="font-black text-sm text-[#1F1F1A]">No specials yet</p>
+          <p className="mt-1 text-[11px] text-[#5F624F]">
             Add your first special to display on the homepage
           </p>
           <button
             type="button"
             onClick={openAdd}
-            className="mt-4 h-8 px-4 rounded-lg bg-[#1B4332] text-white text-[10px] font-black uppercase tracking-widest hover:bg-[#1B4332]/85 transition-colors"
+            className="mt-4 h-8 rounded-lg bg-[#1B4332] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85"
           >
-            <Plus className="w-3.5 h-3.5 inline mr-1" />
+            <Plus className="mr-1 inline h-3.5 w-3.5" />
             Create Special
           </button>
         </div>
       ) : (
-        <section className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
-          <div className="flex items-center bg-[#F7F4EA] px-4 sm:px-5 py-3 gap-2">
+        <section className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
+          <div className="flex items-center gap-2 bg-[#F7F4EA] px-4 py-3 sm:px-5">
             <button
               type="button"
               onClick={() => setIsCollapsed(!isCollapsed)}
-              className="flex-1 min-w-0 text-left"
+              className="min-w-0 flex-1 text-left"
             >
-              <p className="text-[11px] font-bold uppercase tracking-wide text-[#5C4033] truncate">
+              <p className="truncate text-[11px] font-bold tracking-wide text-[#5C4033] uppercase">
                 Specials{" "}
                 <span className="text-[#5F624F]">
                   ({initialSpecials.length})
@@ -210,11 +210,11 @@ export default function SpecialsClient({
             <button
               type="button"
               onClick={openAdd}
-              className="w-7 h-7 sm:h-7 sm:w-auto sm:px-2.5 rounded-lg bg-[#1B4332] text-white hover:bg-[#1B4332]/85 transition-colors flex items-center justify-center gap-1.5 shrink-0"
+              className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1B4332] text-white transition-colors hover:bg-[#1B4332]/85 sm:h-7 sm:w-auto sm:px-2.5"
               title="Add Special"
             >
-              <Plus className="w-3.5 h-3.5 shrink-0" />
-              <span className="hidden sm:inline text-[10px] font-black uppercase tracking-widest">
+              <Plus className="h-3.5 w-3.5 shrink-0" />
+              <span className="hidden font-black text-[10px] tracking-widest uppercase sm:inline">
                 Create
               </span>
             </button>
@@ -226,7 +226,7 @@ export default function SpecialsClient({
             >
               <ChevronDown
                 className={cn(
-                  "w-4 h-4 text-[#5F624F] transition-transform duration-200",
+                  "h-4 w-4 text-[#5F624F] transition-transform duration-200",
                   !isCollapsed && "rotate-180"
                 )}
               />
@@ -247,30 +247,30 @@ export default function SpecialsClient({
                   <div
                     key={special.id}
                     onClick={() => openView(special)}
-                    className="px-3 sm:px-4 py-2.5 flex items-center gap-3 cursor-pointer hover:bg-[#F7F4EA]/50 transition-colors active:scale-[0.99]"
+                    className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[#F7F4EA]/50 active:scale-[0.99] sm:px-4"
                   >
                     {/* Thumbnail */}
-                    <div className="w-11 h-11 shrink-0 rounded-xl overflow-hidden border border-[#E6DFC8] bg-[#F7F4EA]">
+                    <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-[#E6DFC8] bg-[#F7F4EA]">
                       {special.image_url ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
                         <img
                           src={special.image_url}
                           alt={special.title}
-                          className="w-full h-full object-cover"
+                          className="h-full w-full object-cover"
                         />
                       ) : (
-                        <div className="flex items-center justify-center h-full">
-                          <Sparkles className="w-4 h-4 text-[#5F624F] opacity-30" />
+                        <div className="flex h-full items-center justify-center">
+                          <Sparkles className="h-4 w-4 text-[#5F624F] opacity-30" />
                         </div>
                       )}
                     </div>
 
                     {/* Info */}
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p
                           className={cn(
-                            "text-sm font-black leading-snug truncate flex-1 min-w-0",
+                            "min-w-0 flex-1 truncate font-black text-sm leading-snug",
                             inactive ? "text-[#5F624F]" : "text-[#1F1F1A]"
                           )}
                         >
@@ -278,21 +278,21 @@ export default function SpecialsClient({
                         </p>
                         <span
                           className={cn(
-                            "text-[9px] font-bold uppercase tracking-wide shrink-0 px-1.5 py-0.5 rounded-full border",
+                            "shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-bold tracking-wide uppercase",
                             special.is_active
-                              ? "text-green-700 bg-green-50 border-green-200"
-                              : "text-red-500 bg-red-50 border-red-200"
+                              ? "border-green-200 bg-green-50 text-green-700"
+                              : "border-red-200 bg-red-50 text-red-500"
                           )}
                         >
                           {special.is_active ? "Active" : "Inactive"}
                         </span>
                       </div>
-                      <p className="text-[10px] text-[#5F624F] font-medium mt-0.5 tabular-nums truncate">
+                      <p className="mt-0.5 truncate text-[10px] font-medium text-[#5F624F] tabular-nums">
                         {dateRange || "No dates set"}
                       </p>
                     </div>
 
-                    <ChevronRight className="w-4 h-4 text-[#5F624F] opacity-40 shrink-0" />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F] opacity-40" />
                   </div>
                 );
               })}
@@ -312,17 +312,17 @@ export default function SpecialsClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bg-[#F7F4EA] border-t-2 border-[#E6DFC8] rounded-t-[2.5rem] p-0 h-[85vh]
-            flex flex-col outline-none shadow-2xl
-            sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-140
-            sm:h-auto sm:max-h-[80vh] sm:rounded-4xl sm:bottom-6
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8]
+            bg-[#F7F4EA] p-0 shadow-2xl outline-none
+            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
+            sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
           {/* Header */}
-          <div className="shrink-0 p-4 pb-3 border-b border-[#E6DFC8] bg-white/80 backdrop-blur-md sticky top-0 z-30 sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="text-xl font-black text-[#1F1F1A] uppercase tracking-tighter leading-tight truncate">
+                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase">
                   {isAdding
                     ? "New Special"
                     : isEditing
@@ -330,9 +330,9 @@ export default function SpecialsClient({
                     : "View Special"}
                 </SheetTitle>
                 {selected && (
-                  <div className="flex items-center gap-1.5 mt-1">
-                    <Hash className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-xs font-bold text-[#5F624F] uppercase tracking-wide tabular-nums">
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Hash className="h-3 w-3 text-[#5F624F]" />
+                    <span className="text-xs font-bold tracking-wide text-[#5F624F] uppercase tabular-nums">
                       ID: {selected.id}
                     </span>
                   </div>
@@ -342,15 +342,15 @@ export default function SpecialsClient({
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0 touch-pan-y space-y-4 sm:space-y-5">
+          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
             {/* View mode */}
             {!showForm && selected && (
-              <div className="animate-in fade-in duration-200 space-y-4 sm:space-y-5">
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden">
+              <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+                <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                   <DetailCell label="Title" value={selected.title} />
                   {selected.description ? (
-                    <div className="px-4 sm:px-5 py-3 border-b border-[#E6DFC8]">
-                      <p className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] opacity-60 mb-1.5">
+                    <div className="border-b border-[#E6DFC8] px-4 py-3 sm:px-5">
+                      <p className="mb-1.5 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">
                         Description
                       </p>
                       <RichTextContent html={selected.description} variant="admin" />
@@ -389,10 +389,10 @@ export default function SpecialsClient({
                 </div>
 
                 {selected.image_url && (
-                  <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden p-3">
-                    <div className="flex items-center gap-1.5 mb-2">
-                      <ImageIcon className="w-3 h-3 text-[#5F624F]" />
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">
+                  <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white p-3">
+                    <div className="mb-2 flex items-center gap-1.5">
+                      <ImageIcon className="h-3 w-3 text-[#5F624F]" />
+                      <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">
                         Preview
                       </span>
                     </div>
@@ -400,7 +400,7 @@ export default function SpecialsClient({
                     <img
                       src={selected.image_url}
                       alt={selected.title}
-                      className="w-full h-40 object-cover rounded-xl"
+                      className="h-40 w-full rounded-xl object-cover"
                     />
                   </div>
                 )}
@@ -414,7 +414,7 @@ export default function SpecialsClient({
               <form
                 id="special-form"
                 onSubmit={handleSubmit}
-                className="animate-in fade-in duration-200 space-y-4 sm:space-y-5"
+                className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
               >
                 {formDefault && (
                   <input type="hidden" name="id" value={formDefault.id} />
@@ -422,42 +422,42 @@ export default function SpecialsClient({
                 <input type="hidden" name="image_url" value={imageUrl} />
 
                 {/* Image upload */}
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden p-4 space-y-3">
+                <div className="space-y-3 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
                   <div className="flex items-center gap-1.5">
-                    <ImageIcon className="w-3 h-3 text-[#5F624F]" />
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">
+                    <ImageIcon className="h-3 w-3 text-[#5F624F]" />
+                    <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">
                       Image
                     </span>
                   </div>
 
                   {imageUrl ? (
-                    <div className="relative rounded-xl overflow-hidden">
+                    <div className="relative overflow-hidden rounded-xl">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={imageUrl}
                         alt="Preview"
-                        className="w-full max-h-50 object-cover rounded-xl"
+                        className="max-h-50 w-full rounded-xl object-cover"
                       />
                       <button
                         type="button"
                         onClick={() => setImageUrl("")}
-                        className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-lg text-white hover:bg-black/80 transition-colors"
+                        className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
                         title="Remove image"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   ) : (
-                    <label className="flex flex-col items-center justify-center py-8 border-2 border-dashed border-[#E6DFC8] rounded-xl cursor-pointer hover:border-[#5C4033] hover:bg-[#F7F4EA] transition-colors">
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E6DFC8] py-8 transition-colors hover:border-[#5C4033] hover:bg-[#F7F4EA]">
                       {uploadingImage ? (
-                        <Loader2 className="w-8 h-8 text-[#5F624F] animate-spin mb-2" />
+                        <Loader2 className="mb-2 h-8 w-8 animate-spin text-[#5F624F]" />
                       ) : (
-                        <Upload className="w-8 h-8 text-[#5F624F] opacity-40 mb-2" />
+                        <Upload className="mb-2 h-8 w-8 text-[#5F624F] opacity-40" />
                       )}
-                      <span className="text-[11px] font-black uppercase tracking-wide text-[#5F624F]">
+                      <span className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
                         {uploadingImage ? "Uploading..." : "Click to upload"}
                       </span>
-                      <span className="text-[9px] text-[#5F624F] opacity-60 mt-1">JPG, PNG up to 10MB</span>
+                      <span className="mt-1 text-[9px] text-[#5F624F] opacity-60">JPG, PNG up to 10MB</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -469,19 +469,19 @@ export default function SpecialsClient({
                   )}
                 </div>
 
-                <div className="bg-white border-2 border-[#E6DFC8] rounded-3xl overflow-hidden divide-y divide-[#E6DFC8]/50">
+                <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                   <FormRow label="Title" required>
                     <input
                       name="title"
                       required
                       placeholder="e.g. 2-for-1 Cocktails"
                       defaultValue={formDefault?.title ?? ""}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
                     />
                   </FormRow>
 
-                  <div className="px-4 sm:px-5 py-3">
-                    <p className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] opacity-60 mb-2">
+                  <div className="px-4 py-3 sm:px-5">
+                    <p className="mb-2 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">
                       Description
                     </p>
                     <RichTextEditor
@@ -495,7 +495,7 @@ export default function SpecialsClient({
                       name="badges"
                       placeholder="e.g. NEW, FRIDAY (comma-separated)"
                       defaultValue={formDefault?.badges.join(", ") ?? ""}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none placeholder:text-[#5F624F]/40"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
                     />
                   </FormRow>
 
@@ -511,7 +511,7 @@ export default function SpecialsClient({
                               .split("T")[0]
                           : ""
                       }
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
                     />
                   </FormRow>
 
@@ -527,13 +527,13 @@ export default function SpecialsClient({
                               .split("T")[0]
                           : ""
                       }
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
                     />
                   </FormRow>
 
-                  <div className="px-4 sm:px-5 py-3">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F] opacity-60">
+                  <div className="px-4 py-3 sm:px-5">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">
                         Available on
                       </span>
                       <span className="text-[10px] font-medium text-[#5F624F] opacity-60">
@@ -555,7 +555,7 @@ export default function SpecialsClient({
                               defaultChecked={checked}
                               className="peer sr-only"
                             />
-                            <span className="inline-flex h-9 min-w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 text-[11px] font-black uppercase tracking-wide text-[#5F624F] transition-colors peer-checked:border-[#5C4033] peer-checked:bg-[#5C4033] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[#5C4033]">
+                            <span className="inline-flex h-9 min-w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 font-black text-[11px] tracking-wide text-[#5F624F] uppercase transition-colors peer-checked:border-[#5C4033] peer-checked:bg-[#5C4033] peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-[#5C4033]">
                               {d.label}
                             </span>
                           </label>
@@ -571,7 +571,7 @@ export default function SpecialsClient({
                       defaultValue={
                         formDefault?.is_active === false ? "false" : "true"
                       }
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] flex-1 bg-transparent outline-none appearance-none cursor-pointer dir-rtl"
+                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
                     >
                       <option value="true" className="dir-ltr">
                         Active
@@ -589,7 +589,7 @@ export default function SpecialsClient({
                       type="number"
                       min="0"
                       defaultValue={formDefault?.display_order ?? 0}
-                      className="text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 bg-transparent outline-none w-16"
+                      className="w-16 flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
                     />
                   </FormRow>
                 </div>
@@ -602,19 +602,19 @@ export default function SpecialsClient({
           </div>
 
           {/* Footer */}
-          <div className="shrink-0 px-6 py-5 pb-10 sm:pb-5 border-t-2 border-[#E6DFC8] bg-white/80 backdrop-blur-md z-40 sm:rounded-b-4xl">
+          <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 px-4 rounded-2xl border-2 border-[#E6DFC8] text-red-500 font-black uppercase tracking-wide text-[10px] bg-white hover:bg-red-50 hover:border-red-200"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
                 >
                   {isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <Trash2 className="w-4 h-4 mr-2" />
+                    <Trash2 className="mr-2 h-4 w-4" />
                   )}
                   Delete
                 </Button>
@@ -624,9 +624,9 @@ export default function SpecialsClient({
                     setImageUrl(selected?.image_url || "");
                     setIsEditing(true);
                   }}
-                  className="h-14 flex-1 rounded-2xl bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                  className="h-14 flex-1 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95"
                 >
-                  <Pencil className="w-4 h-4 mr-2" />
+                  <Pencil className="mr-2 h-4 w-4" />
                   Edit
                 </Button>
               </div>
@@ -643,7 +643,7 @@ export default function SpecialsClient({
                     else setIsEditing(false);
                   }}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] text-[#5F624F] font-black uppercase tracking-wide text-[10px] bg-white"
+                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
                 >
                   Cancel
                 </Button>
@@ -654,13 +654,13 @@ export default function SpecialsClient({
                     const form = document.getElementById('special-form') as HTMLFormElement | null;
                     if (form) form.requestSubmit();
                   }}
-                  className="h-14 rounded-2xl bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest text-[10px] shadow-lg active:scale-95"
+                  className="h-14 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95"
                 >
                   {isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <>
-                      <Save className="w-4 h-4 mr-2" />
+                      <Save className="mr-2 h-4 w-4" />
                       Save
                     </>
                   )}
@@ -687,13 +687,13 @@ function FormRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className={cn("flex gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4", align === "start" ? "items-start" : "items-center")}>
-      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
-        <span className="text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
+    <div className={cn("flex gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4", align === "start" ? "items-start" : "items-center")}>
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
           {label}
         </span>
         {required && (
-          <span className="text-red-500 text-[10px] font-bold">*</span>
+          <span className="text-[10px] font-bold text-red-500">*</span>
         )}
       </div>
       {children}
@@ -703,13 +703,13 @@ function FormRow({
 
 function DetailCell({ label, value, multiline }: { label: string; value: string; multiline?: boolean }) {
   return (
-    <div className={cn("flex gap-2 sm:gap-3 px-4 sm:px-5 py-2.5 sm:py-4 border-b border-[#E6DFC8] last:border-0", multiline ? "items-start" : "items-center")}>
-      <div className="flex items-center gap-1.5 sm:gap-2 text-[#5F624F] opacity-60 shrink-0">
-        <span className="text-[10px] font-bold uppercase tracking-wide whitespace-nowrap">
+    <div className={cn("flex gap-2 border-b border-[#E6DFC8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4", multiline ? "items-start" : "items-center")}>
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
           {label}
         </span>
       </div>
-      <span className={cn("text-base sm:text-sm font-black text-[#1F1F1A] text-right flex-1 leading-snug wrap-break-word", multiline && "whitespace-pre-line text-left")}>
+      <span className={cn("flex-1 text-right font-black text-base leading-snug wrap-break-word text-[#1F1F1A] sm:text-sm", multiline && "text-left whitespace-pre-line")}>
         {value}
       </span>
     </div>
@@ -718,9 +718,9 @@ function DetailCell({ label, value, multiline }: { label: string; value: string;
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3">
-      <AlertCircle className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
-      <p className="text-sm text-red-700 font-bold leading-snug">{message}</p>
+    <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
+      <p className="text-sm leading-snug font-bold text-red-700">{message}</p>
     </div>
   );
 }

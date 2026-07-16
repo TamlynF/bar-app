@@ -143,10 +143,23 @@ export async function createBingoBooking(formData: FormData) {
     }
 
     // 7. Create Square Payment Link
+    // Attach the real booker to the order so the Square dashboard shows them,
+    // not Square's sandbox default buyer ("Jane Doe"). We split the name for the
+    // buyer address and use a PICKUP fulfillment recipient (tickets are collected
+    // at the venue) so the order's Recipient field is authoritative.
+    const [firstName, ...restName] = fullName.trim().split(/\s+/);
+    const lastName = restName.join(" ") || undefined;
+    const buyerPhone = phoneNo ? `${countryCode ?? ""}${phoneNo}`.trim() : undefined;
+
     const { paymentLink } = await squareClient.checkout.paymentLinks.create({
       idempotencyKey: randomUUID(),
       order: {
         locationId: process.env.SQUARE_LOCATION_ID!,
+        // Link the order back to our booking without polluting the customer-facing
+        // line-item name. referenceId shows as "Reference ID" in the dashboard;
+        // metadata keeps the ids machine-readable for our own logic.
+        referenceId: String(newBooking.id),
+        metadata: { booking_id: String(newBooking.id), event_id: String(eventId) },
         lineItems: [{
           name: `Music Bingo — ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`,
           quantity: String(groupSize),
@@ -155,10 +168,27 @@ export async function createBingoBooking(formData: FormData) {
             currency: "GBP",
           },
         }],
+        fulfillments: [{
+          type: "PICKUP",
+          state: "PROPOSED",
+          pickupDetails: {
+            scheduleType: "ASAP",
+            recipient: {
+              displayName: fullName,
+              emailAddress: email,
+              ...(buyerPhone ? { phoneNumber: buyerPhone } : {}),
+            },
+          },
+        }],
       },
       checkoutOptions: {
         redirectUrl: `${appUrl}/book/bingo/success?bookingId=${newBooking.id}`,
         merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
+      },
+      prePopulatedData: {
+        buyerEmail: email,
+        ...(buyerPhone ? { buyerPhoneNumber: buyerPhone } : {}),
+        buyerAddress: { firstName, lastName },
       },
     });
 

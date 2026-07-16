@@ -63,9 +63,9 @@ export default async function QuizArchivePage({
   }, {});
 
   return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-0 space-y-8 animate-in fade-in duration-700 pb-32 text-left">
+    <div className="mx-auto max-w-6xl animate-in space-y-8 px-4 pt-4 pb-32 text-left duration-700 fade-in sm:px-6 sm:pt-0">
       {/* Filter Toolbar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+      <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
         <QuizHistoryFilter
           quizEvents={quizEvents as QuizEventSummary[]}
           currentFilter={eventFilter}
@@ -73,10 +73,10 @@ export default async function QuizArchivePage({
       </div>
 
       {(!history || history.length === 0) ? (
-        <div className="py-32 text-center border-4 border-dashed border-[#E6DFC8] rounded-[3.5rem] bg-white/40 flex flex-col items-center">
-          <BookOpen className="w-16 h-16 text-[#E6DFC8] mb-6" />
-          <h2 className="font-black text-xl text-[#1F1F1A] uppercase tracking-tight">Archive Is Empty</h2>
-          <p className="text-xs text-[#5F624F] mt-3 uppercase tracking-wide opacity-60 max-w-xs font-bold leading-relaxed">
+        <div className="flex flex-col items-center rounded-[3.5rem] border-4 border-dashed border-[#E6DFC8] bg-white/40 py-32 text-center">
+          <BookOpen className="mb-6 h-16 w-16 text-[#E6DFC8]" />
+          <h2 className="font-black text-xl tracking-tight text-[#1F1F1A] uppercase">Archive Is Empty</h2>
+          <p className="mt-3 max-w-xs text-xs leading-relaxed font-bold tracking-wide text-[#5F624F] uppercase opacity-60">
             There are no approved questions for this specific filter.
           </p>
         </div>
@@ -89,60 +89,60 @@ export default async function QuizArchivePage({
               <details 
                 key={category} 
                 className={cn(
-                  "group border rounded-4xl overflow-hidden shadow-sm transition-all duration-300",
+                  "group overflow-hidden rounded-4xl border shadow-sm transition-all duration-300",
                   theme.bg,                  
                   theme.border
                 )}
               >
-                <summary className="flex items-center justify-between p-5 cursor-pointer list-none select-none outline-none hover:brightness-95 transition-all">
+                <summary className="flex cursor-pointer list-none items-center justify-between p-5 transition-all outline-none select-none hover:brightness-95">
                 <div className="flex items-center gap-4">
                     <div className={cn(
-                      "w-10 h-10 rounded-xl flex items-center justify-center group-open:rotate-90 transition-transform shadow-sm",
+                      "flex h-10 w-10 items-center justify-center rounded-xl shadow-sm transition-transform group-open:rotate-90",
                       theme.iconBg
                     )}>
-                      <LayoutGrid className="w-5 h-5 text-white" />
+                      <LayoutGrid className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <h3 className={cn("text-base font-bold uppercase tracking-tight", theme.text)}>{category}</h3>
-                      <p className="text-[10px] text-[#5F624F] font-bold opacity-60 uppercase tracking-wide">{questions.length} Items Logged</p>
+                      <h3 className={cn("text-base font-bold tracking-tight uppercase", theme.text)}>{category}</h3>
+                      <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">{questions.length} Items Logged</p>
                     </div>
                   </div>
-                  <div className="w-5 h-5 text-[#5F624F] opacity-40 group-open:rotate-180 transition-transform">
-                    <ChevronDown className="w-5 h-5" />
+                  <div className="h-5 w-5 text-[#5F624F] opacity-40 transition-transform group-open:rotate-180">
+                    <ChevronDown className="h-5 w-5" />
                   </div>
                 </summary>
 
-                <div className="p-3 sm:p-6 border-t border-white/40">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+                <div className="border-t border-white/40 p-3 sm:p-6">
+                  <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2">
                     {questions.map((record) => (
                       <div
                         key={record.id}
-                        className="flex flex-col bg-white border border-black/5 rounded-2xl shadow-sm overflow-hidden"
+                        className="flex flex-col overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm"
                       >
-                        <div className="p-5 flex-1 space-y-5 flex flex-col">
+                        <div className="flex flex-1 flex-col space-y-5 p-5">
                           {/* Question Section */}
                           {record.image_url ? (
                             /* eslint-disable-next-line @next/next/no-img-element */
-                            <img src={record.image_url} alt={record.answer_text} className="w-full h-44 object-cover rounded-xl" />
+                            <img src={record.image_url} alt={record.answer_text} className="h-44 w-full rounded-xl object-cover" />
                           ) : record.question_text ? (
                             <div className="flex items-start gap-3">
-                              <div className="mt-1 p-1 bg-[#F7F4EA] rounded-lg">
-                                <MessageSquareQuote className="w-4 h-4 text-[#5C4033] opacity-40" />
+                              <div className="mt-1 rounded-lg bg-[#F7F4EA] p-1">
+                                <MessageSquareQuote className="h-4 w-4 text-[#5C4033] opacity-40" />
                               </div>
-                              <p className="text-sm font-bold text-[#1F1F1A] leading-snug tracking-tight">
+                              <p className="text-sm leading-snug font-bold tracking-tight text-[#1F1F1A]">
                                 {record.question_text}
                               </p>
                             </div>
                           ) : null}
 
                           {/* Unified Answer Box: Dark/Gold High Contrast */}
-                          <div className="mt-auto p-4 rounded-xl bg-[#5C4033] text-center shadow-inner relative overflow-hidden group/answer">
-                            <div className="absolute top-0 left-0 w-full h-full bg-[#5C4033]/5 pointer-events-none" />
-                            <div className="flex items-center justify-center gap-1.5 mb-1.5 opacity-60">
-                                <Target className="w-3 h-3 text-white" />
-                                <span className="text-[9px] font-black text-white uppercase tracking-[0.2em]">Correct Answer</span>
+                          <div className="group/answer relative mt-auto overflow-hidden rounded-xl bg-[#5C4033] p-4 text-center shadow-inner">
+                            <div className="pointer-events-none absolute top-0 left-0 h-full w-full bg-[#5C4033]/5" />
+                            <div className="mb-1.5 flex items-center justify-center gap-1.5 opacity-60">
+                                <Target className="h-3 w-3 text-white" />
+                                <span className="font-black text-[9px] tracking-[0.2em] text-white uppercase">Correct Answer</span>
                             </div>
-                            <p className="text-[15px] font-black text-white leading-tight tracking-tight">
+                            <p className="font-black text-[15px] leading-tight tracking-tight text-white">
                               {record.answer_text}
                             </p>
                           </div>

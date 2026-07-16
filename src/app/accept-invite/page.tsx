@@ -23,6 +23,10 @@ export default function AcceptInvitePage() {
     const refreshToken = params.get("refresh_token");
 
     if (!accessToken || !refreshToken) {
+      // Reading window.location.hash is inherently client-only, so this must run
+      // after mount — the canonical "sync external browser state" effect. The one
+      // synchronous setState here is safe and intentional.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError("No valid invite link found. Please request a new one from your admin.");
       return;
     }
@@ -67,31 +71,31 @@ export default function AcceptInvitePage() {
   }
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] flex items-center justify-center px-4">
+    <main className="flex min-h-dvh w-full items-center justify-center bg-[#26300D] px-4">
       <style dangerouslySetInnerHTML={{
         __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; }`
       }} />
 
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#FDCC4B] mb-4 shadow-lg">
-            <span className="text-[#26300D] font-black text-xl">DF</span>
+          <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FDCC4B] shadow-lg">
+            <span className="font-black text-xl text-[#26300D]">DF</span>
           </div>
-          <h1 className="text-white font-black text-2xl uppercase tracking-widest">Don Fenticas</h1>
-          <p className="text-stone-500 text-xs mt-1 uppercase tracking-widest font-medium">Set Your Password</p>
+          <h1 className="font-black text-2xl tracking-widest text-white uppercase">Don Fenticas</h1>
+          <p className="mt-1 text-xs font-medium tracking-widest text-stone-500 uppercase">Set Your Password</p>
         </div>
 
-        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 backdrop-blur-xl shadow-2xl">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
           {!ready && !error ? (
-            <p className="text-stone-400 text-sm text-center py-4">Verifying your invite…</p>
+            <p className="py-4 text-center text-sm text-stone-400">Verifying your invite…</p>
           ) : error ? (
-            <p className="text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3 text-center">
+            <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-center text-xs font-medium text-red-400">
               {error}
             </p>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-black uppercase tracking-widest text-stone-400">
+                <label className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
                   New Password
                 </label>
                 <input
@@ -100,12 +104,12 @@ export default function AcceptInvitePage() {
                   required
                   autoComplete="new-password"
                   placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-600 focus:outline-none focus:border-[#FDCC4B]/50 focus:ring-1 focus:ring-[#FDCC4B]/30 transition-all"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white transition-all placeholder:text-stone-600 focus:border-[#FDCC4B]/50 focus:ring-1 focus:ring-[#FDCC4B]/30 focus:outline-none"
                 />
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-[11px] font-black uppercase tracking-widest text-stone-400">
+                <label className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
                   Confirm Password
                 </label>
                 <input
@@ -114,12 +118,12 @@ export default function AcceptInvitePage() {
                   required
                   autoComplete="new-password"
                   placeholder="••••••••"
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-600 focus:outline-none focus:border-[#FDCC4B]/50 focus:ring-1 focus:ring-[#FDCC4B]/30 transition-all"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white transition-all placeholder:text-stone-600 focus:border-[#FDCC4B]/50 focus:ring-1 focus:ring-[#FDCC4B]/30 focus:outline-none"
                 />
               </div>
 
               {error && (
-                <p className="text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+                <p className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
                   {error}
                 </p>
               )}
@@ -127,7 +131,7 @@ export default function AcceptInvitePage() {
               <button
                 type="submit"
                 disabled={isPending}
-                className="w-full bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl py-3.5 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#FDCC4B]/20"
+                className="w-full rounded-xl bg-[#FDCC4B] py-3.5 font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isPending ? "Setting password…" : "Set Password & Continue"}
               </button>
@@ -135,7 +139,7 @@ export default function AcceptInvitePage() {
           )}
         </div>
 
-        <p className="text-center text-stone-700 text-[10px] uppercase tracking-widest mt-6 font-bold">
+        <p className="mt-6 text-center text-[10px] font-bold tracking-widest text-stone-700 uppercase">
           Authorised Staff Only
         </p>
       </div>

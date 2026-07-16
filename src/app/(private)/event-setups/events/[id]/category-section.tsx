@@ -314,32 +314,32 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   };
 
   return (
-    <section ref={sectionRef} className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
+    <section ref={sectionRef} className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
       {/* Category header */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-5 py-3.5 bg-[#E6DFC8] hover:bg-[#DDD4B8] border-b border-[#D6CDAE] transition-colors text-left"
+        className="flex w-full items-center justify-between border-b border-[#D6CDAE] bg-[#E6DFC8] px-5 py-3.5 text-left transition-colors hover:bg-[#DDD4B8]"
       >
-        <p className="text-xs font-black uppercase tracking-wide text-[#5C4033]">
+        <p className="font-black text-xs tracking-wide text-[#5C4033] uppercase">
           {orderNo != null ? `${orderNo}. ` : ''}{category_name}
         </p>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex shrink-0 items-center gap-2">
           <span
             className={cn(
-              "text-[10px] font-black tabular-nums px-2.5 py-1 rounded-lg border",
+              "rounded-lg border px-2.5 py-1 font-black text-[10px] tabular-nums",
               isComplete
-                ? "bg-green-50 border-green-200 text-green-700"
+                ? "border-green-200 bg-green-50 text-green-700"
                 : hasAny
-                ? "bg-amber-50 border-amber-200 text-amber-700"
-                : "bg-[#F7F4EA] border-[#E6DFC8] text-[#5F624F]"
+                ? "border-amber-200 bg-amber-50 text-amber-700"
+                : "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F]"
             )}
           >
             {count} / {question_count}
           </span>
           <ChevronDown
             className={cn(
-              "w-4 h-4 text-[#5F624F] transition-transform duration-200",
+              "h-4 w-4 text-[#5F624F] transition-transform duration-200",
               open && "rotate-180"
             )}
           />
@@ -354,9 +354,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               <a
                 href={`/api/spotify/login?return=${encodeURIComponent(`/event-setups/events/${eventId}`)}`}
                 style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                className="flex items-center justify-center gap-2 w-full h-10 rounded-xl bg-(--spotify-bg) text-white font-black uppercase text-[10px] tracking-wide hover:opacity-90 transition-opacity"
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-black text-[10px] tracking-wide text-white uppercase transition-opacity hover:opacity-90"
               >
-                <Music className="w-3.5 h-3.5" />
+                <Music className="h-3.5 w-3.5" />
                 Connect Spotify
               </a>
             </div>
@@ -371,11 +371,11 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                      className="flex-1 flex items-center justify-center gap-2 h-10 rounded-xl bg-(--spotify-bg) text-white font-black uppercase text-[10px] tracking-wide hover:opacity-90 transition-opacity"
+                      className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-black text-[10px] tracking-wide text-white uppercase transition-opacity hover:opacity-90"
                     >
-                      <Music className="w-3.5 h-3.5" />
+                      <Music className="h-3.5 w-3.5" />
                       Open Spotify Playlist
-                      <ExternalLink className="w-3 h-3" />
+                      <ExternalLink className="h-3 w-3" />
                     </a>
                     <Button
                       type="button"
@@ -383,14 +383,14 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                       onClick={handleSyncPlaylist}
                       disabled={isSyncing}
                       title="Sync playlist with saved songs"
-                      className="h-10 w-10 rounded-xl border-2 border-[#E6DFC8] text-[#5C4033] hover:bg-[#F7F4EA] shrink-0"
+                      className="h-10 w-10 shrink-0 rounded-xl border-2 border-[#E6DFC8] text-[#5C4033] hover:bg-[#F7F4EA]"
                     >
-                      {isSyncing ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                      {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     </Button>
                   </div>
                 ) : (
-                  <div className="rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA] p-2.5 space-y-1.5">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-[#5F624F]">
+                  <div className="space-y-1.5 rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA] p-2.5">
+                    <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Spotify playlist — copy into a browser or the Spotify app
                     </p>
                     <div className="flex items-center gap-2">
@@ -398,7 +398,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         href={playlistUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 min-w-0 truncate text-[11px] font-bold text-[#5C4033] underline"
+                        className="min-w-0 flex-1 truncate text-[11px] font-bold text-[#5C4033] underline"
                       >
                         {playlistUrl}
                       </a>
@@ -407,9 +407,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         variant="outline"
                         onClick={handleCopyPlaylist}
                         title="Copy playlist URL"
-                        className="h-9 w-9 rounded-lg border-2 border-[#E6DFC8] text-[#5C4033] hover:bg-white shrink-0"
+                        className="h-9 w-9 shrink-0 rounded-lg border-2 border-[#E6DFC8] text-[#5C4033] hover:bg-white"
                       >
-                        {playlistCopied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5" />}
+                        {playlistCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
                       </Button>
                     </div>
                   </div>
@@ -420,9 +420,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                   variant="outline"
                   onClick={handleSyncPlaylist}
                   disabled={isSyncing || configId == null}
-                  className="w-full h-10 rounded-xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase text-[10px] tracking-wide hover:bg-[#F7F4EA]"
+                  className="h-10 w-full rounded-xl border-2 border-[#E6DFC8] font-black text-[10px] tracking-wide text-[#5C4033] uppercase hover:bg-[#F7F4EA]"
                 >
-                  {isSyncing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Music className="w-3.5 h-3.5 mr-2" />}
+                  {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Music className="mr-2 h-3.5 w-3.5" />}
                   Create Spotify Playlist
                 </Button>
               )}
@@ -434,9 +434,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                 type="button"
                 variant="outline"
                 onClick={handlePrintPictureSheet}
-                className="bg-slate-100 w-full h-10 rounded-xl border-2 border-[#E6DFC8] text-[#5C4033] font-black uppercase text-[10px] tracking-wide hover:bg-[#F7F4EA]"
+                className="h-10 w-full rounded-xl border-2 border-[#E6DFC8] bg-slate-100 font-black text-[10px] tracking-wide text-[#5C4033] uppercase hover:bg-[#F7F4EA]"
               >
-                <Printer className="w-3.5 h-3.5 mr-2" />
+                <Printer className="mr-2 h-3.5 w-3.5" />
                 Print Picture Sheet
               </Button>
             </div>
@@ -444,18 +444,18 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           {isPicture && (() => {
             const firstQ = questions.find((q) => q.question_text);
             return firstQ ? (
-              <div className="px-5 py-2.5 bg-[#5C4033]/5 border-b border-[#E6DFC8]">
-                <p className="pl-3 text-sm font-black text-[#5C4033]">
+              <div className="border-b border-[#E6DFC8] bg-[#5C4033]/5 px-5 py-2.5">
+                <p className="pl-3 font-black text-sm text-[#5C4033]">
                   Question: <span className="font-bold text-[#1F1F1A]">{firstQ.question_text}</span>
                 </p>
               </div>
             ) : null;
           })()}
-          <div className="bg-amber-50 p-3 space-y-3">
+          <div className="space-y-3 bg-amber-50 p-3">
             {count === 0 ? (
               <div className="py-8 text-center">
-                <BookOpen className="w-6 h-6 text-[#5F624F] opacity-20 mx-auto mb-2" />
-                <p className="text-xs font-black text-[#5F624F] opacity-40 uppercase tracking-wide">
+                <BookOpen className="mx-auto mb-2 h-6 w-6 text-[#5F624F] opacity-20" />
+                <p className="font-black text-xs tracking-wide text-[#5F624F] uppercase opacity-40">
                   No questions yet
                 </p>
               </div>
@@ -464,13 +464,13 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                 const isEditing = editingId === q.id;
                 return (
                   <div key={q.id} className={cn(
-                    "bg-white border-2 rounded-2xl p-4 shadow-sm relative overflow-hidden transition-all",
+                    "relative overflow-hidden rounded-2xl border-2 bg-white p-4 shadow-sm transition-all",
                     isEditing ? "border-[#5C4033] ring-4 ring-[#5C4033]/5" : "border-[#E6DFC8]"
                   )}>
                     {isEditing ? (
-                      <div className="space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                      <div className="animate-in space-y-3 duration-200 zoom-in-95 fade-in">
                         <div className="flex items-center gap-2">
-                          <label className="text-xs font-black uppercase text-[#5F624F] tracking-wide ml-1">Question No.</label>
+                          <label className="ml-1 font-black text-xs tracking-wide text-[#5F624F] uppercase">Question No.</label>
                           <input
                             type="number"
                             inputMode="numeric"
@@ -482,20 +482,20 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               const val = e.target.value.replace(/\D/g, '');
                               setEditForm({ ...editForm, questionNo: val === '' ? 0 : parseInt(val) });
                             }}
-                            className="w-16 text-xs font-black text-[#5C4033] px-3 py-2 bg-white border border-[#E6DFC8] focus:border-[#5C4033] rounded-lg outline-none h-10 text-center tabular-nums"
+                            className="h-10 w-16 rounded-lg border border-[#E6DFC8] bg-white px-3 py-2 text-center font-black text-xs text-[#5C4033] tabular-nums outline-none focus:border-[#5C4033]"
                           />
                         </div>
                         {isPicture && q.image_url && (
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black uppercase text-[#5F624F] tracking-wide ml-1">Image</label>
+                            <label className="ml-1 font-black text-xs tracking-wide text-[#5F624F] uppercase">Image</label>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={newImagePreview ?? q.image_url}
                               alt={q.answer_text}
-                              className="w-full h-40 object-cover rounded-xl"
+                              className="h-40 w-full rounded-xl object-cover"
                             />
-                            <label className="flex items-center justify-center gap-2 w-full h-9 rounded-xl border-2 border-dashed border-[#E6DFC8] text-xs font-black uppercase tracking-wide text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033] cursor-pointer transition-all">
-                              <Upload className="w-3.5 h-3.5" />
+                            <label className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#E6DFC8] font-black text-xs tracking-wide text-[#5F624F] uppercase transition-all hover:border-[#5C4033] hover:text-[#5C4033]">
+                              <Upload className="h-3.5 w-3.5" />
                               {newImageFile ? newImageFile.name : 'Replace image'}
                               <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
                             </label>
@@ -503,46 +503,46 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         )}
                         {!isPicture && !hideQuestionText && (
                           <div className="space-y-1.5">
-                            <label className="text-xs font-black uppercase text-[#5F624F] tracking-wide ml-1">Question</label>
+                            <label className="ml-1 font-black text-xs tracking-wide text-[#5F624F] uppercase">Question</label>
                             <textarea
                               title="Edit question"
                               value={editForm.question}
                               onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                              className="w-full text-xs leading-relaxed min-h-30 p-3 bg-[#F7F4EA]/30 border-2 border-[#E6DFC8] focus:border-[#5C4033] rounded-xl outline-none resize-none"
+                              className="min-h-30 w-full resize-none rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA]/30 p-3 text-xs leading-relaxed outline-none focus:border-[#5C4033]"
                             />
                           </div>
                         )}
                         <div className="space-y-1.5">
-                          <label className="text-xs font-black uppercase text-[#5F624F] tracking-wide ml-1">Answer</label>
+                          <label className="ml-1 font-black text-xs tracking-wide text-[#5F624F] uppercase">Answer</label>
                           <input
                             title="Edit answer"
                             value={editForm.answer}
                             onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })}
-                            className="w-full text-xs font-black text-[#5C4033] bg-[#5C4033]/10 border-2 border-[#5C4033]/15 focus:border-[#5C4033] rounded-xl outline-none h-11 px-3"
+                            className="h-11 w-full rounded-xl border-2 border-[#5C4033]/15 bg-[#5C4033]/10 px-3 font-black text-xs text-[#5C4033] outline-none focus:border-[#5C4033]"
                           />
                         </div>
                         <div className="flex gap-2 pt-1">
                           <Button
                             onClick={() => saveEdit(q.id)}
                             disabled={isPending}
-                            className="flex-1 bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase text-xs tracking-wide h-10 rounded-xl"
+                            className="h-10 flex-1 rounded-xl bg-[#1B4332] font-black text-xs tracking-wide text-white uppercase hover:bg-[#1B4332]/85"
                           >
-                            {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Save className="w-3.5 h-3.5 mr-2" /> Save</>}
+                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-3.5 w-3.5" /> Save</>}
                           </Button>
                           <Button
                             variant="outline"
                             onClick={cancelEditing}
                             disabled={isPending}
-                            className="px-4 bg-red-500 border-2 border-[#E6DFC8] text-white font-bold uppercase text-xs h-10 rounded-xl"
+                            className="h-10 rounded-xl border-2 border-[#E6DFC8] bg-red-500 px-4 text-xs font-bold text-white uppercase"
                           >
-                            <X className="w-3.5 h-3.5" />
+                            <X className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2 -mt-1">
-                          <span className="text-sm font-black text-[#5C4033] shrink-0">Question {q.question_no ?? idx + 1}:</span>
+                        <div className="-mt-1 flex items-center justify-between gap-2">
+                          <span className="shrink-0 font-black text-sm text-[#5C4033]">Question {q.question_no ?? idx + 1}:</span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -550,14 +550,14 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 size="icon"
                                 title="Question actions"
                                 aria-label="Question actions"
-                                className="h-7 w-7 -mr-1 rounded-xl text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033] shrink-0"
+                                className="-mr-1 h-7 w-7 shrink-0 rounded-xl text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
                               >
-                                <MoreVertical className="w-4 h-4" />
+                                <MoreVertical className="h-4 w-4" />
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-36">
                               <DropdownMenuItem onClick={() => startEditing(q)}>
-                                <Edit2 className="w-4 h-4" />
+                                <Edit2 className="h-4 w-4" />
                                 Edit
                               </DropdownMenuItem>
                               <DropdownMenuItem
@@ -565,7 +565,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 disabled={isPending}
                                 onClick={() => deleteQuestion(q.id)}
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="h-4 w-4" />
                                 Delete
                               </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -574,15 +574,15 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         <div className="space-y-3">
                           {isHigherOrLower && q.hint_year ? (
                             <div className="space-y-2">
-                              <p className="text-sm text-[#1F1F1A] leading-snug">
+                              <p className="text-sm leading-snug text-[#1F1F1A]">
                                 <span className="font-bold italic">{q.answer_text_ext ?? q.answer_text}</span> higher or lower than <span className="font-bold text-orange-600">{q.hint_year}</span>?
                               </p>
-                              <div className="flex items-center justify-center gap-2 bg-[#7A1F1F] text-white px-3 py-2 rounded-xl w-full shadow-sm">
-                                <Target className="w-3 h-3 text-white/50 shrink-0" />
-                                <span className="text-xs font-black tracking-tight text-center">
+                              <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#7A1F1F] px-3 py-2 text-white shadow-sm">
+                                <Target className="h-3 w-3 shrink-0 text-white/50" />
+                                <span className="text-center font-black text-xs tracking-tight">
                                   {(q.release_year ?? 0) > q.hint_year ? 'Higher' : 'Lower'}
                                 </span>
-                                <span className="text-xs font-black text-white/50 tabular-nums shrink-0">{q.release_year}</span>
+                                <span className="shrink-0 font-black text-xs text-white/50 tabular-nums">{q.release_year}</span>
                               </div>
                             </div>
                           ) : (
@@ -592,11 +592,11 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 <img
                                   src={q.image_url}
                                   alt={q.answer_text}
-                                  className="w-full h-40 object-cover rounded-xl"
+                                  className="h-40 w-full rounded-xl object-cover"
                                 />
                               ) : (
                                 (!includeSpotify || !q.spotify_track_id) && (
-                                  <p className="text-sm font-bold text-[#1F1F1A] leading-snug">
+                                  <p className="text-sm leading-snug font-bold text-[#1F1F1A]">
                                     {q.question_text}
                                   </p>
                                 )
@@ -604,9 +604,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               {hideQuestionText && q.spotify_track_id && (
                                 <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
                               )}
-                              <div className="flex items-center justify-center gap-2 bg-[#1B4332] text-white px-3 py-2 rounded-xl w-full sm:w-fit sm:min-w-50 shadow-sm">
-                                <Target className="w-3 h-3 text-white/50 shrink-0" />
-                                <span className="text-xs font-black tracking-tight text-center">{q.answer_text}</span>
+                              <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-3 py-2 text-white shadow-sm sm:w-fit sm:min-w-50">
+                                <Target className="h-3 w-3 shrink-0 text-white/50" />
+                                <span className="text-center font-black text-xs tracking-tight">{q.answer_text}</span>
                               </div>
                             </>
                           )}
@@ -624,17 +624,17 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
 
           {/* Generate button — hidden for events whose date has passed */}
           {!isPastEvent && (
-            <div className="px-5 py-3.5 border-t border-[#E6DFC8] bg-[#F7F4EA]/50">
+            <div className="border-t border-[#E6DFC8] bg-[#F7F4EA]/50 px-5 py-3.5">
               <Link
                 href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
                 className={cn(
-                  "flex items-center justify-center gap-2 w-full h-10 rounded-xl font-black text-[11px] uppercase tracking-wide transition-all",
+                  "flex h-10 w-full items-center justify-center gap-2 rounded-xl font-black text-[11px] tracking-wide uppercase transition-all",
                   isComplete
-                    ? "bg-white border border-[#E6DFC8] text-[#5F624F] hover:bg-[#F7F4EA]"
-                    : "bg-[#9A3412] text-white hover:bg-[#9A3412]/50 shadow-sm"
+                    ? "border border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]"
+                    : "bg-[#9A3412] text-white shadow-sm hover:bg-[#9A3412]/50"
                 )}
               >
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="h-3.5 w-3.5" />
                 {isComplete ? "Generate Extra" : "Generate Questions"}
               </Link>
             </div>

@@ -23,24 +23,24 @@ export default function BookingsHubClient({ groups }: { groups: AdminBookingGrou
   return (
     <div className="space-y-4 p-2 sm:p-8">
       {/* Search */}
-      <div className="flex items-center gap-2 bg-white px-3 border border-[#E6DFC8] focus-within:border-[#5C4033] rounded-xl min-w-0 h-11 transition-colors">
-        <Search className="w-4 h-4 text-[#5F624F]/50 shrink-0" />
+      <div className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-[#E6DFC8] bg-white px-3 transition-colors focus-within:border-[#5C4033]">
+        <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
         <input
           type="text"
           placeholder="Search bookings..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           aria-label="Search bookings"
-          className="flex-1 bg-transparent outline-none min-w-0 text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-sm"
+          className="min-w-0 flex-1 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
         />
       </div>
 
       {filtered.length === 0 ? (
-        <p className="px-1 py-8 text-[#5F624F]/70 text-sm text-center">
+        <p className="px-1 py-8 text-center text-sm text-[#5F624F]/70">
           No bookings found.
         </p>
       ) : (
-        <div className="gap-3 grid grid-cols-1 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {filtered.map((group) => {
             const badgeClasses = badgeClassFromColor(group.badgeColor);
             const colorHex = swatchHexFromColor(group.badgeColor) ?? "#5C4033";
@@ -49,32 +49,32 @@ export default function BookingsHubClient({ groups }: { groups: AdminBookingGrou
               <Link
                 key={group.key}
                 href={group.href}
-                className="group flex justify-between items-center bg-white shadow-sm hover:shadow-md p-3 border border-[#E6DFC8] hover:border-[#5C4033] rounded-3xl active:scale-[0.98] transition-all"
+                className="group flex items-center justify-between rounded-3xl border border-[#E6DFC8] bg-white p-3 shadow-sm transition-all hover:border-[#5C4033] hover:shadow-md active:scale-[0.98]"
               >
                 <div className="flex items-center gap-4">
                   <div
                     style={{ "--cc": colorHex } as React.CSSProperties}
-                    className="flex items-center justify-center w-12 h-12 bg-(--cc)/15 rounded-2xl transition-transform shrink-0 group-hover:scale-110"
+                    className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-(--cc)/15 transition-transform group-hover:scale-110"
                   >
-                    <Icon className="w-6 h-6 text-(--cc)" />
+                    <Icon className="h-6 w-6 text-(--cc)" />
                   </div>
-                  <div className="flex flex-col min-w-0 text-left">
-                    <span className="font-black text-[#1F1F1A] truncate uppercase leading-none tracking-tight">
+                  <div className="flex min-w-0 flex-col text-left">
+                    <span className="truncate font-black leading-none tracking-tight text-[#1F1F1A] uppercase">
                       {group.label}
                     </span>
-                    <div className="flex items-center gap-1.5 mt-1.5">
+                    <div className="mt-1.5 flex items-center gap-1.5">
                       {group.typeLabel && (
-                        <span className="opacity-60 font-bold text-[#5F624F] text-[11px] uppercase tracking-wider">
+                        <span className="text-[11px] font-bold tracking-wider text-[#5F624F] uppercase opacity-60">
                           {group.typeLabel}
                         </span>
                       )}
-                      <span className={`text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded ${badgeClasses}`}>
+                      <span className={`rounded px-1.5 py-0.5 font-black text-[9px] tracking-wide uppercase ${badgeClasses}`}>
                         {group.count} upcoming
                       </span>
                     </div>
                   </div>
                 </div>
-                <ChevronRight className="w-5 h-5 text-[#E6DFC8] group-hover:text-[#5C4033] transition-colors" />
+                <ChevronRight className="h-5 w-5 text-[#E6DFC8] transition-colors group-hover:text-[#5C4033]" />
               </Link>
             );
           })}

@@ -38,19 +38,19 @@ export function BandCalendarClient({
         className="w-full"
       />
 
-      <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-[#E6DFC8]">
+      <div className="flex flex-wrap items-center gap-4 border-t border-[#E6DFC8] pt-2">
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-[#5C4033]" />
-          <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Confirmed</span>
+          <div className="h-3 w-3 rounded-sm bg-[#5C4033]" />
+          <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Confirmed</span>
         </div>
         <div className="flex items-center gap-1.5">
-          <div className="w-3 h-3 rounded-sm bg-[#C8956D]/60 border border-[#C8956D]" />
-          <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Requested</span>
+          <div className="h-3 w-3 rounded-sm border border-[#C8956D] bg-[#C8956D]/60" />
+          <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Requested</span>
         </div>
         {popularDates.length > 0 && (
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm ring-2 ring-[#C8956D] ring-offset-1" />
-            <span className="text-[10px] font-bold uppercase tracking-wide text-[#5F624F]">Most popular</span>
+            <div className="h-3 w-3 rounded-sm ring-2 ring-[#C8956D] ring-offset-1" />
+            <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Most popular</span>
           </div>
         )}
       </div>

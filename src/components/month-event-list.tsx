@@ -119,7 +119,7 @@ export function MonthEventList({
       {/* Filter chips */}
       {filters.length > 1 && (
         <div
-          className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1"
+          className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1"
           role="group"
           aria-label="Filter events by type"
         >
@@ -132,17 +132,17 @@ export function MonthEventList({
                 aria-pressed={isActive}
                 onClick={() => setActiveFilter(f.label)}
                 style={{ "--chip-c": f.color } as React.CSSProperties}
-                className={`shrink-0 inline-flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide px-3 py-1.5 rounded-full transition-colors active:scale-95 ${
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 font-black text-[10px] tracking-wide uppercase transition-colors active:scale-95 ${
                   isActive
                     ? f.label === ALL
                       ? "bg-[#FDCC4B] text-[#1a2008]"
                       : "bg-(--chip-c) text-[#1a2008]"
-                    : "bg-white/5 text-stone-400 border border-white/8 hover:text-white hover:bg-white/8"
+                    : "border border-white/8 bg-white/5 text-stone-400 hover:bg-white/8 hover:text-white"
                 }`}
               >
                 {f.label !== ALL && (
                   <span
-                    className="ev-dot w-1.5 h-1.5 rounded-full"
+                    className="ev-dot h-1.5 w-1.5 rounded-full"
                     style={{ "--ev-c": isActive ? "#1a2008" : f.color } as React.CSSProperties}
                   />
                 )}
@@ -156,13 +156,13 @@ export function MonthEventList({
       {/* Upcoming, grouped by week then by date */}
       {Array.from(weeks.entries()).map(([weekKey, weekEvents], index) => (
         <div key={weekKey}>
-          <div className="flex items-center gap-2 px-1 mb-1">
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-stone-500">
+          <div className="mb-1 flex items-center gap-2 px-1">
+            <span className="font-black text-[10px] tracking-[0.25em] text-stone-500 uppercase">
               Week {index + 1}
             </span>
-            <div className="flex-1 h-px bg-stone-800/50" />
+            <div className="h-px flex-1 bg-stone-800/50" />
           </div>
-          <div className="bg-[#26300D] border border-white/10 rounded-2xl divide-y divide-[#2a3610] overflow-hidden">
+          <div className="divide-y divide-[#2a3610] overflow-hidden rounded-2xl border border-white/10 bg-[#26300D]">
             {groupByDate(weekEvents).map((g) =>
               g.length === 1 ? (
                 <EventRow key={g[0].id} event={g[0]} isPast={false} />
@@ -178,7 +178,7 @@ export function MonthEventList({
       {visibleUpcoming.length === 0 &&
         visiblePast.length === 0 &&
         (upcoming.length > 0 || past.length > 0) && (
-          <p className="text-center text-stone-600 text-xs font-bold uppercase tracking-widest py-6">
+          <p className="py-6 text-center text-xs font-bold tracking-widest text-stone-600 uppercase">
             No {effectiveFilter.toLowerCase()} events this month
           </p>
         )}
@@ -190,14 +190,14 @@ export function MonthEventList({
             type="button"
             onClick={() => setShowPast((o) => !o)}
             aria-expanded={showPast}
-            className="group w-full flex items-center gap-2 px-1 mb-2"
+            className="group mb-2 flex w-full items-center gap-2 px-1"
           >
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-stone-600">
+            <span className="font-black text-[10px] tracking-[0.25em] text-stone-600 uppercase">
               Earlier this month ({visiblePast.length})
             </span>
-            <div className="flex-1 h-px bg-stone-800/50" />
+            <div className="h-px flex-1 bg-stone-800/50" />
             <ChevronDown
-              className={`w-4 h-4 text-stone-600 transition-transform ${
+              className={`h-4 w-4 text-stone-600 transition-transform ${
                 showPast ? "rotate-180" : ""
               }`}
               aria-hidden="true"
@@ -205,7 +205,7 @@ export function MonthEventList({
           </button>
 
           {showPast && (
-            <div className="bg-[#26300D] border border-white/10 rounded-2xl divide-y divide-[#2a3610] overflow-hidden animate-in fade-in slide-in-from-top-1 duration-200">
+            <div className="animate-in divide-y divide-[#2a3610] overflow-hidden rounded-2xl border border-white/10 bg-[#26300D] duration-200 fade-in slide-in-from-top-1">
               {groupByDate(visiblePast).map((g) =>
                 g.length === 1 ? (
                   <EventRow key={g[0].id} event={g[0]} isPast />
@@ -219,7 +219,7 @@ export function MonthEventList({
       )}
 
       {upcoming.length === 0 && past.length === 0 && (
-        <p className="text-center text-stone-600 text-xs font-bold uppercase tracking-widest py-6">
+        <p className="py-6 text-center text-xs font-bold tracking-widest text-stone-600 uppercase">
           Nothing else this month
         </p>
       )}
@@ -241,19 +241,19 @@ function EventDateCell({
   count: number;
 }) {
   return (
-    <div className="shrink-0 w-10 text-center">
-      <p className="text-stone-500 text-[9px] font-black uppercase tracking-widest leading-tight">
+    <div className="w-10 shrink-0 text-center">
+      <p className="font-black text-[9px] leading-tight tracking-widest text-stone-500 uppercase">
         {format(dateObj, "EEE")}
       </p>
       <p
-        className={`text-base font-black tabular-nums leading-none ${
+        className={`font-black text-base leading-none tabular-nums ${
           isPast ? "text-stone-300" : "text-white"
         }`}
       >
         {format(dateObj, "d")}
       </p>
       {count > 1 && (
-        <span className="mt-1 inline-block text-[8px] font-black tabular-nums leading-none text-[#FDCC4B] bg-[#FDCC4B]/10 rounded-full px-1.5 py-0.5">
+        <span className="mt-1 inline-block rounded-full bg-[#FDCC4B]/10 px-1.5 py-0.5 font-black text-[8px] leading-none text-[#FDCC4B] tabular-nums">
           ×{count}
         </span>
       )}
@@ -269,26 +269,26 @@ function EventBody({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
 
   return (
     <>
-      <div className="flex-1 min-w-0">
+      <div className="min-w-0 flex-1">
         {event.externalLink && !isPast ? (
           <a
             href={event.externalLink}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 min-w-0 max-w-full"
+            className="inline-flex max-w-full min-w-0 items-center gap-1"
             onClick={(e) => e.stopPropagation()}
           >
             <p
-              className="ev-text text-sm font-black leading-tight truncate underline underline-offset-2 pb-px"
+              className="ev-text truncate pb-px font-black text-sm leading-tight underline underline-offset-2"
               style={{ "--ev-c": event.color } as React.CSSProperties}
             >
               {event.title}
             </p>
-            <ExternalLink className="w-3 h-3 shrink-0 text-stone-500" aria-hidden="true" />
+            <ExternalLink className="h-3 w-3 shrink-0 text-stone-500" aria-hidden="true" />
           </a>
         ) : (
           <p
-            className={`ev-text text-sm font-black leading-tight truncate ${
+            className={`ev-text truncate font-black text-sm leading-tight ${
               isPast ? "line-through" : ""
             }`}
             style={{ "--ev-c": event.color } as React.CSSProperties}
@@ -297,14 +297,14 @@ function EventBody({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
           </p>
         )}
         {subLine && (
-          <p className="text-stone-500 text-[10px] font-bold uppercase tracking-wide mt-0.5 truncate">
+          <p className="mt-0.5 truncate text-[10px] font-bold tracking-wide text-stone-500 uppercase">
             {subLine}
           </p>
         )}
       </div>
 
       {!isPast && event.isFullyBooked && (
-        <span className="shrink-0 text-[9px] font-black uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-full">
+        <span className="shrink-0 rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-400 uppercase">
           Sold Out
         </span>
       )}
@@ -315,20 +315,20 @@ function EventBody({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-white bg-[#FF6B35] px-2.5 py-1.5 rounded-full hover:bg-[#FF6B35]/90 active:scale-95 transition-all"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FF6B35] px-2.5 py-1.5 font-black text-[9px] tracking-wide text-white uppercase transition-all hover:bg-[#FF6B35]/90 active:scale-95"
           aria-label="Request a song to sing on Singa"
         >
-          <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+          <Mic2 className="h-3 w-3 shrink-0" aria-hidden="true" />
           Sing
         </a>
       )}
 
       {!isPast && event.isKaraoke && !event.karaokeRequestUrl && (
         <span
-          className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide px-2.5 py-1.5 rounded-full bg-white/5 text-stone-500 border border-white/10"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full border border-white/10 bg-white/5 px-2.5 py-1.5 font-black text-[9px] tracking-wide text-stone-500 uppercase"
           title="Karaoke night hasn't started yet"
         >
-          <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+          <Mic2 className="h-3 w-3 shrink-0" aria-hidden="true" />
           Not Started
         </span>
       )}
@@ -337,10 +337,10 @@ function EventBody({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
         <a
           href={event.bookingPageUrl}
           onClick={(e) => e.stopPropagation()}
-          className="shrink-0 inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wide text-[#1a2008] bg-[#FDCC4B] px-2.5 py-1.5 rounded-full hover:bg-[#FDCC4B]/90 active:scale-95 transition-all"
+          className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#FDCC4B] px-2.5 py-1.5 font-black text-[9px] tracking-wide text-[#1a2008] uppercase transition-all hover:bg-[#FDCC4B]/90 active:scale-95"
           aria-label={`Book ${event.title}`}
         >
-          <CalendarDays className="w-3 h-3 shrink-0" aria-hidden="true" />
+          <CalendarDays className="h-3 w-3 shrink-0" aria-hidden="true" />
           Book
         </a>
       )}
@@ -353,16 +353,16 @@ function EventCluster({ events, isPast }: { events: MonthEvent[]; isPast: boolea
   const dateObj = parseDate(events[0].date);
   const inner = (
     <div
-      className={`flex items-stretch gap-3 px-4 py-3 transition-colors bg-[#FDCC4B]/5 ${
+      className={`flex items-stretch gap-3 bg-[#FDCC4B]/5 px-4 py-3 transition-colors ${
         isPast ? "opacity-50" : ""
       }`}
     >
       <EventDateCell dateObj={dateObj} isPast={isPast} count={events.length} />
-      <div className="flex-1 min-w-0 border-l-2 border-[#FDCC4B]/40 pl-3 divide-y divide-[#2a3610]">
+      <div className="min-w-0 flex-1 divide-y divide-[#2a3610] border-l-2 border-[#FDCC4B]/40 pl-3">
         {events.map((ev) => (
           <div
             key={ev.id}
-            className="py-2.5 first:pt-0 last:pb-0 flex items-center gap-3 min-w-0"
+            className="flex min-w-0 items-center gap-3 py-2.5 first:pt-0 last:pb-0"
           >
             <EventBody event={ev} isPast={isPast} />
           </div>

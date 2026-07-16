@@ -214,10 +214,10 @@ export default function BandBookingForm() {
 
   if (submitted) {
     return (
-      <div className="flex flex-col items-center text-center py-8 gap-4">
-        <CheckCircle2 className="w-12 h-12 text-[#FDCC4B]" />
-        <h3 className="text-white font-black text-xl uppercase tracking-tight">Application Received!</h3>
-        <p className="text-stone-400 text-sm max-w-xs leading-relaxed">
+      <div className="flex flex-col items-center gap-4 py-8 text-center">
+        <CheckCircle2 className="h-12 w-12 text-[#FDCC4B]" />
+        <h3 className="font-black text-xl tracking-tight text-white uppercase">Application Received!</h3>
+        <p className="max-w-xs text-sm leading-relaxed text-stone-400">
           Thanks! We&apos;ll review your application and get back to you via email shortly.
         </p>
       </div>
@@ -230,7 +230,7 @@ export default function BandBookingForm() {
     <form onSubmit={handleSubmit} className="space-y-0">
 
       {/* Step indicator */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {STEPS.map((s) => (
             <div
@@ -245,21 +245,21 @@ export default function BandBookingForm() {
             />
           ))}
         </div>
-        <span className="text-[10px] font-black uppercase tracking-widest text-stone-600">
+        <span className="font-black text-[10px] tracking-widest text-stone-600 uppercase">
           {step} of {STEPS.length}
         </span>
       </div>
 
       {/* Step heading */}
       <div className="mb-7">
-        <h4 className="text-2xl font-black text-white uppercase tracking-tight leading-none mb-1">
+        <h4 className="mb-1 font-black text-2xl leading-none tracking-tight text-white uppercase">
           {currentStep.title}
         </h4>
-        <p className="text-stone-500 text-xs font-medium">{currentStep.subtitle}</p>
+        <p className="text-xs font-medium text-stone-500">{currentStep.subtitle}</p>
       </div>
 
       {/* Step content */}
-      <div key={step} className="space-y-4 animate-in fade-in duration-200">
+      <div key={step} className="animate-in space-y-4 duration-200 fade-in">
 
         {/* Step 1: Act Details */}
         {step === 1 && (
@@ -273,7 +273,7 @@ export default function BandBookingForm() {
                 className={inputClass}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Type <span className="text-red-400">*</span></label>
                 <div className="relative">
@@ -287,7 +287,7 @@ export default function BandBookingForm() {
                     <option value="singer">Singer / Solo Artist</option>
                     <option value="dj">DJ</option>
                   </select>
-                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600 pointer-events-none" />
+                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-stone-600" />
                 </div>
               </div>
               <div>
@@ -327,7 +327,7 @@ export default function BandBookingForm() {
                 className={inputClass}
               />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Email <span className="text-red-400">*</span></label>
                 <input
@@ -356,13 +356,13 @@ export default function BandBookingForm() {
         {step === 3 && (
           <>
             <div className="space-y-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Social Media</p>
+              <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Social Media</p>
               {SOCIAL_FIELDS.map(({ key, label, icon: Icon, prefix, placeholder, urlBuilder }) => (
                 <div key={key}>
                   <label className={labelClass}>{label}</label>
-                  <div className="flex items-center bg-white/5 border border-white/10 rounded-xl overflow-hidden focus-within:border-[#FDCC4B]/40 focus-within:ring-1 focus-within:ring-[#FDCC4B]/20 transition-all">
-                    <Icon className="w-4 h-4 text-stone-600 shrink-0 ml-3.5" />
-                    <span className="text-stone-600 text-sm pl-2 pr-0.5 whitespace-nowrap select-none">{prefix}</span>
+                  <div className="flex items-center overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all focus-within:border-[#FDCC4B]/40 focus-within:ring-1 focus-within:ring-[#FDCC4B]/20">
+                    <Icon className="ml-3.5 h-4 w-4 shrink-0 text-stone-600" />
+                    <span className="pr-0.5 pl-2 text-sm whitespace-nowrap text-stone-600 select-none">{prefix}</span>
                     <input
                       type="text"
                       value={socialLinks[key] || ""}
@@ -376,10 +376,10 @@ export default function BandBookingForm() {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={`Open ${label} link in a new tab`}
-                        className="shrink-0 w-10 self-stretch flex items-center justify-center text-stone-500 hover:text-[#FDCC4B] transition-colors border-l border-white/10"
+                        className="flex w-10 shrink-0 items-center justify-center self-stretch border-l border-white/10 text-stone-500 transition-colors hover:text-[#FDCC4B]"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <ExternalLink className="w-3.5 h-3.5" />
+                        <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     )}
                   </div>
@@ -389,37 +389,37 @@ export default function BandBookingForm() {
 
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Performance Videos</p>
-                <span className="text-[10px] text-stone-600 font-bold">{videoFiles.length}/3</span>
+                <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Performance Videos</p>
+                <span className="text-[10px] font-bold text-stone-600">{videoFiles.length}/3</span>
               </div>
-              <p className="text-[11px] text-stone-600 -mt-1">
+              <p className="-mt-1 text-[11px] text-stone-600">
                 Upload videos of your act (MP4, WebM, MOV — max 50 MB each).
               </p>
 
               {videoFiles.length > 0 && (
                 <div className="space-y-2">
                   {videoFiles.map((vf, i) => (
-                    <div key={i} className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-                      <Video className="w-4 h-4 text-stone-500 shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs text-white font-medium truncate">{vf.file.name}</p>
+                    <div key={i} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
+                      <Video className="h-4 w-4 shrink-0 text-stone-500" />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-white">{vf.file.name}</p>
                         {vf.uploading && (
-                          <p className="text-[10px] text-stone-500 flex items-center gap-1 mt-0.5">
-                            <Loader2 className="w-2.5 h-2.5 animate-spin" /> Uploading…
+                          <p className="mt-0.5 flex items-center gap-1 text-[10px] text-stone-500">
+                            <Loader2 className="h-2.5 w-2.5 animate-spin" /> Uploading…
                           </p>
                         )}
                         {!vf.uploading && vf.uploadedUrl && (
-                          <p className="text-[10px] text-green-400 mt-0.5">Uploaded ✓</p>
+                          <p className="mt-0.5 text-[10px] text-green-400">Uploaded ✓</p>
                         )}
                         {!vf.uploading && vf.error && (
-                          <p className="text-[10px] text-red-400 flex items-center gap-1 mt-0.5">
-                            <AlertCircle className="w-2.5 h-2.5" /> {vf.error}
+                          <p className="mt-0.5 flex items-center gap-1 text-[10px] text-red-400">
+                            <AlertCircle className="h-2.5 w-2.5" /> {vf.error}
                           </p>
                         )}
                       </div>
                       <button title="Remove" type="button" onClick={() => removeVideo(i)}
-                        className="shrink-0 w-7 h-7 rounded-lg flex items-center justify-center text-stone-600 hover:text-red-400 hover:bg-red-400/10 transition-all">
-                        <X className="w-3.5 h-3.5" />
+                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-stone-600 transition-all hover:bg-red-400/10 hover:text-red-400">
+                        <X className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   ))}
@@ -440,9 +440,9 @@ export default function BandBookingForm() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-2 border border-dashed border-white/20 rounded-xl py-4 text-stone-500 hover:border-[#FDCC4B]/30 hover:text-stone-400 hover:bg-white/3 transition-all text-xs font-bold uppercase tracking-wider"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 py-4 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:bg-white/3 hover:text-stone-400"
                   >
-                    <Upload className="w-4 h-4" />
+                    <Upload className="h-4 w-4" />
                     {videoFiles.length === 0 ? "Upload Videos" : "Add Another Video"}
                   </button>
                 </>
@@ -455,31 +455,31 @@ export default function BandBookingForm() {
         {step === 4 && (
           <>
             <div className="space-y-3">
-              <p className="text-[10px] font-black uppercase tracking-widest text-stone-600">Preferred Dates</p>
+              <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Preferred Dates</p>
               {preferredDates.map((date, i) => (
                 <div key={i} className="flex gap-2">
                   <div className="relative flex-1">
-                    <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-stone-600" />
+                    <Calendar className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-stone-600" />
                     <input
                       title="Select Date"
                       type="date"
                       value={date}
                       onChange={(e) => handleDate(i, e.target.value)}
-                      className={`${inputClass} pl-10 input-scheme-dark`}
+                      className={`${inputClass} input-scheme-dark pl-10`}
                     />
                   </div>
                   {preferredDates.length > 1 && (
                     <button title="Remove Date" type="button" onClick={() => removeDate(i)}
-                      className="shrink-0 w-10 h-10 mt-0.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-stone-500 hover:text-red-400 hover:border-red-400/30 transition-all">
-                      <X className="w-3.5 h-3.5" />
+                      className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-stone-500 transition-all hover:border-red-400/30 hover:text-red-400">
+                      <X className="h-3.5 w-3.5" />
                     </button>
                   )}
                 </div>
               ))}
               {preferredDates.length < 4 && (
                 <button title="Add Date" type="button" onClick={addDate}
-                  className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-wider text-stone-500 hover:text-[#FDCC4B] transition-colors">
-                  <Plus className="w-3.5 h-3.5" /> Add another date
+                  className="flex items-center gap-2 text-[11px] font-bold tracking-wider text-stone-500 uppercase transition-colors hover:text-[#FDCC4B]">
+                  <Plus className="h-3.5 w-3.5" /> Add another date
                 </button>
               )}
             </div>
@@ -501,27 +501,27 @@ export default function BandBookingForm() {
 
       {/* Step error */}
       {stepError && (
-        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+        <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {stepError}
         </p>
       )}
 
       {/* Submit error */}
       {error && step === 4 && (
-        <p className="mt-4 text-red-400 text-xs font-medium bg-red-500/10 border border-red-500/20 rounded-xl px-4 py-3">
+        <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {error}
         </p>
       )}
 
       {/* Navigation buttons */}
-      <div className={`flex gap-3 mt-8 ${step === 1 ? "" : ""}`}>
+      <div className={`mt-8 flex gap-3 ${step === 1 ? "" : ""}`}>
         {step > 1 && (
           <button
             type="button"
             onClick={handleBack}
-            className="flex items-center gap-2 h-14 px-5 rounded-xl border border-white/10 text-stone-400 font-black text-xs uppercase tracking-wider hover:bg-white/5 transition-all"
+            className="flex h-14 items-center gap-2 rounded-xl border border-white/10 px-5 font-black text-xs tracking-wider text-stone-400 uppercase transition-all hover:bg-white/5"
           >
-            <ArrowLeft className="w-4 h-4" />
+            <ArrowLeft className="h-4 w-4" />
             Back
           </button>
         )}
@@ -530,17 +530,17 @@ export default function BandBookingForm() {
             key="next"
             type="button"
             onClick={handleNext}
-            className="flex-1 flex items-center justify-center gap-2 h-14 bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] shadow-lg shadow-[#FDCC4B]/20"
+            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98]"
           >
             Next
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="h-4 w-4" />
           </button>
         ) : (
           <button
             key="submit"
             type="submit"
             disabled={isPending || videoFiles.some((v) => v.uploading)}
-            className="flex-1 h-14 bg-[#FDCC4B] text-[#26300D] font-black text-sm uppercase tracking-wider rounded-xl transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-[#FDCC4B]/20"
+            className="h-14 flex-1 rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? "Submitting…" : "Submit Application"}
           </button>

@@ -57,7 +57,7 @@ export function SpecialDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-80 flex items-end sm:items-center justify-center bg-black/70 backdrop-blur-sm sm:p-6 animate-in fade-in duration-200"
+      className="fixed inset-0 z-80 flex animate-in items-end justify-center bg-black/70 backdrop-blur-sm duration-200 fade-in sm:items-center sm:p-6"
       onClick={onClose}
     >
       <div
@@ -65,36 +65,36 @@ export function SpecialDetailModal({
         aria-modal="true"
         aria-label={special.title}
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full sm:max-w-md max-h-[92vh] overflow-y-auto bg-[#1b210f] border border-hairline rounded-t-3xl sm:rounded-3xl shadow-2xl shadow-black/60 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-300"
+        className="relative max-h-[92vh] w-full animate-in overflow-y-auto rounded-t-3xl border border-hairline bg-[#1b210f] shadow-2xl shadow-black/60 duration-300 slide-in-from-bottom-4 sm:max-w-md sm:rounded-3xl sm:zoom-in-95"
       >
         <button
           type="button"
           onClick={onClose}
           aria-label="Close details"
-          className="absolute top-3.5 right-3.5 z-10 w-9 h-9 rounded-full bg-black/50 hover:bg-black/70 text-ink flex items-center justify-center backdrop-blur transition-colors"
+          className="absolute top-3.5 right-3.5 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-ink backdrop-blur transition-colors hover:bg-black/70"
         >
-          <X className="w-4.5 h-4.5" aria-hidden="true" />
+          <X className="h-4.5 w-4.5" aria-hidden="true" />
         </button>
 
         {/* Image */}
         {special.image_url && (
-          <div className="w-full h-48 border-b border-hairline overflow-hidden">
+          <div className="h-48 w-full overflow-hidden border-b border-hairline">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={special.image_url}
               alt={special.title}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
             />
           </div>
         )}
 
         <div className="p-5 sm:p-6">
           {special.badges.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 mb-3">
+            <div className="mb-3 flex flex-wrap gap-1.5">
               {special.badges.map((b) => (
                 <span
                   key={b}
-                  className="text-[10px] font-black uppercase tracking-wide text-[#1a2008] bg-[#FDCC4B] px-2.5 py-1 rounded-md"
+                  className="rounded-md bg-[#FDCC4B] px-2.5 py-1 font-black text-[10px] tracking-wide text-[#1a2008] uppercase"
                 >
                   {b}
                 </span>
@@ -102,7 +102,7 @@ export function SpecialDetailModal({
             </div>
           )}
 
-          <h3 className="text-ink font-black uppercase tracking-tighter leading-[0.95] text-2xl sm:text-3xl">
+          <h3 className="font-black text-2xl leading-[0.95] tracking-tighter text-ink uppercase sm:text-3xl">
             {special.title}
           </h3>
 
@@ -114,19 +114,19 @@ export function SpecialDetailModal({
 
           {/* Runs */}
           {dateRange && (
-            <div className="mt-5 flex items-center gap-3 bg-canvas/60 border border-hairline rounded-2xl px-4 py-3">
-              <CalendarDays className="w-4 h-4 text-[#FDCC4B] shrink-0" aria-hidden="true" />
-              <span className="text-stone-400 text-[11px] font-black uppercase tracking-widest">
+            <div className="mt-5 flex items-center gap-3 rounded-2xl border border-hairline bg-canvas/60 px-4 py-3">
+              <CalendarDays className="h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
+              <span className="font-black text-[11px] tracking-widest text-stone-400 uppercase">
                 Runs
               </span>
-              <span className="ml-auto text-ink text-sm font-bold tabular-nums">
+              <span className="ml-auto text-sm font-bold text-ink tabular-nums">
                 {dateRange}
               </span>
             </div>
           )}
 
           {/* Available on */}
-          <p className="mt-5 mb-2 text-stone-400 text-[10px] font-black uppercase tracking-[0.16em]">
+          <p className="mt-5 mb-2 font-black text-[10px] tracking-[0.16em] text-stone-400 uppercase">
             Available on{everyDay && " · every day"}
           </p>
           <div className="grid grid-cols-7 gap-1.5">
@@ -136,10 +136,10 @@ export function SpecialDetailModal({
                 <span
                   key={d.value}
                   className={cn(
-                    "text-center py-2 rounded-lg text-[11px] font-black uppercase tracking-wide border",
+                    "rounded-lg border py-2 text-center font-black text-[11px] tracking-wide uppercase",
                     on
-                      ? "text-[#1a2008] bg-[#FDCC4B] border-[#FDCC4B]"
-                      : "text-stone-500 bg-canvas-2 border-hairline"
+                      ? "border-[#FDCC4B] bg-[#FDCC4B] text-[#1a2008]"
+                      : "border-hairline bg-canvas-2 text-stone-500"
                   )}
                 >
                   {d.label}
@@ -151,7 +151,7 @@ export function SpecialDetailModal({
           <button
             type="button"
             onClick={onClose}
-            className="mt-6 w-full h-12 rounded-xl bg-[#FDCC4B] text-[#1a2008] text-sm font-black uppercase tracking-wide hover:bg-[#e5b843] active:scale-95 transition-all"
+            className="mt-6 h-12 w-full rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wide text-[#1a2008] uppercase transition-all hover:bg-[#e5b843] active:scale-95"
           >
             Got it
           </button>

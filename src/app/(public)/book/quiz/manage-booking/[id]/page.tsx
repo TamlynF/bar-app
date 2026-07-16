@@ -38,7 +38,7 @@ export default async function ManageBookingPage({
   const isCancelled = booking.status === "cancelled";
 
   return (
-    <main className="min-h-dvh w-full overflow-x-hidden bg-[#26300D] text-[#fdcc4b] flex flex-col selection:bg-[#fdcc4b] selection:text-[#26300D] antialiased">
+    <main className="flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#26300D] text-[#fdcc4b] antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
       <style dangerouslySetInnerHTML={{ __html: `
         html, body {
           background-color: #26300D !important;
@@ -54,10 +54,10 @@ export default async function ManageBookingPage({
         }
       `}} />
 
-      <div className="flex-1 w-full max-w-xl mx-auto py-4 sm:py-12 px-3 sm:px-6 flex flex-col justify-center">
+      <div className="mx-auto flex w-full max-w-xl flex-1 flex-col justify-center px-3 py-4 sm:px-6 sm:py-12">
 
-        <div className="bg-linear-to-b from-[#1e260a] to-[#151a07] rounded-2xl sm:rounded-3xl p-4 sm:p-10 border border-[#fdcc4b]/20 shadow-2xl relative overflow-hidden">
-          <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-md h-24 blur-3xl pointer-events-none rounded-full ${isCancelled ? 'bg-red-500/5' : 'bg-[#fdcc4b]/5'}`}></div>
+        <div className="relative overflow-hidden rounded-2xl border border-[#fdcc4b]/20 bg-linear-to-b from-[#1e260a] to-[#151a07] p-4 shadow-2xl sm:rounded-3xl sm:p-10">
+          <div className={`pointer-events-none absolute top-0 left-1/2 h-24 w-full max-w-md -translate-x-1/2 rounded-full blur-3xl ${isCancelled ? 'bg-red-500/5' : 'bg-[#fdcc4b]/5'}`}></div>
 
           <div className="relative z-10">
             <CancelButton
@@ -67,8 +67,8 @@ export default async function ManageBookingPage({
           </div>
         </div>
 
-        <div className="mt-6 sm:mt-auto pt-4 text-center opacity-30">
-           <p className="text-[9px] font-black uppercase tracking-[0.4em]">Don Fenticas</p>
+        <div className="mt-6 pt-4 text-center opacity-30 sm:mt-auto">
+           <p className="font-black text-[9px] tracking-[0.4em] uppercase">Don Fenticas</p>
         </div>
       </div>
     </main>

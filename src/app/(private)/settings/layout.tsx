@@ -13,18 +13,18 @@ export default function SettingsLayout({
   const isSettingsRoot = pathname === "/settings";
 
   return (
-    <div className="flex flex-col min-h-screen bg-background lg:flex-row lg:space-x-12 px-4 md:px-8 pt-4 sm:pt-0 pb-4 md:pb-8 max-w-7xl mx-auto w-full transition-all duration-500">  
+    <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col bg-background px-4 pt-4 pb-4 transition-all duration-500 sm:pt-0 md:px-8 md:pb-8 lg:flex-row lg:space-x-12">  
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex flex-1 flex-col">
         <main className={cn(
-          "flex-1 bg-card rounded-[2.5rem] border border-[#E6DFC8] shadow-2xl min-h-125 overflow-hidden relative",
-          isSettingsRoot && "bg-transparent border-none shadow-none lg:bg-card lg:border lg:shadow-2xl"
+          "relative min-h-125 flex-1 overflow-hidden rounded-[2.5rem] border border-[#E6DFC8] bg-card shadow-2xl",
+          isSettingsRoot && "border-none bg-transparent shadow-none lg:border lg:bg-card lg:shadow-2xl"
         )}>
           {/* Decorative background blurs */}
-          <div className="absolute top-0 right-0 w-80 h-80 bg-primary/5 blur-[120px] rounded-full pointer-events-none -z-10"></div>
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 blur-[100px] rounded-full pointer-events-none -z-10"></div>
+          <div className="pointer-events-none absolute top-0 right-0 -z-10 h-80 w-80 rounded-full bg-primary/5 blur-[120px]"></div>
+          <div className="pointer-events-none absolute bottom-0 left-0 -z-10 h-64 w-64 rounded-full bg-primary/5 blur-[100px]"></div>
           
-          <div className="h-full relative z-10">
+          <div className="relative z-10 h-full">
             {children}
           </div>
         </main>

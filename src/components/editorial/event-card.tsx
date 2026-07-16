@@ -53,10 +53,10 @@ function FrontCta({ event }: { event: SerializedEvent }) {
         target="_blank"
         rel="noopener noreferrer"
         onClick={stop}
-        className={base + " pointer-events-auto text-ink bg-neon hover:bg-neon/90"}
+        className={base + " pointer-events-auto bg-neon text-ink hover:bg-neon/90"}
         aria-label="Request a song to sing on Singa"
       >
-        <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+        <Mic2 className="h-3 w-3 shrink-0" aria-hidden="true" />
         Sing
       </a>
     );
@@ -66,10 +66,10 @@ function FrontCta({ event }: { event: SerializedEvent }) {
     // Karaoke night with no request URL yet — inactive placeholder.
     return (
       <span
-        className={base + " bg-white/5 text-ink-2 border border-hairline cursor-default"}
+        className={base + " cursor-default border border-hairline bg-white/5 text-ink-2"}
         title="Karaoke night hasn't started yet"
       >
-        <Mic2 className="w-3 h-3 shrink-0" aria-hidden="true" />
+        <Mic2 className="h-3 w-3 shrink-0" aria-hidden="true" />
         Soon
       </span>
     );
@@ -80,10 +80,10 @@ function FrontCta({ event }: { event: SerializedEvent }) {
       <a
         href={event.bookingPageUrl}
         onClick={stop}
-        className={base + " pointer-events-auto text-on-gold bg-gold hover:bg-gold/90"}
+        className={base + " pointer-events-auto bg-gold text-on-gold hover:bg-gold/90"}
         aria-label={`Book ${event.title}`}
       >
-        <CalendarDays className="w-3 h-3 shrink-0" aria-hidden="true" />
+        <CalendarDays className="h-3 w-3 shrink-0" aria-hidden="true" />
         Book
       </a>
     );
@@ -150,12 +150,12 @@ export function EventCard({
         onClick={onToggle}
         aria-expanded={open}
         aria-label={`${event.title} — show details`}
-        className="absolute inset-0 z-0 rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-gold"
+        className="absolute inset-0 z-0 cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-gold"
       />
 
       <div
         className={
-          "pointer-events-none relative z-10 h-full w-full transform-3d transition-transform duration-500 " +
+          "pointer-events-none relative z-10 h-full w-full transition-transform duration-500 transform-3d " +
           (open ? "transform-[rotateY(180deg)]" : "")
         }
       >
@@ -163,32 +163,32 @@ export function EventCard({
         <div
           className={
             faceBase +
-            " flex items-center gap-3 p-3 h-full overflow-hidden sm:gap-4 sm:p-4" +
-            (open ? " pointer-events-none is-lit" : "")
+            " flex h-full items-center gap-3 overflow-hidden p-3 sm:gap-4 sm:p-4" +
+            (open ? " is-lit pointer-events-none" : "")
           }
         >
           {/* Date chip — tinted with the subtype colour (.ad-kind reads --ev-c) */}
-          <div className="ad-kind shrink-0 flex flex-col items-center justify-center w-12 sm:w-14 h-12 sm:h-14 rounded-xl border leading-none">
-            <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">
+          <div className="ad-kind flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border leading-none sm:h-14 sm:w-14">
+            <span className="font-black text-[8px] tracking-widest uppercase sm:text-[9px]">
               {format(dateObj, "EEE")}
             </span>
-            <span className="text-lg sm:text-xl font-black tabular-nums">
+            <span className="font-black text-lg tabular-nums sm:text-xl">
               {format(dateObj, "d")}
             </span>
           </div>
 
           {/* Content */}
-          <div className="flex-1 min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 pr-6">
               <span
-                className="ev-dot w-1.5 h-1.5 rounded-full shrink-0"
+                className="ev-dot h-1.5 w-1.5 shrink-0 rounded-full"
                 style={{ "--ev-c": event.color } as React.CSSProperties}
               />
-              <span className="text-ink-2 text-[9px] font-black uppercase tracking-[0.2em] truncate">
+              <span className="truncate font-black text-[9px] tracking-[0.2em] text-ink-2 uppercase">
                 {subLabel}
               </span>
               {event.isFullyBooked && (
-                <span className="shrink-0 text-[8px] font-black uppercase tracking-widest text-red-400 bg-red-500/10 border border-red-500/20 px-1.5 py-0.5 rounded-full">
+                <span className="shrink-0 rounded-full border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 font-black text-[8px] tracking-widest text-red-400 uppercase">
                   Sold Out
                 </span>
               )}
@@ -196,22 +196,22 @@ export function EventCard({
 
             {/* Title — flex-none so an overflow/nowrap flex child can't collapse */}
             <h3
-              className="ev-text flex-none font-black uppercase tracking-tight leading-[1.05] text-base sm:text-lg line-clamp-2 mt-0.5 pr-6"
+              className="ev-text mt-0.5 line-clamp-2 flex-none pr-6 font-black text-base leading-[1.05] tracking-tight uppercase sm:text-lg"
               style={{ "--ev-c": event.color } as React.CSSProperties}
             >
               {event.title}
             </h3>
 
             {(timeLabel || price) && (
-              <div className="flex items-center gap-2 mt-1 min-w-0">
+              <div className="mt-1 flex min-w-0 items-center gap-2">
                 {timeLabel && (
-                  <span className="flex items-center gap-1 text-ink-2 text-[11px] font-bold tabular-nums truncate">
-                    <Clock className="w-3 h-3 shrink-0" aria-hidden="true" />
+                  <span className="flex items-center gap-1 truncate text-[11px] font-bold text-ink-2 tabular-nums">
+                    <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
                     {timeLabel}
                   </span>
                 )}
                 {price && (
-                  <span className="shrink-0 text-ink text-[11px] font-black tracking-wide">
+                  <span className="shrink-0 font-black text-[11px] tracking-wide text-ink">
                     {price}
                   </span>
                 )}
@@ -223,8 +223,8 @@ export function EventCard({
           {!isPast && <FrontCta event={event} />}
 
           {/* Flip hint — top-right corner; icon-only on mobile */}
-          <span className="pointer-events-none absolute top-2.5 right-2.5 inline-flex items-center gap-1 text-ink-2/60 text-[9px] font-black uppercase tracking-widest">
-            <RefreshCw className="w-3.5 h-3.5 shrink-0" aria-hidden="true" />
+          <span className="pointer-events-none absolute top-2.5 right-2.5 inline-flex items-center gap-1 font-black text-[9px] tracking-widest text-ink-2/60 uppercase">
+            <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             {/* <span className="hidden sm:inline">Info</span> */}
           </span>
         </div>
@@ -234,16 +234,16 @@ export function EventCard({
           ref={backRef}
           className={
             faceBase +
-            " flex flex-col p-3 sm:p-4 transform-[rotateY(180deg)]" +
+            " flex transform-[rotateY(180deg)] flex-col p-3 sm:p-4" +
             (open ? " is-lit" : " pointer-events-none")
           }
         >
-          <div className="flex items-center gap-2 mb-2">
+          <div className="mb-2 flex items-center gap-2">
             <span
-              className="ev-dot w-2 h-2 rounded-full shrink-0"
+              className="ev-dot h-2 w-2 shrink-0 rounded-full"
               style={{ "--ev-c": event.color } as React.CSSProperties}
             />
-            <span className="text-ink-2 text-[9px] font-black uppercase tracking-[0.25em] truncate">
+            <span className="truncate font-black text-[9px] tracking-[0.25em] text-ink-2 uppercase">
               {subLabel} · {format(dateObj, "EEE d MMM")}
             </span>
           </div>
@@ -254,16 +254,16 @@ export function EventCard({
               target="_blank"
               rel="noopener noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="ev-text pointer-events-auto flex-none inline-flex items-start gap-1.5 font-black uppercase tracking-tight leading-[0.95] text-lg mb-2 underline underline-offset-2 decoration-2"
+              className="ev-text pointer-events-auto mb-2 inline-flex flex-none items-start gap-1.5 font-black text-lg leading-[0.95] tracking-tight uppercase underline decoration-2 underline-offset-2"
               style={{ "--ev-c": event.color } as React.CSSProperties}
               aria-label={`Open ${event.title} in a new tab`}
             >
               <span className="line-clamp-2">{event.title}</span>
-              <ExternalLink className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
+              <ExternalLink className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             </a>
           ) : (
             <h3
-              className="ev-text flex-none font-black uppercase tracking-tight leading-[0.95] text-lg mb-2"
+              className="ev-text mb-2 flex-none font-black text-lg leading-[0.95] tracking-tight uppercase"
               style={{ "--ev-c": event.color } as React.CSSProperties}
             >
               {event.title}
@@ -271,15 +271,15 @@ export function EventCard({
           )}
 
           {event.tagline ? (
-            <p className="text-ink-2 text-xs leading-relaxed line-clamp-3">{event.tagline}</p>
+            <p className="line-clamp-3 text-xs leading-relaxed text-ink-2">{event.tagline}</p>
           ) : (
-            <p className="text-ink-2/70 text-xs leading-relaxed italic">
+            <p className="text-xs leading-relaxed text-ink-2/70 italic">
               More details at the door.
             </p>
           )}
 
-          <div className="mt-auto pt-3 border-t border-hairline">
-            <span className="text-ink-2 text-[10px] font-bold uppercase tracking-widest">
+          <div className="mt-auto border-t border-hairline pt-3">
+            <span className="text-[10px] font-bold tracking-widest text-ink-2 uppercase">
               {[timeLabel, entryText(event)].filter(Boolean).join(" · ")}
             </span>
           </div>

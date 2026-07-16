@@ -157,7 +157,7 @@ export default async function BingoSuccessPage({
   if (result.status === "pending") {
     return (
       <StatusPage
-        icon={<Clock className="w-10 h-10 text-amber-500" />}
+        icon={<Clock className="h-10 w-10 text-amber-500" />}
         color="amber"
         title="Payment Processing"
         message="Your payment is being processed. You'll receive a confirmation email shortly. If you have any issues, please contact us."
@@ -171,7 +171,7 @@ export default async function BingoSuccessPage({
 
   return (
     <StatusPage
-      icon={<CheckCircle2 className="w-10 h-10 text-green-500" />}
+      icon={<CheckCircle2 className="h-10 w-10 text-green-500" />}
       color="green"
       title="Booking Confirmed!"
       message={`You're all set${contact?.full_name ? `, ${contact.full_name}` : ""}! A confirmation has been sent to ${contact?.email ?? "your email"}.`}
@@ -205,47 +205,47 @@ function StatusPage({
   const bgColor = color === "green" ? "bg-green-50" : "bg-amber-50";
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] flex flex-col items-center justify-center px-4 py-12">
+    <main className="flex min-h-dvh w-full flex-col items-center justify-center bg-[#26300D] px-4 py-12">
       <style dangerouslySetInnerHTML={{
         __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; }`
       }} />
-      <div className="w-full max-w-md bg-[#F7F4EA] rounded-3xl p-8 shadow-2xl shadow-black/40 text-center">
-        <div className={`inline-flex items-center justify-center w-20 h-20 rounded-full border-2 ${bgColor} ${borderColor} mb-6`}>
+      <div className="w-full max-w-md rounded-3xl bg-[#F7F4EA] p-8 text-center shadow-2xl shadow-black/40">
+        <div className={`inline-flex h-20 w-20 items-center justify-center rounded-full border-2 ${bgColor} ${borderColor} mb-6`}>
           {icon}
         </div>
-        <h1 className="text-2xl font-black text-[#1F1F1A] uppercase tracking-tight mb-3">
+        <h1 className="mb-3 font-black text-2xl tracking-tight text-[#1F1F1A] uppercase">
           {title}
         </h1>
-        <p className="text-sm text-[#5F624F] font-medium leading-relaxed mb-6">
+        <p className="mb-6 text-sm leading-relaxed font-medium text-[#5F624F]">
           {message}
         </p>
 
-        <div className="bg-white border-2 border-[#E6DFC8] rounded-2xl divide-y-2 divide-[#E6DFC8] text-left mb-6">
+        <div className="mb-6 divide-y-2 divide-[#E6DFC8] rounded-2xl border-2 border-[#E6DFC8] bg-white text-left">
           <div className="px-5 py-3.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-0.5">Event</p>
-            <p className="text-sm font-black text-[#1F1F1A]">Music Bingo</p>
+            <p className="mb-0.5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">Event</p>
+            <p className="font-black text-sm text-[#1F1F1A]">Music Bingo</p>
           </div>
           <div className="px-5 py-3.5">
-            <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-0.5">Date</p>
-            <p className="text-sm font-black text-[#1F1F1A]">{eventDate}</p>
+            <p className="mb-0.5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">Date</p>
+            <p className="font-black text-sm text-[#1F1F1A]">{eventDate}</p>
           </div>
           {groupSize && (
             <div className="px-5 py-3.5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-0.5">People</p>
-              <p className="text-sm font-black text-[#1F1F1A]">{groupSize}</p>
+              <p className="mb-0.5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">People</p>
+              <p className="font-black text-sm text-[#1F1F1A]">{groupSize}</p>
             </div>
           )}
           {total != null && (
             <div className="px-5 py-3.5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-[#5F624F] mb-0.5">Paid</p>
-              <p className="text-sm font-black text-[#1F1F1A]">£{total.toFixed(2)}</p>
+              <p className="mb-0.5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">Paid</p>
+              <p className="font-black text-sm text-[#1F1F1A]">£{total.toFixed(2)}</p>
             </div>
           )}
         </div>
 
         <Link
           href="/book"
-          className="inline-block w-full h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[11px] leading-[3.5rem] text-center shadow-lg"
+          className="inline-block h-14 w-full rounded-2xl bg-[#26300D] text-center font-black text-[11px] leading-14 tracking-widest text-[#FDCC4B] uppercase shadow-lg"
         >
           Back to Bookings
         </Link>
@@ -256,19 +256,19 @@ function StatusPage({
 
 function ErrorPage({ message }: { message: string }) {
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] flex flex-col items-center justify-center px-4 py-12">
+    <main className="flex min-h-dvh w-full flex-col items-center justify-center bg-[#26300D] px-4 py-12">
       <style dangerouslySetInnerHTML={{
         __html: `html, body { background-color: #26300D !important; }`
       }} />
-      <div className="w-full max-w-md bg-[#F7F4EA] rounded-3xl p-8 shadow-2xl text-center">
-        <XCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-        <h1 className="text-xl font-black text-[#1F1F1A] uppercase tracking-tight mb-3">
+      <div className="w-full max-w-md rounded-3xl bg-[#F7F4EA] p-8 text-center shadow-2xl">
+        <XCircle className="mx-auto mb-4 h-12 w-12 text-red-500" />
+        <h1 className="mb-3 font-black text-xl tracking-tight text-[#1F1F1A] uppercase">
           Something went wrong
         </h1>
-        <p className="text-sm text-[#5F624F] font-medium mb-6">{message}</p>
+        <p className="mb-6 text-sm font-medium text-[#5F624F]">{message}</p>
         <Link
           href="/book/bingo"
-          className="inline-block w-full h-14 rounded-2xl bg-[#26300D] text-[#FDCC4B] font-black uppercase tracking-[0.1em] text-[11px] leading-[3.5rem] text-center"
+          className="inline-block h-14 w-full rounded-2xl bg-[#26300D] text-center font-black text-[11px] leading-14 tracking-widest text-[#FDCC4B] uppercase"
         >
           Try Again
         </Link>

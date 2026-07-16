@@ -2,10 +2,8 @@ import { useFormatCurrency } from "@/hooks/use-format-currency"
 import { HandCoins, Wallet, Landmark, PiggyBank, type LucideIcon } from 'lucide-react'
 
 export default function BookingItem({
-  key, id, teamName, date, amount, status = 'confirmed'
+  teamName, date, amount, status = 'confirmed'
 }: {
-  key: string;
-        id: string;
   status?: 'confirmed' | 'pending' | 'waitlisted' | 'cancelled';
   teamName?: string;
   date?: string;
@@ -32,14 +30,14 @@ export default function BookingItem({
   const { icon: IconComponent, colors } = statusMap[status]
     const formattedAmount = useFormatCurrency(amount)
 
-  return (<div className="w-full flex items-center">
-    <div className="flex items-center mr-4 grow">
-      <IconComponent className={`${colors} mr-2 w-4 h-4 hidden sm:block`} />
+  return (<div className="flex w-full items-center">
+    <div className="mr-4 flex grow items-center">
+      <IconComponent className={`${colors} mr-2 hidden h-4 w-4 sm:block`} />
       <span>{teamName}</span>
     </div>
 
-    <div className="min-w-37.5 items-center hidden md:flex">
-      {date && <div className="rounded-md text-xs bg-gray-700 dark:bg-gray-100 text-gray-100 dark:text-black px-2 py-0.5">{date}</div>}
+    <div className="hidden min-w-37.5 items-center md:flex">
+      {date && <div className="rounded-md bg-gray-700 px-2 py-0.5 text-xs text-gray-100 dark:bg-gray-100 dark:text-black">{date}</div>}
     </div>
 
     <div className="min-w-17.5 text-right">{formattedAmount}</div>
