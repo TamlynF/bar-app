@@ -924,7 +924,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           });
         }
         const result = await updateBandStatus(request.id, newStatus, adminNotes || undefined);
-        setOpen(false);
+        // The sheet stays open on every status change — the stepper is the control
+        // now, so you land on the new stage and see the result (including Declined,
+        // which can be reopened straight from the stepper). Close it yourself.
         // offered / booked / declined email the band; new / reviewing are silent.
         const emails = newStatus === "offered" || newStatus === "booked" || newStatus === "declined";
         const done = STATUS_TOAST[newStatus];
