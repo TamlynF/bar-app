@@ -527,7 +527,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                           value={vf.description}
                           onChange={(e) => setVideoDescription(vf.id, e.target.value)}
                           placeholder="Add a short description (optional)"
-                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-stone-600 focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 focus:outline-none"
+                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-stone-400 focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 focus:outline-none"
                         />
                       </div>
                     </div>
