@@ -432,6 +432,8 @@ function StageStepper({
   pendingStage,
   blockers,
   onRevealSlot,
+  declineReason,
+  onDeclineReasonChange,
 }: {
   status: string;
   onSelect: (next: BandStatus) => void;
@@ -445,6 +447,12 @@ function StageStepper({
   blockers: Partial<Record<BandStatus, string | undefined>>;
   /** Points the admin at the slot console when a stage is blocked only by it. */
   onRevealSlot: () => void;
+  /**
+   * The reason shown to the applicant on decline (admin_notes). The declined chip
+   * opens this for viewing/editing and flags a dot when one is on file.
+   */
+  declineReason: string;
+  onDeclineReasonChange: (v: string) => void;
 }) {
   const transitions = BAND_TRANSITIONS[status as BandStatus] ?? [];
   const currentLabel = statusTheme[status]?.label ?? status;
@@ -483,7 +491,53 @@ function StageStepper({
     const exits = transitions.filter((tr) => PIPELINE.includes(tr.next));
     return (
       <div className="no-scrollbar mt-3 flex items-center gap-1.5 overflow-x-auto" aria-label={`Status: ${t.label}`}>
-        {chip(status as BandStatus, "current")}
+        {/* The current (declined) chip opens the applicant's decline reason for
+            viewing/editing, and carries a dot when a reason is on file. */}
+        <Popover>
+          <PopoverTrigger asChild>
+            <button
+              type="button"
+              aria-current="step"
+              title="Decline reason for applicant — click to view or edit"
+              className={cn(
+                "relative flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-full border-2 px-3.5 transition-all hover:brightness-95 sm:h-10",
+                t.bg,
+                t.text,
+                t.border
+              )}
+            >
+              <span className={cn("h-2 w-2 shrink-0 rounded-full", t.dot)} />
+              <span className="font-black text-[10px] tracking-widest uppercase">{t.label}</span>
+              {declineReason.trim() && (
+                <span
+                  title="A reason has been recorded"
+                  className="rounded-full bg-[#B45309] px-1.5 py-0.5 font-black text-[8px] tracking-wide text-white uppercase"
+                >
+                  Reasons
+                </span>
+              )}
+            </button>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-80 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white p-0 sm:w-96">
+            <span className="flex items-center gap-1.5 border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+              <MessageSquareQuote className="h-3.5 w-3.5" />
+              Decline Reason for Applicant
+            </span>
+            <div className="p-3">
+              <textarea
+                aria-label="Decline reason for applicant"
+                value={declineReason}
+                onChange={(e) => onDeclineReasonChange(e.target.value)}
+                rows={4}
+                placeholder="The reason given to the band when this was declined..."
+                className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+              />
+              <p className="mt-1.5 text-[10px] leading-snug text-[#5F624F]/70">
+                Saved when you hit Save Changes.
+              </p>
+            </div>
+          </PopoverContent>
+        </Popover>
         {exits.map((tr) => (
           <React.Fragment key={tr.next}>
             <ArrowRight className="h-4 w-4 shrink-0 text-[#5F624F]/30" aria-hidden="true" />
@@ -700,25 +754,38 @@ function Section({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
+      {/* Header bar. The title and chevron are their own toggle buttons so that
+          `headerRight` can carry an interactive element (e.g. a link) as a sibling
+          rather than nested inside a button. The title button flex-fills, so almost
+          the whole bar still toggles — only headerRight itself doesn't. */}
+      <div
         className={cn(
           // Tinted band (the border tone) against the sheet's #F7F4EA and the card's
           // white rows, so the header reads as a header rather than as surface.
-          // brightness-95 darkens on hover without inventing a shade below #E6DFC8.
-          "flex w-full items-center justify-between gap-3 bg-[#E6DFC8] px-4 py-3 text-left transition-all hover:brightness-95 sm:px-5",
+          "flex w-full items-center gap-3 bg-[#E6DFC8] px-4 py-3 sm:px-5",
           // Same hairline as the field-row dividers below it. Only while open, so a
           // collapsed header doesn't draw a stray line against the card's own edge.
           open && "border-b border-[#E6DFC8]"
         )}
       >
-        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
-        <span className="flex items-center gap-2">
-          {headerRight}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          // brightness-95 darkens on hover without inventing a shade below #E6DFC8.
+          className="flex flex-1 items-center text-left transition-all hover:brightness-95"
+        >
+          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+        </button>
+        {headerRight}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+          className="shrink-0 transition-all hover:brightness-95"
+        >
           <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
-        </span>
-      </button>
+        </button>
+      </div>
       <div className={cn(!open && "hidden")}>{children}</div>
     </div>
   );
@@ -2011,6 +2078,8 @@ export function BandBookingCard({
               // arranged"), but never one we couldn't honour.
               blockers={{ booked: slotWarning ?? clashWarning, offered: clashWarning }}
               onRevealSlot={revealSlot}
+              declineReason={adminNotes}
+              onDeclineReasonChange={setAdminNotes}
             />
           </div>
 
@@ -2020,7 +2089,49 @@ export function BandBookingCard({
               {/* Main column — the workflow: event, payment, notes */}
               <div className="min-w-0 space-y-4 sm:space-y-5">
               {/* Event details */}
-              <Section title="Event Details">
+              <Section
+                title="Event Details"
+                headerRight={
+                  showEventBadge ? (
+                    eventHref ? (
+                      // Neutral pill (no fill, inherited text) — the green tick / red
+                      // cross carries the active/deactivated state now, not the colour.
+                      <Link
+                        href={eventHref}
+                        onClick={(e) => e.stopPropagation()}
+                        title={
+                          eventIsActive
+                            ? `View linked event #${request.event_id} — on the schedule`
+                            : `View linked event #${request.event_id} — off the schedule`
+                        }
+                        className="group inline-flex items-center gap-1.5 font-black text-[10px] tracking-wider uppercase"
+                      >
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                        <span className="underline underline-offset-2">Linked Event: #{request.event_id}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                        {eventIsActive ? (
+                          <CheckCircle2 className="ml-2 h-4 w-4 shrink-0 text-green-600" />
+                        ) : (
+                          <XCircle className="ml-2 h-4 w-4 shrink-0 text-red-600" />
+                        )}
+                      </Link>
+                    ) : status === "booked" ? (
+                      <span
+                        title="This booking is booked but has no linked event"
+                        className="inline-flex items-center gap-1.5 font-black text-[10px] tracking-wider text-red-700 uppercase"
+                      >
+                        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                        Missing Linked Event
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 font-black text-[10px] tracking-wider text-blue-700 uppercase">
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                        No Linked Event
+                      </span>
+                    )
+                  ) : undefined
+                }
+              >
                 <EditRow label="Act Name" value={actName} onChange={setActName} editable={editable} placeholder="Act name" />
                 {/* Type / Genre — combined on one row (e.g. "Band / Pop"). Both stay
                     independently editable, so this can't collapse to a single field. */}
@@ -2702,64 +2813,8 @@ export function BandBookingCard({
                     {clashes.length > 0 && <ClashList clashes={clashes} />}
                   </div>
 
-                  {/* Right of the slot console: the linked-event pill (moved here from
-                      the sheet header) and, once declined, the reason given. */}
-                  {(showEventBadge || isDeclined) && (
-                    <div className="flex min-w-0 flex-1 flex-col gap-2">
-                      {showEventBadge &&
-                        (eventHref ? (
-                          <Link
-                            href={eventHref}
-                            title={
-                              eventIsActive
-                                ? `View linked event #${request.event_id}`
-                                : `View linked event #${request.event_id} — currently off the schedule`
-                            }
-                            className={cn(
-                              "group inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-xl border px-3 font-black text-[10px] tracking-wider uppercase transition-colors sm:h-9",
-                              eventIsActive
-                                ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-                                : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                            )}
-                          >
-                            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                            <span>Event:</span>
-                            {/* Underlined so the id reads as the clickable link it is. */}
-                            <span className="tabular-nums underline underline-offset-2">#{request.event_id}</span>
-                            <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
-                          </Link>
-                        ) : status === "booked" ? (
-                          <span
-                            title="This booking is booked but has no linked event"
-                            className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-xl border border-red-200 bg-red-50 px-3 font-black text-[10px] tracking-wider text-red-700 uppercase sm:h-9"
-                          >
-                            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                            Missing Linked Event
-                          </span>
-                        ) : (
-                          <span className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-xl border border-blue-200 bg-blue-50 px-3 font-black text-[10px] tracking-wider text-blue-700 uppercase sm:h-9">
-                            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                            No Linked Event
-                          </span>
-                        ))}
-
-                      {isDeclined && (
-                        <div className="flex min-h-0 flex-1 flex-col">
-                          <span className="mb-1.5 flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
-                            <MessageSquareQuote className="h-3.5 w-3.5" />
-                            Decline Reason for Applicant
-                          </span>
-                          <textarea
-                            aria-label="Decline reason for applicant"
-                            value={adminNotes}
-                            onChange={(e) => setAdminNotes(e.target.value)}
-                            placeholder="The reason given to the band when this was declined..."
-                            className="w-full flex-1 resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  )}
+                  {/* The decline reason now lives in a popover on the declined stage
+                      chip in the header, so the footer keeps just the slot console. */}
                 </div>
 
                 {error && <p className="text-xs font-bold text-red-500">{error}</p>}
