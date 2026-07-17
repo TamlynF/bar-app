@@ -46,7 +46,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
 import { addHoursToTime, toHHMM, type ClashEvent } from "@/lib/event-clash";
-import { bandLifecycleStage, type BandLifecycleStage } from "@/lib/band-lifecycle";
+import { type BandLifecycleStage } from "@/lib/band-lifecycle";
 import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail, type BandEmail } from "@/lib/band-emails";
 
 const DEFAULT_START_TIME = "22:00"; // 10pm
@@ -699,13 +699,15 @@ const PAYMENT_STATUS_META: Record<string, { label: string; className: string }> 
 };
 
 /**
- * Lifecycle badge tints. Deliberately off the green "booked" status theme these
- * sit beside — they report where the night sits in time, not the status, so a
- * neutral "done" and a distinct blue "ahead" don't restate the status colour.
+ * Lifecycle tag fills, matching the type tag's solid treatment at the opposite
+ * corner. Deliberately off the green "booked" status theme these sit beside —
+ * they report where the night sits in time, not the status, so a neutral "done"
+ * and a distinct blue "ahead" don't restate the status colour. The 600/500 tones
+ * (rather than the lighter blue-500/gray-400) are what carry white text at 9px.
  */
 const LIFECYCLE_META: Record<BandLifecycleStage, { label: string; className: string }> = {
-  completed: { label: "Completed", className: "border-gray-200 bg-gray-100 text-gray-600" },
-  upcoming: { label: "Upcoming", className: "border-blue-200 bg-blue-50 text-blue-700" },
+  completed: { label: "Completed", className: "bg-gray-500" },
+  upcoming: { label: "Upcoming", className: "bg-blue-600" },
 };
 
 /** Full date + time, e.g. "8 May 2026, 14:32" — used in the audit trail. */
@@ -725,6 +727,7 @@ const LIST_HREF = "/event-bookings/music-bookings";
 export function BandBookingCard({
   request,
   wide = false,
+  lifecycle = null,
 }: {
   request: BandRequest;
   /**
@@ -734,6 +737,13 @@ export function BandBookingCard({
    * detail a 288px column can't carry: video count, socials, unabbreviated name.
    */
   wide?: boolean;
+  /**
+   * Where this night sits in time, for the corner tag. Handed down rather than
+   * worked out here: "upcoming" belongs to only the next booked night, which is
+   * a fact about the whole board that a single card can't see. Null until the
+   * board has a client clock to compare against.
+   */
+  lifecycle?: BandLifecycleStage | null;
 }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
@@ -832,28 +842,8 @@ export function BandBookingCard({
   // real state rather than just the fact a row exists.
   const linkedEvent = Array.isArray(request.linked_event) ? request.linked_event[0] : request.linked_event;
   const eventIsActive = linkedEvent?.is_active === true;
-  // Has the night happened, or is it coming up? Read off the client's clock, not
-  // the server's: this SSRs in UTC while the venue (and the admin) run on UK
-  // time, and the slots sit at 22:00–00:00 — right where the two disagree. So
-  // `now` is set on mount, and the badge renders from the first client paint.
-  // Also keeps the markup hydration-stable, which a render-time Date would not.
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-  }, []);
-  const lifecycle = now
-    ? bandLifecycleStage(
-        {
-          status: request.status,
-          eventId: request.event_id,
-          eventIsActive,
-          date: linkedEvent?.date,
-          startTime: linkedEvent?.start_time,
-          endTime: linkedEvent?.end_time,
-        },
-        now
-      )
-    : null;
+  /** Is there a corner ribbon at all? Drives the top padding and the heart's drop. */
+  const hasRibbon = !!(request.type || request.genre || lifecycle);
   // The id is a uuid — too long to show whole. First 8 chars is a workable human
   // reference; the full value is on hover and on the clipboard.
   const shortRef = request.id.slice(0, 8).toUpperCase();
@@ -1449,17 +1439,16 @@ export function BandBookingCard({
           <span className="sr-only">Open {request.group_name || request.booker_name}</span>
         </button>
 
-        {/* Type + genre — a two-tone corner tag above the status badge, in the
-            request's own status hue (new = blue, booked = green, ...). Eyebrow
-            treatment per the style guide: tiny, black, wide-tracked caps — the wide
-            tracking is what keeps 9px legible. Type takes the solid fill, genre the
-            light tint at a lighter weight, so type leads. Width-capped so a long
-            genre can't run into the favourite. */}
-        {(request.type || request.genre || lifecycle) && (
-          // pr-11 clears the favourite (w-11) at the far end, so the row can be
-          // full-width without the lifecycle badge ever reaching the heart.
+        {/* A full-width top ribbon: type + genre tucked into the left corner in the
+            request's own status hue (new = blue, booked = green, ...), and the
+            lifecycle tag mirrored into the right corner. Eyebrow treatment per the
+            style guide: tiny, black, wide-tracked caps — the wide tracking is what
+            keeps 9px legible. Type takes the solid fill, genre the light tint at a
+            lighter weight, so type leads. The left group is width-capped so a long
+            genre can't crowd out the lifecycle tag. */}
+        {hasRibbon && (
           // Decorative, so it doesn't intercept clicks meant for the card.
-          <span className="pointer-events-none absolute top-0 left-0 z-10 flex w-full items-stretch pr-11 text-[9px] tracking-widest uppercase">
+          <span className="pointer-events-none absolute top-0 left-0 z-10 flex w-full items-stretch text-[9px] tracking-widest uppercase">
             <span className="flex max-w-[65%] min-w-0 items-stretch overflow-hidden rounded-tl-xl rounded-br-lg">
               {request.type && (
                 <span className={cn("shrink-0 px-2 py-0.5 font-black text-white", theme.dot)}>
@@ -1472,13 +1461,14 @@ export function BandBookingCard({
                 </span>
               )}
             </span>
-            {/* Sits on the same line as the tag, but centred against it rather
-                than stretched — it's a separate remark about the booking, not a
-                third segment of the ribbon. */}
+            {/* The type tag's mirror image in the opposite corner: same eyebrow
+                treatment and solid fill, rounded into the card's own edge. Its
+                own hue, not the status theme's — where the night sits in time is
+                a separate fact from where the request sits in the pipeline. */}
             {lifecycle && (
               <span
                 className={cn(
-                  "ml-1.5 shrink-0 self-center rounded-full border px-1.5 py-px font-black",
+                  "ml-auto shrink-0 rounded-tr-xl rounded-bl-lg px-2 py-0.5 font-black text-white",
                   LIFECYCLE_META[lifecycle].className
                 )}
               >
@@ -1494,7 +1484,7 @@ export function BandBookingCard({
         <div
           className={cn(
             "pointer-events-none relative z-10 flex items-center gap-3 px-3 pb-3 text-left",
-            request.type || request.genre || lifecycle ? "pt-5" : "pt-3"
+            hasRibbon ? "pt-5" : "pt-3"
           )}
         >
           {/* Status badge circle (left) */}
@@ -1682,18 +1672,21 @@ export function BandBookingCard({
             </span>
           )}
 
-          {/* Favourite — persists on click, no Save needed. Pinned to the corner
-              while the card is stacked; the row's last column once it spreads.
-              `relative` (not static) so it keeps its z-index either way, and
-              top/right resolve to a zero offset rather than needing a reset. */}
+          {/* Favourite — persists on click, no Save needed. Pinned to the right
+              edge while the card is stacked, dropping clear of the lifecycle tag
+              that now owns the corner; the row's last column once it spreads.
+              `relative` (not static) so it keeps its z-index either way — which
+              is also why the drop has to be undone there, or it would shift the
+              heart down out of the row. */}
           <button
             type="button"
             onClick={handleToggleFavorite}
             aria-pressed={isFavorite}
             title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
             className={cn(
-              "pointer-events-auto absolute top-0 right-0 z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90",
-              wide && "@2xl:relative @2xl:order-2"
+              "pointer-events-auto absolute right-0 z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90",
+              hasRibbon ? "top-4" : "top-0",
+              wide && "@2xl:relative @2xl:top-0 @2xl:order-2"
             )}
           >
             <Heart

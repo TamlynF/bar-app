@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Search, Inbox, X } from "lucide-react";
 import { BandBookingCard, statusTheme, type BandRequest } from "./band-booking-card";
+import { bandLifecycleStages, type BandLifecycleStage } from "@/lib/band-lifecycle";
 import StatusCircle from "./status-circle";
 import BandFiltersPopover, {
   EMPTY_FILTERS,
@@ -19,6 +20,12 @@ const COLUMNS = ["new", "reviewing", "offered", "booked", "declined"] as const;
 
 const toTitle = (s: string) =>
   s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+
+/** The mount clock never ticks — the tags are read once, when the board mounts. */
+const subscribeToNothing = () => () => {};
+
+/** No clock worth quoting on the server — see `nowMs` in the component. */
+const serverNow = () => null;
 
 /** Today as YYYY-MM-DD, to compare against the date columns (also YYYY-MM-DD). */
 const todayISO = () => {
@@ -154,6 +161,44 @@ export default function BandBookingListClient({
     for (const r of searchedRequests) map.get(normStatus(r.status))?.push(r);
     return map;
   }, [searchedRequests]);
+
+  // Which night is next, and which have been and gone. Read off the client's
+  // clock, not the server's: this SSRs in UTC while the venue (and the admin) run
+  // on UK time, and the slots sit at 22:00–00:00 — right where the two disagree.
+  // So the server renders no tags at all (`serverNow` is null) and the client
+  // fills them in from its own clock on the first paint — hydration-stable, which
+  // a render-time `new Date()` would not be.
+  const mountedAt = useRef<number | null>(null);
+  // Frozen on first read: useSyncExternalStore compares snapshots with Object.is,
+  // so a fresh Date.now() per call would re-render forever.
+  const clientNow = useCallback(() => (mountedAt.current ??= Date.now()), []);
+  const nowMs = useSyncExternalStore(subscribeToNothing, clientNow, serverNow);
+
+  /**
+   * The lifecycle tag per request id. Computed over every request rather than the
+   * filtered board on purpose: which night is next is a fact about the schedule,
+   * so narrowing the board must not promote whichever card survives the filter
+   * into "Upcoming".
+   */
+  const lifecycles = useMemo(() => {
+    if (nowMs == null) return new Map<string, BandLifecycleStage>();
+    return bandLifecycleStages(
+      initialRequests.map((r) => {
+        // Supabase hands the join back as an object or a single-element array.
+        const ev = Array.isArray(r.linked_event) ? r.linked_event[0] : r.linked_event;
+        return {
+          id: r.id,
+          status: r.status,
+          eventId: r.event_id,
+          eventIsActive: ev?.is_active === true,
+          date: ev?.date,
+          startTime: ev?.start_time,
+          endTime: ev?.end_time,
+        };
+      }),
+      new Date(nowMs)
+    );
+  }, [initialRequests, nowMs]);
 
   const totalShown = visibleColumns.reduce(
     (n, c) => n + (grouped.get(c)?.length ?? 0),
@@ -401,7 +446,12 @@ export default function BandBookingListClient({
                   </p>
                 ) : (
                   items.map((req) => (
-                    <BandBookingCard key={req.id} request={req} wide={spreadColumns} />
+                    <BandBookingCard
+                      key={req.id}
+                      request={req}
+                      wide={spreadColumns}
+                      lifecycle={lifecycles.get(req.id) ?? null}
+                    />
                   ))
                 )}
               </section>

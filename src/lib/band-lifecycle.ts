@@ -1,9 +1,9 @@
-// Derives the "where is this booking in its life" badge for a band request:
-// finished, or coming up. Pure (a `now` is passed in) so the rule can be unit-
-// tested and so the caller controls the clock — the card reads it on the client,
-// where "now" is the venue's wall clock rather than the build server's UTC.
+// Derives the "where is this booking in its life" badge for band requests:
+// finished, or the one night coming up next. Pure (a `now` is passed in) so the
+// rule can be unit-tested and so the caller controls the clock — the board reads
+// it on the client, where "now" is the venue's wall clock rather than the build
+// server's UTC.
 
-import { addMonths, startOfDay } from "date-fns";
 import { parseTimeToMinutes } from "./event-clash";
 
 export type BandLifecycleStage = "completed" | "upcoming";
@@ -21,11 +21,13 @@ export interface BandLifecycleInput {
   endTime: string | null | undefined;
 }
 
+export interface BandLifecycleRequest extends BandLifecycleInput {
+  /** `band_booking_requests.id` — the key the returned map is stamped with. */
+  id: string;
+}
+
 const MS_PER_MINUTE = 60_000;
 const MINUTES_PER_DAY = 24 * 60;
-
-/** How far ahead a booking still reads as "upcoming". */
-const UPCOMING_HORIZON_MONTHS = 1;
 
 /**
  * The slot as real instants rather than bare times, so an overnight window is
@@ -59,32 +61,57 @@ function slotInstants(date: string, startTime: string | null | undefined, endTim
 }
 
 /**
- * `completed` once the slot has finished, `upcoming` while it's still ahead and
- * within the horizon, otherwise null.
+ * The stage for every request that earns one, keyed by request id.
  *
- * Null covers the cases with nothing useful to say: any status but booked, no
- * linked event, a booking further out than the horizon, and the gap between
- * start and end — a set that's mid-performance, where neither label is true.
- * `completed` deliberately ignores `is_active`: a gig that happened, happened,
- * whether or not its event was later taken off the schedule.
+ * `completed` is a fact about one request on its own: its slot has finished. It
+ * deliberately ignores `is_active` — a gig that happened, happened, whether or
+ * not its event was later taken off the schedule.
+ *
+ * `upcoming` is a claim about the board as a whole, which is why this reads the
+ * whole list rather than one request at a time: only the *next* night on the
+ * schedule is upcoming, so at most one id ever carries it. To be in the running
+ * a request must be booked, have a linked event that's still active, and start
+ * in the future; the earliest such start wins, a tie going to the first in the
+ * list. There's no horizon — the next night is the next night, however far out.
+ *
+ * A request with nothing useful to say is simply absent from the map: any status
+ * but booked, no linked event, no date, a future night that isn't the next one,
+ * and the gap between start and end — where a gig is mid-performance and neither
+ * label is true.
  */
-export function bandLifecycleStage(input: BandLifecycleInput, now: Date): BandLifecycleStage | null {
-  if ((input.status ?? "").trim().toLowerCase() !== "booked") return null;
-  if (input.eventId == null) return null;
-  if (!input.date) return null;
+export function bandLifecycleStages(
+  requests: BandLifecycleRequest[],
+  now: Date
+): Map<string, BandLifecycleStage> {
+  const stages = new Map<string, BandLifecycleStage>();
+  /** The earliest future night seen so far — the `upcoming` incumbent. */
+  let nextUp: { id: string; start: number } | null = null;
 
-  const slot = slotInstants(input.date, input.startTime, input.endTime);
-  if (!slot) return null;
+  for (const request of requests) {
+    if ((request.status ?? "").trim().toLowerCase() !== "booked") continue;
+    if (request.eventId == null) continue;
+    if (!request.date) continue;
 
-  if (slot.end.getTime() < now.getTime()) return "completed";
+    const slot = slotInstants(request.date, request.startTime, request.endTime);
+    if (!slot) continue;
 
-  // Everything below is a claim about a night that's still to come, so it only
-  // holds while the event is actually on the schedule.
-  if (input.eventIsActive !== true) return null;
-  if (slot.start.getTime() <= now.getTime()) return null;
+    if (slot.end.getTime() < now.getTime()) {
+      stages.set(request.id, "completed");
+      continue;
+    }
 
-  const horizon = addMonths(startOfDay(now), UPCOMING_HORIZON_MONTHS);
-  if (slot.day.getTime() > horizon.getTime()) return null;
+    // Everything below is a claim about a night that's still to come, so it only
+    // holds while the event is actually on the schedule.
+    if (request.eventIsActive !== true) continue;
 
-  return "upcoming";
+    const start = slot.start.getTime();
+    // Already underway — neither finished nor ahead, and it must not take the
+    // upcoming slot from the night that genuinely is next.
+    if (start <= now.getTime()) continue;
+
+    if (!nextUp || start < nextUp.start) nextUp = { id: request.id, start };
+  }
+
+  if (nextUp) stages.set(nextUp.id, "upcoming");
+  return stages;
 }
