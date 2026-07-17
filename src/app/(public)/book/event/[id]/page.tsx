@@ -1,4 +1,5 @@
 import React from "react";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import EventBookingForm from "./_components/event-booking-form";
@@ -126,27 +127,68 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
       <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-12 pb-4 sm:px-6 sm:pt-14 sm:pb-6 lg:px-8">
 
         {/* Header */}
-        <div className="mb-4 flex flex-col items-center text-center sm:mb-6">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={bannerImage}
-            alt={eventTitle}
-            className="mx-auto -mt-2 h-auto w-full object-contain sm:max-w-md"
-          />
-          <div className="mt-4 space-y-2 px-2 sm:mt-5">
-            <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-[#FDCC4B]/20 bg-[#FDCC4B]/10 px-4 py-1.5">
-              <span className="font-black text-[10px] tracking-widest text-[#FDCC4B] uppercase">{eventTitle}</span>
+        <div className="flex flex-col items-center text-center mb-6 sm:mb-10">
+          {cfg.booking_image_url ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={cfg.booking_image_url}
+                alt={eventTitle}
+                className="w-full h-auto object-contain -mt-2 mask-[linear-gradient(to_bottom,black_90%,transparent_100%)] [-webkit-mask-image:linear-gradient(to_bottom,black_90%,transparent_100%)]"
+              />
+              <div className="mt-5 sm:mt-7 space-y-2 px-2">
+                <div className="inline-flex items-center gap-2 bg-[#FDCC4B]/10 border border-[#FDCC4B]/20 rounded-full px-4 py-1.5 mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[#FDCC4B]">{eventTitle}</span>
+                </div>
+                <p className="text-stone-300 text-xs sm:text-sm font-bold">
+                  {eventDate}{timeStr ? ` · ${timeStr}` : ""}
+                </p>
+                {tagline && <p className="text-stone-500 text-xs sm:text-sm italic">{tagline}</p>}
+              </div>
+            </>
+          ) : (
+            <div className="relative w-full px-2 pt-6 sm:pt-10">
+              {/* Soft gold glow behind the title */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 w-[420px] h-[240px] rounded-full bg-[#FDCC4B]/10 blur-[80px]"
+              />
+
+              {/* Brand lockup — small; the logo already lives in the nav */}
+              <div className="relative inline-flex items-center gap-3 mb-4 sm:mb-5">
+                <span aria-hidden className="h-px w-7 bg-[#FDCC4B]/30" />
+                <Image src="/Logo.png" alt="" width={26} height={26} className="rounded-lg" />
+                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[#FDCC4B]">
+                  Don Fenticas presents
+                </span>
+                <span aria-hidden className="h-px w-7 bg-[#FDCC4B]/30" />
+              </div>
+
+              {/* The event is the hero */}
+              <h1 className="relative text-[#FFF4CC] font-black uppercase tracking-tighter leading-[0.95] text-4xl sm:text-6xl drop-shadow-[0_8px_40px_rgba(253,204,75,0.15)]">
+                {eventTitle}
+              </h1>
+
+              {/* Date / time chips — match the public form-input surface */}
+              <div className="relative mt-5 flex flex-wrap items-center justify-center gap-2.5">
+                <span className="inline-flex items-center gap-2 bg-black/40 border border-white/10 rounded-full px-4 py-2 text-xs font-bold text-[#FFF4CC]">
+                  <Calendar className="w-3.5 h-3.5 text-[#FDCC4B]" aria-hidden />
+                  {eventDate}
+                </span>
+                {timeStr && (
+                  <span className="inline-flex items-center gap-2 bg-black/40 border border-white/10 rounded-full px-4 py-2 text-xs font-bold text-[#FFF4CC]">
+                    <Clock className="w-3.5 h-3.5 text-[#FDCC4B]" aria-hidden />
+                    {timeStr}
+                  </span>
+                )}
+              </div>
+
+              {tagline && (
+                <p className="relative mt-4 text-xs sm:text-sm italic text-stone-500">{tagline}</p>
+              )}
             </div>
-            <p className="text-xs font-bold text-(--ev-fg,#d6d3d1) sm:text-sm">
-              {eventDate}{timeStr ? ` · ${timeStr}` : ""}
-            </p>
-            {tagline && (
-              <p className="mx-auto max-w-sm text-center text-xs leading-relaxed font-medium text-(--ev-fg-dim,#a8a29e) italic sm:max-w-2xl sm:text-base">
-                {tagline}
-              </p>
-            )}
-          </div>
-        </div> 
+          )}
+        </div>
 
         {/* Event Badges */}
         {eventBadges.length > 0 && (

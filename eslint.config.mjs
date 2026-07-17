@@ -47,9 +47,13 @@ const eslintConfig = defineConfig([
           caughtErrorsIgnorePattern: "^_",
         },
       ],
-      // Auto-sort Tailwind classes (autofixable). Only the ordering rule is
-      // enabled to stay surgical; other opinionated rules are left off.
-      "better-tailwindcss/enforce-consistent-class-order": "warn",
+      // Class ordering is intentionally OFF. Auto-reordering on save/commit was
+      // producing constant class churn and, worse, an external sorter fighting it
+      // was decaying responsive classes (`sm:pt-14` → a bare `pt-14`). We keep the
+      // two *detector* rules below (conflicting / unknown) as hard errors so any
+      // such corruption still fails `npm run lint` and the pre-commit hook loudly —
+      // we just no longer let any tool rewrite class order automatically.
+      "better-tailwindcss/enforce-consistent-class-order": "off",
       // Catch two classes fighting over the same CSS property at the same
       // breakpoint (`w-9 w-11`, `w-[92vw] w-full`). One of them is dead, and which
       // one silently depends on Tailwind's output order rather than the class list
