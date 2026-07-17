@@ -47,6 +47,9 @@ const DEFAULT_START_TIME = "22:00"; // 10pm
 /** Applicant's booking note collapses to this many characters behind a "…" toggle. */
 const NOTE_PREVIEW_LEN = 50;
 
+/** Preferred-date pills shown before the "Show all" toggle takes over. */
+const PREFERRED_DATES_VISIBLE = 4;
+
 interface SocialLinks {
   instagram?: string;
   facebook?: string;
@@ -1074,11 +1077,19 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   )}
                 </div>
 
-                {/* Preferred dates — inline with the label: right-aligned when few,
-                    horizontally scrollable when many. Past 3 dates a toggle expands
-                    them onto wrapped rows so they're all visible without scrolling. */}
+                {/* Preferred dates — inline with the label. Only the first few show;
+                    a toggle expands the rest onto wrapped rows. The chosen slot always
+                    leads, so it can never fall past the cut-off. */}
                 {dates.length > 0 && (() => {
-                  const pills = dates.map((d, i) => {
+                  const orderedDates =
+                    selectedDate && dates.includes(selectedDate)
+                      ? [selectedDate, ...dates.filter((d) => d !== selectedDate)]
+                      : dates;
+                  const canExpand = orderedDates.length > PREFERRED_DATES_VISIBLE;
+                  const shownDates = showAllDates
+                    ? orderedDates
+                    : orderedDates.slice(0, PREFERRED_DATES_VISIBLE);
+                  const pills = shownDates.map((d) => {
                     // Matches the chosen slot date. Once booked, the pills lock
                     // (inactive), keeping the matched date visibly highlighted.
                     const isSelected = !!selectedDate && selectedDate === d;
@@ -1086,7 +1097,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     const interactive = editable && !locked;
                     return (
                       <button
-                        key={i}
+                        key={d}
                         type="button"
                         disabled={!interactive}
                         onClick={() => applyDate(isSelected ? "" : d)}
@@ -1106,7 +1117,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                       </button>
                     );
                   });
-                  const canExpand = dates.length > 3;
                   const toggleClass =
                     "flex shrink-0 items-center gap-1 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:text-[#1F1F1A]";
                   return (
