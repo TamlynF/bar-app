@@ -66,6 +66,9 @@ export async function updateBandBookingFields(
     phone_no?: string | null;
     notes?: string | null;
     band_notes?: string | null;
+    /** text[] — public video urls, aligned index-for-index with the descriptions. */
+    video_urls?: string[] | null;
+    video_descriptions?: string[] | null;
     /** jsonb — platform → url, blanks already dropped by the caller. */
     social_links?: Record<string, string> | null;
     selected_date?: string | null;

@@ -21,6 +21,8 @@ import {
   AlertCircle,
   AlertTriangle,
   CalendarDays,
+  CalendarClock,
+  Upload,
   Mail,
   Phone,
   Heart,
@@ -40,6 +42,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { VideoFacade } from "@/components/video-facade";
+import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
 import BandNotesPopover from "./band-notes-popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -50,6 +53,10 @@ import { type BandLifecycleStage } from "@/lib/band-lifecycle";
 import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail, type BandEmail } from "@/lib/band-emails";
 
 const DEFAULT_START_TIME = "22:00"; // 10pm
+
+/** Same ceiling as the public application form, so the admin can't outgrow it. */
+const MAX_VIDEOS = 10;
+const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
 
 /** Applicant's booking note collapses to this many characters behind a "…" toggle. */
 const NOTE_PREVIEW_LEN = 50;
@@ -131,6 +138,34 @@ export interface BandRequest {
    * object or a single-element array.
    */
   linked_event?: LinkedEvent | LinkedEvent[] | null;
+}
+
+/**
+ * A video row in the sheet's Act Media manager. The applicant's saved videos load
+ * with a `url` straight away; a freshly picked file has none until its resumable
+ * upload finishes, and carries the local preview + progress in the meantime.
+ */
+interface SheetVideo {
+  id: string;
+  /** Public url once uploaded; null while a picked file is still uploading. */
+  url: string | null;
+  description: string;
+  /** Object URL for the local file, so a not-yet-uploaded pick still previews. */
+  previewUrl?: string;
+  uploading?: boolean;
+  progress?: number;
+  error?: string | null;
+}
+
+/** The applicant's saved videos as editable rows — url + description, paired by index. */
+function seedSheetVideos(request: BandRequest): SheetVideo[] {
+  return (request.video_urls ?? [])
+    .map((url, i) => ({
+      id: `saved-${i}`,
+      url,
+      description: (request.video_descriptions ?? [])[i]?.trim() || "",
+    }))
+    .filter((v) => Boolean(v.url));
 }
 
 export const statusTheme: Record<
@@ -796,6 +831,12 @@ export function BandBookingCard({
   // taking a full card slot in the rail. Mirrors the Band Notes popover.
   const [sysInfoOpen, setSysInfoOpen] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
+  // Act Media videos as an editable list — seeded from the request, with new picks
+  // uploaded straight to the band-videos bucket and persisted on Save.
+  const [sheetVideos, setSheetVideos] = useState<SheetVideo[]>(() => seedSheetVideos(request));
+  const videoInputRef = useRef<HTMLInputElement>(null);
+  /** In-flight resumable uploads, keyed by row id, so a removal can abort one. */
+  const videoUploadHandles = useRef<Record<string, ResumableHandle>>({});
 
   const status = normStatus(request.status);
   const theme = statusTheme[status] || statusTheme.new;
@@ -920,6 +961,19 @@ export function BandBookingCard({
   const dateTimeChanged =
     selectedDate !== origDate || selectedStartTime !== origStart || selectedEndTime !== origEnd;
 
+  // Only successfully-uploaded videos are persistable; a row still uploading has no
+  // url yet, so it stays out of the saved arrays until it lands.
+  const uploadedSheetVideos = sheetVideos.filter((v) => v.url);
+  const videosUploading = sheetVideos.some((v) => v.uploading);
+  const savedVideoUrls = (request.video_urls ?? []).filter(Boolean);
+  const savedVideoDescriptions = savedVideoUrls.map(
+    (_, i) => (request.video_descriptions ?? [])[i]?.trim() || ""
+  );
+  const videosChanged =
+    JSON.stringify(uploadedSheetVideos.map((v) => v.url)) !== JSON.stringify(savedVideoUrls) ||
+    JSON.stringify(uploadedSheetVideos.map((v) => v.description.trim())) !==
+      JSON.stringify(savedVideoDescriptions);
+
   // Have any editable fields diverged from the saved record? Drives the Save button.
   const detailsChanged =
     actName !== (request.group_name ?? "") ||
@@ -935,6 +989,7 @@ export function BandBookingCard({
     bankSortCode !== (request.bank_sort_code ?? "") ||
     bankPaymentRef !== (request.bank_payment_ref ?? "") ||
     JSON.stringify(normalizeSocials(socialLinks)) !== JSON.stringify(normalizeSocials(request.social_links)) ||
+    videosChanged ||
     adminNotes !== (request.admin_notes ?? "");
   const hasChanges = detailsChanged || dateTimeChanged;
 
@@ -948,6 +1003,8 @@ export function BandBookingCard({
     email,
     phone_no: phone || null,
     social_links: normalizeSocials(socialLinks),
+    video_urls: uploadedSheetVideos.map((v) => v.url as string),
+    video_descriptions: uploadedSheetVideos.map((v) => v.description.trim()),
     payment_amount: paymentAmount === "" ? null : Number(paymentAmount),
     paid_amount: paidAmount === "" ? null : Number(paidAmount),
     payment_status: derivedStatus,
@@ -1086,6 +1143,12 @@ export function BandBookingCard({
     setSelectedStartTime(toHHMM(request.selected_start_time));
     setSelectedEndTime(toHHMM(request.selected_end_time));
     setAdminNotes(request.admin_notes || "");
+    // Abort any in-flight uploads, free their previews, and drop back to the saved
+    // videos — a discarded pick shouldn't keep uploading in the background.
+    Object.values(videoUploadHandles.current).forEach((h) => h.abort());
+    videoUploadHandles.current = {};
+    sheetVideos.forEach((v) => v.previewUrl && URL.revokeObjectURL(v.previewUrl));
+    setSheetVideos(seedSheetVideos(request));
     setClashes([]);
     setError(null);
     setSheetOpen(false);
@@ -1103,6 +1166,65 @@ export function BandBookingCard({
         setIsFavorite(!next);
         toast.error("Couldn't update favourite");
       }
+    });
+  }
+
+  const updateSheetVideo = (id: string, patch: Partial<SheetVideo>) =>
+    setSheetVideos((prev) => prev.map((v) => (v.id === id ? { ...v, ...patch } : v)));
+
+  /**
+   * Pick files → upload each to the band-videos bucket (resumable, same helper the
+   * public form uses), adding a row that shows progress and lands a url on success.
+   * The saved arrays only pick these up on Save.
+   */
+  function handleVideoSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    if (!files.length) return;
+    const remaining = MAX_VIDEOS - sheetVideos.length;
+
+    for (const file of files.slice(0, remaining)) {
+      const id = crypto.randomUUID();
+      const previewUrl = URL.createObjectURL(file);
+
+      if (file.size > MAX_VIDEO_BYTES) {
+        setSheetVideos((prev) => [
+          ...prev,
+          { id, url: null, description: "", previewUrl, uploading: false, progress: 0, error: "File too large (max 250 MB)." },
+        ]);
+        continue;
+      }
+
+      setSheetVideos((prev) => [
+        ...prev,
+        { id, url: null, description: "", previewUrl, uploading: true, progress: 0, error: null },
+      ]);
+
+      const ext = file.name.split(".").pop();
+      const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      videoUploadHandles.current[id] = uploadVideoResumable(file, path, {
+        onProgress: (pct) => updateSheetVideo(id, { progress: pct }),
+        onSuccess: (publicUrl) => {
+          updateSheetVideo(id, { uploading: false, url: publicUrl, progress: 100 });
+          delete videoUploadHandles.current[id];
+        },
+        onError: (message) => {
+          updateSheetVideo(id, { uploading: false, error: message });
+          delete videoUploadHandles.current[id];
+        },
+      });
+    }
+
+    if (videoInputRef.current) videoInputRef.current.value = "";
+  }
+
+  /** Drop a video row, aborting its upload and freeing the local preview first. */
+  function removeSheetVideo(id: string) {
+    videoUploadHandles.current[id]?.abort();
+    delete videoUploadHandles.current[id];
+    setSheetVideos((prev) => {
+      const entry = prev.find((v) => v.id === id);
+      if (entry?.previewUrl) URL.revokeObjectURL(entry.previewUrl);
+      return prev.filter((v) => v.id !== id);
     });
   }
 
@@ -1803,12 +1925,14 @@ export function BandBookingCard({
                     title="Band notes (internal)"
                     className={cn(
                       "relative flex h-11 w-11 items-center justify-center rounded-xl border transition-colors sm:h-9 sm:w-9",
+                      // Blue when notes exist — the same on/off identity the card row's
+                      // NotebookPen carries, independent of the request's status hue.
                       bandNoteList.length > 0
-                        ? "border-[#5C4033]/25 bg-[#5C4033]/10 text-[#5C4033] hover:bg-[#5C4033]/15"
+                        ? "border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100"
                         : "border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]"
                     )}
                   >
-                    <NotebookPen className="h-4 w-4" />
+                    <NotebookPen className={cn("h-4 w-4", bandNoteList.length > 0 && "fill-blue-600")} />
                     {bandNoteList.length > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#B45309] px-1 font-black text-[9px] text-white tabular-nums ring-2 ring-white">
                         {bandNoteList.length}
@@ -1988,8 +2112,10 @@ export function BandBookingCard({
                       </button>
                     );
                   });
+                  // A tinted espresso pill so the toggle reads as a control, set off
+                  // from the sheet's #F7F4EA and the #E6DFC8 section headers alike.
                   const toggleClass =
-                    "flex shrink-0 items-center gap-1 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:text-[#1F1F1A]";
+                    "flex shrink-0 items-center gap-1 rounded-lg border border-[#5C4033]/15 bg-[#5C4033]/8 px-2 py-1 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033]/15 hover:text-[#1F1F1A]";
                   return (
                     <div className="border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                       {canExpand && showAllDates ? (
@@ -2069,7 +2195,7 @@ export function BandBookingCard({
                   ("are they any good, do they have a following?"), so they're one
                   scouting section rather than two cards of chrome. Socials lead
                   because they're the cheaper glance. */}
-              {(showSocials || videos.length > 0) && (
+              {(showSocials || sheetVideos.length > 0) && (
                 <Section title="Act Media">
                   {showSocials && (
                     <div className="flex items-center gap-1.5 px-4 py-2 sm:px-5">
@@ -2167,26 +2293,109 @@ export function BandBookingCard({
                     </div>
                   )}
 
-                  {/* Videos — play inline on the page (facade: loads on click) */}
-                  {videos.length > 0 && (
-                    <div
-                      className={cn(
-                        "grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-3 sm:px-5",
-                        // Only rule off the videos when there are pills above them.
-                        showSocials && "border-t border-[#E6DFC8]"
+                  {/* Videos — the applicant's, plus any the admin adds here. Saved
+                      ones play inline (facade: loads on click); a fresh pick shows
+                      its upload progress until it lands a url. Only rule off from the
+                      socials above when there's a row of pills to divide from. */}
+                  {(sheetVideos.length > 0 || editable) && (
+                    <div className={cn(showSocials && "border-t border-[#E6DFC8]")}>
+                      {sheetVideos.length > 0 && (
+                        <div className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-3 sm:px-5">
+                          {sheetVideos.map((v, i) => (
+                            <div key={v.id} className="min-w-0">
+                              {v.url ? (
+                                <VideoFacade url={v.url} title={`Video ${i + 1}`} />
+                              ) : (
+                                <div className="relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#1F1F1A]">
+                                  {v.previewUrl && (
+                                    <video
+                                      src={`${v.previewUrl}#t=0.1`}
+                                      muted
+                                      playsInline
+                                      preload="metadata"
+                                      aria-hidden="true"
+                                      tabIndex={-1}
+                                      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                                    />
+                                  )}
+                                  <span className="absolute inset-0 bg-black/50" />
+                                  {v.error ? (
+                                    <span className="relative flex flex-col items-center gap-1 px-2 text-center">
+                                      <AlertCircle className="h-5 w-5 text-red-300" />
+                                      <span className="text-[10px] font-bold text-red-200">{v.error}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="relative flex flex-col items-center gap-1.5">
+                                      <Loader2 className="h-5 w-5 animate-spin text-white" />
+                                      <span className="font-black text-[10px] tracking-wide text-white uppercase tabular-nums">
+                                        {v.progress ?? 0}%
+                                      </span>
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                              {editable ? (
+                                <div className="mt-1.5 flex items-center gap-1">
+                                  <input
+                                    type="text"
+                                    aria-label={`Description for video ${i + 1}`}
+                                    maxLength={120}
+                                    value={v.description}
+                                    onChange={(e) => updateSheetVideo(v.id, { description: e.target.value })}
+                                    placeholder="Add a description…"
+                                    className="min-w-0 flex-1 rounded-lg border border-[#E6DFC8] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#1F1F1A] transition-all outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSheetVideo(v.id)}
+                                    aria-label={`Remove video ${i + 1}`}
+                                    title="Remove video"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-white text-[#5F624F]/60 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                  >
+                                    <X className="h-3.5 w-3.5" />
+                                  </button>
+                                </div>
+                              ) : (
+                                <p
+                                  title={v.description || undefined}
+                                  className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5F624F]"
+                                >
+                                  {v.description || `Video ${i + 1}`}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       )}
-                    >
-                      {videos.map((v, i) => (
-                        <div key={i} className="min-w-0">
-                          <VideoFacade url={v.url} title={`Video ${i + 1}`} />
-                          <p
-                            title={v.description || undefined}
-                            className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5F624F]"
+
+                      {/* Add more — reuses the public form's resumable upload, so a big
+                          performance video survives a flaky connection. Green identity
+                          per the style guide's upload-action rule. */}
+                      {editable && sheetVideos.length < MAX_VIDEOS && (
+                        <div className={cn("px-4 pb-3 sm:px-5", sheetVideos.length > 0 ? "pt-0" : "pt-3")}>
+                          <input
+                            ref={videoInputRef}
+                            type="file"
+                            accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/mpeg"
+                            multiple
+                            title="Upload videos"
+                            className="hidden"
+                            onChange={handleVideoSelect}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => videoInputRef.current?.click()}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-4 py-2.5 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85"
                           >
-                            {v.description || `Video ${i + 1}`}
+                            <Upload className="h-3.5 w-3.5" />
+                            {sheetVideos.length === 0 ? "Upload Videos" : "Add Another Video"}
+                          </button>
+                          <p className="mt-1.5 text-[10px] leading-snug text-[#5F624F]/70">
+                            MP4, WebM or MOV — max 250 MB each. Applied when you hit Save Changes.{" "}
+                            {sheetVideos.length}/{MAX_VIDEOS}
                           </p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
                 </Section>
@@ -2367,12 +2576,20 @@ export function BandBookingCard({
                       blocked Booked chip flashes it via revealSlot(). */}
                   <div
                     className={cn(
-                      "space-y-1.5 rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] p-2.5 transition-all",
+                      // This is what you commit to, so it's dressed to outrank the
+                      // plain field rows: a heavier espresso border, a warm tint that
+                      // lifts off the white footer, a soft shadow, and an icon chip in
+                      // the heading. The amber rail/flash still override when a slot is
+                      // required or the Booked chip points here.
+                      "space-y-2 rounded-2xl border-2 border-[#5C4033]/25 bg-[#5C4033]/[0.06] p-3 shadow-sm transition-all",
                       slotWarning && "border-l-4 border-l-amber-400",
                       slotFlash && "ring-2 ring-amber-400/70"
                     )}
                   >
-                    <span className="flex flex-wrap items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                    <span className="flex flex-wrap items-center gap-2 font-black text-[11px] tracking-wide text-[#5C4033] uppercase">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#5C4033] text-white">
+                        <CalendarClock className="h-3.5 w-3.5" />
+                      </span>
                       Selected Date &amp; Time
                       {slotWarning && (
                         <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] tracking-tight text-amber-700">
@@ -2528,8 +2745,14 @@ export function BandBookingCard({
                     <button
                       type="button"
                       onClick={handleSave}
-                      disabled={isPending || hasClashes}
-                      title={hasClashes ? clashWarning : undefined}
+                      disabled={isPending || hasClashes || videosUploading}
+                      title={
+                        hasClashes
+                          ? clashWarning
+                          : videosUploading
+                            ? "Wait for videos to finish uploading."
+                            : undefined
+                      }
                       className="flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial"
                     >
                       {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
