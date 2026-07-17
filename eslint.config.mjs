@@ -50,6 +50,42 @@ const eslintConfig = defineConfig([
       // Auto-sort Tailwind classes (autofixable). Only the ordering rule is
       // enabled to stay surgical; other opinionated rules are left off.
       "better-tailwindcss/enforce-consistent-class-order": "warn",
+      // Catch class strings that aren't real Tailwind. An invalid class is just a
+      // string: TypeScript never validates it and the ordering rule above happily
+      // sorts it, so a mangled className (e.g. `tracdhrink-0`, `tre`) ships with
+      // the styling silently dead while `tsc` and `eslint` both report clean.
+      // "error" so `npm run lint` fails loudly on a corrupted class string rather
+      // than it shipping unnoticed. Wire `npm run lint` into pre-commit/CI to gate.
+      // `ignore` lists the hand-written semantic utilities that live in
+      // globals.css `@layer utilities` — they're not Tailwind-generated, so the
+      // plugin can't resolve them and would otherwise flag them. Keep in sync
+      // when adding a new custom class there (see CLAUDE.md "Styling").
+      "better-tailwindcss/no-unknown-classes": [
+        "error",
+        {
+          ignore: [
+            "^ad-", // ad-blink, ad-kind, ad-marquee-track, ad-ping, ad-rise, ad-row, ad-stub-perf
+            "^animate-reveal$",
+            "^animate-spin-slow$",
+            "^bg-dropdown$",
+            "^cat-", // cat-banner, cat-items, cat-note
+            "^dir-(ltr|rtl)$",
+            "^ev-", // ev-dot, ev-text — the [style*="--ev-c"] colour hooks
+            "^input-scheme-dark$",
+            "^is-lit$",
+            "^menu-", // menu-col, menu-frame, menu-grid, menu-row, ...
+            "^neon-", // neon-bg, neon-border, neon-glow, neon-text, ...
+            "^no-print$",
+            "^no-scrollbar$",
+            "^olive-bg$",
+            "^pending$",
+            "^pt-safe-top$",
+            "^rich-content", // rich-content, rich-content--admin, rich-content--public
+            "^rich-editor$",
+            "^spirits-pill$",
+          ],
+        },
+      ],
     },
   },
 ]);

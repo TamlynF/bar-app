@@ -287,7 +287,7 @@ function StageStepper({ status }: { status: string }) {
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
       <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
@@ -319,7 +319,7 @@ function EditRow({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
       <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
       {!editable ? (
         <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{readOnlyValue ?? (value || "—")}</span>
@@ -1041,7 +1041,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <EditRow label="Act Name" value={actName} onChange={setActName} editable={editable} placeholder="Act name" />
                 {/* Type / Genre — combined on one row (e.g. "Band / Pop"). Both stay
                     independently editable, so this can't collapse to a single field. */}
-                <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                   <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Type / Genre</span>
                   {!editable ? (
                     <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">
@@ -1110,7 +1110,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   const toggleClass =
                     "flex shrink-0 items-center gap-1 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:text-[#1F1F1A]";
                   return (
-                    <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                    <div className="border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                       {canExpand && showAllDates ? (
                         <>
                           <div className="flex items-center justify-between gap-3">
@@ -1152,7 +1152,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     Collapsed to a preview so a rambling note can't dominate the sheet;
                     the trailing "…" opens it in place. */}
                 {bookingNote && (
-                  <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                  <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                     <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Notes from Booking
                     </span>
@@ -1327,7 +1327,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   }
                 >
                   {/* Amount */}
-                  <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                  <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                     <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Amount</span>
                     {editable ? (
                       <div className="flex flex-1 items-center justify-end gap-1">
@@ -1359,7 +1359,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     <>
                       {showBankDetails && (
                         <>
-                          <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                          <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                             <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Paid</span>
                             {editable ? (
                               <div className="flex flex-1 items-center justify-end gap-1">
