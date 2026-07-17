@@ -262,8 +262,10 @@ export default function BandBookingListClient({
 
   return (
     <div className="animate-in space-y-3 duration-500 fade-in">
-      {/* Stats + Search grouped card */}
-      <div className="rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
+      {/* Stats + Search grouped card — a warm tone a shade off both the white cards
+          and the #F7F4EA page, lifted off the page with a soft shadow so the
+          controls read as their own bar. */}
+      <div className="rounded-2xl border border-[#E6DFC8] bg-[#EFE8D4] shadow-md">
         <div className="flex flex-col items-center sm:flex-row">
           {/* Stats Bar — takes only the width it needs, so the search can have the
               rest (it used to flex-1 and spread the circles across the header). */}
@@ -320,7 +322,7 @@ export default function BandBookingListClient({
 
           {/* Search + Filters — takes the width the stats bar no longer claims. */}
           <div className="mb-3 flex w-full min-w-0 flex-1 items-center gap-2 px-3 py-2 sm:mb-0 sm:px-4">
-            <div className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#E6DFC8] px-4 transition-colors focus-within:border-[#5C4033]">
+            <div className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#E6DFC8] bg-white px-4 transition-colors focus-within:border-[#5C4033]">
               <div className="flex min-w-0 flex-1 items-center gap-2">
                 <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
                 <input

@@ -131,9 +131,11 @@ export default function BandFiltersPopover({
           title={open ? "Hide filters" : "Show filters"}
           className={cn(
             "inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border font-black text-[11px] tracking-widest uppercase transition-colors sm:w-auto sm:px-4",
+            // Idle sits as a light espresso tint — the same hue the pressed state
+            // fills solid, so it reads as the un-clicked version of the same button.
             open || activeCount > 0
               ? "border-[#5C4033] bg-[#5C4033] text-white"
-              : "border-[#E6DFC8] bg-white text-[#5F624F] hover:text-[#5C4033]"
+              : "border-[#5C4033]/20 bg-[#5C4033]/10 text-[#5C4033] hover:bg-[#5C4033]/20"
           )}
         >
           <SlidersHorizontal className="h-4 w-4 shrink-0" />
