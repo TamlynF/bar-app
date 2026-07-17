@@ -1694,22 +1694,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {/* Band Notes now live in the sheet-header popover (internal, quick
                   access at any scroll position) — see the NotebookPen button above. */}
 
-              {/* Admin notes (read-only once booked/declined; editable in the working-stage footer) */}
-              {!isWorkingStage && request.admin_notes && (
-                <Section title="Admin Notes">
-                  <div className="px-4 py-3 sm:px-5">
-                    <div className="rounded-2xl border border-[#5C4033]/15 bg-[#5C4033]/5 p-4">
-                      <div className="mb-2 flex items-center gap-2">
-                        <MessageSquareQuote className="h-4 w-4 text-[#5C4033] opacity-40" />
-                        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Staff Note</span>
-                      </div>
-                      <p className="text-sm leading-relaxed text-[#1F1F1A] italic">
-                        &quot;{request.admin_notes}&quot;
-                      </p>
-                    </div>
-                  </div>
-                </Section>
-              )}
               </div>
 
               {/* Side rail — reference info: contact, socials, media, audit */}
