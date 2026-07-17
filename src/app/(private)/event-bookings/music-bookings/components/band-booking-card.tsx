@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useRef, useState, useTransition } from "react";
 import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite } from "../actions";
 import type { BandStatus } from "../actions";
 import {
@@ -272,6 +272,7 @@ function StageChip({
   isPending,
   anyPending,
   onSelect,
+  onBlockedClick,
 }: {
   stage: BandStatus;
   tone: StageTone;
@@ -281,17 +282,25 @@ function StageChip({
   /** Some stage is mid-flight — freeze the whole row. */
   anyPending: boolean;
   onSelect: (next: BandStatus) => void;
+  /**
+   * Given when the block is something the admin can fix right now — the chip
+   * stays live and points at the fix instead of being a dead end.
+   */
+  onBlockedClick?: () => void;
 }) {
   const t = statusTheme[stage];
   const interactive = tone !== "current" && !reason;
+  const nudges = !interactive && tone !== "current" && !!onBlockedClick;
 
   return (
     <button
       type="button"
-      disabled={!interactive || anyPending}
-      onClick={() => onSelect(stage)}
+      disabled={anyPending || (!interactive && !nudges)}
+      onClick={() => (interactive ? onSelect(stage) : onBlockedClick?.())}
       title={reason ?? `Move to ${t.label}`}
       aria-current={tone === "current" ? "step" : undefined}
+      // Still announced as unavailable — it just explains itself when clicked.
+      aria-disabled={!interactive || undefined}
       className={cn(
         "flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-2.5 transition-all sm:h-8",
         tone === "current" && cn(t.bg, t.text, t.border),
@@ -303,7 +312,9 @@ function StageChip({
               "cursor-pointer hover:brightness-95",
               tone === "future" && "border-dashed border-[#5C4033]/30 text-[#5C4033]"
             )
-          : "cursor-default"
+          : nudges
+            ? "cursor-pointer border-dashed border-amber-300 text-amber-600/70 hover:bg-amber-50 hover:text-amber-700"
+            : "cursor-default"
       )}
     >
       {isPending ? (
@@ -323,6 +334,7 @@ function StageStepper({
   onSelect,
   pendingStage,
   slotWarning,
+  onRevealSlot,
 }: {
   status: string;
   onSelect: (next: BandStatus) => void;
@@ -330,6 +342,8 @@ function StageStepper({
   pendingStage: BandStatus | null;
   /** Set when the slot is incomplete; blocks `booked` and explains why. */
   slotWarning?: string;
+  /** Points the admin at the slot console when Booked is blocked only by it. */
+  onRevealSlot: () => void;
 }) {
   const transitions = BAND_TRANSITIONS[status as BandStatus] ?? [];
   const currentLabel = statusTheme[status]?.label ?? status;
@@ -342,17 +356,23 @@ function StageStepper({
   };
 
   /** A chip per stage — `reason` null means it's reachable, so it's a button. */
-  const chip = (s: BandStatus, tone: StageTone) => (
-    <StageChip
-      key={s}
-      stage={s}
-      tone={tone}
-      reason={tone === "current" ? "Current stage" : blockedReason(s)}
-      isPending={pendingStage === s}
-      anyPending={!!pendingStage}
-      onSelect={onSelect}
-    />
-  );
+  const chip = (s: BandStatus, tone: StageTone) => {
+    // Booked blocked *only* by a missing slot is fixable on the spot, so that
+    // chip stays live and opens the console rather than sitting dead.
+    const slotFixable = s === "booked" && !!slotWarning && transitions.some((t) => t.next === "booked");
+    return (
+      <StageChip
+        key={s}
+        stage={s}
+        tone={tone}
+        reason={tone === "current" ? "Current stage" : blockedReason(s)}
+        isPending={pendingStage === s}
+        anyPending={!!pendingStage}
+        onSelect={onSelect}
+        onBlockedClick={slotFixable ? onRevealSlot : undefined}
+      />
+    );
+  };
 
   const idx = PIPELINE.indexOf(status as BandStatus);
 
@@ -578,6 +598,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [error, setError] = useState<string | null>(null);
   /** Stage being applied — drives the spinner on that stepper chip. */
   const [pendingStage, setPendingStage] = useState<BandStatus | null>(null);
+  /** Brief highlight on the slot console after a blocked Booked chip points at it. */
+  const [slotFlash, setSlotFlash] = useState(false);
+  const startTimeRef = useRef<HTMLInputElement>(null);
 
   // Favourite persists on click (not via Save), so it gets its own transition —
   // sharing `isPending` would grey out the footer actions on every heart tap.
@@ -788,6 +811,18 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         toast.error("Couldn't update favourite");
       }
     });
+  }
+
+  /**
+   * A blocked Booked chip points at what's missing rather than doing nothing:
+   * highlight the slot console (it's always on screen — the footer doesn't
+   * scroll) and open whichever control still needs filling in.
+   */
+  function revealSlot() {
+    setSlotFlash(true);
+    window.setTimeout(() => setSlotFlash(false), 1200);
+    if (!selectedDate) setDatePickerOpen(true);
+    else startTimeRef.current?.focus();
   }
 
   // Copies the *full* uuid, not the shortened form on screen.
@@ -1272,6 +1307,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               onSelect={handleAction}
               pendingStage={pendingStage}
               slotWarning={slotWarning}
+              onRevealSlot={revealSlot}
             />
           </div>
 
@@ -1748,17 +1784,33 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             {editable && (
               <div className="space-y-2">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  {/* Left: the slot being committed to — compact single row */}
-                  <div className="space-y-1.5 rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] p-2.5">
-                    <span className="block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                  {/* Left: the slot being committed to — compact single row. While
+                      it's still needed for booking it wears an amber rail, and the
+                      blocked Booked chip flashes it via revealSlot(). */}
+                  <div
+                    className={cn(
+                      "space-y-1.5 rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] p-2.5 transition-all",
+                      slotWarning && "border-l-4 border-l-amber-400",
+                      slotFlash && "ring-2 ring-amber-400/70"
+                    )}
+                  >
+                    <span className="flex flex-wrap items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Selected Date &amp; Time
+                      {slotWarning && (
+                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] tracking-tight text-amber-700">
+                          Required to book
+                        </span>
+                      )}
                     </span>
                     <div className="flex flex-wrap items-center gap-2">
                       <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                         <PopoverTrigger asChild>
                           <button
                             type="button"
-                            className="flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border border-[#E6DFC8] bg-white px-3 py-2 text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:border-[#5C4033]/30"
+                            className={cn(
+                              "flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:border-[#5C4033]/30",
+                              !selectedDate && slotWarning ? "border-amber-300" : "border-[#E6DFC8]"
+                            )}
                           >
                             {selectedDate
                               ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
@@ -1793,8 +1845,16 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                           )}
                         </PopoverContent>
                       </Popover>
-                      <div className="flex items-center gap-1.5 rounded-xl border border-[#E6DFC8] bg-white px-3 py-2">
+                      <div
+                        className={cn(
+                          "flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 transition-colors",
+                          (!selectedStartTime || !selectedEndTime) && slotWarning
+                            ? "border-amber-300"
+                            : "border-[#E6DFC8]"
+                        )}
+                      >
                         <input
+                          ref={startTimeRef}
                           type="time"
                           aria-label="Performance start time"
                           value={selectedStartTime}
