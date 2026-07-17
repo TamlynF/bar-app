@@ -134,7 +134,7 @@ function BandMedia({ band, title }: { band: BandInfo; title: string }) {
       )}
 
       {videos.length > 0 && (
-        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5">
           {videos.map((v, i) => (
             // Wrapper re-enables pointer events (the flip layer disables them) and
             // stops the facade's play click from reaching the flip toggle.
