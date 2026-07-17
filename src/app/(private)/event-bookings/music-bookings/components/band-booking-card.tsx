@@ -22,7 +22,6 @@ import {
   AlertCircle,
   AlertTriangle,
   CalendarDays,
-  CalendarClock,
   Upload,
   Mail,
   Phone,
@@ -2633,9 +2632,12 @@ export function BandBookingCard({
                       slotFlash && "ring-2 ring-amber-400/70"
                     )}
                   >
+                    {/* Heading and fields share a row; the fields grow to fill what
+                        the heading leaves and wrap under it only when there's no room. */}
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                     <span
                       className={cn(
-                        "flex flex-wrap items-center gap-2 font-black text-[11px] tracking-wide uppercase",
+                        "flex shrink-0 flex-wrap items-center gap-2 font-black text-[11px] tracking-wide uppercase",
                         slotIsSet ? "text-[#1B4332]" : "text-[#5C4033]"
                       )}
                     >
@@ -2654,7 +2656,7 @@ export function BandBookingCard({
                         </span>
                       )}
                     </span>
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                       <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
                         <PopoverTrigger asChild>
                           <button
@@ -2743,6 +2745,7 @@ export function BandBookingCard({
                           </button>
                         )}
                       </div>
+                    </div>
                     </div>
                     {/* Warning (slot required) and error (clash) sit under the fields
                         they're about, inside the console rather than off to the side. */}
