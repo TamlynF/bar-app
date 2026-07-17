@@ -887,9 +887,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       return;
     }
     // The sheet stays mounted while we ask, so a second Escape would fire
-    // onOpenChange again and stack another dialog over the first. Likewise, an
-    // Escape *during* a status dialog must not open a competing one.
-    if (askingToClose.current || isPending) return;
+    // onOpenChange again and stack another dialog over the first. `pendingStage`
+    // covers an Escape landing while a status change is mid-flight.
+    if (askingToClose.current || !!pendingStage) return;
     askingToClose.current = true;
     try {
       // A clashing slot can't be saved at all, so don't offer a Save that would
@@ -1091,7 +1091,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   function handleAction(newStatus: BandStatus) {
     setError(null);
     setClashes([]);
-    startTransition(async () => {
+    // Asking the admin something is NOT a transition. React 19 holds an async
+    // transition's state updates until the action settles, so a confirm() called
+    // inside one never paints its dialog — and the transition then waits forever on
+    // a click that can't happen. Only the server work below goes in startTransition.
+    void (async () => {
       try {
         // Booking places an event, and an offer promises one — neither may commit a
         // slot that collides with something already on. Re-checked here (not just via
@@ -1103,11 +1107,23 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           if (c.length) return;
         }
         // Last chance to back out before the band is emailed, and where the note
-        // that goes with it gets written. Kept outside the spinner — the chip
-        // shouldn't churn while a dialog waits on the admin.
+        // that goes with it gets written.
         const { ok, note } = await confirmEmail(newStatus);
         if (!ok) return;
-        setPendingStage(newStatus);
+        applyStatus(newStatus, note);
+      } catch {
+        setError("Failed to update. Please try again.");
+      }
+    })();
+  }
+
+  /** The server half of a status change — this part is a real pending update. */
+  function applyStatus(newStatus: BandStatus, note: string) {
+    // Set outside the transition: updates made *inside* an async transition don't
+    // paint until it settles, so a spinner set in there would never be seen.
+    setPendingStage(newStatus);
+    startTransition(async () => {
+      try {
         // admin_notes holds the decline reason and nothing else — an offer/booked
         // message is per-send, so it must leave whatever's on the record alone.
         const isDecline = newStatus === "declined";
@@ -1129,15 +1145,15 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         // which can be reopened straight from the stepper). Close it yourself.
         // offered / booked / declined email the band; new / reviewing are silent.
         const emails = newStatus === "offered" || newStatus === "booked" || newStatus === "declined";
-        const done = STATUS_TOAST[newStatus];
+        const label = STATUS_TOAST[newStatus];
         if (emails) {
           if (result?.emailError) {
-            toast.error(`${done}, but the email didn't send: ${result.emailError}`);
+            toast.error(`${label}, but the email didn't send: ${result.emailError}`);
           } else {
-            toast.success(`${done} — band emailed`);
+            toast.success(`${label} — band emailed`);
           }
         } else {
-          toast.success(done);
+          toast.success(label);
         }
       } catch {
         setError("Failed to update. Please try again.");
@@ -1154,22 +1170,13 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     if (!hasChanges) return;
     setError(null);
     setClashes([]);
-    startTransition(async () => {
+    // Same rule as handleAction: a dialog that waits on the admin can't live inside
+    // startTransition or it never paints. Ask everything first, then hand the writes
+    // to runSave().
+    void (async () => {
       try {
-        if (status !== "booked") {
-          await updateBandBookingFields(request.id, {
-            ...detailFields(),
-            selected_date: selectedDate || null,
-            selected_start_time: selectedStartTime || null,
-            selected_end_time: selectedEndTime || null,
-          });
-          toast.success("Changes saved");
-          setOpen(false);
-          return;
-        }
-
         // Confirmed + date/time change → clash check + reschedule email flow.
-        if (dateTimeChanged) {
+        if (status === "booked" && dateTimeChanged) {
           const c = await findClashes();
           if (c.length) return;
 
@@ -1190,33 +1197,64 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           });
           if (!ok) return;
 
-          await updateBandBookingFields(request.id, detailFields());
-          const result = await rescheduleConfirmedBooking(request.id, {
-            selected_date: selectedDate || null,
-            selected_start_time: selectedStartTime || null,
-            selected_end_time: selectedEndTime || null,
-            admin_notes: adminNotes || null,
+          runSave(async () => {
+            await updateBandBookingFields(request.id, detailFields());
+            const result = await rescheduleConfirmedBooking(request.id, {
+              selected_date: selectedDate || null,
+              selected_start_time: selectedStartTime || null,
+              selected_end_time: selectedEndTime || null,
+              admin_notes: adminNotes || null,
+            });
+            if (result?.emailError) {
+              toast.error(`Booking updated, but the email didn't send: ${result.emailError}`);
+            } else {
+              toast.success("Booking updated — band notified");
+            }
+            setOpen(false);
           });
-          if (result?.emailError) {
-            toast.error(`Booking updated, but the email didn't send: ${result.emailError}`);
-          } else {
-            toast.success("Booking updated — band notified");
-          }
-          setOpen(false);
           return;
         }
 
-        // Confirmed, detail-only change → confirm, then save.
-        const ok = await confirm({
-          title: "Save changes?",
-          description:
-            "This booking is booked — saving updates its details and the linked event.",
-          confirmLabel: "Save Changes",
+        // Confirmed, detail-only change → its edits flow through to the linked
+        // event, so it's worth a nod first.
+        if (status === "booked") {
+          const ok = await confirm({
+            title: "Save changes?",
+            description:
+              "This booking is booked — saving updates its details and the linked event.",
+            confirmLabel: "Save Changes",
+          });
+          if (!ok) return;
+          runSave(async () => {
+            await updateBandBookingFields(request.id, detailFields());
+            toast.success("Changes saved");
+            setOpen(false);
+          });
+          return;
+        }
+
+        // Anything else saves straight away.
+        runSave(async () => {
+          await updateBandBookingFields(request.id, {
+            ...detailFields(),
+            selected_date: selectedDate || null,
+            selected_start_time: selectedStartTime || null,
+            selected_end_time: selectedEndTime || null,
+          });
+          toast.success("Changes saved");
+          setOpen(false);
         });
-        if (!ok) return;
-        await updateBandBookingFields(request.id, detailFields());
-        toast.success("Changes saved");
-        setOpen(false);
+      } catch {
+        setError("Failed to update. Please try again.");
+      }
+    })();
+  }
+
+  /** Runs the write half of a save inside a transition, so Save shows as pending. */
+  function runSave(work: () => Promise<void>) {
+    startTransition(async () => {
+      try {
+        await work();
       } catch {
         setError("Failed to update. Please try again.");
       }
