@@ -2299,8 +2299,15 @@ export function BandBookingCard({
                       socials above when there's a row of pills to divide from. */}
                   {(sheetVideos.length > 0 || editable) && (
                     <div className={cn(showSocials && "border-t border-[#E6DFC8]")}>
-                      {sheetVideos.length > 0 && (
-                        <div className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-3 sm:px-5">
+                      {(sheetVideos.length > 0 || (editable && sheetVideos.length < MAX_VIDEOS)) && (
+                        <div
+                          className={cn(
+                            "grid grid-cols-2 gap-3 px-4 pt-3 sm:grid-cols-3 sm:px-5",
+                            // Helper line below carries the bottom padding when it shows;
+                            // otherwise the grid owns it.
+                            !(editable && sheetVideos.length < MAX_VIDEOS) && "pb-3"
+                          )}
+                        >
                           {sheetVideos.map((v, i) => (
                             <div key={v.id} className="min-w-0">
                               {v.url ? (
@@ -2365,36 +2372,43 @@ export function BandBookingCard({
                               )}
                             </div>
                           ))}
+
+                          {/* Add more — a small icon button sitting in the grid to the
+                              right of the last video. Same white/#E6DFC8 treatment as the
+                              social row's edit button. Reuses the public form's resumable
+                              upload, so a big performance video survives a flaky
+                              connection; centred in an aspect-video cell so it lines up
+                              with the thumbnails beside it. */}
+                          {editable && sheetVideos.length < MAX_VIDEOS && (
+                            <div className="flex aspect-video min-w-0 items-center justify-center">
+                              <input
+                                ref={videoInputRef}
+                                type="file"
+                                accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/mpeg"
+                                multiple
+                                title="Upload videos"
+                                className="hidden"
+                                onChange={handleVideoSelect}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => videoInputRef.current?.click()}
+                                title={sheetVideos.length === 0 ? "Upload videos" : "Add another video"}
+                                aria-label={sheetVideos.length === 0 ? "Upload videos" : "Add another video"}
+                                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                              >
+                                <Upload className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       )}
 
-                      {/* Add more — reuses the public form's resumable upload, so a big
-                          performance video survives a flaky connection. Green identity
-                          per the style guide's upload-action rule. */}
                       {editable && sheetVideos.length < MAX_VIDEOS && (
-                        <div className={cn("px-4 pb-3 sm:px-5", sheetVideos.length > 0 ? "pt-0" : "pt-3")}>
-                          <input
-                            ref={videoInputRef}
-                            type="file"
-                            accept="video/mp4,video/webm,video/quicktime,video/x-msvideo,video/mpeg"
-                            multiple
-                            title="Upload videos"
-                            className="hidden"
-                            onChange={handleVideoSelect}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => videoInputRef.current?.click()}
-                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-4 py-2.5 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85"
-                          >
-                            <Upload className="h-3.5 w-3.5" />
-                            {sheetVideos.length === 0 ? "Upload Videos" : "Add Another Video"}
-                          </button>
-                          <p className="mt-1.5 text-[10px] leading-snug text-[#5F624F]/70">
-                            MP4, WebM or MOV — max 250 MB each. Applied when you hit Save Changes.{" "}
-                            {sheetVideos.length}/{MAX_VIDEOS}
-                          </p>
-                        </div>
+                        <p className="px-4 pt-2 pb-3 text-[10px] leading-snug text-[#5F624F]/70 sm:px-5">
+                          MP4, WebM or MOV — max 250 MB each. Applied when you hit Save Changes.{" "}
+                          {sheetVideos.length}/{MAX_VIDEOS}
+                        </p>
                       )}
                     </div>
                   )}
