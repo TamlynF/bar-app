@@ -30,6 +30,7 @@ import {
   Info,
   Pencil,
   PoundSterling,
+  User,
   X,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
@@ -1385,9 +1386,35 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         </button>
 
 
+        {/* Type + genre — a two-tone corner tag above the status badge. Espresso
+            names the format, cream the genre, so the two read as separate facts at
+            a glance. Capped in width so it can't run into the favourite. */}
+        {(request.type || request.genre) && (
+          <span className="absolute top-0 left-0 z-10 flex max-w-[65%] items-stretch overflow-hidden rounded-tl-xl rounded-br-lg font-black text-[10px] uppercase">
+            {request.type && (
+              <span className="shrink-0 bg-[#5C4033] px-2 py-1 tracking-widest text-white">
+                {toTitleCase(request.type)}
+              </span>
+            )}
+            {/* Tighter tracking and a lighter ground than the type: readable, but
+                clearly the secondary half of the tag. */}
+            {request.genre && (
+              <span className="truncate bg-[#E6DFC8] px-2 py-1 tracking-wide text-[#5C4033]/80">
+                {toTitleCase(request.genre)}
+              </span>
+            )}
+          </span>
+        )}
+
         {/* Content sits above the stretched button but passes clicks through to it,
-            so only the rail's icons are separately clickable. */}
-        <div className="pointer-events-none relative z-10 flex items-start gap-3 px-3 py-3 text-left">
+            so only the rail's icons are separately clickable. The extra top padding
+            when a type tag is present keeps the badge clear of the corner. */}
+        <div
+          className={cn(
+            "pointer-events-none relative z-10 flex items-center gap-3 px-3 pb-3 text-left",
+            request.type || request.genre ? "pt-6" : "pt-3"
+          )}
+        >
           {/* Status badge circle (left) */}
           <div
             className={cn(
@@ -1417,41 +1444,29 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           </div>
 
           <div className="min-w-0 flex-1">
-            {/* Only the name block has to clear the favourite in the corner — the
-                rows below it sit under the rail's height, so they run the card's
-                full width. */}
-            <div className="min-w-0 pr-11">
-              <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
-                {request.group_name || request.booker_name}
-              </p>
-              <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
-                <p
-                  className="truncate text-xs font-semibold text-[#5F624F]"
-                  title={request.booker_name}
-                >
-                  {abbreviateName(request.booker_name)}
-                </p>
-                {/* A fee is a yes/no signal on the row — the amount itself is in the
-                    sheet (and on hover). No fee shows nothing. */}
-                {hasFee && (
-                  <span
-                    className="inline-flex shrink-0 items-center rounded-sm border border-amber-200 bg-amber-50 px-px py-px text-amber-700"
-                    title={`Fee: £${(request.payment_amount ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
-                  >
-                    <PoundSterling className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
-                    <span className="sr-only">Has a fee</span>
-                  </span>
-                )}
-              </div>
-            </div>
+            {/* Only the name has to clear the favourite in the corner — the rows
+                below it are short and left-aligned, so they run the full width. */}
+            <p className="truncate pr-11 font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
+              {request.group_name || request.booker_name}
+            </p>
 
-            {/* Type / genre — a pill rather than muted small print, so the act's
-                character is legible at a glance down a column. */}
-            {(request.type || request.genre) && (
-              <span className="mt-1.5 inline-flex max-w-full items-center truncate rounded-full border border-[#5C4033]/20 bg-[#5C4033]/8 px-2 py-0.5 font-black text-[9px] tracking-widest text-[#5C4033] uppercase">
-                {[toTitleCase(request.type), toTitleCase(request.genre)].filter(Boolean).join(" / ")}
-              </span>
-            )}
+            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[#5F624F]">
+              <User className="h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />
+              <p className="truncate text-xs font-semibold" title={request.booker_name}>
+                {abbreviateName(request.booker_name)}
+              </p>
+              {/* A fee is a yes/no signal on the row — the amount itself is in the
+                  sheet (and on hover). No fee shows nothing. */}
+              {hasFee && (
+                <span
+                  className="inline-flex shrink-0 items-center rounded-sm border border-amber-200 bg-amber-50 px-px py-px text-amber-700"
+                  title={`Fee: £${(request.payment_amount ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                >
+                  <PoundSterling className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                  <span className="sr-only">Has a fee</span>
+                </span>
+              )}
+            </div>
 
             {/* Booking facts — the slot (offered/booked) or the applicant's preferred
                 dates, with the fee marker closing the row. */}
@@ -1485,13 +1500,17 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <button
                   type="button"
                   title={`Band notes (internal) — ${bandNoteList.length}`}
-                  className="pointer-events-auto relative z-20 -my-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90"
+                  className="pointer-events-auto relative z-20 -my-3 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90"
                 >
                   <span className="relative">
+                    {/* Filled when there are notes, outline when there aren't —
+                        the same on/off read as the favourite heart. */}
                     <NotebookPen
                       className={cn(
                         "h-4 w-4 transition-colors",
-                        bandNoteList.length > 0 ? "text-[#5C4033]" : "text-[#5F624F]/30"
+                        bandNoteList.length > 0
+                          ? "fill-[#5C4033] text-[#5C4033]"
+                          : "text-[#5F624F]/30"
                       )}
                       aria-hidden="true"
                     />
