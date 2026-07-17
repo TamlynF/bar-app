@@ -6,8 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 import {
   Instagram, Facebook, Youtube, Music2,
   Plus, X, CheckCircle2, Calendar, Upload, Video, Loader2, AlertCircle,
-  ChevronDown, ChevronRight, ArrowLeft, ExternalLink,
+  ChevronRight, ArrowLeft, ExternalLink,
 } from "lucide-react";
+import {
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from "@/components/ui/select";
 
 const SOCIAL_FIELDS = [
   {
@@ -63,7 +66,11 @@ const STEPS = [
   { number: 4, title: "Availability", subtitle: "When can you play?" },
 ];
 
-export default function BandBookingForm() {
+interface BandBookingFormProps {
+  typeOptions: { value: string; label: string }[];
+}
+
+export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +78,7 @@ export default function BandBookingForm() {
   const [stepError, setStepError] = useState<string | null>(null);
 
   const [groupName, setGroupName] = useState("");
-  const [actType, setActType] = useState("band");
+  const [actType, setActType] = useState(typeOptions[0]?.value ?? "");
   const [genre, setGenre] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [name, setName] = useState("");
@@ -276,19 +283,16 @@ export default function BandBookingForm() {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
                 <label className={labelClass}>Type <span className="text-red-400">*</span></label>
-                <div className="relative">
-                  <select
-                    title="Type of Act"
-                    value={actType}
-                    onChange={(e) => setActType(e.target.value)}
-                    className={`${inputClass} appearance-none pr-9`}
-                  >
-                    <option value="band">Band</option>
-                    <option value="singer">Singer / Solo Artist</option>
-                    <option value="dj">DJ</option>
-                  </select>
-                  <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-stone-600" />
-                </div>
+                <Select value={actType} onValueChange={setActType}>
+                  <SelectTrigger aria-label="Type of Act" className={`${inputClass} pr-9`}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {typeOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className={labelClass}>Genre <span className="text-red-400">*</span></label>

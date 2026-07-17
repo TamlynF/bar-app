@@ -1,12 +1,7 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
+import { toCamelCase } from "@/lib/utils";
 import BandBookingForm from "./_components/band-booking-form";
-import {
-  Banknote, Calendar, Users, Trophy, Wine,
-  MapPin, Clock, DollarSign, Star, CheckCircle,
-  Music, Utensils, GlassWater, Heart, Smile,
-  Sparkles, AlertCircle, Beer, Info, Speaker, User,
-} from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 
 export const metadata = {
@@ -14,29 +9,27 @@ export const metadata = {
   description: "Apply to perform live at Don Fenticas.",
 };
 
-const ICON_MAP: Record<string, React.ElementType> = {
-  Banknote, Calendar, Users, Trophy, Wine,
-  MapPin, Clock, DollarSign, Star, CheckCircle,
-  Music, Utensils, GlassWater, Heart, Smile,
-  Sparkles, AlertCircle, Beer, Info, Speaker, User,
-};
-
 export default async function BandBookingPage() {
   const supabase = await createClient();
 
-  const { data: infoItems } = await supabase
-    .from("event_subtype_badges")
-    .select(`icon, title, event_subtypes!inner(behavior)`)
-    .eq("event_subtypes.behavior", "music_act");
 
-  const dbBadges = (infoItems || []).map((item) => ({
-    icon: ICON_MAP[item.icon || ""] || Info,
-    text: item.title,
-  }));
+  // Act types come from the music_act subtypes: label = title (fallback name),
+  // value = camelCase of the label.
+  const { data: subtypeRows } = await supabase
+    .from("event_subtypes")
+    .select("name, title")
+    .eq("behavior", "music_act")
+    .order("name");
 
-  const _eventBadges = dbBadges.length > 0 ? dbBadges : [
-    { icon: Music, text: "Live Music" },
-    { icon: Calendar, text: "Apply Now" },
+  const dbTypeOptions = (subtypeRows ?? []).map((r) => {
+    const label = r.title?.trim() || r.name;
+    return { value: toCamelCase(label), label };
+  });
+
+  const typeOptions = dbTypeOptions.length > 0 ? dbTypeOptions : [
+    { value: "band", label: "Band" },
+    { value: "singer", label: "Singer / Solo Artist" },
+    { value: "dj", label: "DJ" },
   ];
 
   return (
@@ -62,44 +55,6 @@ export default async function BandBookingPage() {
 
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-14 pb-12 sm:px-6 lg:px-8">
 
-        {/* Header */}
-        {/* <div className="flex flex-col items-center mb-6 text-center sm:mb-10">
-          <div className="w-full max-w-45 transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98] sm:max-w-xs">
-            <Image
-              src="/CompanyName.png"
-              alt="Don Fenticas"
-              width={300}
-              height={90}
-              className="object-contain w-full h-auto drop-shadow-[0_10px_20px_rgba(0,0,0,0.3)]"
-              priority
-            />
-          </div>
-          <div className="mt-5 px-2 space-y-2 sm:mt-7">
-            <div className="inline-flex items-center gap-2 mb-1 px-4 py-1.5 bg-[#FDCC4B]/10 border-[#FDCC4B]/20 rounded-full border">
-              <span className="font-black text-[#FDCC4B] text-[10px] tracking-widest uppercase">Book the Stage</span>
-            </div>
-            <p className="mx-auto max-w-sm font-medium text-stone-400 text-xs text-center leading-relaxed opacity-80 italic sm:text-base">
-              Apply to perform live at Don Fenticas. We&apos;d love to hear you play.
-            </p>
-          </div>
-        </div> */}
-
-        {/* Event Badges */}
-        {/* <div className="overflow-x-auto flex flex-row flex-wrap justify-center gap-2 gap-3 mx-0 mb-12 mb-4 px-0 px-4 pb-4 -mx-4 no-scrollbar sm:overflow-visible">
-          {eventBadges.map((badge, index) => (
-            <div
-              key={index}
-              className={cn(
-                "flex justify-center items-center bg-white/5 hover:bg-white/8 px-4 py-2.5 sm:py-3 border border-white/10 hover:border-white/20 rounded-xl font-black text-[10px] sm:text-[11px] uppercase tracking-wider transition-all",
-                "flex-none sm:flex-1 sm:min-w-37.5"
-              )}
-            >
-              <badge.icon className="mr-2 w-3.5 h-3.5 text-[#fdcc4b] shrink-0" />
-              <span className="text-stone-200 whitespace-nowrap">{badge.text}</span>
-            </div>
-          ))}
-        </div> */}
-
         {/* Booking Form Card */}
         <div className="relative mb-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/3 p-6 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl sm:p-10">
           <div className="pointer-events-none absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]" />
@@ -110,7 +65,7 @@ export default async function BandBookingPage() {
           </div>
 
           <div className="relative z-10">
-            <BandBookingForm />
+            <BandBookingForm typeOptions={typeOptions} />
           </div>
         </div>
 
