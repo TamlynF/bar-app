@@ -161,11 +161,13 @@ export default function BandBookingListClient({
   );
 
   /**
-   * One status selected, so its column has the whole board to itself. The cards
-   * spread into that width rather than staying at board-column proportions, and
-   * spend it on detail the narrow card has no room for.
+   * One or two statuses selected, so their columns have the board between them
+   * rather than a fifth of it each. The cards become eligible to spread into that
+   * width and spend it on detail a board column can't carry — how far they
+   * actually spread is the card's own call, since two columns leave each half of
+   * what one leaves.
    */
-  const soloColumn = visibleColumns.length === 1;
+  const spreadColumns = visibleColumns.length <= 2;
 
   /** One removable chip per active filter, in panel order. */
   const activeChips: { key: string; label: string; clear: () => void }[] = [];
@@ -363,7 +365,7 @@ export default function BandBookingListClient({
                 // columns that scrolls, and there's nothing to scroll past here.
                 className={cn(
                   "flex flex-col gap-2",
-                  soloColumn
+                  spreadColumns
                     ? "sm:min-w-0 sm:flex-1"
                     : "sm:w-72 sm:shrink-0 xl:w-auto xl:min-w-0 xl:flex-1"
                 )}
@@ -399,7 +401,7 @@ export default function BandBookingListClient({
                   </p>
                 ) : (
                   items.map((req) => (
-                    <BandBookingCard key={req.id} request={req} wide={soloColumn} />
+                    <BandBookingCard key={req.id} request={req} wide={spreadColumns} />
                   ))
                 )}
               </section>

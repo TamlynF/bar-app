@@ -251,17 +251,42 @@ const STATUS_TOAST: Record<BandStatus, string> = {
   declined: "Application declined",
 };
 
-/** Per-platform brand colours (icon + button) for the social links. */
-const SOCIAL_META: Record<string, { icon: React.ElementType; className: string; label: string }> = {
+/**
+ * Per-platform brand colours for the social links. `className` fills the sheet's
+ * pill; `glyph` colours a bare icon, for the card row where there's no pill to
+ * carry the brand — each platform's own colour is what makes it identifiable at
+ * 16px, so Instagram's pink is picked out of the gradient rather than flattened
+ * to the palette.
+ */
+const SOCIAL_META: Record<string, { icon: React.ElementType; className: string; glyph: string; label: string }> = {
   instagram: {
     icon: SiInstagram,
     className: "bg-linear-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] text-white border-transparent",
+    glyph: "text-[#DD2A7B]",
     label: "Instagram",
   },
-  facebook: { icon: SiFacebook, className: "bg-[#1877F2] text-white border-transparent", label: "Facebook" },
-  youtube: { icon: SiYoutube, className: "bg-[#FF0000] text-white border-transparent", label: "YouTube" },
-  tiktok: { icon: SiTiktok, className: "bg-black text-white border-transparent", label: "TikTok" },
+  facebook: {
+    icon: SiFacebook,
+    className: "bg-[#1877F2] text-white border-transparent",
+    glyph: "text-[#1877F2]",
+    label: "Facebook",
+  },
+  youtube: {
+    icon: SiYoutube,
+    className: "bg-[#FF0000] text-white border-transparent",
+    glyph: "text-[#FF0000]",
+    label: "YouTube",
+  },
+  tiktok: {
+    icon: SiTiktok,
+    className: "bg-black text-white border-transparent",
+    glyph: "text-black",
+    label: "TikTok",
+  },
 };
+
+/** A marker with nothing behind it — same "off" tone as the unfilled heart. */
+const MARKER_OFF = "text-[#5F624F]/25";
 
 /** Fixed pill order — every platform always shows, filled or not. */
 const SOCIAL_ORDER: (keyof SocialLinks)[] = ["instagram", "facebook", "youtube", "tiktok"];
@@ -882,9 +907,6 @@ export function BandBookingCard({
     .map((url, i) => ({ url, description: (request.video_descriptions ?? [])[i]?.trim() || "" }))
     .filter((v) => Boolean(v.url));
   const dates = (request.preferred_dates ?? []).filter(Boolean);
-  // Which platforms the act actually gave us — the row marks presence only, so it
-  // reads the saved record rather than the sheet's editable copy.
-  const activeSocials = SOCIAL_ORDER.filter((k) => (request.social_links?.[k] ?? "").trim());
   // Internal notes, oldest first (the query orders them). Server-owned: they save
   // on their own, so they're read straight off the request rather than mirrored
   // into state like the editable fields below.
@@ -1411,7 +1433,12 @@ export function BandBookingCard({
       <div
         className={cn(
           "relative w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
-          "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]"
+          "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]",
+          // The row below lays itself out against *this* card's width, not the
+          // viewport's — two columns halve the board, so the same screen can hold
+          // a card with room to spread and one without. Only the eligible card
+          // becomes a container; the board's cards never consult it.
+          wide && "@container"
         )}
       >
         <button
@@ -1421,34 +1448,6 @@ export function BandBookingCard({
         >
           <span className="sr-only">Open {request.group_name || request.booker_name}</span>
         </button>
-
-        {/* Icon rail (top-right). Both sit above the stretched button so their
-            clicks land on them rather than opening the sheet. */}
-
-        {/* Favourite — persists on click, no Save needed. */}
-        <button
-          type="button"
-          onClick={handleToggleFavorite}
-          aria-pressed={isFavorite}
-          title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
-          className={cn(
-            "absolute top-0 right-0 z-20 flex h-11 w-11 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90",
-            // Once the card is a single line, a corner-pinned heart reads as
-            // floating above the row it belongs to. (translate and scale are
-            // separate properties in Tailwind 4, so the hover still works.)
-            wide && "lg:top-1/2 lg:-translate-y-1/2"
-          )}
-        >
-          <Heart
-            className={cn(
-              "h-4 w-4 transition-colors",
-              isFavorite ? "fill-rose-500 text-rose-500" : "text-[#5F624F]/30"
-            )}
-            aria-hidden="true"
-          />
-          <span className="sr-only">{isFavorite ? "Favourited" : "Mark as favourite"}</span>
-        </button>
-
 
         {/* Type + genre — a two-tone corner tag above the status badge, in the
             request's own status hue (new = blue, booked = green, ...). Eyebrow
@@ -1495,10 +1494,7 @@ export function BandBookingCard({
         <div
           className={cn(
             "pointer-events-none relative z-10 flex items-center gap-3 px-3 pb-3 text-left",
-            request.type || request.genre || lifecycle ? "pt-5" : "pt-3",
-            // The row runs to the card's edge now, so it — not the name — is what
-            // has to leave the favourite its corner.
-            wide && "lg:pr-11"
+            request.type || request.genre || lifecycle ? "pt-5" : "pt-3"
           )}
         >
           {/* Status badge circle (left) */}
@@ -1529,17 +1525,17 @@ export function BandBookingCard({
             )}
           </div>
 
-          {/* Three stacked blocks in a board column; one line across the card when
-              it has the board to itself. The blocks are the same either way — only
-              the axis they're laid on changes. */}
-          <div className={cn("min-w-0 flex-1", wide && "lg:flex lg:items-center lg:gap-4")}>
+          {/* Three stacked blocks in a board column. Given room, this wrapper
+              dissolves (`contents`) so the blocks become columns of the row above
+              — one set of nodes, laid on whichever axis fits. */}
+          <div className={cn("min-w-0 flex-1", wide && "@2xl:contents")}>
             {/* Only the name has to clear the favourite in the corner — the rows
                 below it are short and left-aligned, so they run the full width.
-                On one line the favourite is the row's problem, not the name's. */}
+                On one line the favourite is a column, so it clears itself. */}
             <p
               className={cn(
                 "truncate pr-11 font-black text-sm tracking-tight text-[#1F1F1A] uppercase",
-                wide && "lg:w-56 lg:shrink-0 lg:pr-0"
+                wide && "@2xl:min-w-0 @2xl:flex-1 @2xl:pr-0"
               )}
             >
               {request.group_name || request.booker_name}
@@ -1548,7 +1544,7 @@ export function BandBookingCard({
             <div
               className={cn(
                 "mt-1 flex min-w-0 items-center gap-1.5 text-[#5F624F]",
-                wide && "lg:mt-0 lg:w-52 lg:shrink-0"
+                wide && "@2xl:mt-0 @2xl:w-32 @2xl:shrink-0"
               )}
             >
               <User className="h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />
@@ -1572,13 +1568,17 @@ export function BandBookingCard({
 
             {/* Booking facts — the slot (offered/booked) or the applicant's preferred
                 dates, with the fee marker closing the row. */}
+            {/* Dissolves too, so the slot and the notes button become columns in
+                their own right rather than a row nested inside one. */}
             <div
               className={cn(
                 "mt-1 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5F624F]",
-                wide && "lg:mt-0 lg:min-w-0 lg:flex-1"
+                wide && "@2xl:contents"
               )}
             >
-              <span className="min-w-0 truncate">
+              {/* The wrapper's type still reaches here once it dissolves —
+                  `contents` drops the box, not the inheritance. */}
+              <span className={cn("min-w-0 truncate", wide && "@2xl:w-28 @2xl:shrink-0")}>
                 {hasSlot
                   ? (request.selected_start_time || request.selected_end_time) && (
                       <span className="inline-flex items-center gap-1">
@@ -1599,42 +1599,6 @@ export function BandBookingCard({
                     )}
               </span>
 
-              {/* What the act sent in, as presence markers rather than content —
-                  the material itself is a click away in the sheet. Only worth the
-                  width when the card has it, so they ride with `wide`. ml-auto
-                  parks them next to the notes button instead of letting
-                  justify-between strand them mid-row. */}
-              {wide && (videos.length > 0 || activeSocials.length > 0) && (
-                <span className="ml-auto flex shrink-0 items-center gap-2.5">
-                  {videos.length > 0 && (
-                    <span
-                      className="inline-flex items-center gap-1"
-                      title={`${videos.length} video${videos.length === 1 ? "" : "s"} attached`}
-                    >
-                      <Video className="h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />
-                      <span className="tabular-nums">{videos.length}</span>
-                      <span className="sr-only">
-                        video{videos.length === 1 ? "" : "s"} attached
-                      </span>
-                    </span>
-                  )}
-                  {activeSocials.length > 0 && (
-                    <span className="inline-flex items-center gap-1.5">
-                      {activeSocials.map((key) => {
-                        const meta = SOCIAL_META[key];
-                        const Icon = meta.icon;
-                        return (
-                          <span key={key} className="inline-flex" title={`Has a ${meta.label} link`}>
-                            <Icon className="h-3 w-3 shrink-0 opacity-60" aria-hidden="true" />
-                            <span className="sr-only">Has a {meta.label} link</span>
-                          </span>
-                        );
-                      })}
-                    </span>
-                  )}
-                </span>
-              )}
-
               {/* Internal notes — same log as the sheet, read and written from here
                   too. pointer-events-auto: the content around it deliberately lets
                   clicks fall through to the card, this must not. The negative margin
@@ -1646,9 +1610,11 @@ export function BandBookingCard({
                   className={cn(
                     "pointer-events-auto relative z-20 -my-3 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90",
                     // Reclaiming the gutter is free while this sits on its own line
-                    // below the favourite. On one line they're side by side, and the
-                    // negative margin would slide it under the favourite's target.
-                    wide && "lg:mr-0"
+                    // below the favourite. As a column it's a column like any other:
+                    // no negative gutter, and ordered past the markers that are
+                    // declared after it (the wrapper it sits in has dissolved, so
+                    // DOM order alone would put it in the wrong place).
+                    wide && "@2xl:order-1 @2xl:mr-0"
                   )}
                 >
                   <span className="relative">
@@ -1675,6 +1641,70 @@ export function BandBookingCard({
               </BandNotesPopover>
             </div>
           </div>
+
+          {/* Markers — what the act sent in, as presence rather than content; the
+              material itself is a click away in the sheet. Both stay off until the
+              row has actually spread, since a stacked card has nowhere to put them.
+              Sized to the act name, so they read as row data, not decoration. */}
+          {wide && (
+            <span
+              className={cn(
+                "hidden shrink-0 items-center justify-center gap-1 @2xl:flex @2xl:w-12",
+                videos.length > 0 ? "text-[#5F624F]" : MARKER_OFF
+              )}
+              title={`${videos.length} video${videos.length === 1 ? "" : "s"} attached`}
+            >
+              <Video className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="font-black text-sm tabular-nums">{videos.length}</span>
+              <span className="sr-only">video{videos.length === 1 ? "" : "s"} attached</span>
+            </span>
+          )}
+
+          {/* Every platform always shows — an absent link is a fact worth seeing,
+              so it greys out rather than disappearing and shifting the others.
+              Four across once there's room for them; 2x2 when the card is tighter
+              (two columns splitting the board), which keeps the marker square
+              instead of squeezing the row. */}
+          {wide && (
+            <span className="hidden shrink-0 place-items-center gap-1 @2xl:grid @2xl:w-11 @2xl:grid-cols-2 @4xl:flex @4xl:w-28 @4xl:items-center @4xl:justify-between">
+              {SOCIAL_ORDER.map((key) => {
+                const meta = SOCIAL_META[key];
+                const Icon = meta.icon;
+                const has = Boolean((request.social_links?.[key] ?? "").trim());
+                const label = has ? `Has a ${meta.label} link` : `No ${meta.label} link`;
+                return (
+                  <span key={key} className="inline-flex" title={label}>
+                    <Icon className={cn("h-4 w-4 shrink-0", has ? meta.glyph : MARKER_OFF)} aria-hidden="true" />
+                    <span className="sr-only">{label}</span>
+                  </span>
+                );
+              })}
+            </span>
+          )}
+
+          {/* Favourite — persists on click, no Save needed. Pinned to the corner
+              while the card is stacked; the row's last column once it spreads.
+              `relative` (not static) so it keeps its z-index either way, and
+              top/right resolve to a zero offset rather than needing a reset. */}
+          <button
+            type="button"
+            onClick={handleToggleFavorite}
+            aria-pressed={isFavorite}
+            title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
+            className={cn(
+              "pointer-events-auto absolute top-0 right-0 z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90",
+              wide && "@2xl:relative @2xl:order-2"
+            )}
+          >
+            <Heart
+              className={cn(
+                "h-4 w-4 transition-colors",
+                isFavorite ? "fill-rose-500 text-rose-500" : "text-[#5F624F]/30"
+              )}
+              aria-hidden="true"
+            />
+            <span className="sr-only">{isFavorite ? "Favourited" : "Mark as favourite"}</span>
+          </button>
         </div>
       </div>
 
