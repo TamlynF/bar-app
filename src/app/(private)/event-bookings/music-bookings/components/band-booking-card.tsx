@@ -937,7 +937,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-auto max-h-[85vh] w-full flex-col rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 sm:left-1/2 sm:w-[92vw] sm:max-w-5xl sm:-translate-x-1/2 sm:rounded-[2.5rem] lg:max-h-[90vh] lg:max-w-6xl"
+          className="flex h-auto max-h-[90vh] w-full flex-col rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 sm:left-1/2 sm:w-[92vw] sm:max-w-5xl sm:-translate-x-1/2 sm:rounded-[2.5rem] lg:max-h-[94vh] lg:max-w-6xl"
         >
           {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
@@ -1061,7 +1061,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           </div>
 
           {/* Scrollable body */}
-          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-6 sm:px-6">
+          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 pt-3 pb-6 sm:px-6">
             <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-8 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid">
               {/* Main column — the workflow: event, payment, notes */}
               <div className="min-w-0 space-y-4 sm:space-y-5">
