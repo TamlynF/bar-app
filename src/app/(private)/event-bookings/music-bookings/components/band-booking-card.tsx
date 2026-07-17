@@ -457,6 +457,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [bankSortCode, setBankSortCode] = useState(request.bank_sort_code ?? "");
   const [bankPaymentRef, setBankPaymentRef] = useState(request.bank_payment_ref ?? "");
   const [showBankDetails, setShowBankDetails] = useState(false);
+  const [showContactDetails, setShowContactDetails] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
 
   const status = normStatus(request.status);
@@ -1150,6 +1151,135 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 )}
               </Section>
 
+              {/* Social links */}
+              {socials.length > 0 && (
+                <Section title="Social Media">
+                  <div className="flex flex-wrap gap-2 px-4 py-3 sm:px-5">
+                    {socials.map(([key, url]) => {
+                      const meta = SOCIAL_META[key];
+                      const Icon = meta?.icon ?? Link2;
+                      return (
+                        <a
+                          key={key}
+                          href={url as string}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-opacity hover:opacity-90",
+                            meta?.className ?? "border-[#E6DFC8] bg-white text-[#5C4033]"
+                          )}
+                        >
+                          <Icon className="h-3.5 w-3.5" />
+                          {meta?.label ?? key.charAt(0).toUpperCase() + key.slice(1)}
+                        </a>
+                      );
+                    })}
+                  </div>
+                </Section>
+              )}
+
+              {/* Videos — play inline on the page (facade: loads on click) */}
+              {videos.length > 0 && (
+                <Section title="Performance Videos">
+                  <div className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-3 sm:px-5">
+                    {videos.map((v, i) => (
+                      <div key={i} className="min-w-0">
+                        <VideoFacade url={v.url} title={`Video ${i + 1}`} />
+                        <p
+                          title={v.description || undefined}
+                          className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5F624F]"
+                        >
+                          {v.description || `Video ${i + 1}`}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
+
+              {/* Band Notes now live in the sheet-header popover (internal, quick
+                  access at any scroll position) — see the NotebookPen button above. */}
+
+              {/* Admin notes (read-only once booked/declined; editable in the working-stage footer) */}
+              {!isWorkingStage && request.admin_notes && (
+                <Section title="Admin Notes">
+                  <div className="px-4 py-3 sm:px-5">
+                    <div className="rounded-2xl border border-[#5C4033]/15 bg-[#5C4033]/5 p-4">
+                      <div className="mb-2 flex items-center gap-2">
+                        <MessageSquareQuote className="h-4 w-4 text-[#5C4033] opacity-40" />
+                        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Staff Note</span>
+                      </div>
+                      <p className="text-sm leading-relaxed text-[#1F1F1A] italic">
+                        &quot;{request.admin_notes}&quot;
+                      </p>
+                    </div>
+                  </div>
+                </Section>
+              )}
+              </div>
+
+              {/* Side rail — reference info: contact, socials, media, audit */}
+              <div className="min-w-0 space-y-4 sm:space-y-5">
+              {/* Contact info */}
+              <Section title="Contact Information">
+                <EditRow label="Name" value={bookerName} onChange={setBookerName} editable={editable} placeholder="Contact name" />
+                {/* Email + phone behind "View more" — the name identifies the request;
+                    the contact channels are only needed when reaching out. */}
+                {showContactDetails && (
+                  <>
+                    <EditRow
+                      label="Email"
+                      value={email}
+                      onChange={setEmail}
+                      editable={editable}
+                      type="email"
+                      placeholder="email@example.com"
+                      trailing={
+                        email.trim() ? (
+                          <a
+                            href={`mailto:${email.trim()}`}
+                            title={`Email ${email.trim()}`}
+                            aria-label={`Email ${email.trim()}`}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
+                          >
+                            <Mail className="h-3.5 w-3.5" />
+                          </a>
+                        ) : undefined
+                      }
+                    />
+                    <EditRow
+                      label="Phone"
+                      value={phone}
+                      onChange={setPhone}
+                      editable={editable}
+                      type="tel"
+                      placeholder="Phone number"
+                      trailing={
+                        phone.trim() ? (
+                          <a
+                            href={`tel:${phone.replace(/\s+/g, "")}`}
+                            title={`Call ${phone.trim()}`}
+                            aria-label={`Call ${phone.trim()}`}
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                          </a>
+                        ) : undefined
+                      }
+                    />
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setShowContactDetails((v) => !v)}
+                  aria-expanded={showContactDetails}
+                  className="flex w-full items-center justify-center gap-1 border-t border-[#E6DFC8] bg-[#F7F4EA] px-4 py-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#1F1F1A] sm:px-5"
+                >
+                  {showContactDetails ? "View less" : "View more"}
+                  <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showContactDetails && "rotate-180")} />
+                </button>
+              </Section>
+
               {/* Payment Details section */}
               {(editable || (request.payment_amount ?? 0) > 0) && (
                 <Section
@@ -1233,120 +1363,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                       </button>
                     </>
                   )}
-                </Section>
-              )}
-
-              {/* Band Notes now live in the sheet-header popover (internal, quick
-                  access at any scroll position) — see the NotebookPen button above. */}
-
-              {/* Admin notes (read-only once booked/declined; editable in the working-stage footer) */}
-              {!isWorkingStage && request.admin_notes && (
-                <Section title="Admin Notes">
-                  <div className="px-4 py-3 sm:px-5">
-                    <div className="rounded-2xl border border-[#5C4033]/15 bg-[#5C4033]/5 p-4">
-                      <div className="mb-2 flex items-center gap-2">
-                        <MessageSquareQuote className="h-4 w-4 text-[#5C4033] opacity-40" />
-                        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Staff Note</span>
-                      </div>
-                      <p className="text-sm leading-relaxed text-[#1F1F1A] italic">
-                        &quot;{request.admin_notes}&quot;
-                      </p>
-                    </div>
-                  </div>
-                </Section>
-              )}
-              </div>
-
-              {/* Side rail — reference info: contact, socials, media, audit */}
-              <div className="min-w-0 space-y-4 sm:space-y-5">
-              {/* Contact info */}
-              <Section title="Contact Information">
-                <EditRow label="Name" value={bookerName} onChange={setBookerName} editable={editable} placeholder="Contact name" />
-                <EditRow
-                  label="Email"
-                  value={email}
-                  onChange={setEmail}
-                  editable={editable}
-                  type="email"
-                  placeholder="email@example.com"
-                  trailing={
-                    email.trim() ? (
-                      <a
-                        href={`mailto:${email.trim()}`}
-                        title={`Email ${email.trim()}`}
-                        aria-label={`Email ${email.trim()}`}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
-                      >
-                        <Mail className="h-3.5 w-3.5" />
-                      </a>
-                    ) : undefined
-                  }
-                />
-                <EditRow
-                  label="Phone"
-                  value={phone}
-                  onChange={setPhone}
-                  editable={editable}
-                  type="tel"
-                  placeholder="Phone number"
-                  trailing={
-                    phone.trim() ? (
-                      <a
-                        href={`tel:${phone.replace(/\s+/g, "")}`}
-                        title={`Call ${phone.trim()}`}
-                        aria-label={`Call ${phone.trim()}`}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
-                      >
-                        <Phone className="h-3.5 w-3.5" />
-                      </a>
-                    ) : undefined
-                  }
-                />
-              </Section>
-
-              {/* Social links */}
-              {socials.length > 0 && (
-                <Section title="Social Media">
-                  <div className="flex flex-wrap gap-2 px-4 py-3 sm:px-5">
-                    {socials.map(([key, url]) => {
-                      const meta = SOCIAL_META[key];
-                      const Icon = meta?.icon ?? Link2;
-                      return (
-                        <a
-                          key={key}
-                          href={url as string}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={cn(
-                            "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-opacity hover:opacity-90",
-                            meta?.className ?? "border-[#E6DFC8] bg-white text-[#5C4033]"
-                          )}
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                          {meta?.label ?? key.charAt(0).toUpperCase() + key.slice(1)}
-                        </a>
-                      );
-                    })}
-                  </div>
-                </Section>
-              )}
-
-              {/* Videos — play inline on the page (facade: loads on click) */}
-              {videos.length > 0 && (
-                <Section title="Performance Videos">
-                  <div className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-3 sm:px-5">
-                    {videos.map((v, i) => (
-                      <div key={i} className="min-w-0">
-                        <VideoFacade url={v.url} title={`Video ${i + 1}`} />
-                        <p
-                          title={v.description || undefined}
-                          className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5F624F]"
-                        >
-                          {v.description || `Video ${i + 1}`}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
                 </Section>
               )}
 
