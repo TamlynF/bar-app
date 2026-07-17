@@ -43,7 +43,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
 import { addHoursToTime, toHHMM, type ClashEvent } from "@/lib/event-clash";
-import { buildRescheduleEmail } from "@/lib/band-emails";
+import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail, type BandEmail } from "@/lib/band-emails";
 
 const DEFAULT_START_TIME = "22:00"; // 10pm
 
@@ -249,61 +249,177 @@ const normStatus = (s?: string) => (s || "").trim().toLowerCase();
 const PIPELINE: BandStatus[] = ["new", "reviewing", "offered", "booked"];
 
 /**
- * Compact horizontal stepper showing where a request sits in the pipeline.
- * Past stages get a check, the current stage gets its statusTheme tint, and
- * future stages stay muted. Labels collapse to dots on mobile except the
- * current stage. A terminal exit (declined) isn't a pipeline stage, so it
- * renders as a lone chip — the header badge speaks to the linked event now,
- * not the status, so this is the only thing carrying it.
+ * The pipeline, as the control. Past stages get a check, the current stage gets
+ * its statusTheme tint, future stages stay muted — and any stage reachable from
+ * the current one is a button that moves the request there. Reachability comes
+ * straight from BAND_TRANSITIONS, so this stays in step with the state machine
+ * without restating it.
+ *
+ * A terminal exit (declined) isn't a pipeline stage, so it renders as its own
+ * chip alongside whatever it can reach — which is what makes "Reopen" reachable.
  */
-function StageStepper({ status }: { status: string }) {
+type StageTone = "current" | "past" | "future";
+
+/**
+ * One stage chip. Declared at module scope (not inside StageStepper) so React
+ * keeps the same component type across renders instead of remounting it.
+ * A reachable stage is a live button; everything else is inert but explains why.
+ */
+function StageChip({
+  stage,
+  tone,
+  reason,
+  isPending,
+  anyPending,
+  onSelect,
+}: {
+  stage: BandStatus;
+  tone: StageTone;
+  /** Why this stage can't be clicked; null when it can. */
+  reason: string | null;
+  isPending: boolean;
+  /** Some stage is mid-flight — freeze the whole row. */
+  anyPending: boolean;
+  onSelect: (next: BandStatus) => void;
+}) {
+  const t = statusTheme[stage];
+  const interactive = tone !== "current" && !reason;
+
+  return (
+    <button
+      type="button"
+      disabled={!interactive || anyPending}
+      onClick={() => onSelect(stage)}
+      title={reason ?? `Move to ${t.label}`}
+      aria-current={tone === "current" ? "step" : undefined}
+      className={cn(
+        "flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-2.5 transition-all sm:h-8",
+        tone === "current" && cn(t.bg, t.text, t.border),
+        tone === "past" && "border-[#E6DFC8] bg-white text-[#5F624F]",
+        tone === "future" && "border-transparent text-[#5F624F]/45",
+        // A reachable stage advertises itself; an unreachable one stays flat.
+        interactive
+          ? cn(
+              "cursor-pointer hover:brightness-95",
+              tone === "future" && "border-dashed border-[#5C4033]/30 text-[#5C4033]"
+            )
+          : "cursor-default"
+      )}
+    >
+      {isPending ? (
+        <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+      ) : tone === "past" ? (
+        <CheckCircle2 className="h-3 w-3 shrink-0 text-green-600" />
+      ) : (
+        <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", tone === "current" ? t.dot : "bg-[#E6DFC8]")} />
+      )}
+      <span className="font-black text-[9px] tracking-widest uppercase">{t.label}</span>
+    </button>
+  );
+}
+
+function StageStepper({
+  status,
+  onSelect,
+  pendingStage,
+  slotWarning,
+}: {
+  status: string;
+  onSelect: (next: BandStatus) => void;
+  /** Stage currently being applied — shows a spinner on that chip. */
+  pendingStage: BandStatus | null;
+  /** Set when the slot is incomplete; blocks `booked` and explains why. */
+  slotWarning?: string;
+}) {
+  const transitions = BAND_TRANSITIONS[status as BandStatus] ?? [];
+  const currentLabel = statusTheme[status]?.label ?? status;
+
+  // Reachable per the state machine; booking additionally needs a full slot.
+  const blockedReason = (s: BandStatus): string | null => {
+    if (!transitions.some((t) => t.next === s)) return `Not available from ${currentLabel}`;
+    if (s === "booked" && slotWarning) return slotWarning;
+    return null;
+  };
+
+  /** A chip per stage — `reason` null means it's reachable, so it's a button. */
+  const chip = (s: BandStatus, tone: StageTone) => (
+    <StageChip
+      key={s}
+      stage={s}
+      tone={tone}
+      reason={tone === "current" ? "Current stage" : blockedReason(s)}
+      isPending={pendingStage === s}
+      anyPending={!!pendingStage}
+      onSelect={onSelect}
+    />
+  );
+
   const idx = PIPELINE.indexOf(status as BandStatus);
+
+  // Off-pipeline (declined): its own chip, plus whatever it can reach.
   if (idx === -1) {
     const t = statusTheme[status];
     if (!t) return null;
+    const exits = transitions.filter((tr) => PIPELINE.includes(tr.next));
     return (
-      <div className="mt-3 flex items-center gap-1" aria-label={`Status: ${t.label}`}>
-        <div className={cn("flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1", t.bg, t.text, t.border)}>
-          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", t.dot)} />
-          <span className="font-black text-[9px] tracking-widest uppercase">{t.label}</span>
-        </div>
+      <div className="no-scrollbar mt-3 flex items-center gap-1 overflow-x-auto" aria-label={`Status: ${t.label}`}>
+        {chip(status as BandStatus, "current")}
+        {exits.map((tr) => (
+          <React.Fragment key={tr.next}>
+            <div className="h-px min-w-2 flex-1 bg-[#E6DFC8]" />
+            {chip(tr.next, "future")}
+          </React.Fragment>
+        ))}
       </div>
     );
   }
+
   return (
     <div
-      className="mt-3 flex items-center gap-1"
-      aria-label={`Stage ${idx + 1} of ${PIPELINE.length}: ${statusTheme[status]?.label ?? status}`}
+      className="no-scrollbar mt-3 flex items-center gap-1 overflow-x-auto"
+      aria-label={`Stage ${idx + 1} of ${PIPELINE.length}: ${currentLabel}`}
     >
-      {PIPELINE.map((s, i) => {
-        const t = statusTheme[s];
-        const isCurrent = i === idx;
-        const isPast = i < idx;
-        return (
-          <React.Fragment key={s}>
-            {i > 0 && (
-              <div className={cn("h-px min-w-2 flex-1", isPast || isCurrent ? "bg-[#5C4033]/25" : "bg-[#E6DFC8]")} />
-            )}
-            <div
-              className={cn(
-                "flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1",
-                isCurrent && cn(t.bg, t.text, t.border),
-                isPast && "border-[#E6DFC8] bg-white text-[#5F624F]",
-                !isCurrent && !isPast && "border-transparent text-[#5F624F]/45"
-              )}
-            >
-              {isPast ? (
-                <CheckCircle2 className="h-3 w-3 shrink-0 text-green-600" />
-              ) : (
-                <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", isCurrent ? t.dot : "bg-[#E6DFC8]")} />
-              )}
-              <span className={cn("font-black text-[9px] tracking-widest uppercase", !isCurrent && "hidden sm:inline")}>
-                {t.label}
-              </span>
-            </div>
-          </React.Fragment>
-        );
-      })}
+      {PIPELINE.map((s, i) => (
+        <React.Fragment key={s}>
+          {i > 0 && (
+            <div className={cn("h-px min-w-2 flex-1", i <= idx ? "bg-[#5C4033]/25" : "bg-[#E6DFC8]")} />
+          )}
+          {chip(s, i === idx ? "current" : i < idx ? "past" : "future")}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Renders exactly what the band is about to receive, for the confirm dialogs.
+ * Reads a built BandEmail, so the preview can't drift from the sent message.
+ */
+function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to: string; slotLabel?: string }) {
+  return (
+    <div className="space-y-1.5 rounded-xl border border-[#E6DFC8] bg-white p-3 text-left">
+      <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">To: {to}</p>
+      <p className="font-black text-xs text-[#1F1F1A]">{email.subject}</p>
+      <p className="text-xs text-[#5F624F]">{email.greeting}</p>
+      {email.body.map((p, i) => (
+        <p key={i} className="text-xs leading-relaxed text-[#5F624F]">{p}</p>
+      ))}
+      {(email.dateLabel || email.slotLabel) && (
+        <div className="mt-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2">
+          <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{slotLabel}</p>
+          <p className="font-black text-sm text-[#1F1F1A]">{email.slotLabel || email.dateLabel}</p>
+          {!email.slotLabel && email.timeLabel && (
+            <p className="text-xs font-bold text-[#5F624F]">{email.timeLabel}</p>
+          )}
+          {email.feeLabel && <p className="mt-1 text-xs font-bold text-[#5F624F]">{email.feeLabel}</p>}
+        </div>
+      )}
+      {email.noteLabel && (
+        <div className="mt-1 rounded-lg border-l-4 border-[#5C4033] bg-[#F7F4EA] px-3 py-2">
+          <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Note from our team</p>
+          <p className="text-xs leading-relaxed text-[#1F1F1A]">{email.noteLabel}</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -460,6 +576,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [clashes, setClashes] = useState<ClashEvent[]>([]);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  /** Stage being applied — drives the spinner on that stepper chip. */
+  const [pendingStage, setPendingStage] = useState<BandStatus | null>(null);
 
   // Favourite persists on click (not via Save), so it gets its own transition —
   // sharing `isPending` would grey out the footer actions on every heart tap.
@@ -682,6 +800,69 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     }
   }
 
+  /**
+   * The band only hears about offered / booked / declined — those get a preview
+   * of the exact email before anything is sent. new / reviewing are silent, so
+   * they stay one-click.
+   */
+  async function confirmEmail(newStatus: BandStatus): Promise<boolean> {
+    const slot = {
+      name: bookerName || request.booker_name,
+      groupName: actName || request.group_name,
+      date: selectedDate || null,
+      startTime: selectedStartTime || null,
+      endTime: selectedEndTime || null,
+      notes: adminNotes || null,
+    };
+
+    if (newStatus === "offered") {
+      return confirm({
+        title: "Send offer & email band?",
+        description: "The band gets this straight away and replies to accept. Preview:",
+        confirmLabel: "Send & Email",
+        content: (
+          <EmailPreview
+            email={buildOfferEmail({
+              ...slot,
+              paymentAmount: paymentAmount === "" ? null : Number(paymentAmount),
+            })}
+            to={email || request.email}
+            slotLabel="Proposed Slot"
+          />
+        ),
+      });
+    }
+
+    if (newStatus === "booked") {
+      return confirm({
+        title: "Book & email band?",
+        description: "This confirms the band and puts the event on the schedule. Preview:",
+        confirmLabel: "Book & Email",
+        content: (
+          <EmailPreview
+            email={buildOutcomeEmail({ ...slot, outcome: "confirmed" })}
+            to={email || request.email}
+            slotLabel="Performance Date"
+          />
+        ),
+      });
+    }
+
+    if (newStatus === "declined") {
+      return confirm({
+        title: "Decline & email band?",
+        description: "This turns the application down and emails the band. Preview:",
+        confirmLabel: "Decline & Email",
+        variant: "destructive",
+        content: (
+          <EmailPreview email={buildOutcomeEmail({ ...slot, outcome: "cancelled" })} to={email || request.email} />
+        ),
+      });
+    }
+
+    return true;
+  }
+
   function handleAction(newStatus: BandStatus) {
     setError(null);
     setClashes([]);
@@ -689,10 +870,15 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       try {
         // Booking places an event — block it if the slot clashes. The clashes
         // render inline under the Performance Time field, so no footer error here.
+        // Checked before the preview so we never preview an unsendable email.
         if (newStatus === "booked") {
           const c = await findClashes();
           if (c.length) return;
         }
+        // Last chance to back out before the band is emailed. Kept outside the
+        // spinner — the chip shouldn't churn while a dialog waits on the admin.
+        if (!(await confirmEmail(newStatus))) return;
+        setPendingStage(newStatus);
         // Persist any field / date edits before the status change.
         if (hasChanges) {
           await updateBandBookingFields(request.id, {
@@ -718,6 +904,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         }
       } catch {
         setError("Failed to update. Please try again.");
+      } finally {
+        setPendingStage(null);
       }
     });
   }
@@ -761,27 +949,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             description:
               "This moves the booking back to Offered, takes the linked event off the schedule, and emails the band to re-confirm. Preview:",
             confirmLabel: "Update & Email",
-            content: (
-              <div className="space-y-1.5 rounded-xl border border-[#E6DFC8] bg-white p-3 text-left">
-                <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
-                  To: {request.email}
-                </p>
-                <p className="font-black text-xs text-[#1F1F1A]">{preview.subject}</p>
-                <p className="text-xs text-[#5F624F]">{preview.greeting}</p>
-                {preview.body.map((p, i) => (
-                  <p key={i} className="text-xs leading-relaxed text-[#5F624F]">{p}</p>
-                ))}
-                {preview.dateLabel && (
-                  <div className="mt-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2">
-                    <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">New Slot</p>
-                    <p className="font-black text-sm text-[#1F1F1A]">{preview.dateLabel}</p>
-                    {preview.timeLabel && (
-                      <p className="text-xs font-bold text-[#5F624F]">{preview.timeLabel}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            ),
+            content: <EmailPreview email={preview} to={request.email} slotLabel="New Slot" />,
           });
           if (!ok) return;
 
@@ -941,7 +1109,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-auto max-h-[90vh] w-full flex-col rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 sm:left-1/2 sm:w-[92vw] sm:max-w-5xl sm:-translate-x-1/2 sm:rounded-[2.5rem] lg:max-h-[94vh] lg:max-w-6xl"
+          className="left-1/2 flex h-auto max-h-[90vh] w-[92vw] w-full max-w-5xl max-w-6xl -translate-x-1/2 flex-col rounded-[2.5rem] rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 lg:max-h-[94vh]"
         >
           {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
@@ -1068,7 +1236,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                       type="button"
                       aria-label="System information"
                       title="System information"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033] sm:h-9 sm:w-9"
+                      className="flex h-11 w-9 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033] sm:h-9"
                     >
                       <Info className="h-4 w-4" />
                     </button>
@@ -1099,7 +1267,12 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 </Popover>
               </div>
             </div>
-            <StageStepper status={status} />
+            <StageStepper
+              status={status}
+              onSelect={handleAction}
+              pendingStage={pendingStage}
+              slotWarning={slotWarning}
+            />
           </div>
 
           {/* Scrollable body */}
@@ -1689,9 +1862,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
                 {error && <p className="text-xs font-bold text-red-500">{error}</p>}
 
-                {/* Cancel left, stage transitions right (primary last), Save when dirty.
-                    Booking needs a full slot, mirroring the old Confirm guard, so an
-                    event is always placed when booked. */}
+                {/* Stage moves live in the header stepper now. What's left here is
+                    Cancel, the Decline exit (a terminal outcome, not a stage), and
+                    Save once something's dirty. */}
                 <div className="flex flex-wrap items-center gap-2.5">
                   <button
                     type="button"
@@ -1701,27 +1874,22 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   >
                     Cancel
                   </button>
-                  {[...(BAND_TRANSITIONS[status as BandStatus] ?? [])]
-                    .sort((a, b) => (a.primary ? 1 : 0) - (b.primary ? 1 : 0))
-                    .map((t) => {
-                      const needsSlot =
-                        t.next === "booked" && (!selectedDate || !selectedStartTime || !selectedEndTime);
-                      return (
-                        <button
-                          key={t.next + t.label}
-                          type="button"
-                          onClick={() => handleAction(t.next)}
-                          disabled={isPending || needsSlot}
-                          title={needsSlot ? "Set a date, start and end time before booking" : undefined}
-                          className={cn(
-                            "flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl px-4 font-black text-[10px] tracking-widest uppercase transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-5",
-                            t.className
-                          )}
-                        >
-                          {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t.label}
-                        </button>
-                      );
-                    })}
+                  {(BAND_TRANSITIONS[status as BandStatus] ?? [])
+                    .filter((t) => !PIPELINE.includes(t.next))
+                    .map((t) => (
+                      <button
+                        key={t.next + t.label}
+                        type="button"
+                        onClick={() => handleAction(t.next)}
+                        disabled={isPending}
+                        className={cn(
+                          "flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl px-4 font-black text-[10px] tracking-widest uppercase transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-5",
+                          t.className
+                        )}
+                      >
+                        {pendingStage === t.next ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t.label}
+                      </button>
+                    ))}
                   {hasChanges && (
                     <button
                       type="button"

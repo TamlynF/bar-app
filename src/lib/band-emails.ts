@@ -24,14 +24,23 @@ function formatDateLong(d?: string | null): string {
   });
 }
 
-export type RescheduleEmail = {
+export type BandEmail = {
   subject: string;
   heading: string;
   greeting: string;
+  /** Plain-text paragraphs — safe to render in the admin preview as-is. */
   body: string[];
   dateLabel: string; // "" when no date
   timeLabel: string; // "" when no times
+  /** Offer only — the proposed slot, or "to be arranged" when no date is set. */
+  slotLabel?: string;
+  /** "" when there's no fee / no note to pass on. */
+  feeLabel?: string;
+  noteLabel?: string;
 };
+
+/** @deprecated Kept as an alias so existing imports keep working. */
+export type RescheduleEmail = BandEmail;
 
 /**
  * Email a band receives when an admin changes the date/time of an already-booked
@@ -44,7 +53,7 @@ export function buildRescheduleEmail(p: {
   date: string | null;
   startTime: string | null;
   endTime: string | null;
-}): RescheduleEmail {
+}): BandEmail {
   const dateLabel = formatDateLong(p.date);
   const timeLabel = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
 
@@ -58,5 +67,80 @@ export function buildRescheduleEmail(p: {
     ],
     dateLabel,
     timeLabel,
+  };
+}
+
+/**
+ * Email a band receives when an admin offers them a slot. The band replies to
+ * accept; nothing is on the schedule until the admin marks the request booked.
+ */
+export function buildOfferEmail(p: {
+  name: string;
+  groupName?: string | null;
+  date: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  paymentAmount?: number | null;
+  notes?: string | null;
+}): BandEmail {
+  const dateLabel = formatDateLong(p.date);
+  const timeLabel = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
+  // The offer states the slot on one line, and says so plainly when there isn't one yet.
+  const slotLabel = dateLabel
+    ? [dateLabel, timeLabel].filter(Boolean).join(", ")
+    : "to be arranged";
+
+  return {
+    subject: `We'd love to book you${p.groupName ? `, ${p.groupName}` : ""} — Don Fenticas`,
+    heading: "We'd Love to Book You",
+    greeting: `Hi ${p.name},`,
+    body: [
+      `Great news — we'd love to have ${p.groupName ?? "you"} play at Don Fenticas. Here's what we're offering:`,
+      "Reply to this email to accept the slot or discuss details — once you confirm, we'll lock it in and it goes on our events calendar.",
+    ],
+    dateLabel,
+    timeLabel,
+    slotLabel,
+    feeLabel: p.paymentAmount != null ? `Fee: £${p.paymentAmount}` : "",
+    noteLabel: p.notes?.trim() || "",
+  };
+}
+
+/**
+ * Email a band receives once an admin settles their application — booked
+ * ("confirmed") or declined ("cancelled").
+ */
+export function buildOutcomeEmail(p: {
+  name: string;
+  groupName?: string | null;
+  outcome: "confirmed" | "cancelled";
+  date: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  notes?: string | null;
+}): BandEmail {
+  const isConfirmed = p.outcome === "confirmed";
+  const dateLabel = formatDateLong(p.date);
+  const timeLabel = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
+
+  return {
+    subject: isConfirmed
+      ? "Your Performance at Don Fenticas is Confirmed!"
+      : "Update on Your Application — Don Fenticas",
+    heading: isConfirmed ? "You're Confirmed!" : "Application Update",
+    greeting: `Hey ${p.name},`,
+    body: isConfirmed
+      ? [
+          "Great news! Your application to perform at Don Fenticas has been confirmed.",
+          "We'll be in touch closer to the date with any further details. If you have any questions in the meantime, just reply to this email.",
+        ]
+      : [
+          "Thank you for applying to perform at Don Fenticas. After reviewing your application, we're unable to proceed at this time.",
+          "We appreciate your interest and encourage you to apply again in the future.",
+        ],
+    // A declined application has no slot to show, even if one had been pencilled in.
+    dateLabel: isConfirmed ? dateLabel : "",
+    timeLabel: isConfirmed ? timeLabel : "",
+    noteLabel: p.notes?.trim() || "",
   };
 }

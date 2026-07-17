@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planBandEventSync, type BandStatus as BandStatusType } from "@/lib/band-event-sync";
 import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
-import { buildRescheduleEmail } from "@/lib/band-emails";
+import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail } from "@/lib/band-emails";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
@@ -286,25 +286,6 @@ export async function updateBandStatus(
   return { emailError };
 }
 
-function formatTime12(t?: string | null): string {
-  if (!t) return "";
-  const [hh, mm] = t.split(":");
-  const h = parseInt(hh, 10);
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${mm} ${ampm}`;
-}
-
-function formatDateLong(d?: string | null): string {
-  if (!d) return "";
-  return new Date(d + "T00:00:00").toLocaleDateString("en-GB", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-}
-
 async function sendRescheduleEmail(
   name: string,
   email: string,
@@ -359,53 +340,38 @@ async function sendOutcomeEmail(
   endTime?: string | null,
   notes?: string | null
 ): Promise<string | null> {
-  const isConfirmed = status === "confirmed";
-  const subject = isConfirmed
-    ? "Your Performance at Don Fenticas is Confirmed!"
-    : "Update on Your Application — Don Fenticas";
-
-  const dateStr = formatDateLong(selectedDate);
-  const timeStr = [formatTime12(startTime), formatTime12(endTime)]
-    .filter(Boolean)
-    .join(" – ");
+  const e = buildOutcomeEmail({
+    name,
+    groupName,
+    outcome: status,
+    date: selectedDate ?? null,
+    startTime: startTime ?? null,
+    endTime: endTime ?? null,
+    notes,
+  });
 
   const html = `
     <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F4EA;border-radius:16px;overflow:hidden;">
       <div style="background:#5C4033;padding:32px 24px;text-align:center;">
         <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
-          ${isConfirmed ? "You're Confirmed!" : "Application Update"}
+          ${e.heading}
         </h1>
         ${groupName ? `<p style="margin:8px 0 0;color:#E6DFC8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
       </div>
       <div style="padding:32px 24px;">
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">
-          Hey ${name},
-        </p>
-        ${isConfirmed ? `
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">
-          Great news! Your application to perform at <strong>Don Fenticas</strong> has been <strong>confirmed</strong>.
-        </p>
-        ${dateStr ? `
+        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.greeting}</p>
+        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.body[0]}</p>
+        ${e.dateLabel ? `
         <div style="background:#fff;border:2px solid #E6DFC8;border-radius:12px;padding:20px;margin:20px 0;">
           <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Performance Date</p>
-          <p style="margin:0;font-size:18px;font-weight:900;color:#1F1F1A;">${dateStr}</p>
-          ${timeStr ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5F624F;">${timeStr}</p>` : ""}
+          <p style="margin:0;font-size:18px;font-weight:900;color:#1F1F1A;">${e.dateLabel}</p>
+          ${e.timeLabel ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5F624F;">${e.timeLabel}</p>` : ""}
         </div>` : ""}
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">
-          We'll be in touch closer to the date with any further details. If you have any questions in the meantime, just reply to this email.
-        </p>
-        ` : `
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">
-          Thank you for applying to perform at <strong>Don Fenticas</strong>. After reviewing your application, we're unable to proceed at this time.
-        </p>
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">
-          We appreciate your interest and encourage you to apply again in the future.
-        </p>
-        `}
-        ${notes ? `
+        ${e.body.slice(1).map((p) => `<p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
+        ${e.noteLabel ? `
         <div style="background:#fff;border-left:4px solid #5C4033;border-radius:8px;padding:16px;margin:20px 0;">
           <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Note from our team</p>
-          <p style="margin:0;font-size:14px;color:#1F1F1A;line-height:1.5;">${notes}</p>
+          <p style="margin:0;font-size:14px;color:#1F1F1A;line-height:1.5;">${e.noteLabel}</p>
         </div>` : ""}
       </div>
       <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
@@ -415,7 +381,7 @@ async function sendOutcomeEmail(
       </div>
     </div>`;
 
-  const { data, error } = await resend.emails.send({ from: FROM, to: email, subject, html });
+  const { data, error } = await resend.emails.send({ from: FROM, to: email, subject: e.subject, html });
   if (error) {
     console.error("[band outcome email] Resend failed:", JSON.stringify(error));
     return error.message ?? "Email failed to send.";
@@ -434,36 +400,38 @@ async function sendOfferEmail(
   paymentAmount: number | null,
   notes?: string | null
 ): Promise<string | null> {
-  const slot = date
-    ? `${formatDateLong(date)}${startTime ? `, ${formatTime12(startTime)}` : ""}${endTime ? ` – ${formatTime12(endTime)}` : ""}`
-    : "to be arranged";
+  const e = buildOfferEmail({
+    name,
+    groupName,
+    date,
+    startTime,
+    endTime,
+    paymentAmount,
+    notes,
+  });
 
   const html = `
     <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F4EA;border-radius:16px;overflow:hidden;">
       <div style="background:#5C4033;padding:32px 24px;text-align:center;">
         <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
-          We'd Love to Book You
+          ${e.heading}
         </h1>
         ${groupName ? `<p style="margin:8px 0 0;color:#E6DFC8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
       </div>
       <div style="padding:32px 24px;">
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">Hi ${name},</p>
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">
-          Great news — we'd love to have ${groupName ? `<strong>${groupName}</strong>` : "you"} play at <strong>Don Fenticas</strong>. Here's what we're offering:
-        </p>
+        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.greeting}</p>
+        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.body[0]}</p>
         <div style="background:#fff;border:2px solid #E6DFC8;border-radius:12px;padding:20px;margin:20px 0;">
           <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Proposed Slot</p>
-          <p style="margin:0;font-size:18px;font-weight:900;color:#1F1F1A;">${slot}</p>
-          ${paymentAmount != null ? `<p style="margin:8px 0 0;font-size:14px;font-weight:700;color:#5F624F;">Fee: £${paymentAmount}</p>` : ""}
+          <p style="margin:0;font-size:18px;font-weight:900;color:#1F1F1A;">${e.slotLabel}</p>
+          ${e.feeLabel ? `<p style="margin:8px 0 0;font-size:14px;font-weight:700;color:#5F624F;">${e.feeLabel}</p>` : ""}
         </div>
-        ${notes ? `
+        ${e.noteLabel ? `
         <div style="background:#fff;border-left:4px solid #5C4033;border-radius:8px;padding:16px;margin:20px 0;">
           <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Note from our team</p>
-          <p style="margin:0;font-size:14px;color:#1F1F1A;line-height:1.5;">${notes}</p>
+          <p style="margin:0;font-size:14px;color:#1F1F1A;line-height:1.5;">${e.noteLabel}</p>
         </div>` : ""}
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">
-          Reply to this email to accept the slot or discuss details — once you confirm, we'll lock it in and it goes on our events calendar.
-        </p>
+        ${e.body.slice(1).map((p) => `<p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
       </div>
       <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
         <p style="margin:0;font-size:11px;color:#5F624F;">
@@ -475,7 +443,7 @@ async function sendOfferEmail(
   const { data, error } = await resend.emails.send({
     from: FROM,
     to: email,
-    subject: `We'd love to book you${groupName ? `, ${groupName}` : ""} — Don Fenticas`,
+    subject: e.subject,
     html,
   });
   if (error) {
