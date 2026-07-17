@@ -31,6 +31,7 @@ import {
   NotebookPen,
   Info,
   Pencil,
+  PoundSterling,
   X,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
@@ -1329,19 +1330,24 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         {/* Status badge circle (left) */}
         <div
           className={cn(
-            "flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-full border",
+            "flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border",
             theme.bg,
             theme.text,
             theme.border
           )}
         >
           {hasSlot && request.selected_date ? (
+            // The badge carries the whole slot date (weekday / day / month), so the
+            // row below doesn't repeat it.
             <div className="flex flex-col items-center justify-center leading-none">
-              <span className="mb-0.5 font-black text-[10px] tracking-tighter uppercase opacity-80">
-                {format(new Date(request.selected_date + "T00:00:00"), "MMM")}
+              <span className="font-black text-[8px] tracking-tighter uppercase opacity-70">
+                {format(new Date(request.selected_date + "T00:00:00"), "EEE")}
               </span>
-              <span className="font-black text-base tracking-tighter">
+              <span className="my-px font-black text-sm tracking-tighter">
                 {format(new Date(request.selected_date + "T00:00:00"), "dd")}
+              </span>
+              <span className="font-black text-[8px] tracking-tighter uppercase opacity-70">
+                {format(new Date(request.selected_date + "T00:00:00"), "MMM")}
               </span>
             </div>
           ) : (
@@ -1372,19 +1378,17 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             )}
           </div>
 
-          {/* Schedule — offered/booked → selected slot; otherwise → applicant's preferred dates */}
+          {/* Schedule — offered/booked → the slot's time (its date is on the badge);
+              otherwise → applicant's preferred dates */}
           {(hasSlot ? !!request.selected_date : dates.length > 0) ? (
             <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] font-semibold text-[#5F624F]">
               {hasSlot ? (
-                request.selected_date && (
+                (request.selected_start_time || request.selected_end_time) && (
                   <span className="inline-flex items-center gap-1">
-                    <CalendarDays className="h-3 w-3 shrink-0" />
-                    {format(new Date(request.selected_date + "T00:00:00"), "EEE, d MMM")}
-                    {(request.selected_start_time || request.selected_end_time) && (
-                      <span className="text-[#5F624F]/80">
-                        · {[toHHMM(request.selected_start_time), toHHMM(request.selected_end_time)].filter(Boolean).join("–")}
-                      </span>
-                    )}
+                    <Clock3 className="h-3 w-3 shrink-0" />
+                    {[toHHMM(request.selected_start_time), toHHMM(request.selected_end_time)]
+                      .filter(Boolean)
+                      .join("–")}
                   </span>
                 )
               ) : (
@@ -1413,20 +1417,17 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {videos.length}
             </span>
           )}
-          {(() => {
-            const amount = request.payment_amount ?? 0;
-            const isFree = !(amount > 0);
-            return (
-              <span
-                className={cn(
-                  "inline-flex shrink-0 items-center rounded border px-1.5 py-0.5 font-black text-[10px] tracking-tight uppercase",
-                  isFree ? "border-green-200 bg-green-50 text-green-700" : "border-amber-200 bg-amber-50 text-amber-700"
-                )}
-              >
-                {isFree ? "Free" : `£${amount.toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
-              </span>
-            );
-          })()}
+          {/* A fee is a yes/no signal on the row — the amount itself is in the sheet.
+              No fee shows nothing rather than a "Free" pill. */}
+          {(request.payment_amount ?? 0) > 0 && (
+            <span
+              className="inline-flex shrink-0 items-center rounded border border-amber-200 bg-amber-50 p-0.5 text-amber-700"
+              title={`Fee: £${(request.payment_amount ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+            >
+              <PoundSterling className="h-3 w-3 shrink-0" aria-hidden="true" />
+              <span className="sr-only">Has a fee</span>
+            </span>
+          )}
         </div>
 
         <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
