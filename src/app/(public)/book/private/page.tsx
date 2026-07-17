@@ -6,7 +6,7 @@ import {
   Banknote, Calendar, Users, Trophy, Wine,
   MapPin, Clock, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile,
-  Sparkles, AlertCircle, Beer, Info, Speaker, User,
+  Sparkles, AlertCircle, Beer, Info, Speaker, User, Ghost
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PublicNav } from "@/components/public-nav";
@@ -20,7 +20,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Banknote, Calendar, Users, Trophy, Wine,
   MapPin, Clock, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile,
-  Sparkles, AlertCircle, Beer, Info, Speaker, User,
+  Sparkles, AlertCircle, Beer, Info, Speaker, User, Ghost
 };
 
 export default async function PrivateHirePage() {

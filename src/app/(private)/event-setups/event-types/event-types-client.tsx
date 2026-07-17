@@ -4,11 +4,11 @@ import { useMemo, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import {
-  Plus, Edit2, Trash2, Layers, Info, Loader2,
+  Plus, Edit2, Trash2, Layers, Info, Loader2, Ghost,
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Beer,
   ChevronDown, Banknote, Trophy, Wine, Speaker, User,
-  Search, X, SlidersHorizontal, Ticket, Armchair, PoundSterling, Disc3, Mic, Tag, Check,
+  Search, X, SlidersHorizontal, Ticket, Armchair, PoundSterling, Disc3, Mic, Tag, Check, 
 } from "lucide-react";
 import {
   saveTypeAction,
@@ -31,7 +31,7 @@ import { IconPicker } from "@/components/icon-picker";
 const ICON_OPTIONS = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Info,
-  Beer, Banknote, Trophy, Wine, Speaker, User,
+  Beer, Banknote, Trophy, Wine, Speaker, User, Disc3, Mic, Tag, Check, Ghost,
 };
 
 /** Lucide icon per sub-category behaviour. */
@@ -379,17 +379,17 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const badgeHasErrors = Object.keys(badgeErrors).length > 0;
 
   return (
-    <div className="max-w-3xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+    <div className="space-y-4 px-2 sm:px-4 md:px-6 py-3 max-w-3xl">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-[13px] font-medium text-[#5F624F]">Manage your event categories and sub-categories.</p>
+      <div className="flex justify-between items-center gap-3">
+        <p className="font-medium text-[#5F624F] text-[13px]">Manage your event categories and sub-categories.</p>
         <button
           type="button"
           onClick={openNewType}
-          className="flex h-9 shrink-0 items-center gap-1.5 rounded-[10px] bg-[#1B4332] px-4 text-white transition-colors hover:bg-[#1B4332]/85"
+          className="flex items-center gap-1.5 bg-[#1B4332] hover:bg-[#1B4332]/85 px-4 rounded-[10px] h-9 text-white transition-colors shrink-0"
         >
-          <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-          <span className="font-black text-[11px] tracking-widest uppercase">Category</span>
+          <Plus className="stroke-[2.5] w-3.5 h-3.5" />
+          <span className="font-black text-[11px] uppercase tracking-widest">Category</span>
         </button>
       </div>
 
@@ -397,15 +397,15 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
       <div className="flex flex-col gap-3">
         {!hasAny ? (
-          <div className="px-5 py-12 text-center text-[#5F624F]">
-            <Layers className="mx-auto mb-2.5 h-8 w-8 opacity-40" />
-            <p className="font-black text-sm text-[#1F1F1A]">No Event Categories</p>
+          <div className="px-5 py-12 text-[#5F624F] text-center">
+            <Layers className="opacity-40 mx-auto mb-2.5 w-8 h-8" />
+            <p className="font-black text-[#1F1F1A] text-sm">No Event Categories</p>
             <p className="text-xs">Add your first category to get started.</p>
           </div>
         ) : filtered.length === 0 ? (
-          <div className="px-5 py-12 text-center text-[#5F624F]">
-            <Search className="mx-auto mb-2.5 h-6.5 w-6.5 opacity-40" />
-            <p className="font-black text-sm text-[#1F1F1A]">Nothing matches your filters</p>
+          <div className="px-5 py-12 text-[#5F624F] text-center">
+            <Search className="opacity-40 mx-auto mb-2.5 w-6.5 h-6.5" />
+            <p className="font-black text-[#1F1F1A] text-sm">Nothing matches your filters</p>
             <p className="text-xs">Try clearing the search or filters.</p>
           </div>
         ) : (
@@ -417,45 +417,45 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               <section
                 key={t.id}
                 style={catVars(t.color)}
-                className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-[#FFFDF7]"
+                className="bg-[#FFFDF7] border border-[#E6DFC8] rounded-2xl overflow-hidden"
               >
                 {/* Category header */}
-                <header className="flex items-center gap-2 bg-(--cat-bg) px-4 py-3 sm:px-5">
+                <header className="flex items-center gap-2 px-4 py-3 bg-(--cat-bg) sm:px-5">
                   <button
                     type="button"
                     onClick={() => toggleCollapse(t.id)}
-                    className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5 text-left"
+                    className="flex flex-wrap flex-1 items-center gap-2.5 min-w-0 text-left"
                   >
                     <span className="font-black text-[15px] tracking-[0.04em] whitespace-nowrap text-(--cat-text) uppercase">
                       {toTitleCase(t.name)}
                     </span>
-                    <span className="font-black text-xs text-[#5F624F]">({subtypes.length})</span>
+                    <span className="font-black text-[#5F624F] text-xs">({subtypes.length})</span>
                     {catBookable && <BookingMark title="Bookable · one booking page for the whole category" />}
                   </button>
 
-                  <div className="flex shrink-0 items-center gap-0.5">
+                  <div className="flex items-center gap-0.5 shrink-0">
                     <button
                       type="button"
                       onClick={() => openNewSubtype(t)}
                       aria-label="Add sub-category"
-                      className="flex h-9 items-center gap-1.5 rounded-lg bg-[#1B4332] px-2.5 text-white transition-colors hover:bg-[#1B4332]/85 sm:h-7"
+                      className="flex items-center gap-1.5 bg-[#1B4332] hover:bg-[#1B4332]/85 px-2.5 rounded-lg h-9 sm:h-7 text-white transition-colors"
                     >
-                      <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-                      <span className="hidden font-black text-[10px] tracking-widest uppercase sm:inline">Sub-Category</span>
+                      <Plus className="stroke-[2.5] w-3.5 h-3.5" />
+                      <span className="hidden sm:inline font-black text-[10px] uppercase tracking-widest">Sub-Category</span>
                     </button>
-                    <IconBtn label="Edit category" onClick={() => openEditType(t)}><Edit2 className="h-3.5 w-3.5" /></IconBtn>
-                    <IconBtn label="Delete category" danger onClick={() => removeType(t)}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
+                    <IconBtn label="Edit category" onClick={() => openEditType(t)}><Edit2 className="w-3.5 h-3.5" /></IconBtn>
+                    <IconBtn label="Delete category" danger onClick={() => removeType(t)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
                     <IconBtn label="Toggle category" onClick={() => toggleCollapse(t.id)}>
-                      <ChevronDown className={cn("h-4 w-4 transition-transform duration-200", open && "rotate-180")} />
+                      <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", open && "rotate-180")} />
                     </IconBtn>
                   </div>
                 </header>
 
                 {/* Sub-categories — badges always visible inline */}
                 {open && (
-                  <div className="flex flex-col gap-2 px-3 pt-1 pb-3.5 sm:px-4">
+                  <div className="flex flex-col gap-2 px-3 sm:px-4 pt-1 pb-3.5">
                     {subtypes.length === 0 && (
-                      <p className="px-1 py-1.5 text-xs text-[#5F624F] italic">No sub-categories match.</p>
+                      <p className="px-1 py-1.5 text-[#5F624F] text-xs italic">No sub-categories match.</p>
                     )}
                     {subtypes.map((s) => {
                       const badges = s.event_subtype_badges ?? [];
@@ -464,10 +464,10 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         <div
                           key={s.id}
                           style={subVars(s.color)}
-                          className="overflow-hidden rounded-xl border border-l-[3px] border-[#E6DFC8] border-l-accent bg-[#F7F4EA]"
+                          className="bg-[#F7F4EA] border border-[#E6DFC8] border-l-[3px] border-l-accent rounded-xl overflow-hidden"
                         >
-                          <div className="flex items-start justify-between gap-2.5 border-b border-(--sub-border) bg-[color-mix(in_srgb,var(--sub-bg)_45%,#fff)] px-3 py-2.5 sm:px-3.5">
-                            <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2.5">
+                          <div className="flex items-start justify-between gap-2.5 px-3 py-2.5 bg-[color-mix(in_srgb,var(--sub-bg)_45%,#fff)] border-b border-(--sub-border) sm:px-3.5">
+                            <div className="flex flex-wrap flex-1 items-center gap-2.5 min-w-0">
                               <span className="font-black text-[14px] tracking-[0.01em] whitespace-nowrap text-(--sub-text) capitalize">
                                 {toTitleCase(s.name)}
                               </span>
@@ -475,14 +475,14 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                               {t.booking_grouping === "per_event" && <BookingMark inverted title="Booked per individual event" />}
                               <FlagDots s={s} />
                             </div>
-                            <div className="flex shrink-0 items-center gap-0.5">
-                              <IconBtn label="Edit sub-category" onClick={() => openEditSubtype(s)}><Edit2 className="h-3.5 w-3.5" /></IconBtn>
-                              <IconBtn label="Delete sub-category" danger onClick={() => removeSubtype(s)}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
+                            <div className="flex items-center gap-0.5 shrink-0">
+                              <IconBtn label="Edit sub-category" onClick={() => openEditSubtype(s)}><Edit2 className="w-3.5 h-3.5" /></IconBtn>
+                              <IconBtn label="Delete sub-category" danger onClick={() => removeSubtype(s)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
                             </div>
                           </div>
 
                           {/* Always-visible badge chips + inline add */}
-                          <div className="flex flex-wrap gap-2 px-3 py-3 sm:px-3.5">
+                          <div className="flex flex-wrap gap-2 px-3 sm:px-3.5 py-3">
                             {badges.map((bg) => (
                               <BadgeChip
                                 key={bg.id}
@@ -496,9 +496,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                               type="button"
                               onClick={() => setBadgeForm({ event_subtypes_id: s.id, subName: s.name, title: "", description: "", icon: "" })}
                               aria-label="Add badge"
-                              className="inline-flex items-center gap-1.5 rounded-[9px] border border-[#A9C4B7] bg-[#E7EFEA] px-2.5 py-1.5 font-black text-[11px] tracking-wide whitespace-nowrap text-[#1B4332] uppercase transition-colors hover:border-[#1B4332] hover:bg-[#D7E5DD] hover:text-[#102A20]"
+                              className="inline-flex items-center gap-1.5 bg-[#E7EFEA] hover:bg-[#D7E5DD] px-2.5 py-1.5 border border-[#A9C4B7] hover:border-[#1B4332] rounded-[9px] font-black text-[#1B4332] text-[11px] hover:text-[#102A20] uppercase tracking-wide whitespace-nowrap transition-colors"
                             >
-                              <Plus className="h-3 w-3 stroke-[2.5]" />
+                              <Plus className="stroke-[2.5] w-3 h-3" />
                               <span className="hidden sm:inline">{badges.length === 0 ? "Add badge" : "Add"}</span>
                             </button>
                           </div>
@@ -522,7 +522,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             title={typeForm?.id ? `Edit ${typeForm.name ? toTitleCase(typeForm.name) : "Category"}` : "New Category"}
             onClose={() => { setTypeForm(null); setError(null); }}
           />
-          <div className="min-h-0 flex-1 touch-pan-y space-y-3.5 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+          <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-5 min-h-0 overflow-y-auto touch-pan-y">
             {typeForm && (
               <>
                 <CollapsibleCard title="Identity">
@@ -545,7 +545,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       onChange={(v) => setTypeForm({ ...typeForm, booking_grouping: v, is_bookable: v === "per_type" ? typeForm.is_bookable : false })}
                       render={(v) => BOOKING_GROUPING_OPTIONS.find((o) => o.value === v)?.label ?? v}
                     />
-                    <p className="text-[11px] leading-relaxed text-[#5F624F]">
+                    <p className="text-[#5F624F] text-[11px] leading-relaxed">
                       {typeForm.booking_grouping === "per_event" && "One card per event — each date links to its own booking page."}
                       {typeForm.booking_grouping === "per_subtype" && "One card per sub-category — all dates share one page with a date dropdown."}
                       {typeForm.booking_grouping === "per_type" && "One card for the whole category — all its events share one page with a date dropdown."}
@@ -584,7 +584,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             title={subtypeForm?.id ? `Edit ${subtypeForm.name ? toTitleCase(subtypeForm.name) : "Sub-Category"}` : "New Sub-Category"}
             onClose={() => { setSubtypeForm(null); setError(null); }}
           />
-          <div className="min-h-0 flex-1 touch-pan-y space-y-3.5 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+          <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-5 min-h-0 overflow-y-auto touch-pan-y">
             {subtypeForm && (() => {
               const parent = types.find((t) => t.id === subtypeForm.event_types_id);
               const ownsBookingPage = parent?.booking_grouping === "per_subtype";
@@ -644,19 +644,19 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       <button
                         type="button"
                         onClick={(e) => { e.stopPropagation(); setSubtypeForm({ ...subtypeForm, badges: [...subtypeForm.badges, { title: "", description: "", icon: "Star" }] }); }}
-                        className="inline-flex items-center gap-1 rounded-lg bg-[#1B4332] px-2.5 py-1.5 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85"
+                        className="inline-flex items-center gap-1 bg-[#1B4332] hover:bg-[#1B4332]/85 px-2.5 py-1.5 rounded-lg font-black text-[10px] text-white uppercase tracking-widest"
                       >
-                        <Plus className="h-3 w-3 stroke-[2.5]" /> Add
+                        <Plus className="stroke-[2.5] w-3 h-3" /> Add
                       </button>
                     }
                     bodyClassName="p-3.5 flex flex-col gap-2.5"
                   >
-                    <p className="text-[11px] leading-relaxed text-[#5F624F]">Shown on this sub-category&apos;s booking page. Each badge is an icon, a title and an optional line of detail.</p>
+                    <p className="text-[#5F624F] text-[11px] leading-relaxed">Shown on this sub-category&apos;s booking page. Each badge is an icon, a title and an optional line of detail.</p>
                     {subtypeForm.badges.length === 0 ? (
                       <div className="flex flex-col items-center gap-2 py-5 text-[#5F624F]">
-                        <Tag className="h-5 w-5 opacity-40" />
-                        <span className="text-xs font-bold">No badges yet</span>
-                        <button type="button" onClick={() => setSubtypeForm({ ...subtypeForm, badges: [{ title: "", description: "", icon: "Star" }] })} className="rounded-[9px] border border-dashed border-[#A9C4B7] px-4 py-2 font-black text-[11px] tracking-wide text-[#1B4332] uppercase hover:border-[#1B4332] hover:bg-[#E7EFEA]">Add the first badge</button>
+                        <Tag className="opacity-40 w-5 h-5" />
+                        <span className="font-bold text-xs">No badges yet</span>
+                        <button type="button" onClick={() => setSubtypeForm({ ...subtypeForm, badges: [{ title: "", description: "", icon: "Star" }] })} className="hover:bg-[#E7EFEA] px-4 py-2 border border-[#A9C4B7] hover:border-[#1B4332] border-dashed rounded-[9px] font-black text-[#1B4332] text-[11px] uppercase tracking-wide">Add the first badge</button>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2">
@@ -689,7 +689,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             title={badgeForm?.id ? "Edit Badge" : "New Badge"}
             onClose={() => { setBadgeForm(null); setError(null); }}
           />
-          <div className="min-h-0 flex-1 touch-pan-y space-y-3.5 overflow-y-auto px-4 py-4 sm:px-5 sm:py-5">
+          <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-5 min-h-0 overflow-y-auto touch-pan-y">
             {badgeForm && (
               <>
                 {/* Live preview */}
@@ -731,18 +731,18 @@ function FilterBar({ filters, setFilters, types }: { filters: Filters; setFilter
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div className="flex items-center gap-2 rounded-[13px] border border-[#E6DFC8] bg-[#FFFDF7] px-3 py-1.5 pl-3">
-        <Search className="h-4.25 w-4.25 shrink-0 text-[#5F624F]" />
+      <div className="flex items-center gap-2 bg-[#FFFDF7] px-3 py-1.5 pl-3 border border-[#E6DFC8] rounded-[13px]">
+        <Search className="w-4.25 h-4.25 text-[#5F624F] shrink-0" />
         <input
           value={filters.q}
           aria-label="Search categories, sub-categories and badges"
           placeholder="Search types, sub-categories, badges…"
           onChange={(e) => set({ q: e.target.value })}
-          className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/60"
+          className="flex-1 bg-transparent outline-none min-w-0 font-medium text-[#1F1F1A] placeholder:text-[#5F624F]/60 text-sm"
         />
         {filters.q && (
-          <button type="button" aria-label="Clear search" onClick={() => set({ q: "" })} className="grid h-6 w-6 place-items-center rounded-[7px] text-[#5F624F] hover:bg-[#F7F4EA]">
-            <X className="h-3.5 w-3.5" />
+          <button type="button" aria-label="Clear search" onClick={() => set({ q: "" })} className="place-items-center grid hover:bg-[#F7F4EA] rounded-[7px] w-6 h-6 text-[#5F624F]">
+            <X className="w-3.5 h-3.5" />
           </button>
         )}
         <button
@@ -750,18 +750,18 @@ function FilterBar({ filters, setFilters, types }: { filters: Filters; setFilter
           onClick={() => setOpen(!open)}
           aria-label="Toggle filters"
           className={cn(
-            "flex h-8 shrink-0 items-center gap-1.5 rounded-[9px] border px-3 font-black text-[11px] tracking-wide uppercase transition-colors",
+            "flex items-center gap-1.5 px-3 border rounded-[9px] h-8 font-black text-[11px] uppercase tracking-wide transition-colors shrink-0",
             open || active > 0 ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F] hover:border-[#5C4033]/40",
           )}
         >
-          <SlidersHorizontal className="h-3.75 w-3.75" />
+          <SlidersHorizontal className="w-3.75 h-3.75" />
           <span>Filters</span>
-          {active > 0 && <span className="grid h-4 min-w-4 place-items-center rounded-full bg-white/25 px-1 text-[10px] leading-none">{active}</span>}
+          {active > 0 && <span className="place-items-center grid bg-white/25 px-1 rounded-full min-w-4 h-4 text-[10px] leading-none">{active}</span>}
         </button>
       </div>
 
       {open && (
-        <div className="flex flex-col gap-3.5 rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] p-3.5">
+        <div className="flex flex-col gap-3.5 bg-[#FFFDF7] p-3.5 border border-[#E6DFC8] rounded-[14px]">
           <FilterGroup label="Category">
             <FChip active={filters.category === "all"} onClick={() => set({ category: "all" })} label="All" />
             {types.map((c) => (
@@ -778,7 +778,7 @@ function FilterBar({ filters, setFilters, types }: { filters: Filters; setFilter
             <FToggle on={filters.bookable} onClick={() => set({ bookable: !filters.bookable })} label="Bookable only" />
             <FToggle on={filters.hasBadges} onClick={() => set({ hasBadges: !filters.hasBadges })} label="Has badges" />
             {active > 0 && (
-              <button type="button" onClick={() => set({ category: "all", behavior: "all", bookable: false, hasBadges: false })} className="ml-auto font-black text-[11px] tracking-wide text-[#5C4033] uppercase hover:underline">
+              <button type="button" onClick={() => set({ category: "all", behavior: "all", bookable: false, hasBadges: false })} className="ml-auto font-black text-[#5C4033] text-[11px] hover:underline uppercase tracking-wide">
                 Clear all
               </button>
             )}
@@ -792,7 +792,7 @@ function FilterBar({ filters, setFilters, types }: { filters: Filters; setFilter
 function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
-      <span className="font-black text-[10px] tracking-[0.12em] text-[#5F624F] uppercase">{label}</span>
+      <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-[0.12em]">{label}</span>
       <div className="flex flex-wrap gap-1.5">{children}</div>
     </div>
   );
@@ -807,13 +807,13 @@ function FChip({ active, onClick, label, color }: { active: boolean; onClick: ()
       onClick={onClick}
       style={activeColorStyle}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-[9px] border px-2.5 py-1.5 font-black text-[11px] transition-colors",
+        "inline-flex items-center gap-1.5 px-2.5 py-1.5 border rounded-[9px] font-black text-[11px] transition-colors",
         active && c && "border-(--fbd) bg-(--fb) text-(--ft)",
         active && !c && "border-[#5C4033] bg-[#5C4033] text-white",
         !active && "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F] hover:border-[#5C4033]",
       )}
     >
-      {c && <span style={{ "--fd": c.solid } as React.CSSProperties} className="h-2 w-2 rounded-full bg-(--fd)" />}
+      {c && <span style={{ "--fd": c.solid } as React.CSSProperties} className="h-2 w-2 bg-(--fd) rounded-full" />}
       {label}
     </button>
   );
@@ -821,9 +821,9 @@ function FChip({ active, onClick, label, color }: { active: boolean; onClick: ()
 
 function FToggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
-    <button type="button" onClick={onClick} className="inline-flex items-center gap-2 text-xs font-bold text-[#1F1F1A]">
-      <span className={cn("grid h-4.5 w-4.5 place-items-center rounded-md border-[1.5px] transition-colors", on ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-[#F7F4EA]")}>
-        {on && <Check className="h-3 w-3 stroke-3" />}
+    <button type="button" onClick={onClick} className="inline-flex items-center gap-2 font-bold text-[#1F1F1A] text-xs">
+      <span className={cn("place-items-center grid border-[1.5px] rounded-md w-4.5 h-4.5 transition-colors", on ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-[#F7F4EA]")}>
+        {on && <Check className="stroke-3 w-3 h-3" />}
       </span>
       {label}
     </button>
@@ -840,7 +840,7 @@ function IconBtn({ label, onClick, danger, children }: { label: string; onClick:
       title={label}
       onClick={onClick}
       className={cn(
-        "grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors sm:h-7 sm:w-7",
+        "place-items-center grid rounded-lg w-9 sm:w-7 h-9 sm:h-7 transition-colors shrink-0",
         danger ? "text-[#c0584d] hover:bg-[#fdecec] hover:text-[#DC2626]" : "text-[#5F624F] hover:bg-[#F7F4EA] hover:text-[#5C4033]",
       )}
     >
@@ -855,24 +855,24 @@ function BadgeChip({ badge, accent, onEdit, onDelete, large }: { badge: Badge; a
       onClick={onEdit}
       title={onEdit ? "Edit badge" : undefined}
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-[9px] border border-[#E6DFC8] bg-[#FFFDF7]",
+        "inline-flex items-center gap-1.5 bg-[#FFFDF7] border border-[#E6DFC8] rounded-[9px] max-w-full",
         large ? "px-2.5 py-2" : "px-2.5 py-1.5 pl-1.5",
         onEdit && "cursor-pointer transition-colors hover:border-[#5C4033] hover:bg-[#F7F4EA]",
       )}
     >
-      <span className={cn("grid shrink-0 place-items-center rounded-md bg-[#F7F4EA]", large ? "h-6.5 w-6.5" : "h-5 w-5", accent ? "text-(--sub-text)" : "text-[#5C4033]")}>
+      <span className={cn("place-items-center grid bg-[#F7F4EA] rounded-md shrink-0", large ? "h-6.5 w-6.5" : "h-5 w-5", accent ? "text-(--sub-text)" : "text-[#5C4033]")}>
         {renderBadgeIcon(badge.icon, large ? "w-3.75 h-3.75" : "w-3.25 h-3.25")}
       </span>
-      <span className={cn("truncate font-black whitespace-nowrap text-[#1F1F1A]", large ? "text-sm" : "text-xs")}>{badge.title}</span>
-      {badge.description && <span className="truncate border-l border-[#E6DFC8] pl-1.5 text-[11px] whitespace-nowrap text-[#5F624F]">{badge.description}</span>}
+      <span className={cn("font-black text-[#1F1F1A] truncate whitespace-nowrap", large ? "text-sm" : "text-xs")}>{badge.title}</span>
+      {badge.description && <span className="pl-1.5 border-[#E6DFC8] border-l text-[#5F624F] text-[11px] truncate whitespace-nowrap">{badge.description}</span>}
       {onDelete && (
         <button
           type="button"
           aria-label="Delete badge"
           onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="ml-0.5 grid h-4.25 w-4.25 shrink-0 place-items-center rounded-[5px] text-[#5F624F] hover:bg-[#fdecec] hover:text-[#DC2626]"
+          className="place-items-center grid hover:bg-[#fdecec] ml-0.5 rounded-[5px] w-4.25 h-4.25 text-[#5F624F] hover:text-[#DC2626] shrink-0"
         >
-          <X className="h-3 w-3 stroke-[2.5]" />
+          <X className="stroke-[2.5] w-3 h-3" />
         </button>
       )}
     </span>
@@ -888,8 +888,8 @@ function FlagDots({ s }: { s: Subtype }) {
   return (
     <span className="inline-flex items-center gap-1">
       {flags.map(({ Icon, label, tone }) => (
-        <span key={label} title={label} className={cn("grid h-5.5 w-5.5 place-items-center rounded-md border", tone)}>
-          <Icon className="h-2.75 w-2.75" />
+        <span key={label} title={label} className={cn("place-items-center grid border rounded-md w-5.5 h-5.5", tone)}>
+          <Icon className="w-2.75 h-2.75" />
         </span>
       ))}
     </span>
@@ -899,14 +899,14 @@ function FlagDots({ s }: { s: Subtype }) {
 /** Prominent ticket marker. `inverted` signals per-event booking (outlined). */
 function BookingMark({ inverted = false, title = "Bookable" }: { inverted?: boolean; title?: string }) {
   return (
-    <span title={title} className="inline-flex shrink-0 items-center">
+    <span title={title} className="inline-flex items-center shrink-0">
       <span
         className={cn(
-          "grid h-5.75 w-5.75 place-items-center rounded-[7px]",
+          "place-items-center grid rounded-[7px] w-5.75 h-5.75",
           inverted ? "border-[1.5px] border-[#862041] bg-white text-[#862041]" : "bg-[#862041] text-white shadow-[0_1px_4px_-1px_rgba(134,32,65,0.6)]",
         )}
       >
-        <Ticket className="h-3.25 w-3.25 stroke-[2.2]" />
+        <Ticket className="stroke-[2.2] w-3.25 h-3.25" />
       </span>
     </span>
   );
@@ -917,18 +917,18 @@ function BookingMark({ inverted = false, title = "Bookable" }: { inverted?: bool
 const SHEET_CLASS = "bg-[#F7F4EA] border-t border-[#E6DFC8] rounded-t-[28px] p-0 h-[92vh] flex flex-col outline-none shadow-2xl gap-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-165 sm:h-auto sm:max-h-[84vh] sm:rounded-[28px] sm:bottom-5.5 sm:border sm:border-[#E6DFC8]";
 
 function SheetGrab() {
-  return <div className="mx-auto mt-2.5 h-1.25 w-10.5 shrink-0 rounded-full bg-[#E6DFC8]" />;
+  return <div className="bg-[#E6DFC8] mx-auto mt-2.5 rounded-full w-10.5 h-1.25 shrink-0" />;
 }
 
 function SheetHead({ kicker, title, onClose }: { kicker: string; title: string; onClose: () => void }) {
   return (
-    <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#E6DFC8] px-5 pt-3 pb-4">
+    <div className="flex justify-between items-start gap-3 px-5 pt-3 pb-4 border-[#E6DFC8] border-b shrink-0">
       <div className="min-w-0">
-        <SheetDescription className="mb-1 font-black text-[10px] tracking-[0.13em] text-[#5F624F] uppercase">{kicker}</SheetDescription>
-        <SheetTitle className="font-black text-[22px] leading-none tracking-tight text-[#1F1F1A] uppercase">{title}</SheetTitle>
+        <SheetDescription className="mb-1 font-black text-[#5F624F] text-[10px] uppercase tracking-[0.13em]">{kicker}</SheetDescription>
+        <SheetTitle className="font-black text-[#1F1F1A] text-[22px] uppercase leading-none tracking-tight">{title}</SheetTitle>
       </div>
-      <button type="button" onClick={onClose} aria-label="Close" className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] border border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F] hover:text-[#1F1F1A]">
-        <X className="h-4.5 w-4.5" />
+      <button type="button" onClick={onClose} aria-label="Close" className="place-items-center grid bg-[#F7F4EA] border border-[#E6DFC8] rounded-[10px] w-9 h-9 text-[#5F624F] hover:text-[#1F1F1A] shrink-0">
+        <X className="w-4.5 h-4.5" />
       </button>
     </div>
   );
@@ -936,13 +936,13 @@ function SheetHead({ kicker, title, onClose }: { kicker: string; title: string; 
 
 function SheetFooter({ onCancel, onSave, pending, saveLabel, disableSave }: { onCancel: () => void; onSave: () => void; pending: boolean; saveLabel: string; disableSave?: boolean }) {
   return (
-    <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-[#E6DFC8] bg-[#FFFDF7] px-4 py-3.5 pb-8 sm:px-5">
+    <div className="gap-2.5 grid grid-cols-2 bg-[#FFFDF7] px-4 sm:px-5 py-3.5 pb-8 border-[#E6DFC8] border-t shrink-0">
       <Button
         type="button"
         variant="ghost"
         onClick={onCancel}
         disabled={pending}
-        className="h-12 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] font-black text-xs tracking-wide text-[#5F624F] uppercase hover:border-[#5C4033] hover:bg-[#EFEADD] hover:text-[#5C4033]"
+        className="bg-[#F7F4EA] hover:bg-[#EFEADD] border border-[#E6DFC8] hover:border-[#5C4033] rounded-xl h-12 font-black text-[#5F624F] hover:text-[#5C4033] text-xs uppercase tracking-wide"
       >
         Cancel
       </Button>
@@ -951,9 +951,9 @@ function SheetFooter({ onCancel, onSave, pending, saveLabel, disableSave }: { on
         disabled={pending || disableSave}
         title={disableSave ? "Resolve the highlighted fields before saving" : undefined}
         onClick={onSave}
-        className="h-12 rounded-xl bg-[#1B4332] font-black text-xs tracking-wide text-white uppercase hover:bg-[#2D5F49] disabled:pointer-events-none disabled:opacity-50"
+        className="bg-[#1B4332] hover:bg-[#2D5F49] disabled:opacity-50 rounded-xl h-12 font-black text-white text-xs uppercase tracking-wide disabled:pointer-events-none"
       >
-        {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : saveLabel}
+        {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : saveLabel}
       </Button>
     </div>
   );
@@ -965,15 +965,15 @@ function CollapsibleCard({ title, count, action, defaultOpen = true, bodyClassNa
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
-      <div className="flex items-center gap-2.5 bg-[#EFEADD] pr-3 transition-colors hover:bg-[#E6DFC8]">
+    <div className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
+      <div className="flex items-center gap-2.5 bg-[#EFEADD] hover:bg-[#E6DFC8] pr-3 transition-colors">
         <button type="button" onClick={() => setOpen((o) => !o)} className="flex flex-1 items-center gap-1.5 px-4 py-3 text-left">
-          <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{title}</span>
-          {count != null && <span className="inline-grid h-4.5 min-w-4.5 place-items-center rounded-full bg-[#5C4033] px-1.5 text-[10px] text-white">{count}</span>}
+          <span className="font-black text-[#5C4033] text-[11px] uppercase tracking-wide">{title}</span>
+          {count != null && <span className="inline-grid place-items-center bg-[#5C4033] px-1.5 rounded-full min-w-4.5 h-4.5 text-[10px] text-white">{count}</span>}
         </button>
         {action}
-        <button type="button" onClick={() => setOpen((o) => !o)} aria-label={`Toggle ${title}`} className="grid h-7 w-7 place-items-center text-[#5F624F]">
-          <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-label={`Toggle ${title}`} className="place-items-center grid w-7 h-7 text-[#5F624F]">
+          <ChevronDown className={cn("w-4 h-4 transition-transform", open && "rotate-180")} />
         </button>
       </div>
       {open && <div className={bodyClassName ?? ""}>{children}</div>}
@@ -985,12 +985,12 @@ function CollapsibleCard({ title, count, action, defaultOpen = true, bodyClassNa
 function BookingGroup({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
-    <div className="flex flex-col gap-2.5 rounded-[18px] border-[1.5px] border-[#bfe3cf] bg-[#1F8A5B]/5 p-2.5">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 px-1.5 pt-1 pb-0.5 font-black text-[10px] tracking-widest text-[#1F8A5B] uppercase">
-        <span className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-[#1F8A5B] text-white"><Ticket className="h-3 w-3 stroke-[2.2]" /></span>
+    <div className="flex flex-col gap-2.5 bg-[#1F8A5B]/5 p-2.5 border-[#bfe3cf] border-[1.5px] rounded-[18px]">
+      <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 px-1.5 pt-1 pb-0.5 font-black text-[#1F8A5B] text-[10px] uppercase tracking-widest">
+        <span className="place-items-center grid bg-[#1F8A5B] rounded-md w-5 h-5 text-white shrink-0"><Ticket className="stroke-[2.2] w-3 h-3" /></span>
         <span>Booking setup</span>
-        <span className="ml-auto font-bold tracking-normal text-[#1F8A5B]/70 normal-case">shown while bookable</span>
-        <ChevronDown className={cn("h-4 w-4 text-[#1F8A5B] transition-transform", open && "rotate-180")} />
+        <span className="ml-auto font-bold text-[#1F8A5B]/70 normal-case tracking-normal">shown while bookable</span>
+        <ChevronDown className={cn("w-4 h-4 text-[#1F8A5B] transition-transform", open && "rotate-180")} />
       </button>
       {open && <div className="flex flex-col gap-2.5">{children}</div>}
     </div>
@@ -1001,12 +1001,12 @@ function BookingGroup({ children }: { children: React.ReactNode }) {
 
 function FieldRow({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
   return (
-    <div className="border-t border-[#E6DFC8] px-4 py-3 first:border-t-0">
+    <div className="px-4 py-3 border-[#E6DFC8] border-t first:border-t-0">
       <div className="flex items-center gap-3">
-        <span className={cn("shrink-0 font-black text-[10px] tracking-wide uppercase", error ? "text-[#DC2626]" : "text-[#5F624F]")}>
+        <span className={cn("font-black text-[10px] uppercase tracking-wide shrink-0", error ? "text-[#DC2626]" : "text-[#5F624F]")}>
           {label}{required && <span className="ml-0.5 text-[#DC2626]">*</span>}
         </span>
-        <div className="flex min-w-0 flex-1 justify-end">{children}</div>
+        <div className="flex flex-1 justify-end min-w-0">{children}</div>
       </div>
       {error && <FieldError message={error} />}
     </div>
@@ -1015,8 +1015,8 @@ function FieldRow({ label, required, error, children }: { label: string; require
 
 function FieldCol({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2 border-t border-[#E6DFC8] px-4 py-3 first:border-t-0">
-      <span className={cn("font-black text-[10px] tracking-wide uppercase", error ? "text-[#DC2626]" : "text-[#5F624F]")}>{label}</span>
+    <div className="flex flex-col gap-2 px-4 py-3 border-[#E6DFC8] border-t first:border-t-0">
+      <span className={cn("font-black text-[10px] uppercase tracking-wide", error ? "text-[#DC2626]" : "text-[#5F624F]")}>{label}</span>
       {children}
       {error && <FieldError message={error} />}
     </div>
@@ -1026,8 +1026,8 @@ function FieldCol({ label, error, children }: { label: string; error?: string; c
 /** Inline validation message shown under a field. */
 function FieldError({ message }: { message: string }) {
   return (
-    <p className="mt-1.5 flex items-center gap-1 text-[11px] leading-snug font-bold text-[#DC2626]">
-      <AlertCircle className="h-3 w-3 shrink-0" />
+    <p className="flex items-center gap-1 mt-1.5 font-bold text-[#DC2626] text-[11px] leading-snug">
+      <AlertCircle className="w-3 h-3 shrink-0" />
       {message}
     </p>
   );
@@ -1043,7 +1043,7 @@ function SheetInput({ value, onChange, placeholder, type }: { value: string; onC
       placeholder={placeholder}
       aria-label={placeholder}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full bg-transparent text-right text-sm font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+      className="bg-transparent outline-none w-full font-semibold text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-sm text-right"
     />
   );
 }
@@ -1056,7 +1056,7 @@ function SheetTextarea({ value, onChange, placeholder }: { value: string; onChan
       aria-label={placeholder}
       rows={2}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full resize-none rounded-[10px] border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2.5 text-sm leading-relaxed font-medium text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 focus-visible:border-[#5C4033] focus-visible:ring-[3px] focus-visible:ring-[#5C4033]/10"
+      className="bg-[#F7F4EA] px-3 py-2.5 border border-[#E6DFC8] focus-visible:border-[#5C4033] rounded-[10px] outline-none focus-visible:ring-[#5C4033]/10 focus-visible:ring-[3px] w-full font-medium text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-sm leading-relaxed resize-none"
     />
   );
 }
@@ -1064,14 +1064,14 @@ function SheetTextarea({ value, onChange, placeholder }: { value: string; onChan
 /** Segmented control (e.g. booking grouping). */
 function SegRow<T extends string>({ options, value, onChange, render }: { options: T[]; value: T; onChange: (v: T) => void; render?: (v: T) => string }) {
   return (
-    <div className="flex gap-0.75 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-0.75">
+    <div className="flex gap-0.75 bg-[#F7F4EA] p-0.75 border border-[#E6DFC8] rounded-xl">
       {options.map((o) => (
         <button
           key={o}
           type="button"
           onClick={() => onChange(o)}
           className={cn(
-            "flex-1 rounded-lg px-2 py-2.5 text-[11px] font-extrabold tracking-wide uppercase transition-colors",
+            "flex-1 px-2 py-2.5 rounded-lg font-extrabold text-[11px] uppercase tracking-wide transition-colors",
             value === o ? "bg-[#5C4033] text-white" : "text-[#5F624F] hover:text-[#5C4033]",
           )}
         >
@@ -1084,10 +1084,10 @@ function SegRow<T extends string>({ options, value, onChange, render }: { option
 
 function ToggleRow({ label, sub, value, onChange }: { label: string; sub?: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-t border-[#E6DFC8] px-4 py-3 first:border-t-0">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="text-[13px] font-bold text-[#1F1F1A]">{label}</span>
-        {sub && <span className="text-[11px] text-[#5F624F]">{sub}</span>}
+    <div className="flex justify-between items-center gap-3 px-4 py-3 border-[#E6DFC8] border-t first:border-t-0">
+      <div className="flex flex-col gap-0.5 min-w-0">
+        <span className="font-bold text-[#1F1F1A] text-[13px]">{label}</span>
+        {sub && <span className="text-[#5F624F] text-[11px]">{sub}</span>}
       </div>
       <Switch value={value} onChange={onChange} label={label} />
     </div>
@@ -1102,16 +1102,16 @@ function Switch({ value, onChange, label }: { value: boolean; onChange: (v: bool
       aria-checked={value}
       aria-label={`Toggle ${label}`}
       onClick={() => onChange(!value)}
-      className={cn("relative h-6.25 w-11 shrink-0 rounded-full transition-colors", value ? "bg-[#22a356]" : "bg-[#d8d0bb]")}
+      className={cn("relative rounded-full w-11 h-6.25 transition-colors shrink-0", value ? "bg-[#22a356]" : "bg-[#d8d0bb]")}
     >
-      <span className={cn("absolute top-[2.5px] left-[2.5px] h-5 w-5 rounded-full bg-white shadow transition-transform", value && "translate-x-4.75")} />
+      <span className={cn("top-[2.5px] left-[2.5px] absolute bg-white shadow rounded-full w-5 h-5 transition-transform", value && "translate-x-4.75")} />
     </button>
   );
 }
 
 function BehaviorGrid({ value, onChange }: { value: EventBehavior; onChange: (v: EventBehavior) => void }) {
   return (
-    <div className="grid grid-cols-3 gap-1.75">
+    <div className="gap-1.75 grid grid-cols-3">
       {BEHAVIOR_OPTIONS.map((o) => {
         const I = BEHAVIOR_ICON[o.value];
         return (
@@ -1120,13 +1120,13 @@ function BehaviorGrid({ value, onChange }: { value: EventBehavior; onChange: (v:
             type="button"
             onClick={() => onChange(o.value)}
             className={cn(
-              "flex flex-col items-center gap-1.5 rounded-xl border px-1.5 py-2.5 text-[10px] font-extrabold tracking-wide uppercase transition-colors",
+              "flex flex-col items-center gap-1.5 px-1.5 py-2.5 border rounded-xl font-extrabold text-[10px] uppercase tracking-wide transition-colors",
               value === o.value
                 ? "border-[#5C4033] bg-[#5C4033] text-white"
                 : "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033]",
             )}
           >
-            <I className="h-3.75 w-3.75" />
+            <I className="w-3.75 h-3.75" />
             {o.label}
           </button>
         );
@@ -1154,7 +1154,7 @@ function ColorSwatches({ value, onChange }: { value: string | null; onChange: (c
               sel ? "scale-110 ring-2 ring-[#5C4033] ring-offset-2 ring-offset-[#F7F4EA]" : "opacity-80 hover:opacity-100",
             )}
           >
-            {sel && <Check className="h-3.5 w-3.5 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]" />}
+            {sel && <Check className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] w-3.5 h-3.5 text-white" />}
           </button>
         );
       })}
@@ -1166,7 +1166,7 @@ function BookingCardSection({ value, onChange }: { value: CardForm; onChange: (p
   return (
     <CollapsibleCard title="Booking Card">
       <div className="px-4 pt-3">
-        <p className="text-[11px] leading-relaxed text-[#5F624F]">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
+        <p className="text-[#5F624F] text-[11px] leading-relaxed">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
       </div>
       <FieldRow label="Card Title">
         <SheetInput value={value.booking_card_title} placeholder="e.g. Music Bingo" onChange={(v) => onChange({ booking_card_title: v })} />
@@ -1177,7 +1177,7 @@ function BookingCardSection({ value, onChange }: { value: CardForm; onChange: (p
       <FieldRow label="Card Badge">
         <SheetInput value={value.booking_card_badge} placeholder="e.g. Thursdays, Book Now" onChange={(v) => onChange({ booking_card_badge: v })} />
       </FieldRow>
-      <div className="border-t border-[#E6DFC8]">
+      <div className="border-[#E6DFC8] border-t">
         <IconPicker label="Card Icon" value={value.booking_card_icon} onChange={(name) => onChange({ booking_card_icon: name })} />
       </div>
     </CollapsibleCard>
@@ -1195,7 +1195,7 @@ const renderBadgeIcon = (iconStr: string | null, size = "w-4 h-4") => {
 /** Icon picker grid shared by the badge editors (8 columns, redesign). */
 function IconGrid({ value, onChange }: { value: string | null; onChange: (name: string) => void }) {
   return (
-    <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
+    <div className="gap-1.5 grid grid-cols-6 sm:grid-cols-8">
       {Object.entries(ICON_OPTIONS).map(([name, IconComponent]) => (
         <button
           key={name}
@@ -1205,13 +1205,13 @@ function IconGrid({ value, onChange }: { value: string | null; onChange: (name: 
           aria-pressed={value === name}
           onClick={() => onChange(name)}
           className={cn(
-            "grid aspect-square place-items-center rounded-lg border transition-colors active:scale-95",
+            "place-items-center grid border rounded-lg aspect-square active:scale-95 transition-colors",
             value === name
               ? "border-[#5C4033] bg-[#5C4033] text-white"
               : "border-[#E6DFC8] bg-[#FFFDF7] text-[#5F624F] hover:border-[#5C4033] hover:bg-[#F7F4EA] hover:text-[#5C4033]",
           )}
         >
-          <IconComponent className="h-4.25 w-4.25" />
+          <IconComponent className="w-4.25 h-4.25" />
         </button>
       ))}
     </div>
@@ -1222,29 +1222,29 @@ function IconGrid({ value, onChange }: { value: string | null; onChange: (name: 
 function BadgeEditorRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onChange: (b: BadgeDraft) => void; onDelete: () => void }) {
   const [pickOpen, setPickOpen] = useState(false);
   return (
-    <div className="rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-2.5">
+    <div className="bg-[#F7F4EA] p-2.5 border border-[#E6DFC8] rounded-xl">
       <div className="flex items-start gap-2.5">
         <button
           type="button"
           aria-label="Change icon"
           onClick={() => setPickOpen((o) => !o)}
-          className="relative grid h-10 w-10 shrink-0 place-items-center rounded-[10px] border border-[#E6DFC8] bg-white text-[#5C4033]"
+          className="relative place-items-center grid bg-white border border-[#E6DFC8] rounded-[10px] w-10 h-10 text-[#5C4033] shrink-0"
         >
           {renderBadgeIcon(badge.icon, "w-4.5 h-4.5")}
-          <span className="absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full bg-[#5C4033] text-white">
-            <ChevronDown className="h-2.5 w-2.5 stroke-3" />
+          <span className="-right-1 -bottom-1 absolute place-items-center grid bg-[#5C4033] rounded-full w-4 h-4 text-white">
+            <ChevronDown className="stroke-3 w-2.5 h-2.5" />
           </span>
         </button>
-        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <input value={badge.title} placeholder="Badge title" aria-label="Badge title" onChange={(e) => onChange({ ...badge, title: e.target.value })} className="w-full border-b border-transparent bg-transparent py-0.5 text-[13px] font-extrabold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 focus:border-[#E6DFC8]" />
-          <input value={badge.description} placeholder="Short description" aria-label="Badge description" onChange={(e) => onChange({ ...badge, description: e.target.value })} className="w-full border-b border-transparent bg-transparent py-0.5 text-xs text-[#5F624F] outline-none placeholder:text-[#5F624F]/40 focus:border-[#E6DFC8]" />
+        <div className="flex flex-col flex-1 gap-1.5 min-w-0">
+          <input value={badge.title} placeholder="Badge title" aria-label="Badge title" onChange={(e) => onChange({ ...badge, title: e.target.value })} className="bg-transparent py-0.5 border-transparent focus:border-[#E6DFC8] border-b outline-none w-full font-extrabold text-[#1F1F1A] text-[13px] placeholder:text-[#5F624F]/40" />
+          <input value={badge.description} placeholder="Short description" aria-label="Badge description" onChange={(e) => onChange({ ...badge, description: e.target.value })} className="bg-transparent py-0.5 border-transparent focus:border-[#E6DFC8] border-b outline-none w-full text-[#5F624F] placeholder:text-[#5F624F]/40 text-xs" />
         </div>
-        <button type="button" aria-label="Remove badge" onClick={onDelete} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[#5F624F] hover:bg-[#fdecec] hover:text-[#DC2626]">
-          <Trash2 className="h-3.5 w-3.5" />
+        <button type="button" aria-label="Remove badge" onClick={onDelete} className="place-items-center grid hover:bg-[#fdecec] rounded-lg w-7 h-7 text-[#5F624F] hover:text-[#DC2626] shrink-0">
+          <Trash2 className="w-3.5 h-3.5" />
         </button>
       </div>
       {pickOpen && (
-        <div className="mt-2.5 border-t border-[#E6DFC8] pt-2.5">
+        <div className="mt-2.5 pt-2.5 border-[#E6DFC8] border-t">
           <IconGrid value={badge.icon} onChange={(ic) => { onChange({ ...badge, icon: ic }); setPickOpen(false); }} />
         </div>
       )}
@@ -1254,9 +1254,9 @@ function BadgeEditorRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onCh
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 p-3">
-      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-      <p className="text-[11px] leading-snug font-bold text-red-600">{message}</p>
+    <div className="flex items-start gap-2.5 bg-red-50 p-3 border border-red-200 rounded-2xl">
+      <AlertCircle className="mt-0.5 w-4 h-4 text-red-500 shrink-0" />
+      <p className="font-bold text-[11px] text-red-600 leading-snug">{message}</p>
     </div>
   );
 }

@@ -4,7 +4,7 @@ import {
   Calendar, Banknote, Users, Trophy, Wine, 
   MapPin, Clock, DollarSign, Star, CheckCircle, 
   Music, Utensils, GlassWater, Heart, Smile, 
-  Sparkles, AlertCircle, Beer, Info, Speaker, User
+  Sparkles, AlertCircle, Beer, Info, Speaker, User, Ghost
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import Image from 'next/image';
@@ -20,7 +20,7 @@ const ICON_MAP: Record<string, React.ElementType> = {
   Banknote, Calendar, Users, Trophy, Wine,
   MapPin, Clock, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile,
-  Sparkles, AlertCircle, Beer, Info, Speaker, User
+  Sparkles, AlertCircle, Beer, Info, Speaker, User, Ghost
 };
 
 export default async function QuizBookingPage({
