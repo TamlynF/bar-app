@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
+import { SquareError } from "square";
 import { randomUUID } from "crypto";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import {
@@ -22,13 +23,31 @@ const appUrl = process.env.NEXT_PUBLIC_SITE_URL
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+/** Square env vars required to create a payment link (paid events only). */
+function missingSquareConfig(): string[] {
+  const missing: string[] = [];
+  if (!process.env.SQUARE_ACCESS_TOKEN) missing.push("SQUARE_ACCESS_TOKEN");
+  if (!process.env.SQUARE_LOCATION_ID) missing.push("SQUARE_LOCATION_ID");
+  return missing;
+}
+
+/** True when a thrown error is a Square auth failure — a missing/stale token, or
+    a token that doesn't match SQUARE_ENVIRONMENT (e.g. a prod token in sandbox). */
+function isSquareAuthError(err: unknown): err is SquareError {
+  return (
+    err instanceof SquareError &&
+    (err.statusCode === 401 ||
+      err.errors?.some((e) => e.category === "AUTHENTICATION_ERROR"))
+  );
+}
+
 export async function createEventBooking(formData: FormData) {
   console.log("createEventBooking called with formData:", Object.fromEntries(formData.entries()));
   console.log("Environment variables:", {
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
     VERCEL_URL: process.env.VERCEL_URL,
     SQUARE_ENVIRONMENT: process.env.SQUARE_ENVIRONMENT,
-    SQUARE_ACCESS_TOKEN: process.env.SQUARE_ACCESS_TOKEN,
+    SQUARE_ACCESS_TOKEN_present: !!process.env.SQUARE_ACCESS_TOKEN,
     SQUARE_LOCATION_ID: process.env.SQUARE_LOCATION_ID,
   });
   console.log(formData.get("event_id"), formData.get("full_name"), formData.get("email"), formData.get("group_size"));
@@ -65,6 +84,19 @@ export async function createEventBooking(formData: FormData) {
 
     const paymentAmountPence = Math.round((event.payment_amount || 0) * 100);
     const isFree = paymentAmountPence === 0;
+
+    // Paid events need Square configured. Check before writing any DB rows so a
+    // misconfiguration fails fast instead of orphaning a pending booking.
+    if (!isFree) {
+      const missing = missingSquareConfig();
+      if (missing.length) {
+        console.error(
+          `[createEventBooking] Square not configured — missing ${missing.join(", ")}. ` +
+            `Set them in .env.local and restart the dev server (env vars load at startup).`
+        );
+        return { error: "Payments are temporarily unavailable. Please try again later." };
+      }
+    }
 
     // 2. Table allocation — route through the shared module (seated events only).
     let chosenTable: FreeTable | null = null;
@@ -156,28 +188,50 @@ export async function createEventBooking(formData: FormData) {
     // `square-order` builders (unit-tested); we supply the impure bits here.
     const buyerPhone = buildBuyerPhone(countryCode, phoneNo);
 
-    const { paymentLink } = await squareClient.checkout.paymentLinks.create({
-      idempotencyKey: randomUUID(),
-      order: buildEventOrder({
-        locationId: process.env.SQUARE_LOCATION_ID!,
-        bookingId: newBooking.id,
-        eventId: event.id,
-        title: event.title || "Event",
-        amountPence: paymentAmountPence,
-        groupSize,
-        fullName,
-        email,
-        buyerPhone,
-      }),
-      checkoutOptions: {
-        redirectUrl: `${appUrl}/book/event/${eventId}/success?bookingId=${newBooking.id}`,
-        merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
-      },
-      prePopulatedData: buildPrePopulatedData({ email, fullName, buyerPhone }),
-    });
-console.log("Square payment link created:", paymentLink);
-    const checkoutUrl = paymentLink?.url;
-    const orderId = paymentLink?.orderId;
+    let checkoutUrl: string | undefined;
+    let orderId: string | undefined;
+    try {
+      const { paymentLink } = await squareClient.checkout.paymentLinks.create({
+        idempotencyKey: randomUUID(),
+        order: buildEventOrder({
+          locationId: process.env.SQUARE_LOCATION_ID!,
+          bookingId: newBooking.id,
+          eventId: event.id,
+          title: event.title || "Event",
+          amountPence: paymentAmountPence,
+          groupSize,
+          fullName,
+          email,
+          buyerPhone,
+        }),
+        checkoutOptions: {
+          redirectUrl: `${appUrl}/book/event/${eventId}/success?bookingId=${newBooking.id}`,
+          merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
+        },
+        prePopulatedData: buildPrePopulatedData({ email, fullName, buyerPhone }),
+      });
+      checkoutUrl = paymentLink?.url;
+      orderId = paymentLink?.orderId;
+    } catch (squareErr) {
+      // Roll back the pending booking (and any table hold) so a failed checkout
+      // doesn't leave an orphaned row behind.
+      await supabase.from("booking_table_mappings").delete().eq("booking_id", newBooking.id);
+      await supabase.from("bookings").delete().eq("id", newBooking.id);
+
+      if (isSquareAuthError(squareErr)) {
+        const env = process.env.SQUARE_ENVIRONMENT || "sandbox (default)";
+        console.error(
+          `[createEventBooking] Square rejected the payment-link request (HTTP ${squareErr.statusCode ?? "?"}, ` +
+            `AUTHENTICATION_ERROR). SQUARE_ENVIRONMENT=${env}, SQUARE_LOCATION_ID=${process.env.SQUARE_LOCATION_ID}. ` +
+            `If Orders/Payments work but only checkout fails, the Online Checkout API is not enabled for this ` +
+            `Square app/test account — enable it (or use a full-capability sandbox test account) in the Square ` +
+            `Developer Dashboard. Otherwise verify SQUARE_ACCESS_TOKEN matches SQUARE_ENVIRONMENT and restart the dev server.`
+        );
+      } else {
+        console.error("[createEventBooking] Square payment link error:", squareErr);
+      }
+      return { error: "We couldn't start checkout. Please try again in a moment." };
+    }
 
     if (!checkoutUrl) {
       await supabase.from("booking_table_mappings").delete().eq("booking_id", newBooking.id);

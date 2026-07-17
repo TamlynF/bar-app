@@ -6,6 +6,12 @@
       "type": "node-terminal",
       "request": "launch",
       "command": "npm run dev"
+    },
+    {
+      "name": "Next.js: debug client-side",
+      "type": "chrome",           // use "chrome" if you debug in Chrome
+      "request": "launch",
+      "url": "http://localhost:3000"
     }
   ]
 }
