@@ -140,7 +140,7 @@ export default async function GroupedBookingPage({
 
       <PublicNav currentPath="/book/group" />
 
-      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-12 pt-14 pb-4 pb-6 sm:px-6 lg:px-8">
+      <div className="relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-12 pb-4 sm:px-6 sm:pt-14 sm:pb-6 lg:px-8">
 
         {/* Header */}
         <div className="mb-4 flex flex-col items-center text-center sm:mb-6">
@@ -165,7 +165,7 @@ export default async function GroupedBookingPage({
           )}
           <div className="mt-4 space-y-2 px-2 sm:mt-5">
             {tagline && (
-              <p className="mx-auto max-w-sm text-center text-base text-xs leading-relaxed font-medium text-(--ev-fg-dim,#a8a29e) italic sm:max-w-2xl">
+              <p className="mx-auto max-w-sm text-center text-xs leading-relaxed font-medium text-(--ev-fg-dim,#a8a29e) italic sm:max-w-2xl sm:text-base">
                 {tagline}
               </p>
             )}
@@ -174,7 +174,7 @@ export default async function GroupedBookingPage({
 
         {/* Event Badges */}
         {badges.length > 0 && (
-          <div className="no-scrollbar -mx-4 mx-0 mb-4 mb-5 flex flex-row flex-wrap justify-center gap-2 gap-3 overflow-x-auto px-0 px-4 pb-4 sm:overflow-visible">
+          <div className="no-scrollbar -mx-4 mb-4 flex flex-row flex-wrap justify-center gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:mb-5 sm:gap-3 sm:overflow-visible sm:px-0">
             {badges.map((badge, index) => (
               <div
                 key={index}

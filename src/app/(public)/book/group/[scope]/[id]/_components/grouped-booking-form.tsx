@@ -209,7 +209,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
       <input type="hidden" name="special_requests" value={formData.specialRequests} />
 
       {/* Date selector + group size */}
-      <div className="grid grid-cols-1 gap-4 gap-6 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-1">
           <label className={labelClasses}>
             Select Date <span className="text-red-500">*</span>

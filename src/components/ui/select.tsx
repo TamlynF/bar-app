@@ -33,7 +33,7 @@ function SelectTrigger({
     <SelectPrimitive.Trigger
       data-slot="select-trigger"
       className={cn(
-        "flex w-full items-center justify-between rounded-xl outline-none disabled:cursor-not-allowed disabled:opacity-50 data-[placeholder]:text-stone-600 [&>span]:line-clamp-1 [&>span]:text-left",
+        "flex w-full items-center justify-between rounded-xl outline-none disabled:cursor-not-allowed disabled:opacity-50 data-placeholder:text-stone-600 [&>span]:line-clamp-1 [&>span]:text-left",
         className
       )}
       {...props}
@@ -59,7 +59,7 @@ function SelectContent({
         position={position}
         sideOffset={4}
         className={cn(
-          "relative z-50 max-h-(--radix-select-content-available-height) min-w-[8rem] origin-(--radix-select-content-transform-origin) overflow-hidden rounded-xl border border-white/10 bg-[#26300D] text-white shadow-2xl",
+          "relative z-50 max-h-(--radix-select-content-available-height) min-w-32 origin-(--radix-select-content-transform-origin) overflow-hidden rounded-xl border border-white/10 bg-[#26300D] text-white shadow-2xl",
           "data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
           className
         )}
@@ -106,7 +106,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer items-center rounded-lg py-2 pr-2 pl-8 text-sm text-white outline-none select-none data-[disabled]:pointer-events-none data-[disabled]:opacity-50 data-[highlighted]:bg-[#FDCC4B]/15 data-[highlighted]:text-[#FDCC4B]",
+        "relative flex w-full cursor-pointer items-center rounded-lg py-2 pr-2 pl-8 text-sm text-white outline-none select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-highlighted:bg-[#FDCC4B]/15 data-highlighted:text-[#FDCC4B]",
         className
       )}
       {...props}
