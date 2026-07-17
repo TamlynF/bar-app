@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { MapPin, Instagram, Facebook, ArrowRight } from "lucide-react";
+import { MapPin, ArrowRight } from "lucide-react";
+import { SiInstagram, SiFacebook } from "react-icons/si";
 import { SectionHeading } from "@/components/editorial/section-heading";
 
 const DAYS: { key: string; label: string }[] = [
@@ -81,7 +82,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
                 aria-label="Instagram"
                 className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-hairline bg-canvas-2 text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
               >
-                <Instagram className="h-5 w-5" aria-hidden="true" />
+                <SiInstagram className="h-5 w-5" aria-hidden="true" />
               </a>
             )}
             {fb && (
@@ -92,7 +93,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
                 aria-label="Facebook"
                 className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-hairline bg-canvas-2 text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
               >
-                <Facebook className="h-5 w-5" aria-hidden="true" />
+                <SiFacebook className="h-5 w-5" aria-hidden="true" />
               </a>
             )}
             {mapsHref && (

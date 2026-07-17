@@ -2,9 +2,10 @@
 
 import React, { useState, useTransition } from "react";
 import {
-  Building2, MapPin, Mail, Phone, Instagram, Facebook, Users,
+  Building2, MapPin, Mail, Phone, Users,
   Loader2, Pencil, Save, X, Upload, Trash2, Clock,
 } from "lucide-react";
+import { SiInstagram, SiFacebook } from "react-icons/si";
 import { updateCompanyInfo } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -379,8 +380,8 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
           <div>
             <h3 className={sectionLabel}>Social Media</h3>
             <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white shadow-sm">
-              <InfoRow icon={<Instagram className="h-4 w-4" />} label="Instagram" value={data.instagram} href={data.instagram ? `https://instagram.com/${data.instagram.replace("@", "")}` : undefined} />
-              <InfoRow icon={<Facebook className="h-4 w-4" />} label="Facebook" value={data.facebook} href={data.facebook?.startsWith("http") ? data.facebook : data.facebook ? `https://facebook.com/${data.facebook}` : undefined} />
+              <InfoRow icon={<SiInstagram className="h-4 w-4" />} label="Instagram" value={data.instagram} href={data.instagram ? `https://instagram.com/${data.instagram.replace("@", "")}` : undefined} />
+              <InfoRow icon={<SiFacebook className="h-4 w-4" />} label="Facebook" value={data.facebook} href={data.facebook?.startsWith("http") ? data.facebook : data.facebook ? `https://facebook.com/${data.facebook}` : undefined} />
               <InfoRow
                 icon={<svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>}
                 label="Twitter / X" value={data.twitter} href={data.twitter ? `https://x.com/${data.twitter.replace("@", "")}` : undefined}

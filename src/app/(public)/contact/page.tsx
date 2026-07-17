@@ -3,12 +3,11 @@ import {
   MapPin,
   Phone,
   Mail,
-  Instagram,
-  Facebook,
   ExternalLink,
   Clock,
   MessageSquare,
 } from "lucide-react";
+import { SiInstagram, SiFacebook } from "react-icons/si";
 import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import EnquiryForm from "./_components/enquiry-form";
@@ -148,11 +147,11 @@ export default async function ContactPage() {
         {/* Social */}
         {(info?.instagram || info?.facebook || info?.twitter || info?.tiktok || info?.youtube) && (
           <section className="mt-8">
-            <SectionLabel icon={Instagram} label="Follow Us" />
+            <SectionLabel icon={SiInstagram} label="Follow Us" />
             <div className="mt-3 grid grid-cols-2 gap-3">
               {info?.instagram && (
                 <SocialCard
-                  icon={Instagram}
+                  icon={SiInstagram}
                   label="Instagram"
                   handle={`@${info.instagram.replace("@", "")}`}
                   href={`https://instagram.com/${info.instagram.replace("@", "")}`}
@@ -160,7 +159,7 @@ export default async function ContactPage() {
               )}
               {info?.facebook && (
                 <SocialCard
-                  icon={Facebook}
+                  icon={SiFacebook}
                   label="Facebook"
                   handle={info.facebook}
                   href={

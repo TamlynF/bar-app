@@ -8,9 +8,6 @@ import {
   Clock,
   Inbox,
   Send,
-  Instagram,
-  Facebook,
-  Youtube,
   Music2,
   Link2,
   CalendarDays,
@@ -18,6 +15,7 @@ import {
   Mail,
   DollarSign,
 } from "lucide-react";
+import { SiInstagram, SiFacebook, SiYoutube } from "react-icons/si";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -54,9 +52,9 @@ const STATUS_CONFIG: Record<
 };
 
 const SOCIAL_ICONS: Record<string, React.ElementType> = {
-  instagram: Instagram,
-  facebook: Facebook,
-  youtube: Youtube,
+  instagram: SiInstagram,
+  facebook: SiFacebook,
+  youtube: SiYoutube,
   tiktok: Music2,
 };
 

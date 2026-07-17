@@ -6,9 +6,6 @@ import type { BandStatus } from "../actions";
 import {
   ChevronRight,
   ChevronDown,
-  Instagram,
-  Facebook,
-  Youtube,
   Music2,
   Link2,
   CheckCircle2,
@@ -28,6 +25,7 @@ import {
   Mail,
   Phone,
 } from "lucide-react";
+import { SiInstagram, SiFacebook, SiYoutube } from "react-icons/si";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -202,12 +200,12 @@ const STATUS_TOAST: Record<BandStatus, string> = {
 /** Per-platform brand colours (icon + button) for the social links. */
 const SOCIAL_META: Record<string, { icon: React.ElementType; className: string; label: string }> = {
   instagram: {
-    icon: Instagram,
+    icon: SiInstagram,
     className: "bg-linear-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] text-white border-transparent",
     label: "Instagram",
   },
-  facebook: { icon: Facebook, className: "bg-[#1877F2] text-white border-transparent", label: "Facebook" },
-  youtube: { icon: Youtube, className: "bg-[#FF0000] text-white border-transparent", label: "YouTube" },
+  facebook: { icon: SiFacebook, className: "bg-[#1877F2] text-white border-transparent", label: "Facebook" },
+  youtube: { icon: SiYoutube, className: "bg-[#FF0000] text-white border-transparent", label: "YouTube" },
   tiktok: { icon: Music2, className: "bg-black text-white border-transparent", label: "TikTok" },
 };
 

@@ -4,10 +4,11 @@ import React, { useState, useTransition, useRef } from "react";
 import { createBandBooking } from "@/app/(public)/_actions/create-band-booking";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
 import {
-  Instagram, Facebook, Youtube, Music2,
+  Music2,
   Plus, X, CheckCircle2, Calendar, Upload, Video, Loader2, AlertCircle,
   ChevronRight, ArrowLeft, ExternalLink,
 } from "lucide-react";
+import { SiInstagram, SiFacebook, SiYoutube } from "react-icons/si";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
@@ -16,7 +17,7 @@ const SOCIAL_FIELDS = [
   {
     key: "instagram" as const,
     label: "Instagram",
-    icon: Instagram,
+    icon: SiInstagram,
     iconColor: "text-[#E1306C]",
     prefix: "instagram.com/",
     placeholder: "yourhandle",
@@ -25,7 +26,7 @@ const SOCIAL_FIELDS = [
   {
     key: "facebook" as const,
     label: "Facebook",
-    icon: Facebook,
+    icon: SiFacebook,
     iconColor: "text-[#1877F2]",
     prefix: "facebook.com/",
     placeholder: "yourpage",
@@ -34,7 +35,7 @@ const SOCIAL_FIELDS = [
   {
     key: "youtube" as const,
     label: "YouTube",
-    icon: Youtube,
+    icon: SiYoutube,
     iconColor: "text-[#FF0000]",
     prefix: "youtube.com/@",
     placeholder: "yourchannel",
