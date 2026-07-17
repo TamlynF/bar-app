@@ -1930,22 +1930,15 @@ export function BandBookingCard({
               <div className="min-w-0">
                 <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#1F1F1A] uppercase">
                   {request.group_name || request.booker_name}
+                  {/* Reference inline — bracketed, italic and smaller. The copyable
+                      value lives in the System Information popover now. */}
+                  <span className="ml-1.5 text-sm font-semibold tracking-wide text-[#5F624F] normal-case italic">
+                    (#Ref: {shortRef})
+                  </span>
                 </SheetTitle>
                 <SheetDescription className="sr-only">
                   Review and manage this band request.
                 </SheetDescription>
-                {/* Reference — shortened uuid; click copies the full value */}
-                <button
-                  type="button"
-                  onClick={handleCopyRef}
-                  title={request.id}
-                  aria-label={`Copy reference ${request.id}`}
-                  className="group mt-1 flex items-center gap-1.5 text-[#5F624F] transition-colors hover:text-[#5C4033]"
-                >
-                  <Hash className="h-3 w-3 shrink-0" />
-                  <span className="font-black text-xs tracking-wide uppercase tabular-nums">Ref: {shortRef}</span>
-                  <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
-                </button>
               </div>
 
               {/* Quick actions (favourite, notes, audit). The linked-event pill now
@@ -1957,14 +1950,15 @@ export function BandBookingCard({
                   aria-pressed={isFavorite}
                   aria-label={isFavorite ? "Remove from favourites" : "Mark as favourite"}
                   title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
-                  className={cn(
-                    "flex h-11 w-11 items-center justify-center rounded-xl border transition-colors sm:h-9 sm:w-9",
-                    isFavorite
-                      ? "border-rose-200 bg-rose-50 text-rose-500 hover:bg-rose-100"
-                      : "border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA] hover:text-rose-500"
-                  )}
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white transition-colors hover:bg-[#F7F4EA] sm:h-9 sm:w-9"
                 >
-                  <Heart className={cn("h-4 w-4", isFavorite && "fill-current")} />
+                  {/* Background stays white; only the heart changes colour/fill. */}
+                  <Heart
+                    className={cn(
+                      "h-4 w-4 transition-colors",
+                      isFavorite ? "fill-rose-500 text-rose-500" : "text-[#5F624F]"
+                    )}
+                  />
                 </button>
 
                 {/* The same notes log the card row shows — notes save themselves,
@@ -1974,16 +1968,16 @@ export function BandBookingCard({
                     type="button"
                     aria-label={`Band notes (internal): ${bandNoteList.length}`}
                     title="Band notes (internal)"
-                    className={cn(
-                      "relative flex h-11 w-11 items-center justify-center rounded-xl border transition-colors sm:h-9 sm:w-9",
-                      // Blue when notes exist — the same on/off identity the card row's
-                      // NotebookPen carries, independent of the request's status hue.
-                      bandNoteList.length > 0
-                        ? "border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100"
-                        : "border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]"
-                    )}
+                    className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white transition-colors hover:bg-[#F7F4EA] sm:h-9 sm:w-9"
                   >
-                    <NotebookPen className={cn("h-4 w-4", bandNoteList.length > 0 && "fill-blue-600")} />
+                    {/* Background stays white; only the pen changes colour/fill —
+                        blue when notes exist, the same on/off read as the card row. */}
+                    <NotebookPen
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        bandNoteList.length > 0 ? "fill-blue-600 text-blue-600" : "text-[#5F624F]"
+                      )}
+                    />
                     {bandNoteList.length > 0 && (
                       <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#B45309] px-1 font-black text-[9px] text-white tabular-nums ring-2 ring-white">
                         {bandNoteList.length}
@@ -2009,6 +2003,23 @@ export function BandBookingCard({
                     <span className="block border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
                       System Information
                     </span>
+                    {/* Reference — the shortened uuid; click copies the full value. */}
+                    <SheetRow
+                      label="Reference"
+                      value={
+                        <button
+                          type="button"
+                          onClick={handleCopyRef}
+                          title={request.id}
+                          aria-label={`Copy reference ${request.id}`}
+                          className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] tabular-nums transition-colors hover:text-[#1F1F1A]"
+                        >
+                          <Hash className="h-3 w-3 shrink-0" />
+                          <span>{shortRef}</span>
+                          <Copy className="h-3 w-3 shrink-0 opacity-50 transition-opacity group-hover:opacity-100" />
+                        </button>
+                      }
+                    />
                     <SheetRow
                       label="Linked Event"
                       value={
@@ -2068,6 +2079,9 @@ export function BandBookingCard({
                 </Popover>
               </div>
             </div>
+            {/* Divider — the pipeline reads as its own zone, set apart from the act
+                name and the quick-action buttons in the row above. */}
+            <div className="mt-3 border-t border-[#E6DFC8]" />
             <StageStepper
               status={status}
               onSelect={handleAction}
