@@ -33,6 +33,7 @@ import {
   Info,
   Pencil,
   PoundSterling,
+  Undo2,
   User,
   Video,
   X,
@@ -2853,42 +2854,56 @@ export function BandBookingCard({
                     {clashes.length > 0 && <ClashList clashes={clashes} />}
                   </div>
 
-                  {/* The decline reason now lives in a popover on the declined stage
-                      chip in the header, so the footer keeps just the slot console. */}
+                  {/* Actions sit beside the slot console on one row (stacking under
+                      it only on a phone). With nothing changed there's just Close;
+                      an edit splits it into Cancel (discard) + Save. The decline
+                      reason moved to the header's declined chip, so this is all the
+                      right of the footer carries now. */}
+                  <div className="flex items-center justify-end gap-2 sm:flex-1">
+                    {!hasChanges ? (
+                      <button
+                        type="button"
+                        onClick={handleCancel}
+                        disabled={isPending}
+                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial sm:px-6"
+                      >
+                        <X className="h-3.5 w-3.5 shrink-0" />
+                        Close
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={handleCancel}
+                          disabled={isPending}
+                          title="Discard changes"
+                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial sm:px-6"
+                        >
+                          <Undo2 className="h-3.5 w-3.5 shrink-0" />
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSave}
+                          disabled={isPending || hasClashes || videosUploading}
+                          title={
+                            hasClashes
+                              ? clashWarning
+                              : videosUploading
+                                ? "Wait for videos to finish uploading."
+                                : undefined
+                          }
+                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-6"
+                        >
+                          {isPending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Save className="h-3.5 w-3.5 shrink-0" />}
+                          Save
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
 
                 {error && <p className="text-xs font-bold text-red-500">{error}</p>}
-
-                {/* All stage moves — including the Decline exit — live in the header
-                    stepper now. The footer keeps only Cancel and Save. */}
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    disabled={isPending}
-                    className="mr-auto flex h-11 flex-1 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial"
-                  >
-                    Cancel
-                  </button>
-                  {hasChanges && (
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={isPending || hasClashes || videosUploading}
-                      title={
-                        hasClashes
-                          ? clashWarning
-                          : videosUploading
-                            ? "Wait for videos to finish uploading."
-                            : undefined
-                      }
-                      className="flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial"
-                    >
-                      {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                      Save Changes
-                    </button>
-                  )}
-                </div>
             </div>
           </div>
           {ConfirmDialogUI}
