@@ -123,7 +123,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
 
       <PublicNav currentPath="/book/event" />
 
-      <div className="z-10 relative flex flex-col flex-1 mx-auto px-4 sm:px-6 lg:px-8 pt-14 pb-6 w-full max-w-3xl">
+      <div className="z-10 relative flex flex-col flex-1 mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6 w-full max-w-3xl">
 
         {/* Header */}
         <div className="flex flex-col items-center mb-6 sm:mb-10 text-center">
@@ -146,7 +146,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
               </div>
             </>
           ) : (
-            <div className="relative px-2 pt-6 sm:pt-10 w-full">
+            <div className="relative px-2 py-2 w-full max-h-[25vh]">
               {/* Soft gold glow behind the title */}
               <div
                 aria-hidden
@@ -154,7 +154,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
               />
 
               {/* Brand lockup — small; the logo already lives in the nav */}
-              <div className="inline-flex relative items-center gap-3 mb-4 sm:mb-5">
+              <div className="inline-flex relative items-center gap-3 mb-2.5">
                 <span aria-hidden className="bg-[#FDCC4B]/30 w-7 h-px" />
                 <Image src="/logo.jpeg" alt="" width={26} height={26} className="rounded-lg" />
                 <span className="font-black text-[#FDCC4B] text-[10px] uppercase tracking-[0.25em]">
@@ -164,26 +164,20 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
               </div>
 
               {/* The event is the hero */}
-              <h1 className="relative drop-shadow-[0_8px_40px_rgba(253,204,75,0.15)] font-black text-[#FFF4CC] text-4xl sm:text-6xl uppercase leading-[0.95] tracking-tighter">
+              <h1 className="relative drop-shadow-[0_8px_40px_rgba(253,204,75,0.15)] font-black text-[#FFF4CC] text-3xl sm:text-5xl uppercase leading-[0.95] tracking-tighter">
                 {eventTitle}
               </h1>
 
-              {/* Date / time chips — match the public form-input surface */}
-              <div className="relative flex flex-wrap justify-center items-center gap-2.5 mt-5">
+              {/* Combined date + time chip — one pill when there's no booking image */}
+              <div className="relative flex flex-wrap justify-center items-center gap-2.5 mt-3">
                 <span className="inline-flex items-center gap-2 bg-black/40 px-4 py-2 border border-white/10 rounded-full font-bold text-[#FFF4CC] text-xs">
                   <Calendar className="w-3.5 h-3.5 text-[#FDCC4B]" aria-hidden />
-                  {eventDate}
+                  {eventDate}{timeStr ? ` · ${timeStr}` : ""}
                 </span>
-                {timeStr && (
-                  <span className="inline-flex items-center gap-2 bg-black/40 px-4 py-2 border border-white/10 rounded-full font-bold text-[#FFF4CC] text-xs">
-                    <Clock className="w-3.5 h-3.5 text-[#FDCC4B]" aria-hidden />
-                    {timeStr}
-                  </span>
-                )}
               </div>
 
               {tagline && (
-                <p className="relative mt-4 text-stone-500 text-xs sm:text-sm italic">{tagline}</p>
+                <p className="relative mx-auto mt-3 w-full max-w-none font-medium text-[#FDCC4B]/90 text-base sm:text-xl italic">{tagline}</p>
               )}
             </div>
           )}
