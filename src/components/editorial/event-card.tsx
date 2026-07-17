@@ -95,11 +95,23 @@ function FrontCta({ event }: { event: SerializedEvent }) {
   return null;
 }
 
-const SOCIAL_META: { key: keyof BandInfo["socialLinks"]; Icon: IconType; label: string }[] = [
-  { key: "instagram", Icon: SiInstagram, label: "Instagram" },
-  { key: "facebook", Icon: SiFacebook, label: "Facebook" },
-  { key: "youtube", Icon: SiYoutube, label: "YouTube" },
-  { key: "tiktok", Icon: SiTiktok, label: "TikTok" },
+// Brand fills mirror the admin band card's social scheme so the icons read the
+// same everywhere: Instagram gradient, Facebook blue, YouTube red, TikTok black.
+const SOCIAL_META: {
+  key: keyof BandInfo["socialLinks"];
+  Icon: IconType;
+  label: string;
+  className: string;
+}[] = [
+  {
+    key: "instagram",
+    Icon: SiInstagram,
+    label: "Instagram",
+    className: "bg-linear-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] text-white",
+  },
+  { key: "facebook", Icon: SiFacebook, label: "Facebook", className: "bg-[#1877F2] text-white" },
+  { key: "youtube", Icon: SiYoutube, label: "YouTube", className: "bg-[#FF0000] text-white" },
+  { key: "tiktok", Icon: SiTiktok, label: "TikTok", className: "bg-black text-white ring-1 ring-white/20" },
 ];
 
 /** Back-face band block for music acts: social icons + video-thumbnail links.
@@ -117,7 +129,7 @@ function BandMedia({ band, title }: { band: BandInfo; title: string }) {
     <div className="mt-3 flex flex-col gap-3">
       {socials.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
-          {socials.map(({ key, url, Icon, label }) => (
+          {socials.map(({ key, url, Icon, label, className }) => (
             <a
               key={key}
               href={url}
@@ -125,7 +137,10 @@ function BandMedia({ band, title }: { band: BandInfo; title: string }) {
               rel="noopener noreferrer"
               onClick={stop}
               aria-label={`${title} on ${label}`}
-              className="pointer-events-auto inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline bg-white/5 text-ink-2 transition-colors hover:border-white/30 hover:text-ink"
+              className={
+                "pointer-events-auto inline-flex h-8 w-8 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-95 " +
+                className
+              }
             >
               <Icon className="h-4 w-4" aria-hidden="true" />
             </a>
@@ -300,14 +315,37 @@ export function EventCard({
             (open ? " is-lit" : " pointer-events-none")
           }
         >
-          <div className="mb-2 flex items-center gap-2">
-            <span
-              className="ev-dot h-2 w-2 shrink-0 rounded-full"
-              style={{ "--ev-c": event.color } as React.CSSProperties}
-            />
-            <span className="truncate font-black text-[9px] tracking-[0.25em] text-ink-2 uppercase">
-              {subLabel} · {format(dateObj, "EEE d MMM")}
-            </span>
+          {/* Header — subtype in its own colour + a bold date, with the time and
+              ticket/entry line moved up here so the essentials read at a glance
+              the moment the card flips (they used to sit in a footer). */}
+          <div className="mb-3 border-b border-hairline pb-3">
+            <div className="flex items-center gap-2">
+              <span
+                className="ev-dot h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ "--ev-c": event.color } as React.CSSProperties}
+              />
+              <span
+                className="ev-text truncate font-black text-[11px] tracking-[0.28em] uppercase"
+                style={{ "--ev-c": event.color } as React.CSSProperties}
+              >
+                {subLabel}
+              </span>
+            </div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="inline-flex items-center gap-1.5 font-black text-sm tracking-tight text-ink uppercase">
+                <CalendarDays className="h-3.5 w-3.5 shrink-0 text-ink-2" aria-hidden="true" />
+                {format(dateObj, "EEE d MMM")}
+              </span>
+              {timeLabel && (
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-ink-2 tabular-nums">
+                  <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                  {timeLabel}
+                </span>
+              )}
+              <span className="font-black text-[10px] tracking-widest text-ink-2 uppercase">
+                {entryText(event)}
+              </span>
+            </div>
           </div>
 
           {event.externalLink ? (
@@ -345,12 +383,6 @@ export function EventCard({
           {event.behavior === "music_act" && event.band && (
             <BandMedia band={event.band} title={event.title} />
           )}
-
-          <div className="mt-auto border-t border-hairline pt-3">
-            <span className="text-[10px] font-bold tracking-widest text-ink-2 uppercase">
-              {[timeLabel, entryText(event)].filter(Boolean).join(" · ")}
-            </span>
-          </div>
         </div>
       </div>
     </div>
