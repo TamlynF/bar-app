@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition, useRef } from "react";
 import { createBandBooking } from "@/app/(public)/_actions/create-band-booking";
-import { createClient } from "@/lib/supabase/client";
+import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
 import {
   Instagram, Facebook, Youtube, Music2,
   Plus, X, CheckCircle2, Calendar, Upload, Video, Loader2, AlertCircle,
@@ -52,12 +52,18 @@ const SOCIAL_FIELDS = [
 ];
 
 interface VideoFile {
+  id: string;
   file: File;
   previewUrl: string;
   uploadedUrl: string | null;
+  description: string;
+  progress: number;
   error: string | null;
   uploading: boolean;
 }
+
+const MAX_VIDEOS = 10;
+const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
 
 const inputClass =
   "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-600 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
@@ -95,7 +101,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
   const [preferredDates, setPreferredDates] = useState<string[]>(["", ""]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = createClient();
+  const uploadHandles = useRef<Record<string, ResumableHandle>>({});
 
   function handleSocial(key: string, value: string) {
     setSocialLinks((prev) => ({ ...prev, [key]: value }));
@@ -132,6 +138,10 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
       if (!name.trim()) { setStepError("Please enter your name."); return; }
       if (!email.trim() || !email.includes("@")) { setStepError("Please enter a valid email address."); return; }
     }
+    if (step === 3 && videoFiles.some((v) => !v.uploadedUrl)) {
+      setStepError("Please wait for all videos to finish uploading (or remove any that failed).");
+      return;
+    }
     setStep((s) => s + 1);
   }
 
@@ -140,54 +150,64 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
     setStep((s) => s - 1);
   }
 
-  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  function updateVideo(id: string, patch: Partial<VideoFile>) {
+    setVideoFiles((prev) => prev.map((v) => (v.id === id ? { ...v, ...patch } : v)));
+  }
+
+  function setVideoDescription(id: string, value: string) {
+    updateVideo(id, { description: value });
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
 
-    const remaining = 3 - videoFiles.length;
+    const remaining = MAX_VIDEOS - videoFiles.length;
     const toAdd = files.slice(0, remaining);
 
-    const newEntries: VideoFile[] = toAdd.map((file) => ({
-      file,
-      previewUrl: URL.createObjectURL(file),
-      uploadedUrl: null,
-      error: null,
-      uploading: true,
-    }));
+    for (const file of toAdd) {
+      const id = crypto.randomUUID();
+      const previewUrl = URL.createObjectURL(file);
 
-    setVideoFiles((prev) => [...prev, ...newEntries]);
+      if (file.size > MAX_VIDEO_BYTES) {
+        setVideoFiles((prev) => [
+          ...prev,
+          { id, file, previewUrl, uploadedUrl: null, description: "", progress: 0, error: "File too large (max 250 MB).", uploading: false },
+        ]);
+        continue;
+      }
 
-    for (let i = 0; i < toAdd.length; i++) {
-      const file = toAdd[i];
+      setVideoFiles((prev) => [
+        ...prev,
+        { id, file, previewUrl, uploadedUrl: null, description: "", progress: 0, error: null, uploading: true },
+      ]);
+
       const ext = file.name.split(".").pop();
       const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-      const { data, error: uploadError } = await supabase.storage
-        .from("band-videos")
-        .upload(path, file, { cacheControl: "3600", upsert: false });
-
-      const publicUrl = data
-        ? supabase.storage.from("band-videos").getPublicUrl(data.path).data.publicUrl
-        : null;
-
-      setVideoFiles((prev) => {
-        const globalIndex = prev.length - toAdd.length + i;
-        return prev.map((v, idx) =>
-          idx === globalIndex
-            ? { ...v, uploading: false, uploadedUrl: publicUrl, error: uploadError?.message ?? null }
-            : v
-        );
+      uploadHandles.current[id] = uploadVideoResumable(file, path, {
+        onProgress: (pct) => updateVideo(id, { progress: pct }),
+        onSuccess: (publicUrl) => {
+          updateVideo(id, { uploading: false, uploadedUrl: publicUrl, progress: 100 });
+          delete uploadHandles.current[id];
+        },
+        onError: (message) => {
+          updateVideo(id, { uploading: false, error: message });
+          delete uploadHandles.current[id];
+        },
       });
     }
 
     if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
-  function removeVideo(index: number) {
+  function removeVideo(id: string) {
+    uploadHandles.current[id]?.abort();
+    delete uploadHandles.current[id];
     setVideoFiles((prev) => {
-      const entry = prev[index];
-      URL.revokeObjectURL(entry.previewUrl);
-      return prev.filter((_, i) => i !== index);
+      const entry = prev.find((v) => v.id === id);
+      if (entry) URL.revokeObjectURL(entry.previewUrl);
+      return prev.filter((v) => v.id !== id);
     });
   }
 
@@ -195,15 +215,14 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
     e.preventDefault();
     setError(null);
 
-    const stillUploading = videoFiles.some((v) => v.uploading);
-    if (stillUploading) {
-      setError("Please wait for all videos to finish uploading.");
+    if (videoFiles.some((v) => !v.uploadedUrl)) {
+      setError("Please wait for all videos to finish uploading (or remove any that failed).");
       return;
     }
 
-    const uploadedUrls = videoFiles
-      .filter((v) => v.uploadedUrl)
-      .map((v) => v.uploadedUrl as string);
+    const uploaded = videoFiles.filter((v) => v.uploadedUrl);
+    const uploadedUrls = uploaded.map((v) => v.uploadedUrl as string);
+    const videoDescriptions = uploaded.map((v) => v.description.trim());
 
     const builtSocialLinks: Record<string, string> = {};
     SOCIAL_FIELDS.forEach(({ key, urlBuilder }) => {
@@ -223,6 +242,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           phone_no: phone || undefined,
           social_links: builtSocialLinks,
           video_urls: uploadedUrls,
+          video_descriptions: videoDescriptions,
           preferred_dates: preferredDates.filter(Boolean),
           notes: notes || undefined,
         });
@@ -448,43 +468,74 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
                 <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Performance Videos</p>
-                <span className="text-[10px] font-bold text-stone-600">{videoFiles.length}/3</span>
+                <span className="text-[10px] font-bold text-stone-600">{videoFiles.length}/{MAX_VIDEOS}</span>
               </div>
               <p className="-mt-1 text-[11px] text-stone-600">
-                Upload videos of your act (MP4, WebM, MOV — max 50 MB each).
+                Upload videos of your act (MP4, WebM, MOV — max 250 MB each).
               </p>
 
               {videoFiles.length > 0 && (
-                <div className="space-y-2">
-                  {videoFiles.map((vf, i) => (
-                    <div key={i} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                      <Video className="h-4 w-4 shrink-0 text-stone-500" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-white">{vf.file.name}</p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {videoFiles.map((vf) => (
+                    <div key={vf.id} className="overflow-hidden rounded-xl border border-white/10 bg-white/5">
+                      <div className="relative aspect-video w-full bg-black">
+                        <video
+                          src={`${vf.previewUrl}#t=0.1`}
+                          preload="metadata"
+                          controls
+                          className="h-full w-full object-contain"
+                        >
+                          <track kind="captions" />
+                        </video>
                         {vf.uploading && (
-                          <p className="mt-0.5 flex items-center gap-1 text-[10px] text-stone-500">
-                            <Loader2 className="h-2.5 w-2.5 animate-spin" /> Uploading…
+                          <div className="absolute inset-x-0 bottom-0 bg-black/70 px-2 py-1.5">
+                            <div className="flex items-center gap-1 text-[10px] font-medium text-stone-200">
+                              <Loader2 className="h-2.5 w-2.5 animate-spin" /> Uploading… {vf.progress}%
+                            </div>
+                            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/15">
+                              <div
+                                style={{ "--progress": `${vf.progress}%` } as React.CSSProperties}
+                                className="h-full w-(--progress) rounded-full bg-[#FDCC4B] transition-all"
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="space-y-2 p-3">
+                        <div className="flex items-center gap-2">
+                          <Video className="h-3.5 w-3.5 shrink-0 text-stone-500" />
+                          <p className="min-w-0 flex-1 truncate text-xs font-medium text-white">{vf.file.name}</p>
+                          <button title={`Remove ${vf.file.name}`} type="button" onClick={() => removeVideo(vf.id)}
+                            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-stone-600 transition-all hover:bg-red-400/10 hover:text-red-400">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                        {!vf.uploading && vf.uploadedUrl && (
+                          <p className="flex items-center gap-1 text-[10px] text-green-400">
+                            <CheckCircle2 className="h-2.5 w-2.5" /> Uploaded
                           </p>
                         )}
-                        {!vf.uploading && vf.uploadedUrl && (
-                          <p className="mt-0.5 text-[10px] text-green-400">Uploaded ✓</p>
-                        )}
                         {!vf.uploading && vf.error && (
-                          <p className="mt-0.5 flex items-center gap-1 text-[10px] text-red-400">
+                          <p className="flex items-center gap-1 text-[10px] text-red-400">
                             <AlertCircle className="h-2.5 w-2.5" /> {vf.error}
                           </p>
                         )}
+                        <input
+                          type="text"
+                          aria-label={`Description for ${vf.file.name}`}
+                          maxLength={120}
+                          value={vf.description}
+                          onChange={(e) => setVideoDescription(vf.id, e.target.value)}
+                          placeholder="Add a short description (optional)"
+                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs text-white placeholder:text-stone-600 focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 focus:outline-none"
+                        />
                       </div>
-                      <button title="Remove" type="button" onClick={() => removeVideo(i)}
-                        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-stone-600 transition-all hover:bg-red-400/10 hover:text-red-400">
-                        <X className="h-3.5 w-3.5" />
-                      </button>
                     </div>
                   ))}
                 </div>
               )}
 
-              {videoFiles.length < 3 && (
+              {videoFiles.length < MAX_VIDEOS && (
                 <>
                   <input
                     title="Upload Videos"
@@ -588,7 +639,8 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
             key="next"
             type="button"
             onClick={handleNext}
-            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98]"
+            disabled={step === 3 && videoFiles.some((v) => !v.uploadedUrl)}
+            className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Next
             <ChevronRight className="h-4 w-4" />
@@ -597,7 +649,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           <button
             key="submit"
             type="submit"
-            disabled={isPending || videoFiles.some((v) => v.uploading)}
+            disabled={isPending || videoFiles.some((v) => !v.uploadedUrl)}
             className="h-14 flex-1 rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? "Submitting…" : "Submit Application"}

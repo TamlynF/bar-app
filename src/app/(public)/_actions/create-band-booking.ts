@@ -23,6 +23,7 @@ export interface BandBookingData {
     tiktok?: string;
   };
   video_urls: string[];
+  video_descriptions?: string[];
   preferred_dates: string[];
   notes?: string;
 }
@@ -43,6 +44,7 @@ export async function createBandBooking(data: BandBookingData) {
         phone_no: data.phone_no || null,
         social_links: data.social_links,
         video_urls: data.video_urls.filter(Boolean),
+        video_descriptions: data.video_descriptions ?? [],
         preferred_dates: data.preferred_dates.filter(Boolean),
         notes: data.notes || null,
         status: "new",
@@ -93,7 +95,13 @@ async function sendAdminEmail(data: BandBookingData, id: string) {
     .map(([k, v]) => `<li><strong>${k}:</strong> ${v}</li>`)
     .join("");
 
-  const videos = data.video_urls.filter(Boolean).map((u) => `<li>${u}</li>`).join("");
+  const videos = data.video_urls
+    .filter(Boolean)
+    .map((u, i) => {
+      const desc = data.video_descriptions?.[i]?.trim();
+      return `<li>${u}${desc ? ` — ${desc}` : ""}</li>`;
+    })
+    .join("");
   const dates = data.preferred_dates.filter(Boolean).join(", ") || "Not specified";
 
   const html = `
