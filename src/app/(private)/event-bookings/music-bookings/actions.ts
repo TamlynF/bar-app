@@ -108,6 +108,58 @@ export async function updateBandBookingFields(
 }
 
 /**
+ * Internal notes on a band application (`band_booking_notes`) — a list, each note
+ * its own row with an author and timestamp. Separate from the applicant's own
+ * booking note (`notes`) and from `admin_notes`, which carries the decline reason.
+ *
+ * These write straight through rather than going via the sheet's Save: a note is
+ * a self-contained thing you add or amend, not a field of the request, so it
+ * isn't part of the request's dirty/save cycle.
+ */
+const NOTE_REVALIDATE = ["/event-bookings/music-bookings"] as const;
+
+function revalidateNotes() {
+  for (const path of NOTE_REVALIDATE) revalidatePath(path);
+}
+
+export async function addBandNote(requestId: string, body: string) {
+  const text = body.trim();
+  if (!text) throw new Error("A note can't be empty.");
+
+  const supabase = await createClient();
+  const empId = await currentEmployeeId();
+  const { error } = await supabase
+    .from("band_booking_notes")
+    .insert({ request_id: requestId, body: text, created_by: empId, updated_by: empId });
+
+  if (error) throw new Error("Failed to add the note.");
+  revalidateNotes();
+}
+
+export async function updateBandNote(noteId: string, body: string) {
+  const text = body.trim();
+  if (!text) throw new Error("A note can't be empty.");
+
+  const supabase = await createClient();
+  const empId = await currentEmployeeId();
+  const { error } = await supabase
+    .from("band_booking_notes")
+    .update({ body: text, updated_by: empId, updated_at: new Date().toISOString() })
+    .eq("id", noteId);
+
+  if (error) throw new Error("Failed to save the note.");
+  revalidateNotes();
+}
+
+export async function deleteBandNote(noteId: string) {
+  const supabase = await createClient();
+  const { error } = await supabase.from("band_booking_notes").delete().eq("id", noteId);
+
+  if (error) throw new Error("Failed to delete the note.");
+  revalidateNotes();
+}
+
+/**
  * Flags/unflags a request as a favourite. Unlike `updateBandBookingFields` this
  * deliberately does NOT stamp updated_by/updated_at — a favourite is a bookmark,
  * not an edit to the record, so it stays out of the audit trail.

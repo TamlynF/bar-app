@@ -11,9 +11,13 @@ export default async function MusicBookingsPage() {
   const { data: requests, error } = await supabase
     .from("band_booking_requests")
     .select(
-      "*, updated_by_employee:employees!updated_by(full_name), linked_event:events!band_booking_requests_event_id_fkey(is_active)"
+      "*, updated_by_employee:employees!updated_by(full_name)," +
+        " linked_event:events!band_booking_requests_event_id_fkey(is_active)," +
+        " band_notes_list:band_booking_notes(id, body, created_at, author:employees!band_booking_notes_created_by_fkey(full_name))"
     )
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    // Notes read oldest-first, as a running log.
+    .order("created_at", { referencedTable: "band_booking_notes", ascending: true });
 
   if (error) console.error("Music bookings fetch error:", error);
 

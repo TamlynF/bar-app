@@ -38,6 +38,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { VideoFacade } from "@/components/video-facade";
+import BandNotesPopover from "./band-notes-popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -63,6 +64,15 @@ interface SocialLinks {
   tiktok?: string;
 }
 
+/** One internal note on a request — a row of `band_booking_notes`. */
+export interface BandNote {
+  id: string;
+  body: string;
+  created_at: string;
+  /** Joined employee for `created_by` — who wrote it. */
+  author?: { full_name: string | null } | { full_name: string | null }[] | null;
+}
+
 export interface BandRequest {
   id: string;
   group_name: string | null;
@@ -77,7 +87,13 @@ export interface BandRequest {
   video_descriptions: string[] | null;
   preferred_dates: string[] | null;
   notes: string | null;
+  /**
+   * @deprecated Superseded by `band_notes_list` (`band_booking_notes`). Kept only
+   * because the column still exists; nothing writes it any more.
+   */
   band_notes: string | null;
+  /** Internal notes, oldest first. */
+  band_notes_list?: BandNote[] | null;
   status: string;
   admin_notes: string | null;
   created_at: string;
@@ -686,7 +702,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   // sharing `isPending` would grey out the footer actions on every heart tap.
   const [isFavorite, setIsFavorite] = useState(request.is_favorite);
   const [, startFavTransition] = useTransition();
-  const [notesOpen, setNotesOpen] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [declineReasonOpen, setDeclineReasonOpen] = useState(false);
 
@@ -698,7 +713,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [bookerName, setBookerName] = useState(request.booker_name ?? "");
   const [email, setEmail] = useState(request.email ?? "");
   const [phone, setPhone] = useState(request.phone_no ?? "");
-  const [bandNotes, setBandNotes] = useState(request.band_notes ?? "");
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(request.social_links ?? {});
   const [socialEditorOpen, setSocialEditorOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(request.payment_amount != null ? String(request.payment_amount) : "");
@@ -812,6 +826,12 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     .map((url, i) => ({ url, description: (request.video_descriptions ?? [])[i]?.trim() || "" }))
     .filter((v) => Boolean(v.url));
   const dates = (request.preferred_dates ?? []).filter(Boolean);
+  // Internal notes, oldest first (the query orders them). Server-owned: they save
+  // on their own, so they're read straight off the request rather than mirrored
+  // into state like the editable fields below.
+  const bandNoteList = request.band_notes_list ?? [];
+  /** Drives the fee marker in the icon rail, and how much room the name must leave. */
+  const hasFee = (request.payment_amount ?? 0) > 0;
 
   // Payment status is derived live from the amount + paid inputs, never edited.
   const amountNum = paymentAmount === "" ? 0 : Number(paymentAmount) || 0;
@@ -837,7 +857,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     bookerName !== (request.booker_name ?? "") ||
     email !== (request.email ?? "") ||
     phone !== (request.phone_no ?? "") ||
-    bandNotes !== (request.band_notes ?? "") ||
     paymentAmount !== (request.payment_amount != null ? String(request.payment_amount) : "") ||
     paidAmount !== (request.paid_amount != null ? String(request.paid_amount) : "") ||
     bankAccountName !== (request.bank_account_name ?? "") ||
@@ -857,7 +876,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     booker_name: bookerName,
     email,
     phone_no: phone || null,
-    band_notes: bandNotes || null,
     social_links: normalizeSocials(socialLinks),
     payment_amount: paymentAmount === "" ? null : Number(paymentAmount),
     paid_amount: paidAmount === "" ? null : Number(paidAmount),
@@ -986,7 +1004,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     setBookerName(request.booker_name ?? "");
     setEmail(request.email ?? "");
     setPhone(request.phone_no ?? "");
-    setBandNotes(request.band_notes ?? "");
     setSocialLinks(request.social_links ?? {});
     setPaymentAmount(request.payment_amount != null ? String(request.payment_amount) : "");
     setPaidAmount(request.paid_amount != null ? String(request.paid_amount) : "");
@@ -1346,8 +1363,10 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           <span className="sr-only">Open {request.group_name || request.booker_name}</span>
         </button>
 
-        {/* Favourite — persists on click, no Save needed. Above the stretched
-            button so its own click lands here instead of opening the sheet. */}
+        {/* Icon rail (top-right). Both sit above the stretched button so their
+            clicks land on them rather than opening the sheet. */}
+
+        {/* Favourite — persists on click, no Save needed. */}
         <button
           type="button"
           onClick={handleToggleFavorite}
@@ -1365,93 +1384,128 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           <span className="sr-only">{isFavorite ? "Favourited" : "Mark as favourite"}</span>
         </button>
 
-        {/* Content sits above the stretched button but passes clicks through to it,
-            so only the favourite is separately clickable. pr-11 keeps the row clear
-            of the favourite's corner. */}
-        <div className="pointer-events-none relative z-10 flex items-center gap-3 py-3.5 pr-11 pl-3 text-left">
-          {/* Status badge circle (left) */}
-        <div
-          className={cn(
-            "flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border",
-            theme.bg,
-            theme.text,
-            theme.border
-          )}
-        >
-          {hasSlot && request.selected_date ? (
-            // The badge carries the whole slot date (weekday / day / month), so the
-            // row below doesn't repeat it.
-            <div className="flex flex-col items-center justify-center leading-none">
-              <span className="font-black text-[8px] tracking-tighter uppercase opacity-70">
-                {format(new Date(request.selected_date + "T00:00:00"), "EEE")}
-              </span>
-              <span className="my-px font-black text-sm tracking-tighter">
-                {format(new Date(request.selected_date + "T00:00:00"), "dd")}
-              </span>
-              <span className="font-black text-[8px] tracking-tighter uppercase opacity-70">
-                {format(new Date(request.selected_date + "T00:00:00"), "MMM")}
-              </span>
-            </div>
-          ) : (
-            theme.icon
-          )}
-        </div>
 
-        {/* Names + type/genre */}
-        <div className="min-w-0 flex-1">
-          <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
-            {request.group_name || request.booker_name}
-          </p>
-          <div className="mt-0.5 flex items-center gap-2 text-[#5F624F]">
-            <p className="truncate text-xs font-semibold" title={request.booker_name}>
-              {abbreviateName(request.booker_name)}
-            </p>
-            {(request.type || request.genre) && (
-              <span className="truncate text-[10px] font-bold opacity-60">
-                {[toTitleCase(request.type), toTitleCase(request.genre)].filter(Boolean).join(" / ")}
-              </span>
+        {/* Content sits above the stretched button but passes clicks through to it,
+            so only the rail's icons are separately clickable. */}
+        <div className="pointer-events-none relative z-10 flex items-start gap-3 px-3 py-3 text-left">
+          {/* Status badge circle (left) */}
+          <div
+            className={cn(
+              "flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border",
+              theme.bg,
+              theme.text,
+              theme.border
+            )}
+          >
+            {hasSlot && request.selected_date ? (
+              // The badge carries the whole slot date (weekday / day / month), so the
+              // row below doesn't repeat it.
+              <div className="flex flex-col items-center justify-center leading-none">
+                <span className="font-black text-[8px] tracking-tighter uppercase opacity-70">
+                  {format(new Date(request.selected_date + "T00:00:00"), "EEE")}
+                </span>
+                <span className="my-px font-black text-sm tracking-tighter">
+                  {format(new Date(request.selected_date + "T00:00:00"), "dd")}
+                </span>
+                <span className="font-black text-[8px] tracking-tighter uppercase opacity-70">
+                  {format(new Date(request.selected_date + "T00:00:00"), "MMM")}
+                </span>
+              </div>
+            ) : (
+              theme.icon
             )}
           </div>
 
-          {/* Schedule — offered/booked → the slot's time (its date is on the badge);
-              otherwise → applicant's preferred dates */}
-          {(hasSlot ? !!request.selected_date : dates.length > 0) ? (
-            <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] font-semibold text-[#5F624F]">
-              {hasSlot ? (
-                (request.selected_start_time || request.selected_end_time) && (
-                  <span className="inline-flex items-center gap-1">
-                    <Clock3 className="h-3 w-3 shrink-0" />
-                    {[toHHMM(request.selected_start_time), toHHMM(request.selected_end_time)]
-                      .filter(Boolean)
-                      .join("–")}
+          <div className="min-w-0 flex-1">
+            {/* Only the name block has to clear the favourite in the corner — the
+                rows below it sit under the rail's height, so they run the card's
+                full width. */}
+            <div className="min-w-0 pr-11">
+              <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
+                {request.group_name || request.booker_name}
+              </p>
+              <div className="mt-0.5 flex min-w-0 items-center gap-1.5">
+                <p
+                  className="truncate text-xs font-semibold text-[#5F624F]"
+                  title={request.booker_name}
+                >
+                  {abbreviateName(request.booker_name)}
+                </p>
+                {/* A fee is a yes/no signal on the row — the amount itself is in the
+                    sheet (and on hover). No fee shows nothing. */}
+                {hasFee && (
+                  <span
+                    className="inline-flex shrink-0 items-center rounded-sm border border-amber-200 bg-amber-50 px-px py-px text-amber-700"
+                    title={`Fee: £${(request.payment_amount ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
+                  >
+                    <PoundSterling className="h-2.5 w-2.5 shrink-0" aria-hidden="true" />
+                    <span className="sr-only">Has a fee</span>
                   </span>
-                )
-              ) : (
-                dates.length > 0 && (
-                  <span className="inline-flex min-w-0 items-center gap-1">
-                    <CalendarDays className="h-3 w-3 shrink-0" />
-                    <span className="truncate">
-                      {dates.slice(0, 2).map((d) => format(new Date(d + "T00:00:00"), "d MMM")).join(", ")}
-                      {dates.length > 2 ? ` +${dates.length - 2}` : ""}
-                    </span>
-                  </span>
-                )
-              )}
+                )}
+              </div>
             </div>
-          ) : null}
-        </div>
 
-          {/* A fee is a yes/no signal on the row — the amount itself is in the sheet.
-              No fee shows nothing rather than a "Free" pill. */}
-          {(request.payment_amount ?? 0) > 0 && (
-            <span
-              className="inline-flex shrink-0 items-center rounded border border-amber-200 bg-amber-50 p-0.5 text-amber-700"
-              title={`Fee: £${(request.payment_amount ?? 0).toLocaleString("en-GB", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`}
-            >
-              <PoundSterling className="h-3 w-3 shrink-0" aria-hidden="true" />
-              <span className="sr-only">Has a fee</span>
-            </span>
-          )}
+            {/* Type / genre — a pill rather than muted small print, so the act's
+                character is legible at a glance down a column. */}
+            {(request.type || request.genre) && (
+              <span className="mt-1.5 inline-flex max-w-full items-center truncate rounded-full border border-[#5C4033]/20 bg-[#5C4033]/8 px-2 py-0.5 font-black text-[9px] tracking-widest text-[#5C4033] uppercase">
+                {[toTitleCase(request.type), toTitleCase(request.genre)].filter(Boolean).join(" / ")}
+              </span>
+            )}
+
+            {/* Booking facts — the slot (offered/booked) or the applicant's preferred
+                dates, with the fee marker closing the row. */}
+            <div className="mt-1 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5F624F]">
+              <span className="min-w-0 truncate">
+                {hasSlot
+                  ? (request.selected_start_time || request.selected_end_time) && (
+                      <span className="inline-flex items-center gap-1">
+                        <Clock3 className="h-3 w-3 shrink-0" />
+                        {[toHHMM(request.selected_start_time), toHHMM(request.selected_end_time)]
+                          .filter(Boolean)
+                          .join("–")}
+                      </span>
+                    )
+                  : dates.length > 0 && (
+                      <span className="inline-flex min-w-0 items-center gap-1">
+                        <CalendarDays className="h-3 w-3 shrink-0" />
+                        <span className="truncate">
+                          {dates.slice(0, 2).map((d) => format(new Date(d + "T00:00:00"), "d MMM")).join(", ")}
+                          {dates.length > 2 ? ` +${dates.length - 2}` : ""}
+                        </span>
+                      </span>
+                    )}
+              </span>
+
+              {/* Internal notes — same log as the sheet, read and written from here
+                  too. pointer-events-auto: the content around it deliberately lets
+                  clicks fall through to the card, this must not. The negative margin
+                  keeps a 44px tap target from padding the row out to 44px tall. */}
+              <BandNotesPopover requestId={request.id} notes={bandNoteList} editable={editable}>
+                <button
+                  type="button"
+                  title={`Band notes (internal) — ${bandNoteList.length}`}
+                  className="pointer-events-auto relative z-20 -my-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90"
+                >
+                  <span className="relative">
+                    <NotebookPen
+                      className={cn(
+                        "h-4 w-4 transition-colors",
+                        bandNoteList.length > 0 ? "text-[#5C4033]" : "text-[#5F624F]/30"
+                      )}
+                      aria-hidden="true"
+                    />
+                    {bandNoteList.length > 0 && (
+                      <span className="absolute -top-1.5 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#B45309] px-1 font-black text-[8px] text-white tabular-nums ring-2 ring-white">
+                        {bandNoteList.length}
+                      </span>
+                    )}
+                  </span>
+                  <span className="sr-only">Band notes (internal): {bandNoteList.length}</span>
+                </button>
+              </BandNotesPopover>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1548,48 +1602,28 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   <Heart className={cn("h-4 w-4", isFavorite && "fill-current")} />
                 </button>
 
-                <Popover open={notesOpen} onOpenChange={setNotesOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      aria-label="Band notes (internal)"
-                      title="Band notes (internal)"
-                      className={cn(
-                        "relative flex h-11 w-11 items-center justify-center rounded-xl border transition-colors sm:h-9 sm:w-9",
-                        bandNotes.trim()
-                          ? "border-[#5C4033]/25 bg-[#5C4033]/10 text-[#5C4033] hover:bg-[#5C4033]/15"
-                          : "border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]"
-                      )}
-                    >
-                      <NotebookPen className="h-4 w-4" />
-                      {bandNotes.trim() && (
-                        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#B45309] ring-2 ring-white" />
-                      )}
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 rounded-2xl border-2 border-[#E6DFC8] bg-white p-4">
-                    <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
-                      Band Notes
-                    </span>
-                    {editable ? (
-                      <textarea
-                        aria-label="Band notes"
-                        value={bandNotes}
-                        onChange={(e) => setBandNotes(e.target.value)}
-                        rows={5}
-                        placeholder="Add notes about the band..."
-                        className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2.5 text-sm text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
-                      />
-                    ) : (
-                      <p className="text-sm leading-relaxed text-[#1F1F1A] italic">
-                        {bandNotes ? `“${bandNotes}”` : "—"}
-                      </p>
+                {/* The same notes log the card row shows — notes save themselves,
+                    so this sits outside the sheet's Save/discard cycle. */}
+                <BandNotesPopover requestId={request.id} notes={bandNoteList} editable={editable}>
+                  <button
+                    type="button"
+                    aria-label={`Band notes (internal): ${bandNoteList.length}`}
+                    title="Band notes (internal)"
+                    className={cn(
+                      "relative flex h-11 w-11 items-center justify-center rounded-xl border transition-colors sm:h-9 sm:w-9",
+                      bandNoteList.length > 0
+                        ? "border-[#5C4033]/25 bg-[#5C4033]/10 text-[#5C4033] hover:bg-[#5C4033]/15"
+                        : "border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]"
                     )}
-                    <p className="mt-2 text-[10px] leading-snug text-[#5F624F]/70">
-                      Internal only — never shared with the band.
-                    </p>
-                  </PopoverContent>
-                </Popover>
+                  >
+                    <NotebookPen className="h-4 w-4" />
+                    {bandNoteList.length > 0 && (
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#B45309] px-1 font-black text-[9px] text-white tabular-nums ring-2 ring-white">
+                        {bandNoteList.length}
+                      </span>
+                    )}
+                  </button>
+                </BandNotesPopover>
 
                 {/* System information — audit trail. Reference-only, so it sits
                     behind an icon here rather than as a card in the rail. */}
