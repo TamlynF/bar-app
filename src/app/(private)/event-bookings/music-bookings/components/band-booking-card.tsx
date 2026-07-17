@@ -5,7 +5,6 @@ import { useSearchParams } from "next/navigation";
 import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite } from "../actions";
 import type { BandStatus } from "../actions";
 import {
-  ChevronRight,
   ChevronDown,
   Music2,
   Link2,
@@ -22,7 +21,6 @@ import {
   AlertCircle,
   AlertTriangle,
   CalendarDays,
-  Video,
   Mail,
   Phone,
   Heart,
@@ -611,6 +609,18 @@ function Section({
       <div className={cn(!open && "hidden")}>{children}</div>
     </div>
   );
+}
+
+/**
+ * "Tamlyn Fourie" → "T.Fourie" — the card row is narrow, and the surname is what
+ * gets recognised. A middle name drops out (the last word is the surname); a
+ * single-word name has nothing to abbreviate and is left whole.
+ */
+function abbreviateName(name?: string | null): string {
+  const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length < 2) return parts[0] ?? "";
+  const surname = parts[parts.length - 1];
+  return `${parts[0][0].toUpperCase()}.${surname}`;
 }
 
 function toTitleCase(str?: string | null) {
@@ -1317,17 +1327,49 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
   return (
     <>
-      {/* Card row */}
-      <button
-        type="button"
-        onClick={() => setSheetOpen(true)}
+      {/* Card row.
+          A container rather than one big button: the favourite toggle has to be a
+          real button, and a button can't nest inside another. Opening the sheet is
+          instead a transparent button stretched across the card, sitting under the
+          content and over nothing else — so the whole row still opens it. */}
+      <div
         className={cn(
-          "w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
-          "flex items-center gap-3 px-3 py-3.5 text-left",
+          "relative w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
           "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]"
         )}
       >
-        {/* Status badge circle (left) */}
+        <button
+          type="button"
+          onClick={() => setSheetOpen(true)}
+          className="absolute inset-0 z-0 cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#5C4033]/40 focus-visible:ring-inset"
+        >
+          <span className="sr-only">Open {request.group_name || request.booker_name}</span>
+        </button>
+
+        {/* Favourite — persists on click, no Save needed. Above the stretched
+            button so its own click lands here instead of opening the sheet. */}
+        <button
+          type="button"
+          onClick={handleToggleFavorite}
+          aria-pressed={isFavorite}
+          title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
+          className="absolute top-0 right-0 z-20 flex h-11 w-11 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90"
+        >
+          <Heart
+            className={cn(
+              "h-4 w-4 transition-colors",
+              isFavorite ? "fill-rose-500 text-rose-500" : "text-[#5F624F]/30"
+            )}
+            aria-hidden="true"
+          />
+          <span className="sr-only">{isFavorite ? "Favourited" : "Mark as favourite"}</span>
+        </button>
+
+        {/* Content sits above the stretched button but passes clicks through to it,
+            so only the favourite is separately clickable. pr-11 keeps the row clear
+            of the favourite's corner. */}
+        <div className="pointer-events-none relative z-10 flex items-center gap-3 py-3.5 pr-11 pl-3 text-left">
+          {/* Status badge circle (left) */}
         <div
           className={cn(
             "flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border",
@@ -1357,20 +1399,13 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
         {/* Names + type/genre */}
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
-              {request.group_name || request.booker_name}
-            </p>
-            {/* Indicator only — the row is itself a button, so this can't be one. */}
-            {isFavorite && (
-              <>
-                <Heart className="h-3.5 w-3.5 shrink-0 fill-rose-500 text-rose-500" aria-hidden="true" />
-                <span className="sr-only">Favourite</span>
-              </>
-            )}
-          </div>
+          <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
+            {request.group_name || request.booker_name}
+          </p>
           <div className="mt-0.5 flex items-center gap-2 text-[#5F624F]">
-            <p className="truncate text-xs font-semibold">{request.booker_name}</p>
+            <p className="truncate text-xs font-semibold" title={request.booker_name}>
+              {abbreviateName(request.booker_name)}
+            </p>
             {(request.type || request.genre) && (
               <span className="truncate text-[10px] font-bold opacity-60">
                 {[toTitleCase(request.type), toTitleCase(request.genre)].filter(Boolean).join(" / ")}
@@ -1406,17 +1441,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           ) : null}
         </div>
 
-        {/* Right column: media count (top, above the arrow) + payment pill (end) */}
-        <div className="flex shrink-0 flex-col items-end justify-center gap-1.5">
-          {videos.length > 0 && (
-            <span
-              className="inline-flex items-center gap-1 text-[11px] font-bold text-[#5F624F]"
-              title={`${videos.length} video${videos.length === 1 ? "" : "s"} attached`}
-            >
-              <Video className="h-3.5 w-3.5 shrink-0" />
-              {videos.length}
-            </span>
-          )}
           {/* A fee is a yes/no signal on the row — the amount itself is in the sheet.
               No fee shows nothing rather than a "Free" pill. */}
           {(request.payment_amount ?? 0) > 0 && (
@@ -1429,9 +1453,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             </span>
           )}
         </div>
-
-        <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
-      </button>
+      </div>
 
       {/* Bottom sheet */}
       {/* Dismissals route through requestClose so unsaved edits can't slip away;
