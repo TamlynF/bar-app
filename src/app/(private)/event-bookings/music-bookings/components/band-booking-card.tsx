@@ -29,6 +29,7 @@ import {
   Copy,
   NotebookPen,
   Pencil,
+  X,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -1578,6 +1579,21 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                             }}
                             autoFocus
                           />
+                          {/* react-day-picker won't deselect the active day in single
+                              mode, so clearing needs its own control. */}
+                          {selectedDate && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                applyDate("");
+                                setDatePickerOpen(false);
+                              }}
+                              className="flex w-full items-center justify-center gap-1.5 border-t border-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                              Clear date
+                            </button>
+                          )}
                         </PopoverContent>
                       </Popover>
                       <div className="flex items-center gap-1.5 rounded-xl border border-[#E6DFC8] bg-white px-3 py-2">
@@ -1599,6 +1615,18 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                           }}
                           className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none"
                         />
+                        {/* Start drives end, so one control clears the pair. */}
+                        {(selectedStartTime || selectedEndTime) && (
+                          <button
+                            type="button"
+                            onClick={() => applyStart("")}
+                            aria-label="Clear performance times"
+                            title="Clear times"
+                            className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5F624F]/50 transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
                     {/* Single message covering the date + time pair above. */}
