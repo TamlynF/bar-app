@@ -98,7 +98,7 @@ export default function BandNotesPopover({
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
         align="end"
-        className="flex max-h-[26rem] w-80 flex-col rounded-2xl border-2 border-[#E6DFC8] bg-white p-0"
+        className="flex max-h-104 w-80 flex-col rounded-2xl border-2 border-[#E6DFC8] bg-white p-0"
       >
         <div className="flex items-center justify-between gap-2 border-b border-[#E6DFC8] px-4 py-3">
           <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">

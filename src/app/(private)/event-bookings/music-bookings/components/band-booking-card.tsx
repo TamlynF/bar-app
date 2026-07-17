@@ -1386,20 +1386,21 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         </button>
 
 
-        {/* Type + genre — a two-tone corner tag above the status badge. Espresso
-            names the format, cream the genre, so the two read as separate facts at
-            a glance. Capped in width so it can't run into the favourite. */}
+        {/* Type + genre — a two-tone corner tag above the status badge, in the
+            request's own status hue (new = blue, booked = green, ...). Eyebrow
+            treatment per the style guide: tiny, black, wide-tracked caps — the wide
+            tracking is what keeps 9px legible. Type takes the solid fill, genre the
+            light tint at a lighter weight, so type leads. Width-capped so a long
+            genre can't run into the favourite. */}
         {(request.type || request.genre) && (
-          <span className="absolute top-0 left-0 z-10 flex max-w-[65%] items-stretch overflow-hidden rounded-tl-xl rounded-br-lg font-black text-[10px] uppercase">
+          <span className="absolute top-0 left-0 z-10 flex max-w-[65%] items-stretch overflow-hidden rounded-tl-xl rounded-br-lg text-[9px] tracking-widest uppercase">
             {request.type && (
-              <span className="shrink-0 bg-[#5C4033] px-2 py-1 tracking-widest text-white">
+              <span className={cn("shrink-0 px-2 py-0.5 font-black text-white", theme.dot)}>
                 {toTitleCase(request.type)}
               </span>
             )}
-            {/* Tighter tracking and a lighter ground than the type: readable, but
-                clearly the secondary half of the tag. */}
             {request.genre && (
-              <span className="truncate bg-[#E6DFC8] px-2 py-1 tracking-wide text-[#5C4033]/80">
+              <span className={cn("truncate px-2 py-0.5 font-bold", theme.bg, theme.text)}>
                 {toTitleCase(request.genre)}
               </span>
             )}
@@ -1412,7 +1413,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         <div
           className={cn(
             "pointer-events-none relative z-10 flex items-center gap-3 px-3 pb-3 text-left",
-            request.type || request.genre ? "pt-6" : "pt-3"
+            request.type || request.genre ? "pt-5" : "pt-3"
           )}
         >
           {/* Status badge circle (left) */}
@@ -1503,13 +1504,14 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   className="pointer-events-auto relative z-20 -my-3 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90"
                 >
                   <span className="relative">
-                    {/* Filled when there are notes, outline when there aren't —
-                        the same on/off read as the favourite heart. */}
+                    {/* Filled when there are notes, outline when there aren't — the
+                        same on/off read as the favourite heart. Blue is its own
+                        identity (like the heart's rose), independent of status. */}
                     <NotebookPen
                       className={cn(
                         "h-4 w-4 transition-colors",
                         bandNoteList.length > 0
-                          ? "fill-[#5C4033] text-[#5C4033]"
+                          ? "fill-blue-600 text-blue-600"
                           : "text-[#5F624F]/30"
                       )}
                       aria-hidden="true"
