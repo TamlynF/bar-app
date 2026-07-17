@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useState, useTransition } from "react";
+import React, { useEffect, useRef, useState, useTransition } from "react";
 import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite } from "../actions";
 import type { BandStatus } from "../actions";
 import {
@@ -333,33 +333,36 @@ function StageStepper({
   status,
   onSelect,
   pendingStage,
-  slotWarning,
+  blockers,
   onRevealSlot,
 }: {
   status: string;
   onSelect: (next: BandStatus) => void;
   /** Stage currently being applied — shows a spinner on that chip. */
   pendingStage: BandStatus | null;
-  /** Set when the slot is incomplete; blocks `booked` and explains why. */
-  slotWarning?: string;
-  /** Points the admin at the slot console when Booked is blocked only by it. */
+  /**
+   * Per-stage reasons a transition can't happen yet, beyond what the state
+   * machine allows. Every one of these is fixable in the slot console, so a
+   * blocked chip points there rather than sitting dead.
+   */
+  blockers: Partial<Record<BandStatus, string | undefined>>;
+  /** Points the admin at the slot console when a stage is blocked only by it. */
   onRevealSlot: () => void;
 }) {
   const transitions = BAND_TRANSITIONS[status as BandStatus] ?? [];
   const currentLabel = statusTheme[status]?.label ?? status;
+  const reachable = (s: BandStatus) => transitions.some((t) => t.next === s);
 
-  // Reachable per the state machine; booking additionally needs a full slot.
+  // Allowed by the state machine, then clear of any slot problem.
   const blockedReason = (s: BandStatus): string | null => {
-    if (!transitions.some((t) => t.next === s)) return `Not available from ${currentLabel}`;
-    if (s === "booked" && slotWarning) return slotWarning;
-    return null;
+    if (!reachable(s)) return `Not available from ${currentLabel}`;
+    return blockers[s] ?? null;
   };
 
   /** A chip per stage — `reason` null means it's reachable, so it's a button. */
   const chip = (s: BandStatus, tone: StageTone) => {
-    // Booked blocked *only* by a missing slot is fixable on the spot, so that
-    // chip stays live and opens the console rather than sitting dead.
-    const slotFixable = s === "booked" && !!slotWarning && transitions.some((t) => t.next === "booked");
+    // Reachable but slot-blocked → keep it live and send them to the fix.
+    const slotFixable = reachable(s) && !!blockers[s];
     return (
       <StageChip
         key={s}
@@ -672,6 +675,13 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           ? "A start and end time must be set to book this act."
           : undefined;
 
+  // A slot that overlaps another active event can't be committed — it would double-
+  // book the venue. Blocks Save and the Booked chip until the time moves.
+  const hasClashes = clashes.length > 0;
+  const clashWarning = hasClashes
+    ? `Clashes with ${clashes.map((c) => c.title).join(", ")} — pick another time.`
+    : undefined;
+
   // Every platform gets a pill; unfilled ones render deactivated and can be filled
   // in. Read-only requests only show what's actually there.
   const hasAnySocial = SOCIAL_ORDER.some((k) => (socialLinks[k] ?? "").trim());
@@ -755,6 +765,33 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     setSelectedEndTime(v ? addHoursToTime(v, 2) : "");
     setClashes([]);
   };
+
+  /**
+   * Validate the slot against the schedule as it's edited, so a clash surfaces
+   * while you're still choosing rather than on the way out. Debounced — the time
+   * inputs fire per keystroke. The action-time findClashes() below still runs as
+   * the authoritative check; this is the live one that drives the UI.
+   */
+  useEffect(() => {
+    if (!selectedDate || !selectedStartTime || !selectedEndTime) {
+      setClashes([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        const list = await getClashingEvents(selectedDate, selectedStartTime, selectedEndTime, request.event_id);
+        if (!cancelled) setClashes(list);
+      } catch {
+        // A failed lookup shouldn't wedge the sheet — booking re-checks anyway.
+        if (!cancelled) setClashes([]);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [selectedDate, selectedStartTime, selectedEndTime, request.event_id]);
 
   // Look up active events that overlap the chosen slot (excluding this booking's own
   // linked event). Returns the clashes and stores them for display.
@@ -903,10 +940,12 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     setClashes([]);
     startTransition(async () => {
       try {
-        // Booking places an event — block it if the slot clashes. The clashes
-        // render inline under the Performance Time field, so no footer error here.
+        // Booking places an event, and an offer promises one — neither may commit a
+        // slot that collides with something already on. Re-checked here (not just via
+        // the live effect) so a clash landing between render and click still stops it.
+        // The clashes render inline under the slot fields, so no footer error here.
         // Checked before the preview so we never preview an unsendable email.
-        if (newStatus === "booked") {
+        if (newStatus === "booked" || newStatus === "offered") {
           const c = await findClashes();
           if (c.length) return;
         }
@@ -1308,7 +1347,10 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               status={status}
               onSelect={handleAction}
               pendingStage={pendingStage}
-              slotWarning={slotWarning}
+              // Booking needs a complete, clash-free slot. Offering only needs a
+              // clash-free one — an offer with no slot yet is legitimate ("to be
+              // arranged"), but never one we couldn't honour.
+              blockers={{ booked: slotWarning ?? clashWarning, offered: clashWarning }}
               onRevealSlot={revealSlot}
             />
           </div>
@@ -1956,7 +1998,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     <button
                       type="button"
                       onClick={handleSave}
-                      disabled={isPending}
+                      disabled={isPending || hasClashes}
+                      title={hasClashes ? clashWarning : undefined}
                       className="flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial"
                     >
                       {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
