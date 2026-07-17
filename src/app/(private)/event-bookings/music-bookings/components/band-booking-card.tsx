@@ -950,6 +950,9 @@ export function BandBookingCard({
   const clashWarning = hasClashes
     ? `Clashes with ${clashes.map((c) => c.title).join(", ")} — pick another time.`
     : undefined;
+  // A complete, clash-free slot — the console then wears the Save/book green
+  // (#1B4332) to read as "ready", rather than the neutral resting espresso.
+  const slotIsSet = !!selectedDate && !!selectedStartTime && !!selectedEndTime && !hasClashes;
 
   // Every platform gets a pill; unfilled ones render deactivated and can be filled
   // in. Read-only requests only show what's actually there.
@@ -2624,12 +2627,24 @@ export function BandBookingCard({
                         ? "border-red-300 bg-red-50"
                         : slotWarning
                           ? "border-l-4 border-amber-300 border-l-amber-400 bg-amber-50"
-                          : "border-[#5C4033]/25 bg-[#F7F4EA]",
+                          : slotIsSet
+                            ? "border-[#1B4332]/30 bg-[#F7F4EA] shadow-[#1B4332]/25"
+                            : "border-[#5C4033]/25 bg-[#F7F4EA]",
                       slotFlash && "ring-2 ring-amber-400/70"
                     )}
                   >
-                    <span className="flex flex-wrap items-center gap-2 font-black text-[11px] tracking-wide text-[#5C4033] uppercase">
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-[#5C4033] text-white">
+                    <span
+                      className={cn(
+                        "flex flex-wrap items-center gap-2 font-black text-[11px] tracking-wide uppercase",
+                        slotIsSet ? "text-[#1B4332]" : "text-[#5C4033]"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white",
+                          slotIsSet ? "bg-[#1B4332]" : "bg-[#5C4033]"
+                        )}
+                      >
                         <CalendarClock className="h-3.5 w-3.5" />
                       </span>
                       Selected Date &amp; Time
@@ -2646,7 +2661,11 @@ export function BandBookingCard({
                             type="button"
                             className={cn(
                               "flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:border-[#5C4033]/30",
-                              !selectedDate && slotWarning ? "border-amber-300" : "border-[#E6DFC8]"
+                              !selectedDate && slotWarning
+                                ? "border-amber-300"
+                                : slotIsSet
+                                  ? "border-[#1B4332]"
+                                  : "border-[#E6DFC8]"
                             )}
                           >
                             {selectedDate
@@ -2687,7 +2706,9 @@ export function BandBookingCard({
                           "flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 transition-colors",
                           (!selectedStartTime || !selectedEndTime) && slotWarning
                             ? "border-amber-300"
-                            : "border-[#E6DFC8]"
+                            : slotIsSet
+                              ? "border-[#1B4332]"
+                              : "border-[#E6DFC8]"
                         )}
                       >
                         <input
