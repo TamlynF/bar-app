@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useTransition } from "react";
-import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking } from "../actions";
+import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite } from "../actions";
 import type { BandStatus } from "../actions";
 import {
   ChevronRight,
@@ -24,6 +24,10 @@ import {
   Video,
   Mail,
   Phone,
+  Heart,
+  Hash,
+  Copy,
+  NotebookPen,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -221,13 +225,25 @@ const PIPELINE: BandStatus[] = ["new", "reviewing", "offered", "booked"];
 /**
  * Compact horizontal stepper showing where a request sits in the pipeline.
  * Past stages get a check, the current stage gets its statusTheme tint, and
- * future stages stay muted. Hidden for declined requests (the header badge
- * already tells that story). Labels collapse to dots on mobile except the
- * current stage.
+ * future stages stay muted. Labels collapse to dots on mobile except the
+ * current stage. A terminal exit (declined) isn't a pipeline stage, so it
+ * renders as a lone chip — the header badge speaks to the linked event now,
+ * not the status, so this is the only thing carrying it.
  */
 function StageStepper({ status }: { status: string }) {
   const idx = PIPELINE.indexOf(status as BandStatus);
-  if (idx === -1) return null;
+  if (idx === -1) {
+    const t = statusTheme[status];
+    if (!t) return null;
+    return (
+      <div className="mt-3 flex items-center gap-1" aria-label={`Status: ${t.label}`}>
+        <div className={cn("flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1", t.bg, t.text, t.border)}>
+          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", t.dot)} />
+          <span className="font-black text-[9px] tracking-widest uppercase">{t.label}</span>
+        </div>
+      </div>
+    );
+  }
   return (
     <div
       className="mt-3 flex items-center gap-1"
@@ -419,6 +435,12 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  // Favourite persists on click (not via Save), so it gets its own transition —
+  // sharing `isPending` would grey out the footer actions on every heart tap.
+  const [isFavorite, setIsFavorite] = useState(request.is_favorite);
+  const [, startFavTransition] = useTransition();
+  const [notesOpen, setNotesOpen] = useState(false);
+
   // Editable detail fields (act, contact & payment). Seeded from the request; a
   // cancelled request is read-only, everything else can be edited.
   const [actName, setActName] = useState(request.group_name ?? "");
@@ -441,10 +463,21 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const theme = statusTheme[status] || statusTheme.new;
   const editable = status !== "declined";
 
+  // Where the linked event lives, if one has been placed. Null → System
+  // Information shows "—".
+  const eventHref = request.event_id ? `/event-setups/events?open=${request.event_id}` : null;
+  // The id is a uuid — too long to show whole. First 8 chars is a workable human
+  // reference; the full value is on hover and on the clipboard.
+  const shortRef = request.id.slice(0, 8).toUpperCase();
+
   // A selected slot exists to show once one has been offered or booked.
   const hasSlot = status === "offered" || status === "booked";
   // Triage stages where the admin picks a slot and the note-to-applicant shows.
   const isWorkingStage = status === "new" || status === "reviewing" || status === "offered";
+  // No event is expected until a request is booked, so during triage an "unlinked"
+  // badge would just be noise — only show it once a link exists or its absence means
+  // something (booked with no event = a fault; declined = merely informational).
+  const showEventBadge = !!eventHref || !isWorkingStage;
   // One consolidated slot warning. Two stacked lines (one under Date, one under
   // Time) nag without adding information, so state the precondition to book once,
   // naming only what's actually missing. Rendered below the Date+Time pair.
@@ -578,6 +611,31 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     setClashes([]);
     setError(null);
     setOpen(false);
+  }
+
+  // Favourite is a bookmark, not an edit — it saves on click and is deliberately
+  // left alone by handleCancel. Optimistic, reverting if the write fails.
+  function handleToggleFavorite() {
+    const next = !isFavorite;
+    setIsFavorite(next);
+    startFavTransition(async () => {
+      try {
+        await toggleBandFavorite(request.id, next);
+      } catch {
+        setIsFavorite(!next);
+        toast.error("Couldn't update favourite");
+      }
+    });
+  }
+
+  // Copies the *full* uuid, not the shortened form on screen.
+  async function handleCopyRef() {
+    try {
+      await navigator.clipboard.writeText(request.id);
+      toast.success("Reference copied");
+    } catch {
+      toast.error("Couldn't copy the reference");
+    }
   }
 
   function handleAction(newStatus: BandStatus) {
@@ -757,6 +815,13 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
               {request.group_name || request.booker_name}
             </p>
+            {/* Indicator only — the row is itself a button, so this can't be one. */}
+            {isFavorite && (
+              <>
+                <Heart className="h-3.5 w-3.5 shrink-0 fill-rose-500 text-rose-500" aria-hidden="true" />
+                <span className="sr-only">Favourite</span>
+              </>
+            )}
           </div>
           <div className="mt-0.5 flex items-center gap-2 text-[#5F624F]">
             <p className="truncate text-xs font-semibold">{request.booker_name}</p>
@@ -844,21 +909,113 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <SheetDescription className="sr-only">
                   Review and manage this band request.
                 </SheetDescription>
-                {request.group_name && (
-                  <p className="mt-0.5 text-xs text-[#5F624F]">{request.booker_name}</p>
-                )}
+                {/* Reference — shortened uuid; click copies the full value */}
+                <button
+                  type="button"
+                  onClick={handleCopyRef}
+                  title={request.id}
+                  aria-label={`Copy reference ${request.id}`}
+                  className="group mt-1 flex items-center gap-1.5 text-[#5F624F] transition-colors hover:text-[#5C4033]"
+                >
+                  <Hash className="h-3 w-3 shrink-0" />
+                  <span className="font-black text-xs tracking-wide uppercase tabular-nums">Ref: {shortRef}</span>
+                  <Copy className="h-3 w-3 shrink-0 opacity-0 transition-opacity group-hover:opacity-60" />
+                </button>
               </div>
-              <span
-                className={cn(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-[10px] tracking-wider uppercase",
-                  theme.bg,
-                  theme.text,
-                  theme.border
-                )}
-              >
-                <span className={cn("h-2 w-2 rounded-full", theme.dot)} />
-                {theme.label}
-              </span>
+
+              {/* Linked event, then quick actions. The badge speaks to the event,
+                  not the status (the stepper below carries that): green = linked and
+                  navigates; red = booked but no event was ever placed, which is a
+                  data fault worth shouting about; blue = nothing linked. */}
+              <div className="flex shrink-0 items-center gap-1.5">
+                {showEventBadge &&
+                  (eventHref ? (
+                    <Link
+                      href={eventHref}
+                      title={`View linked event #${request.event_id}`}
+                      className="group inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-3 font-black text-[10px] tracking-wider text-green-700 uppercase transition-colors hover:bg-green-100 sm:h-9"
+                    >
+                      <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                      {/* The label is the widest thing in the header — drop it on a
+                          phone and let the colour + "#id" carry it. */}
+                      <span className="hidden sm:inline">View Linked Event:</span>
+                      <span className="tabular-nums">#{request.event_id}</span>
+                      <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                    </Link>
+                  ) : status === "booked" ? (
+                    <span
+                      title="This booking is booked but has no linked event"
+                      className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 font-black text-[10px] tracking-wider text-red-700 uppercase sm:h-9"
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      Missing Linked Event
+                    </span>
+                  ) : (
+                    <span className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 font-black text-[10px] tracking-wider text-blue-700 uppercase sm:h-9">
+                      <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                      No Linked Event
+                    </span>
+                  ))}
+
+                <button
+                  type="button"
+                  onClick={handleToggleFavorite}
+                  aria-pressed={isFavorite}
+                  aria-label={isFavorite ? "Remove from favourites" : "Mark as favourite"}
+                  title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
+                  className={cn(
+                    "flex h-11 w-11 items-center justify-center rounded-xl border transition-colors sm:h-9 sm:w-9",
+                    isFavorite
+                      ? "border-rose-200 bg-rose-50 text-rose-500 hover:bg-rose-100"
+                      : "border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA] hover:text-rose-500"
+                  )}
+                >
+                  <Heart className={cn("h-4 w-4", isFavorite && "fill-current")} />
+                </button>
+
+                <Popover open={notesOpen} onOpenChange={setNotesOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="Band notes (internal)"
+                      title="Band notes (internal)"
+                      className={cn(
+                        "relative flex h-11 w-11 items-center justify-center rounded-xl border transition-colors sm:h-9 sm:w-9",
+                        bandNotes.trim()
+                          ? "border-[#5C4033]/25 bg-[#5C4033]/10 text-[#5C4033] hover:bg-[#5C4033]/15"
+                          : "border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]"
+                      )}
+                    >
+                      <NotebookPen className="h-4 w-4" />
+                      {bandNotes.trim() && (
+                        <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-[#B45309] ring-2 ring-white" />
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80 rounded-2xl border-2 border-[#E6DFC8] bg-white p-4">
+                    <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+                      Band Notes
+                    </span>
+                    {editable ? (
+                      <textarea
+                        aria-label="Band notes"
+                        value={bandNotes}
+                        onChange={(e) => setBandNotes(e.target.value)}
+                        rows={5}
+                        placeholder="Add notes about the band..."
+                        className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2.5 text-sm text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                      />
+                    ) : (
+                      <p className="text-sm leading-relaxed text-[#1F1F1A] italic">
+                        {bandNotes ? `“${bandNotes}”` : "—"}
+                      </p>
+                    )}
+                    <p className="mt-2 text-[10px] leading-snug text-[#5F624F]/70">
+                      Internal only — never shared with the band.
+                    </p>
+                  </PopoverContent>
+                </Popover>
+              </div>
             </div>
             <StageStepper status={status} />
           </div>
@@ -1157,25 +1314,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 </Section>
               )}
 
-              {/* Band Notes — admin factbox for notes about the band */}
-              <Section title="Band Notes">
-                {editable ? (
-                  <div className="px-4 py-3 sm:px-5">
-                    <textarea
-                      aria-label="Band notes"
-                      value={bandNotes}
-                      onChange={(e) => setBandNotes(e.target.value)}
-                      rows={3}
-                      placeholder="Add notes about the band..."
-                      className="w-full resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-4 py-3 text-sm text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
-                    />
-                  </div>
-                ) : (
-                  <p className="px-4 py-3 text-sm leading-relaxed text-[#1F1F1A] italic sm:px-5">
-                    {bandNotes ? `“${bandNotes}”` : "—"}
-                  </p>
-                )}
-              </Section>
+              {/* Band Notes now live in the sheet-header popover (internal, quick
+                  access at any scroll position) — see the NotebookPen button above. */}
 
               {/* Admin notes (read-only once booked/declined; editable in the working-stage footer) */}
               {!isWorkingStage && request.admin_notes && (
@@ -1269,22 +1409,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 </Section>
               )}
 
-              {/* Linked Event navigation */}
-              {request.event_id && (
-                <Link
-                  href={`/event-setups/events?open=${request.event_id}`}
-                  className="group flex h-fit items-center justify-between gap-3 rounded-3xl border-2 border-[#E6DFC8] bg-white px-4 py-3.5 transition-colors hover:bg-[#F7F4EA] sm:px-5"
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <CalendarDays className="h-4 w-4 shrink-0 text-[#5C4033]" />
-                    <span className="font-black text-xs tracking-wide text-[#5C4033] uppercase">
-                      View Linked Event
-                    </span>
-                  </div>
-                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[#5F624F] transition-colors group-hover:text-[#5C4033]" />
-                </Link>
-              )}
-
               {/* Videos — play inline on the page (facade: loads on click) */}
               {videos.length > 0 && (
                 <Section title="Performance Videos">
@@ -1306,6 +1430,21 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
               {/* System information — audit trail; collapsed by default */}
               <Section title="System Information" defaultOpen={false}>
+                <SheetRow
+                  label="Linked Event"
+                  value={
+                    eventHref ? (
+                      <Link
+                        href={eventHref}
+                        className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] hover:underline"
+                      >
+                        <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                        <span className="tabular-nums">#{request.event_id}</span>
+                        <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                      </Link>
+                    ) : null
+                  }
+                />
                 <SheetRow label="Submitted" value={formatDateTime(request.created_at)} />
                 <SheetRow label="Last Modified" value={formatDateTime(request.updated_at)} />
                 <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "—"} />
