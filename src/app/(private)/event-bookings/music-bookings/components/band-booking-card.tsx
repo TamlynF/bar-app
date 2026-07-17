@@ -911,8 +911,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         description: "You've made changes to this request. Save them before closing?",
         confirmLabel: "Save changes",
         cancelLabel: "Discard",
-        // Cancel means Discard here, so a stray backdrop click must not answer.
-        dismissOnBackdrop: false,
+        // Cancel means Discard here, so a stray click or Escape must not answer.
+        dismissible: false,
       });
       // handleSave closes on success and stays put if its own confirm is backed out of.
       if (save) handleSave();
