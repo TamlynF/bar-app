@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite } from "../actions";
 import type { BandStatus } from "../actions";
 import {
@@ -97,6 +98,12 @@ export interface BandRequest {
   updated_by?: number | null;
   /** Joined employee for `updated_by` — who last modified the request. */
   updated_by_employee?: { full_name: string | null } | null;
+  /**
+   * Joined `events` row for `event_id` — only `is_active` is read, to tell a
+   * linked event that's on the schedule from one that's been taken off it.
+   * Supabase returns the join as an object or a single-element array.
+   */
+  linked_event?: { is_active: boolean } | { is_active: boolean }[] | null;
 }
 
 export const statusTheme: Record<
@@ -639,8 +646,11 @@ function formatDateTime(iso?: string | null): string {
   });
 }
 
+const LIST_HREF = "/event-bookings/music-bookings";
+
 export function BandBookingCard({ request }: { request: BandRequest }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
+  const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   // Footer "note to applicant" is tucked away unless one already exists.
@@ -703,9 +713,41 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const noteIsLong = bookingNote.length > NOTE_PREVIEW_LEN;
   const noteHead = bookingNote.slice(0, NOTE_PREVIEW_LEN).trimEnd();
 
+  /**
+   * Open/close the sheet, mirroring its state into the URL as `?open=<request id>`.
+   *
+   * The sheet is local state, so a round-trip to the linked event and back would
+   * otherwise land on the bare list. The marker lets the effect below reopen this
+   * request — both on browser Back (which restores this entry) and on the events
+   * page sending us back explicitly. replaceState rather than router.push: the
+   * marker annotates where we already are, it isn't a place worth a history entry.
+   */
+  function setSheetOpen(next: boolean) {
+    setOpen(next);
+    window.history.replaceState(null, "", next ? `${LIST_HREF}?open=${request.id}` : LIST_HREF);
+  }
+
+  // Reopen this request's sheet when we're the one named in `?open=`, then drop the
+  // marker so a later refresh doesn't resurrect a sheet the admin has closed.
+  useEffect(() => {
+    const openId = searchParams.get("open") ?? new URLSearchParams(window.location.search).get("open");
+    if (openId !== request.id) return;
+    setOpen(true);
+    window.history.replaceState(null, "", LIST_HREF);
+  }, [searchParams, request.id]);
+
   // Where the linked event lives, if one has been placed. Null → System
   // Information shows "—".
-  const eventHref = request.event_id ? `/event-setups/events?open=${request.event_id}` : null;
+  // `back` carries our own reopen marker, so closing the event's sheet returns to
+  // this request rather than stranding the admin on the events list.
+  const eventHref = request.event_id
+    ? `/event-setups/events?open=${request.event_id}&back=${encodeURIComponent(`${LIST_HREF}?open=${request.id}`)}`
+    : null;
+  // Is that event actually on the schedule? Only `booked` keeps its event active;
+  // every other status deactivates it, so the badge colour reports the event's
+  // real state rather than just the fact a row exists.
+  const linkedEvent = Array.isArray(request.linked_event) ? request.linked_event[0] : request.linked_event;
+  const eventIsActive = linkedEvent?.is_active === true;
   // The id is a uuid — too long to show whole. First 8 chars is a workable human
   // reference; the full value is on hover and on the clipboard.
   const shortRef = request.id.slice(0, 8).toUpperCase();
@@ -886,7 +928,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
    */
   async function requestClose() {
     if (!hasChanges) {
-      setOpen(false);
+      setSheetOpen(false);
       return;
     }
     // The sheet stays mounted while we ask, so a second Escape would fire
@@ -947,7 +989,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     setAdminNotes(request.admin_notes || "");
     setClashes([]);
     setError(null);
-    setOpen(false);
+    setSheetOpen(false);
   }
 
   // Favourite is a bookmark, not an edit — it saves on click and is deliberately
@@ -1221,7 +1263,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             } else {
               toast.success("Booking updated — band notified");
             }
-            setOpen(false);
+            setSheetOpen(false);
           });
           return;
         }
@@ -1239,7 +1281,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           runSave(async () => {
             await updateBandBookingFields(request.id, detailFields());
             toast.success("Changes saved");
-            setOpen(false);
+            setSheetOpen(false);
           });
           return;
         }
@@ -1253,7 +1295,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             selected_end_time: selectedEndTime || null,
           });
           toast.success("Changes saved");
-          setOpen(false);
+          setSheetOpen(false);
         });
       } catch {
         setError("Failed to update. Please try again.");
@@ -1277,7 +1319,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       {/* Card row */}
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => setSheetOpen(true)}
         className={cn(
           "w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
           "flex items-center gap-3 px-3 py-3.5 text-left",
@@ -1393,7 +1435,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       {/* Bottom sheet */}
       {/* Dismissals route through requestClose so unsaved edits can't slip away;
           opening stays direct. */}
-      <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : requestClose())}>
+      <Sheet open={open} onOpenChange={(next) => (next ? setSheetOpen(true) : requestClose())}>
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
@@ -1425,15 +1467,25 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
               {/* Linked event, then quick actions. The badge speaks to the event,
                   not the status (the stepper below carries that): green = linked and
-                  navigates; red = booked but no event was ever placed, which is a
-                  data fault worth shouting about; blue = nothing linked. */}
+                  live on the schedule; red = either linked but deactivated, or booked
+                  with no event ever placed (a data fault worth shouting about);
+                  blue = nothing linked. */}
               <div className="flex shrink-0 items-center gap-1.5">
                 {showEventBadge &&
                   (eventHref ? (
                     <Link
                       href={eventHref}
-                      title={`View linked event #${request.event_id}`}
-                      className="group inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-green-200 bg-green-50 px-3 font-black text-[10px] tracking-wider text-green-700 uppercase transition-colors hover:bg-green-100 sm:h-9"
+                      title={
+                        eventIsActive
+                          ? `View linked event #${request.event_id}`
+                          : `View linked event #${request.event_id} — currently off the schedule`
+                      }
+                      className={cn(
+                        "group inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border px-3 font-black text-[10px] tracking-wider uppercase transition-colors sm:h-9",
+                        eventIsActive
+                          ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                          : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                      )}
                     >
                       <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                       {/* The label is the widest thing in the header — drop it on a

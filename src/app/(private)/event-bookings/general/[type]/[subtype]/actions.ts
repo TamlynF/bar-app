@@ -291,7 +291,9 @@ export async function getBandRequestsForType() {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("band_booking_requests")
-    .select("*, updated_by_employee:employees!updated_by(full_name)")
+    .select(
+      "*, updated_by_employee:employees!updated_by(full_name), linked_event:events!band_booking_requests_event_id_fkey(is_active)"
+    )
     .order("created_at", { ascending: false });
   if (error) console.error("getBandRequestsForType error:", error);
   return data ?? [];

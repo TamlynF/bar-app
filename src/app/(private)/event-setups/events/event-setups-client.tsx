@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -219,7 +219,15 @@ export default function EventsClient({
 }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [selected, setSelected] = useState<EventRecord | null>(null);
+  /**
+   * Where `?back=` says to go when this sheet closes — set when another page linked
+   * us here to look at one specific event (e.g. a band request's linked event). It
+   * survives the effect below stripping the URL, so closing returns the admin to
+   * the sheet they came from instead of dumping them on the events list.
+   */
+  const [returnHref, setReturnHref] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -302,7 +310,15 @@ export default function EventsClient({
 
   // Auto-open sheet when returning from another page (?open=id)
   useEffect(() => {
-    const openId = searchParams.get("open") || new URLSearchParams(window.location.search).get("open");
+    const params = new URLSearchParams(window.location.search);
+    const back = searchParams.get("back") || params.get("back");
+    // Only ever a path on this app: `back` is attacker-controllable via the URL, and
+    // pushing it blind would turn this page into an open redirect. A leading "//"
+    // (or "/\") is protocol-relative — an absolute URL wearing a path's clothes.
+    if (back && back.startsWith("/") && !back.startsWith("//") && !back.startsWith("/\\")) {
+      setReturnHref(back);
+    }
+    const openId = searchParams.get("open") || params.get("open");
     if (!openId) return;
     const event = initialEvents.find((e) => String(e.id) === openId);
     if (event) {
@@ -480,6 +496,13 @@ export default function EventsClient({
     setIsAdding(false);
     setIsEditing(false);
     setFormError(null);
+    // Came here to look at one event on another page's behalf → closing the sheet
+    // means "done", so hand the admin back rather than leaving them on a list they
+    // never asked for. push, not replace: this is a real navigation.
+    if (returnHref) {
+      router.push(returnHref);
+      return;
+    }
     // Drop the ?open marker so a closed sheet isn't restored on Back/refresh.
     window.history.replaceState(null, "", "/event-setups/events");
   };
