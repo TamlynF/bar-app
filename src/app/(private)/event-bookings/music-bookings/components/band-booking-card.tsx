@@ -53,6 +53,9 @@ const NOTE_PREVIEW_LEN = 50;
 /** Preferred-date pills shown before the "Show all" toggle takes over. */
 const PREFERRED_DATES_VISIBLE = 4;
 
+/** The Decline Reason row lives in a narrow popover, so it previews less than a sheet row. */
+const DECLINE_PREVIEW_LEN = 28;
+
 interface SocialLinks {
   instagram?: string;
   facebook?: string;
@@ -447,6 +450,56 @@ function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to:
   );
 }
 
+/**
+ * Dialog body for the outbound emails: an optional message, plus a preview that
+ * rebuilds as you type it.
+ *
+ * The draft lives in here rather than in the card because `useConfirm` snapshots
+ * `content` when the dialog opens — a textarea bound to the card's state would
+ * render stale and swallow keystrokes. This component mounts once and owns its
+ * own state; `onNoteChange` reports back so the caller can read the final value.
+ */
+function EmailWithNote({
+  initialNote,
+  onNoteChange,
+  build,
+  to,
+  label,
+  placeholder,
+  slotLabel,
+}: {
+  initialNote: string;
+  onNoteChange: (v: string) => void;
+  /** Rebuilds the email for the given note — keeps the preview honest. */
+  build: (note: string) => BandEmail;
+  to: string;
+  label: string;
+  placeholder: string;
+  slotLabel?: string;
+}) {
+  const [note, setNote] = useState(initialNote);
+  return (
+    <div className="space-y-2 text-left">
+      <label className="block">
+        <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+          {label}
+        </span>
+        <textarea
+          value={note}
+          rows={3}
+          placeholder={placeholder}
+          onChange={(e) => {
+            setNote(e.target.value);
+            onNoteChange(e.target.value);
+          }}
+          className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-white px-3 py-2 text-xs text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+        />
+      </label>
+      <EmailPreview email={build(note)} to={to} slotLabel={slotLabel} />
+    </div>
+  );
+}
+
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
@@ -591,7 +644,6 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [open, setOpen] = useState(false);
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   // Footer "note to applicant" is tucked away unless one already exists.
-  const [noteOpen, setNoteOpen] = useState(() => !!(request.admin_notes || "").trim());
   const [selectedDate, setSelectedDate] = useState(request.selected_date || "");
   const [selectedStartTime, setSelectedStartTime] = useState(toHHMM(request.selected_start_time));
   const [selectedEndTime, setSelectedEndTime] = useState(toHHMM(request.selected_end_time));
@@ -606,6 +658,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const startTimeRef = useRef<HTMLInputElement>(null);
   /** Re-entry guard for the unsaved-changes prompt. */
   const askingToClose = useRef(false);
+  /** Live value of the note being written inside an email dialog. */
+  const noteDraft = useRef("");
 
   // Favourite persists on click (not via Save), so it gets its own transition —
   // sharing `isPending` would grey out the footer actions on every heart tap.
@@ -613,6 +667,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [, startFavTransition] = useTransition();
   const [notesOpen, setNotesOpen] = useState(false);
   const [noteExpanded, setNoteExpanded] = useState(false);
+  const [declineReasonOpen, setDeclineReasonOpen] = useState(false);
 
   // Editable detail fields (act, contact & payment). Seeded from the request; a
   // cancelled request is read-only, everything else can be edited.
@@ -677,12 +732,21 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           ? "A start and end time must be set to book this act."
           : undefined;
 
+  // The reason the band was given when declined. Lives in admin_notes (the same
+  // field the offer/booked messages use) — it's whatever was last said to them.
+  const isDeclined = status === "declined";
+  const declineReason = adminNotes.trim();
+  const declineIsLong = declineReason.length > DECLINE_PREVIEW_LEN;
+  const declineHead = declineReason.slice(0, DECLINE_PREVIEW_LEN).trimEnd();
+
   // A slot that overlaps another active event can't be committed — it would double-
   // book the venue. Blocks Save and the Booked chip until the time moves.
   const hasClashes = clashes.length > 0;
   const clashWarning = hasClashes
     ? `Clashes with ${clashes.map((c) => c.title).join(", ")} — pick another time.`
     : undefined;
+  /** Is there anything to say about the slot? Drives the footer's second column. */
+  const hasSlotFeedback = !!slotWarning || hasClashes;
 
   // Every platform gets a pill; unfilled ones render deactivated and can be filled
   // in. Read-only requests only show what's actually there.
@@ -823,8 +887,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       return;
     }
     // The sheet stays mounted while we ask, so a second Escape would fire
-    // onOpenChange again and stack another dialog over the first.
-    if (askingToClose.current) return;
+    // onOpenChange again and stack another dialog over the first. Likewise, an
+    // Escape *during* a status dialog must not open a competing one.
+    if (askingToClose.current || isPending) return;
     askingToClose.current = true;
     try {
       // A clashing slot can't be saved at all, so don't offer a Save that would
@@ -924,62 +989,103 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
    * of the exact email before anything is sent. new / reviewing are silent, so
    * they stay one-click.
    */
-  async function confirmEmail(newStatus: BandStatus): Promise<boolean> {
+  /**
+   * The band only hears about offered / booked / declined — each gets a dialog to
+   * write an optional message and see the exact email before it goes. Returns the
+   * note alongside the verdict, since it's written *in* the dialog and the caller
+   * has to persist and send it. new / reviewing send nothing, so they stay
+   * one-click and keep whatever note is already on the record.
+   */
+  async function confirmEmail(newStatus: BandStatus): Promise<{ ok: boolean; note: string }> {
     const slot = {
       name: bookerName || request.booker_name,
       groupName: actName || request.group_name,
       date: selectedDate || null,
       startTime: selectedStartTime || null,
       endTime: selectedEndTime || null,
-      notes: adminNotes || null,
+    };
+    const to = email || request.email;
+
+    const dialogs: Partial<
+      Record<
+        BandStatus,
+        {
+          title: string;
+          description: string;
+          confirmLabel: string;
+          label: string;
+          placeholder: string;
+          slotLabel?: string;
+          destructive?: boolean;
+          /** Prefill from the record. Only the decline reason is kept there. */
+          seed?: boolean;
+          build: (note: string) => BandEmail;
+        }
+      >
+    > = {
+      offered: {
+        title: "Send offer & email band?",
+        description: "The band gets this straight away and replies to accept.",
+        confirmLabel: "Send & Email",
+        label: "Message to the band (optional)",
+        placeholder: "Anything they should know about the slot, load-in, kit...",
+        slotLabel: "Proposed Slot",
+        build: (note) =>
+          buildOfferEmail({
+            ...slot,
+            paymentAmount: paymentAmount === "" ? null : Number(paymentAmount),
+            notes: note,
+          }),
+      },
+      booked: {
+        title: "Book & email band?",
+        description: "This confirms the band and puts the event on the schedule.",
+        confirmLabel: "Book & Email",
+        label: "Message to the band (optional)",
+        placeholder: "Anything they should know before the night...",
+        slotLabel: "Performance Date",
+        build: (note) => buildOutcomeEmail({ ...slot, outcome: "confirmed", notes: note }),
+      },
+      declined: {
+        title: "Decline & email band?",
+        description: "This turns the application down and emails the band.",
+        confirmLabel: "Decline & Email",
+        label: "Reason for declining (optional)",
+        placeholder: "Shared with the band in the email. Leave blank to say nothing.",
+        destructive: true,
+        // The reason is kept on the record, so an existing one is offered for reuse.
+        seed: true,
+        build: (note) => buildOutcomeEmail({ ...slot, outcome: "cancelled", notes: note }),
+      },
     };
 
-    if (newStatus === "offered") {
-      return confirm({
-        title: "Send offer & email band?",
-        description: "The band gets this straight away and replies to accept. Preview:",
-        confirmLabel: "Send & Email",
-        content: (
-          <EmailPreview
-            email={buildOfferEmail({
-              ...slot,
-              paymentAmount: paymentAmount === "" ? null : Number(paymentAmount),
-            })}
-            to={email || request.email}
-            slotLabel="Proposed Slot"
-          />
-        ),
-      });
-    }
+    const d = dialogs[newStatus];
+    if (!d) return { ok: true, note: adminNotes };
 
-    if (newStatus === "booked") {
-      return confirm({
-        title: "Book & email band?",
-        description: "This confirms the band and puts the event on the schedule. Preview:",
-        confirmLabel: "Book & Email",
-        content: (
-          <EmailPreview
-            email={buildOutcomeEmail({ ...slot, outcome: "confirmed" })}
-            to={email || request.email}
-            slotLabel="Performance Date"
-          />
-        ),
-      });
-    }
-
-    if (newStatus === "declined") {
-      return confirm({
-        title: "Decline & email band?",
-        description: "This turns the application down and emails the band. Preview:",
-        confirmLabel: "Decline & Email",
-        variant: "destructive",
-        content: (
-          <EmailPreview email={buildOutcomeEmail({ ...slot, outcome: "cancelled" })} to={email || request.email} />
-        ),
-      });
-    }
-
-    return true;
+    // Offer / booked messages are written fresh each send — they must not inherit
+    // the decline reason (or anything else) sitting in admin_notes.
+    const initial = d.seed ? adminNotes : "";
+    noteDraft.current = initial;
+    const ok = await confirm({
+      title: d.title,
+      description: `${d.description} Preview:`,
+      confirmLabel: d.confirmLabel,
+      variant: d.destructive ? "destructive" : undefined,
+      content: (
+        <EmailWithNote
+          initialNote={initial}
+          onNoteChange={(v) => {
+            noteDraft.current = v;
+          }}
+          build={d.build}
+          to={to}
+          label={d.label}
+          placeholder={d.placeholder}
+          slotLabel={d.slotLabel}
+        />
+      ),
+    });
+    return { ok, note: noteDraft.current };
   }
 
   function handleAction(newStatus: BandStatus) {
@@ -996,20 +1102,28 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           const c = await findClashes();
           if (c.length) return;
         }
-        // Last chance to back out before the band is emailed. Kept outside the
-        // spinner — the chip shouldn't churn while a dialog waits on the admin.
-        if (!(await confirmEmail(newStatus))) return;
+        // Last chance to back out before the band is emailed, and where the note
+        // that goes with it gets written. Kept outside the spinner — the chip
+        // shouldn't churn while a dialog waits on the admin.
+        const { ok, note } = await confirmEmail(newStatus);
+        if (!ok) return;
         setPendingStage(newStatus);
-        // Persist any field / date edits before the status change.
+        // admin_notes holds the decline reason and nothing else — an offer/booked
+        // message is per-send, so it must leave whatever's on the record alone.
+        const isDecline = newStatus === "declined";
+        const persistedNote = isDecline ? note : adminNotes;
         if (hasChanges) {
           await updateBandBookingFields(request.id, {
             ...detailFields(),
+            admin_notes: persistedNote || null,
             selected_date: selectedDate || null,
             selected_start_time: selectedStartTime || null,
             selected_end_time: selectedEndTime || null,
           });
         }
-        const result = await updateBandStatus(request.id, newStatus, adminNotes || undefined);
+        // `note` is what the band reads; the action decides what (if anything) sticks.
+        const result = await updateBandStatus(request.id, newStatus, note || undefined);
+        if (isDecline) setAdminNotes(note);
         // The sheet stays open on every status change — the stepper is the control
         // now, so you land on the new stage and see the result (including Declined,
         // which can be reopened straight from the stepper). Close it yourself.
@@ -1385,6 +1499,43 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         ) : null
                       }
                     />
+                    {/* Decline reason — previewed short, opens into an editable box
+                        so a badly-worded reason can be corrected after the fact. */}
+                    {(isDeclined || !!declineReason) && (
+                      <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                          Decline Reason
+                        </span>
+                        {declineReasonOpen ? (
+                          <textarea
+                            aria-label="Decline reason"
+                            value={adminNotes}
+                            rows={3}
+                            autoFocus
+                            placeholder="Why was this declined?"
+                            onChange={(e) => setAdminNotes(e.target.value)}
+                            className="min-w-0 flex-1 resize-none rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 py-1.5 text-[13px] text-[#1F1F1A] transition-all outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30"
+                          />
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setDeclineReasonOpen(true)}
+                            title={declineReason || "Add a reason"}
+                            className="min-w-0 text-right text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:text-[#5C4033]"
+                          >
+                            {declineReason ? (
+                              <span className="italic">
+                                &quot;{declineIsLong ? declineHead : declineReason}
+                                {declineIsLong && <span className="font-black text-[#5C4033] not-italic">…</span>}
+                                &quot;
+                              </span>
+                            ) : (
+                              <span className="text-[#5F624F]/50">Add a reason…</span>
+                            )}
+                          </button>
+                        )}
+                      </div>
+                    )}
                     <SheetRow label="Submitted" value={formatDateTime(request.created_at)} />
                     <SheetRow label="Last Modified" value={formatDateTime(request.updated_at)} />
                     <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "—"} />
@@ -1856,11 +2007,54 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               primary action (right), Save only once something changed. The note to
               the applicant is tucked behind a toggle since it's optional. */}
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-4 py-3 pb-6 backdrop-blur-md sm:px-6">
-            {/* Action area — editable stages (new / reviewing / offered / booked).
-                A declined request is read-only, so no footer. */}
-            {editable && (
+            {/* A declined request has no slot to commit, so its footer is just the
+                reason the band was given — editable, in case it needs rewording. */}
+            {isDeclined ? (
               <div className="space-y-2">
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col">
+                  <span className="mb-1.5 flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                    <MessageSquareQuote className="h-3.5 w-3.5" />
+                    Decline Reason for Applicant
+                  </span>
+                  <textarea
+                    aria-label="Decline reason for applicant"
+                    value={adminNotes}
+                    onChange={(e) => setAdminNotes(e.target.value)}
+                    placeholder="The reason given to the band when this was declined..."
+                    rows={2}
+                    className="w-full resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                  />
+                </div>
+
+                {error && <p className="text-xs font-bold text-red-500">{error}</p>}
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={handleCancel}
+                    disabled={isPending}
+                    className="mr-auto flex h-11 flex-1 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial"
+                  >
+                    Cancel
+                  </button>
+                  {hasChanges && (
+                    <button
+                      type="button"
+                      onClick={handleSave}
+                      disabled={isPending}
+                      className="flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial"
+                    >
+                      {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                      Save Changes
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {/* Splits only when there's something to say about the slot —
+                    otherwise the console keeps the full width. */}
+                <div className={cn("grid gap-3", hasSlotFeedback && "sm:grid-cols-2")}>
                   {/* Left: the slot being committed to — compact single row. While
                       it's still needed for booking it wears an amber rail, and the
                       blocked Booked chip flashes it via revealSlot(). */}
@@ -1963,38 +2157,17 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         )}
                       </div>
                     </div>
-                    {/* Single message covering the date + time pair above. */}
-                    <FieldMessage warning={slotWarning} />
-                    {clashes.length > 0 && (
-                      <div className="mt-1">
-                        <ClashList clashes={clashes} />
-                      </div>
-                    )}
                   </div>
 
-                  {/* Right: note to applicant — optional, so it stays behind a toggle */}
-                  <div className="flex flex-col">
-                    <button
-                      type="button"
-                      onClick={() => setNoteOpen((o) => !o)}
-                      aria-expanded={noteOpen}
-                      className="flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:text-[#5C4033]"
-                    >
-                      <MessageSquareQuote className="h-3.5 w-3.5" />
-                      Note to Applicant {adminNotes.trim() && !noteOpen ? "(added)" : "(optional)"}
-                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", noteOpen && "rotate-180")} />
-                    </button>
-                    {noteOpen && (
-                      <textarea
-                        aria-label="Note to applicant"
-                        value={adminNotes}
-                        onChange={(e) => setAdminNotes(e.target.value)}
-                        placeholder="Add a message to include in the offer / outcome email..."
-                        rows={2}
-                        className="mt-1.5 w-full flex-1 resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
-                      />
-                    )}
-                  </div>
+                  {/* Right: what's wrong with the slot. The message to the band is
+                      written in the send dialog now, so this space carries the
+                      thing that actually blocks you. */}
+                  {hasSlotFeedback && (
+                    <div className="flex flex-col justify-center gap-1.5">
+                      <FieldMessage warning={slotWarning} />
+                      {clashes.length > 0 && <ClashList clashes={clashes} />}
+                    </div>
+                  )}
                 </div>
 
                 {error && <p className="text-xs font-bold text-red-500">{error}</p>}

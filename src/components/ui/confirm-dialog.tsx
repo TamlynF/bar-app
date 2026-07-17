@@ -29,6 +29,12 @@ export function useConfirm() {
   const resolveRef = useRef<((value: boolean) => void) | undefined>(undefined);
 
   const confirm = useCallback((opts: ConfirmOptions): Promise<boolean> => {
+    // Opening a second dialog while one is in flight would overwrite resolveRef and
+    // strand the first promise forever — and any `await confirm(...)` sitting inside
+    // a startTransition would then never finish, leaving isPending stuck true and
+    // every button gated on it permanently dead. Settle the old one as cancelled.
+    resolveRef.current?.(false);
+    resolveRef.current = undefined;
     setOptions(opts);
     setOpen(true);
     return new Promise((resolve) => {

@@ -164,17 +164,27 @@ export async function rescheduleConfirmedBooking(
   return { emailError };
 }
 
+/**
+ * `emailNote` is the message the band reads on this transition. Only a decline
+ * keeps it on the record (as the decline reason) — offer/booked messages are
+ * written per-send, so they must neither overwrite nor blank out admin_notes.
+ */
 export async function updateBandStatus(
   id: string,
   status: BandStatus,
-  adminNotes?: string
+  emailNote?: string
 ) {
   const supabase = await createClient();
   const empId = await currentEmployeeId();
 
   const { data: record, error } = await supabase
     .from("band_booking_requests")
-    .update({ status, admin_notes: adminNotes || null, updated_by: empId, updated_at: new Date().toISOString() })
+    .update({
+      status,
+      ...(status === "declined" ? { admin_notes: emailNote || null } : {}),
+      updated_by: empId,
+      updated_at: new Date().toISOString(),
+    })
     .eq("id", id)
     .select(
       "booker_name, email, type, genre, group_name, selected_date, selected_start_time, selected_end_time, payment_amount, event_id"
@@ -262,7 +272,7 @@ export async function updateBandStatus(
       record.selected_start_time,
       record.selected_end_time,
       record.payment_amount,
-      adminNotes
+      emailNote
     );
   } else if (status === "booked" || status === "declined") {
     emailError = await sendOutcomeEmail(
@@ -273,7 +283,7 @@ export async function updateBandStatus(
       record.selected_date,
       record.selected_start_time,
       record.selected_end_time,
-      adminNotes
+      emailNote
     );
   }
 
