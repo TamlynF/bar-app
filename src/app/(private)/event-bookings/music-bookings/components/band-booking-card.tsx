@@ -1396,8 +1396,6 @@ export function BandBookingCard({
           placeholder: string;
           slotLabel?: string;
           destructive?: boolean;
-          /** Prefill from the record. Only the decline reason is kept there. */
-          seed?: boolean;
           build: (note: string) => BandEmail;
         }
       >
@@ -1432,8 +1430,9 @@ export function BandBookingCard({
         label: "Reason for declining (optional)",
         placeholder: "Shared with the band in the email. Leave blank to say nothing.",
         destructive: true,
-        // The reason is kept on the record, so an existing one is offered for reuse.
-        seed: true,
+        // Always starts blank — the reason box is not pre-filled from any existing
+        // admin_notes, so leaving it blank clears the field. What's typed is emailed
+        // and saved as the new decline reason.
         build: (note) => buildOutcomeEmail({ ...slot, outcome: "cancelled", notes: note }),
       },
     };
@@ -1441,9 +1440,9 @@ export function BandBookingCard({
     const d = dialogs[newStatus];
     if (!d) return { ok: true, note: adminNotes };
 
-    // Offer / booked messages are written fresh each send — they must not inherit
-    // the decline reason (or anything else) sitting in admin_notes.
-    const initial = d.seed ? adminNotes : "";
+    // Every outbound message — offer, booked, and decline — is written fresh each
+    // send: the box starts blank rather than inheriting anything in admin_notes.
+    const initial = "";
     noteDraft.current = initial;
     const ok = await confirm({
       title: d.title,
