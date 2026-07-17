@@ -10,7 +10,7 @@ import { GalleryPeek, type GalleryPeekItem } from "@/components/gallery-peek";
 import { FindUs, type CompanyInfo } from "@/components/find-us";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { SectionHeading } from "@/components/editorial/section-heading";
-import { serializeEvent, type EventRow } from "@/lib/events-display";
+import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
 
 export const revalidate = 300;
 
@@ -59,7 +59,9 @@ export default async function HomePage() {
     supabase.from("company_information").select("*").maybeSingle(),
   ]);
 
-  const highlightedEvents = ((rawEvents ?? []) as EventRow[]).map(serializeEvent);
+  const highlightedEvents = ((rawEvents ?? []) as EventRow[])
+    .filter((e) => getEventType(e)?.behavior !== "private")
+    .map(serializeEvent);
   // The soonest event headlines the hero ("on tonight" if it's today); the rest
   // fill the schedule list below.
   const featured = highlightedEvents[0] ?? null;

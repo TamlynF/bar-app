@@ -5,7 +5,7 @@ import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { type FilterTab } from "@/components/editorial/filter-tabs";
 import { WhatsOnGrid } from "@/components/whats-on-grid";
-import { parseDate, serializeEvent, type EventRow } from "@/lib/events-display";
+import { getEventType, parseDate, serializeEvent, type EventRow } from "@/lib/events-display";
 
 export const revalidate = 300;
 
@@ -37,7 +37,9 @@ export default async function WhatsOnPage() {
     .limit(100);
 
   const events = ((rawEvents ?? []) as EventRow[]).filter(
-    (e) => e.date < todayStr || e.is_active || e.is_fully_booked
+    (e) =>
+      getEventType(e)?.behavior !== "private" &&
+      (e.date < todayStr || e.is_active)
   );
 
   const monthEvents = events.filter((e) => parseDate(e.date) <= monthEnd);
