@@ -17,6 +17,7 @@ const SOCIAL_FIELDS = [
     key: "instagram" as const,
     label: "Instagram",
     icon: Instagram,
+    iconColor: "text-[#E1306C]",
     prefix: "instagram.com/",
     placeholder: "yourhandle",
     urlBuilder: (h: string) => `https://instagram.com/${h}`,
@@ -25,6 +26,7 @@ const SOCIAL_FIELDS = [
     key: "facebook" as const,
     label: "Facebook",
     icon: Facebook,
+    iconColor: "text-[#1877F2]",
     prefix: "facebook.com/",
     placeholder: "yourpage",
     urlBuilder: (h: string) => `https://facebook.com/${h}`,
@@ -33,6 +35,7 @@ const SOCIAL_FIELDS = [
     key: "youtube" as const,
     label: "YouTube",
     icon: Youtube,
+    iconColor: "text-[#FF0000]",
     prefix: "youtube.com/@",
     placeholder: "yourchannel",
     urlBuilder: (h: string) => `https://youtube.com/@${h}`,
@@ -41,6 +44,7 @@ const SOCIAL_FIELDS = [
     key: "tiktok" as const,
     label: "TikTok",
     icon: Music2,
+    iconColor: "text-[#25F4EE]",
     prefix: "tiktok.com/@",
     placeholder: "yourhandle",
     urlBuilder: (h: string) => `https://tiktok.com/@${h}`,
@@ -86,6 +90,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
   const [phone, setPhone] = useState("");
   const [notes, setNotes] = useState("");
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
+  const [addedSocials, setAddedSocials] = useState<string[]>([]);
   const [videoFiles, setVideoFiles] = useState<VideoFile[]>([]);
   const [preferredDates, setPreferredDates] = useState<string[]>(["", ""]);
 
@@ -94,6 +99,15 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
 
   function handleSocial(key: string, value: string) {
     setSocialLinks((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function addSocial(key: string) {
+    setAddedSocials((prev) => (prev.includes(key) ? prev : [...prev, key]));
+  }
+
+  function removeSocial(key: string) {
+    setAddedSocials((prev) => prev.filter((k) => k !== key));
+    handleSocial(key, "");
   }
 
   function handleDate(index: number, value: string) {
@@ -361,17 +375,24 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           <>
             <div className="space-y-3">
               <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Social Media</p>
-              {SOCIAL_FIELDS.map(({ key, label, icon: Icon, prefix, placeholder, urlBuilder }) => (
-                <div key={key}>
-                  <label className={labelClass}>{label}</label>
-                  <div className="flex items-center overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all focus-within:border-[#FDCC4B]/40 focus-within:ring-1 focus-within:ring-[#FDCC4B]/20">
-                    <Icon className="ml-3.5 h-4 w-4 shrink-0 text-stone-600" />
-                    <span className="pr-0.5 pl-2 text-sm whitespace-nowrap text-stone-600 select-none">{prefix}</span>
+
+              {addedSocials.map((key) => {
+                const field = SOCIAL_FIELDS.find((f) => f.key === key);
+                if (!field) return null;
+                const { label, icon: Icon, iconColor, prefix, placeholder, urlBuilder } = field;
+                return (
+                  <div
+                    key={key}
+                    className="flex items-center overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all focus-within:border-[#FDCC4B]/40 focus-within:ring-1 focus-within:ring-[#FDCC4B]/20"
+                  >
+                    <Icon className={`ml-3.5 h-4 w-4 shrink-0 ${iconColor}`} />
+                    <span className="pr-0.5 pl-2 text-sm whitespace-nowrap text-stone-400 select-none">{prefix}</span>
                     <input
                       type="text"
                       value={socialLinks[key] || ""}
                       onChange={(e) => handleSocial(key, e.target.value.replace(/^@/, ""))}
                       placeholder={placeholder}
+                      aria-label={`${label} handle`}
                       className="flex-1 bg-transparent py-3 pr-3 text-sm text-white placeholder:text-stone-600 focus:outline-none"
                     />
                     {socialLinks[key] && (
@@ -386,9 +407,42 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     )}
+                    <button
+                      type="button"
+                      title={`Remove ${label}`}
+                      onClick={() => removeSocial(key)}
+                      className="flex w-10 shrink-0 items-center justify-center self-stretch border-l border-white/10 text-stone-500 transition-colors hover:text-red-400"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </div>
-                </div>
-              ))}
+                );
+              })}
+
+              {addedSocials.length < SOCIAL_FIELDS.length && (
+                <Select key={addedSocials.length} onValueChange={addSocial}>
+                  <SelectTrigger
+                    aria-label="Add a social link"
+                    className="w-full rounded-xl border border-dashed border-white/20 px-4 py-3 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:text-stone-400"
+                  >
+                    <span className="flex items-center gap-2">
+                      <Plus className="h-4 w-4" /> Add a social link
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SOCIAL_FIELDS.filter((f) => !addedSocials.includes(f.key)).map((f) => {
+                      const Icon = f.icon;
+                      return (
+                        <SelectItem key={f.key} value={f.key}>
+                          <span className="flex items-center gap-2">
+                            <Icon className={`h-4 w-4 ${f.iconColor}`} /> {f.label}
+                          </span>
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="space-y-3 pt-2">
