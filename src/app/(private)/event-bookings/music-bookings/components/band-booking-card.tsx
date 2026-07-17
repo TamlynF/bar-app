@@ -1882,50 +1882,9 @@ export function BandBookingCard({
                 </button>
               </div>
 
-              {/* Linked event, then quick actions. The badge speaks to the event,
-                  not the status (the stepper below carries that): green = linked and
-                  live on the schedule; red = either linked but deactivated, or booked
-                  with no event ever placed (a data fault worth shouting about);
-                  blue = nothing linked. */}
+              {/* Quick actions (favourite, notes, audit). The linked-event pill now
+                  lives in the footer, beside the slot console. */}
               <div className="flex shrink-0 items-center gap-1.5">
-                {showEventBadge &&
-                  (eventHref ? (
-                    <Link
-                      href={eventHref}
-                      title={
-                        eventIsActive
-                          ? `View linked event #${request.event_id}`
-                          : `View linked event #${request.event_id} — currently off the schedule`
-                      }
-                      className={cn(
-                        "group inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border px-3 font-black text-[10px] tracking-wider uppercase transition-colors sm:h-9",
-                        eventIsActive
-                          ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-                          : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                      )}
-                    >
-                      <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                      {/* The label is the widest thing in the header — drop it on a
-                          phone and let the colour + "#id" carry it. */}
-                      <span className="hidden sm:inline">View Linked Event:</span>
-                      <span className="tabular-nums">#{request.event_id}</span>
-                      <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
-                    </Link>
-                  ) : status === "booked" ? (
-                    <span
-                      title="This booking is booked but has no linked event"
-                      className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-3 font-black text-[10px] tracking-wider text-red-700 uppercase sm:h-9"
-                    >
-                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                      Missing Linked Event
-                    </span>
-                  ) : (
-                    <span className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-3 font-black text-[10px] tracking-wider text-blue-700 uppercase sm:h-9">
-                      <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                      No Linked Event
-                    </span>
-                  ))}
-
                 <button
                   type="button"
                   onClick={handleToggleFavorite}
@@ -2607,9 +2566,9 @@ export function BandBookingCard({
               the applicant is tucked behind a toggle since it's optional. */}
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#5C4033]/15 bg-[#E6DFC8] px-4 py-3 pb-6 sm:px-6">
             <div className="space-y-2">
-                {/* Splits only for the decline reason; the slot console now carries
-                    its own warnings inline, so it keeps the full width otherwise. */}
-                <div className={cn("grid gap-3", isDeclined && "sm:grid-cols-2")}>
+                {/* Slot console on the left (three fifths), the linked-event pill and
+                    any decline reason on the right. */}
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
                   {/* Left: the slot being committed to, with its warnings under the
                       fields. The blocked Booked chip flashes it via revealSlot(). */}
                   <div
@@ -2622,6 +2581,9 @@ export function BandBookingCard({
                       // once it's set. The flash still pulses when the Booked chip
                       // points here.
                       "space-y-2 rounded-2xl border-2 p-3 shadow-lg transition-all",
+                      // Three fifths of the footer width from sm up (full width on a
+                      // phone), leaving the rest for the linked-event pill / decline.
+                      "sm:w-3/5",
                       hasClashes
                         ? "border-red-300 bg-red-50"
                         : slotWarning
@@ -2641,20 +2603,7 @@ export function BandBookingCard({
                         slotIsSet ? "text-[#1B4332]" : "text-[#5C4033]"
                       )}
                     >
-                      <span
-                        className={cn(
-                          "flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-white",
-                          slotIsSet ? "bg-[#1B4332]" : "bg-[#5C4033]"
-                        )}
-                      >
-                        <CalendarClock className="h-3.5 w-3.5" />
-                      </span>
                       Selected Date &amp; Time
-                      {slotWarning && (
-                        <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[9px] tracking-tight text-amber-700">
-                          Required to book
-                        </span>
-                      )}
                     </span>
                     <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
                       <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
@@ -2753,21 +2702,62 @@ export function BandBookingCard({
                     {clashes.length > 0 && <ClashList clashes={clashes} />}
                   </div>
 
-                  {/* Right: once declined, the reason the band was given — editable,
-                      in case it needs rewording. */}
-                  {isDeclined && (
-                    <div className="flex flex-col">
-                      <span className="mb-1.5 flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
-                        <MessageSquareQuote className="h-3.5 w-3.5" />
-                        Decline Reason for Applicant
-                      </span>
-                      <textarea
-                        aria-label="Decline reason for applicant"
-                        value={adminNotes}
-                        onChange={(e) => setAdminNotes(e.target.value)}
-                        placeholder="The reason given to the band when this was declined..."
-                        className="w-full flex-1 resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
-                      />
+                  {/* Right of the slot console: the linked-event pill (moved here from
+                      the sheet header) and, once declined, the reason given. */}
+                  {(showEventBadge || isDeclined) && (
+                    <div className="flex min-w-0 flex-1 flex-col gap-2">
+                      {showEventBadge &&
+                        (eventHref ? (
+                          <Link
+                            href={eventHref}
+                            title={
+                              eventIsActive
+                                ? `View linked event #${request.event_id}`
+                                : `View linked event #${request.event_id} — currently off the schedule`
+                            }
+                            className={cn(
+                              "group inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-xl border px-3 font-black text-[10px] tracking-wider uppercase transition-colors sm:h-9",
+                              eventIsActive
+                                ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
+                                : "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                            )}
+                          >
+                            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                            <span>Event:</span>
+                            {/* Underlined so the id reads as the clickable link it is. */}
+                            <span className="tabular-nums underline underline-offset-2">#{request.event_id}</span>
+                            <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                          </Link>
+                        ) : status === "booked" ? (
+                          <span
+                            title="This booking is booked but has no linked event"
+                            className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-xl border border-red-200 bg-red-50 px-3 font-black text-[10px] tracking-wider text-red-700 uppercase sm:h-9"
+                          >
+                            <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                            Missing Linked Event
+                          </span>
+                        ) : (
+                          <span className="inline-flex h-11 shrink-0 items-center gap-1.5 self-start rounded-xl border border-blue-200 bg-blue-50 px-3 font-black text-[10px] tracking-wider text-blue-700 uppercase sm:h-9">
+                            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                            No Linked Event
+                          </span>
+                        ))}
+
+                      {isDeclined && (
+                        <div className="flex min-h-0 flex-1 flex-col">
+                          <span className="mb-1.5 flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                            <MessageSquareQuote className="h-3.5 w-3.5" />
+                            Decline Reason for Applicant
+                          </span>
+                          <textarea
+                            aria-label="Decline reason for applicant"
+                            value={adminNotes}
+                            onChange={(e) => setAdminNotes(e.target.value)}
+                            placeholder="The reason given to the band when this was declined..."
+                            className="w-full flex-1 resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
