@@ -72,6 +72,23 @@ export async function updateBandBookingFields(
 }
 
 /**
+ * Flags/unflags a request as a favourite. Unlike `updateBandBookingFields` this
+ * deliberately does NOT stamp updated_by/updated_at — a favourite is a bookmark,
+ * not an edit to the record, so it stays out of the audit trail.
+ */
+export async function toggleBandFavorite(id: string, value: boolean) {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("band_booking_requests")
+    .update({ is_favorite: value })
+    .eq("id", id);
+
+  if (error) throw new Error("Failed to update favourite.");
+
+  revalidatePath("/event-bookings/music-bookings");
+}
+
+/**
  * Returns the active events on `date` whose time window overlaps [startTime, endTime).
  * `excludeEventId` skips the booking's own linked event so it never clashes with itself.
  */

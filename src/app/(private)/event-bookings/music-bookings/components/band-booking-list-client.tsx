@@ -46,7 +46,8 @@ export default function BandBookingListClient({
         );
       })
       .sort((a, b) => {
-        // Sort: pipeline order (new → declined), then by created_at desc
+        // Sort: favourites first, then pipeline order (new → declined), then by created_at desc
+        if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
         const statusOrder: Record<string, number> = {
           new: 0,
           reviewing: 1,
