@@ -56,7 +56,7 @@ export default async function BandBookingPage() {
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-14 pb-12 sm:px-6 lg:px-8">
 
         {/* Booking Form Card */}
-        <div className="relative mb-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/3 p-6 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl sm:p-10">
+        <div className="relative mb-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl ring-1 ring-white/10 backdrop-blur-xl sm:p-10">
           <div className="pointer-events-none absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]" />
 
           <div className="relative z-10 mb-8 text-center">
@@ -70,13 +70,13 @@ export default async function BandBookingPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-auto mb-6 flex flex-col items-center gap-4 pt-8">
-          <div className="flex items-center gap-4 text-stone-800">
-            <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
-            <div className="h-px w-6 bg-stone-800/50" />
+        <div className="mt-auto mb-6 flex flex-col items-center gap-3 pt-8">
+          <div className="flex items-center gap-4 text-stone-300">
+            <div className="h-px w-6 bg-white/20" />
+            <span className="text-[10px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
+            <div className="h-px w-6 bg-white/20" />
           </div>
-          <p className="text-[8px] tracking-widest text-stone-600 uppercase opacity-30">
+          <p className="text-[9px] tracking-widest text-stone-400 uppercase">
             Licensed Venue • Please Drink Responsibly
           </p>
         </div>

@@ -72,7 +72,7 @@ const MAX_DATES = 8;
 const titleCase = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
 const inputClass =
-  "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-600 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
+  "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-500 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
 const labelClass = "block text-[11px] font-black uppercase tracking-widest text-stone-400 mb-1.5";
 
 const STEPS = [
@@ -80,6 +80,7 @@ const STEPS = [
   { number: 2, title: "Contact", subtitle: "How do we reach you?" },
   { number: 3, title: "Online & Media", subtitle: "Links and performance videos." },
   { number: 4, title: "Availability", subtitle: "When can you play?" },
+  { number: 5, title: "Fee & Notes", subtitle: "Your fee and anything else." },
 ];
 
 interface BandBookingFormProps {
@@ -286,7 +287,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
             />
           ))}
         </div>
-        <span className="font-black text-[10px] tracking-widest text-stone-600 uppercase">
+        <span className={labelClass}>
           {step} of {STEPS.length}
         </span>
       </div>
@@ -382,7 +383,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
         {step === 3 && (
           <>
             <div className="space-y-3">
-              <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Social Media</p>
+              <p className={labelClass}>Social Media</p>
 
               {addedSocials.map((key) => {
                 const field = SOCIAL_FIELDS.find((f) => f.key === key);
@@ -401,7 +402,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                       onChange={(e) => handleSocial(key, e.target.value.replace(/^@/, ""))}
                       placeholder={placeholder}
                       aria-label={`${label} handle`}
-                      className="flex-1 bg-transparent py-3 pr-3 text-sm text-white placeholder:text-stone-600 focus:outline-none"
+                      className="flex-1 bg-transparent py-3 pr-3 text-sm text-white placeholder:text-stone-500 focus:outline-none"
                     />
                     {socialLinks[key] && (
                       <a
@@ -431,11 +432,11 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                 <Select key={addedSocials.length} onValueChange={addSocial}>
                   <SelectTrigger
                     aria-label="Add a social link"
-                    className="w-full rounded-xl border border-dashed border-white/20 px-4 py-3 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:text-stone-400"
+                    className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:text-stone-400"
                   >
-                    <span className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
                       <Plus className="h-4 w-4" /> Add a social link
-                    </span>
+                    </div>
                   </SelectTrigger>
                   <SelectContent>
                     {SOCIAL_FIELDS.filter((f) => !addedSocials.includes(f.key)).map((f) => {
@@ -455,10 +456,10 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
 
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-                <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Performance Videos</p>
-                <span className="text-[10px] font-bold text-stone-600">{videoFiles.length}/{MAX_VIDEOS}</span>
+                <p className={labelClass}>Performance Videos</p>
+                <span className="text-[10px] font-bold text-stone-400">{videoFiles.length}/{MAX_VIDEOS}</span>
               </div>
-              <p className="-mt-1 text-[11px] text-stone-600">
+              <p className="-mt-1 text-[11px] text-stone-500">
                 Upload videos of your act (MP4, WebM, MOV — max 250 MB each).
               </p>
 
@@ -537,7 +538,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-white/20 py-4 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:bg-white/3 hover:text-stone-400"
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-4 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:text-stone-400"
                   >
                     <Upload className="h-4 w-4" />
                     {videoFiles.length === 0 ? "Upload Videos" : "Add Another Video"}
@@ -551,14 +552,14 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
         {/* Step 4: Availability */}
         {step === 4 && (
           <>
+            {/* <p className="-mt-4 text-[11px] text-stone-500">Tap the dates you&apos;re available to play.</p> */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Preferred Dates</p>
-                <span className="text-[10px] font-bold text-stone-600">{preferredDates.length}/{MAX_DATES}</span>
+                <p className={labelClass}>Preferred Dates</p>
+                <span className="text-[10px] font-bold text-stone-400">{preferredDates.length}/{MAX_DATES}</span>
               </div>
-              <p className="-mt-1 text-[11px] text-stone-600">Tap the dates you&apos;re available to play.</p>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
+              <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[auto_1fr]">
                 {/* Left: compact calendar */}
                 <div
                   style={{
@@ -610,7 +611,13 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
               </div>
             </div>
 
-            <div className="pt-2">
+          </>
+        )}
+
+        {/* Step 5: Fee & Notes */}
+        {step === 5 && (
+          <>
+            <div>
               <label className={labelClass}>Expected Payment (£)</label>
               <input
                 type="number"
@@ -646,7 +653,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
       )}
 
       {/* Submit error */}
-      {error && step === 4 && (
+      {error && step === 5 && (
         <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {error}
         </p>
@@ -664,7 +671,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
             Back
           </button>
         )}
-        {step < 4 ? (
+        {step < 5 ? (
           <button
             key="next"
             type="button"

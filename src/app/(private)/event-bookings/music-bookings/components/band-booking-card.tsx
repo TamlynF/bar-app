@@ -798,7 +798,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bottom-6 left-1/2 flex h-[85vh] h-auto max-h-[80vh] w-4xl w-140 -translate-x-1/2 flex-col rounded-4xl rounded-t-[2.5rem] border-2 border-t-2 border-[#E6DFC8] border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:inset-x-auto lg:max-h-[90vh]"
+          className="bottom-6 left-1/2 flex h-[85vh] h-auto max-h-[80vh] w-4xl w-140 -translate-x-1/2 flex-col rounded-4xl rounded-t-[2.5rem] border-2 border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:inset-x-auto lg:max-h-[90vh]"
         >
           {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
@@ -1313,7 +1313,7 @@ function ClashList({ clashes }: { clashes: ClashEvent[] }) {
       <ul className="list-disc space-y-0.5 pl-6">
         {clashes.map((c) => (
           <li key={c.id} className="text-[11px] font-bold text-red-700">
-            {c.title} ({c.start} – {c.end})
+            {c.title} ({c.start} - {c.end})
           </li>
         ))}
       </ul>
