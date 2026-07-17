@@ -73,7 +73,7 @@ const settingsItems = [
 
 export default function SettingsBasePage() {
   return (
-    <div className="space-y-6 px-2 py-0 py-2 sm:px-8">
+    <div className="space-y-6 px-2 py-2 sm:px-8 sm:py-0">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         {settingsItems.map((item) => (
           <Link

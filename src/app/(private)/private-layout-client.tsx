@@ -654,7 +654,7 @@ export default function PrivateLayoutClient({
 
                         {/* Title */}
                         <div className="flex w-full flex-col items-center justify-center">
-                            <h1 className="flex flex-wrap items-center justify-center gap-1 px-8 text-center font-black text-base text-sm tracking-widest text-[#1F1F1A] uppercase sm:gap-2">
+                            <h1 className="flex flex-wrap items-center justify-center gap-1 px-8 text-center font-black text-sm tracking-widest text-[#1F1F1A] uppercase sm:gap-2 sm:text-base">
                                 <span className={cn(subtitle && backHref ? "hidden sm:inline" : "")}>{title}</span>
                                 {subtitle && (
                                     <>
@@ -667,7 +667,7 @@ export default function PrivateLayoutClient({
                     </div>
                 </header>
 
-                <main className="mx-auto w-full max-w-7xl flex-1 p-1 pb-8 pb-20 sm:p-6">
+                <main className="mx-auto w-full max-w-7xl flex-1 p-1 pb-20 sm:p-6 sm:pb-8">
                     {children}
                 </main>
 

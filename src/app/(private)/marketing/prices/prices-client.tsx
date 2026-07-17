@@ -166,7 +166,7 @@ export default function PricesClient({
     .slice(0, 2);
 
   return (
-    <div className="max-w-3xl space-y-3 space-y-4 px-2 py-0 py-3 sm:px-4 md:px-6">
+    <div className="max-w-3xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {/* Area + refresh */}
       <section className="space-y-3 rounded-2xl border border-[#E6DFC8] bg-white p-4 sm:p-5">
         {!isEditing ? (

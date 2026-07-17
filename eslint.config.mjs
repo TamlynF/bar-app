@@ -50,6 +50,15 @@ const eslintConfig = defineConfig([
       // Auto-sort Tailwind classes (autofixable). Only the ordering rule is
       // enabled to stay surgical; other opinionated rules are left off.
       "better-tailwindcss/enforce-consistent-class-order": "warn",
+      // Catch two classes fighting over the same CSS property at the same
+      // breakpoint (`w-9 w-11`, `w-[92vw] w-full`). One of them is dead, and which
+      // one silently depends on Tailwind's output order rather than the class list
+      // — so the rendered result rarely matches the intent. This is how a stripped
+      // responsive prefix shows up: `h-11 w-11 sm:h-9 sm:w-9` (fine, and correctly
+      // ignored here) decays into `h-11 w-9 w-11 sm:h-9` (broken) and nothing else
+      // notices. Same blind spot as `no-unknown-classes` below, different shape, so
+      // it gets the same "error" treatment to fail `npm run lint` loudly.
+      "better-tailwindcss/no-conflicting-classes": "error",
       // Catch class strings that aren't real Tailwind. An invalid class is just a
       // string: TypeScript never validates it and the ordering rule above happily
       // sorts it, so a mangled className (e.g. `tracdhrink-0`, `tre`) ships with
