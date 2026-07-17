@@ -75,24 +75,30 @@ export async function createEventBooking(formData: FormData) {
       chosenTable = allocation.status === "confirmed" ? allocation.table : null;
     }
 
-    // 3. Upsert contact
+    // 3. Upsert contact — atomic insert-or-get keyed on the unique email so
+    // concurrent submits (e.g. a double-clicked "Pay & Book") can't collide on
+    // contacts_email_key. ON CONFLICT DO NOTHING preserves the existing row's
+    // details; when the insert is skipped we re-select the existing id.
     let contactId: number;
-    const { data: existingContact } = await supabase
+    const { data: insertedContact } = await supabase
       .from("contacts")
+      .upsert(
+        [{ full_name: fullName, email, country_code: countryCode, phone_no: phoneNo }],
+        { onConflict: "email", ignoreDuplicates: true }
+      )
       .select("id")
-      .eq("email", email)
       .maybeSingle();
 
-    if (existingContact) {
-      contactId = existingContact.id;
+    if (insertedContact) {
+      contactId = insertedContact.id;
     } else {
-      const { data: newContact, error: contactError } = await supabase
+      const { data: existingContact } = await supabase
         .from("contacts")
-        .insert([{ full_name: fullName, email, country_code: countryCode, phone_no: phoneNo }])
         .select("id")
-        .single();
-      if (contactError || !newContact) throw new Error("Failed to save contact.");
-      contactId = newContact.id;
+        .eq("email", email)
+        .maybeSingle();
+      if (!existingContact) throw new Error("Failed to save contact.");
+      contactId = existingContact.id;
     }
 
     const totalPence = paymentAmountPence * groupSize;
