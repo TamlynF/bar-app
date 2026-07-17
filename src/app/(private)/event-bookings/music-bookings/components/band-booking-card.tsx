@@ -31,6 +31,7 @@ import {
   Pencil,
   PoundSterling,
   User,
+  Video,
   X,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
@@ -696,7 +697,19 @@ function formatDateTime(iso?: string | null): string {
 
 const LIST_HREF = "/event-bookings/music-bookings";
 
-export function BandBookingCard({ request }: { request: BandRequest }) {
+export function BandBookingCard({
+  request,
+  wide = false,
+}: {
+  request: BandRequest;
+  /**
+   * This card's column has the board to itself, so the row can spread into the
+   * width instead of staying at board-column proportions. Drives the `lg:` row
+   * layout below (there's only room for it on a real screen) and unlocks the
+   * detail a 288px column can't carry: video count, socials, unabbreviated name.
+   */
+  wide?: boolean;
+}) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
@@ -869,6 +882,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     .map((url, i) => ({ url, description: (request.video_descriptions ?? [])[i]?.trim() || "" }))
     .filter((v) => Boolean(v.url));
   const dates = (request.preferred_dates ?? []).filter(Boolean);
+  // Which platforms the act actually gave us — the row marks presence only, so it
+  // reads the saved record rather than the sheet's editable copy.
+  const activeSocials = SOCIAL_ORDER.filter((k) => (request.social_links?.[k] ?? "").trim());
   // Internal notes, oldest first (the query orders them). Server-owned: they save
   // on their own, so they're read straight off the request rather than mirrored
   // into state like the editable fields below.
@@ -1415,7 +1431,13 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           onClick={handleToggleFavorite}
           aria-pressed={isFavorite}
           title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
-          className="absolute top-0 right-0 z-20 flex h-11 w-11 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90"
+          className={cn(
+            "absolute top-0 right-0 z-20 flex h-11 w-11 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90",
+            // Once the card is a single line, a corner-pinned heart reads as
+            // floating above the row it belongs to. (translate and scale are
+            // separate properties in Tailwind 4, so the hover still works.)
+            wide && "lg:top-1/2 lg:-translate-y-1/2"
+          )}
         >
           <Heart
             className={cn(
@@ -1473,7 +1495,10 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         <div
           className={cn(
             "pointer-events-none relative z-10 flex items-center gap-3 px-3 pb-3 text-left",
-            request.type || request.genre || lifecycle ? "pt-5" : "pt-3"
+            request.type || request.genre || lifecycle ? "pt-5" : "pt-3",
+            // The row runs to the card's edge now, so it — not the name — is what
+            // has to leave the favourite its corner.
+            wide && "lg:pr-11"
           )}
         >
           {/* Status badge circle (left) */}
@@ -1504,17 +1529,33 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             )}
           </div>
 
-          <div className="min-w-0 flex-1">
+          {/* Three stacked blocks in a board column; one line across the card when
+              it has the board to itself. The blocks are the same either way — only
+              the axis they're laid on changes. */}
+          <div className={cn("min-w-0 flex-1", wide && "lg:flex lg:items-center lg:gap-4")}>
             {/* Only the name has to clear the favourite in the corner — the rows
-                below it are short and left-aligned, so they run the full width. */}
-            <p className="truncate pr-11 font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
+                below it are short and left-aligned, so they run the full width.
+                On one line the favourite is the row's problem, not the name's. */}
+            <p
+              className={cn(
+                "truncate pr-11 font-black text-sm tracking-tight text-[#1F1F1A] uppercase",
+                wide && "lg:w-56 lg:shrink-0 lg:pr-0"
+              )}
+            >
               {request.group_name || request.booker_name}
             </p>
 
-            <div className="mt-1 flex min-w-0 items-center gap-1.5 text-[#5F624F]">
+            <div
+              className={cn(
+                "mt-1 flex min-w-0 items-center gap-1.5 text-[#5F624F]",
+                wide && "lg:mt-0 lg:w-52 lg:shrink-0"
+              )}
+            >
               <User className="h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />
               <p className="truncate text-xs font-semibold" title={request.booker_name}>
-                {abbreviateName(request.booker_name)}
+                {/* The abbreviation buys width a board column doesn't have. Given
+                    the room, the whole name is more use than "T.Fourie". */}
+                {wide ? request.booker_name : abbreviateName(request.booker_name)}
               </p>
               {/* A fee is a yes/no signal on the row — the amount itself is in the
                   sheet (and on hover). No fee shows nothing. */}
@@ -1531,7 +1572,12 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
             {/* Booking facts — the slot (offered/booked) or the applicant's preferred
                 dates, with the fee marker closing the row. */}
-            <div className="mt-1 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5F624F]">
+            <div
+              className={cn(
+                "mt-1 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5F624F]",
+                wide && "lg:mt-0 lg:min-w-0 lg:flex-1"
+              )}
+            >
               <span className="min-w-0 truncate">
                 {hasSlot
                   ? (request.selected_start_time || request.selected_end_time) && (
@@ -1553,6 +1599,42 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     )}
               </span>
 
+              {/* What the act sent in, as presence markers rather than content —
+                  the material itself is a click away in the sheet. Only worth the
+                  width when the card has it, so they ride with `wide`. ml-auto
+                  parks them next to the notes button instead of letting
+                  justify-between strand them mid-row. */}
+              {wide && (videos.length > 0 || activeSocials.length > 0) && (
+                <span className="ml-auto flex shrink-0 items-center gap-2.5">
+                  {videos.length > 0 && (
+                    <span
+                      className="inline-flex items-center gap-1"
+                      title={`${videos.length} video${videos.length === 1 ? "" : "s"} attached`}
+                    >
+                      <Video className="h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />
+                      <span className="tabular-nums">{videos.length}</span>
+                      <span className="sr-only">
+                        video{videos.length === 1 ? "" : "s"} attached
+                      </span>
+                    </span>
+                  )}
+                  {activeSocials.length > 0 && (
+                    <span className="inline-flex items-center gap-1.5">
+                      {activeSocials.map((key) => {
+                        const meta = SOCIAL_META[key];
+                        const Icon = meta.icon;
+                        return (
+                          <span key={key} className="inline-flex" title={`Has a ${meta.label} link`}>
+                            <Icon className="h-3 w-3 shrink-0 opacity-60" aria-hidden="true" />
+                            <span className="sr-only">Has a {meta.label} link</span>
+                          </span>
+                        );
+                      })}
+                    </span>
+                  )}
+                </span>
+              )}
+
               {/* Internal notes — same log as the sheet, read and written from here
                   too. pointer-events-auto: the content around it deliberately lets
                   clicks fall through to the card, this must not. The negative margin
@@ -1561,7 +1643,13 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 <button
                   type="button"
                   title={`Band notes (internal) — ${bandNoteList.length}`}
-                  className="pointer-events-auto relative z-20 -my-3 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90"
+                  className={cn(
+                    "pointer-events-auto relative z-20 -my-3 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90",
+                    // Reclaiming the gutter is free while this sits on its own line
+                    // below the favourite. On one line they're side by side, and the
+                    // negative margin would slide it under the favourite's target.
+                    wide && "lg:mr-0"
+                  )}
                 >
                   <span className="relative">
                     {/* Filled when there are notes, outline when there aren't — the

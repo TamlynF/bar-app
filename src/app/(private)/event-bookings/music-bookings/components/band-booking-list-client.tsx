@@ -160,6 +160,13 @@ export default function BandBookingListClient({
     0
   );
 
+  /**
+   * One status selected, so its column has the whole board to itself. The cards
+   * spread into that width rather than staying at board-column proportions, and
+   * spend it on detail the narrow card has no room for.
+   */
+  const soloColumn = visibleColumns.length === 1;
+
   /** One removable chip per active filter, in panel order. */
   const activeChips: { key: string; label: string; clear: () => void }[] = [];
   if (filters.favOnly)
@@ -351,8 +358,15 @@ export default function BandBookingListClient({
                 key={col}
                 aria-label={`${theme.label} — ${items.length} request${items.length === 1 ? "" : "s"}`}
                 // min-w-0 is what lets a column shrink past its cards' natural
-                // width — without it five columns overflow the row.
-                className="flex flex-col gap-2 sm:w-72 sm:shrink-0 xl:w-auto xl:min-w-0 xl:flex-1"
+                // width — without it five columns overflow the row. A solo column
+                // takes the board from sm up: the fixed 72 belongs to a row of
+                // columns that scrolls, and there's nothing to scroll past here.
+                className={cn(
+                  "flex flex-col gap-2",
+                  soloColumn
+                    ? "sm:min-w-0 sm:flex-1"
+                    : "sm:w-72 sm:shrink-0 xl:w-auto xl:min-w-0 xl:flex-1"
+                )}
               >
                 {/* Column header — sticks while the column scrolls past it */}
                 <div
@@ -384,7 +398,9 @@ export default function BandBookingListClient({
                     Nothing here
                   </p>
                 ) : (
-                  items.map((req) => <BandBookingCard key={req.id} request={req} />)
+                  items.map((req) => (
+                    <BandBookingCard key={req.id} request={req} wide={soloColumn} />
+                  ))
                 )}
               </section>
             );
