@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { upsertContactByEmail, upsertMusicActFromBand } from "@/lib/music-acts";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -22,6 +23,7 @@ export interface BandBookingData {
     youtube?: string;
     tiktok?: string;
   };
+  spotify_url?: string;
   video_urls: string[];
   video_descriptions?: string[];
   preferred_dates: string[];
@@ -30,6 +32,25 @@ export interface BandBookingData {
 
 export async function createBandBooking(data: BandBookingData) {
   const supabase = await createClient();
+
+  // Resolve (or create) the applicant's contact and the master music act so the
+  // request links to a single canonical profile. Best-effort — a failure here
+  // must not stop the application being recorded, so the ids fall back to null.
+  const contactId = await upsertContactByEmail(supabase, {
+    booker_name: data.booker_name,
+    email: data.email,
+    phone_no: data.phone_no,
+  });
+  const musicActId = await upsertMusicActFromBand(supabase, {
+    contactId,
+    group_name: data.group_name,
+    type: data.type,
+    genre: data.genre,
+    spotify_url: data.spotify_url,
+    social_links: data.social_links,
+    video_urls: data.video_urls,
+    video_descriptions: data.video_descriptions,
+  });
 
   const { data: record, error } = await supabase
     .from("band_booking_requests")
@@ -43,12 +64,14 @@ export async function createBandBooking(data: BandBookingData) {
         email: data.email,
         phone_no: data.phone_no || null,
         social_links: data.social_links,
+        spotify_url: data.spotify_url || null,
         video_urls: data.video_urls.filter(Boolean),
         video_descriptions: data.video_descriptions ?? [],
         preferred_dates: data.preferred_dates.filter(Boolean),
         notes: data.notes || null,
         status: "new",
         payment_status: "no_payment",
+        music_acts_id: musicActId,
       },
     ])
     .select("id")

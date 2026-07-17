@@ -189,6 +189,7 @@ export default function PrivateLayoutClient({
     const settingsSubItems = [
         { label: "Company Info", href: "/settings/company", icon: Building2 },
         { label: "Guests", href: "/settings/customers", icon: BookUser },
+        { label: "Music Acts", href: "/settings/music-acts", icon: Guitar },
         { label: "Seating Plan", href: "/settings/tables", icon: Grid2X2 },
         { label: "Menu", href: "/settings/menu", icon: UtensilsCrossed },
         { label: "Specials", href: "/settings/specials", icon: Sparkles },
@@ -307,6 +308,7 @@ export default function PrivateLayoutClient({
                 "tables": "Floor Plan",
                 "customers": "Guests",
                 "users": "System Users",
+                "music-acts": "Music Acts",
             }
             const subtitle = settingsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
             return { title: "Settings", subtitle, backHref: "/settings" }

@@ -7,6 +7,11 @@ import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planBandEventSync, type BandStatus as BandStatusType } from "@/lib/band-event-sync";
 import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
 import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail } from "@/lib/band-emails";
+import {
+  upsertContactByEmail,
+  upsertMusicActFromBand,
+  syncMusicActFields,
+} from "@/lib/music-acts";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
@@ -71,6 +76,7 @@ export async function updateBandBookingFields(
     video_descriptions?: string[] | null;
     /** jsonb — platform → url, blanks already dropped by the caller. */
     social_links?: Record<string, string> | null;
+    spotify_url?: string | null;
     selected_date?: string | null;
     selected_start_time?: string | null;
     selected_end_time?: string | null;
@@ -90,7 +96,7 @@ export async function updateBandBookingFields(
     .from("band_booking_requests")
     .update({ ...fields, updated_by: empId, updated_at: new Date().toISOString() })
     .eq("id", id)
-    .select("group_name, booker_name, event_id")
+    .select("group_name, booker_name, email, phone_no, event_id, music_acts_id")
     .single();
 
   if (error || !record) throw new Error("Failed to save changes.");
@@ -101,6 +107,46 @@ export async function updateBandBookingFields(
   const renamed = "group_name" in fields || "booker_name" in fields;
   if (record.event_id && renamed) {
     await updateLinkedEvent(supabase, record.event_id, { title: eventTitleFor(record) }, empId);
+  }
+
+  // Sync the shared profile back to the master music act so it stays the single
+  // source of truth. Guarded on a full detail save (`group_name` present) so a
+  // slot-only status update can't blank the act. Legacy requests with no linked
+  // act get one created and stamped back onto the request.
+  if ("group_name" in fields) {
+    const shared = {
+      group_name: fields.group_name ?? record.group_name ?? "",
+      type: fields.type,
+      genre: fields.genre,
+      spotify_url: fields.spotify_url,
+      social_links: fields.social_links,
+      video_urls: fields.video_urls,
+      video_descriptions: fields.video_descriptions,
+      bank_account_no: fields.bank_account_no,
+      bank_account_name: fields.bank_account_name,
+      bank_sort_code: fields.bank_sort_code,
+      bank_payment_ref: fields.bank_payment_ref,
+    };
+    let actId = record.music_acts_id as string | null;
+    if (!actId) {
+      const contactId = await upsertContactByEmail(
+        supabase,
+        {
+          booker_name: fields.booker_name ?? record.booker_name,
+          email: fields.email ?? record.email,
+          phone_no: fields.phone_no ?? record.phone_no,
+        },
+        empId
+      );
+      actId = await upsertMusicActFromBand(supabase, { contactId, ...shared }, empId);
+      if (actId) {
+        await supabase
+          .from("band_booking_requests")
+          .update({ music_acts_id: actId })
+          .eq("id", id);
+      }
+    }
+    if (actId) await syncMusicActFields(supabase, actId, shared, empId);
   }
 
   revalidatePath("/event-bookings/music-bookings");

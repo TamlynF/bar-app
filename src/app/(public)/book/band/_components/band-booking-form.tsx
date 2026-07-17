@@ -7,7 +7,7 @@ import {
   Plus, X, CheckCircle2, Upload, Video, Loader2, AlertCircle,
   ChevronRight, ArrowLeft, ExternalLink,
 } from "lucide-react";
-import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
+import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiSpotify } from "react-icons/si";
 import { format, startOfToday } from "date-fns";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
@@ -104,6 +104,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
   const [notes, setNotes] = useState("");
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
   const [addedSocials, setAddedSocials] = useState<string[]>([]);
+  const [spotifyUrl, setSpotifyUrl] = useState("");
   const [videoFiles, setVideoFiles] = useState<VideoFile[]>([]);
   const [preferredDates, setPreferredDates] = useState<Date[]>([]);
 
@@ -242,6 +243,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           email,
           phone_no: phone || undefined,
           social_links: builtSocialLinks,
+          spotify_url: spotifyUrl.trim() || undefined,
           video_urls: uploadedUrls,
           video_descriptions: videoDescriptions,
           preferred_dates: sortedDates.map((d) => format(d, "yyyy-MM-dd")),
@@ -452,6 +454,34 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                   </SelectContent>
                 </Select>
               )}
+            </div>
+
+            <div className="space-y-3 pt-2">
+              <p className={labelClass}>Spotify</p>
+              <div className="flex items-center overflow-hidden rounded-xl border border-white/10 bg-white/5 transition-all focus-within:border-[#FDCC4B]/40 focus-within:ring-1 focus-within:ring-[#FDCC4B]/20">
+                <SiSpotify className="ml-3.5 h-4 w-4 shrink-0 text-[#1DB954]" />
+                <input
+                  type="url"
+                  inputMode="url"
+                  value={spotifyUrl}
+                  onChange={(e) => setSpotifyUrl(e.target.value)}
+                  placeholder="https://open.spotify.com/artist/…"
+                  aria-label="Spotify artist or profile link"
+                  className="flex-1 bg-transparent px-3 py-3 text-sm text-white placeholder:text-stone-500 focus:outline-none"
+                />
+                {spotifyUrl.trim() && (
+                  <a
+                    href={spotifyUrl.trim()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open Spotify link in a new tab"
+                    className="flex w-10 shrink-0 items-center justify-center self-stretch border-l border-white/10 text-stone-500 transition-colors hover:text-[#FDCC4B]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
+              </div>
             </div>
 
             <div className="space-y-3 pt-2">

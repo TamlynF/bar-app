@@ -38,7 +38,7 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
+import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiSpotify } from "react-icons/si";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
@@ -102,6 +102,9 @@ export interface BandRequest {
   email: string;
   phone_no: string | null;
   social_links: SocialLinks | null;
+  spotify_url: string | null;
+  /** FK to the master music_acts row this request is linked to (null for legacy rows). */
+  music_acts_id: string | null;
   video_urls: string[] | null;
   /** Parallel to `video_urls` — the applicant's short description per video. */
   video_descriptions: string[] | null;
@@ -931,6 +934,7 @@ export function BandBookingCard({
   const [phone, setPhone] = useState(request.phone_no ?? "");
   const [socialLinks, setSocialLinks] = useState<SocialLinks>(request.social_links ?? {});
   const [socialEditorOpen, setSocialEditorOpen] = useState(false);
+  const [spotifyUrl, setSpotifyUrl] = useState(request.spotify_url ?? "");
   const [paymentAmount, setPaymentAmount] = useState(request.payment_amount != null ? String(request.payment_amount) : "");
   const [paidAmount, setPaidAmount] = useState(request.paid_amount != null ? String(request.paid_amount) : "");
   const [bankAccountName, setBankAccountName] = useState(request.bank_account_name ?? "");
@@ -1043,7 +1047,8 @@ export function BandBookingCard({
   // Every platform gets a pill; unfilled ones render deactivated and can be filled
   // in. Read-only requests only show what's actually there.
   const hasAnySocial = SOCIAL_ORDER.some((k) => (socialLinks[k] ?? "").trim());
-  const showSocials = editable || hasAnySocial;
+  const hasSpotify = !!spotifyUrl.trim();
+  const showSocials = editable || hasAnySocial || hasSpotify;
 
   // Pair each url with its description by index *before* dropping blanks, so a
   // missing url can't shift every description onto the wrong video.
@@ -1102,6 +1107,7 @@ export function BandBookingCard({
     bankSortCode !== (request.bank_sort_code ?? "") ||
     bankPaymentRef !== (request.bank_payment_ref ?? "") ||
     JSON.stringify(normalizeSocials(socialLinks)) !== JSON.stringify(normalizeSocials(request.social_links)) ||
+    spotifyUrl !== (request.spotify_url ?? "") ||
     videosChanged ||
     adminNotes !== (request.admin_notes ?? "");
   const hasChanges = detailsChanged || dateTimeChanged;
@@ -1116,6 +1122,7 @@ export function BandBookingCard({
     email,
     phone_no: phone || null,
     social_links: normalizeSocials(socialLinks),
+    spotify_url: spotifyUrl.trim() || null,
     video_urls: uploadedSheetVideos.map((v) => v.url as string),
     video_descriptions: uploadedSheetVideos.map((v) => v.description.trim()),
     payment_amount: paymentAmount === "" ? null : Number(paymentAmount),
@@ -1246,6 +1253,7 @@ export function BandBookingCard({
     setEmail(request.email ?? "");
     setPhone(request.phone_no ?? "");
     setSocialLinks(request.social_links ?? {});
+    setSpotifyUrl(request.spotify_url ?? "");
     setPaymentAmount(request.payment_amount != null ? String(request.payment_amount) : "");
     setPaidAmount(request.paid_amount != null ? String(request.paid_amount) : "");
     setBankAccountName(request.bank_account_name ?? "");
@@ -2386,6 +2394,41 @@ export function BandBookingCard({
                         );
                       })}
 
+                      {/* Spotify sits beside the socials but lives in its own column
+                          (spotify_url), so it's rendered here rather than in the map. */}
+                      {(() => {
+                        const url = spotifyUrl.trim();
+                        const pillClass =
+                          "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-bold transition-all";
+                        return url ? (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Open Spotify"
+                            className={cn(pillClass, "border-transparent bg-[#1DB954] text-white hover:opacity-90")}
+                          >
+                            <SiSpotify className="h-3 w-3 shrink-0" />
+                            <span className="truncate">Spotify</span>
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={!editable}
+                            onClick={() => setSocialEditorOpen(true)}
+                            title={editable ? "Add Spotify link" : "No Spotify link"}
+                            className={cn(
+                              pillClass,
+                              "border-dashed border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F]/50",
+                              editable ? "hover:border-[#5C4033]/40 hover:text-[#5C4033]" : "cursor-not-allowed"
+                            )}
+                          >
+                            <SiSpotify className="h-3 w-3 shrink-0" />
+                            <span className="truncate">Spotify</span>
+                          </button>
+                        );
+                      })()}
+
                       {/* One editor for all four — also reachable by clicking any
                           empty pill, and the only way to fix an existing url. */}
                       {editable && (
@@ -2431,6 +2474,19 @@ export function BandBookingCard({
                                   </label>
                                 );
                               })}
+                              <label className="flex items-center gap-2">
+                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-transparent bg-[#1DB954] text-white">
+                                  <SiSpotify className="h-3.5 w-3.5" />
+                                </span>
+                                <span className="sr-only">Spotify URL</span>
+                                <input
+                                  type="url"
+                                  value={spotifyUrl}
+                                  onChange={(e) => setSpotifyUrl(e.target.value)}
+                                  placeholder="Spotify URL"
+                                  className="min-w-0 flex-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 py-1.5 text-xs text-[#1F1F1A] transition-all outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30"
+                                />
+                              </label>
                             </div>
                             <p className="mt-2 text-[10px] leading-snug text-[#5F624F]/70">
                               Applied when you hit Save Changes.

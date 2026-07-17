@@ -146,7 +146,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
               </p>
             )}
           </div>
-        </div>
+        </div> 
 
         {/* Event Badges */}
         {eventBadges.length > 0 && (
