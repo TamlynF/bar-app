@@ -1194,49 +1194,58 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 )}
               </Section>
 
-              {/* Social links */}
-              {socials.length > 0 && (
-                <Section title="Social Media">
-                  <div className="flex flex-wrap gap-2 px-4 py-3 sm:px-5">
-                    {socials.map(([key, url]) => {
-                      const meta = SOCIAL_META[key];
-                      const Icon = meta?.icon ?? Link2;
-                      return (
-                        <a
-                          key={key}
-                          href={url as string}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className={cn(
-                            "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-opacity hover:opacity-90",
-                            meta?.className ?? "border-[#E6DFC8] bg-white text-[#5C4033]"
-                          )}
-                        >
-                          <Icon className="h-3.5 w-3.5" />
-                          {meta?.label ?? key.charAt(0).toUpperCase() + key.slice(1)}
-                        </a>
-                      );
-                    })}
-                  </div>
-                </Section>
-              )}
+              {/* Act Media — socials + videos together: both answer the same question
+                  ("are they any good, do they have a following?"), so they're one
+                  scouting section rather than two cards of chrome. Socials lead
+                  because they're the cheaper glance. */}
+              {(socials.length > 0 || videos.length > 0) && (
+                <Section title="Act Media">
+                  {socials.length > 0 && (
+                    <div className="flex flex-wrap gap-2 px-4 py-3 sm:px-5">
+                      {socials.map(([key, url]) => {
+                        const meta = SOCIAL_META[key];
+                        const Icon = meta?.icon ?? Link2;
+                        return (
+                          <a
+                            key={key}
+                            href={url as string}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={cn(
+                              "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-opacity hover:opacity-90",
+                              meta?.className ?? "border-[#E6DFC8] bg-white text-[#5C4033]"
+                            )}
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                            {meta?.label ?? key.charAt(0).toUpperCase() + key.slice(1)}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
 
-              {/* Videos — play inline on the page (facade: loads on click) */}
-              {videos.length > 0 && (
-                <Section title="Performance Videos">
-                  <div className="grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-3 sm:px-5">
-                    {videos.map((v, i) => (
-                      <div key={i} className="min-w-0">
-                        <VideoFacade url={v.url} title={`Video ${i + 1}`} />
-                        <p
-                          title={v.description || undefined}
-                          className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5F624F]"
-                        >
-                          {v.description || `Video ${i + 1}`}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
+                  {/* Videos — play inline on the page (facade: loads on click) */}
+                  {videos.length > 0 && (
+                    <div
+                      className={cn(
+                        "grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-3 sm:px-5",
+                        // Only rule off the videos when there are pills above them.
+                        socials.length > 0 && "border-t border-[#E6DFC8]"
+                      )}
+                    >
+                      {videos.map((v, i) => (
+                        <div key={i} className="min-w-0">
+                          <VideoFacade url={v.url} title={`Video ${i + 1}`} />
+                          <p
+                            title={v.description || undefined}
+                            className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5F624F]"
+                          >
+                            {v.description || `Video ${i + 1}`}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </Section>
               )}
 
