@@ -28,6 +28,7 @@ import {
   Hash,
   Copy,
   NotebookPen,
+  Pencil,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -222,6 +223,23 @@ const SOCIAL_META: Record<string, { icon: React.ElementType; className: string; 
   youtube: { icon: SiYoutube, className: "bg-[#FF0000] text-white border-transparent", label: "YouTube" },
   tiktok: { icon: SiTiktok, className: "bg-black text-white border-transparent", label: "TikTok" },
 };
+
+/** Fixed pill order — every platform always shows, filled or not. */
+const SOCIAL_ORDER: (keyof SocialLinks)[] = ["instagram", "facebook", "youtube", "tiktok"];
+
+/**
+ * Trimmed, blank-dropped links in a stable key order. Emptying a field clears the
+ * key rather than persisting "", and the stable order makes two normalised objects
+ * safe to compare with JSON.stringify for the dirty check.
+ */
+function normalizeSocials(links: SocialLinks | null | undefined): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const key of SOCIAL_ORDER) {
+    const value = (links?.[key] ?? "").trim();
+    if (value) out[key] = value;
+  }
+  return out;
+}
 
 const normStatus = (s?: string) => (s || "").trim().toLowerCase();
 
@@ -457,6 +475,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [email, setEmail] = useState(request.email ?? "");
   const [phone, setPhone] = useState(request.phone_no ?? "");
   const [bandNotes, setBandNotes] = useState(request.band_notes ?? "");
+  const [socialLinks, setSocialLinks] = useState<SocialLinks>(request.social_links ?? {});
+  const [socialEditorOpen, setSocialEditorOpen] = useState(false);
   const [paymentAmount, setPaymentAmount] = useState(request.payment_amount != null ? String(request.payment_amount) : "");
   const [paidAmount, setPaidAmount] = useState(request.paid_amount != null ? String(request.paid_amount) : "");
   const [bankAccountName, setBankAccountName] = useState(request.bank_account_name ?? "");
@@ -506,9 +526,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           ? "A start and end time must be set to book this act."
           : undefined;
 
-  const socials = request.social_links
-    ? Object.entries(request.social_links).filter(([, v]) => v)
-    : [];
+  // Every platform gets a pill; unfilled ones render deactivated and can be filled
+  // in. Read-only requests only show what's actually there.
+  const hasAnySocial = SOCIAL_ORDER.some((k) => (socialLinks[k] ?? "").trim());
+  const showSocials = editable || hasAnySocial;
+
   // Pair each url with its description by index *before* dropping blanks, so a
   // missing url can't shift every description onto the wrong video.
   const videos = (request.video_urls ?? [])
@@ -547,6 +569,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     bankAccountNo !== (request.bank_account_no ?? "") ||
     bankSortCode !== (request.bank_sort_code ?? "") ||
     bankPaymentRef !== (request.bank_payment_ref ?? "") ||
+    JSON.stringify(normalizeSocials(socialLinks)) !== JSON.stringify(normalizeSocials(request.social_links)) ||
     adminNotes !== (request.admin_notes ?? "");
   const hasChanges = detailsChanged || dateTimeChanged;
 
@@ -560,6 +583,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     email,
     phone_no: phone || null,
     band_notes: bandNotes || null,
+    social_links: normalizeSocials(socialLinks),
     payment_amount: paymentAmount === "" ? null : Number(paymentAmount),
     paid_amount: paidAmount === "" ? null : Number(paidAmount),
     payment_status: derivedStatus,
@@ -612,6 +636,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     setEmail(request.email ?? "");
     setPhone(request.phone_no ?? "");
     setBandNotes(request.band_notes ?? "");
+    setSocialLinks(request.social_links ?? {});
     setPaymentAmount(request.payment_amount != null ? String(request.payment_amount) : "");
     setPaidAmount(request.paid_amount != null ? String(request.paid_amount) : "");
     setBankAccountName(request.bank_account_name ?? "");
@@ -1198,29 +1223,101 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   ("are they any good, do they have a following?"), so they're one
                   scouting section rather than two cards of chrome. Socials lead
                   because they're the cheaper glance. */}
-              {(socials.length > 0 || videos.length > 0) && (
+              {(showSocials || videos.length > 0) && (
                 <Section title="Act Media">
-                  {socials.length > 0 && (
-                    <div className="flex flex-wrap gap-2 px-4 py-3 sm:px-5">
-                      {socials.map(([key, url]) => {
+                  {showSocials && (
+                    <div className="flex items-center gap-1.5 px-4 py-2 sm:px-5">
+                      {SOCIAL_ORDER.map((key) => {
                         const meta = SOCIAL_META[key];
                         const Icon = meta?.icon ?? Link2;
-                        return (
+                        const url = (socialLinks[key] ?? "").trim();
+                        const pillClass =
+                          "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-bold transition-all";
+                        // Filled → straight to the profile (the whole point of the row).
+                        // Empty → a deactivated pill that opens the editor instead.
+                        return url ? (
                           <a
                             key={key}
-                            href={url as string}
+                            href={url}
                             target="_blank"
                             rel="noopener noreferrer"
+                            title={`Open ${meta.label}`}
+                            className={cn(pillClass, "hover:opacity-90", meta.className)}
+                          >
+                            <Icon className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{meta.label}</span>
+                          </a>
+                        ) : (
+                          <button
+                            key={key}
+                            type="button"
+                            disabled={!editable}
+                            onClick={() => setSocialEditorOpen(true)}
+                            title={editable ? `Add ${meta.label} link` : `No ${meta.label} link`}
                             className={cn(
-                              "flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-opacity hover:opacity-90",
-                              meta?.className ?? "border-[#E6DFC8] bg-white text-[#5C4033]"
+                              pillClass,
+                              "border-dashed border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F]/50",
+                              editable ? "hover:border-[#5C4033]/40 hover:text-[#5C4033]" : "cursor-not-allowed"
                             )}
                           >
-                            <Icon className="h-3.5 w-3.5" />
-                            {meta?.label ?? key.charAt(0).toUpperCase() + key.slice(1)}
-                          </a>
+                            <Icon className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{meta.label}</span>
+                          </button>
                         );
                       })}
+
+                      {/* One editor for all four — also reachable by clicking any
+                          empty pill, and the only way to fix an existing url. */}
+                      {editable && (
+                        <Popover open={socialEditorOpen} onOpenChange={setSocialEditorOpen}>
+                          <PopoverTrigger asChild>
+                            <button
+                              type="button"
+                              aria-label="Edit social links"
+                              title="Edit social links"
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                            >
+                              <Pencil className="h-3 w-3" />
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent align="end" className="w-72 rounded-2xl border-2 border-[#E6DFC8] bg-white p-3">
+                            <span className="mb-2 block font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+                              Social Links
+                            </span>
+                            <div className="space-y-2">
+                              {SOCIAL_ORDER.map((key) => {
+                                const meta = SOCIAL_META[key];
+                                const Icon = meta?.icon ?? Link2;
+                                return (
+                                  <label key={key} className="flex items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border",
+                                        meta.className
+                                      )}
+                                    >
+                                      <Icon className="h-3.5 w-3.5" />
+                                    </span>
+                                    <span className="sr-only">{meta.label} URL</span>
+                                    <input
+                                      type="url"
+                                      value={socialLinks[key] ?? ""}
+                                      onChange={(e) =>
+                                        setSocialLinks((s) => ({ ...s, [key]: e.target.value }))
+                                      }
+                                      placeholder={`${meta.label} URL`}
+                                      className="min-w-0 flex-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 py-1.5 text-xs text-[#1F1F1A] transition-all outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30"
+                                    />
+                                  </label>
+                                );
+                              })}
+                            </div>
+                            <p className="mt-2 text-[10px] leading-snug text-[#5F624F]/70">
+                              Applied when you hit Save Changes.
+                            </p>
+                          </PopoverContent>
+                        </Popover>
+                      )}
                     </div>
                   )}
 
@@ -1230,7 +1327,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                       className={cn(
                         "grid grid-cols-2 gap-3 px-4 py-3 sm:grid-cols-3 sm:px-5",
                         // Only rule off the videos when there are pills above them.
-                        socials.length > 0 && "border-t border-[#E6DFC8]"
+                        showSocials && "border-t border-[#E6DFC8]"
                       )}
                     >
                       {videos.map((v, i) => (

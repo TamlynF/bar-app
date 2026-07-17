@@ -44,6 +44,8 @@ export async function updateBandBookingFields(
     phone_no?: string | null;
     notes?: string | null;
     band_notes?: string | null;
+    /** jsonb — platform → url, blanks already dropped by the caller. */
+    social_links?: Record<string, string> | null;
     selected_date?: string | null;
     selected_start_time?: string | null;
     selected_end_time?: string | null;
