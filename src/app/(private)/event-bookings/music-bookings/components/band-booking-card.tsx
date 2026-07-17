@@ -28,6 +28,7 @@ import {
   Hash,
   Copy,
   NotebookPen,
+  Info,
   Pencil,
   X,
 } from "lucide-react";
@@ -486,6 +487,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [bankPaymentRef, setBankPaymentRef] = useState(request.bank_payment_ref ?? "");
   const [showBankDetails, setShowBankDetails] = useState(false);
   const [showContactDetails, setShowContactDetails] = useState(false);
+  // Audit trail — reference only, so it lives behind a header icon rather than
+  // taking a full card slot in the rail. Mirrors the Band Notes popover.
+  const [sysInfoOpen, setSysInfoOpen] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
 
   const status = normStatus(request.status);
@@ -1055,6 +1059,44 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     </p>
                   </PopoverContent>
                 </Popover>
+
+                {/* System information — audit trail. Reference-only, so it sits
+                    behind an icon here rather than as a card in the rail. */}
+                <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      aria-label="System information"
+                      title="System information"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033] sm:h-9 sm:w-9"
+                    >
+                      <Info className="h-4 w-4" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
+                    <span className="block border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+                      System Information
+                    </span>
+                    <SheetRow
+                      label="Linked Event"
+                      value={
+                        eventHref ? (
+                          <Link
+                            href={eventHref}
+                            className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] hover:underline"
+                          >
+                            <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                            <span className="tabular-nums">#{request.event_id}</span>
+                            <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                          </Link>
+                        ) : null
+                      }
+                    />
+                    <SheetRow label="Submitted" value={formatDateTime(request.created_at)} />
+                    <SheetRow label="Last Modified" value={formatDateTime(request.updated_at)} />
+                    <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "—"} />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
             <StageStepper status={status} />
@@ -1516,27 +1558,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 </Section>
               )}
 
-              {/* System information — audit trail; collapsed by default */}
-              <Section title="System Information" defaultOpen={false}>
-                <SheetRow
-                  label="Linked Event"
-                  value={
-                    eventHref ? (
-                      <Link
-                        href={eventHref}
-                        className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] hover:underline"
-                      >
-                        <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                        <span className="tabular-nums">#{request.event_id}</span>
-                        <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
-                      </Link>
-                    ) : null
-                  }
-                />
-                <SheetRow label="Submitted" value={formatDateTime(request.created_at)} />
-                <SheetRow label="Last Modified" value={formatDateTime(request.updated_at)} />
-                <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "—"} />
-              </Section>
+              {/* System information (audit trail) now lives in the sheet-header
+                  popover — reference-only data, reachable at any scroll position
+                  without taking a card slot in the rail. See the Info button above. */}
               </div>
             </div>
             <div className="h-4" />
