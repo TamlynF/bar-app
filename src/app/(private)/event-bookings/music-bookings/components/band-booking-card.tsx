@@ -2104,19 +2104,20 @@ export function BandBookingCard({
                             : `View linked event #${request.event_id} — off the schedule`
                         }
                         className={cn(
-                          "group inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 font-black text-[10px] tracking-wider uppercase transition-colors",
+                          "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] tracking-wider uppercase transition-colors",
                           eventIsActive
                             ? "border-green-200 bg-green-50 hover:bg-green-100"
                             : "border-red-200 bg-red-50 hover:bg-red-100"
                         )}
                       >
-                        <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-                        <span className="underline underline-offset-2">Linked Event: #{request.event_id}</span>
-                        <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                        <span>
+                          Linked Event:{" "}
+                          <span className="underline underline-offset-2">#{request.event_id}</span>
+                        </span>
                         {eventIsActive ? (
-                          <CheckCircle2 className="ml-2 h-4 w-4 shrink-0 text-green-600" />
+                          <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
                         ) : (
-                          <XCircle className="ml-2 h-4 w-4 shrink-0 text-red-600" />
+                          <XCircle className="h-3.5 w-3.5 shrink-0 text-red-600" />
                         )}
                       </Link>
                     ) : status === "booked" ? (
