@@ -338,18 +338,6 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                 />
               </div>
             </div>
-            <div>
-              <label className={labelClass}>Expected Payment (£)</label>
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={paymentAmount}
-                onChange={(e) => setPaymentAmount(e.target.value)}
-                placeholder="0.00"
-                className={inputClass}
-              />
-            </div>
           </>
         )}
 
@@ -620,6 +608,19 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                   <p className="flex items-center text-[11px] text-stone-600">No dates selected yet.</p>
                 )}
               </div>
+            </div>
+
+            <div className="pt-2">
+              <label className={labelClass}>Expected Payment (£)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                placeholder="0.00"
+                className={inputClass}
+              />
             </div>
 
             <div className="pt-2">
