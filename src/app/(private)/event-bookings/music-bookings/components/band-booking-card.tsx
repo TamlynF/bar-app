@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useTransition } from "react";
+import React, { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { updateBandStatus, updateBandBookingFields, getClashingEvents, rescheduleConfirmedBooking, toggleBandFavorite } from "../actions";
 import type { BandStatus } from "../actions";
@@ -872,9 +872,29 @@ export function BandBookingCard({
    */
   lifecycle?: BandLifecycleStage | null;
 }) {
-  const { confirm, ConfirmDialogUI } = useConfirm();
+  const { confirm: baseConfirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
+  /**
+   * Raised while a confirm dialog is open. That dialog is a Radix layer portalled
+   * out to <body>, so every click and focus inside it (and its own dismissal) reads
+   * to the sheet as an interaction *outside* itself — which would fire the sheet's
+   * onOpenChange(false) and, since a plain status change has no unsaved edits, close
+   * the sheet from under the dialog. The sheet checks this flag before honouring any
+   * outside-dismissal (see the SheetContent guards below).
+   */
+  const confirmOpen = useRef(false);
+  const confirm = useCallback(
+    async (opts: Parameters<typeof baseConfirm>[0]) => {
+      confirmOpen.current = true;
+      try {
+        return await baseConfirm(opts);
+      } finally {
+        confirmOpen.current = false;
+      }
+    },
+    [baseConfirm]
+  );
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   // Footer "note to applicant" is tucked away unless one already exists.
   const [selectedDate, setSelectedDate] = useState(request.selected_date || "");
@@ -1923,6 +1943,19 @@ export function BandBookingCard({
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
+          // A confirm dialog opened from inside the sheet is portalled to <body>, so
+          // interacting with it (or dismissing it) looks "outside" to the sheet.
+          // While one is open, don't let that dismiss the sheet — otherwise changing
+          // a status (which has no unsaved edits to prompt about) closes it outright.
+          onPointerDownOutside={(e) => {
+            if (confirmOpen.current) e.preventDefault();
+          }}
+          onInteractOutside={(e) => {
+            if (confirmOpen.current) e.preventDefault();
+          }}
+          onEscapeKeyDown={(e) => {
+            if (confirmOpen.current) e.preventDefault();
+          }}
           className="left-1/2 flex h-auto max-h-[90vh] w-full max-w-6xl -translate-x-1/2 flex-col rounded-[2.5rem] rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 lg:max-h-[94vh]"
         >
           {/* Sheet header */}
