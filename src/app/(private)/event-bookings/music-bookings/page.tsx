@@ -12,7 +12,7 @@ export default async function MusicBookingsPage() {
     .from("band_booking_requests")
     .select(
       "*, updated_by_employee:employees!updated_by(full_name)," +
-        " linked_event:events!band_booking_requests_event_id_fkey(is_active)," +
+        " linked_event:events!band_booking_requests_event_id_fkey(is_active, date, start_time, end_time)," +
         " band_notes_list:band_booking_notes(id, body, created_at, author:employees!band_booking_notes_created_by_fkey(full_name))"
     )
     .order("created_at", { ascending: false })

@@ -45,6 +45,7 @@ import { format } from "date-fns";
 import Link from "next/link";
 import { toast } from "sonner";
 import { addHoursToTime, toHHMM, type ClashEvent } from "@/lib/event-clash";
+import { bandLifecycleStage, type BandLifecycleStage } from "@/lib/band-lifecycle";
 import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail, type BandEmail } from "@/lib/band-emails";
 
 const DEFAULT_START_TIME = "22:00"; // 10pm
@@ -72,6 +73,14 @@ export interface BandNote {
   created_at: string;
   /** Joined employee for `created_by` — who wrote it. */
   author?: { full_name: string | null } | { full_name: string | null }[] | null;
+}
+
+/** The slice of the linked `events` row the card reads. */
+interface LinkedEvent {
+  is_active: boolean;
+  date: string | null;
+  start_time: string | null;
+  end_time: string | null;
 }
 
 export interface BandRequest {
@@ -115,11 +124,12 @@ export interface BandRequest {
   /** Joined employee for `updated_by` — who last modified the request. */
   updated_by_employee?: { full_name: string | null } | null;
   /**
-   * Joined `events` row for `event_id` — only `is_active` is read, to tell a
-   * linked event that's on the schedule from one that's been taken off it.
-   * Supabase returns the join as an object or a single-element array.
+   * Joined `events` row for `event_id`. `is_active` tells a linked event that's
+   * on the schedule from one that's been taken off it; the date and times place
+   * the booking in time for the lifecycle badge. Supabase returns the join as an
+   * object or a single-element array.
    */
-  linked_event?: { is_active: boolean } | { is_active: boolean }[] | null;
+  linked_event?: LinkedEvent | LinkedEvent[] | null;
 }
 
 export const statusTheme: Record<
@@ -662,6 +672,16 @@ const PAYMENT_STATUS_META: Record<string, { label: string; className: string }> 
   over_paid: { label: "Over paid", className: "bg-purple-50 border-purple-200 text-purple-700" },
 };
 
+/**
+ * Lifecycle badge tints. Deliberately off the green "booked" status theme these
+ * sit beside — they report where the night sits in time, not the status, so a
+ * neutral "done" and a distinct blue "ahead" don't restate the status colour.
+ */
+const LIFECYCLE_META: Record<BandLifecycleStage, { label: string; className: string }> = {
+  completed: { label: "Completed", className: "border-gray-200 bg-gray-100 text-gray-600" },
+  upcoming: { label: "Upcoming", className: "border-blue-200 bg-blue-50 text-blue-700" },
+};
+
 /** Full date + time, e.g. "8 May 2026, 14:32" — used in the audit trail. */
 function formatDateTime(iso?: string | null): string {
   if (!iso) return "—";
@@ -774,6 +794,28 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   // real state rather than just the fact a row exists.
   const linkedEvent = Array.isArray(request.linked_event) ? request.linked_event[0] : request.linked_event;
   const eventIsActive = linkedEvent?.is_active === true;
+  // Has the night happened, or is it coming up? Read off the client's clock, not
+  // the server's: this SSRs in UTC while the venue (and the admin) run on UK
+  // time, and the slots sit at 22:00–00:00 — right where the two disagree. So
+  // `now` is set on mount, and the badge renders from the first client paint.
+  // Also keeps the markup hydration-stable, which a render-time Date would not.
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+  }, []);
+  const lifecycle = now
+    ? bandLifecycleStage(
+        {
+          status: request.status,
+          eventId: request.event_id,
+          eventIsActive,
+          date: linkedEvent?.date,
+          startTime: linkedEvent?.start_time,
+          endTime: linkedEvent?.end_time,
+        },
+        now
+      )
+    : null;
   // The id is a uuid — too long to show whole. First 8 chars is a workable human
   // reference; the full value is on hover and on the clipboard.
   const shortRef = request.id.slice(0, 8).toUpperCase();
@@ -1392,16 +1434,34 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
             tracking is what keeps 9px legible. Type takes the solid fill, genre the
             light tint at a lighter weight, so type leads. Width-capped so a long
             genre can't run into the favourite. */}
-        {(request.type || request.genre) && (
-          <span className="absolute top-0 left-0 z-10 flex max-w-[65%] items-stretch overflow-hidden rounded-tl-xl rounded-br-lg text-[9px] tracking-widest uppercase">
-            {request.type && (
-              <span className={cn("shrink-0 px-2 py-0.5 font-black text-white", theme.dot)}>
-                {toTitleCase(request.type)}
-              </span>
-            )}
-            {request.genre && (
-              <span className={cn("truncate px-2 py-0.5 font-bold", theme.bg, theme.text)}>
-                {toTitleCase(request.genre)}
+        {(request.type || request.genre || lifecycle) && (
+          // pr-11 clears the favourite (w-11) at the far end, so the row can be
+          // full-width without the lifecycle badge ever reaching the heart.
+          // Decorative, so it doesn't intercept clicks meant for the card.
+          <span className="pointer-events-none absolute top-0 left-0 z-10 flex w-full items-stretch pr-11 text-[9px] tracking-widest uppercase">
+            <span className="flex max-w-[65%] min-w-0 items-stretch overflow-hidden rounded-tl-xl rounded-br-lg">
+              {request.type && (
+                <span className={cn("shrink-0 px-2 py-0.5 font-black text-white", theme.dot)}>
+                  {toTitleCase(request.type)}
+                </span>
+              )}
+              {request.genre && (
+                <span className={cn("truncate px-2 py-0.5 font-bold", theme.bg, theme.text)}>
+                  {toTitleCase(request.genre)}
+                </span>
+              )}
+            </span>
+            {/* Sits on the same line as the tag, but centred against it rather
+                than stretched — it's a separate remark about the booking, not a
+                third segment of the ribbon. */}
+            {lifecycle && (
+              <span
+                className={cn(
+                  "ml-1.5 shrink-0 self-center rounded-full border px-1.5 py-px font-black",
+                  LIFECYCLE_META[lifecycle].className
+                )}
+              >
+                {LIFECYCLE_META[lifecycle].label}
               </span>
             )}
           </span>
@@ -1413,7 +1473,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         <div
           className={cn(
             "pointer-events-none relative z-10 flex items-center gap-3 px-3 pb-3 text-left",
-            request.type || request.genre ? "pt-5" : "pt-3"
+            request.type || request.genre || lifecycle ? "pt-5" : "pt-3"
           )}
         >
           {/* Status badge circle (left) */}

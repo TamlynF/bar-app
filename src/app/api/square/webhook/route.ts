@@ -3,7 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Constructed per-request: the Resend constructor throws when RESEND_API_KEY is
+// absent, which at module scope crashes `next build` page-data collection.
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 const APP_URL = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -97,7 +101,7 @@ export async function POST(req: NextRequest) {
         : "TBC";
 
       const manageUrl = `${APP_URL}/book/bingo/manage-booking/${booking.id}`;
-      await resend.emails.send({
+      await getResend().emails.send({
         from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
         to: contact.email,
         subject: "Music Bingo Booking Confirmed! 🎵",
