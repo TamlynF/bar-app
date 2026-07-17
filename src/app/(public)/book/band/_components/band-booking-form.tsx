@@ -4,14 +4,15 @@ import React, { useState, useTransition, useRef } from "react";
 import { createBandBooking } from "@/app/(public)/_actions/create-band-booking";
 import { uploadVideoResumable, type ResumableHandle } from "@/lib/resumable-upload";
 import {
-  Music2,
-  Plus, X, CheckCircle2, Calendar, Upload, Video, Loader2, AlertCircle,
+  Plus, X, CheckCircle2, Upload, Video, Loader2, AlertCircle,
   ChevronRight, ArrowLeft, ExternalLink,
 } from "lucide-react";
-import { SiInstagram, SiFacebook, SiYoutube } from "react-icons/si";
+import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
+import { format, startOfToday } from "date-fns";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
 
 const SOCIAL_FIELDS = [
   {
@@ -44,7 +45,7 @@ const SOCIAL_FIELDS = [
   {
     key: "tiktok" as const,
     label: "TikTok",
-    icon: Music2,
+    icon: SiTiktok,
     iconColor: "text-[#25F4EE]",
     prefix: "tiktok.com/@",
     placeholder: "yourhandle",
@@ -65,6 +66,10 @@ interface VideoFile {
 
 const MAX_VIDEOS = 10;
 const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
+const MAX_DATES = 8;
+
+/** "singer / solo artist" → "Singer / Solo Artist" (first letter of each word up, rest down). */
+const titleCase = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
 const inputClass =
   "w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder:text-stone-600 focus:outline-none focus:border-[#FDCC4B]/40 focus:ring-1 focus:ring-[#FDCC4B]/20 transition-all";
@@ -99,7 +104,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
   const [socialLinks, setSocialLinks] = useState<Record<string, string>>({});
   const [addedSocials, setAddedSocials] = useState<string[]>([]);
   const [videoFiles, setVideoFiles] = useState<VideoFile[]>([]);
-  const [preferredDates, setPreferredDates] = useState<string[]>(["", ""]);
+  const [preferredDates, setPreferredDates] = useState<Date[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadHandles = useRef<Record<string, ResumableHandle>>({});
@@ -117,17 +122,11 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
     handleSocial(key, "");
   }
 
-  function handleDate(index: number, value: string) {
-    setPreferredDates((prev) => prev.map((d, i) => (i === index ? value : d)));
+  function removeDate(d: Date) {
+    setPreferredDates((prev) => prev.filter((x) => x.getTime() !== d.getTime()));
   }
 
-  function addDate() {
-    if (preferredDates.length < 4) setPreferredDates((prev) => [...prev, ""]);
-  }
-
-  function removeDate(index: number) {
-    setPreferredDates((prev) => prev.filter((_, i) => i !== index));
-  }
+  const sortedDates = [...preferredDates].sort((a, b) => a.getTime() - b.getTime());
 
   function handleNext() {
     setStepError(null);
@@ -244,7 +243,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           social_links: builtSocialLinks,
           video_urls: uploadedUrls,
           video_descriptions: videoDescriptions,
-          preferred_dates: preferredDates.filter(Boolean),
+          preferred_dates: sortedDates.map((d) => format(d, "yyyy-MM-dd")),
           notes: notes || undefined,
         });
         setSubmitted(true);
@@ -324,7 +323,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                   </SelectTrigger>
                   <SelectContent>
                     {typeOptions.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                      <SelectItem key={o.value} value={o.value}>{titleCase(o.label)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -565,33 +564,62 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
         {step === 4 && (
           <>
             <div className="space-y-3">
-              <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Preferred Dates</p>
-              {preferredDates.map((date, i) => (
-                <div key={i} className="flex gap-2">
-                  <div className="relative flex-1">
-                    <Calendar className="absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-stone-600" />
-                    <input
-                      title="Select Date"
-                      type="date"
-                      value={date}
-                      onChange={(e) => handleDate(i, e.target.value)}
-                      className={`${inputClass} input-scheme-dark pl-10`}
-                    />
-                  </div>
-                  {preferredDates.length > 1 && (
-                    <button title="Remove Date" type="button" onClick={() => removeDate(i)}
-                      className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-stone-500 transition-all hover:border-red-400/30 hover:text-red-400">
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
+              <div className="flex items-center justify-between">
+                <p className="font-black text-[10px] tracking-widest text-stone-600 uppercase">Preferred Dates</p>
+                <span className="text-[10px] font-bold text-stone-600">{preferredDates.length}/{MAX_DATES}</span>
+              </div>
+              <p className="-mt-1 text-[11px] text-stone-600">Tap the dates you&apos;re available to play.</p>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-[auto_1fr] sm:items-start">
+                {/* Left: compact calendar */}
+                <div
+                  style={{
+                    "--primary": "#FDCC4B",
+                    "--primary-foreground": "#26300D",
+                    "--accent": "rgba(255,255,255,0.10)",
+                    "--accent-foreground": "#FDCC4B",
+                    "--background": "transparent",
+                    "--muted-foreground": "#a8a29e",
+                    "--border": "rgba(255,255,255,0.10)",
+                    "--ring": "#FDCC4B",
+                  } as React.CSSProperties}
+                  className="flex justify-center rounded-2xl border border-white/10 bg-white/5 p-2"
+                >
+                  <Calendar
+                    mode="multiple"
+                    max={MAX_DATES}
+                    selected={preferredDates}
+                    onSelect={(dates) => setPreferredDates(dates ?? [])}
+                    disabled={{ before: startOfToday() }}
+                    defaultMonth={new Date()}
+                    className="bg-transparent text-white [--cell-size:1.9rem]"
+                  />
                 </div>
-              ))}
-              {preferredDates.length < 4 && (
-                <button title="Add Date" type="button" onClick={addDate}
-                  className="flex items-center gap-2 text-[11px] font-bold tracking-wider text-stone-500 uppercase transition-colors hover:text-[#FDCC4B]">
-                  <Plus className="h-3.5 w-3.5" /> Add another date
-                </button>
-              )}
+
+                {/* Right: selected date pills */}
+                {sortedDates.length > 0 ? (
+                  <div className="flex flex-wrap content-start gap-2">
+                    {sortedDates.map((d) => (
+                      <span
+                        key={d.getTime()}
+                        className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/5 py-1 pr-1 pl-3 text-xs font-medium whitespace-nowrap text-white"
+                      >
+                        {format(d, "EEE, d MMM yyyy")}
+                        <button
+                          title={`Remove ${format(d, "d MMM")}`}
+                          type="button"
+                          onClick={() => removeDate(d)}
+                          className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-stone-400 transition-colors hover:bg-red-400/10 hover:text-red-400"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="flex items-center text-[11px] text-stone-600">No dates selected yet.</p>
+                )}
+              </div>
             </div>
 
             <div className="pt-2">

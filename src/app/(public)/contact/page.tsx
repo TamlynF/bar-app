@@ -7,7 +7,7 @@ import {
   Clock,
   MessageSquare,
 } from "lucide-react";
-import { SiInstagram, SiFacebook } from "react-icons/si";
+import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
 import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import EnquiryForm from "./_components/enquiry-form";
@@ -171,6 +171,7 @@ export default async function ContactPage() {
               )}
               {info?.tiktok && (
                 <SocialCard
+                  icon={SiTiktok}
                   label="TikTok"
                   handle={`@${info.tiktok.replace("@", "")}`}
                   href={`https://tiktok.com/@${info.tiktok.replace("@", "")}`}
@@ -178,6 +179,7 @@ export default async function ContactPage() {
               )}
               {info?.twitter && (
                 <SocialCard
+                  icon={SiX}
                   label="X / Twitter"
                   handle={`@${info.twitter.replace("@", "")}`}
                   href={`https://x.com/${info.twitter.replace("@", "")}`}
@@ -185,6 +187,7 @@ export default async function ContactPage() {
               )}
               {info?.youtube && (
                 <SocialCard
+                  icon={SiYoutube}
                   label="YouTube"
                   handle={info.youtube}
                   href={

@@ -53,7 +53,7 @@ Always run `npm run build` successfully before committing.
   Also **prefer the canonical scale token over an arbitrary px value** when the value is on the scale (`min-w-50` not `min-w-[200px]`) — see the "Prefer canonical Tailwind classes" rule under Visual standards below.
 - **Component library:** shadcn/ui (new-york style), components live in `src/components/ui/`. Owned by us — edit freely.
 - **Primitives:** Radix UI (via shadcn)
-- **Icons:** Lucide React only
+- **Icons:** Lucide React for UI/interface icons. For brand/social logos (Instagram, Facebook, YouTube, X, TikTok, etc.), use Simple Icons via `react-icons/si` (`SiInstagram`, `SiFacebook`, `SiYoutube`, …) — Lucide's brand icons are deprecated and being removed in v1.0. Don't add other icon libraries without asking.
 - **Forms:** react-hook-form + zod where validation is non-trivial; plain `useState` is fine for simple forms
 - **Auth:** Supabase Auth via `@supabase/ssr`
 - **DB:** Supabase Postgres (no Prisma; use the Supabase client directly)

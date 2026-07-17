@@ -8,14 +8,13 @@ import {
   Clock,
   Inbox,
   Send,
-  Music2,
   Link2,
   CalendarDays,
   Phone,
   Mail,
   DollarSign,
 } from "lucide-react";
-import { SiInstagram, SiFacebook, SiYoutube } from "react-icons/si";
+import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -55,7 +54,7 @@ const SOCIAL_ICONS: Record<string, React.ElementType> = {
   instagram: SiInstagram,
   facebook: SiFacebook,
   youtube: SiYoutube,
-  tiktok: Music2,
+  tiktok: SiTiktok,
 };
 
 function DetailRow({ label, value }: { label: string; value: React.ReactNode }) {
