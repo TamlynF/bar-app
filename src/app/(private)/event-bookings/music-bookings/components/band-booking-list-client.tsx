@@ -2,10 +2,14 @@
 
 import React, { useMemo, useState } from "react";
 import { Search, Inbox, X } from "lucide-react";
-import { BandBookingCard, type BandRequest } from "./band-booking-card";
+import { BandBookingCard, statusTheme, type BandRequest } from "./band-booking-card";
 import StatusCircle from "./status-circle";
+import { cn } from "@/lib/utils";
 
 const normStatus = (s?: string) => (s || "").trim().toLowerCase();
+
+/** Board column order — the pipeline, left to right, with the terminal exit last. */
+const COLUMNS = ["new", "reviewing", "offered", "booked", "declined"] as const;
 
 export default function BandBookingListClient({
   initialRequests,
@@ -27,40 +31,44 @@ export default function BandBookingListClient({
     setActiveStatusFilters(next);
   };
 
-  const filteredRequests = useMemo(() => {
+  // Search narrows what's on the board; the status circles choose which columns show.
+  const searchedRequests = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
     return initialRequests
-      .filter((r) => {
-        const rStatus = normStatus(r.status);
-        const matchesStatus =
-          activeStatusFilters.size === 0
-            ? true
-            : activeStatusFilters.has(rStatus);
-        const q = searchQuery.trim().toLowerCase();
-        return (
-          matchesStatus &&
-          (q === "" ||
-            (r.group_name || "").toLowerCase().includes(q) ||
-            (r.booker_name || "").toLowerCase().includes(q) ||
-            (r.genre || "").toLowerCase().includes(q) ||
-            (r.type || "").toLowerCase().includes(q))
-        );
-      })
+      .filter(
+        (r) =>
+          q === "" ||
+          (r.group_name || "").toLowerCase().includes(q) ||
+          (r.booker_name || "").toLowerCase().includes(q) ||
+          (r.genre || "").toLowerCase().includes(q) ||
+          (r.type || "").toLowerCase().includes(q)
+      )
       .sort((a, b) => {
-        // Sort: favourites first, then pipeline order (new → declined), then by created_at desc
+        // Within a column: favourites first, then newest first.
         if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
-        const statusOrder: Record<string, number> = {
-          new: 0,
-          reviewing: 1,
-          offered: 2,
-          booked: 3,
-          declined: 4,
-        };
-        const sa = statusOrder[normStatus(a.status)] ?? 5;
-        const sb = statusOrder[normStatus(b.status)] ?? 5;
-        if (sa !== sb) return sa - sb;
         return (b.created_at || "").localeCompare(a.created_at || "");
       });
-  }, [initialRequests, activeStatusFilters, searchQuery]);
+  }, [initialRequests, searchQuery]);
+
+  /** Which columns to render — all of them, unless the circles have narrowed it. */
+  const visibleColumns = useMemo(
+    () =>
+      COLUMNS.filter(
+        (c) => activeStatusFilters.size === 0 || activeStatusFilters.has(c)
+      ),
+    [activeStatusFilters]
+  );
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, BandRequest[]>(COLUMNS.map((c) => [c, []]));
+    for (const r of searchedRequests) map.get(normStatus(r.status))?.push(r);
+    return map;
+  }, [searchedRequests]);
+
+  const totalShown = visibleColumns.reduce(
+    (n, c) => n + (grouped.get(c)?.length ?? 0),
+    0
+  );
 
   const stats = useMemo(() => {
     const countBy = (status: string) =>
@@ -165,21 +173,66 @@ export default function BandBookingListClient({
         </div>
       </div>
 
-      {/* Cards */}
-      <div className="space-y-2 pb-2">
-        {filteredRequests.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">
-            <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5F624F]/50" />
-            <p className="text-sm font-medium text-[#5F624F]">
-              No band applications found
-            </p>
-          </div>
-        ) : (
-          filteredRequests.map((req) => (
-            <BandBookingCard key={req.id} request={req} />
-          ))
-        )}
-      </div>
+      {/* Status board — one column per pipeline stage */}
+      {totalShown === 0 ? (
+        <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">
+          <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5F624F]/50" />
+          <p className="text-sm font-medium text-[#5F624F]">
+            No band applications found
+          </p>
+        </div>
+      ) : (
+        // Stacked on mobile; a scrolling row of fixed columns from sm; from xl the
+        // columns share the width equally and the scroll goes away entirely.
+        <div className="no-scrollbar flex flex-col gap-2 pb-2 sm:flex-row sm:overflow-x-auto xl:overflow-x-visible">
+          {visibleColumns.map((col) => {
+            const theme = statusTheme[col];
+            const items = grouped.get(col) ?? [];
+            return (
+              <section
+                key={col}
+                aria-label={`${theme.label} — ${items.length} request${items.length === 1 ? "" : "s"}`}
+                // min-w-0 is what lets a column shrink past its cards' natural
+                // width — without it five columns overflow the row.
+                className="flex flex-col gap-2 sm:w-72 sm:shrink-0 xl:w-auto xl:min-w-0 xl:flex-1"
+              >
+                {/* Column header — sticks while the column scrolls past it */}
+                <div
+                  className={cn(
+                    "sticky top-0 z-10 flex items-center justify-between gap-2 rounded-xl border px-3 py-2",
+                    theme.bg,
+                    theme.border
+                  )}
+                >
+                  <span className={cn("flex items-center gap-2", theme.text)}>
+                    <span className={cn("h-2 w-2 shrink-0 rounded-full", theme.dot)} />
+                    <span className="font-black text-[11px] tracking-widest uppercase">
+                      {theme.label}
+                    </span>
+                  </span>
+                  <span
+                    className={cn(
+                      "min-w-6 rounded-full border bg-white px-1.5 text-center font-black text-[11px] leading-5",
+                      theme.border,
+                      theme.text
+                    )}
+                  >
+                    {items.length}
+                  </span>
+                </div>
+
+                {items.length === 0 ? (
+                  <p className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white/60 py-8 text-center text-xs font-semibold text-[#5F624F]/60">
+                    Nothing here
+                  </p>
+                ) : (
+                  items.map((req) => <BandBookingCard key={req.id} request={req} />)
+                )}
+              </section>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

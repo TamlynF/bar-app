@@ -68,6 +68,12 @@ const REQUEST_PATHS = [
     "/event-bookings/private-bookings",
 ]
 
+// Routes that lay content out across the full content area rather than the
+// shared max-w-7xl column — currently just the band-applications status board,
+// which runs five columns side by side and needs every pixel. Exact matches
+// only: the detail routes beneath these stay on the normal width.
+const WIDE_PATHS = ["/event-bookings/music-bookings"]
+
 function isQuizPath(path: string): boolean {
     return QUIZ_PATHS.some((q) => path === q || path.startsWith(`${q}/`))
 }
@@ -99,6 +105,8 @@ export default function PrivateLayoutClient({
     // so those never light up Bookings.
     const isRequestPath = (path: string): boolean =>
         REQUEST_PATHS.some((q) => path === q || path.startsWith(`${q}/`))
+
+    const isWidePath = WIDE_PATHS.includes(pathname ?? "")
 
     // Desktop sidebar collapse (icon-only rail). Survives SPA navigation.
     const [collapsed, setCollapsed] = useState(false)
@@ -667,7 +675,12 @@ export default function PrivateLayoutClient({
                     </div>
                 </header>
 
-                <main className="mx-auto w-full max-w-7xl flex-1 p-1 pb-20 sm:p-6 sm:pb-8">
+                <main className={cn(
+                    "mx-auto w-full flex-1 p-1 pb-20 sm:py-6 sm:pb-8",
+                    // A wide route sets its own gutters, so drop both the cap and
+                    // the centring that would otherwise strand it mid-screen.
+                    isWidePath ? "max-w-none" : "max-w-7xl sm:px-6"
+                )}>
                     {children}
                 </main>
 
