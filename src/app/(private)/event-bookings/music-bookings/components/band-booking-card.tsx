@@ -266,7 +266,7 @@ function StageStepper({ status }: { status: string }) {
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2.5 py-3 last:border-0 sm:px-5">
+    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
       <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
@@ -298,7 +298,7 @@ function EditRow({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2.5 py-3 last:border-0 sm:px-5">
+    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
       <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
       {!editable ? (
         <span className="min-w-0 flex-1 truncate text-right text-sm font-bold text-[#1F1F1A]">{readOnlyValue ?? (value || "—")}</span>
@@ -419,6 +419,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [bankAccountNo, setBankAccountNo] = useState(request.bank_account_no ?? "");
   const [bankSortCode, setBankSortCode] = useState(request.bank_sort_code ?? "");
   const [bankPaymentRef, setBankPaymentRef] = useState(request.bank_payment_ref ?? "");
+  const [showBankDetails, setShowBankDetails] = useState(false);
 
   const status = normStatus(request.status);
   const theme = statusTheme[status] || statusTheme.new;
@@ -798,7 +799,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="bottom-6 left-1/2 flex h-[85vh] h-auto max-h-[80vh] w-4xl w-140 -translate-x-1/2 flex-col rounded-4xl rounded-t-[2.5rem] border-2 border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:inset-x-auto lg:max-h-[90vh]"
+          className="flex h-auto max-h-[85vh] w-full flex-col rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 sm:left-1/2 sm:w-[92vw] sm:max-w-3xl sm:-translate-x-1/2 sm:rounded-[2.5rem] lg:max-h-[90vh] lg:max-w-4xl"
         >
           {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
@@ -830,8 +831,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           </div>
 
           {/* Scrollable body */}
-          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 py-6 sm:px-6">
-            <div className="animate-in grid-cols-[minmax(0,1fr)_340px] items-start gap-5 space-y-0 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid">
+          <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-6 sm:px-6">
+            <div className="animate-in grid-cols-[minmax(0,1fr)_340px] items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid">
               {/* Main column — the workflow: event, payment, notes */}
               <div className="min-w-0 space-y-4 sm:space-y-5">
               {/* Event details */}
@@ -853,7 +854,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
                 {/* Preferred dates — applicant's choices, shown above the selected slot */}
                 {dates.length > 0 && (
-                  <div className="border-b border-[#E6DFC8] px-4 py-2.5 py-3 last:border-0 sm:px-5">
+                  <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
                     <span className="mb-2 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Preferred Dates
                     </span>
@@ -883,7 +884,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 )}
 
                 {/* Selected date — label + value on one row (right-aligned); calendar popover when editable */}
-                <div className="border-b border-[#E6DFC8] px-4 py-2.5 py-3 last:border-0 sm:px-5">
+                <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
                   <div className="flex items-center justify-between gap-4">
                     <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Selected Date
@@ -925,7 +926,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 </div>
 
                 {/* Selected time — label + start/end on one row (24h, matching the event view) */}
-                <div className="border-b border-[#E6DFC8] px-4 py-2.5 py-3 last:border-0 sm:px-5">
+                <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
                   <div className="flex items-center justify-between gap-4">
                     <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Selected Time
@@ -969,7 +970,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
 
                 {/* Notes from the booking (applicant) — read-only; hidden when blank */}
                 {request.notes && request.notes.trim() && (
-                  <div className="border-b border-[#E6DFC8] px-4 py-2.5 py-3 last:border-0 sm:px-5">
+                  <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
                     <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Notes from Booking
                     </span>
@@ -984,7 +985,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {(editable || (request.payment_amount ?? 0) > 0) && (
                 <Section title="Payment Details" defaultOpen={initialPaymentOpen}>
                   {/* Amount */}
-                  <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2.5 py-3 last:border-0 sm:px-5">
+                  <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
                     <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Amount</span>
                     {editable ? (
                       <div className="flex flex-1 items-center justify-end gap-1">
@@ -1009,7 +1010,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   </div>
                   {/* Paid — hidden when there is no payment */}
                   {!isNoPayment && (
-                    <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2.5 py-3 last:border-0 sm:px-5">
+                    <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
                       <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Paid</span>
                       {editable ? (
                         <div className="flex flex-1 items-center justify-end gap-1">
@@ -1031,19 +1032,32 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     </div>
                   )}
                   {/* Status — derived from amount vs paid, never edited */}
-                  <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2.5 py-3 last:border-0 sm:px-5">
+                  <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
                     <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Status</span>
                     <span className={cn("rounded-lg border px-2 py-1 font-black text-[10px] tracking-tight uppercase", PAYMENT_STATUS_META[derivedStatus].className)}>
                       {PAYMENT_STATUS_META[derivedStatus].label}
                     </span>
                   </div>
-                  {/* Bank details — hidden when there is no payment */}
+                  {/* Bank details — hidden when there is no payment, collapsed behind "View more" */}
                   {!isNoPayment && (
                     <>
-                      <EditRow label="Account Name" value={bankAccountName} onChange={setBankAccountName} editable={editable} placeholder="—" />
-                      <EditRow label="Account No." value={bankAccountNo} onChange={setBankAccountNo} editable={editable} placeholder="—" />
-                      <EditRow label="Sort Code" value={bankSortCode} onChange={setBankSortCode} editable={editable} placeholder="—" />
-                      <EditRow label="Payment Ref" value={bankPaymentRef} onChange={setBankPaymentRef} editable={editable} placeholder="—" />
+                      {showBankDetails && (
+                        <>
+                          <EditRow label="Account Name" value={bankAccountName} onChange={setBankAccountName} editable={editable} placeholder="—" />
+                          <EditRow label="Account No." value={bankAccountNo} onChange={setBankAccountNo} editable={editable} placeholder="—" />
+                          <EditRow label="Sort Code" value={bankSortCode} onChange={setBankSortCode} editable={editable} placeholder="—" />
+                          <EditRow label="Payment Ref" value={bankPaymentRef} onChange={setBankPaymentRef} editable={editable} placeholder="—" />
+                        </>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setShowBankDetails((v) => !v)}
+                        aria-expanded={showBankDetails}
+                        className="flex w-full items-center justify-center gap-1 px-4 py-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors last:border-0 hover:text-[#1F1F1A] sm:px-5"
+                      >
+                        {showBankDetails ? "View less" : "View more"}
+                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showBankDetails && "rotate-180")} />
+                      </button>
                     </>
                   )}
                 </Section>
@@ -1180,7 +1194,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               {/* Videos — play inline on the page (facade: loads on click) */}
               {videos.length > 0 && (
                 <Section title="Performance Videos">
-                  <div className="grid grid-cols-1 gap-3 px-4 px-5 py-3 sm:grid-cols-2 lg:grid-cols-1">
+                  <div className="grid grid-cols-1 gap-3 px-5 py-3 sm:grid-cols-2 lg:grid-cols-1">
                     {videos.map((url, i) => (
                       <VideoFacade key={i} url={url} title={`Video ${i + 1}`} />
                     ))}
@@ -1202,7 +1216,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
           {/* Footer — compact single row: Cancel (left), stage transitions with one
               primary action (right), Save only once something changed. The note to
               the applicant is tucked behind a toggle since it's optional. */}
-          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-4 py-4 pb-4 pb-9 backdrop-blur-md sm:px-6">
+          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-4 py-4 pb-9 backdrop-blur-md sm:px-6">
             {/* Action area — editable stages (new / reviewing / offered / booked).
                 A declined request is read-only, so no footer. */}
             {editable && (
@@ -1240,7 +1254,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     type="button"
                     onClick={handleCancel}
                     disabled={isPending}
-                    className="mr-auto flex h-11 flex-1 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white px-4 px-5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial"
+                    className="mr-auto flex h-11 flex-1 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial"
                   >
                     Cancel
                   </button>
@@ -1270,7 +1284,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                       type="button"
                       onClick={handleSave}
                       disabled={isPending}
-                      className="flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-4 px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial"
+                      className="flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial"
                     >
                       {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
                       Save Changes
