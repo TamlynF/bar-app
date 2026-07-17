@@ -68,13 +68,22 @@ function isScope (v: string): v is Scope {
   return v === 'type' || v === 'subtype'
 }
 
+// Booking-navigation title precedence for a taxonomy row (type or sub-type):
+// booking_card_title → title → name, using the first non-blank value.
+const pickTitle = (
+  bookingCardTitle: string | null,
+  title: string | null,
+  name: string | null
+) =>
+  bookingCardTitle?.trim() || title?.trim() || (name as string | null) || 'Events'
+
 async function loadHeader (scope: Scope, id: string) {
   const supabase = await createClient()
   if (scope === 'subtype') {
     const [{ data: subtype }, { data: badges }] = await Promise.all([
       supabase
         .from('event_subtypes')
-        .select('name, tagline, booking_config')
+        .select('name, title, booking_card_title, tagline, booking_config')
         .eq('id', id)
         .maybeSingle(),
       supabase
@@ -83,7 +92,11 @@ async function loadHeader (scope: Scope, id: string) {
         .eq('event_subtypes_id', id)
     ])
     return {
-      title: (subtype?.name as string | null) || 'Events',
+      title: pickTitle(
+        subtype?.booking_card_title as string | null,
+        subtype?.title as string | null,
+        subtype?.name as string | null
+      ),
       tagline: (subtype?.tagline as string | null) || '',
       badges: badges ?? [],
       bookingConfig: (subtype?.booking_config as BookingConfig | null) ?? {}
@@ -91,11 +104,15 @@ async function loadHeader (scope: Scope, id: string) {
   }
   const { data: type } = await supabase
     .from('event_types')
-    .select('name, booking_config')
+    .select('name, title, booking_card_title, booking_config')
     .eq('id', id)
     .maybeSingle()
   return {
-    title: (type?.name as string | null) || 'Events',
+    title: pickTitle(
+      type?.booking_card_title as string | null,
+      type?.title as string | null,
+      type?.name as string | null
+    ),
     tagline: '',
     badges: [] as { icon: string | null; title: string }[],
     bookingConfig: (type?.booking_config as BookingConfig | null) ?? {}
@@ -115,13 +132,6 @@ export async function generateMetadata ({
     description: `Book your spot at Don Fenticas.`
   }
 }
-
-const toTitleCase = (s: string) =>
-  s
-    .trim()
-    .split(/\s+/)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join(' ')
 
 export default async function GroupedBookingPage ({
   params,
@@ -167,7 +177,7 @@ export default async function GroupedBookingPage ({
   // The whole group shares one booking form/page config (from the type or sub-type).
   const cfg = normalizeBookingConfig(header.bookingConfig)
   const tagline = cfg.tag_line || header.tagline
-  const title = toTitleCase(header.title)
+  const title = header.title
   const badges = (header.badges || []).map(item => ({
     Icon: ICON_MAP[item.icon || ''] || Info,
     text: item.title
