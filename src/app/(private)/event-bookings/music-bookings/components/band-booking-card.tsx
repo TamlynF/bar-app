@@ -897,7 +897,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-auto max-h-[85vh] w-full flex-col rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 sm:left-1/2 sm:w-[92vw] sm:max-w-3xl sm:-translate-x-1/2 sm:rounded-[2.5rem] lg:max-h-[90vh] lg:max-w-4xl"
+          className="flex h-auto max-h-[85vh] w-full flex-col rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 sm:left-1/2 sm:w-[92vw] sm:max-w-5xl sm:-translate-x-1/2 sm:rounded-[2.5rem] lg:max-h-[90vh] lg:max-w-6xl"
         >
           {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
@@ -1133,86 +1133,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                   );
                 })()}
 
-                {/* Selected date — label + value on one row (right-aligned); calendar popover when editable */}
-                <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
-                      Selected Date
-                    </span>
-                    {editable ? (
-                      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
-                        <PopoverTrigger asChild>
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-2 text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:text-[#5C4033]"
-                          >
-                            {selectedDate
-                              ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
-                              : "Pick a date"}
-                            <CalendarDays className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
-                          </button>
-                        </PopoverTrigger>
-                        <PopoverContent align="end" className="w-auto rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
-                          <Calendar
-                            mode="single"
-                            selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
-                            onSelect={(d) => {
-                              if (d) applyDate(format(d, "yyyy-MM-dd"));
-                              setDatePickerOpen(false);
-                            }}
-                            autoFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    ) : (
-                      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">
-                        {selectedDate ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy") : "—"}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Selected time — label + start/end on one row (24h, matching the event view) */}
-                <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
-                      Selected Time
-                    </span>
-                    {editable ? (
-                      <div className="flex items-center gap-1.5">
-                        <input
-                          type="time"
-                          aria-label="Performance start time"
-                          value={selectedStartTime}
-                          onChange={(e) => applyStart(e.target.value)}
-                          className="bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none"
-                        />
-                        <span className="text-xs text-[#5F624F]/50">-</span>
-                        <input
-                          type="time"
-                          aria-label="Performance end time"
-                          value={selectedEndTime}
-                          onChange={(e) => {
-                            setSelectedEndTime(e.target.value);
-                            setClashes([]);
-                          }}
-                          className="bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none"
-                        />
-                      </div>
-                    ) : (
-                      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">
-                        {selectedStartTime || selectedEndTime ? `${selectedStartTime} - ${selectedEndTime}` : "—"}
-                      </span>
-                    )}
-                  </div>
-                  {/* Single message covering the Date + Time pair above. */}
-                  <FieldMessage warning={slotWarning} />
-                  {clashes.length > 0 && (
-                    <div className="mt-2">
-                      <ClashList clashes={clashes} />
-                    </div>
-                  )}
-                </div>
+                {/* Selected date & time live in the footer action console (below), next
+                    to the note + booking actions — they're what you commit to, not
+                    part of the applicant's submitted details. */}
 
                 {/* Notes from the booking (applicant) — read-only; hidden when blank */}
                 {request.notes && request.notes.trim() && (
@@ -1264,36 +1187,35 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                       </span>
                     )}
                   </div>
-                  {/* Paid — hidden when there is no payment */}
-                  {!isNoPayment && (
-                    <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
-                      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Paid</span>
-                      {editable ? (
-                        <div className="flex flex-1 items-center justify-end gap-1">
-                          <span className="text-[13px] font-semibold text-[#5F624F]">£</span>
-                          <input
-                            aria-label="Paid"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            placeholder="0.00"
-                            value={paidAmount}
-                            onChange={(e) => setPaidAmount(e.target.value)}
-                            className="w-24 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
-                          />
-                        </div>
-                      ) : (
-                        <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">£{(request.paid_amount ?? 0).toFixed(2)}</span>
-                      )}
-                    </div>
-                  )}
                   {/* Status is derived from amount vs paid and never edited, so it
-                      lives as a badge in the section header rather than as a row. */}
-                  {/* Bank details — hidden when there is no payment, collapsed behind "View more" */}
+                      lives as a badge in the section header rather than as a row —
+                      which also keeps the payment state readable while Paid is collapsed. */}
+                  {/* Paid + bank details — hidden when there is no payment, and tucked
+                      behind "View more" so the section stays compact by default. */}
                   {!isNoPayment && (
                     <>
                       {showBankDetails && (
                         <>
+                          <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                            <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Paid</span>
+                            {editable ? (
+                              <div className="flex flex-1 items-center justify-end gap-1">
+                                <span className="text-[13px] font-semibold text-[#5F624F]">£</span>
+                                <input
+                                  aria-label="Paid"
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  placeholder="0.00"
+                                  value={paidAmount}
+                                  onChange={(e) => setPaidAmount(e.target.value)}
+                                  className="w-24 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+                                />
+                              </div>
+                            ) : (
+                              <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">£{(request.paid_amount ?? 0).toFixed(2)}</span>
+                            )}
+                          </div>
                           <EditRow label="Account Name" value={bankAccountName} onChange={setBankAccountName} editable={editable} placeholder="—" />
                           <EditRow label="Account No." value={bankAccountNo} onChange={setBankAccountNo} editable={editable} placeholder="—" />
                           <EditRow label="Sort Code" value={bankSortCode} onChange={setBankSortCode} editable={editable} placeholder="—" />
@@ -1304,7 +1226,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                         type="button"
                         onClick={() => setShowBankDetails((v) => !v)}
                         aria-expanded={showBankDetails}
-                        className="flex w-full items-center justify-center gap-1 px-4 py-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors last:border-0 hover:text-[#1F1F1A] sm:px-5"
+                        className="flex w-full items-center justify-center gap-1 border-t border-[#E6DFC8] bg-[#F7F4EA] px-4 py-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#1F1F1A] sm:px-5"
                       >
                         {showBankDetails ? "View less" : "View more"}
                         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showBankDetails && "rotate-180")} />
@@ -1462,27 +1384,90 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                 A declined request is read-only, so no footer. */}
             {editable && (
               <div className="space-y-2">
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => setNoteOpen((o) => !o)}
-                    aria-expanded={noteOpen}
-                    className="flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:text-[#5C4033]"
-                  >
-                    <MessageSquareQuote className="h-3.5 w-3.5" />
-                    Note to Applicant {adminNotes.trim() && !noteOpen ? "(added)" : "(optional)"}
-                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", noteOpen && "rotate-180")} />
-                  </button>
-                  {noteOpen && (
-                    <textarea
-                      aria-label="Note to applicant"
-                      value={adminNotes}
-                      onChange={(e) => setAdminNotes(e.target.value)}
-                      placeholder="Add a message to include in the offer / outcome email..."
-                      rows={2}
-                      className="mt-1.5 w-full resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
-                    />
-                  )}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {/* Left: the slot being committed to — compact single row */}
+                  <div className="space-y-1.5 rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] p-2.5">
+                    <span className="block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                      Selected Date &amp; Time
+                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            className="flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border border-[#E6DFC8] bg-white px-3 py-2 text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:border-[#5C4033]/30"
+                          >
+                            {selectedDate
+                              ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
+                              : "Pick a date"}
+                            <CalendarDays className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-auto rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
+                          <Calendar
+                            mode="single"
+                            selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
+                            onSelect={(d) => {
+                              if (d) applyDate(format(d, "yyyy-MM-dd"));
+                              setDatePickerOpen(false);
+                            }}
+                            autoFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <div className="flex items-center gap-1.5 rounded-xl border border-[#E6DFC8] bg-white px-3 py-2">
+                        <input
+                          type="time"
+                          aria-label="Performance start time"
+                          value={selectedStartTime}
+                          onChange={(e) => applyStart(e.target.value)}
+                          className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none"
+                        />
+                        <span className="text-xs text-[#5F624F]/50">-</span>
+                        <input
+                          type="time"
+                          aria-label="Performance end time"
+                          value={selectedEndTime}
+                          onChange={(e) => {
+                            setSelectedEndTime(e.target.value);
+                            setClashes([]);
+                          }}
+                          className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none"
+                        />
+                      </div>
+                    </div>
+                    {/* Single message covering the date + time pair above. */}
+                    <FieldMessage warning={slotWarning} />
+                    {clashes.length > 0 && (
+                      <div className="mt-1">
+                        <ClashList clashes={clashes} />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Right: note to applicant — optional, so it stays behind a toggle */}
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      onClick={() => setNoteOpen((o) => !o)}
+                      aria-expanded={noteOpen}
+                      className="flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:text-[#5C4033]"
+                    >
+                      <MessageSquareQuote className="h-3.5 w-3.5" />
+                      Note to Applicant {adminNotes.trim() && !noteOpen ? "(added)" : "(optional)"}
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform duration-200", noteOpen && "rotate-180")} />
+                    </button>
+                    {noteOpen && (
+                      <textarea
+                        aria-label="Note to applicant"
+                        value={adminNotes}
+                        onChange={(e) => setAdminNotes(e.target.value)}
+                        placeholder="Add a message to include in the offer / outcome email..."
+                        rows={2}
+                        className="mt-1.5 w-full flex-1 resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                      />
+                    )}
+                  </div>
                 </div>
 
                 {error && <p className="text-xs font-bold text-red-500">{error}</p>}
