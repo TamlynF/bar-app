@@ -6,6 +6,7 @@ import { updateBandStatus, updateBandBookingFields, getClashingEvents, reschedul
 import type { BandStatus } from "../actions";
 import {
   ChevronDown,
+  ArrowRight,
   Music2,
   Link2,
   CheckCircle2,
@@ -399,7 +400,7 @@ function StageChip({
       // Still announced as unavailable — it just explains itself when clicked.
       aria-disabled={!interactive || undefined}
       className={cn(
-        "flex h-11 shrink-0 items-center gap-1.5 rounded-full border px-2.5 transition-all sm:h-8",
+        "flex h-12 shrink-0 items-center gap-2 rounded-full border-2 px-3.5 transition-all sm:h-10",
         tone === "current" && cn(t.bg, t.text, t.border),
         tone === "past" && "border-[#E6DFC8] bg-white text-[#5F624F]",
         tone === "future" && "border-transparent text-[#5F624F]/45",
@@ -415,13 +416,13 @@ function StageChip({
       )}
     >
       {isPending ? (
-        <Loader2 className="h-3 w-3 shrink-0 animate-spin" />
+        <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
       ) : tone === "past" ? (
-        <CheckCircle2 className="h-3 w-3 shrink-0 text-green-600" />
+        <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
       ) : (
-        <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", tone === "current" ? t.dot : "bg-[#E6DFC8]")} />
+        <span className={cn("h-2 w-2 shrink-0 rounded-full", tone === "current" ? t.dot : "bg-[#E6DFC8]")} />
       )}
-      <span className="font-black text-[9px] tracking-widest uppercase">{t.label}</span>
+      <span className="font-black text-[10px] tracking-widest uppercase">{t.label}</span>
     </button>
   );
 }
@@ -482,11 +483,11 @@ function StageStepper({
     if (!t) return null;
     const exits = transitions.filter((tr) => PIPELINE.includes(tr.next));
     return (
-      <div className="no-scrollbar mt-3 flex items-center gap-1 overflow-x-auto" aria-label={`Status: ${t.label}`}>
+      <div className="no-scrollbar mt-3 flex items-center gap-1.5 overflow-x-auto" aria-label={`Status: ${t.label}`}>
         {chip(status as BandStatus, "current")}
         {exits.map((tr) => (
           <React.Fragment key={tr.next}>
-            <div className="h-px min-w-2 flex-1 bg-[#E6DFC8]" />
+            <ArrowRight className="h-4 w-4 shrink-0 text-[#5F624F]/30" aria-hidden="true" />
             {chip(tr.next, "future")}
           </React.Fragment>
         ))}
@@ -496,17 +497,42 @@ function StageStepper({
 
   return (
     <div
-      className="no-scrollbar mt-3 flex items-center gap-1 overflow-x-auto"
+      className="no-scrollbar mt-3 flex items-center gap-1.5 overflow-x-auto"
       aria-label={`Stage ${idx + 1} of ${PIPELINE.length}: ${currentLabel}`}
     >
       {PIPELINE.map((s, i) => (
         <React.Fragment key={s}>
+          {/* An arrow, not a bar — it points at the next step. Espresso once the
+              stage is reached, muted while it's still ahead. */}
           {i > 0 && (
-            <div className={cn("h-px min-w-2 flex-1", i <= idx ? "bg-[#5C4033]/25" : "bg-[#E6DFC8]")} />
+            <ArrowRight
+              className={cn("h-4 w-4 shrink-0", i <= idx ? "text-[#5C4033]" : "text-[#5F624F]/30")}
+              aria-hidden="true"
+            />
           )}
           {chip(s, i === idx ? "current" : i < idx ? "past" : "future")}
         </React.Fragment>
       ))}
+
+      {/* Decline — a terminal exit, deliberately NOT part of the approval pipeline:
+          pushed clear to the right with no arrow leading in, and outlined in dashed
+          red so it reads as the bad, off-workflow action it is. */}
+      {reachable("declined") && (
+        <button
+          type="button"
+          disabled={!!pendingStage}
+          onClick={() => onSelect("declined")}
+          title="Decline application — a terminal exit, not a pipeline step"
+          className="ml-auto flex h-12 shrink-0 items-center gap-2 rounded-full border-2 border-dashed border-red-300 bg-red-50 px-3.5 text-red-600 transition-colors hover:bg-red-100 disabled:pointer-events-none disabled:opacity-50 sm:h-10"
+        >
+          {pendingStage === "declined" ? (
+            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+          ) : (
+            <XCircle className="h-3.5 w-3.5 shrink-0" />
+          )}
+          <span className="font-black text-[10px] tracking-widest uppercase">Decline</span>
+        </button>
+      )}
     </div>
   );
 }
@@ -2724,9 +2750,8 @@ export function BandBookingCard({
 
                 {error && <p className="text-xs font-bold text-red-500">{error}</p>}
 
-                {/* Stage moves live in the header stepper now. What's left here is
-                    Cancel, the Decline exit (a terminal outcome, not a stage), and
-                    Save once something's dirty. */}
+                {/* All stage moves — including the Decline exit — live in the header
+                    stepper now. The footer keeps only Cancel and Save. */}
                 <div className="flex flex-wrap items-center gap-2.5">
                   <button
                     type="button"
@@ -2736,22 +2761,6 @@ export function BandBookingCard({
                   >
                     Cancel
                   </button>
-                  {(BAND_TRANSITIONS[status as BandStatus] ?? [])
-                    .filter((t) => !PIPELINE.includes(t.next))
-                    .map((t) => (
-                      <button
-                        key={t.next + t.label}
-                        type="button"
-                        onClick={() => handleAction(t.next)}
-                        disabled={isPending}
-                        className={cn(
-                          "flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl px-4 font-black text-[10px] tracking-widest uppercase transition-all active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-5",
-                          t.className
-                        )}
-                      >
-                        {pendingStage === t.next ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t.label}
-                      </button>
-                    ))}
                   {hasChanges && (
                     <button
                       type="button"
