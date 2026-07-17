@@ -44,6 +44,11 @@ export const metadata: Metadata = {
   },
   description:
     "Don Fenticas, Regent Street, Hinckley — quiz nights, live music, karaoke, and unforgettable nights out.",
+  icons: {
+    icon: "/df-mark.jpg",
+    shortcut: "/df-mark.jpg",
+    apple: "/df-mark.jpg",
+  },
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
