@@ -604,6 +604,8 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   /** Brief highlight on the slot console after a blocked Booked chip points at it. */
   const [slotFlash, setSlotFlash] = useState(false);
   const startTimeRef = useRef<HTMLInputElement>(null);
+  /** Re-entry guard for the unsaved-changes prompt. */
+  const askingToClose = useRef(false);
 
   // Favourite persists on click (not via Save), so it gets its own transition —
   // sharing `isPending` would grey out the footer actions on every heart tap.
@@ -808,6 +810,51 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
     );
     setClashes(list);
     return list;
+  }
+
+  /**
+   * Guard every dismissal of the sheet (✕ / Escape / click outside): unsaved edits
+   * ask to be saved or discarded first, rather than vanishing silently. Mirrors
+   * `guardedClose` in the general-bookings list.
+   */
+  async function requestClose() {
+    if (!hasChanges) {
+      setOpen(false);
+      return;
+    }
+    // The sheet stays mounted while we ask, so a second Escape would fire
+    // onOpenChange again and stack another dialog over the first.
+    if (askingToClose.current) return;
+    askingToClose.current = true;
+    try {
+      // A clashing slot can't be saved at all, so don't offer a Save that would
+      // quietly do nothing — discarding is the only way out that isn't "fix it".
+      if (hasClashes) {
+        const discard = await confirm({
+          title: "Discard changes?",
+          description:
+            "This slot clashes with another event, so these changes can't be saved. Close and discard them?",
+          confirmLabel: "Discard",
+          cancelLabel: "Keep editing",
+          variant: "destructive",
+        });
+        if (discard) handleCancel();
+        return;
+      }
+      const save = await confirm({
+        title: "Save changes?",
+        description: "You've made changes to this request. Save them before closing?",
+        confirmLabel: "Save changes",
+        cancelLabel: "Discard",
+        // Cancel means Discard here, so a stray backdrop click must not answer.
+        dismissOnBackdrop: false,
+      });
+      // handleSave closes on success and stays put if its own confirm is backed out of.
+      if (save) handleSave();
+      else handleCancel();
+    } finally {
+      askingToClose.current = false;
+    }
   }
 
   // Discard any unsaved edits and close the sheet.
@@ -1181,7 +1228,9 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       </button>
 
       {/* Bottom sheet */}
-      <Sheet open={open} onOpenChange={setOpen}>
+      {/* Dismissals route through requestClose so unsaved edits can't slip away;
+          opening stays direct. */}
+      <Sheet open={open} onOpenChange={(next) => (next ? setOpen(true) : requestClose())}>
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}

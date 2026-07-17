@@ -14,6 +14,13 @@ interface ConfirmOptions {
   variant?: "destructive" | "default";
   /** Hide the cancel button, turning the dialog into a single-action acknowledgement (e.g. a validation alert). */
   hideCancel?: boolean;
+  /**
+   * Whether clicking the backdrop cancels. Defaults to true, which is right when
+   * cancelling is the safe way out ("Delete?" → Cancel). Set false when the cancel
+   * action itself is destructive (e.g. "Discard"), so a stray click can't lose work
+   * — the dialog then only resolves via its buttons.
+   */
+  dismissOnBackdrop?: boolean;
 }
 
 export function useConfirm() {
@@ -45,10 +52,10 @@ export function useConfirm() {
   // paints above modal surfaces like a Radix Sheet (which is itself portalled).
   const ConfirmDialogUI = open && typeof document !== "undefined" ? createPortal(
     <>
-      {/* Backdrop */}
+      {/* Backdrop. Still blocks the surface underneath when it doesn't dismiss. */}
       <div
         className={styles.backdrop}
-        onClick={handleCancel}
+        onClick={options.dismissOnBackdrop === false ? undefined : handleCancel}
         onPointerDown={(e) => e.stopPropagation()}
       />
       {/* Dialog box */}

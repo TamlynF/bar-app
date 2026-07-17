@@ -335,6 +335,8 @@ export default function BookingList({
         description: "You've made changes to this booking. Save them before closing?",
         confirmLabel: "Save changes",
         cancelLabel: "Discard",
+        // Cancel means Discard here, so a stray backdrop click must not answer.
+        dismissOnBackdrop: false,
       });
       if (save) {
         const ok = await persistEdits();
