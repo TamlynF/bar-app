@@ -21,6 +21,7 @@ import {
   MessageSquareQuote,
   AlertCircle,
   AlertTriangle,
+  BellRing,
   CalendarDays,
   Upload,
   Mail,
@@ -509,12 +510,10 @@ function StageStepper({
               <span className={cn("h-2 w-2 shrink-0 rounded-full", t.dot)} />
               <span className="font-black text-[10px] tracking-widest uppercase">{t.label}</span>
               {declineReason.trim() && (
-                <span
-                  title="A reason has been recorded"
-                  className="rounded-full bg-[#B45309] px-1.5 py-0.5 font-black text-[8px] tracking-wide text-white uppercase"
-                >
-                  Reasons
-                </span>
+                <BellRing
+                  aria-label="A reason has been recorded"
+                  className="absolute -top-1.5 -right-1.5 h-4 w-4 fill-yellow-300 text-yellow-500"
+                />
               )}
             </button>
           </PopoverTrigger>
@@ -2104,7 +2103,12 @@ export function BandBookingCard({
                             ? `View linked event #${request.event_id} — on the schedule`
                             : `View linked event #${request.event_id} — off the schedule`
                         }
-                        className="group inline-flex items-center gap-1.5 font-black text-[10px] tracking-wider uppercase"
+                        className={cn(
+                          "group inline-flex h-9 items-center gap-1.5 rounded-xl border px-3 font-black text-[10px] tracking-wider uppercase transition-colors",
+                          eventIsActive
+                            ? "border-green-200 bg-green-50 hover:bg-green-100"
+                            : "border-red-200 bg-red-50 hover:bg-red-100"
+                        )}
                       >
                         <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                         <span className="underline underline-offset-2">Linked Event: #{request.event_id}</span>
@@ -2661,6 +2665,27 @@ export function BandBookingCard({
                       </button>
                     </>
                   )}
+                </Section>
+              )}
+
+              {/* Decline reason — the message given to the applicant. Editable here,
+                  and mirrored to the declined stage chip's popover. Only shown once
+                  the request has actually been declined. */}
+              {isDeclined && (
+                <Section title="Decline Reason for Applicant">
+                  <div className="p-4 sm:p-5">
+                    <textarea
+                      aria-label="Decline reason for applicant"
+                      value={adminNotes}
+                      onChange={(e) => setAdminNotes(e.target.value)}
+                      rows={4}
+                      placeholder="The reason given to the band when this was declined..."
+                      className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                    />
+                    <p className="mt-1.5 text-[10px] leading-snug text-[#5F624F]/70">
+                      Saved when you hit Save Changes.
+                    </p>
+                  </div>
                 </Section>
               )}
 
