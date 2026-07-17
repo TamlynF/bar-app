@@ -924,8 +924,6 @@ export function BandBookingCard({
   const clashWarning = hasClashes
     ? `Clashes with ${clashes.map((c) => c.title).join(", ")} — pick another time.`
     : undefined;
-  /** Is there anything to say about the slot? Drives the footer's second column. */
-  const hasSlotFeedback = !!slotWarning || hasClashes;
 
   // Every platform gets a pill; unfilled ones render deactivated and can be filled
   // in. Read-only requests only show what's actually there.
@@ -2579,24 +2577,28 @@ export function BandBookingCard({
           {/* Footer — compact single row: Cancel (left), stage transitions with one
               primary action (right), Save only once something changed. The note to
               the applicant is tucked behind a toggle since it's optional. */}
-          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-4 py-3 pb-6 backdrop-blur-md sm:px-6">
+          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#5C4033]/15 bg-[#E6DFC8] px-4 py-3 pb-6 sm:px-6">
             <div className="space-y-2">
-                {/* Splits when the second column has something to carry — the decline
-                    reason, or whatever's blocking the slot. Otherwise the console
-                    keeps the full width. */}
-                <div className={cn("grid gap-3", (isDeclined || hasSlotFeedback) && "sm:grid-cols-2")}>
-                  {/* Left: the slot being committed to — compact single row. While
-                      it's still needed for booking it wears an amber rail, and the
-                      blocked Booked chip flashes it via revealSlot(). */}
+                {/* Splits only for the decline reason; the slot console now carries
+                    its own warnings inline, so it keeps the full width otherwise. */}
+                <div className={cn("grid gap-3", isDeclined && "sm:grid-cols-2")}>
+                  {/* Left: the slot being committed to, with its warnings under the
+                      fields. The blocked Booked chip flashes it via revealSlot(). */}
                   <div
                     className={cn(
-                      // This is what you commit to, so it's dressed to outrank the
-                      // plain field rows: a heavier espresso border, a warm tint that
-                      // lifts off the white footer, a soft shadow, and an icon chip in
-                      // the heading. The amber rail/flash still override when a slot is
-                      // required or the Booked chip points here.
-                      "space-y-2 rounded-2xl border-2 border-[#5C4033]/25 bg-[#5C4033]/[0.06] p-3 shadow-sm transition-all",
-                      slotWarning && "border-l-4 border-l-amber-400",
+                      // This is what you commit to, so it's dressed to outrank
+                      // everything around it: a raised card that lifts off the tan
+                      // footer with a strong shadow and heavy border, and whose
+                      // background itself carries the state — amber while a slot is
+                      // still required, red when the chosen slot clashes, calm cream
+                      // once it's set. The flash still pulses when the Booked chip
+                      // points here.
+                      "space-y-2 rounded-2xl border-2 p-3 shadow-lg transition-all",
+                      hasClashes
+                        ? "border-red-300 bg-red-50"
+                        : slotWarning
+                          ? "border-l-4 border-amber-300 border-l-amber-400 bg-amber-50"
+                          : "border-[#5C4033]/25 bg-[#F7F4EA]",
                       slotFlash && "ring-2 ring-amber-400/70"
                     )}
                   >
@@ -2695,13 +2697,15 @@ export function BandBookingCard({
                         )}
                       </div>
                     </div>
+                    {/* Warning (slot required) and error (clash) sit under the fields
+                        they're about, inside the console rather than off to the side. */}
+                    {slotWarning && <FieldMessage warning={slotWarning} />}
+                    {clashes.length > 0 && <ClashList clashes={clashes} />}
                   </div>
 
                   {/* Right: once declined, the reason the band was given — editable,
-                      in case it needs rewording. Otherwise what's blocking the slot;
-                      the message to the band is written in the send dialog now, so
-                      this space carries the thing that actually stops you. */}
-                  {isDeclined ? (
+                      in case it needs rewording. */}
+                  {isDeclined && (
                     <div className="flex flex-col">
                       <span className="mb-1.5 flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                         <MessageSquareQuote className="h-3.5 w-3.5" />
@@ -2715,13 +2719,6 @@ export function BandBookingCard({
                         className="w-full flex-1 resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
                       />
                     </div>
-                  ) : (
-                    hasSlotFeedback && (
-                      <div className="flex flex-col justify-center gap-1.5">
-                        <FieldMessage warning={slotWarning} />
-                        {clashes.length > 0 && <ClashList clashes={clashes} />}
-                      </div>
-                    )
                   )}
                 </div>
 
