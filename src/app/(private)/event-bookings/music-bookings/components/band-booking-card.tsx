@@ -839,7 +839,10 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
    * the authoritative check; this is the live one that drives the UI.
    */
   useEffect(() => {
-    if (!selectedDate || !selectedStartTime || !selectedEndTime) {
+    // A declined request places no event, so its slot can't collide with anything —
+    // and its clash list would have nowhere to render (the footer's second column
+    // carries the decline reason), leaving Save mysteriously disabled.
+    if (status === "declined" || !selectedDate || !selectedStartTime || !selectedEndTime) {
       setClashes([]);
       return;
     }
@@ -857,7 +860,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [selectedDate, selectedStartTime, selectedEndTime, request.event_id]);
+  }, [status, selectedDate, selectedStartTime, selectedEndTime, request.event_id]);
 
   // Look up active events that overlap the chosen slot (excluding this booking's own
   // linked event). Returns the clashes and stores them for display.
@@ -1139,6 +1142,14 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
         }
         // `note` is what the band reads; the action decides what (if anything) sticks.
         const result = await updateBandStatus(request.id, newStatus, note || undefined);
+        // The server re-checks the slot as the last word before an event is placed.
+        // A clash landing between our own check and this one leaves the request where
+        // it was — surface it inline under the slot fields, like every other clash.
+        if (result?.clashes?.length) {
+          setClashes(result.clashes);
+          toast.error("This slot now clashes with another event — pick another time.");
+          return;
+        }
         if (isDecline) setAdminNotes(note);
         // The sheet stays open on every status change — the stepper is the control
         // now, so you land on the new stage and see the result (including Declined,
@@ -2045,54 +2056,11 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
               primary action (right), Save only once something changed. The note to
               the applicant is tucked behind a toggle since it's optional. */}
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-4 py-3 pb-6 backdrop-blur-md sm:px-6">
-            {/* A declined request has no slot to commit, so its footer is just the
-                reason the band was given — editable, in case it needs rewording. */}
-            {isDeclined ? (
-              <div className="space-y-2">
-                <div className="flex flex-col">
-                  <span className="mb-1.5 flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
-                    <MessageSquareQuote className="h-3.5 w-3.5" />
-                    Decline Reason for Applicant
-                  </span>
-                  <textarea
-                    aria-label="Decline reason for applicant"
-                    value={adminNotes}
-                    onChange={(e) => setAdminNotes(e.target.value)}
-                    placeholder="The reason given to the band when this was declined..."
-                    rows={2}
-                    className="w-full resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
-                  />
-                </div>
-
-                {error && <p className="text-xs font-bold text-red-500">{error}</p>}
-
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    disabled={isPending}
-                    className="mr-auto flex h-11 flex-1 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial"
-                  >
-                    Cancel
-                  </button>
-                  {hasChanges && (
-                    <button
-                      type="button"
-                      onClick={handleSave}
-                      disabled={isPending}
-                      className="flex h-11 min-w-24 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial"
-                    >
-                      {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                      Save Changes
-                    </button>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {/* Splits only when there's something to say about the slot —
-                    otherwise the console keeps the full width. */}
-                <div className={cn("grid gap-3", hasSlotFeedback && "sm:grid-cols-2")}>
+            <div className="space-y-2">
+                {/* Splits when the second column has something to carry — the decline
+                    reason, or whatever's blocking the slot. Otherwise the console
+                    keeps the full width. */}
+                <div className={cn("grid gap-3", (isDeclined || hasSlotFeedback) && "sm:grid-cols-2")}>
                   {/* Left: the slot being committed to — compact single row. While
                       it's still needed for booking it wears an amber rail, and the
                       blocked Booked chip flashes it via revealSlot(). */}
@@ -2197,14 +2165,31 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     </div>
                   </div>
 
-                  {/* Right: what's wrong with the slot. The message to the band is
-                      written in the send dialog now, so this space carries the
-                      thing that actually blocks you. */}
-                  {hasSlotFeedback && (
-                    <div className="flex flex-col justify-center gap-1.5">
-                      <FieldMessage warning={slotWarning} />
-                      {clashes.length > 0 && <ClashList clashes={clashes} />}
+                  {/* Right: once declined, the reason the band was given — editable,
+                      in case it needs rewording. Otherwise what's blocking the slot;
+                      the message to the band is written in the send dialog now, so
+                      this space carries the thing that actually stops you. */}
+                  {isDeclined ? (
+                    <div className="flex flex-col">
+                      <span className="mb-1.5 flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                        <MessageSquareQuote className="h-3.5 w-3.5" />
+                        Decline Reason for Applicant
+                      </span>
+                      <textarea
+                        aria-label="Decline reason for applicant"
+                        value={adminNotes}
+                        onChange={(e) => setAdminNotes(e.target.value)}
+                        placeholder="The reason given to the band when this was declined..."
+                        className="w-full flex-1 resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                      />
                     </div>
+                  ) : (
+                    hasSlotFeedback && (
+                      <div className="flex flex-col justify-center gap-1.5">
+                        <FieldMessage warning={slotWarning} />
+                        {clashes.length > 0 && <ClashList clashes={clashes} />}
+                      </div>
+                    )
                   )}
                 </div>
 
@@ -2251,8 +2236,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     </button>
                   )}
                 </div>
-              </div>
-            )}
+            </div>
           </div>
           {ConfirmDialogUI}
         </SheetContent>

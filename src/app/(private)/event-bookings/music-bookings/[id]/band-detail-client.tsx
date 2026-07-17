@@ -28,7 +28,15 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
     setError(null);
     startTransition(async () => {
       try {
-        await updateBandStatus(request.id, status, adminNotes || undefined);
+        const result = await updateBandStatus(request.id, status, adminNotes || undefined);
+        // Booking into an occupied slot is refused server-side — stay put and say why
+        // rather than navigating away as though it had gone through.
+        if (result?.clashes?.length) {
+          setError(
+            `This slot clashes with ${result.clashes.map((c) => c.title).join(", ")} — pick another time.`
+          );
+          return;
+        }
         router.push("/event-bookings/music-bookings");
       } catch {
         setError("Failed to update. Please try again.");
