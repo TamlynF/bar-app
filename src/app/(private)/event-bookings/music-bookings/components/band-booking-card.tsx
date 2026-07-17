@@ -44,6 +44,9 @@ import { buildRescheduleEmail } from "@/lib/band-emails";
 
 const DEFAULT_START_TIME = "22:00"; // 10pm
 
+/** Applicant's booking note collapses to this many characters behind a "…" toggle. */
+const NOTE_PREVIEW_LEN = 50;
+
 interface SocialLinks {
   instagram?: string;
   facebook?: string;
@@ -440,6 +443,7 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const [isFavorite, setIsFavorite] = useState(request.is_favorite);
   const [, startFavTransition] = useTransition();
   const [notesOpen, setNotesOpen] = useState(false);
+  const [noteExpanded, setNoteExpanded] = useState(false);
 
   // Editable detail fields (act, contact & payment). Seeded from the request; a
   // cancelled request is read-only, everything else can be edited.
@@ -463,6 +467,12 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
   const status = normStatus(request.status);
   const theme = statusTheme[status] || statusTheme.new;
   const editable = status !== "declined";
+
+  // Applicant's note. Long ones sit on one row as a preview + "…" toggle rather
+  // than pushing every other field down the sheet.
+  const bookingNote = (request.notes ?? "").trim();
+  const noteIsLong = bookingNote.length > NOTE_PREVIEW_LEN;
+  const noteHead = bookingNote.slice(0, NOTE_PREVIEW_LEN).trimEnd();
 
   // Where the linked event lives, if one has been placed. Null → System
   // Information shows "—".
@@ -1138,14 +1148,37 @@ export function BandBookingCard({ request }: { request: BandRequest }) {
                     to the note + booking actions — they're what you commit to, not
                     part of the applicant's submitted details. */}
 
-                {/* Notes from the booking (applicant) — read-only; hidden when blank */}
-                {request.notes && request.notes.trim() && (
-                  <div className="border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
-                    <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                {/* Notes from the booking (applicant) — read-only; hidden when blank.
+                    Collapsed to a preview so a rambling note can't dominate the sheet;
+                    the trailing "…" opens it in place. */}
+                {bookingNote && (
+                  <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
+                    <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                       Notes from Booking
                     </span>
-                    <p className="text-sm leading-relaxed text-[#1F1F1A] italic">
-                      &quot;{request.notes}&quot;
+                    <p className="min-w-0 text-right text-[13px] leading-relaxed font-semibold text-[#1F1F1A] italic">
+                      &quot;{noteExpanded ? bookingNote : noteHead}{noteIsLong && !noteExpanded && (
+                        <button
+                          type="button"
+                          onClick={() => setNoteExpanded(true)}
+                          title="Show the full note"
+                          aria-label="Show the full note"
+                          aria-expanded={false}
+                          className="px-0.5 font-black text-[#5C4033] not-italic hover:underline"
+                        >
+                          …
+                        </button>
+                      )}&quot;
+                      {noteIsLong && noteExpanded && (
+                        <button
+                          type="button"
+                          onClick={() => setNoteExpanded(false)}
+                          aria-expanded={true}
+                          className="ml-1.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase not-italic hover:underline"
+                        >
+                          Less
+                        </button>
+                      )}
                     </p>
                   </div>
                 )}
