@@ -61,7 +61,7 @@ export default async function HomePage() {
 
   const highlightedEvents = ((rawEvents ?? []) as EventRow[])
     .filter((e) => getEventType(e)?.behavior !== "private")
-    .map(serializeEvent);
+    .map((e) => serializeEvent(e));
   // The soonest event headlines the hero ("on tonight" if it's today); the rest
   // fill the schedule list below.
   const featured = highlightedEvents[0] ?? null;

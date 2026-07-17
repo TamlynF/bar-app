@@ -5,7 +5,13 @@ import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { type FilterTab } from "@/components/editorial/filter-tabs";
 import { WhatsOnGrid } from "@/components/whats-on-grid";
-import { getEventType, parseDate, serializeEvent, type EventRow } from "@/lib/events-display";
+import {
+  getEventType,
+  parseDate,
+  serializeEvent,
+  type BandInfo,
+  type EventRow,
+} from "@/lib/events-display";
 
 export const revalidate = 300;
 
@@ -28,7 +34,7 @@ export default async function WhatsOnPage() {
   const { data: rawEvents } = await supabase
     .from("events")
     .select(
-      "id, title, date, start_time, end_time, is_active, is_fully_booked, is_bookable, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior)"
+      "id, title, date, start_time, end_time, tagline, is_active, is_fully_booked, is_bookable, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline)"
     )
     .gte("date", monthStartStr)
     .lte("date", nextMonthEndStr)
@@ -42,8 +48,47 @@ export default async function WhatsOnPage() {
       (e.date < todayStr || e.is_active)
   );
 
+  // For music-act events, pull the socials + video showreel from the linked
+  // band request so the flip card can show them on its back face.
+  const musicActIds = events
+    .filter((e) => getEventType(e)?.behavior === "music_act")
+    .map((e) => e.id);
+
+  const bandByEvent = new Map<number, BandInfo>();
+  if (musicActIds.length > 0) {
+    const { data: bandRows } = await supabase
+      .from("band_booking_requests")
+      .select("event_id, social_links, video_urls, video_descriptions")
+      .in("event_id", musicActIds)
+      .eq("status", "booked");
+
+    for (const b of (bandRows ?? []) as {
+      event_id: number | null;
+      social_links: Record<string, string> | null;
+      video_urls: string[] | null;
+      video_descriptions: string[] | null;
+    }[]) {
+      if (b.event_id == null || bandByEvent.has(b.event_id)) continue;
+      const socials = b.social_links ?? {};
+      const urls = (b.video_urls ?? []).filter(Boolean);
+      const descs = b.video_descriptions ?? [];
+      bandByEvent.set(b.event_id, {
+        socialLinks: {
+          instagram: socials.instagram?.trim() || undefined,
+          facebook: socials.facebook?.trim() || undefined,
+          youtube: socials.youtube?.trim() || undefined,
+          tiktok: socials.tiktok?.trim() || undefined,
+        },
+        videos: urls.map((url, i) => ({ url, description: (descs[i] ?? "").trim() })),
+      });
+    }
+  }
+
+  const toSerialized = (e: EventRow) =>
+    serializeEvent(e, bandByEvent.get(e.id) ?? null);
+
   const monthEvents = events.filter((e) => parseDate(e.date) <= monthEnd);
-  const serializedMonthEvents = monthEvents.map(serializeEvent);
+  const serializedMonthEvents = monthEvents.map(toSerialized);
 
   // Grid buckets: upcoming (today onward) + past (before today). The grid marks
   // the first upcoming event inline as "NEXT UP" — no separate hero.
@@ -67,7 +112,7 @@ export default async function WhatsOnPage() {
   // render them with the same EventCard, behind a "View {month}" toggle.
   const later = events
     .filter((e) => parseDate(e.date) > monthEnd)
-    .map(serializeEvent);
+    .map(toSerialized);
 
   const thisMonthLabel = format(today, "MMMM");
   const nextMonthLabel = format(addMonths(today, 1), "MMMM");

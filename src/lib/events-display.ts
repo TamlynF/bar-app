@@ -104,6 +104,19 @@ export function eventBadgeColor(event: EventRow): string {
   return brightenForDark(base);
 }
 
+/** Socials + video showreel for a `music_act` event, sourced from the linked
+ *  `band_booking_requests` row. Null on every other kind of event. */
+export type BandInfo = {
+  socialLinks: {
+    instagram?: string;
+    facebook?: string;
+    youtube?: string;
+    tiktok?: string;
+  };
+  /** Parallel url + applicant description, blanks dropped. */
+  videos: { url: string; description: string }[];
+};
+
 /** The serialized shape consumed by NextEventHero / MonthEventList / highlights. */
 export type SerializedEvent = {
   id: number;
@@ -122,10 +135,15 @@ export type SerializedEvent = {
   price: number | null;
   isKaraoke: boolean;
   karaokeRequestUrl: string | null;
+  /** The subtype's behaviour — lets a surface special-case music acts, etc. */
+  behavior: EventBehavior;
+  /** Band socials/videos for `music_act` events; null otherwise. */
+  band: BandInfo | null;
 };
 
-/** Map a raw events row into the shared serialized shape. */
-export function serializeEvent(e: EventRow): SerializedEvent {
+/** Map a raw events row into the shared serialized shape. `band` is attached
+ *  only for music-act events (the caller looks it up from the linked request). */
+export function serializeEvent(e: EventRow, band: BandInfo | null = null): SerializedEvent {
   const et = getEventType(e);
   return {
     id: e.id,
@@ -143,5 +161,7 @@ export function serializeEvent(e: EventRow): SerializedEvent {
     price: e.payment_amount ?? null,
     isKaraoke: et?.behavior === "karaoke",
     karaokeRequestUrl: e.karaoke_request_url ?? null,
+    behavior: et?.behavior ?? "standard",
+    band,
   };
 }

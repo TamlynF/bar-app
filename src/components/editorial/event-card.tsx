@@ -3,7 +3,10 @@
 import { useLayoutEffect, useRef } from "react";
 import { format } from "date-fns";
 import { Clock, CalendarDays, ExternalLink, Mic2, RefreshCw } from "lucide-react";
-import { parseDate, type SerializedEvent } from "@/lib/events-display";
+import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
+import type { IconType } from "react-icons";
+import { VideoFacade } from "@/components/video-facade";
+import { parseDate, type BandInfo, type SerializedEvent } from "@/lib/events-display";
 
 /**
  * Single-open flip card for the /whats-on schedule. Laid out as a compact,
@@ -90,6 +93,65 @@ function FrontCta({ event }: { event: SerializedEvent }) {
   }
 
   return null;
+}
+
+const SOCIAL_META: { key: keyof BandInfo["socialLinks"]; Icon: IconType; label: string }[] = [
+  { key: "instagram", Icon: SiInstagram, label: "Instagram" },
+  { key: "facebook", Icon: SiFacebook, label: "Facebook" },
+  { key: "youtube", Icon: SiYoutube, label: "YouTube" },
+  { key: "tiktok", Icon: SiTiktok, label: "TikTok" },
+];
+
+/** Back-face band block for music acts: social icons + video-thumbnail links.
+ *  Every control opens in a new tab and stops the flip toggle from firing. */
+function BandMedia({ band, title }: { band: BandInfo; title: string }) {
+  const stop = (e: React.MouseEvent) => e.stopPropagation();
+  const socials = SOCIAL_META.map((s) => ({ ...s, url: band.socialLinks[s.key] })).filter(
+    (s) => s.url
+  );
+  const videos = band.videos.filter((v) => v.url);
+
+  if (socials.length === 0 && videos.length === 0) return null;
+
+  return (
+    <div className="mt-3 flex flex-col gap-3">
+      {socials.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {socials.map(({ key, url, Icon, label }) => (
+            <a
+              key={key}
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={stop}
+              aria-label={`${title} on ${label}`}
+              className="pointer-events-auto inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline bg-white/5 text-ink-2 transition-colors hover:border-white/30 hover:text-ink"
+            >
+              <Icon className="h-4 w-4" aria-hidden="true" />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {videos.length > 0 && (
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
+          {videos.map((v, i) => (
+            // Wrapper re-enables pointer events (the flip layer disables them) and
+            // stops the facade's play click from reaching the flip toggle.
+            <div key={i} className="pointer-events-auto min-w-0" onClick={stop}>
+              <VideoFacade url={v.url} title={v.description || `Video ${i + 1}`} />
+              <p
+                title={v.description || undefined}
+                className="mt-1.5 line-clamp-2 text-[11px] font-medium text-ink-2"
+              >
+                {v.description || `Video ${i + 1}`}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function EventCard({
@@ -271,11 +333,17 @@ export function EventCard({
           )}
 
           {event.tagline ? (
-            <p className="line-clamp-3 text-xs leading-relaxed text-ink-2">{event.tagline}</p>
+            <p className="text-xs leading-relaxed text-ink-2">{event.tagline}</p>
           ) : (
-            <p className="text-xs leading-relaxed text-ink-2/70 italic">
-              More details at the door.
-            </p>
+            !event.band && (
+              <p className="text-xs leading-relaxed text-ink-2/70 italic">
+                More details at the door.
+              </p>
+            )
+          )}
+
+          {event.behavior === "music_act" && event.band && (
+            <BandMedia band={event.band} title={event.title} />
           )}
 
           <div className="mt-auto border-t border-hairline pt-3">
