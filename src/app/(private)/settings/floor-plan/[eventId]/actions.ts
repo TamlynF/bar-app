@@ -5,10 +5,6 @@ import { revalidatePath } from "next/cache";
 
 export type ChairChange = { mappingId: number; addSeat: number };
 
-/**
- * Persist a computed floor plan to `events.floor_plan_layout` and push any
- * per-table extra-chair changes back to `booking_table_mappings.add_seat`.
- */
 export async function saveFloorPlanLayoutAction(
   eventId: number,
   layout: unknown,
@@ -25,7 +21,6 @@ export async function saveFloorPlanLayoutAction(
       .eq("id", eventId);
     if (layoutError) throw layoutError;
 
-    // Update add_seat only where it actually changed.
     for (const change of chairChanges) {
       const { error } = await supabase
         .from("booking_table_mappings")
@@ -42,10 +37,6 @@ export async function saveFloorPlanLayoutAction(
   }
 }
 
-/**
- * Add an available table to an event's layout as an event-level mapping
- * (no booking). Requires booking_table_mappings.booking_id to be nullable.
- */
 export async function addEventTableAction(eventId: number, tableId: number) {
   const supabase = await createClient();
   if (!eventId || !tableId) return { error: "Missing event or table." };
@@ -76,7 +67,6 @@ export async function addEventTableAction(eventId: number, tableId: number) {
   }
 }
 
-/** Add several available tables at once (event-level mappings). */
 export async function addEventTablesAction(eventId: number, tableIds: number[]) {
   const supabase = await createClient();
   if (!eventId || tableIds.length === 0) return { error: "Nothing to add." };
@@ -103,7 +93,6 @@ export async function addEventTablesAction(eventId: number, tableIds: number[]) 
   }
 }
 
-/** Remove an event-level (booking-less) table mapping. Won't touch booking tables. */
 export async function removeEventTableAction(eventId: number, mappingId: number) {
   const supabase = await createClient();
   if (!mappingId) return { error: "Missing table." };

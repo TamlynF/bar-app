@@ -21,6 +21,5 @@ export async function updatePassword(formData: FormData) {
     return { error: error.message };
   }
 
-  // Once updated successfully, redirect to the private dashboard
   redirect("/dashboard");
 }

@@ -6,7 +6,6 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Match these to the constants in create-private-hire.ts
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 const REPLY_TO = "admin@bookingsdonfenticas.co.uk";
 
@@ -36,10 +35,6 @@ export async function getEnquiries() {
   return data ?? [];
 }
 
-/**
- * Sends the reply to the enquirer by email and marks the enquiry responded.
- * reply_to is the venue address so the conversation continues over email.
- */
 export async function replyToEnquiry(id: string, replyMessage: string) {
   const trimmed = replyMessage.trim();
   if (!trimmed) throw new Error("Reply message is required.");
@@ -86,7 +81,6 @@ export async function replyToEnquiry(id: string, replyMessage: string) {
   revalidatePath("/dashboard");
 }
 
-/** Closes an enquiry without emailing (spam, resolved elsewhere, etc.). */
 export async function closeEnquiry(id: string, adminNotes?: string) {
   const supabase = await createClient();
   const empId = await currentEmployeeId();

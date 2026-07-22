@@ -28,7 +28,6 @@ export default async function MarketingTrendsPage() {
 
   const area = resolveComparisonArea(settings, address);
 
-  // Prices tab data (competitor prices for the current area + own-menu comparison).
   const { data: prices } = await supabase
     .from("competitor_prices")
     .select("*")

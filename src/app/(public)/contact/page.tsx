@@ -55,7 +55,6 @@ export default async function ContactPage() {
       <PublicNav currentPath="/contact" />
 
       <div className="mx-auto max-w-xl px-4 py-6 sm:py-10">
-        {/* Page header */}
         <SectionHeading eyebrow="Find us · get in touch" title="About Us" />
         {info?.description && (
           <p className="-mt-2 mb-8 text-sm leading-relaxed font-medium text-stone-400">
@@ -63,7 +62,6 @@ export default async function ContactPage() {
           </p>
         )}
 
-        {/* Contact details */}
         <section className="space-y-3">
           {info?.address && (
             <ContactCard
@@ -92,7 +90,6 @@ export default async function ContactPage() {
           )}
         </section>
 
-        {/* Opening hours */}
         {hasHours && (
           <section className="mt-8">
             <SectionLabel icon={Clock} label="Opening Hours" />
@@ -144,7 +141,6 @@ export default async function ContactPage() {
   </div>
 </section>
 
-        {/* Social */}
         {(info?.instagram || info?.facebook || info?.twitter || info?.tiktok || info?.youtube) && (
           <section className="mt-8">
             <SectionLabel icon={SiInstagram} label="Follow Us" />
@@ -201,7 +197,6 @@ export default async function ContactPage() {
           </section>
         )}
 
-        {/* Fallback if nothing configured */}
         {!info?.address && !info?.phone && !info?.email && (
           <div className="rounded-2xl border border-white/5 bg-white/3 py-16 text-center">
             <Mail className="mx-auto mb-3 h-8 w-8 text-stone-700" />
@@ -214,7 +209,6 @@ export default async function ContactPage() {
           </div>
         )}
 
-        {/* Footer */}
         <div className="mt-16 text-center">
           <div className="flex items-center justify-center gap-3 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />

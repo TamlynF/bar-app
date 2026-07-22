@@ -41,7 +41,6 @@ export type SpecialRecord = {
   updated_by?: number | null;
 };
 
-/** ISO weekday numbers (1=Mon … 7=Sun) paired with their short labels. */
 const WEEKDAYS: { value: number; label: string }[] = [
   { value: 1, label: "Mon" },
   { value: 2, label: "Tue" },
@@ -175,7 +174,6 @@ export default function SpecialsClient({
 
   return (
     <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
-      {/* List */}
       {initialSpecials.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
           <Sparkles className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
@@ -249,7 +247,6 @@ export default function SpecialsClient({
                     onClick={() => openView(special)}
                     className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[#F7F4EA]/50 active:scale-[0.99] sm:px-4"
                   >
-                    {/* Thumbnail */}
                     <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-[#E6DFC8] bg-[#F7F4EA]">
                       {special.image_url ? (
                         /* eslint-disable-next-line @next/next/no-img-element */
@@ -265,7 +262,6 @@ export default function SpecialsClient({
                       )}
                     </div>
 
-                    {/* Info */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p
@@ -301,7 +297,6 @@ export default function SpecialsClient({
         </section>
       )}
 
-      {/* Bottom Sheet */}
       <Sheet
         open={isSheetOpen}
         onOpenChange={(open) => {
@@ -318,7 +313,6 @@ export default function SpecialsClient({
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
-          {/* Header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -341,9 +335,7 @@ export default function SpecialsClient({
             </div>
           </div>
 
-          {/* Body */}
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-            {/* View mode */}
             {!showForm && selected && (
               <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
@@ -409,7 +401,6 @@ export default function SpecialsClient({
               </div>
             )}
 
-            {/* Form */}
             {showForm && (
               <form
                 id="special-form"
@@ -421,7 +412,6 @@ export default function SpecialsClient({
                 )}
                 <input type="hidden" name="image_url" value={imageUrl} />
 
-                {/* Image upload */}
                 <div className="space-y-3 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
                   <div className="flex items-center gap-1.5">
                     <ImageIcon className="h-3 w-3 text-[#5F624F]" />
@@ -601,7 +591,6 @@ export default function SpecialsClient({
             <div className="h-4" />
           </div>
 
-          {/* Footer */}
           <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">

@@ -1,16 +1,7 @@
-// src/app/(private)/dashboard/lib/analytics.ts
-//
-// Pure data-shaping helpers for the admin dashboard analytics sections.
-// Pattern: the server component fetches raw rows (see fetchDashboardAnalytics
-// at the bottom), passes them through these pure functions, and hands plain
-// serialisable objects to "use client" chart components. Keeps page.tsx thin
-// and every calculation unit-testable.
 
-// ─── Row types (shaped to match the existing schema) ─────────────────────────
 
 type JoinOneOrMany<T> = T | T[] | null;
 
-/** Supabase joins can come back as object OR array — normalise (see CLAUDE.md). */
 function one<T>(v: JoinOneOrMany<T>): T | null {
   if (v == null) return null;
   return Array.isArray(v) ? (v[0] ?? null) : v;
@@ -42,9 +33,7 @@ export type BandCostRow = {
   selected_date: string | null;
 };
 
-// ─── Week bucketing ──────────────────────────────────────────────────────────
 
-/** Monday 00:00 of the week containing `d`, as a Date. */
 function weekStart(d: Date): Date {
   const out = new Date(d);
   const day = (out.getDay() + 6) % 7; // Mon=0 … Sun=6
@@ -53,7 +42,6 @@ function weekStart(d: Date): Date {
   return out;
 }
 
-/** Short label for a week bucket, e.g. "23 Jun". */
 function weekLabel(d: Date): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
@@ -65,10 +53,6 @@ export type WeeklyPoint = {
   guests: number;    // sum of group_size
 };
 
-/**
- * Buckets bookings into the trailing `weeks` calendar weeks by created_at.
- * Weeks with no bookings are zero-filled so the chart never has gaps.
- */
 export function weeklyTrend(
   bookings: AnalyticsBookingRow[],
   weeks = 12,
@@ -104,7 +88,6 @@ export function weeklyTrend(
   }));
 }
 
-// ─── Month stats + deltas ────────────────────────────────────────────────────
 
 export type MonthStats = {
   collected: number;
@@ -136,12 +119,10 @@ export function monthStats(bookings: AnalyticsBookingRow[]): MonthStats {
 }
 
 export type Delta = {
-  /** Signed percentage change vs previous period, null when previous is 0. */
   pct: number | null;
   direction: "up" | "down" | "flat";
 };
 
-/** % change of `current` vs `previous`. pct is null when previous === 0. */
 export function delta(current: number, previous: number): Delta {
   if (previous === 0) {
     return { pct: null, direction: current > 0 ? "up" : "flat" };
@@ -150,14 +131,9 @@ export function delta(current: number, previous: number): Delta {
   return { pct, direction: pct > 0 ? "up" : pct < 0 ? "down" : "flat" };
 }
 
-// ─── Revenue by event type ───────────────────────────────────────────────────
 
 export type RevenueByType = { type: string; revenue: number };
 
-/**
- * Sums paid revenue per event type. Pass confirmed private-hire deposits
- * separately so hire money shows up as its own bar.
- */
 export function revenueByEventType(
   bookings: AnalyticsBookingRow[],
   privateHires: PrivateHireRevenueRow[] = []
@@ -185,7 +161,6 @@ export function revenueByEventType(
     .sort((a, b) => b.revenue - a.revenue);
 }
 
-/** Booked band/entertainment spend — pair with revenue for margin context. */
 export function entertainmentSpend(bands: BandCostRow[]): number {
   const total = bands
     .filter((b) => b.status === "booked")
@@ -193,15 +168,9 @@ export function entertainmentSpend(bands: BandCostRow[]): number {
   return Math.round(total * 100) / 100;
 }
 
-// ─── New vs returning guests ─────────────────────────────────────────────────
 
 export type GuestSplit = { newGuests: number; returning: number; returningPct: number };
 
-/**
- * A contact booking this month is "returning" if they had any booking before
- * the month started. `priorContactIds` = distinct contact_ids from bookings
- * created before firstDayOfMonth (fetched separately, ids only — cheap).
- */
 export function newVsReturning(
   monthBookings: AnalyticsBookingRow[],
   priorContactIds: Set<number>
@@ -226,16 +195,13 @@ export function newVsReturning(
   };
 }
 
-// ─── Smaller KPIs ────────────────────────────────────────────────────────────
 
-/** % of bookings in the set that were cancelled. */
 export function cancellationRate(bookings: AnalyticsBookingRow[]): number {
   if (bookings.length === 0) return 0;
   const cancelled = bookings.filter((b) => b.status === "cancelled").length;
   return Math.round((cancelled / bookings.length) * 100);
 }
 
-/** Median days between booking creation and the event date (lead time). */
 export function medianLeadTimeDays(bookings: AnalyticsBookingRow[]): number {
   const leads: number[] = [];
   for (const b of bookings) {
@@ -254,7 +220,6 @@ export function medianLeadTimeDays(bookings: AnalyticsBookingRow[]): number {
   return Math.round(median * 10) / 10;
 }
 
-/** Booking counts by event day-of-week (Mon..Sun) — for a heat strip. */
 export function bookingsByDayOfWeek(
   bookings: AnalyticsBookingRow[]
 ): { day: string; bookings: number }[] {
@@ -269,13 +234,10 @@ export function bookingsByDayOfWeek(
   return days.map((day, i) => ({ day, bookings: counts[i] }));
 }
 
-// ─── One-call fetch + compute for the dashboard page ─────────────────────────
 
 const BOOKING_SELECT =
   "created_at, paid_amount, total_amount, status, payment_status, group_size, contact_id, events!bookings_event_id_fkey(date, event_types(name))";
 
-// Deliberately loose client type so this file doesn't couple to the supabase
-// server/browser client split. Pass the result of `await createClient()`.
 type SupabaseLike = {
   from: (table: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any
 };
@@ -302,8 +264,6 @@ export async function fetchDashboardAnalytics(
   const twelveWeeksAgo = new Date(weekStart(now));
   twelveWeeksAgo.setDate(twelveWeeksAgo.getDate() - 11 * 7);
 
-  // Widest window we need for booking rows (12 weeks covers both months
-  // for typical use; take the earlier of the two boundaries to be safe).
   const windowStart = new Date(
     Math.min(twelveWeeksAgo.getTime(), firstOfPrevMonth.getTime())
   ).toISOString();

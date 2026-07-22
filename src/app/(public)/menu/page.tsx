@@ -115,16 +115,13 @@ export default async function MenuPage() {
         }}
       />
 
-      {/* Shared sticky nav */}
       <div className="no-print">
         <PublicNav currentPath="/menu" />
       </div>
 
-      {/* Menu frame — the bordered page (kept for the print aesthetic) */}
       <div className="menu-frame relative mx-3 my-4 max-w-4xl rounded-sm border-[5px] border-[#4a5a28] sm:mx-auto sm:my-8">
         <div className="menu-inner border-2 border-[#B8962E] bg-[#2a3612] p-4 sm:p-8">
 
-          {/* Page header — H1 is "MENU", not the bar's name */}
           <header className="menu-header mb-5 text-center sm:mb-7">
             <div className="mb-3 inline-flex items-center gap-1.5 rounded-full border border-[#FDCC4B]/20 bg-[#FDCC4B]/10 px-3 py-1">
               <Wine className="h-3 w-3 text-[#FDCC4B]" />
@@ -140,14 +137,12 @@ export default async function MenuPage() {
             </p>
           </header>
 
-          {/* Spirits note */}
           <div className="mb-5 text-center">
             <span className="spirits-pill inline-block rounded-sm bg-[#FDCC4B] px-3 py-1 font-black text-[10px] tracking-wide text-[#26300D] uppercase sm:px-4 sm:text-xs">
               Spirits* — (+ £1.45 for mixers, + £1.95 for tonic)
             </span>
           </div>
 
-          {/* Two-column grid */}
           <div className="menu-grid grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
             <div className="menu-col flex flex-col gap-3 sm:gap-4">
               {col1.map((cat) => (
@@ -164,7 +159,6 @@ export default async function MenuPage() {
         </div>
       </div>
 
-      {/* Screen-only footer */}
       <div className="no-print mx-auto max-w-4xl px-4 pb-10 text-center">
         <p className="text-[9px] font-bold tracking-widest text-[#4a5a28] uppercase">
           &copy; {new Date().getFullYear()} Don Fenticas &middot; Regent Street, Hinckley

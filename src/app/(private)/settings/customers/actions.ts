@@ -8,7 +8,6 @@ export async function saveContactAction(formData: FormData) {
   
   const id = formData.get("id")?.toString();
   
-  // Extracting data matching the schema
   const payload = {
     full_name: formData.get("full_name")?.toString() || "",
     email: formData.get("email")?.toString() || "",
@@ -23,20 +22,16 @@ export async function saveContactAction(formData: FormData) {
 
   try {
     if (id) {
-      // Update existing contact
       const { error } = await supabase.from("contacts").update(payload).eq("id", id);
       
-      // Catch unique email violations nicely
       if (error?.code === '23505') {
         throw new Error("A customer with this email address already exists.");
       } else if (error) {
         throw error;
       }
     } else {
-      // Insert new contact
       const { error } = await supabase.from("contacts").insert(payload);
       
-      // Catch unique email violations nicely
       if (error?.code === '23505') {
         throw new Error("A customer with this email address already exists.");
       } else if (error) {

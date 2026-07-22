@@ -16,7 +16,6 @@ export interface TeamRow {
   groupName: string;
   groupSize: number | null;
   contactName: string | null;
-  /** null when the team has not been scored yet. */
   score: number | null;
   isWinner: boolean;
 }
@@ -34,7 +33,6 @@ export interface AllTimeTeam {
   total_score: number;
 }
 
-/** Helper for Supabase joins that may come back as an array or a single object. */
 function one<T>(rel: T | T[] | null | undefined): T | null {
   if (!rel) return null;
   return Array.isArray(rel) ? rel[0] ?? null : rel;
@@ -44,10 +42,6 @@ type EventJoin = { id: number; date: string; title: string | null };
 type ContactJoin = { full_name: string | null };
 type ScoreJoin = { score: number | null; is_winner: boolean | null };
 
-/**
- * Quiz-behaviour events that have at least one non-cancelled booking — the
- * events a leaderboard can be viewed or scored for. Newest first.
- */
 export async function getQuizEvents(): Promise<LeaderboardEvent[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -72,10 +66,6 @@ export async function getQuizEvents(): Promise<LeaderboardEvent[]> {
   return Array.from(byId.values()).sort((a, b) => (a.date < b.date ? 1 : -1));
 }
 
-/**
- * Every non-cancelled team booked on an event, with its current score (null when
- * unscored). Drives both the standings view and the score-entry form.
- */
 export async function getEventTeams(eventId: string): Promise<TeamRow[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -112,11 +102,6 @@ export async function getEventTeams(eventId: string): Promise<TeamRow[]> {
   });
 }
 
-/**
- * All-time team standings across every quiz: total points, quizzes attended and
- * wins, aggregated by team name. Sorted by wins then total score. Moved here from
- * the dashboard, which no longer surfaces the leaderboard.
- */
 export async function getAllTimeLeaderboard(limit = 5): Promise<AllTimeTeam[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -145,18 +130,12 @@ export async function getAllTimeLeaderboard(limit = 5): Promise<AllTimeTeam[]> {
     .slice(0, limit);
 }
 
-/**
- * Replaces all scores for a quiz event in one pass: clears the event's existing
- * booking_scores, then inserts a row for every team given a score. Teams left
- * blank are simply not scored.
- */
 export async function saveEventScores(
   eventId: string,
   entries: ScoreEntry[],
 ): Promise<{ error?: string }> {
   const supabase = await createClient();
 
-  // Resolve which employee is making the change (for created_by / updated_by).
   let employeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
   if (user?.email) {
@@ -164,7 +143,6 @@ export async function saveEventScores(
     if (emp) employeeId = emp.id;
   }
 
-  // Clear this event's scores, then re-insert the provided ones.
   const { error: delError } = await supabase.from("booking_scores").delete().eq("event_id", Number(eventId));
   if (delError) {
     console.error("saveEventScores delete error:", delError);

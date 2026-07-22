@@ -51,7 +51,6 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
 
   if (!event) notFound();
 
-  // Fetch subtype info + badges
   const [{ data: subtype }, { data: infoItems }] = await Promise.all([
     supabase
       .from("event_subtypes")
@@ -68,8 +67,6 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
   const cfg = normalizeBookingConfig(config);
   const tagline = cfg.tag_line || (subtype?.tagline as string) || event.tagline || "";
   const eventTitle = event.title || "Event";
-  // Banner + theme source: the event's booking image, falling back to the logo so
-  // the header always renders a themed banner (matches the grouped booking page).
   const bannerImage = cfg.booking_image_url || "/CompanyName.png";
 
   const dbBadges = (infoItems || []).map((item) => ({
@@ -108,14 +105,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
       `}} />
 
-      {/* Dynamic theme — the banner image's dominant colour is sampled client-side
-          into the `--ev-theme` CSS variable and bled across the page via gradients.
-          The banner is the event's booking image, or the company logo when absent,
-          so the header always themes. Mirrors the grouped booking page. */}
-      {/* <ImageThemer imageUrl={bannerImage} /> */}
 
-      {/* Colour wash — a strong field of the image's colour that carries down over
-          most of the page (past 75%) before resolving into the olive base. */}
       <div
         aria-hidden
         className="z-0 absolute inset-0 bg-[linear-gradient(to_bottom,var(--ev-theme,transparent)_0%,var(--ev-theme,transparent)_35%,transparent_82%)] opacity-80 pointer-events-none"
@@ -125,7 +115,6 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
 
       <div className="z-10 relative flex flex-col flex-1 mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-6 w-full max-w-3xl">
 
-        {/* Header */}
         <div className="flex flex-col items-center mb-6 sm:mb-10 text-center">
           {cfg.booking_image_url ? (
             <>
@@ -147,13 +136,11 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
             </>
           ) : (
             <div className="relative px-2 py-2 w-full max-h-[25vh]">
-              {/* Soft gold glow behind the title */}
               <div
                 aria-hidden
                 className="top-0 left-1/2 absolute bg-[#FDCC4B]/10 blur-[80px] rounded-full w-105 h-60 -translate-x-1/2 pointer-events-none"
               />
 
-              {/* Brand lockup — small; the logo already lives in the nav */}
               <div className="inline-flex relative items-center gap-3 mb-2.5">
                 <span aria-hidden className="bg-[#FDCC4B]/30 w-7 h-px" />
                 <Image src="/logo.jpeg" alt="" width={26} height={26} className="rounded-lg" />
@@ -163,12 +150,10 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
                 <span aria-hidden className="bg-[#FDCC4B]/30 w-7 h-px" />
               </div>
 
-              {/* The event is the hero */}
               <h1 className="relative drop-shadow-[0_8px_40px_rgba(253,204,75,0.15)] font-black text-[#FFF4CC] text-3xl sm:text-5xl uppercase leading-[0.95] tracking-tighter">
                 {eventTitle}
               </h1>
 
-              {/* Combined date + time chip — one pill when there's no booking image */}
               <div className="relative flex flex-wrap justify-center items-center gap-2.5 mt-3">
                 <span className="inline-flex items-center gap-2 bg-black/40 px-4 py-2 border border-white/10 rounded-full font-bold text-[#FFF4CC] text-xs">
                   <Calendar className="w-3.5 h-3.5 text-[#FDCC4B]" aria-hidden />
@@ -183,7 +168,6 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
           )}
         </div>
 
-        {/* Event Badges */}
         {eventBadges.length > 0 && (
           <div className="flex flex-row flex-wrap justify-center gap-3 mx-0 mb-5 px-4 pb-4 sm:overflow-visible overflow-x-auto no-scrollbar">
             {eventBadges.map((badge, index) => (
@@ -201,10 +185,8 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
           </div>
         )}
 
-        {/* Booking Form Card */}
         <div className="relative bg-white/3 shadow-2xl backdrop-blur-xl mb-12 p-6 sm:p-10 border border-white/10 rounded-[2.5rem] ring-1 ring-white/5 overflow-hidden">
           <div className="-top-32 -left-32 absolute bg-[#fdcc4b]/10 blur-[100px] rounded-full w-64 h-64 pointer-events-none" />
-          {/* Image-colour glow, complements the gold one and ties the card to the theme */}
           {cfg.booking_image_url && (
             <div className="absolute h-64 w-64 bg-(--ev-theme) rounded-full opacity-12 blur-[100px] pointer-events-none -right-28 -bottom-28" />
           )}
@@ -231,7 +213,6 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex flex-col items-center gap-4 mt-auto mb-6 pt-8">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="bg-stone-800/50 w-6 h-px" />

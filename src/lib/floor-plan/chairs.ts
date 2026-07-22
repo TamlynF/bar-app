@@ -1,11 +1,9 @@
-// Pure chair-placement geometry for the floor-plan calculator. No DOM/React.
 import { round } from "./geometry";
 import type { ChairLayout, Point } from "./types";
 
 export type ChairDot = Point & { extra: boolean };
 export type BenchBar = { x: number; y: number; width: number; length: number };
 
-/** How many base seats a chair layout implies (falls back to the table capacity). */
 export function chairLayoutSeatCount(layout: ChairLayout | null | undefined, capacity: number): number {
   if (!layout || layout.mode === "auto") return capacity;
   const perSide = Math.max(0, layout.perSide ?? 0);
@@ -14,7 +12,6 @@ export function chairLayoutSeatCount(layout: ChairLayout | null | undefined, cap
   return perSide * 2 + ends * 2;
 }
 
-/** Evenly spaced coordinates along [from, to], inset from the ends. */
 function distribute(count: number, from: number, to: number): number[] {
   if (count <= 0) return [];
   const out: number[] = [];
@@ -38,19 +35,11 @@ export type ChairInput = {
   layout: ChairLayout | null;
 };
 
-/**
- * Chair dots (and benches) for a table, in unrotated world coordinates centred
- * on (cx, cy). Rotate the whole group at the call site to match the table.
- *
- * Rectangles seat along their two LONG sides by default; `layout` can pin an
- * exact per-side / bench arrangement. Extra chairs are appended at the short ends.
- */
 export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; benches: BenchBar[] } {
   const { shape, cx, cy, chairGap, baseSeats, extraChairs, layout } = input;
   const base = Math.max(0, baseSeats);
   const extra = Math.max(0, extraChairs);
 
-  // ── Round: simple ring ──
   if (shape === "round") {
     const r = (input.diameter > 0 ? input.diameter : Math.max(input.width, input.length)) / 2 + chairGap;
     const total = base + extra;
@@ -62,7 +51,6 @@ export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; ben
     return { chairs, benches: [] };
   }
 
-  // ── Rectangle ──
   const w = input.width > 0 ? input.width : 1.2;
   const l = input.length > 0 ? input.length : 0.7;
   const halfW = w / 2;
@@ -70,7 +58,6 @@ export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; ben
   const longVertical = l >= w; // long sides are left/right when the table is taller than wide
   const mode = layout?.mode ?? "auto";
 
-  // Base chair counts on each long side / short end.
   let long1: number;
   let long2: number;
   let end1 = 0;
@@ -89,7 +76,6 @@ export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; ben
     long2 = base - long1;
   }
 
-  // Split extra chairs across the two short ends.
   const extra1 = Math.ceil(extra / 2);
   const extra2 = extra - extra1;
 
@@ -100,7 +86,6 @@ export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; ben
   const endOffset = (longVertical ? halfL : halfW) + chairGap;
 
   if (mode === "bench") {
-    // A bench bar along each long side.
     const depth = chairGap * 1.3;
     if (longVertical) {
       const len = l * 0.92;
@@ -112,7 +97,6 @@ export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; ben
       benches.push({ x: cx - len / 2, y: cy + halfL + chairGap, width: len, length: depth });
     }
   } else {
-    // Chairs along the two long sides.
     if (longVertical) {
       distribute(long1, cy - halfL, cy + halfL).forEach((y) => chairs.push({ x: round(cx - longOffset, 3), y: round(y, 3), extra: false }));
       distribute(long2, cy - halfL, cy + halfL).forEach((y) => chairs.push({ x: round(cx + longOffset, 3), y: round(y, 3), extra: false }));
@@ -122,7 +106,6 @@ export function computeTableChairs(input: ChairInput): { chairs: ChairDot[]; ben
     }
   }
 
-  // Short ends: base end chairs + any extra chairs.
   const endTotal1 = end1 + extra1;
   const endTotal2 = end2 + extra2;
   const placeEnd = (count: number, baseCount: number, sign: 1 | -1) => {

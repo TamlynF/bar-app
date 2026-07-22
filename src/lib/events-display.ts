@@ -1,12 +1,6 @@
 import { swatchHexFromColor } from "@/lib/event-type-colors";
 import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
 
-/**
- * Shared event-display helpers used by the public home page (highlighted
- * events) and the /whats-on schedule page. Pure logic — kept out of the
- * Server Components so both surfaces serialize events identically and the
- * fiddly bits (join shape, colour brightening) are unit-tested in one place.
- */
 
 export type TypeJoin = { name: string; color: string | null };
 export type SubtypeJoin = {
@@ -42,12 +36,10 @@ export type EventRow = {
   event_subtypes: SubtypeJoin | SubtypeJoin[];
 };
 
-/** Parse a YYYY-MM-DD date string without timezone shift */
 export function parseDate(dateStr: string) {
   return new Date(dateStr + "T00:00:00");
 }
 
-/** Format a time string like "20:00:00+00" to "8pm" or "8:30pm" */
 export function formatTime(time: string | null): string | null {
   if (!time) return null;
   const [h, m] = time.split(":");
@@ -58,7 +50,6 @@ export function formatTime(time: string | null): string | null {
   return `${displayHour}:${minute}${ampm}`;
 }
 
-/** Safely extract + normalize the event type/subtype from the joins (can be array or object) */
 export function getEventType(event: EventRow): EventTypeJoin | null {
   const t = Array.isArray(event.event_types) ? event.event_types[0] : event.event_types;
   const s = Array.isArray(event.event_subtypes) ? event.event_subtypes[0] : event.event_subtypes;
@@ -72,10 +63,6 @@ export function getEventType(event: EventRow): EventTypeJoin | null {
   };
 }
 
-/**
- * Lift a hex colour toward white until it's bright enough to read as a TITLE
- * on the near-black olive canvas (#1a2008).
- */
 export function brightenForDark(hex: string): string {
   const h = hex.replace("#", "");
   if (h.length !== 6) return hex;
@@ -97,15 +84,12 @@ export function brightenForDark(hex: string): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-/** The (brightened) type colour for an event, from badge_color, falling back to gold. */
 export function eventBadgeColor(event: EventRow): string {
   const et = getEventType(event);
   const base = swatchHexFromColor(et?.badge_color) ?? "#FDCC4B";
   return brightenForDark(base);
 }
 
-/** Socials + video showreel for a `music_act` event, sourced from the linked
- *  `band_booking_requests` row. Null on every other kind of event. */
 export type BandInfo = {
   socialLinks: {
     instagram?: string;
@@ -113,11 +97,9 @@ export type BandInfo = {
     youtube?: string;
     tiktok?: string;
   };
-  /** Parallel url + applicant description, blanks dropped. */
   videos: { url: string; description: string }[];
 };
 
-/** The serialized shape consumed by NextEventHero / MonthEventList / highlights. */
 export type SerializedEvent = {
   id: number;
   title: string;
@@ -131,18 +113,13 @@ export type SerializedEvent = {
   color: string;
   subType: string | null;
   tagline: string | null;
-  /** Entry/ticket price in GBP; 0 = free, null when not fetched. */
   price: number | null;
   isKaraoke: boolean;
   karaokeRequestUrl: string | null;
-  /** The subtype's behaviour — lets a surface special-case music acts, etc. */
   behavior: EventBehavior;
-  /** Band socials/videos for `music_act` events; null otherwise. */
   band: BandInfo | null;
 };
 
-/** Map a raw events row into the shared serialized shape. `band` is attached
- *  only for music-act events (the caller looks it up from the linked request). */
 export function serializeEvent(e: EventRow, band: BandInfo | null = null): SerializedEvent {
   const et = getEventType(e);
   return {

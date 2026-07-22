@@ -1,5 +1,4 @@
 import React from 'react'
-// Using absolute aliases to ensure the build environment correctly locates the modules
 import { getFullQuestionHistoryAction, getQuizEventsAction } from '@/app/(private)/event-setups/quiz-generator/actions'
 import {
   LayoutGrid,
@@ -29,7 +28,6 @@ export type QuizEventSummary = {
   date: string;
 }
 
-// UI/UX Theme palette for category differentiation
 const CATEGORY_THEMES = [
   { bg: "bg-blue-50", border: "border-blue-200", iconBg: "bg-blue-600", text: "text-blue-900" },
   { bg: "bg-amber-50/50", border: "border-amber-200", iconBg: "bg-amber-600", text: "text-amber-900" },
@@ -64,7 +62,6 @@ export default async function QuizArchivePage({
 
   return (
     <div className="mx-auto max-w-6xl animate-in space-y-8 px-4 pt-4 pb-32 text-left duration-700 fade-in sm:px-6 sm:pt-0">
-      {/* Filter Toolbar */}
       <div className="flex flex-col justify-between gap-6 sm:flex-row sm:items-center">
         <QuizHistoryFilter
           quizEvents={quizEvents as QuizEventSummary[]}
@@ -120,7 +117,6 @@ export default async function QuizArchivePage({
                         className="flex flex-col overflow-hidden rounded-2xl border border-black/5 bg-white shadow-sm"
                       >
                         <div className="flex flex-1 flex-col space-y-5 p-5">
-                          {/* Question Section */}
                           {record.image_url ? (
                             /* eslint-disable-next-line @next/next/no-img-element */
                             <img src={record.image_url} alt={record.answer_text} className="h-44 w-full rounded-xl object-cover" />
@@ -135,7 +131,6 @@ export default async function QuizArchivePage({
                             </div>
                           ) : null}
 
-                          {/* Unified Answer Box: Dark/Gold High Contrast */}
                           <div className="group/answer relative mt-auto overflow-hidden rounded-xl bg-[#5C4033] p-4 text-center shadow-inner">
                             <div className="pointer-events-none absolute top-0 left-0 h-full w-full bg-[#5C4033]/5" />
                             <div className="mb-1.5 flex items-center justify-center gap-1.5 opacity-60">

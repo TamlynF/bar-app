@@ -19,7 +19,6 @@ export default async function PrivateBookingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-4 sm:py-0 md:px-8">
-      {/* Header */}
       <div>
         <h2 className="font-black text-xl tracking-tight text-[#1F1F1A] uppercase">
           Private Hire

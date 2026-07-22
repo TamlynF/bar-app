@@ -6,14 +6,6 @@ import { Flag } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { COUNTRY_CODES } from "@/lib/country-codes";
 
-/**
- * Country dialing-code picker for the booking forms. The closed field shows only
- * the code (e.g. "+44"); the open list shows "ISO +code" (e.g. "GB +44") so the
- * duplicate codes (several "+1"s) stay distinguishable. Both are centre-aligned.
- *
- * The menu renders through a portal with fixed positioning so it escapes the
- * booking card's `overflow-hidden` instead of being clipped.
- */
 export function CountryCodeSelect({
   value,
   onChange,
@@ -52,8 +44,6 @@ export function CountryCodeSelect({
     };
   }, [open]);
 
-  // Show ~10 codes at a time and scroll for the rest, but never exceed the space
-  // below the field so a field near the viewport bottom scrolls instead of clipping.
   const TEN_ROWS = 10 * 34 + 8; // ~10 option rows + list padding
   const maxH = rect
     ? Math.min(TEN_ROWS, Math.max(160, window.innerHeight - rect.bottom - 16))

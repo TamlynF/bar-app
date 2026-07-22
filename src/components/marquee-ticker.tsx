@@ -1,8 +1,3 @@
-/**
- * After-dark marquee — a slow scrolling band of the bar's recurring nights,
- * echoing the lit signage over the bar. Decorative (aria-hidden); pauses for
- * users who prefer reduced motion (see .ad-marquee-track in globals.css).
- */
 const PHRASES = [
   "Live Music",
   "Thursday Quiz",

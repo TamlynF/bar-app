@@ -109,11 +109,7 @@ export default async function BandBookingDetailPage({
     <div className="min-h-screen flex-1 bg-background">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-4 sm:py-0 md:px-8">
 
-        {/* Back link + header */}
         <div className="space-y-3">
-          {/* <div className="hidden sm:block">
-            <BackButton label="All Band Applications" />
-          </div> */}
 
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
@@ -136,10 +132,8 @@ export default async function BandBookingDetailPage({
           </div>
         </div>
 
-        {/* Event details + Contact — two-column on sm+ */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
-          {/* Event details */}
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Event Details
@@ -212,7 +206,6 @@ export default async function BandBookingDetailPage({
             </div>
           </div>
 
-          {/* Contact */}
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Contact Information
@@ -257,7 +250,6 @@ export default async function BandBookingDetailPage({
               </div>
             </div>
 
-            {/* Bank details — only if present */}
             {(request.bank_account_no || request.bank_sort_code) && (
               <div className="mt-2 space-y-2">
                 <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -274,7 +266,6 @@ export default async function BandBookingDetailPage({
           </div>
         </div>
 
-        {/* Social links */}
         {socials.length > 0 && (
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -300,7 +291,6 @@ export default async function BandBookingDetailPage({
           </div>
         )}
 
-        {/* Notes from applicant */}
         {request.notes && (
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -312,7 +302,6 @@ export default async function BandBookingDetailPage({
           </div>
         )}
 
-        {/* Admin notes — read-only once booked/declined (editable in the action area otherwise) */}
         {(request.status === "booked" || request.status === "declined") && request.admin_notes && (
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -324,7 +313,6 @@ export default async function BandBookingDetailPage({
           </div>
         )}
 
-        {/* Client component: videos + confirm/reject actions */}
         <BandDetailClient request={request} />
 
       </div>

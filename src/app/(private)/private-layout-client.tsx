@@ -44,13 +44,10 @@ type SubItem = {
     label: string;
     href: string;
     icon?: React.ComponentType<{ className?: string }>;
-    /** When set, render a coloured icon chip (icon in this hue, lighter background). */
     colorHex?: string | null;
-    /** When > 0, render an amber count pill on the right (e.g. pending enquiries). */
     count?: number;
 };
 
-// Routes that belong to the Quiz group, regardless of URL prefix.
 const QUIZ_PATHS = [
     "/event-setups/quiz-history",
     "/event-setups/quiz-categories",
@@ -59,19 +56,12 @@ const QUIZ_PATHS = [
     "/settings/teams",
 ]
 
-// Routes that belong to the Requests group. Band applications and private
-// hire keep their existing /event-bookings routes but are claimed by
-// Requests, not Bookings.
 const REQUEST_PATHS = [
     "/requests",
     "/event-bookings/music-bookings",
     "/event-bookings/private-bookings",
 ]
 
-// Routes that lay content out across the full content area rather than the
-// shared max-w-7xl column — currently just the band-applications status board,
-// which runs five columns side by side and needs every pixel. Exact matches
-// only: the detail routes beneath these stay on the normal width.
 const WIDE_PATHS = ["/event-bookings/music-bookings"]
 
 function isQuizPath(path: string): boolean {
@@ -101,14 +91,11 @@ export default function PrivateLayoutClient({
     const [isPending, startTransition] = useTransition()
     const searchParams = useSearchParams()
 
-    // Requests own /requests and the band/private review pages (REQUEST_PATHS),
-    // so those never light up Bookings.
     const isRequestPath = (path: string): boolean =>
         REQUEST_PATHS.some((q) => path === q || path.startsWith(`${q}/`))
 
     const isWidePath = WIDE_PATHS.includes(pathname ?? "")
 
-    // Desktop sidebar collapse (icon-only rail). Survives SPA navigation.
     const [collapsed, setCollapsed] = useState(false)
 
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname && pathname.startsWith("/event-bookings") && !isRequestPath(pathname))
@@ -129,8 +116,6 @@ export default function PrivateLayoutClient({
 
     const badgeText = pendingRequestsCount > 99 ? "99+" : String(pendingRequestsCount)
 
-    // Mobile bottom nav — thumb-reach destinations. Quiz lives under Events;
-    // Market Trends links straight to the marketing insights page.
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Bookings", href: "/event-bookings", icon: Tickets },
@@ -140,8 +125,6 @@ export default function PrivateLayoutClient({
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
-    // Desktop sidebar. Quiz pages now live under the Events group; Market
-    // Trends is a plain link to the marketing insights page.
     const sidebarItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Bookings", href: "/event-bookings", icon: Tickets },
@@ -151,10 +134,6 @@ export default function PrivateLayoutClient({
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
-    // Booking links are data-driven from each category's booking_card config
-    // (grouped + partitioned upstream in the layout), rendered with a coloured
-    // icon chip. Guest bookings and requests keep their own nav groups; the
-    // standalone Enquiries page is appended to Requests.
     const toSub = (nav: BookingNavItem): SubItem => ({
         label: nav.label,
         href: nav.href,
@@ -165,8 +144,6 @@ export default function PrivateLayoutClient({
 
     const eventSubItems: SubItem[] = guestNav.map(toSub)
 
-    // Requests are fixed review queues (not event-derived), so they're always
-    // shown with their own pending-count pill and coloured icon chip.
     const requestSubItems: SubItem[] = [
         { label: "Band Applications", href: "/event-bookings/music-bookings", icon: Guitar, colorHex: "#7C3AED", count: pendingBandCount },
         { label: "Private Hire", href: "/event-bookings/private-bookings", icon: PartyPopper, colorHex: "#0EA5E9", count: pendingHireCount },
@@ -178,7 +155,6 @@ export default function PrivateLayoutClient({
         { label: "Event Categories", href: "/event-setups/event-types", icon: Component },
     ]
 
-    // Nested Quiz sub-group, rendered inside the Events group.
     const quizSubItems = [
         { label: "Quiz History", href: "/event-setups/quiz-history", icon: Grid2X2 },
         { label: "Quiz Rules", href: "/event-setups/quiz-categories", icon: Dices },
@@ -219,8 +195,6 @@ export default function PrivateLayoutClient({
 
             const segment = normalizedPath.split("/")[2]
 
-            // Quiz-group pages get the Quiz title even though they live under
-            // the /event-setups URL prefix.
             const quizMap: Record<string, string> = {
                 "quiz-history": "Quiz History",
                 "quiz-categories": "Quiz Rules",
@@ -230,7 +204,6 @@ export default function PrivateLayoutClient({
                 return { title: "Quiz", subtitle: quizMap[segment], backHref: "/event-setups" }
             }
 
-            // When on quiz generator with event_id, back button goes to event quiz page
             if (segment === "quiz-generator") {
                 const eventId = searchParams.get("event_id")
                 const category = searchParams.get("category")
@@ -247,7 +220,6 @@ export default function PrivateLayoutClient({
             }
             const subtitle = eventSetupsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
 
-            // When on event detail page /event-setups/events/{id}, back goes to events list with sheet open
             if (segment === "events") {
                 const eventId = normalizedPath.split("/")[3]
                 if (eventId) {
@@ -263,9 +235,6 @@ export default function PrivateLayoutClient({
 
             const segment = normalizedPath.split("/")[2]
 
-            // Band applications, private hire and other Requests sub-links live
-            // under /event-bookings but belong to Requests — show the Requests
-            // nav label (e.g. "Band Applications"), not the "General" segment.
             const matchedRequest = requestSubItems.find(
                 (s) => normalizedPath === s.href || normalizedPath.startsWith(`${s.href}/`)
             )
@@ -273,7 +242,6 @@ export default function PrivateLayoutClient({
                 return { title: "Requests", subtitle: matchedRequest.label, backHref: "/requests" }
             }
 
-            // Legacy band/private routes.
             if (segment === "music-bookings") {
                 return { title: "Requests", subtitle: "Band Applications", backHref: "/requests" }
             }
@@ -285,8 +253,6 @@ export default function PrivateLayoutClient({
                 "quiz-bookings": "Quiz",
                 "bingo-bookings": "Bingo",
             }
-            // Prefer the label of the matching Bookings nav button (e.g.
-            // "Music Bingo") over the raw URL segment ("General").
             const matchedNav = eventSubItems.find(
                 (s) => normalizedPath === s.href || normalizedPath.startsWith(`${s.href}/`)
             )
@@ -299,7 +265,6 @@ export default function PrivateLayoutClient({
 
             const segment = normalizedPath.split("/")[2]
 
-            // Teams belongs to the Quiz group but keeps its /settings route.
             if (segment === "teams") {
                 return { title: "Quiz", subtitle: "Teams", backHref: "/settings" }
             }
@@ -321,12 +286,10 @@ export default function PrivateLayoutClient({
 
     return (
         <div className="pt-safe-top flex h-screen min-h-screen bg-[#F7F4EA] sm:overflow-hidden">
-            {/* 1. Sidebar for Tablets/Desktops */}
             <aside className={cn(
                 "sticky top-0 z-50 hidden h-screen shrink-0 flex-col border-r border-[#E6DFC8] bg-white transition-[width] duration-300 sm:flex",
                 collapsed ? "w-16" : "w-72"
             )}>
-                {/* Sidebar Brand + collapse toggle */}
                 <div className={cn(
                     "flex min-h-10 items-center gap-3 border-b border-[#E6DFC8] px-3 py-3",
                     collapsed ? "justify-center" : "justify-between px-6"
@@ -347,7 +310,6 @@ export default function PrivateLayoutClient({
                     </button>
                 </div>
 
-                {/* Sidebar Navigation */}
                 <nav className="no-scrollbar flex-1 space-y-1 overflow-y-auto p-4">
                     {sidebarItems.map((item) => {
                         const normalizedPathname = pathname?.replace(/\/$/, "") || ""
@@ -360,10 +322,6 @@ export default function PrivateLayoutClient({
                         const isRequests = item.label === "Requests"
                         const isEventsNav = item.label === "Events"
 
-                        // Requests claims its own paths; Bookings and Settings
-                        // exclude Requests/Quiz so two parents never light up at
-                        // once. Quiz pages now live under the Events group, so
-                        // Events lights up on them too.
                         const isActive = isRequests
                             ? onRequestPath
                             : isEvents
@@ -385,7 +343,6 @@ export default function PrivateLayoutClient({
                             : isEventsNav
                             ? () => setEventsNavOpen((p) => !p)
                             : undefined
-                        // Collapsed rail: clicking a group expands the sidebar and opens it.
                         const openGroup = isEvents
                             ? () => setEventsOpen(true)
                             : isRequests
@@ -398,7 +355,6 @@ export default function PrivateLayoutClient({
 
                         return (
                             <React.Fragment key={item.href}>
-                                {/* Parent row — button for collapsible items, Link for plain items */}
                                 {hasSubItems && toggle ? (
                                     <button
                                         type="button"
@@ -414,7 +370,6 @@ export default function PrivateLayoutClient({
                                     >
                                         <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-[#5F624F]")} />
 
-                                        {/* Collapsed: amber dot when requests are pending */}
                                         {collapsed && isRequests && pendingRequestsCount > 0 && (
                                             <span className="absolute top-1.5 right-2 h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
                                         )}
@@ -423,12 +378,10 @@ export default function PrivateLayoutClient({
                                             <>
                                                 <span className="flex-1 text-left">{item.label}</span>
 
-                                                {/* Green dot — confirmed capacity */}
                                                 {isEvents && (
                                                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-green-500" aria-hidden="true" />
                                                 )}
 
-                                                {/* Amber count — pending requests */}
                                                 {isRequests && pendingRequestsCount > 0 && (
                                                     <span className={cn(
                                                         "flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full px-1 font-black text-[9px] tabular-nums",
@@ -459,7 +412,6 @@ export default function PrivateLayoutClient({
                                     </Link>
                                 )}
 
-                                {/* Sub-items for Bookings */}
                                 {isEvents && eventsOpen && !collapsed && (
                                     <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
                                         {eventSubItems.map((sub) => {
@@ -493,7 +445,6 @@ export default function PrivateLayoutClient({
                                     </div>
                                 )}
 
-                                {/* Sub-items for Requests */}
                                 {isRequests && requestsOpen && !collapsed && (
                                     <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
                                         {requestSubItems.map((sub) => {
@@ -532,7 +483,6 @@ export default function PrivateLayoutClient({
                                     </div>
                                 )}
 
-                                {/* Sub-items for Events Nav */}
                                 {isEventsNav && eventsNavOpen && !collapsed && (
                                     <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
                                         {eventsNavSubItems.map((sub) => {
@@ -554,7 +504,6 @@ export default function PrivateLayoutClient({
                                             )
                                         })}
 
-                                        {/* Nested Quiz sub-group */}
                                         <button
                                             type="button"
                                             onClick={() => setQuizOpen((p) => !p)}
@@ -594,7 +543,6 @@ export default function PrivateLayoutClient({
                                     </div>
                                 )}
 
-                                {/* Sub-items for Settings */}
                                 {isSettings && settingsOpen && !collapsed && (
                                     <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
                                         {settingsSubItems.map((sub) => {
@@ -622,7 +570,6 @@ export default function PrivateLayoutClient({
                     })}
                 </nav>
 
-                {/* Sidebar Footer */}
                 <div className="space-y-2 border-t border-[#E6DFC8] p-4">
                     <button
                         type="button"
@@ -645,12 +592,10 @@ export default function PrivateLayoutClient({
                 </div>
             </aside>
 
-            {/* 2. Main Content Wrapper */}
             <div className="flex h-screen min-w-0 flex-1 flex-col sm:overflow-y-auto">
                 <header className="sticky top-0 z-40 w-full border-b border-[#E6DFC8] bg-white px-4 py-3 sm:px-8">
                     <div className="relative mx-auto flex min-h-10 max-w-7xl items-center">
 
-                        {/* Mobile Back Button */}
                         {backHref && (
                             <button
                                 title="Go back"
@@ -662,7 +607,6 @@ export default function PrivateLayoutClient({
                             </button>
                         )}
 
-                        {/* Title */}
                         <div className="flex w-full flex-col items-center justify-center">
                             <h1 className="flex flex-wrap items-center justify-center gap-1 px-8 text-center font-black text-sm tracking-widest text-[#1F1F1A] uppercase sm:gap-2 sm:text-base">
                                 <span className={cn(subtitle && backHref ? "hidden sm:inline" : "")}>{title}</span>
@@ -679,14 +623,11 @@ export default function PrivateLayoutClient({
 
                 <main className={cn(
                     "mx-auto w-full flex-1 p-1 pb-20 sm:py-6 sm:pb-8",
-                    // A wide route sets its own gutters, so drop both the cap and
-                    // the centring that would otherwise strand it mid-screen.
                     isWidePath ? "max-w-none" : "max-w-7xl sm:px-6"
                 )}>
                     {children}
                 </main>
 
-                {/* 3. Persistent Mobile Bottom Navigation */}
                 <nav className="fixed right-0 bottom-0 left-0 z-50 border-t border-[#E6DFC8] bg-white py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] sm:hidden">
                     <div className="mx-auto flex w-full max-w-md items-center justify-around px-4">
                         {navItems.map((item) => {
@@ -715,12 +656,10 @@ export default function PrivateLayoutClient({
                                     )}>
                                         <item.icon className="mx-auto h-5 w-5" />
 
-                                        {/* Green dot — confirmed capacity */}
                                         {item.label === "Bookings" && (
                                             <span className="absolute top-0 right-1.5 h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true" />
                                         )}
 
-                                        {/* Amber count — pending requests */}
                                         {item.label === "Requests" && pendingRequestsCount > 0 && (
                                             <span className="absolute -top-1 right-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 font-black text-[8px] text-white tabular-nums">
                                                 {badgeText}

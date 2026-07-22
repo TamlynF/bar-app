@@ -9,23 +9,11 @@ import { cn } from "@/lib/utils";
 import { addBandNote, updateBandNote, deleteBandNote } from "../actions";
 import type { BandNote } from "./band-booking-card";
 
-/** Supabase returns a join as an object or a single-element array. */
 function authorName(note: BandNote): string {
   const a = Array.isArray(note.author) ? note.author[0] : note.author;
   return a?.full_name?.trim() || "Unknown";
 }
 
-/**
- * The internal notes on a band request: a running log, oldest first, each note
- * its own record with an author and date.
- *
- * Notes write straight through — a note isn't a field of the request, so it
- * doesn't ride along on the sheet's Save. That's what lets this same popover
- * work from the card row, where there's no Save to ride on.
- *
- * The caller supplies the trigger (`children`), since the card and the sheet
- * style theirs differently.
- */
 export default function BandNotesPopover({
   requestId,
   notes,
@@ -34,15 +22,12 @@ export default function BandNotesPopover({
 }: {
   requestId: string;
   notes: BandNote[];
-  /** A declined request is read-only — notes can be read but not changed. */
   editable: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
-  /** Per-note edit buffers, keyed by note id. Absent = not being edited. */
   const [edits, setEdits] = useState<Record<string, string>>({});
-  /** Note awaiting delete confirmation — inline, to avoid a dialog over a popover. */
   const [confirmingId, setConfirmingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -109,7 +94,6 @@ export default function BandNotesPopover({
           </span>
         </div>
 
-        {/* The log */}
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
           {notes.length === 0 ? (
             <p className="py-4 text-center text-xs font-semibold text-[#5F624F]/60">
@@ -195,7 +179,6 @@ export default function BandNotesPopover({
           )}
         </div>
 
-        {/* Add */}
         {editable && (
           <div className="space-y-2 border-t border-[#E6DFC8] px-4 py-3">
             <label className="block">

@@ -179,7 +179,6 @@ export default function MusicActsClient({
     setVideos([]);
   };
 
-  // --- Image uploads (cover = single, images = multiple) → `gallery` bucket ---
   const uploadToGallery = async (file: File): Promise<string> => {
     const ext = file.name.split(".").pop();
     const path = `music-acts/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -224,7 +223,6 @@ export default function MusicActsClient({
   const removeImage = (url: string) =>
     setForm((f) => ({ ...f, image_urls: f.image_urls.filter((u) => u !== url) }));
 
-  // --- Video uploads → `band-videos` bucket (resumable) ---
   const patchVideo = (id: string, patch: Partial<VideoItem>) =>
     setVideos((prev) => prev.map((v) => (v.id === id ? { ...v, ...patch } : v)));
 
@@ -556,7 +554,6 @@ function FormMode({
 }) {
   return (
     <div className="animate-in space-y-4 duration-200 fade-in">
-      {/* Cover image */}
       <div className="space-y-3 rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
         <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Profile picture</p>
         {form.cover_image_url ? (
@@ -574,7 +571,6 @@ function FormMode({
         )}
       </div>
 
-      {/* Core details */}
       <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
         <TextRow label="Group name" required value={form.group_name} onChange={(v) => set("group_name", v)} placeholder="e.g. The Rolling Stones" />
         <TextRow label="Type" value={form.type} onChange={(v) => set("type", v)} placeholder="Band / Singer / DJ" list="music-act-types" />
@@ -584,7 +580,6 @@ function FormMode({
 
       <TextAreaCard label="Introduction" value={form.introduction} onChange={(v) => set("introduction", v)} placeholder="A short bio / description of the act…" />
 
-      {/* Links */}
       <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
         <TextRow label="Spotify" value={form.spotify_url} onChange={(v) => set("spotify_url", v)} placeholder="https://open.spotify.com/artist/…" type="url" />
         <TextRow label="Website" value={form.web_url} onChange={(v) => set("web_url", v)} placeholder="https://…" type="url" />
@@ -593,14 +588,12 @@ function FormMode({
         ))}
       </div>
 
-      {/* Contact */}
       <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
         <TextRow label="Contact name" value={form.contact_name} onChange={(v) => set("contact_name", v)} placeholder="Booker name" />
         <TextRow label="Email" value={form.contact_email} onChange={(v) => set("contact_email", v)} placeholder="email@example.com" type="email" />
         <TextRow label="Phone" value={form.contact_phone} onChange={(v) => set("contact_phone", v)} placeholder="Phone number" type="tel" />
       </div>
 
-      {/* Bank */}
       <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
         <TextRow label="Bank name" value={form.bank_account_name} onChange={(v) => set("bank_account_name", v)} placeholder="Account holder" />
         <TextRow label="Account no" value={form.bank_account_no} onChange={(v) => set("bank_account_no", v)} placeholder="12345678" />
@@ -610,13 +603,11 @@ function FormMode({
 
       <TextAreaCard label="Internal notes" value={form.internal_notes} onChange={(v) => set("internal_notes", v)} placeholder="Private notes about this act…" />
 
-      {/* Favourite */}
       <button type="button" onClick={() => set("is_favorite", !form.is_favorite)} className={cn("flex w-full items-center justify-between rounded-3xl border-2 bg-white px-4 py-3.5 transition-colors", form.is_favorite ? "border-amber-300" : "border-[#E6DFC8]")}>
         <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Favourite</span>
         <Star className={cn("h-5 w-5", form.is_favorite ? "fill-amber-400 text-amber-400" : "text-[#5F624F]/30")} />
       </button>
 
-      {/* Additional images */}
       <div className="space-y-3 rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Photos</p>
@@ -638,7 +629,6 @@ function FormMode({
         )}
       </div>
 
-      {/* Videos */}
       <div className="space-y-3 rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Videos <span className="opacity-60">{videos.length}/{MAX_VIDEOS}</span></p>

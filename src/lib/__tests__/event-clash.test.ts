@@ -73,7 +73,6 @@ describe("findEventClashes", () => {
   });
 
   it("handles an overnight target window", () => {
-    // 23:00–01:00 overlaps the gig ending 23:00? No (half-open), but overlaps "No End" at 22:00? no.
     const clashes = findEventClashes({ start: "23:00", end: "01:00" }, events);
     expect(clashes.map((c) => c.id)).not.toContain(1);
   });

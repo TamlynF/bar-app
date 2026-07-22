@@ -10,7 +10,6 @@ function getCookie(name: string): string | null {
   return match ? decodeURIComponent(match[2]) : null
 }
 
-// ── Global singleton ──────────────────────────────────────────────────────
 
 let globalPlayer: Spotify.Player | null = null
 let globalDeviceId: string | null = null
@@ -38,7 +37,6 @@ async function getToken(): Promise<string | null> {
   return null
 }
 
-// Pre-load the SDK script (can happen on mount, no user gesture needed)
 function preloadSdk() {
   if (sdkLoading || (typeof window !== 'undefined' && window.Spotify)) return
   if (typeof document === 'undefined') return
@@ -71,7 +69,6 @@ function waitForDevice(): Promise<string | null> {
   })
 }
 
-// Create + connect player. Can be called multiple times safely.
 async function connectPlayer(): Promise<string | null> {
   if (globalDeviceId) return globalDeviceId
   if (playerConnecting) return waitForDevice()
@@ -120,7 +117,6 @@ async function connectPlayer(): Promise<string | null> {
   return waitForDevice()
 }
 
-// ── Component ─────────────────────────────────────────────────────────────
 
 type SpotifyPlayerProps = {
   trackId: string
@@ -129,9 +125,6 @@ type SpotifyPlayerProps = {
 }
 
 export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayerProps) {
-  // Read the auth cookie into React in an SSR-safe way: the server snapshot is
-  // always `false` (no `document` on the server), the client reads the cookie.
-  // Avoids a post-mount setState (react-hooks/set-state-in-effect).
   const connected = useSyncExternalStore(
     () => () => {},
     () => !!getCookie('spotify_access_token'),
@@ -146,20 +139,15 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
   const activatedRef = useRef(false)
 
-  // Reset the (fake) progress bar whenever playback starts or stops. Done during
-  // render — React's supported "adjust state when a value changes" pattern — so it
-  // doesn't trip react-hooks/set-state-in-effect.
   if (isPlaying !== wasPlaying) {
     setWasPlaying(isPlaying)
     setProgress(0)
   }
 
-  // Preload the SDK once we know a token is present.
   useEffect(() => {
     if (connected) preloadSdk()
   }, [connected])
 
-  // Listen for playback state
   useEffect(() => {
     const onPlayState = (tid: string | null, playing: boolean) => {
       if (tid === trackId) {
@@ -173,7 +161,6 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
     return () => { playingListeners.delete(onPlayState) }
   }, [trackId])
 
-  // Fetch track metadata
   useEffect(() => {
     if (!connected) return
     let cancelled = false
@@ -199,7 +186,6 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
     return () => { cancelled = true }
   }, [trackId, connected])
 
-  // Progress bar
   useEffect(() => {
     if (progressInterval.current) clearInterval(progressInterval.current)
     if (isPlaying && trackInfo) {
@@ -213,24 +199,19 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
   const handlePlayPause = useCallback(async () => {
     setError(null)
 
-    // ── PAUSE ──
     if (isPlaying && globalPlayer) {
       globalPlayer.pause()
       return
     }
 
-    // ── PLAY ──
     setIsLoading(true)
 
-    // Step 1: activateElement() MUST be called synchronously in the click handler
-    // This unlocks the audio context on iOS/Android before any async work
     if (globalPlayer && !activatedRef.current) {
       globalPlayer.activateElement()
       activatedRef.current = true
     }
 
     try {
-      // Step 2: ensure player is connected
       const deviceId = await connectPlayer()
       if (!deviceId) {
         setError('Player not ready — tap again')
@@ -238,13 +219,11 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
         return
       }
 
-      // Step 2b: activate again if player was just created
       if (globalPlayer && !activatedRef.current) {
         globalPlayer.activateElement()
         activatedRef.current = true
       }
 
-      // Step 3: get auth token
       const token = await getToken()
       if (!token) {
         setError('Auth expired')
@@ -252,7 +231,6 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
         return
       }
 
-      // Step 4: play the track
       const playRes = await fetch(`https://api.spotify.com/v1/me/player/play?device_id=${deviceId}`, {
         method: 'PUT',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -275,7 +253,6 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
         }
         setIsLoading(false)
       }
-      // Don't set isPlaying here — let player_state_changed handle it
     } catch (err) {
       console.error('Playback error:', err)
       setError('Play failed')

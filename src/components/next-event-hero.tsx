@@ -45,9 +45,7 @@ export function NextEventHero({
       </div>
 
       <div className="olive-bg neon-border neon-glow overflow-hidden rounded-2xl border">
-        {/* Main event row */}
         <div className="flex items-center gap-3 px-4 py-3.5">
-          {/* Date column */}
           <div className="w-10 shrink-0 text-center">
             <p className="font-black text-[9px] leading-tight tracking-widest text-stone-500 uppercase">
               {format(dateObj, "EEE")}
@@ -57,7 +55,6 @@ export function NextEventHero({
             </p>
           </div>
 
-          {/* Content */}
           <div className="min-w-0 flex-1">
             {event.subType && (
               <p className="mb-0.5 font-black text-[9px] leading-tight tracking-widest text-stone-500 uppercase">
@@ -98,7 +95,6 @@ export function NextEventHero({
             )}
           </div>
 
-          {/* Right side */}
           {event.isFullyBooked && (
             <span className="shrink-0 rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-400 uppercase">
               Sold Out
@@ -140,11 +136,9 @@ export function NextEventHero({
           )}
         </div>
 
-        {/* Also on the night — sibling events on the same date */}
         {siblings.length > 0 && (
           <div className="neon-border border-t px-4 pb-3">
             <div className="flex gap-3">
-              {/* Spacer — matches the date column width so siblings align with the title */}
               <div className="w-10 shrink-0" />
               <div className="min-w-0 flex-1 pt-2.5">
                 <div className="mb-2 flex items-center gap-2">

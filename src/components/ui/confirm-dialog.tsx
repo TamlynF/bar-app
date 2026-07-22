@@ -6,32 +6,14 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/compone
 interface ConfirmOptions {
   title: string;
   description?: string;
-  /** Optional rich content rendered below the description (e.g. an email preview). */
   content?: React.ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: "destructive" | "default";
-  /** Hide the cancel button, turning the dialog into a single-action acknowledgement (e.g. a validation alert). */
   hideCancel?: boolean;
-  /**
-   * Whether a click outside or Escape dismisses the dialog as "cancel". Defaults to
-   * true, which is right when cancelling is the safe way out ("Delete?" → Cancel).
-   * Set false when the cancel action is itself destructive (e.g. "Discard"), so a
-   * stray click or keypress can't lose work — only the buttons then answer.
-   */
   dismissible?: boolean;
 }
 
-/**
- * Promise-based confirm dialog.
- *
- * Built on the Radix Dialog rather than a hand-rolled `createPortal`, deliberately:
- * these dialogs are opened from inside a Sheet, which is itself a modal Radix
- * dialog with a focus trap. A portal Radix doesn't know about sits *outside* that
- * trap, so its FocusScope pulls focus straight back out — buttons still click, but
- * any input inside is impossible to type in. As a Radix layer, this one joins the
- * stack and takes focus properly.
- */
 export function useConfirm() {
   const [open, setOpen] = useState(false);
   const [options, setOptions] = useState<ConfirmOptions>({ title: "" });
@@ -45,9 +27,6 @@ export function useConfirm() {
   }, []);
 
   const confirm = useCallback((opts: ConfirmOptions): Promise<boolean> => {
-    // Opening a second dialog while one is in flight would overwrite resolveRef and
-    // strand the first promise forever, hanging whatever is awaiting it. Settle the
-    // old one as cancelled first.
     resolveRef.current?.(false);
     resolveRef.current = undefined;
     setOptions(opts);
@@ -69,7 +48,6 @@ export function useConfirm() {
     >
       <DialogContent
         showCloseButton={false}
-        // When cancelling is destructive, only the buttons may answer.
         onInteractOutside={(e) => {
           if (locked) e.preventDefault();
         }}
@@ -87,7 +65,6 @@ export function useConfirm() {
               {options.description}
             </DialogDescription>
           ) : (
-            // Radix wants every dialog described; fall back to the title.
             <DialogDescription className="sr-only">{options.title}</DialogDescription>
           )}
         </div>

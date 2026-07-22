@@ -60,15 +60,12 @@ const first = <T,>(v: T | T[] | null): T | null =>
 
 const GOLD = "#FDCC4B";
 
-// Sub-types whose behaviour makes them an enquiry, not a ticketed booking. Their
-// hub cards move to the Requests & Enquiries section and link to the enquiry form.
 type RequestKind = "private" | "music_act";
 const requestKindOf = (behavior: string | null | undefined): RequestKind | null =>
   behavior === "private" ? "private" : behavior === "music_act" ? "music_act" : null;
 const requestHrefOf = (kind: RequestKind | null): string | null =>
   kind === "private" ? "/book/private" : kind === "music_act" ? "/book/band" : null;
 
-/** Collapse bookable events into hub cards per each category's booking_grouping. */
 function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
   const cards: BookingCard[] = [];
   const groups = new Map<string, BookingCard>();
@@ -79,15 +76,12 @@ function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
     const grouping = type?.booking_grouping ?? "per_event";
     const isFree = !ev.payment_amount || ev.payment_amount === 0;
 
-    // per_subtype needs a subtype; without one, fall back to a single-event card.
     const mode = grouping === "per_subtype" && !subtype ? "per_event" : grouping;
 
-    // Pick the row that owns this card's branding, and the colour it tints with.
     const source: CardSource | null = mode === "per_type" ? type : mode === "per_subtype" ? subtype : ev;
     const colorKey = mode === "per_type" ? type?.color : subtype?.color;
     const colorHex = swatchHexFromColor(colorKey) ?? GOLD;
     const taglineFallback = subtype?.tagline || ev.tagline || "";
-    // private / music_act sub-types are enquiries — link to the enquiry form.
     const requestKind = requestKindOf(subtype?.behavior);
     const requestHref = requestHrefOf(requestKind);
 
@@ -117,7 +111,6 @@ function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
     const existing = groups.get(groupKey);
     if (existing) {
       existing.count += 1;
-      // events are date-ascending, so the first seen date is the earliest.
       existing.isFullyBooked = existing.isFullyBooked && !!ev.is_fully_booked;
       continue;
     }
@@ -173,7 +166,6 @@ export default async function BookingHubPage() {
     });
     const isGroup = card.count > 1;
     const Icon = cardIcon(card.icon);
-    // Explicit card badge wins; otherwise the dynamic count / price / Full badge.
     const badgeText = card.badge
       ? card.badge
       : isGroup
@@ -230,7 +222,6 @@ export default async function BookingHubPage() {
       <PublicNav currentPath="/book" />
 
       <div className="mx-auto max-w-5xl pt-1 sm:pt-1">
-        {/* Upcoming Bookable Events (ticketed) */}
         {ticketCards.length > 0 && (
           <div className="mt-1 sm:mt-1">
             <SectionHeading eyebrow="Tickets" title="Upcoming Events" />
@@ -240,7 +231,6 @@ export default async function BookingHubPage() {
           </div>
         )}
 
-        {/* Requests & Enquiries (private hire + band applications) */}
         {requestCards.length > 0 && (
           <div className="mt-16 sm:mt-20">
             <SectionHeading eyebrow="Get in touch" title="Requests & Enquiries" />
@@ -250,7 +240,6 @@ export default async function BookingHubPage() {
           </div>
         )}
 
-        {/* Footer */}
         <div className="mt-16 flex flex-col items-center gap-2">
           <div className="flex items-center gap-3 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />

@@ -25,9 +25,6 @@ export default async function MusicActsPage() {
 
   if (error) console.error("Error fetching music acts:", error);
 
-  // Aggregate booked requests per act into booked / completed (past) / upcoming
-  // (today onward) counts, keyed by the linked event's date. Supabase returns the
-  // join as an object or a single-element array.
   const today = new Date().toISOString().split("T")[0];
   const counts: Record<string, ActCounts> = {};
   for (const b of bookings ?? []) {

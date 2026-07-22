@@ -86,7 +86,6 @@ export default async function PrivateHireDetailPage({
   const StatusIcon = cfg.icon;
   const reasonLabel = privateHireSubtypeLabel(unwrapSubtype(request.event_subtypes), request.reason_for_hire);
 
-  // Resolve date/time — schema has both preferred_* and selected_* variants
   const displayDate =
     (request as Record<string, unknown>).selected_date as string | null ??
     (request as Record<string, unknown>).preferred_date as string | null;
@@ -105,7 +104,6 @@ export default async function PrivateHireDetailPage({
     <div className="min-h-screen flex-1 bg-background">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-4 sm:py-0 md:px-8">
 
-        {/* Back link + header */}
         <div className="space-y-3">
 
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -127,10 +125,8 @@ export default async function PrivateHireDetailPage({
           </div>
         </div>
 
-        {/* Event details + Contact — two-column on sm+ */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
-          {/* Event details */}
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Event Details
@@ -188,7 +184,6 @@ export default async function PrivateHireDetailPage({
             </div>
           </div>
 
-          {/* Contact */}
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
               Contact Information
@@ -235,7 +230,6 @@ export default async function PrivateHireDetailPage({
           </div>
         </div>
 
-        {/* Additional requirements */}
         {request.additional_requirements && (
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -247,7 +241,6 @@ export default async function PrivateHireDetailPage({
           </div>
         )}
 
-        {/* Admin notes — read-only when resolved */}
         {request.status !== "pending" && request.admin_notes && (
           <div className="space-y-2">
             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -259,7 +252,6 @@ export default async function PrivateHireDetailPage({
           </div>
         )}
 
-        {/* Client component: confirm/reject actions */}
         <PrivateHireDetailClient request={request} />
 
       </div>

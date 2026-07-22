@@ -4,14 +4,6 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { ChevronDown, ExternalLink } from "lucide-react";
 
-/**
- * Client island for the "View [next month]" reveal on the home schedule.
- *
- * The server component (page.tsx) does all fetching, bucketing and colour
- * brightening, then passes the already-computed next-month events here. This
- * component only owns the show/hide state — keeping the "use client" surface
- * as small as possible per CLAUDE.md.
- */
 
 type LaterEvent = {
   id: number;

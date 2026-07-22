@@ -23,7 +23,6 @@ const appUrl = process.env.NEXT_PUBLIC_SITE_URL
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-/** Square env vars required to create a payment link (paid events only). */
 function missingSquareConfig(): string[] {
   const missing: string[] = [];
   if (!process.env.SQUARE_ACCESS_TOKEN) missing.push("SQUARE_ACCESS_TOKEN");
@@ -31,8 +30,6 @@ function missingSquareConfig(): string[] {
   return missing;
 }
 
-/** True when a thrown error is a Square auth failure — a missing/stale token, or
-    a token that doesn't match SQUARE_ENVIRONMENT (e.g. a prod token in sandbox). */
 function isSquareAuthError(err: unknown): err is SquareError {
   return (
     err instanceof SquareError &&
@@ -67,7 +64,6 @@ export async function createEventBooking(formData: FormData) {
   }
 
   try {
-    // 1. Fetch event and verify it's bookable
     const { data: event } = await supabase
       .from("events")
       .select("id, date, title, payment_amount, seating_required, is_fully_booked, is_active, is_bookable")
@@ -85,8 +81,6 @@ export async function createEventBooking(formData: FormData) {
     const paymentAmountPence = Math.round((event.payment_amount || 0) * 100);
     const isFree = paymentAmountPence === 0;
 
-    // Paid events need Square configured. Check before writing any DB rows so a
-    // misconfiguration fails fast instead of orphaning a pending booking.
     if (!isFree) {
       const missing = missingSquareConfig();
       if (missing.length) {
@@ -98,7 +92,6 @@ export async function createEventBooking(formData: FormData) {
       }
     }
 
-    // 2. Table allocation — route through the shared module (seated events only).
     let chosenTable: FreeTable | null = null;
     let status: "confirmed" | "waitlisted" = "confirmed";
     if (seatingApplies(event)) {
@@ -107,10 +100,6 @@ export async function createEventBooking(formData: FormData) {
       chosenTable = allocation.status === "confirmed" ? allocation.table : null;
     }
 
-    // 3. Upsert contact — atomic insert-or-get keyed on the unique email so
-    // concurrent submits (e.g. a double-clicked "Pay & Book") can't collide on
-    // contacts_email_key. ON CONFLICT DO NOTHING preserves the existing row's
-    // details; when the insert is skipped we re-select the existing id.
     let contactId: number;
     const { data: insertedContact } = await supabase
       .from("contacts")
@@ -135,7 +124,6 @@ export async function createEventBooking(formData: FormData) {
 
     const totalPence = paymentAmountPence * groupSize;
 
-    // 4. Create booking
     const { data: newBooking, error: bookingError } = await supabase
       .from("bookings")
       .insert([{
@@ -156,7 +144,6 @@ export async function createEventBooking(formData: FormData) {
       throw new Error(`Failed to create booking: ${bookingError?.message || "unknown error"}`);
     }
 
-    // 5. Table mapping — commit with the unique-index concurrency backstop.
     if (chosenTable) {
       const mapped = await commitMapping(supabase, {
         bookingId: newBooking.id,
@@ -165,16 +152,13 @@ export async function createEventBooking(formData: FormData) {
         groupSize,
       });
       if (!mapped.ok) {
-        // Lost the last table to a concurrent booking — waitlist this one.
         status = "waitlisted";
         if (isFree) {
           await supabase.from("bookings").update({ status: "waitlisted" }).eq("id", newBooking.id);
         }
-        // Paid path: the square_order_id update below persists the new status.
       }
     }
 
-    // 6. Free booking — confirm immediately
     if (isFree) {
       await sendEventBookingEmail(
         newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, 0, 0
@@ -184,8 +168,6 @@ export async function createEventBooking(formData: FormData) {
       return { success: true };
     }
 
-    // 7. Create Square Payment Link — payload shape lives in the pure
-    // `square-order` builders (unit-tested); we supply the impure bits here.
     const buyerPhone = buildBuyerPhone(countryCode, phoneNo);
 
     let checkoutUrl: string | undefined;
@@ -213,8 +195,6 @@ export async function createEventBooking(formData: FormData) {
       checkoutUrl = paymentLink?.url;
       orderId = paymentLink?.orderId;
     } catch (squareErr) {
-      // Roll back the pending booking (and any table hold) so a failed checkout
-      // doesn't leave an orphaned row behind.
       await supabase.from("booking_table_mappings").delete().eq("booking_id", newBooking.id);
       await supabase.from("bookings").delete().eq("id", newBooking.id);
 
@@ -239,7 +219,6 @@ export async function createEventBooking(formData: FormData) {
       throw new Error("Failed to create payment link. Please try again.");
     }
 
-    // 8. Store Square order ID
     await supabase
       .from("bookings")
       .update({ square_order_id: orderId, status })

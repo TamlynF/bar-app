@@ -9,11 +9,6 @@ export type GalleryPeekItem = {
   image_url: string;
 };
 
-/**
- * Home "Inside" — After Dark: an asymmetric photo mosaic of the room (the first
- * shot runs tall, a later one runs wide) with a hover-zoom, linking through to
- * the full /gallery. Renders nothing when there are no photos.
- */
 export function GalleryPeek({ items }: { items: GalleryPeekItem[] }) {
   if (items.length === 0) return null;
 

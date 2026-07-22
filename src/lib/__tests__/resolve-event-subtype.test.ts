@@ -2,11 +2,6 @@ import { describe, it, expect } from "vitest";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 
-/**
- * Builds a minimal chainable Supabase mock. Each `.from()` call consumes the
- * next queued result; that result is returned by whichever terminal
- * (`maybeSingle`/`single`) ends the chain. `inserts` records insert payloads.
- */
 function makeSupabase(results: Array<{ data: unknown }>) {
   const inserts: Array<{ table: string; payload: unknown }> = [];
   let i = 0;
@@ -46,7 +41,6 @@ describe("resolveEventSubtype", () => {
     const result = await resolveEventSubtype(client, "music", "DJ", "music_act");
     expect(result).toEqual({ eventTypeId: 2, eventSubtypeId: 20 });
 
-    // Name is normalised to lower-case, and the new subtype carries the behavior.
     expect(inserts[0]).toEqual({ table: "event_types", payload: { name: "music" } });
     expect(inserts[1].table).toBe("event_subtypes");
     expect(inserts[1].payload).toMatchObject({

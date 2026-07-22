@@ -16,7 +16,6 @@ export default async function ManageBookingPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  // Fetched special_requests in the select query
   const { data: booking, error } = await supabase
     .from("bookings")
     .select(`

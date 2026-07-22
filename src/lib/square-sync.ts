@@ -1,18 +1,5 @@
-// Square → Supabase sales sync.
-//
-// Pulls COMPLETED Square orders for a time window and flattens each into a
-// `square_sales` row (takings, tips, fees, refunds, per-category split). Called
-// by the scheduled /api/square/sync route so the dashboard reads venue takings
-// from Supabase, never hitting Square on page load.
-//
-// These are ACTUAL venue takings and are kept distinct from the app's
-// pre-booked booking revenue — the dashboard never sums the two.
-
 import { squareClient } from "@/lib/square";
 import type { SupabaseClient } from "@supabase/supabase-js";
-
-// ── Money helpers ────────────────────────────────────────────────────────────
-// Square amounts are BigInt minor units (pence). Everything we store is £.
 
 type Money = { amount?: bigint | number | null } | null | undefined;
 
@@ -25,8 +12,6 @@ function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
-// ── Category bucketing ───────────────────────────────────────────────────────
-
 export type SalesBucket = "drinks" | "food" | "tickets" | "other";
 export type CategoryBreakdown = Record<SalesBucket, number>;
 
@@ -37,11 +22,6 @@ const EMPTY_BREAKDOWN = (): CategoryBreakdown => ({
   other: 0,
 });
 
-/**
- * Classify a Square category (or item) name into a dashboard bucket by
- * keyword. Pure + exported so it's unit-testable and easy to tune. Unknown
- * names fall through to "other".
- */
 export function bucketForCategory(name: string | null | undefined): SalesBucket {
   const n = (name ?? "").toLowerCase();
   if (!n) return "other";
@@ -53,13 +33,6 @@ export function bucketForCategory(name: string | null | undefined): SalesBucket 
   return "other";
 }
 
-// ── Catalog: variation → category-name map ───────────────────────────────────
-
-/**
- * Builds a map from catalog variation id → its item's category name, so an
- * order line item (which references a variation) can be bucketed. Degrades to
- * an empty map on any failure — line items then bucket as "other".
- */
 async function buildVariationCategoryMap(): Promise<Map<string, string>> {
   const variationToCategory = new Map<string, string>();
   try {
@@ -73,8 +46,6 @@ async function buildVariationCategoryMap(): Promise<Map<string, string>> {
       if (obj.type === "CATEGORY" && obj.categoryData?.name) {
         categoryNames.set(obj.id, obj.categoryData.name);
       } else if (obj.type === "ITEM" && obj.itemData) {
-        // Loosely typed: catalog category shape varies across API versions
-        // (newer `reportingCategory`/`categories`, older `categoryId`).
         const data = obj.itemData as {
           reportingCategory?: { id?: string | null } | null;
           categories?: Array<{ id?: string | null }> | null;
@@ -104,9 +75,6 @@ async function buildVariationCategoryMap(): Promise<Map<string, string>> {
   return variationToCategory;
 }
 
-// ── Per-order shaping ────────────────────────────────────────────────────────
-
-// Loosely typed to avoid coupling to the SDK's deep response types.
 type SquareOrder = {
   id?: string;
   locationId?: string;
@@ -144,11 +112,6 @@ export type SquareSaleRow = {
   raw: unknown;
 };
 
-/**
- * Flatten a Square order into a `square_sales` row. Fees/refunds are supplied
- * from the Payments/Refunds APIs (keyed by order id) since they aren't on the
- * order object itself.
- */
 export function orderToSaleRow(
   order: SquareOrder,
   variationCategory: Map<string, string>,
@@ -198,8 +161,6 @@ export function orderToSaleRow(
   };
 }
 
-// ── Fees & refunds lookups ───────────────────────────────────────────────────
-
 async function fetchFeesByOrder(
   locationId: string,
   beginTime: string
@@ -239,8 +200,6 @@ async function fetchRefundsByOrder(
   return refunds;
 }
 
-// ── Order search (manual cursor pagination) ──────────────────────────────────
-
 async function searchCompletedOrders(
   locationId: string,
   beginTime: string
@@ -266,8 +225,6 @@ async function searchCompletedOrders(
   return orders;
 }
 
-// ── Entry point ──────────────────────────────────────────────────────────────
-
 export type SyncResult = {
   ordersSynced: number;
   from: string;
@@ -275,11 +232,6 @@ export type SyncResult = {
   error?: string;
 };
 
-/**
- * Sync Square sales into Supabase. Incremental: reads the watermark from
- * square_sync_state, pulls orders closed since then (with a lookback overlap so
- * late-arriving/offline orders aren't missed), and upserts. Idempotent.
- */
 export async function syncSquareSales(
   supabase: SupabaseClient,
   now: Date = new Date()
@@ -289,8 +241,6 @@ export async function syncSquareSales(
     return { ordersSynced: 0, from: "", status: "error", error: "SQUARE_LOCATION_ID not set" };
   }
 
-  // Watermark, minus a 3-day lookback: Square offline orders can transmit up to
-  // 72h late, and upsert makes re-pulling them harmless.
   const { data: state } = await supabase
     .from("square_sync_state")
     .select("last_synced_at")
@@ -320,7 +270,6 @@ export async function syncSquareSales(
       .filter((r): r is SquareSaleRow => r !== null);
 
     if (rows.length > 0) {
-      // Chunk to stay well under payload limits.
       for (let i = 0; i < rows.length; i += 500) {
         const chunk = rows.slice(i, i + 500);
         const { error } = await supabase

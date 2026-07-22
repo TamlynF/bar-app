@@ -19,12 +19,10 @@ export async function saveTableAction(formData: FormData) {
     const n = parseFloat(raw);
     return Number.isFinite(n) && n > 0 ? n : null;
   };
-  // Keep dimensions consistent with the chosen shape (clear the unused ones).
   const diameter = shape === "round" ? parseDim("diameter") : null;
   const width = shape === "rect" ? parseDim("width") : null;
   const length = shape === "rect" ? parseDim("length") : null;
 
-  // Chair arrangement (rect only). 'auto' (or round) stores null.
   const parseCount = (key: string) => {
     const n = parseInt(formData.get(key)?.toString() || "", 10);
     return Number.isFinite(n) && n >= 0 ? n : 0;
@@ -57,7 +55,6 @@ export async function saveTableAction(formData: FormData) {
 
   try {
     if (id) {
-      // Update existing table
       const { error } = await supabase
         .from("tables")
         .update(payload)
@@ -65,7 +62,6 @@ export async function saveTableAction(formData: FormData) {
         
       if (error) throw error;
     } else {
-      // Insert new table
       const { error } = await supabase
         .from("tables")
         .insert(payload);
@@ -73,7 +69,6 @@ export async function saveTableAction(formData: FormData) {
       if (error) throw error;
     }
 
-    // Refresh the page data
     revalidatePath("/settings/tables");
     return { success: true };
   } catch (error) {
@@ -86,7 +81,6 @@ export async function deleteTableAction(id: number) {
   const supabase = await createClient();
   
   try {
-    // Check for active bookings before deleting
     const { count, error: countError } = await supabase
       .from("booking_table_mappings")
       .select("*", { count: 'exact', head: true })

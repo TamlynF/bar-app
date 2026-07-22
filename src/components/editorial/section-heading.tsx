@@ -1,11 +1,6 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
-/**
- * Oversized editorial section header (awwwards-style): small uppercase eyebrow
- * over a huge fluid display title, with an optional action link on the right
- * and a hairline rule. Used to open every section on the public site.
- */
 export function SectionHeading({
   eyebrow,
   title,

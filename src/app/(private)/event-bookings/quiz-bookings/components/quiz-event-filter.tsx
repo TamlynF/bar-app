@@ -62,7 +62,6 @@ export default function QuizEventFilter({
     setOpen(false);
   };
 
-  // Close on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
@@ -80,7 +79,6 @@ export default function QuizEventFilter({
 
   return (
     <div className="relative w-full">
-      {/* Input row */}
       <div className="flex h-12 items-center gap-3 rounded-xl bg-[#F7F4EA] px-4">
         <div className="flex min-w-0 flex-1 flex-col">
           <span className="mb-0.5 font-black text-[10px] leading-none tracking-wide text-[#5F624F]/50 uppercase">
@@ -117,7 +115,6 @@ export default function QuizEventFilter({
         )}
       </div>
 
-      {/* Dropdown */}
       {open && (
         <div
           ref={dropdownRef}

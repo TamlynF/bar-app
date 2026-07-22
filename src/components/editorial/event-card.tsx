@@ -8,30 +8,16 @@ import type { IconType } from "react-icons";
 import { VideoFacade } from "@/components/video-facade";
 import { parseDate, type BandInfo, type SerializedEvent } from "@/lib/events-display";
 
-/**
- * Single-open flip card for the /whats-on schedule. Laid out as a compact,
- * fixed-height horizontal row: tinted date chip → content (subtype / title /
- * time + price) → action button, with a small flip "Info" hint pinned to the
- * top-right corner (icon-only on mobile). All closed cards share the same
- * height so the list reads as a neat stack; tapping flips the card (3D rotateY)
- * to a back face with the blurb + a meta line, and the card auto-grows to fit.
- *
- * "Single open" is owned by the parent (`open` + `onToggle`). Status/CTA logic
- * mirrors EventCta / NextEventHero so every surface agrees.
- */
 
-/** Format a GBP amount: whole pounds as "£10", pennies as "£12.50". */
 function formatGBP(n: number): string {
   return Number.isInteger(n) ? `£${n}` : `£${n.toFixed(2)}`;
 }
 
-/** Short entry/price token shown next to the time (from events.payment_amount). */
 function priceLabel(event: SerializedEvent): string | null {
   if (event.isFullyBooked || event.price == null) return null;
   return event.price > 0 ? formatGBP(event.price) : "FREE";
 }
 
-/** The entry/price line shown as text on the back (the back has no buttons). */
 function entryText(event: SerializedEvent): string {
   if (event.isFullyBooked) return "Sold out";
   if (event.price != null && event.price > 0) return `${formatGBP(event.price)} entry`;
@@ -41,7 +27,6 @@ function entryText(event: SerializedEvent): string {
   return "Free entry · walk in";
 }
 
-/** Front-face action button. `stopPropagation` so it doesn't flip the card. */
 function FrontCta({ event }: { event: SerializedEvent }) {
   const base =
     "shrink-0 inline-flex items-center justify-center gap-1.5 text-[10px] font-black uppercase tracking-wide px-3.5 py-2 rounded-full active:scale-95 transition-all";
@@ -66,7 +51,6 @@ function FrontCta({ event }: { event: SerializedEvent }) {
   }
 
   if (event.isKaraoke) {
-    // Karaoke night with no request URL yet — inactive placeholder.
     return (
       <span
         className={base + " cursor-default border border-hairline bg-white/5 text-ink-2"}
@@ -95,8 +79,6 @@ function FrontCta({ event }: { event: SerializedEvent }) {
   return null;
 }
 
-// Brand fills mirror the admin band card's social scheme so the icons read the
-// same everywhere: Instagram gradient, Facebook blue, YouTube red, TikTok black.
 const SOCIAL_META: {
   key: keyof BandInfo["socialLinks"];
   Icon: IconType;
@@ -114,8 +96,6 @@ const SOCIAL_META: {
   { key: "tiktok", Icon: SiTiktok, label: "TikTok", className: "bg-black text-white ring-1 ring-white/20" },
 ];
 
-/** Back-face band block for music acts: social icons + video-thumbnail links.
- *  Every control opens in a new tab and stops the flip toggle from firing. */
 function BandMedia({ band, title }: { band: BandInfo; title: string }) {
   const stop = (e: React.MouseEvent) => e.stopPropagation();
   const socials = SOCIAL_META.map((s) => ({ ...s, url: band.socialLinks[s.key] })).filter(
@@ -151,8 +131,6 @@ function BandMedia({ band, title }: { band: BandInfo; title: string }) {
       {videos.length > 0 && (
         <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 sm:gap-3 lg:grid-cols-5">
           {videos.map((v, i) => (
-            // Wrapper re-enables pointer events (the flip layer disables them) and
-            // stops the facade's play click from reaching the flip toggle.
             <div key={i} className="pointer-events-auto min-w-0" onClick={stop}>
               <VideoFacade url={v.url} title={v.description || `Video ${i + 1}`} />
               <p
@@ -185,8 +163,6 @@ export function EventCard({
   const containerRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
 
-  // Closed cards share a fixed height (set in the className). When opened, pin
-  // the container to the back face's height (via --fh) so it grows to fit it.
   useLayoutEffect(() => {
     const c = containerRef.current;
     const b = backRef.current;
@@ -219,9 +195,6 @@ export function EventCard({
         (isNext ? "ring-2 ring-neon" : "")
       }
     >
-      {/* Flip toggle — covers the card and sits behind the faces, so the links
-          and buttons layered above it stay clickable without nesting one
-          interactive control inside another. */}
       <button
         type="button"
         onClick={onToggle}
@@ -236,7 +209,6 @@ export function EventCard({
           (open ? "transform-[rotateY(180deg)]" : "")
         }
       >
-        {/* FRONT — compact horizontal row */}
         <div
           className={
             faceBase +
@@ -244,7 +216,6 @@ export function EventCard({
             (open ? " is-lit pointer-events-none" : "")
           }
         >
-          {/* Date chip — tinted with the subtype colour (.ad-kind reads --ev-c) */}
           <div className="ad-kind flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl border leading-none sm:h-14 sm:w-14">
             <span className="font-black text-[8px] tracking-widest uppercase sm:text-[9px]">
               {format(dateObj, "EEE")}
@@ -254,7 +225,6 @@ export function EventCard({
             </span>
           </div>
 
-          {/* Content */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 pr-6">
               <span
@@ -271,7 +241,6 @@ export function EventCard({
               )}
             </div>
 
-            {/* Title — flex-none so an overflow/nowrap flex child can't collapse */}
             <h3
               className="ev-text mt-0.5 line-clamp-2 flex-none pr-6 font-black text-base leading-[1.05] tracking-tight uppercase sm:text-lg"
               style={{ "--ev-c": event.color } as React.CSSProperties}
@@ -296,17 +265,13 @@ export function EventCard({
             )}
           </div>
 
-          {/* Action button */}
           {!isPast && <FrontCta event={event} />}
 
-          {/* Flip hint — top-right corner; icon-only on mobile */}
           <span className="pointer-events-none absolute top-2.5 right-2.5 inline-flex items-center gap-1 font-black text-[9px] tracking-widest text-ink-2/60 uppercase">
             <RefreshCw className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            {/* <span className="hidden sm:inline">Info</span> */}
           </span>
         </div>
 
-        {/* BACK — no buttons; entry/price shown as text */}
         <div
           ref={backRef}
           className={
@@ -315,9 +280,6 @@ export function EventCard({
             (open ? " is-lit" : " pointer-events-none")
           }
         >
-          {/* Header — subtype in its own colour + a bold date, with the time and
-              ticket/entry line moved up here so the essentials read at a glance
-              the moment the card flips (they used to sit in a footer). */}
           <div className="mb-3 border-b border-hairline pb-3">
             <div className="flex items-center gap-2">
               <span

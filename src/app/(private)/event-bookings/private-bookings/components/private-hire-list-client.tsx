@@ -7,7 +7,6 @@ import { PrivateHireCard, type PrivateHireRequest } from "./private-hire-card";
 
 const normStatus = (s?: string) => (s || "").trim().toLowerCase();
 
-// Mirrors the music-bookings stats bar: a coloured ring per status with the count.
 const statusTheme: Record<string, { text: string; border: string; dot: string; ring: string }> = {
   all: { text: "text-[#1F1F1A]", border: "border-[#E6DFC8]", dot: "bg-[#5F624F]", ring: "ring-slate-500/40" },
   pending: { text: "text-amber-700", border: "border-amber-200", dot: "bg-amber-500", ring: "ring-amber-500/40" },
@@ -55,7 +54,6 @@ export default function PrivateHireListClient({
   initialStatuses = [],
 }: {
   initialRequests: PrivateHireRequest[];
-  /** Status keys to pre-select in the filter (e.g. from ?status=pending). */
   initialStatuses?: string[];
 }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -86,7 +84,6 @@ export default function PrivateHireListClient({
         );
       })
       .sort((a, b) => {
-        // Sort: pending first, then by created_at desc
         const statusOrder: Record<string, number> = {
           pending: 0,
           confirmed: 1,
@@ -111,10 +108,8 @@ export default function PrivateHireListClient({
 
   return (
     <div className="animate-in space-y-3 duration-500 fade-in">
-      {/* Stats + Search grouped card */}
       <div className="rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center">
-          {/* Stats Bar */}
           <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:flex-1 sm:pt-0">
             <div className="flex w-full min-w-max items-stretch gap-3 px-2 py-3 sm:min-w-0 sm:justify-evenly sm:gap-0">
               <StatusCircle
@@ -148,11 +143,9 @@ export default function PrivateHireListClient({
             </div>
           </div>
 
-          {/* Divider */}
           <div className="mx-3 border-t border-[#E6DFC8] sm:hidden" />
           <div className="hidden w-px bg-[#E6DFC8] sm:my-2 sm:block sm:self-stretch" />
 
-          {/* Search */}
           <div className="mb-3 flex justify-center px-4 sm:mb-0 sm:shrink-0 sm:px-3 sm:py-2">
             <div className="flex h-10 w-full max-w-sm items-center gap-3 rounded-xl border border-[#E6DFC8] px-4 transition-colors focus-within:border-[#5C4033] sm:w-56">
               <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -183,7 +176,6 @@ export default function PrivateHireListClient({
         </div>
       </div>
 
-      {/* Cards */}
       <div className="space-y-2 pb-2">
         {filteredRequests.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">

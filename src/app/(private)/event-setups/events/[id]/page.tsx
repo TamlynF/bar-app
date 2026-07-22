@@ -110,7 +110,6 @@ export default async function EventQuizQuestionsPage({
   return (
     <div className="mx-auto animate-in space-y-6 p-2 text-left duration-700 fade-in sm:max-w-2xl sm:p-6 md:max-w-7xl lg:max-w-7xl">
 
-      {/* Event header card */}
       <div className="flex items-start gap-3 rounded-2xl border border-[#E6DFC8] bg-white px-5 py-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#C8956D]/30 bg-[#C8956D]/30">
           <Brain className="h-4 w-4 text-[#5C4033]" />
@@ -134,7 +133,6 @@ export default async function EventQuizQuestionsPage({
         </div>
       </div>
 
-      {/* Categories */}
       <div className="space-y-4">
         {byCategory.map((cat) => (
           <CategorySection
@@ -154,7 +152,6 @@ export default async function EventQuizQuestionsPage({
           />
         ))}
 
-        {/* No categories configured at all */}
         {byCategory.length === 0 && (
           <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
             <BookOpen className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-20" />

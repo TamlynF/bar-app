@@ -183,7 +183,6 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
         </section>
       )}
 
-      {/* Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
         <SheetContent
           side="bottom"
@@ -195,7 +194,6 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
-          {/* Header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -212,9 +210,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
             </div>
           </div>
 
-          {/* Body */}
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-            {/* View mode */}
             {!showForm && selected && (
               <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 <div className="overflow-hidden rounded-2xl border-2 border-[#E6DFC8]">
@@ -238,14 +234,12 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
               </div>
             )}
 
-            {/* Form */}
             {showForm && (
               <form id="gallery-form" onSubmit={handleSubmit} className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
                 <input type="hidden" name="image_url" value={imageUrl || formDefault?.image_url || ""} />
                 <input type="hidden" name="media_type" value={mediaType} />
 
-                {/* Image Upload / Preview */}
                 <div className="space-y-3 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
                   {(imageUrl || formDefault?.image_url) ? (
                     <div className="relative overflow-hidden rounded-xl">
@@ -330,7 +324,6 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
             <div className="h-4" />
           </div>
 
-          {/* Footer */}
           <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">

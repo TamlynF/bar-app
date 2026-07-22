@@ -6,7 +6,6 @@ import { format } from "date-fns";
 import { CalendarDays, ChevronDown } from "lucide-react";
 import type { LeaderboardEvent } from "../actions";
 
-// DB stores `date` as YYYY-MM-DD — anchor to local midnight (see CLAUDE.md).
 const parseDate = (d: string) => new Date(d + "T00:00:00");
 
 export default function LeaderboardEventFilter({

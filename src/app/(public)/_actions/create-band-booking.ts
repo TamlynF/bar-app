@@ -33,9 +33,6 @@ export interface BandBookingData {
 export async function createBandBooking(data: BandBookingData) {
   const supabase = await createClient();
 
-  // Resolve (or create) the applicant's contact and the master music act so the
-  // request links to a single canonical profile. Best-effort — a failure here
-  // must not stop the application being recorded, so the ids fall back to null.
   const contactId = await upsertContactByEmail(supabase, {
     booker_name: data.booker_name,
     email: data.email,

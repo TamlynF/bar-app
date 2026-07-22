@@ -24,17 +24,11 @@ interface BookingFormData {
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-/**
- * Validates if a team name is available for a specific event date.
- */
 export async function checkTeamName(teamName: string, quizDate: string, excludeBookingId?: string | number) {
   if (!teamName || !quizDate) return { isAvailable: true };
   
   const supabase = await createClient();
 
-  // 1. Resolve the event ID(s) for the chosen date. There can be more than one
-  //    event on a date (e.g. two sessions), so check team-name uniqueness across
-  //    all of them — and never use .maybeSingle() here (it errors on >1 row).
   const { data: eventRows } = await supabase
     .from('events')
     .select('id')
@@ -42,10 +36,8 @@ export async function checkTeamName(teamName: string, quizDate: string, excludeB
 
   const eventIds = (eventRows ?? []).map((e) => e.id);
 
-  // If no event exists yet for that date, the name is available by default
   if (eventIds.length === 0) return { isAvailable: true };
 
-  // 2. Query for active bookings with the same name (ignoring case and cancelled entries)
   let query = supabase
     .from("bookings")
     .select("id")
@@ -53,7 +45,6 @@ export async function checkTeamName(teamName: string, quizDate: string, excludeB
     .ilike("group_name", teamName.trim())
     .not("status", "eq", "cancelled");
 
-  // Exclude current record if we are validating an existing booking modification
   if (excludeBookingId) {
     query = query.neq("id", excludeBookingId);
   }
@@ -63,14 +54,10 @@ export async function checkTeamName(teamName: string, quizDate: string, excludeB
   return { isAvailable: !duplicateTeam };
 }
 
-/**
- * Checks if there are any available tables for a given date and group size.
- */
 export async function checkQuizAvailability(quizDate: string, teamSize: number): Promise<{ available: boolean }> {
   if (!quizDate) return { available: true };
   const supabase = await createClient();
 
-  // Find the event for this date
   const { data: eventData } = await supabase
     .from('events')
     .select('id, event_subtypes!inner(behavior)')
@@ -78,7 +65,6 @@ export async function checkQuizAvailability(quizDate: string, teamSize: number):
     .eq('event_subtypes.behavior', 'quiz')
     .maybeSingle();
 
-  // No event yet = available (it'll be created on booking)
   if (!eventData) return { available: true };
 
   const freeTables = await getFreeTablesForEvent(supabase, eventData.id, { groupSize: teamSize });
@@ -90,8 +76,6 @@ export async function createBooking(formData: BookingFormData) {
   const supabase = await createClient();
 
   try {
-    // Resolve the chosen event by its unique id (the form sends event_id). Two
-    // events can share a date, so we must target the exact one, not look up by date.
     const { data: eventRow, error: eventLookupError } = await supabase
       .from('events')
       .select('id, date, seating_required, is_bookable')
@@ -106,7 +90,6 @@ export async function createBooking(formData: BookingFormData) {
     const { isAvailable } = await checkTeamName(formData.team_name, quizDate);
     if (!isAvailable) throw new Error('This team name was just reserved by another user. Please choose a different name.');
 
-    // TABLE ALLOCATION — route through the shared module (seated events only).
     let finalStatus: "confirmed" | "waitlisted" = "confirmed";
     let chosenTable: FreeTable | null = null;
     if (seatingApplies(eventRow)) {
@@ -118,7 +101,6 @@ export async function createBooking(formData: BookingFormData) {
       chosenTable = allocation.status === "confirmed" ? allocation.table : null;
     }
 
-    // 1. Handle Contact (Find existing or create new)
     let contactId;
     const { data: existingContact } = await supabase
       .from("contacts")
@@ -142,14 +124,12 @@ export async function createBooking(formData: BookingFormData) {
       if (contactError) {
         console.error("Contact insert error:", contactError);
         throw new Error('Failed to save booking')
-        //return { success: false, error: "Failed to save contact details." };
       }
       contactId = newContact?.id;
     }
 
     if (!contactId) throw new Error("Failed to save lead contact.");
 
-    // FINAL BOOKING INSERTION
     const { data: newBooking, error: bookingError } = await supabase
       .from("bookings")
       .insert([{
@@ -160,8 +140,6 @@ export async function createBooking(formData: BookingFormData) {
           status: finalStatus,
           special_requests: formData.special_requests || null, // Map to DB column
           paid_amount: 0,
-          // Note: Omitting team_id as it appears to be optional or handled elsewhere.
-          // If Supabase complains about team_id being required, you will need a 4th step for 'teams'.
       }])
       .select("id")
       .single();
@@ -169,10 +147,8 @@ export async function createBooking(formData: BookingFormData) {
     if (bookingError || !newBooking) {
       console.error("Supabase insert error:", bookingError);
       throw new Error("Error creating booking: " + bookingError.message)
-      //return { success: false, error: bookingError?.message };
     }
 
-    // TABLE MAPPING — commit with the unique-index concurrency backstop.
     if (chosenTable) {
       const mapped = await commitMapping(supabase, {
         bookingId: newBooking.id,
@@ -181,7 +157,6 @@ export async function createBooking(formData: BookingFormData) {
         groupSize: formData.team_size,
       });
       if (!mapped.ok) {
-        // Lost the last table to a concurrent booking — waitlist this one.
         finalStatus = "waitlisted";
         await supabase
           .from("bookings")
@@ -192,18 +167,14 @@ export async function createBooking(formData: BookingFormData) {
 
     const isWaitlisted = finalStatus === "waitlisted";
 
-    // 9. Send the confirmation or waitlist email.
-    // A failed email must NOT discard an already-saved booking, so swallow errors here.
     try {
       await sendBookingEmail(newBooking.id, formData.email, formData.name, quizDate, formData.team_name, formData.team_size, finalStatus);
     } catch (emailError) {
       console.error("Booking saved but confirmation email failed:", emailError);
     }
 
-    // 10. Update fully booked status
     await updateFullyBookedStatus(supabase, eventId);
 
-    // 11. Revalidate paths so the UI updates with the new booking
     revalidatePath("/dashboard");
     revalidatePath("/book/quiz/manage-booking");
 
@@ -218,14 +189,9 @@ export async function createBooking(formData: BookingFormData) {
   } catch (error) {
     console.error("Server action error:", error);
     throw new Error(error instanceof Error ? error.message : "An unexpected error occurred. Please try again.");
-    //return { success: false, error: error.message || "An unexpected error occurred. Please try again." };
   }
 }
 
-/**
- * Helper function to handle sending emails.
- * Uses environment variables to build the correct public URLs for Vercel.
- */
 async function sendBookingEmail(
   booking_id: number,
   email: string,
@@ -235,10 +201,6 @@ async function sendBookingEmail(
   team_size: number,
   status: "confirmed" | "waitlisted"
 ) {
-  // Logic to determine the correct base URL
-  // 1. Explicit variable (Best for custom domains)
-  // 2. Vercel deployment URL (Automatic backup)
-  // 3. Localhost (Development fallback)
   const appUrl = process.env.NEXT_PUBLIC_SITE_URL 
     ? process.env.NEXT_PUBLIC_SITE_URL 
     : process.env.VERCEL_URL 
@@ -283,7 +245,6 @@ async function sendBookingEmail(
       if (resendError) {
         console.error("Resend API Error:", resendError);
         throw new Error(`Booking saved, but email failed: ${resendError.message}`)
-        //return { success: false, error: `Booking saved, but email failed: ${resendError.message}` };
       }
 
     } catch (emailError) {
@@ -295,6 +256,5 @@ async function sendBookingEmail(
           : JSON.stringify(emailError);
       
       throw new Error(`Booking saved, but email failed: ${errorMessage}`);
-      //return { success: false, error: `Booking saved, but email failed: ${emailError.message || JSON.stringify(emailError)}` };
     }
 }

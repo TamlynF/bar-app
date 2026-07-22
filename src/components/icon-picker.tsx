@@ -3,11 +3,6 @@
 import { cn } from "@/lib/utils";
 import { BOOKING_CARD_ICONS, BOOKING_CARD_ICON_NAMES } from "@/lib/booking-card-icons";
 
-/**
- * Admin-themed grid for picking a Lucide icon name. Shares the icon set with the
- * public booking-card render via `BOOKING_CARD_ICONS`. Clicking the selected
- * icon again clears the selection.
- */
 export function IconPicker({
   value,
   onChange,

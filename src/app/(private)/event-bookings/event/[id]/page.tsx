@@ -73,8 +73,6 @@ export default async function EventDetailPage({
   const eventId = Number(id);
   if (isNaN(eventId)) notFound();
 
-  // Optional status pre-filter (e.g. ?status=confirmed) — comma-separated,
-  // case-insensitive. Seeds the status pills in the bookings section.
   const initialStatuses = status
     ? status.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
     : [];
@@ -106,7 +104,6 @@ export default async function EventDetailPage({
   const event = rawEvent as unknown as EventRow;
   const bookings = (rawBookings ?? []) as unknown as BookingRow[];
 
-  // event_types / event_subtypes come back as array OR object (see CLAUDE.md).
   const etType = Array.isArray(event.event_types) ? event.event_types[0] : event.event_types;
   const etSub = Array.isArray(event.event_subtypes) ? event.event_subtypes[0] : event.event_subtypes;
   const type = etType?.name ?? "";
@@ -117,7 +114,6 @@ export default async function EventDetailPage({
   const hostName =
     event.employees && !Array.isArray(event.employees) ? event.employees.full_name : null;
 
-  // Payment totals across non-cancelled bookings.
   let totalExpected = 0;
   let totalPaid = 0;
   for (const b of bookings) {
@@ -127,7 +123,6 @@ export default async function EventDetailPage({
       b.total_amount != null ? Number(b.total_amount) : eventPrice * (Number(b.group_size) || 0);
   }
 
-  // Table capacity buckets — only when this event needs seating.
   let tableStats: { capacity: number; total: number; assigned: number }[] | null = null;
   if (seatingRequired) {
     const groups: Record<number, { total: number; assigned: number }> = {};
@@ -147,7 +142,6 @@ export default async function EventDetailPage({
       .sort((a, b) => a.capacity - b.capacity);
   }
 
-  // Quiz progress — only for quiz-behaviour events.
   let quiz: EventSummary["quiz"] = null;
   if (isQuiz) {
     const stats = await getQuizStatsForEvent(eventId);
@@ -182,7 +176,6 @@ export default async function EventDetailPage({
     tableStats,
   };
 
-  // Map to the shape the shared BookingsSection / BookingList expect.
   const generalBookings: GeneralBooking[] = bookings.map((b) => ({
     id: String(b.id),
     event_id: String(eventId),
@@ -222,9 +215,6 @@ export default async function EventDetailPage({
 
   return (
     <div className="min-h-screen flex-1 bg-background xl:min-h-0">
-      {/* Mirrors the general bookings hub: on xl the page fills the viewport so
-          the list scrolls on its own while the event banner, search/filters and
-          detail panel stay fixed. Below xl it's normal document flow. */}
       <div className="mx-auto max-w-7xl space-y-4 px-3 py-3 sm:py-0 md:px-8 xl:flex xl:h-[calc(100vh-7.5rem)] xl:flex-col xl:overflow-hidden">
         <BookingsSection
           bookings={generalBookings}

@@ -22,7 +22,6 @@ export default async function CompanyInfoPage() {
 
       <div className="mx-2 border-t border-[#E6DFC8] sm:mx-4" />
 
-      {/* Venue layout — draw the room, obstacles, fixtures & seating. */}
       <VenueEditorClient
         companyId={data?.id ?? null}
         companyName={data?.name ?? null}

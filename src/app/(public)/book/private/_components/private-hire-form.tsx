@@ -39,7 +39,6 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
 
   const selectedSubtype = subtypes.find((s) => String(s.id) === eventSubtypeId);
 
-  // Whether the current step's required fields are all filled — drives the Next button.
   const guestCountNum = parseInt(guestCount, 10);
   const step1Valid = fullName.trim() !== "" && email.trim() !== "" && email.includes("@");
   const step2Valid =
@@ -111,7 +110,6 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
   return (
     <form onSubmit={handleSubmit} className="space-y-0 overflow-hidden">
 
-      {/* Step indicator */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {STEPS.map((s) => (
@@ -132,7 +130,6 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
         </span>
       </div>
 
-      {/* Step heading */}
       <div className="mb-7">
         <h4 className="mb-1 font-black text-2xl leading-none tracking-tight text-white uppercase">
           {currentStep.title}
@@ -140,10 +137,8 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
         <p className="text-xs font-medium text-stone-500">{currentStep.subtitle}</p>
       </div>
 
-      {/* Step content */}
       <div key={step} className="animate-in space-y-4 duration-200 fade-in">
 
-        {/* Step 1: Your Details */}
         {step === 1 && (
           <>
             <div className="space-y-1">
@@ -195,7 +190,6 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
           </>
         )}
 
-        {/* Step 2: Your Event */}
         {step === 2 && (
           <>
             <div className="space-y-1">
@@ -290,7 +284,6 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
           </>
         )}
 
-        {/* Step 3: Final Details */}
         {step === 3 && (
           <>
             <div className="space-y-1">
@@ -310,33 +303,23 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
               </div>
             </div>
 
-            {/* Deposit notice */}
-            {/* <div className="flex items-start gap-3 bg-[#FDCC4B]/8 border border-[#FDCC4B]/20 rounded-2xl px-4 py-3.5 mt-2">
-              <Info className="w-4 h-4 text-[#FDCC4B] shrink-0 mt-0.5" />
-              <p className="text-xs text-stone-300 font-medium leading-relaxed">
-                <span className="font-black text-[#FDCC4B]">Deposit required.</span> Once we&apos;ve reviewed your enquiry, we&apos;ll be in touch to confirm availability and share deposit payment details to secure your booking.
-              </p>
-            </div> */}
           </>
         )}
 
       </div>
 
-      {/* Step error */}
       {stepError && (
         <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {stepError}
         </p>
       )}
 
-      {/* Submit error */}
       {error && step === 3 && (
         <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {error}
         </p>
       )}
 
-      {/* Navigation */}
       <div className="mt-8 flex gap-3">
         {step > 1 && (
           <button

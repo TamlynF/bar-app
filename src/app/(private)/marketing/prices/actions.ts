@@ -51,10 +51,6 @@ async function readMenuItems(
   return rows;
 }
 
-/**
- * Fetch current competitor prices for the comparison area via Gemini (grounded),
- * parse into GBP amounts, and replace the stored set for that area.
- */
 export async function refreshPricesAction(): Promise<
   { success: true; count: number } | { error: string }
 > {
@@ -88,7 +84,6 @@ export async function refreshPricesAction(): Promise<
     return { error: "The AI didn't return any usable prices. Try refreshing again." };
   }
 
-  // Replace the set for this area so results stay consistent and current.
   await supabase.from("competitor_prices").delete().eq("area", area);
   const { error } = await supabase.from("competitor_prices").insert(rows);
   if (error) {
@@ -108,10 +103,6 @@ export async function refreshPricesAction(): Promise<
   return { success: true, count: rows.length };
 }
 
-/**
- * "Live AI: local price insights" — refreshes competitor prices for the table
- * AND generates fresh price-positioning idea cards, in one click.
- */
 export async function refreshPriceInsightsAction(): Promise<
   { success: true; priceCount: number; ideaCount: number } | { error: string }
 > {
@@ -120,7 +111,6 @@ export async function refreshPriceInsightsAction(): Promise<
     refreshTrendsAction("price"),
   ]);
 
-  // Only a hard fail if both halves failed.
   if ("error" in prices && "error" in ideas) {
     return { error: prices.error };
   }
@@ -131,7 +121,6 @@ export async function refreshPriceInsightsAction(): Promise<
   };
 }
 
-/** Update the editable comparison area / radius. */
 export async function updateComparisonAreaAction(
   formData: FormData,
 ): Promise<{ success: true } | { error: string }> {

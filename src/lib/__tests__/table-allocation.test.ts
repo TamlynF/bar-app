@@ -12,7 +12,6 @@ import {
   type MappedBooking,
 } from "@/lib/table-allocation";
 
-// Small builders to keep the cases readable.
 const t = (id: number, max_capacity: number): FreeTable => ({ id, max_capacity });
 const mb = (
   bookingId: number,
@@ -65,9 +64,7 @@ describe("pickSmallestFittingTable", () => {
 
 describe("pickTighterFreeTable", () => {
   it("finds the tightest free table smaller than current that still fits", () => {
-    // group dropped to 4, currently on a 10-seat; a free 6-seat is the tightest fit.
     const free = [t(1, 6), t(2, 8), t(3, 4)];
-    // 4-seat (id 3) is tighter and fits 4 — closest to newSize.
     expect(pickTighterFreeTable(free, 4, 10)?.id).toBe(3);
   });
 
@@ -78,19 +75,15 @@ describe("pickTighterFreeTable", () => {
 
   it("requires the table to still seat the group", () => {
     const free = [t(1, 6), t(2, 5)];
-    // newSize 6: the 5-seat is too small; 6-seat fits and is tighter than 10.
     expect(pickTighterFreeTable(free, 6, 10)?.id).toBe(1);
   });
 
   it("steps up to the next higher free capacity when the lowest isn't available, capped below current", () => {
-    // group dropped to 4 from a 10-seat; no free 4/5-seat, so take the 6-seat
-    // (lowest available that fits) — never the 8 over the 6, never >= current 10.
     const free = [t(1, 8), t(2, 6)];
     expect(pickTighterFreeTable(free, 4, 10)?.id).toBe(2);
   });
 
   it("never picks a table larger than the current one", () => {
-    // newSize fits these, but both are >= current capacity → keep current (null)
     const free = [t(1, 10), t(2, 12)];
     expect(pickTighterFreeTable(free, 4, 8)).toBeNull();
   });
@@ -102,7 +95,6 @@ describe("pickTighterFreeTable", () => {
 
 describe("findUpsizeSwap (3a.2)", () => {
   it("swaps with a smaller group sitting on a bigger, fitting table", () => {
-    // current: group now 6 on a 6-seat table -> still fits? No: newSize 8 > cap 6.
     const current = mb(1, 6, 100, 6);
     const candidates = [
       mb(2, 4, 200, 10), // smaller group on a 10-seat that fits 8, and 4 fits current's 6 -> valid
@@ -142,7 +134,6 @@ describe("findUpsizeSwap (3a.2)", () => {
 
 describe("findDownsizeSwap (3b.2)", () => {
   it("hands the big table to a larger group on a tighter table", () => {
-    // current: 8 -> 4 on a 10-seat. B is 6 people on a 6-seat.
     const current = mb(1, 8, 100, 10);
     const candidates = [mb(2, 6, 200, 6)];
     const swap = findDownsizeSwap(current, candidates, 4);
@@ -177,7 +168,6 @@ describe("findDownsizeSwap (3b.2)", () => {
 
 describe("decideCreate", () => {
   it("confirms onto the tightest fitting table", () => {
-    // tightest fit for 5 is the 6-seat (id 2)
     const res = decideCreate([t(1, 10), t(2, 6), t(3, 4)], 5);
     expect(res).toEqual({ status: "confirmed", table: { id: 2, max_capacity: 6 } });
   });
@@ -224,13 +214,11 @@ describe("decideSizeChange — decrease (3b)", () => {
   const booking = mb(1, 8, 100, 10); // 8 people on a 10-seat, dropping
 
   it("relocates to a tighter free table (worked example)", () => {
-    // drops to 4; a free 6-seat is the tightest fit -> move there, free the 10.
     const res = decideSizeChange(booking, 4, [t(2, 6), t(3, 8)], []);
     expect(res).toEqual({ outcome: "reassigned", tableId: 2, addSeat: 0 });
   });
 
   it("tightens via swap when no free tighter table exists", () => {
-    // no free table; B is 6 people on a 6-seat -> B takes the 10, A takes the 6.
     const candidates = [mb(2, 6, 200, 6)];
     const res = decideSizeChange(booking, 4, [], candidates);
     expect(res).toEqual({
@@ -243,7 +231,6 @@ describe("decideSizeChange — decrease (3b)", () => {
   });
 
   it("keeps the current table when nothing tighter is free or swappable", () => {
-    // no free table, and the only neighbour is a smaller group -> stay put.
     const candidates = [mb(2, 3, 200, 6)];
     const res = decideSizeChange(booking, 4, [], candidates);
     expect(res).toEqual({ outcome: "kept", tableId: 100, addSeat: 0 });

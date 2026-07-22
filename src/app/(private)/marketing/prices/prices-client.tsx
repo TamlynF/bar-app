@@ -35,7 +35,6 @@ function formatWhen(iso: string | null): string {
   });
 }
 
-// Verdict → the word shown beside your price + colour for the range-bar "you" dot.
 const VERDICT_WORD: Record<Verdict, { word: string; text: string; dot: string }> = {
   above: { word: "above avg", text: "text-red-600", dot: "#DC2626" },
   below: { word: "below avg", text: "text-green-700", dot: "#15803D" },
@@ -43,9 +42,6 @@ const VERDICT_WORD: Record<Verdict, { word: string; text: string; dot: string }>
   unknown: { word: "no data", text: "text-[#5F624F]/60", dot: "#8A8D7A" },
 };
 
-// Min→max range bar with an avg tick and a your-price dot (desktop only; phone
-// swaps to a compact min·avg·max line). Dynamic positions ride CSS custom
-// properties consumed by Tailwind arbitrary values (no standard inline styles).
 function RangeBar({ c }: { c: BenchmarkComparison }) {
   const min = c.competitorMin as number;
   const max = c.competitorMax as number;
@@ -114,7 +110,6 @@ export default function PricesClient({
   const [showRaw, setShowRaw] = useState(false);
   const [view, setView] = useState<PriceView>("summary");
   const [venuePickerOpen, setVenuePickerOpen] = useState(false);
-  // null = use the default (top few by relevance); array = the user's explicit pick.
   const [pickedVenues, setPickedVenues] = useState<string[] | null>(null);
 
   const allVenues = useMemo(() => rankedVenues(competitorPrices), [competitorPrices]);
@@ -158,7 +153,6 @@ export default function PricesClient({
     });
   };
 
-  // Headline insights — the items where you sit furthest from the local average.
   const insights = comparison
     .filter((c) => c.ownPrice != null && c.competitorAvg != null && c.sampleCount > 0)
     .map((c) => ({ label: c.label, diff: (c.ownPrice as number) - (c.competitorAvg as number) }))
@@ -167,16 +161,13 @@ export default function PricesClient({
 
   return (
     <div className="max-w-3xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
-      {/* Area + refresh */}
       <section className="space-y-3 rounded-2xl border border-[#E6DFC8] bg-white p-4 sm:p-5">
         {!isEditing ? (
           <div className="flex flex-wrap items-center gap-3">
             <div className="min-w-0 flex-1">
               <div className="flex items-start gap-1.5 text-[#5F624F]">
                 <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                {/* Phone: just the address, smaller and not bold */}
                 <p className="text-[11px] font-normal tracking-normal normal-case sm:hidden">{area}</p>
-                {/* Desktop: full comparison descriptor */}
                 <p className="hidden font-black text-[10px] tracking-widest uppercase sm:block">
                   Comparing {area}
                   {radius ? ` · ${radius}` : ""} · bars, pubs, music venues &amp; hospitality only
@@ -245,7 +236,6 @@ export default function PricesClient({
         )}
       </section>
 
-      {/* Headline insights — biggest gaps vs the local average */}
       {insights.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {insights.map((ins) => (
@@ -265,7 +255,6 @@ export default function PricesClient({
         </div>
       )}
 
-      {/* Comparison */}
       <section className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
         <div className="flex items-center justify-between gap-2 border-b border-[#E6DFC8] bg-[#F7F4EA] px-4 py-3 sm:px-5">
           <p className="font-black text-[11px] tracking-widest text-[#5C4033] uppercase">Your menu vs local venues</p>
@@ -287,7 +276,6 @@ export default function PricesClient({
                 </button>
               ))}
 
-              {/* Venue picker — choose up to 4 venues for the By-venue grid */}
               {view === "byVenue" && (
                 <div className="relative">
                   <button
@@ -432,7 +420,6 @@ export default function PricesClient({
                   {hasData ? (
                     <>
                       <RangeBar c={c} />
-                      {/* Phone: compact one-line min · avg · max */}
                       <p className="text-[10.5px] text-[#5F624F] tabular-nums sm:hidden">
                         {formatGbp(c.competitorMin)} · avg{" "}
                         <span className="font-black text-[#1F1F1A]">{formatGbp(c.competitorAvg)}</span> ·{" "}
@@ -450,7 +437,6 @@ export default function PricesClient({
         )}
       </section>
 
-      {/* Raw competitor prices */}
       {competitorPrices.length > 0 && (
         <section className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
           <button
@@ -500,7 +486,6 @@ export default function PricesClient({
         Competitor prices are AI-estimated from live web search and matched to your menu by keyword. Treat as a guide, not gospel.
       </p>
 
-      {/* Full-width live-AI scan button (mirrors the app's price-insights block) */}
       <button
         type="button"
         onClick={handleRefresh}
@@ -518,7 +503,6 @@ export default function PricesClient({
         </div>
       )}
 
-      {/* AI price-positioning idea cards */}
       {priceTrends.length > 0 ? (
         <div className="space-y-3">
           <p className="pt-1 font-black text-[10px] tracking-widest text-[#5C4033] uppercase">Pricing plays</p>

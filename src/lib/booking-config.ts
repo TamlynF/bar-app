@@ -1,11 +1,3 @@
-// Booking configuration stored as JSONB on the row that owns the public booking
-// page for a category's `booking_grouping`: `event_types.booking_config` (per_type),
-// `event_subtypes.booking_config` (per_subtype), or `events.booking_config` (per_event).
-//
-// The shape is intentionally a single blob: it's always read whole to render one
-// booking form, never queried by individual field. Each form field carries its own
-// visibility / label / required flags, plus field-specific attributes.
-
 export type FieldKey = "name" | "email" | "phone" | "group_size" | "group_name" | "special_requests";
 
 export type FieldConfig = {
@@ -34,7 +26,6 @@ export type BookingConfig = {
   fields?: BookingFields;
 };
 
-/** Fully-resolved config (no optionals) for consumers that need every value present. */
 export type ResolvedBookingConfig = {
   booking_image_url: string | null;
   tag_line: string;
@@ -48,7 +39,6 @@ export type ResolvedBookingConfig = {
   };
 };
 
-/** Defaults match the historical hardcoded behaviour of the public event form. */
 export const DEFAULT_BOOKING_CONFIG: ResolvedBookingConfig = {
   booking_image_url: null,
   tag_line: "",
@@ -82,12 +72,6 @@ function resolveField(raw: Partial<FieldConfig> | undefined, def: FieldConfig, l
   };
 }
 
-/**
- * Resolve a stored config into a fully-populated `ResolvedBookingConfig`, filling
- * defaults and mapping the legacy flat shape (`collect_phone`, `group_name_label`,
- * `max_group_size`, `custom_tagline`, …) so old DB rows keep rendering. New nested
- * keys take precedence over legacy ones.
- */
 export function normalizeBookingConfig(
   raw: BookingConfig | Record<string, unknown> | null | undefined
 ): ResolvedBookingConfig {
@@ -109,7 +93,6 @@ export function normalizeBookingConfig(
     booking_image_url: typeof r.booking_image_url === "string" && r.booking_image_url !== "" ? r.booking_image_url : null,
     tag_line: asString(r.tag_line, asString(r.custom_tagline, def.tag_line)),
     fields: {
-      // Name & email are always shown and required, regardless of stored value.
       name: { ...name, visible: true, required: true },
       email: { ...email, visible: true, required: true },
       phone: resolveField(fields.phone, def.fields.phone, { visible: r.collect_phone }),

@@ -21,19 +21,12 @@ function fmtShort(iso: string) {
   return `${dt.getDate()} ${MONTHS[dt.getMonth()]}`;
 }
 
-/** Human label for a range value (null = no filter). */
 export function dateRangeLabel(range: DateRange | null): string {
   if (!range || !range.start) return "All dates";
   if (!range.end || range.end === range.start) return fmtShort(range.start);
   return `${fmtShort(range.start)} – ${fmtShort(range.end)}`;
 }
 
-/**
- * Date / date-range filter. Tap once to pick a single day, tap a second day to
- * extend into a range. Value is `{ start, end }` (YYYY-MM-DD; `end` null = single
- * day) or `null` for no date filter. Built on the shared Popover so it matches
- * the rest of the admin surface.
- */
 export function DatePicker({
   value,
   onChange,
@@ -57,7 +50,6 @@ export function DatePicker({
     else setDraft({ start: draft.start, end: v });
   };
 
-  // 0 = outside, 1 = inside range, 2 = endpoint
   const rangeOf = (d: number) => {
     const v = toISO(view.y, view.m, d);
     if (!draft.start) return 0;
@@ -123,7 +115,6 @@ export function DatePicker({
         </button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 rounded-2xl border-2 border-[#E6DFC8] bg-white p-3">
-        {/* Month navigation */}
         <div className="mb-2 flex items-center justify-between">
           <button type="button" onClick={() => shift(-1)} title="Previous month" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#F7F4EA]">
             <ChevronLeft className="h-4 w-4 text-[#5C4033]" />
@@ -134,14 +125,12 @@ export function DatePicker({
           </button>
         </div>
 
-        {/* Weekday header */}
         <div className="mb-1 grid grid-cols-7">
           {WD.map((w, i) => (
             <span key={i} className="py-1 text-center font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{w}</span>
           ))}
         </div>
 
-        {/* Day grid */}
         <div className="grid grid-cols-7 gap-1">
           {cells.map((d, i) => {
             if (d == null) return <span key={i} className="aspect-square" />;
@@ -169,7 +158,6 @@ export function DatePicker({
 
         <p className="mt-3 mb-2 text-center font-black text-[11px] text-[#5C4033]">{summary}</p>
 
-        {/* Actions */}
         <div className="flex gap-2">
           <button type="button" onClick={clear} className="h-9 flex-1 rounded-lg border border-[#E6DFC8] font-black text-[10px] tracking-wide text-[#5F624F] uppercase hover:bg-[#F7F4EA]">
             All dates

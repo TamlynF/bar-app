@@ -75,7 +75,6 @@ export default function EventsHubClient({
   initialEvents: EventWithDetails[],
   availableTablesCount: number
 }) {
-  // Mobile-first: Default to collapsed for secondary sections
   const [expandedSections, setExpandedSections] = useState({
     quiz: true,
     historicQuiz: false,
@@ -90,10 +89,8 @@ export default function EventsHubClient({
     }))
   }
 
-  // Aggregate stats for events
   const allQuizEvents = initialEvents.filter(e => e.event_types?.behavior === 'quiz')
   
-  // Categorize Quiz Events
   const today = new Date().toISOString().split('T')[0]
   const { upcomingQuiz, historicQuiz } = useMemo(() => {
     const sorted = [...allQuizEvents].sort((a, b) => a.date.localeCompare(b.date));
@@ -116,7 +113,6 @@ export default function EventsHubClient({
   return (
     <div className="mx-auto max-w-5xl animate-in space-y-6 px-4 pt-4 pb-24 text-left duration-700 fade-in sm:space-y-8 sm:px-8 sm:pt-0 sm:pb-8">
       
-      {/* KPI Stats Grid */}
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KPICard label="Active Events" value={initialEvents.length} icon={LayoutGrid} />
         <KPICard label="Total Guests" value={totalGuests} icon={Users} color="amber" />
@@ -126,7 +122,6 @@ export default function EventsHubClient({
 
       <div className="space-y-5 sm:space-y-6">
         
-        {/* UPCOMING QUIZ SECTION */}
         <CollapsibleSection 
           title="Upcoming Quizzes" 
           icon={CalendarCheck2} 
@@ -150,7 +145,6 @@ export default function EventsHubClient({
           </div>
         </CollapsibleSection>
 
-        {/* HISTORIC QUIZ SECTION */}
         <CollapsibleSection 
           title="Historic Quizzes" 
           icon={History} 
@@ -173,7 +167,6 @@ export default function EventsHubClient({
           </div>
         </CollapsibleSection>
 
-        {/* BANDS SECTION */}
         <CollapsibleSection 
           title="Live Entertainment" 
           icon={Mic2} 
@@ -206,7 +199,6 @@ export default function EventsHubClient({
           </div>
         </CollapsibleSection>
 
-        {/* PRIVATE HIRE SECTION */}
         <CollapsibleSection 
           title="Private Hire CRM" 
           icon={Lock} 
@@ -234,9 +226,6 @@ export default function EventsHubClient({
   )
 }
 
-/**
- * REUSABLE INTERNAL COMPONENTS
- */
 
 function QuizEventCard({ 
   event, 
@@ -338,7 +327,6 @@ function CollapsibleSection({
 }) {
   return (
     <div className="space-y-3">
-      {/* Header acting as the toggle button */}
       <button
         type="button"
         onClick={onToggle}
@@ -362,7 +350,6 @@ function CollapsibleSection({
         </div>
       </button>
       
-      {/* Animated container using grid-rows for smooth height transition */}
       <div className={cn(
         styles.collapsibleContainer,
         isOpen ? styles.expanded : styles.collapsed

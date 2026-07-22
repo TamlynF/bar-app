@@ -48,7 +48,6 @@ function formatEventDate(dateStr: string) {
   });
 }
 
-/** Dropdown label: long date, plus the start time when present (disambiguates same-day events). */
 function eventOptionLabel(ev: QuizEvent) {
   const time = formatTime(ev.start_time);
   return time ? `${formatEventDate(ev.date)} · ${time}` : formatEventDate(ev.date);
@@ -72,7 +71,6 @@ export default function BookingForm({ events }: Props) {
     specialRequests: "",
   });
 
-  // Resolve the chosen event by id (unique), not by date — two events can share a date.
   const selectedEvent =
     events.find((e) => String(e.id) === formData.quizEventId) ?? events[0];
   const selectedDate = selectedEvent?.date ?? "";
@@ -234,7 +232,6 @@ export default function BookingForm({ events }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-      {/* Date and Size Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-1">
           <label htmlFor="quizDate" className={labelClasses}>
@@ -285,7 +282,6 @@ export default function BookingForm({ events }: Props) {
         </div>
       </div>
 
-      {/* Names Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-1">
           <label htmlFor="name" className={labelClasses}>
@@ -353,7 +349,6 @@ export default function BookingForm({ events }: Props) {
           </div>
         </div>
 
-      {/* Special Requests Field */}
       <div className="space-y-1">
         <label htmlFor="specialRequests" className={labelClasses}>
           Additional Requests (Optional)

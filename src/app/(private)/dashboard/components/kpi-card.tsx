@@ -17,13 +17,9 @@ export default function KpiCard({
   outstanding: number;
   confirmed: number;
   newGuests: number;
-  /** Month-over-month % change in collected revenue. */
   collectedDeltaPct: number;
-  /** Count of unpaid bookings making up the outstanding total. */
   unpaidCount: number;
-  /** Change in confirmed bookings vs last month. */
   confirmedDelta: number;
-  /** Change in new guests vs last month. */
   newGuestsDelta: number;
 }) {
   const total = collected + outstanding;
@@ -32,7 +28,6 @@ export default function KpiCard({
 
   return (
     <div className="rounded-2xl border border-[#E6DFC8] bg-white p-3.5 shadow-sm">
-      {/* Collection rate */}
       <div className="mb-2 flex items-baseline justify-between">
         <span className="font-black text-[9px] tracking-wide text-[#5F624F] uppercase">{monthLabel} collection rate</span>
         <span className={cn("font-black text-[11px] tabular-nums", outstanding > 0 ? "text-amber-700" : "text-green-700")}>
@@ -46,7 +41,6 @@ export default function KpiCard({
         />
       </div>
 
-      {/* 2×2 stat grid */}
       <div className="mt-3.5 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[#E6DFC8]">
         <Cell label="Collected" value={`£${collected.toFixed(0)}`} valueClass="text-green-700" trend={{ value: `${collectedDeltaPct}%`, up: collectedDeltaPct >= 0 }} />
         <Cell label="Outstanding" value={`£${outstanding.toFixed(0)}`} valueClass="text-amber-700" sub={`${unpaidCount} unpaid`} />

@@ -23,7 +23,6 @@ export interface MusicActInput {
   bank_payment_ref?: string | null;
   internal_notes?: string | null;
   is_favorite?: boolean;
-  /** Contact fields — upserted to `contacts` (matched by email) and linked. */
   contact?: { booker_name?: string | null; email?: string | null; phone_no?: string | null };
 }
 
@@ -50,7 +49,6 @@ export async function saveMusicActAction(
 
   const empId = await currentEmployeeId(supabase);
 
-  // Link a contact when an email is given (matched by the UNIQUE email column).
   let contactId: number | null = null;
   if (input.contact?.email?.trim()) {
     contactId = await upsertContactByEmail(

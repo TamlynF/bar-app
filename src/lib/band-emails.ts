@@ -1,6 +1,3 @@
-// Pure builders for band-booking emails. Returning structured content (not HTML)
-// lets the admin UI preview exactly what will be sent, while the server action
-// wraps the same content into the branded HTML template — one source of truth.
 
 import { toHHMM } from "@/lib/event-clash";
 
@@ -28,25 +25,16 @@ export type BandEmail = {
   subject: string;
   heading: string;
   greeting: string;
-  /** Plain-text paragraphs — safe to render in the admin preview as-is. */
   body: string[];
   dateLabel: string; // "" when no date
   timeLabel: string; // "" when no times
-  /** Offer only — the proposed slot, or "to be arranged" when no date is set. */
   slotLabel?: string;
-  /** "" when there's no fee / no note to pass on. */
   feeLabel?: string;
   noteLabel?: string;
 };
 
-/** @deprecated Kept as an alias so existing imports keep working. */
 export type RescheduleEmail = BandEmail;
 
-/**
- * Email a band receives when an admin changes the date/time of an already-booked
- * booking. It asks them to re-confirm the new slot (the booking has been moved back
- * to "offered" until they do).
- */
 export function buildRescheduleEmail(p: {
   name: string;
   groupName?: string | null;
@@ -70,10 +58,6 @@ export function buildRescheduleEmail(p: {
   };
 }
 
-/**
- * Email a band receives when an admin offers them a slot. The band replies to
- * accept; nothing is on the schedule until the admin marks the request booked.
- */
 export function buildOfferEmail(p: {
   name: string;
   groupName?: string | null;
@@ -85,7 +69,6 @@ export function buildOfferEmail(p: {
 }): BandEmail {
   const dateLabel = formatDateLong(p.date);
   const timeLabel = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
-  // The offer states the slot on one line, and says so plainly when there isn't one yet.
   const slotLabel = dateLabel
     ? [dateLabel, timeLabel].filter(Boolean).join(", ")
     : "to be arranged";
@@ -106,10 +89,6 @@ export function buildOfferEmail(p: {
   };
 }
 
-/**
- * Email a band receives once an admin settles their application — booked
- * ("confirmed") or declined ("cancelled").
- */
 export function buildOutcomeEmail(p: {
   name: string;
   groupName?: string | null;
@@ -138,7 +117,6 @@ export function buildOutcomeEmail(p: {
           "Thank you for applying to perform at Don Fenticas. After reviewing your application, we're unable to proceed at this time.",
           "We appreciate your interest and encourage you to apply again in the future.",
         ],
-    // A declined application has no slot to show, even if one had been pencilled in.
     dateLabel: isConfirmed ? dateLabel : "",
     timeLabel: isConfirmed ? timeLabel : "",
     noteLabel: p.notes?.trim() || "",

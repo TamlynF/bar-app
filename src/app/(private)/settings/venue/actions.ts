@@ -14,9 +14,6 @@ export async function saveVenueLayoutAction(
     return { error: "No company record found to save against." };
   }
 
-  // Light server-side validation — the editor enforces most of this, but never
-  // trust the client. A room is optional (can be saved empty), but if present it
-  // needs at least a triangle.
   if (geometry.room_outline && geometry.room_outline.points.length < 3) {
     return { error: "The room outline needs at least 3 points." };
   }

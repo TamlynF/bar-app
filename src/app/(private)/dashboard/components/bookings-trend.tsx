@@ -15,27 +15,21 @@ export interface TrendBooking {
 type Range = "week" | "month" | "year";
 type View = "summary" | "detail";
 
-// SVG canvas (stretched to fill width via preserveAspectRatio="none"; strokes
-// stay crisp with vector-effect="non-scaling-stroke").
 const W = 600;
 const H = 120;
 const PAD_TOP = 14;
 const PAD_BOT = 18;
 const DAY = 86_400_000;
 
-// Distinct series colours for the detail (breakdown) view.
 const SERIES_COLORS = [
   "#5C4033", "#B45309", "#1B4332", "#2563EB",
   "#7C3AED", "#DB2777", "#0891B2", "#CA8A04",
   "#4B5563", "#9D174D",
 ];
 
-// Detail view caps the number of distinct series for readability; the rest roll
-// into a single grey "Other" line.
 const TOP_N = 5;
 const OTHER_COLOR = "#9CA3AF";
 
-// Labels come from the DB (often lower-case) — show them Title Cased.
 const titleCase = (s: string) =>
   s ? s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()) : s;
 
@@ -68,7 +62,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
     return () => document.removeEventListener("mousedown", onDown);
   }, [open]);
 
-  // Distinct types (and their sub-types) present in the data — the filterable set.
   const taxonomy = useMemo(() => {
     const types = new Map<string, { id: string; name: string; subs: Map<string, { id: string; name: string }> }>();
     for (const b of bookings) {
@@ -81,8 +74,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [bookings]);
 
-  // Bucketing for the current + previous period. All date math is in UTC and
-  // keyed off the server-passed `nowMs`, so SSR and client agree.
   const period = useMemo(() => {
     if (range === "week") {
       const dow = (new Date(nowMs).getUTCDay() + 6) % 7; // 0 = Monday
@@ -113,7 +104,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
         prevBucket: (ms: number) => { const d = new Date(ms); return d.getUTCFullYear() === prevY && d.getUTCMonth() === prevM ? Math.min(4, Math.floor((d.getUTCDate() - 1) / 7)) : -1; },
       };
     }
-    // year — bucket by month, current vs previous calendar year.
     const curY = new Date(nowMs).getUTCFullYear();
     const prevY = curY - 1;
     return {
@@ -126,7 +116,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
     };
   }, [range, nowMs]);
 
-  // Summary series — the current selection as a single line vs. the prior period.
   const summary = useMemo(() => {
     const inFilter = (b: TrendBooking) => {
       if (applied === "all") return true;
@@ -145,9 +134,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
     return { cur, prev };
   }, [bookings, applied, period]);
 
-  // Detail series — a line per group for the current period. Grouping depends on
-  // the selection: "all" → per event type; a type ("all subtypes") → per sub-type;
-  // a single sub-type → just that one line.
   const detail = useMemo(() => {
     let groups: { id: string; name: string }[] = [];
     let keyOf: (b: TrendBooking) => string | null = () => null;
@@ -189,8 +175,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
       total: cur[i].reduce((a, b) => a + b, 0),
     }));
 
-    // Keep the chart readable: rank by volume, keep the top N, roll the rest
-    // into a single "Other" line (summing both current + previous buckets).
     list.sort((a, b) => b.total - a.total);
     if (list.length > TOP_N) {
       const keep = list.slice(0, TOP_N);
@@ -220,7 +204,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
   const niceMax = Math.max(2, Math.ceil((rawMax * 1.1) / 2) * 2);
   const ticks = [niceMax, niceMax / 2, 0];
 
-  // Summary paths.
   const curPath = linePath(summary.cur, niceMax, false);
   const prevPath = linePath(summary.prev, niceMax, false);
   const areaPath = linePath(summary.cur, niceMax, true);
@@ -253,7 +236,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
       <div className="flex items-center gap-2 px-1">
         <TrendingUp className="h-4 w-4 text-[#5F624F]" />
         <h2 className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">Bookings</h2>
-        {/* Range toggle — filled active state so it reads clearly */}
         <div className="ml-auto flex gap-1 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-1 shadow-sm">
           {(["week", "month", "year"] as Range[]).map((r) => (
             <button
@@ -272,7 +254,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
       </div>
 
       <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm">
-        {/* Event filter + summary/detail toggle */}
         <div className="mb-3 flex items-center gap-2">
           <Filter className="h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
           <div ref={ref} className="relative min-w-0 flex-1">
@@ -290,7 +271,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
             {open && (
               <div className="absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-xl border border-[#E6DFC8] bg-white shadow-[0_18px_40px_-12px_rgba(31,31,26,0.30)]">
                 <div className="grid grid-cols-2">
-                  {/* Column 1 — event types */}
                   <div className="max-h-60 overflow-y-auto border-r border-[#E6DFC8] p-1.5">
                     <p className="px-2 pt-1.5 pb-1 font-black text-[8px] tracking-[0.09em] text-[#a7a288] uppercase">Event type</p>
                     <FilterOpt
@@ -309,7 +289,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                       />
                     ))}
                   </div>
-                  {/* Column 2 — sub-types of the selected type */}
                   <div className="max-h-60 overflow-y-auto p-1.5">
                     {!selectedType ? (
                       <p className="p-3 text-[10px] leading-relaxed font-medium text-[#a7a288] italic">
@@ -341,7 +320,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               </div>
             )}
           </div>
-          {/* Summary / Detail toggle */}
           <div className="flex shrink-0 gap-0.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] p-0.5">
             {(["summary", "detail"] as View[]).map((vw) => (
               <button
@@ -359,7 +337,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
           </div>
         </div>
 
-        {/* Legend */}
         {isDetail ? (
           <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5">
             {detail.length === 0 ? (
@@ -394,9 +371,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
           </div>
         )}
 
-        {/* Plot */}
         <div className="relative pl-7">
-          {/* y-axis labels */}
           <div className="absolute top-0 bottom-6 left-0 w-6">
             {ticks.map((t) => (
               <span
@@ -430,7 +405,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
             ))}
             {isDetail ? (
               <>
-                {/* Previous period per series — dashed, drawn behind the solid lines */}
                 {detail.map((s) => {
                   const p = linePath(s.prevVals, niceMax, false);
                   return (
@@ -448,7 +422,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                     />
                   );
                 })}
-                {/* Current period per series — solid */}
                 {detail.map((s) => {
                   const c = linePath(s.vals, niceMax, false);
                   return (
@@ -469,7 +442,6 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
             )}
           </svg>
 
-          {/* x-axis labels */}
           <div className="mt-1.5 flex justify-between px-0.5">
             {period.labels.map((l) => (
               <span key={l} className="text-[9px] font-bold tracking-wide text-[#5F624F] uppercase">

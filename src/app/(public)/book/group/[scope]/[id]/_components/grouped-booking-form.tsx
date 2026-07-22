@@ -33,13 +33,8 @@ export interface GroupedEvent {
 
 interface Props {
   events: GroupedEvent[];
-  /** The shared booking form/page config for the whole group — defined on the
-      owning event_type (per_type) or event_subtype (per_subtype). */
   config: BookingConfig;
-  /** When true, the date dropdown also shows each event's title (events of a
-      whole category can share a date but differ by title). */
   showTitleInSelector?: boolean;
-  /** Event id (from the `?id=` query) to pre-select; ignored if not in `events`. */
   defaultEventId?: string;
 }
 
@@ -80,7 +75,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
     return showTitleInSelector && ev.title ? `${base} — ${ev.title}` : base;
   }
 
-  // Resolve the chosen event by id (unique) — events can share a date.
   const selectedEvent = events.find((e) => String(e.id) === eventId) ?? events[0];
 
   const cfg = useMemo(() => normalizeBookingConfig(config), [config]);
@@ -195,7 +189,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-      {/* Hidden fields consumed by createEventBooking */}
       <input type="hidden" name="event_id" value={eventId} />
       <input type="hidden" name="full_name" value={formData.fullName} />
       <input
@@ -208,7 +201,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
       <input type="hidden" name="phone_no" value={formData.phoneNo} />
       <input type="hidden" name="special_requests" value={formData.specialRequests} />
 
-      {/* Date selector + group size */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-1">
           <label className={labelClasses}>
@@ -264,7 +256,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         )}
       </div>
 
-      {/* Name */}
       <div className="space-y-1">
         <label className={labelClasses}>
           {f.name.label} <span className="text-red-500">*</span>
@@ -285,7 +276,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         </div>
       </div>
 
-      {/* Email */}
       <div className="space-y-1">
         <label className={labelClasses}>
           {f.email.label} <span className="text-red-500">*</span>
@@ -306,7 +296,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         </div>
       </div>
 
-      {/* Phone (optional per config) */}
       {f.phone.visible && (
         <div className="space-y-1">
           <label className={labelClasses}>
@@ -335,7 +324,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         </div>
       )}
 
-      {/* Group Name (optional per config) */}
       {f.group_name.visible && (
         <div className="space-y-1">
           <label className={labelClasses}>
@@ -358,7 +346,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         </div>
       )}
 
-      {/* Price Preview */}
       {hasPricing && (
         <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/40 px-5 py-4">
           <div>
@@ -372,7 +359,6 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
         </div>
       )}
 
-      {/* Special Requests */}
       {f.special_requests.visible && (
         <div className="space-y-1">
           <label className={labelClasses}>

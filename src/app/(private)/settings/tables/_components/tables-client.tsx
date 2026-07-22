@@ -62,7 +62,6 @@ export default function TablesClient({
   const [shape, setShape] = useState<"round" | "rect">("round");
   const [chairMode, setChairMode] = useState<"auto" | "sides" | "bench">("auto");
 
-  // ── Filters ─────────────────────────────────────────────────────────────────
   const [query, setQuery] = useState("");
   const [shapeFilter, setShapeFilter] = useState<ShapeFilter>("all");
   const [availFilter, setAvailFilter] = useState<AvailFilter>("all");
@@ -90,7 +89,6 @@ export default function TablesClient({
     });
   }, [initialTables, query, shapeFilter, availFilter]);
 
-  // ── Edit-form collapsible sections ────────────────────────────────────────
   const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     details: true,
     capacity: true,
@@ -100,7 +98,6 @@ export default function TablesClient({
   const toggleSection = (key: string) =>
     setOpenSections((s) => ({ ...s, [key]: !s[key] }));
 
-  // ── Sheet helpers ─────────────────────────────────────────────────────────
   const isSheetOpen = !!selected || isAdding;
 
   const openView = (table: Table) => {
@@ -126,7 +123,6 @@ export default function TablesClient({
     setFormError(null);
   };
 
-  // ── Actions ───────────────────────────────────────────────────────────────
   const handleSubmit = (formData: FormData) => {
     setFormError(null);
     startTransition(async () => {
@@ -164,7 +160,6 @@ export default function TablesClient({
   return (
     <div className="max-w-4xl space-y-4 px-4 py-4 sm:py-0 md:px-6">
 
-      {/* ── Header ── */}
       <div className="flex items-center justify-between gap-3">
         <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
           {initialTables.length} table{initialTables.length !== 1 ? "s" : ""}
@@ -182,10 +177,8 @@ export default function TablesClient({
         </Button>
       </div>
 
-      {/* ── Filter bar ── */}
       {initialTables.length > 0 && (
         <div className="space-y-2.5">
-          {/* Search */}
           <div className="flex h-11 items-center gap-2 rounded-xl border border-[#E6DFC8] bg-white px-3 transition-colors focus-within:border-[#5C4033]/40">
             <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
             <input
@@ -208,7 +201,6 @@ export default function TablesClient({
             )}
           </div>
 
-          {/* Chips */}
           <div className="flex flex-wrap items-center gap-1.5">
             <Chip active={shapeFilter === "all"} onClick={() => setShapeFilter("all")}>
               All shapes
@@ -251,7 +243,6 @@ export default function TablesClient({
         </div>
       )}
 
-      {/* ── Card List ── */}
       {initialTables.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
           <LayoutDashboard className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
@@ -280,7 +271,6 @@ export default function TablesClient({
               onClick={() => openView(table)}
               className="flex cursor-pointer items-center gap-3 rounded-2xl border border-[#E6DFC8] bg-white px-4 py-2.5 transition-all hover:border-[#5C4033]/30 hover:shadow-sm active:scale-[0.99]"
             >
-              {/* Shape icon */}
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F7F4EA] text-[#5C4033]">
                 {table.shape === "rect" ? (
                   <RectangleHorizontal className="h-4 w-4" />
@@ -289,7 +279,6 @@ export default function TablesClient({
                 )}
               </div>
 
-              {/* Text */}
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span className="shrink-0 rounded-md border border-[#E6DFC8] bg-[#F7F4EA] px-1.5 py-0.5 font-black text-[10px] text-[#5F624F] tabular-nums">
@@ -304,7 +293,6 @@ export default function TablesClient({
                 )}
               </div>
 
-              {/* Badges */}
               <div className="flex shrink-0 items-center gap-1.5">
                 <InfoBadge icon={<Users className="h-3 w-3" />}>
                   {table.max_capacity}
@@ -337,9 +325,6 @@ export default function TablesClient({
         </div>
       )}
 
-      {/* ══════════════════════════════
-          BOTTOM SHEET
-      ══════════════════════════════ */}
       <Sheet
         open={isSheetOpen}
         onOpenChange={(open) => {
@@ -355,7 +340,6 @@ export default function TablesClient({
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
-          {/* Sticky header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase">
               {isAdding ? "New Table" : isEditing ? "Edit Table" : (selected?.name ?? "")}
@@ -370,10 +354,8 @@ export default function TablesClient({
             )}
           </div>
 
-          {/* Scrollable body */}
           <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-5 py-5">
 
-            {/* ── VIEW MODE ── */}
             {!showForm && selected && (
               <div className="animate-in duration-200 fade-in sm:flex sm:flex-col sm:items-center">
                 <div className="w-full space-y-4 sm:max-w-sm">
@@ -425,7 +407,6 @@ export default function TablesClient({
               </div>
             )}
 
-            {/* ── EDIT / ADD FORM ── */}
             {showForm && (
               <form
                 id="table-form"
@@ -436,7 +417,6 @@ export default function TablesClient({
                   <input type="hidden" name="id" value={formDefault.id} />
                 )}
 
-                {/* Details */}
                 <Section
                   title="Details"
                   open={openSections.details}
@@ -467,7 +447,6 @@ export default function TablesClient({
                   </div>
                 </Section>
 
-                {/* Capacity & Availability */}
                 <Section
                   title="Capacity & Availability"
                   open={openSections.capacity}
@@ -494,7 +473,6 @@ export default function TablesClient({
                     </div>
                   </div>
 
-                  {/* Available toggle */}
                   <label className="flex cursor-pointer items-center justify-between gap-3 pt-1">
                     <span>
                       <span className="block font-black text-sm text-[#1F1F1A]">
@@ -517,7 +495,6 @@ export default function TablesClient({
                   </label>
                 </Section>
 
-                {/* Shape & Size */}
                 <Section
                   title="Shape & Size"
                   open={openSections.shape}
@@ -605,7 +582,6 @@ export default function TablesClient({
                   )}
                 </Section>
 
-                {/* Chair Arrangement — rectangular only */}
                 {shape === "rect" && (
                   <Section
                     title="Chair Arrangement"
@@ -686,10 +662,8 @@ export default function TablesClient({
             <div className="h-4" />
           </div>
 
-          {/* Sticky footer */}
           <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 p-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
 
-            {/* View mode */}
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3 sm:mx-auto sm:max-w-sm">
                 <Button
@@ -713,7 +687,6 @@ export default function TablesClient({
               </div>
             )}
 
-            {/* Edit / Add mode */}
             {showForm && (
               <div className="grid grid-cols-2 gap-3 sm:mx-auto sm:max-w-sm">
                 <Button
@@ -751,7 +724,6 @@ export default function TablesClient({
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function Chip({
   active,
@@ -846,7 +818,6 @@ function Section({
           )}
         />
       </button>
-      {/* Body stays mounted (hidden, not unmounted) so all fields submit. */}
       <div className={cn("space-y-4 p-4", !open && "hidden")}>{children}</div>
     </div>
   );
@@ -892,7 +863,6 @@ function ErrorBox({ message }: { message: string }) {
   );
 }
 
-// ── Pure formatting helpers ────────────────────────────────────────────────────
 
 function sizeText(t: Table): string {
   if (t.shape === "rect") {
@@ -901,7 +871,6 @@ function sizeText(t: Table): string {
   return t.diameter ? `${t.diameter} m ⌀` : "Not set";
 }
 
-/** Short label for the list-row chair badge. */
 function chairBadge(t: Table): string {
   if (t.shape !== "rect") return "Auto";
   const cl = t.chair_layout;
@@ -910,7 +879,6 @@ function chairBadge(t: Table): string {
   return `${cl.perSide ?? 0} per side`;
 }
 
-/** Full sentence for the view-sheet chair row. */
 function chairSummaryFull(t: Table): string {
   if (t.shape !== "rect") return "Auto";
   const cl = t.chair_layout;

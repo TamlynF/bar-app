@@ -68,8 +68,6 @@ function isScope (v: string): v is Scope {
   return v === 'type' || v === 'subtype'
 }
 
-// Booking-navigation title precedence for a taxonomy row (type or sub-type):
-// booking_card_title → title → name, using the first non-blank value.
 const pickTitle = (
   bookingCardTitle: string | null,
   title: string | null,
@@ -174,7 +172,6 @@ export default async function GroupedBookingPage ({
     is_fully_booked: (e.is_fully_booked as boolean) ?? false,
     seating_required: (e.seating_required as boolean) ?? false
   }))
-  // The whole group shares one booking form/page config (from the type or sub-type).
   const cfg = normalizeBookingConfig(header.bookingConfig)
   const tagline = cfg.tag_line || header.tagline
   const title = header.title
@@ -206,8 +203,6 @@ export default async function GroupedBookingPage ({
         }}
       />
 
-      {/* Dynamic theme — the shared booking image's dominant colour is sampled
-          client-side and bled across the page. Falls back to olive when absent. */}
       {cfg.booking_image_url && (
         <>
           <ImageThemer imageUrl={cfg.booking_image_url} />
@@ -221,7 +216,6 @@ export default async function GroupedBookingPage ({
       <PublicNav currentPath='/book/group' />
 
       <div className='relative z-10 mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-4 pb-4 sm:px-6 sm:pt-4 sm:pb-6 lg:px-8'>
-        {/* Header */}
         <div className='mb-4 flex max-h-[25vh] flex-col items-center text-center sm:mb-6'>
           {cfg.booking_image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -232,13 +226,11 @@ export default async function GroupedBookingPage ({
             />
           ) : (
             <div className='relative px-2 py-2 w-full max-h-[25vh]'>
-              {/* Soft gold glow behind the title */}
               <div
                 aria-hidden
                 className='top-0 left-1/2 absolute bg-[#FDCC4B]/10 blur-[80px] rounded-full w-105 h-60 -translate-x-1/2 pointer-events-none'
               />
 
-              {/* Brand lockup — small; the logo already lives in the nav */}
               <div className='inline-flex relative items-center gap-3 mb-2.5'>
                 <span aria-hidden className='bg-[#FDCC4B]/30 w-7 h-px' />
                 <Image
@@ -254,7 +246,6 @@ export default async function GroupedBookingPage ({
                 <span aria-hidden className='bg-[#FDCC4B]/30 w-7 h-px' />
               </div>
 
-              {/* The event is the hero */}
               <h1 className='relative drop-shadow-[0_8px_40px_rgba(253,204,75,0.15)] font-black text-[#FFF4CC] text-3xl sm:text-5xl uppercase leading-[0.95] tracking-tighter'>
                 {title}
               </h1>
@@ -269,7 +260,6 @@ export default async function GroupedBookingPage ({
           </div>
         </div>
 
-        {/* Event Badges */}
         {badges.length > 0 && (
           <div className='no-scrollbar -mx-4 mb-4 flex flex-row flex-wrap justify-center gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:mb-5 sm:gap-3 sm:overflow-visible sm:px-0'>
             {badges.map((badge, index) => (
@@ -289,7 +279,6 @@ export default async function GroupedBookingPage ({
           </div>
         )}
 
-        {/* Booking Form Card */}
         <div className='relative mb-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/3 p-6 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl sm:p-10'>
           <div className='pointer-events-none absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]' />
 
@@ -325,7 +314,6 @@ export default async function GroupedBookingPage ({
           </div>
         </div>
 
-        {/* Footer */}
         <div className='mt-auto mb-6 flex flex-col items-center gap-4 pt-8'>
           <div className='flex items-center gap-4 text-stone-800'>
             <div className='h-px w-6 bg-stone-800/50' />

@@ -27,15 +27,10 @@ export interface EventSummary {
   hostName: string;
   badgeClass: string | null;
   badgeLabel: string | null;
-  /** Per-person price (null when the event is free) — drives the payment rows. */
   paymentAmount: number | null;
-  /** Sum of expected booking totals (non-cancelled). */
   totalExpected: number;
-  /** Sum of amounts actually paid (non-cancelled). */
   totalPaid: number;
-  /** Present only for quiz-behaviour sub-categories. */
   quiz?: { status: string; count: number; total: number } | null;
-  /** Present only when the event requires seating — capacity buckets. */
   tableStats?: { capacity: number; total: number; assigned: number }[] | null;
 }
 
@@ -51,9 +46,6 @@ const STAT_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
-// ---- Compact event banner -------------------------------------------------
-// Collapsible event context with an inline facts row and an optional Tables
-// toggle that reveals the capacity buckets beneath it.
 function EventBanner({
   summary,
   tablesOpen,
@@ -70,7 +62,6 @@ function EventBanner({
     <div className="flex overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
       <div className="w-1.5 shrink-0 bg-[#5C4033]" />
       <div className="min-w-0 flex-1">
-        {/* Header */}
         <div
           className={cn(
             "flex items-center gap-2.5 bg-[#ECE4CE] px-4 py-3",
@@ -118,7 +109,6 @@ function EventBanner({
           </button>
         </div>
 
-        {/* Body — collapsible facts */}
         {open && (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 pt-3 pb-3.5">
             <Meta icon={<CalendarDays className="h-3.5 w-3.5" />}>{summary.dateLabel}</Meta>
@@ -166,7 +156,6 @@ function Meta({ icon, children }: { icon: React.ReactNode; children: React.React
   );
 }
 
-// ---- Table capacity buckets ----------------------------------------------
 function TableStats({ buckets }: { buckets: { capacity: number; total: number; assigned: number }[] }) {
   const assigned = buckets.reduce((a, b) => a + b.assigned, 0);
   const total = buckets.reduce((a, b) => a + b.total, 0);
@@ -204,7 +193,6 @@ function TableStats({ buckets }: { buckets: { capacity: number; total: number; a
   );
 }
 
-// ---- Compact status filter pill ------------------------------------------
 function StatPill({
   statusKey,
   label,
@@ -259,13 +247,10 @@ export default function BookingsSection({
   eventFilter,
 }: {
   bookings: GeneralBooking[];
-  /** Present when an event is selected — enables the interactive stats bar. */
   summary: EventSummary | null;
   type: string;
   subtype: string;
-  /** Status keys to pre-select in the filter (e.g. from ?status=confirmed). */
   initialStatuses?: string[];
-  /** Optional event selector — stacks above on mobile, shares the search row on sm+. */
   eventFilter?: React.ReactNode;
 }) {
   const seededStatuses = initialStatuses.map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -294,7 +279,6 @@ export default function BookingsSection({
     [bookings],
   );
 
-  // Status (multi-select) + search filtering driven by the stat pills / search.
   const filteredBookings = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     return bookings.filter(b => {
@@ -314,7 +298,6 @@ export default function BookingsSection({
 
   return (
     <>
-      {/* Event context — only when an event is selected */}
       {summary && (
         <div className="animate-in space-y-3 duration-300 fade-in slide-in-from-top-2">
           <EventBanner
@@ -326,8 +309,6 @@ export default function BookingsSection({
         </div>
       )}
 
-      {/* Event selector + Search + Filters toggle. On mobile the event selector
-          stacks above; on sm+ all three share one row. */}
       <div className="space-y-2.5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {eventFilter && <div className="sm:w-56 sm:shrink-0 lg:w-72">{eventFilter}</div>}
@@ -375,7 +356,6 @@ export default function BookingsSection({
           </div>
         </div>
 
-        {/* Status filter pills */}
         {showFilters && (
           <div className="no-scrollbar flex animate-in gap-2 overflow-x-auto px-0.5 pb-0.5 duration-200 fade-in slide-in-from-top-1">
             {statCounts.map(s => (
@@ -393,7 +373,6 @@ export default function BookingsSection({
         )}
       </div>
 
-      {/* Bookings count + clear */}
       <div className="flex items-center justify-between px-0.5">
         <span className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
           Bookings ({filteredBookings.length})
@@ -412,7 +391,6 @@ export default function BookingsSection({
         )}
       </div>
 
-      {/* Bookings list + master–detail */}
       <BookingList bookings={filteredBookings} showDate={!summary} type={type} subtype={subtype} />
     </>
   );

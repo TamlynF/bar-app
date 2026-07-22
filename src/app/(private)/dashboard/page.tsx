@@ -161,20 +161,16 @@ export default async function DashboardPage() {
   const venueSalesPromise = fetchVenueSales(supabase);
   const nowMs = new Date().getTime();
   const todayStr = new Date().toISOString().split("T")[0];
-  // 12-month horizon for the "missing quiz" deep-link's date-range filter.
   const twelveMonthsStr = new Date(
     new Date().getFullYear(),
     new Date().getMonth() + 12,
     new Date().getDate()
   ).toISOString().split("T")[0];
 
-  // Trend chart supports week/month/year views, so fetch from the start of last
-  // calendar year (covers "this year" vs "last year", and the shorter ranges).
   const trendFrom = new Date(Date.UTC(new Date().getUTCFullYear() - 1, 0, 1))
     .toISOString()
     .split("T")[0];
 
-  // ─── Data Fetching ────────────────────────────────────────────────────────
   const analytics = await analyticsPromise;
   const venueSales = await venueSalesPromise;
   
@@ -212,8 +208,6 @@ export default async function DashboardPage() {
       .eq("event_subtypes.behavior", "quiz"),
   ]);
 
-  // Confirmed bookings on active events that still owe money. The paid < total
-  // comparison isn't expressible in the PostgREST filter, so it's applied here.
   const unpaidCount = ((unpaidBookingsData ?? []) as { total_amount: number | null; paid_amount: number | null }[])
     .filter((b) => (b.paid_amount ?? 0) < (b.total_amount ?? 0)).length;
 
@@ -221,7 +215,6 @@ export default async function DashboardPage() {
     .from("band_booking_requests")
     .select("preferred_dates");
 
-  // Bookings trend (created_at + event taxonomy) for the weekly/monthly chart.
   const { data: trendRaw } = await supabase
     .from("bookings")
     .select("created_at, events!bookings_event_id_fkey!inner(event_types!inner(id, name), event_subtypes!inner(id, name))")
@@ -237,7 +230,6 @@ export default async function DashboardPage() {
     .neq("is_active", false)
     .order("date", { ascending: true })
     .limit(5);
-  //console.log("Raw upcoming events data:", JSON.stringify(rawUpcoming, null, 2), "Error:", upcomingError);
   if (upcomingError) console.error("Upcoming events error:", upcomingError);
   
   const upcomingEvents = (rawUpcoming ?? []) as unknown as UpcomingEvent[];
@@ -265,7 +257,6 @@ export default async function DashboardPage() {
       : Promise.resolve({ data: [] as { booking_id: number; table_id: number }[] }),
   ]);
 
-  // ─── Calculations ─────────────────────────────────────────────────────────
 
   const tableCapacityMap = new Map((tablesData ?? []).map(t => [t.id, t.max_capacity]));
   const bookingTableMap = new Map((tableMappings ?? []).map(m => [m.booking_id, m.table_id]));
@@ -449,7 +440,6 @@ export default async function DashboardPage() {
       return a.startTime.localeCompare(b.startTime); // ascending startTime
     });
 
-  // Map trend rows to the flat shape the client chart buckets/filters.
   type IdName = { id: number; name: string };
   type TrendEventRel = { event_types: IdName | IdName[]; event_subtypes: IdName | IdName[] };
   type TrendRaw = { created_at: string; events: TrendEventRel | TrendEventRel[] | null };
@@ -468,23 +458,17 @@ export default async function DashboardPage() {
     })
     .filter((b) => !!b.createdAt);
 
-  // Triage "Needs Action" segments — order + colour per the design.
   const actionItems: ActionItem[] = [
     { key: "unpaid", label: "Unpaid bookings", count: unpaidCount, href: "/event-bookings/unpaid", color: "bg-amber-700" },
     { key: "bands", label: "Bands pending", count: pendingBands ?? 0, href: "/event-bookings/general/music/__all__?status=new,reviewing", color: "bg-purple-700" },
     { key: "hires", label: "Private hires pending", count: pendingPrivate ?? 0, href: "/event-bookings/general/private/__all__?status=pending", color: "bg-blue-600" },
     { key: "enquiries", label: "Enquiries pending", count: pendingEnquiries ?? 0, href: "/requests/enquiries?status=pending", color: "bg-teal-600" },
     { key: "quizzes", label: "Missing quiz", count: quizzesMissingQuestions, href: `/event-setups/events?from=${todayStr}&to=${twelveMonthsStr}&quick=quiz,active`, color: "bg-green-700" },
-    //{ key: "saturdays", label: "Saturdays", count: openSaturdays, href: "/event-bookings/music-bookings", color: "bg-red-600" },    
-    //{ key: "seatable-waitlist", label: "Waitlist", count: seatableWaitlistCount, href: "/event-bookings/quiz-bookings?status=waitlisted", color: "bg-teal-600" },
   ];
 
-  // Everything upcoming (incl. tonight) lists together in "Coming Up"; tonight's
-  // event is flagged inside the row list (see EventRowListClient).
   const comingUp = allListItems;
 
 
-  // ─── Render ───────────────────────────────────────────────────────────────
 
   return (
     <div className="min-h-screen flex-1 bg-background pb-24">
@@ -496,20 +480,14 @@ export default async function DashboardPage() {
           </p>
         </header>
 
-        {/* TRIAGE: what's wrong — needs-action hero */}
         <NeedsActionHero items={actionItems} total={totalActions} />
 
-        {/* Bookings graph spans full width (like the needs-action hero); below it
-            Trends fills the wide left column and "at a Glance" + "Coming Up" stack
-            in the right column. Mobile stacks in source order. */}
         <div className="grid items-start gap-5 lg:grid-cols-[1.6fr_1fr]">
 
-          {/* Bookings trend — full width, matching the needs-action hero */}
           <div className="row-start-1 lg:col-span-2">
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
-          {/* SECTION: TRENDS — wide left column */}
           <section className="row-start-2 space-y-2 lg:col-start-1">
             <SectionLabel icon={BarChart3} label="Trends" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -539,7 +517,6 @@ export default async function DashboardPage() {
             </div>
           </section>
 
-          {/* Right column: this month "at a Glance", then "Coming Up" beneath it */}
           <div className="row-start-2 space-y-5 lg:col-start-2">
             <section className="space-y-2">
               <SectionLabel
@@ -574,7 +551,6 @@ export default async function DashboardPage() {
               </div>
             </section>
 
-            {/* Coming Up (incl. tonight) — directly under "at a Glance" */}
             <section className="space-y-2">
               <SectionLabel icon={CalendarDays} label="Coming Up" />
               {comingUp.length > 0 ? (
@@ -591,14 +567,12 @@ export default async function DashboardPage() {
             </section>
           </div>
 
-          {/* SECTION: VENUE SALES (actual Square takings — distinct from pre-booked revenue) */}
           <section className="space-y-2 lg:col-span-2">
             <SectionLabel icon={Wine} label="Venue Sales" />
             <VenueSalesSection data={venueSales} />
           </section>
         </div>
 
-        {/* Quick links */}
         <section className="space-y-2">
           <SectionLabel icon={Zap} label="Quick Links" />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -618,7 +592,6 @@ export default async function DashboardPage() {
 
 
 
-// ─── Shared Components ─────────────────────────────────────────────────────
 
 
 

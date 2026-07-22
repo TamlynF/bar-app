@@ -31,13 +31,6 @@ const SWATCH_HEX: Record<string, string> = {
   fuchsia: "#D946EF", slate: "#94A3B8", zinc: "#A1A1AA", stone: "#A8A29E",
 };
 
-/**
- * Full hex quad per colour key — `bg` (light fill), `text` (readable ink),
- * `border`, and `solid` (the saturated accent). Used by the Event Categories
- * redesign to drive category/sub-category tinting through CSS custom properties
- * (set via `style`, consumed via Tailwind arbitrary values) rather than the
- * static `badge`/`swatchClass` Tailwind classes above.
- */
 export type ColorHex = { bg: string; text: string; border: string; solid: string };
 
 const COLOR_HEX: Record<string, ColorHex> = {
@@ -63,7 +56,6 @@ const COLOR_HEX: Record<string, ColorHex> = {
   stone:   { bg: "#f5f5f4", text: "#44403c", border: "#e7e5e4", solid: "#a8a29e" },
 };
 
-/** Neutral cream/tan fallback used when a record has no colour set. */
 export const FALLBACK_COLOR_HEX: ColorHex = { bg: "#F7F4EA", text: "#5F624F", border: "#E6DFC8", solid: "#E6DFC8" };
 
 export function colorHexFromKey(color: string | null | undefined): ColorHex {

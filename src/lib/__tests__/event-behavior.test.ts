@@ -55,14 +55,11 @@ describe("isEventBehavior", () => {
   });
 
   it("rejects legacy names, casing variants and non-strings", () => {
-    // legacy type/subtype names that used to drive logic
     expect(isEventBehavior("games")).toBe(false);
     expect(isEventBehavior("band")).toBe(false);
     expect(isEventBehavior("music")).toBe(false);
-    // casing is significant
     expect(isEventBehavior("Quiz")).toBe(false);
     expect(isEventBehavior("QUIZ")).toBe(false);
-    // empty / nullish / wrong type
     expect(isEventBehavior("")).toBe(false);
     expect(isEventBehavior(null)).toBe(false);
     expect(isEventBehavior(undefined)).toBe(false);

@@ -55,7 +55,6 @@ export default async function BingoBookingsPage({
   const type = "games";
   const subType = "bingo";
 
-  // 1. Fetch bingo events for the filter dropdown
   const bingoEventsRaw = await getBingoEventList();
   const bingoEvents = bingoEventsRaw.map((e) => ({
     id: String(e.id),
@@ -63,20 +62,16 @@ export default async function BingoBookingsPage({
     title: (e as { title?: string | null }).title ?? null,
   }));
 
-  // 2. Fetch current bookings
   const allBookings = await getBingoBookings(selectedDate || null, selectedEventId, filterStatus ?? null, filterPaymentStatus ?? null, filterFromDate ?? null, filterMinTotal ?? null);
   const bingoBookings = allBookings as BingoBooking[];
 
-  // 3. Fetch all physical tables
   const allTablesRaw = await getAvailableTables();
   const allTables = allTablesRaw || [];
 
-  // 4. Fetch event details for selected date/event
   const eventDetails = selectedDate
     ? await getEventDetails(selectedDate, type, subType, selectedEventId)
     : null;
 
-  // 5. Payment totals for selected event
   const activeBookings = bingoBookings.filter((b) => b.status !== "cancelled");
   const totalPaid = activeBookings.reduce((sum, b) => sum + (b.paid_amount ?? 0), 0);
   const totalOutstanding = activeBookings.reduce(
@@ -84,7 +79,6 @@ export default async function BingoBookingsPage({
     0
   );
 
-  // 6. Table status by capacity
   let tableStatusByCapacity: { capacity: number; total: number; assigned: number }[] = [];
 
   if (selectedDate) {
@@ -107,25 +101,20 @@ export default async function BingoBookingsPage({
 
   return (
     <div className="relative min-h-screen flex-1 overflow-hidden bg-background">
-      {/* Visual background blurs */}
       <div className="pointer-events-none fixed top-0 right-0 -z-10 h-96 w-96 rounded-full bg-primary/5 blur-[120px]" />
       <div className="pointer-events-none fixed bottom-0 left-0 -z-10 h-80 w-80 rounded-full bg-blue-500/5 blur-[100px]" />
 
       <div className="mx-auto max-w-7xl space-y-5 px-3 py-3 text-left sm:py-0 md:px-8">
 
-        {/* Event filter dropdown */}
         <div className="w-full rounded-2xl border border-[#E6DFC8] bg-white p-1.5 shadow-sm">
           <QuizEventFilter events={bingoEvents} selectedDate={selectedDate} />
         </div>
 
-        {/* Event Summary / Empty State */}
         {selectedDate ? (
           <div className="animate-in overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white shadow-sm duration-500 fade-in slide-in-from-top-2">
 
-            {/* Main summary */}
             <div className="space-y-3 p-4">
 
-              {/* sm+: Time · Host · Paid · Outstanding evenly spaced with labels */}
               <div className="hidden items-start justify-evenly gap-4 sm:flex">
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-[10px] leading-none font-bold tracking-wide text-[#5F624F]/50 uppercase">Time</span>
@@ -161,10 +150,8 @@ export default async function BingoBookingsPage({
                 </div>
               </div>
 
-              {/* Divider — sm+ only */}
               <div className="hidden border-t border-[#E6DFC8] sm:block" />
 
-              {/* Table Status */}
               <div className="flex flex-col gap-2">
                 <span className="text-[10px] leading-none font-bold tracking-wide text-[#5F624F]/50 uppercase">Table Status</span>
                 <div className="flex flex-wrap gap-2">
@@ -190,7 +177,6 @@ export default async function BingoBookingsPage({
 
             </div>
 
-            {/* Expandable event details */}
             <details className="group border-t border-[#E6DFC8]">
               <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 transition-colors select-none hover:bg-[#F7F4EA]">
                 <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Event Details</span>
@@ -198,7 +184,6 @@ export default async function BingoBookingsPage({
               </summary>
               <div className="space-y-2.5 border-t border-[#E6DFC8]/60 px-4 pb-4">
 
-                {/* Mobile-only: Time + Host + Paid + Outstanding */}
                 <div className="space-y-2.5 border-b border-[#E6DFC8] pb-2.5 sm:hidden">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5">
@@ -228,7 +213,6 @@ export default async function BingoBookingsPage({
                   </div>
                 </div>
 
-                {/* Title — all sizes */}
                 <div>
                   <p className="mb-0.5 text-[10px] font-bold tracking-wide text-[#5F624F]/50 uppercase">Title</p>
                   <p className="text-sm font-bold text-[#1F1F1A]">{eventDetails?.title || "—"}</p>
@@ -269,7 +253,6 @@ export default async function BingoBookingsPage({
           </div>
         )}
 
-        {/* Booking list */}
         <div className="space-y-3">
           <Suspense fallback={
             <div className="space-y-2.5">

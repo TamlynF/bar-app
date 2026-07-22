@@ -24,13 +24,11 @@ export default function TonightCard({
 
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-[#E6DFC8] bg-white p-3.5 shadow-sm">
-      {/* Time block */}
       <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[#5C4033] leading-none text-white">
         <span className="font-black text-xs tracking-wide tabular-nums">{start ?? "TBC"}</span>
         {end && <span className="mt-0.5 text-[9px] font-bold text-white/60 tabular-nums">{end}</span>}
       </div>
 
-      {/* Body */}
       <div className="min-w-0 flex-1">
         <div className="truncate font-black text-[15px] tracking-tight text-[#1F1F1A] uppercase">
           {event.title}
@@ -46,7 +44,6 @@ export default function TonightCard({
         )}
       </div>
 
-      {/* Open */}
       <Link
         href={event.href}
         className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-[#5C4033] px-4 font-black text-[11px] tracking-wide text-white uppercase transition-colors hover:bg-[#5C4033]/85"

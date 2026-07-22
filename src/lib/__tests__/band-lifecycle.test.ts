@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { bandLifecycleStages, type BandLifecycleInput, type BandLifecycleRequest } from "../band-lifecycle";
 
-/** A booked request whose event sits on 22 May, 22:00–00:00 — the common case. */
 const booked = (overrides: Partial<BandLifecycleInput> = {}): BandLifecycleInput => ({
   status: "booked",
   eventId: 42,
@@ -12,16 +11,13 @@ const booked = (overrides: Partial<BandLifecycleInput> = {}): BandLifecycleInput
   ...overrides,
 });
 
-/** The same, as a board entry. */
 const req = (id: string, overrides: Partial<BandLifecycleInput> = {}): BandLifecycleRequest => ({
   id,
   ...booked(overrides),
 });
 
-/** Local-time instant, matching how the helper parses the DB's date strings. */
 const at = (iso: string) => new Date(iso);
 
-/** The stage of a request considered on its own — no siblings to compete with. */
 const stageOf = (input: BandLifecycleInput, now: Date) =>
   bandLifecycleStages([{ id: "solo", ...input }], now).get("solo") ?? null;
 
@@ -45,8 +41,6 @@ describe("bandLifecycleStages", () => {
   });
 
   describe("overnight slots land on the right side of midnight", () => {
-    // The regression this guards: comparing the bare end time 00:00 against the
-    // wall clock marks a gig booked for tonight as finished from midnight on.
     it("is upcoming at midday on the day of the gig", () => {
       expect(stageOf(booked(), at("2026-05-22T12:00:00"))).toBe("upcoming");
     });
@@ -69,8 +63,6 @@ describe("bandLifecycleStages", () => {
   });
 
   describe("times are only compared against the clock once the date arrives", () => {
-    // A future gig must not drop off the badge purely because of the hour it's
-    // viewed at — 22:00 next Friday is still upcoming when read at 23:00 tonight.
     it("stays upcoming when viewed later in the evening than the gig's start time", () => {
       expect(stageOf(booked({ date: "2026-05-29" }), at("2026-05-22T23:00:00"))).toBe("upcoming");
     });
@@ -91,8 +83,6 @@ describe("bandLifecycleStages", () => {
   });
 
   describe("a past event still reads completed once deactivated", () => {
-    // Whether the event was later pulled off the schedule says nothing about
-    // whether the night happened.
     it("is completed even when the linked event is inactive", () => {
       expect(stageOf(booked({ eventIsActive: false }), at("2026-06-01T12:00:00"))).toBe("completed");
     });
@@ -196,9 +186,6 @@ describe("bandLifecycleStages", () => {
       expect(bandLifecycleStages([], now).size).toBe(0);
     });
 
-    // A tie is only reachable via two events at the identical instant, which the
-    // clash check is meant to prevent — but the badge must still land on exactly
-    // one card rather than both.
     it("gives a dead heat to a single request", () => {
       const stages = bandLifecycleStages([req("a", { date: "2026-05-24" }), req("b", { date: "2026-05-24" })], now);
       expect([...stages.values()]).toEqual(["upcoming"]);

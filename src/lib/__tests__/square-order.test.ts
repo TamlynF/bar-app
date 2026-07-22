@@ -93,7 +93,6 @@ describe("buildEventOrder", () => {
     expect(line.quantity).toBe("3");
     expect(line.basePriceMoney?.amount).toBe(BigInt(1500));
     expect(line.basePriceMoney?.currency).toBe("GBP");
-    // Guards against passing an already-multiplied total as the per-unit price.
     expect(line.basePriceMoney?.amount).not.toBe(BigInt(4500));
   });
 

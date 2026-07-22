@@ -197,7 +197,6 @@ describe("rotatedRectCorners", () => {
     expect(rotatedRectCorners(0, 0, 2, 1, 0)).toEqual(rectCorners(0, 0, 2, 1));
   });
   it("rotates a 2x1 rect 90° about its centre", () => {
-    // centre (1, 0.5); corners swing to a 1x2 footprint around it.
     const c = rotatedRectCorners(0, 0, 2, 1, 90);
     const xs = c.map((p) => p.x).sort((a, b) => a - b);
     const ys = c.map((p) => p.y).sort((a, b) => a - b);
@@ -211,7 +210,6 @@ describe("rotatedRectCorners", () => {
 describe("doorClearancePolygon", () => {
   it("sweeps downward for a door facing 180°", () => {
     const poly = doorClearancePolygon({ x: 5, y: 0 }, 180, 1, 1);
-    // Opening spans x in [4.5, 5.5] at y=0, clearance extends to y=1.
     const xs = poly.map((p) => p.x).sort((a, b) => a - b);
     const ys = poly.map((p) => p.y).sort((a, b) => a - b);
     expect(xs[0]).toBeCloseTo(4.5);
@@ -240,7 +238,6 @@ describe("benchSeatPositions", () => {
     const pts = benchSeatPositions(0, 0, 3, 0.5, 0, 3);
     expect(pts).toHaveLength(3);
     expect(pts.map((p) => p.x)).toEqual([0.5, 1.5, 2.5]);
-    // facing up (0°) → seats on the top edge (y = 0)
     expect(pts.every((p) => p.y === 0)).toBe(true);
   });
   it("returns nothing for zero seats", () => {

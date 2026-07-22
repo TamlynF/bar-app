@@ -12,15 +12,7 @@ import { SectionHeading } from "@/components/editorial/section-heading";
 import { EventCta } from "@/components/editorial/event-cta";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
 
-/**
- * Home-page "What's On" — the After Dark schedule: a vertical list of nights
- * that light up to the event's own colour on hover, each with a date chip, a
- * type icon, the title (+ Sold Out flag) and the shared booking CTA.
- *
- * The soonest event is featured in the hero, so this list shows the rest.
- */
 
-/** A sign-like icon element for an event, picked from its subtype/behaviour. */
 function eventIcon(event: SerializedEvent, className: string) {
   const key = (event.subType ?? "").toLowerCase();
   if (key.includes("karaoke")) return <Mic2 className={className} />;
@@ -83,7 +75,6 @@ function ScheduleRow({
       className="ad-row ad-rise flex items-center gap-3 rounded-3xl border border-hairline bg-canvas-2 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5"
       style={{ "--ev-c": event.color, "--i": index } as React.CSSProperties}
     >
-      {/* Date */}
       <div className="w-11 shrink-0 text-center">
         <span className="block font-black text-[9px] tracking-widest text-stone-400 uppercase">
           {format(dateObj, "EEE")}
@@ -93,7 +84,6 @@ function ScheduleRow({
         </span>
       </div>
 
-      {/* Type icon */}
       <div
         className="ad-kind hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border sm:flex"
         aria-hidden="true"
@@ -101,7 +91,6 @@ function ScheduleRow({
         {eventIcon(event, "w-5 h-5")}
       </div>
 
-      {/* Body */}
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
           <h3
@@ -123,14 +112,12 @@ function ScheduleRow({
         )}
       </div>
 
-      {/* Time */}
       {timeLabel && (
         <span className="hidden shrink-0 text-right text-sm font-bold text-ink tabular-nums sm:block">
           {timeLabel}
         </span>
       )}
 
-      {/* CTA */}
       <EventCta event={event} />
     </li>
   );

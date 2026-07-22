@@ -3,17 +3,6 @@
 import { useState } from "react";
 import { Play, ExternalLink } from "lucide-react";
 
-/**
- * Lazy "facade" video player: shows a lightweight play tile and only mounts the
- * heavy player once clicked — keeping pages fast (a YouTube embed can pull
- * 1–2MB of third-party scripts). Theme-neutral (dark tile + white control) so
- * it works on both the public olive/gold and admin espresso/cream surfaces.
- *
- * Handles three url kinds automatically:
- *  - YouTube link  → inline iframe embed
- *  - direct video file (e.g. Supabase Storage mp4) → inline <video>
- *  - anything else (vimeo/social/etc.) → external-link tile (can't embed)
- */
 function youTubeId(url: string): string | null {
   const m = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/
@@ -38,7 +27,6 @@ export function VideoFacade({
   const ytId = youTubeId(url);
   const embeddable = Boolean(ytId) || isVideoFile(url);
 
-  // Non-embeddable (vimeo/social/etc.) — keep it a link, don't try to play inline.
   if (!embeddable) {
     return (
       <a
@@ -80,7 +68,6 @@ export function VideoFacade({
       aria-label={`Play ${title}`}
       className={`group relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#1F1F1A] transition-transform active:scale-[0.99] ${className}`}
     >
-      {/* Poster: YouTube thumbnail, or the video's first frame for direct files. */}
       {ytId ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
@@ -100,7 +87,6 @@ export function VideoFacade({
           className="pointer-events-none absolute inset-0 h-full w-full object-cover"
         />
       )}
-      {/* Dim so the white play control stays legible over any poster. */}
       <span className="absolute inset-0 bg-black/25 transition-colors group-hover:bg-black/15" />
       <span className="relative grid h-14 w-14 place-items-center rounded-full bg-white/90 text-[#1F1F1A] transition-transform group-hover:scale-110">
         <Play className="ml-0.5 h-5 w-5" fill="currentColor" aria-hidden="true" />

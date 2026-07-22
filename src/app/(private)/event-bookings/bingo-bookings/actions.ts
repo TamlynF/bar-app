@@ -114,7 +114,6 @@ export async function updateBingoBookingStatus(id: string, status: string) {
   const eventId = bookingRow?.event_id as number | null;
   const wantConfirmed = status.toLowerCase() === "confirmed";
 
-  // Confirm only if a table can be mapped (seated events). Plan before writing.
   let tableToAssign = null;
   if (wantConfirmed && eventId != null) {
     const plan = await planConfirmSeating(supabase, {
@@ -142,7 +141,6 @@ export async function updateBingoBookingStatus(id: string, status: string) {
       });
     }
   } else {
-    // Rule 3c: moving away from `confirmed` frees the booking's table.
     await clearMappingOnStatusChange(supabase, id);
   }
   if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
@@ -164,7 +162,6 @@ export async function updateBingoBookingDetails(
 ) {
   const supabase = await createClient();
 
-  // Capture the pre-edit size + status + event (needed for downsize relocation).
   const { data: prev } = await supabase
     .from("bookings")
     .select("group_size, status, event_id")
@@ -182,8 +179,6 @@ export async function updateBingoBookingDetails(
     .eq("id", id);
   if (error) throw new Error("Failed to update booking");
 
-  // Reconcile the table assignment through the shared module
-  // (3c clear / 3d explicit pick / confirm-needs-a-table / downsize relocate).
   const newSize = updates.group_size ?? oldSize;
   const finalStatus = (updates.status ?? (prev?.status as string) ?? "").toLowerCase();
   const result = await reconcileSeatedBookingTable(supabase, {
@@ -227,7 +222,6 @@ export async function refundBingoBooking(id: string) {
 
   if (!booking) throw new Error("Booking not found");
 
-  // Attempt Square refund if we have a payment ID
   if (booking.square_payment_id) {
     try {
       const { randomUUID } = await import("crypto");

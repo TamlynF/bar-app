@@ -1,14 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-/**
- * Music Acts master file helpers — the single source of truth for a band/artist,
- * shared by the public band-request action (which populates it on submission),
- * the admin band card (which syncs edits back to it), and the Settings › Music
- * Acts CRUD page.
- *
- * A returning act is matched by its contact (email) + group name so re-applying
- * updates the same record rather than spawning a duplicate.
- */
 
 export type SocialLinks = {
   instagram?: string;
@@ -17,7 +8,6 @@ export type SocialLinks = {
   tiktok?: string;
 };
 
-/** Row shape of `public.music_acts` (hand-written — the project has no generated types). */
 export interface MusicActRow {
   id: string;
   group_name: string;
@@ -44,7 +34,6 @@ export interface MusicActRow {
   created_by: number | null;
 }
 
-/** The subset of act fields shared with (and synced from) a band request. */
 export interface BandSharedActFields {
   group_name: string;
   type?: string | null;
@@ -55,11 +44,6 @@ export interface BandSharedActFields {
   video_descriptions?: string[] | null;
 }
 
-/**
- * Find a contact by email (the column is UNIQUE) or create one. Returns the
- * contact id, or null if we couldn't resolve/create one (never throws — the
- * band flow should still record the request even if the contact link fails).
- */
 export async function upsertContactByEmail(
   supabase: SupabaseClient,
   contact: { booker_name?: string | null; email: string; phone_no?: string | null },
@@ -94,7 +78,6 @@ export async function upsertContactByEmail(
   return created.id as number;
 }
 
-/** Only the fields worth carrying onto the master; blanks dropped. */
 function actPayloadFromShared(fields: BandSharedActFields) {
   return {
     group_name: fields.group_name?.trim() || "Unnamed act",
@@ -107,11 +90,6 @@ function actPayloadFromShared(fields: BandSharedActFields) {
   };
 }
 
-/**
- * Find-or-create the master act for a band request. Matches an existing act by
- * contact + case-insensitive group name; on a hit it refreshes the shared
- * fields, otherwise it inserts a new act. Returns the act id (or null on error).
- */
 export async function upsertMusicActFromBand(
   supabase: SupabaseClient,
   args: BandSharedActFields & { contactId: number | null },
@@ -119,7 +97,6 @@ export async function upsertMusicActFromBand(
 ): Promise<string | null> {
   const payload = actPayloadFromShared(args);
 
-  // Match a returning act: same contact, same group name (case-insensitive).
   let existingId: string | null = null;
   if (args.contactId != null) {
     const { data: match } = await supabase
@@ -166,10 +143,6 @@ export async function upsertMusicActFromBand(
   return created.id as string;
 }
 
-/**
- * Push a band request's edited shared fields onto an already-linked master act.
- * Also carries the request's bank details, which live on both records.
- */
 export async function syncMusicActFields(
   supabase: SupabaseClient,
   actId: string,

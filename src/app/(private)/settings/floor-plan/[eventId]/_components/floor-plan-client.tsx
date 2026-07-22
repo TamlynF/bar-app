@@ -112,7 +112,6 @@ export default function FloorPlanClient({
   const saved = savedLayout ?? null;
   const router = useRouter();
 
-  // ── Inputs ──
   const [chairZone, setChairZone] = useState<number>(saved?.settings?.chairZone ?? 0.5);
   const [aisleWidth, setAisleWidth] = useState<number>(saved?.settings?.aisleWidth ?? MIN_AISLE);
   const [mustSee, setMustSee] = useState<string[]>(saved?.settings?.mustSee ?? []);
@@ -135,7 +134,6 @@ export default function FloorPlanClient({
   const [showPool, setShowPool] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isMutating, startMutate] = useTransition();
-  // Bumped when a drag finishes, to trigger the "fill freed space" check.
   const [autoFillTick, setAutoFillTick] = useState(0);
 
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -143,7 +141,6 @@ export default function FloorPlanClient({
 
   const markDirty = () => setDirty(true);
 
-  // ── Derived inputs ──
   const focals = useMemo(() => focalPointsFrom(fixtures), [fixtures]);
   const blockers = useMemo(() => buildBlockers(obstacles, fixtures, features), [obstacles, fixtures, features]);
   const benchSeats = useMemo(
@@ -170,7 +167,6 @@ export default function FloorPlanClient({
     [room, blockers, focals, tablesWithChairs, availableCount, benchSeats, chairZone, aisleWidth, mustSee, overrides]
   );
 
-  // ── Viewport (metres) — encompass room + all geometry ──
   const view = useMemo(() => {
     const pts: Point[] = [{ x: 0, y: 0 }];
     if (room) pts.push(...room.points, { x: room.width, y: room.length });
@@ -185,7 +181,6 @@ export default function FloorPlanClient({
 
   const fontSize = Math.min(Math.max(Math.min(view.width, view.length) * 0.035, 0.16), 0.45);
 
-  // ── Chair edits ──
   const adjustChairs = (mappingId: number, delta: number) => {
     setTableChairs((prev) => ({ ...prev, [mappingId]: Math.max(0, (prev[mappingId] ?? 0) + delta) }));
     markDirty();
@@ -200,7 +195,6 @@ export default function FloorPlanClient({
     markDirty();
   };
 
-  // ── Manual nudge ──
   const eventToWorld = (e: React.PointerEvent): Point => {
     const el = svgRef.current;
     if (!el) return { x: 0, y: 0 };
@@ -239,7 +233,6 @@ export default function FloorPlanClient({
     const ny = round(clamp(w.y - d.grabDY, 0, view.length));
     const group = groupOf(d.mappingId);
     if (group && group.length > 1) {
-      // Move the whole attached group rigidly by the same delta.
       const cur = currentPos(d.mappingId);
       const dx = nx - cur.x;
       const dy = ny - cur.y;
@@ -267,9 +260,7 @@ export default function FloorPlanClient({
       try {
         svgRef.current?.releasePointerCapture(e.pointerId);
       } catch {
-        /* already released */
       }
-      // The move may have opened room for another table — check after this gesture.
       setAutoFillTick((t) => t + 1);
     }
   };
@@ -295,13 +286,11 @@ export default function FloorPlanClient({
     toast.success("Layout re-packed from current settings.");
   };
 
-  // ── Attach / detach tables ──
   const attachSelected = () => {
     if (selectedId == null) return;
     const me = currentPos(selectedId);
     const others = result.placements.filter((p) => p.mappingId !== selectedId);
     if (others.length === 0) return toast.info("No other table to attach to.");
-    // Nearest other table by centre distance.
     let nearest = others[0];
     let best = Infinity;
     for (const p of others) {
@@ -334,7 +323,6 @@ export default function FloorPlanClient({
     markDirty();
   };
 
-  // ── Table pool (add / remove available tables) ──
   const emptyCells = Math.max(0, result.cellsAvailable - result.placements.length);
   const addableTables = availableTables.filter((t) => !t.inUse);
 
@@ -373,11 +361,6 @@ export default function FloorPlanClient({
     });
   };
 
-  // ── Auto-fill freed space after a manual move ──
-  // `cellsAvailable` is a fixed theatre-grid count, so it can't tell when nudging
-  // tables together opens real space. Instead, look for a grid cell whose footprint
-  // clears every *current* table: when a drag frees one (and a table is available),
-  // drop the next available table into that gap and refresh.
   const cellSize = useMemo(() => {
     const spans = tablesWithChairs.map((t) => tableSpan(t));
     const maxSpan = spans.length ? Math.max(...spans) : 1.1;
@@ -409,7 +392,6 @@ export default function FloorPlanClient({
         toast.error(res.error);
         return;
       }
-      // Pin the new table into the gap that opened, then refresh to load it.
       if (res?.mappingId != null) {
         setOverrides((prev) => ({ ...prev, [res.mappingId as number]: { x: cell.x, y: cell.y, rotation: 0 } }));
       }
@@ -417,11 +399,9 @@ export default function FloorPlanClient({
       toast.success("Added the next table to the freed space.");
       router.refresh();
     });
-    // Runs once per completed drag; the other inputs are read fresh inside.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoFillTick]);
 
-  // ── Save ──
   const handleSave = () => {
     const layout = {
       version: 1,
@@ -461,10 +441,6 @@ export default function FloorPlanClient({
   const selectedTable = selectedId != null ? tablesWithChairs.find((t) => t.mappingId === selectedId) ?? null : null;
   const placementsById = useMemo(() => new Map(result.placements.map((p) => [p.mappingId, p])), [result.placements]);
 
-  // ── Per-table visuals + bench docking ──
-  // Chairs are computed once here; any chair sitting over a venue bench is
-  // removed (the bench seats those guests), and that bench is marked "used" so
-  // its seats aren't double-counted in the totals.
   const tableVisuals = useMemo(() => {
     const benchBoxes = features
       .filter((f) => f.kind === "bench")
@@ -513,7 +489,6 @@ export default function FloorPlanClient({
 
   return (
     <div className="max-w-5xl space-y-4 p-2 sm:p-4">
-      {/* ── Header ── */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <Link
@@ -555,7 +530,6 @@ export default function FloorPlanClient({
         </div>
       ) : (
         <>
-          {/* ── Controls ── */}
           <div className="space-y-4 rounded-2xl border border-[#E6DFC8] bg-white p-3">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <NumField id="chair-zone" label="Chair zone (m)" value={chairZone} min={0} step={0.1} onChange={(v) => { setChairZone(v); markDirty(); }} />
@@ -585,7 +559,6 @@ export default function FloorPlanClient({
               </div>
             </div>
 
-            {/* Must-see focal multi-select */}
             <div className="space-y-2">
               <p className="flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                 <Eye className="h-3.5 w-3.5" /> Must be visible from every seat
@@ -614,7 +587,6 @@ export default function FloorPlanClient({
               )}
             </div>
 
-            {/* Selected table chair control */}
             <div className="rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
               {selectedTable ? (
                 <div className="space-y-3">
@@ -683,7 +655,6 @@ export default function FloorPlanClient({
               )}
             </div>
 
-            {/* Table pool — add available tables / fill empty space */}
             <div className="space-y-3 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
@@ -735,7 +706,6 @@ export default function FloorPlanClient({
             </div>
           </div>
 
-          {/* ── Stats ── */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <StatBadge label="Tables placed" value={`${result.stats.tablesPlaced} / ${tables.length}`} sub={`${availableCount} available`} />
             <StatBadge
@@ -757,7 +727,6 @@ export default function FloorPlanClient({
             />
           </div>
 
-          {/* ── Warnings ── */}
           {result.warnings.length > 0 && (
             <div className="space-y-1.5">
               {result.warnings.map((w, i) => (
@@ -775,7 +744,6 @@ export default function FloorPlanClient({
             </div>
           )}
 
-          {/* ── Plan ── */}
           <div
             className="aspect-(--fp-ar) w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-[#FFFDF7]"
             style={{ "--fp-ar": `${view.width} / ${view.length}` } as React.CSSProperties}
@@ -788,7 +756,6 @@ export default function FloorPlanClient({
               onPointerUp={onSvgPointerUp}
               onPointerCancel={onSvgPointerUp}
             >
-              {/* Room */}
               <polygon
                 points={room!.points.map((p) => `${p.x},${p.y}`).join(" ")}
                 fill="#5C4033"
@@ -799,7 +766,6 @@ export default function FloorPlanClient({
                 vectorEffect="non-scaling-stroke"
               />
 
-              {/* Obstacles */}
               {obstacles.map((o) => {
                 const cx = o.x + o.width / 2;
                 const cy = o.y + o.length / 2;
@@ -818,7 +784,6 @@ export default function FloorPlanClient({
                 );
               })}
 
-              {/* Fixtures */}
               {fixtures.map((f) => {
                 const cx = f.x + f.width / 2;
                 const cy = f.y + f.length / 2;
@@ -845,7 +810,6 @@ export default function FloorPlanClient({
                 );
               })}
 
-              {/* Features (benches / doors / windows) */}
               {features.map((f) => {
                 const cx = f.x + f.width / 2;
                 const cy = f.y + f.length / 2;
@@ -867,7 +831,6 @@ export default function FloorPlanClient({
                 );
               })}
 
-              {/* Attached-table group outlines */}
               {attachGroups.map((g, gi) => {
                 const members = g.map((id) => placementsById.get(id)).filter(Boolean) as typeof result.placements;
                 if (members.length < 2) return null;
@@ -899,12 +862,10 @@ export default function FloorPlanClient({
                 );
               })}
 
-              {/* Tables */}
               {result.placements.map((p) => {
                 const fill = p.worstRating ? RATING_FILL[p.worstRating] : "#5C4033";
                 const isSel = selectedId === p.mappingId;
                 const transform = p.rotation ? `rotate(${p.rotation} ${p.x} ${p.y})` : undefined;
-                // Real table extents — round renders a circle, rect renders w × l.
                 const w = p.shape === "round" ? p.diameter : p.width;
                 const l = p.shape === "round" ? p.diameter : p.length;
                 const ringR = Math.max(w, l) / 2 + 0.18;
@@ -914,15 +875,12 @@ export default function FloorPlanClient({
                 return (
                   <g key={p.mappingId} className="cursor-move" onPointerDown={(e) => startDrag(e, p.mappingId)}>
                     <g transform={transform}>
-                      {/* benches (bench layout) */}
                       {benches.map((b, i) => (
                         <rect key={`b${i}`} x={b.x} y={b.y} width={b.width} height={b.length} rx={0.06} fill="#8B6F47" fillOpacity={0.9} stroke="#5C4033" strokeWidth={1} vectorEffect="non-scaling-stroke" />
                       ))}
-                      {/* chairs */}
                       {chairs.map((c, i) => (
                         <circle key={`c${i}`} cx={c.x} cy={c.y} r={0.13} fill={c.extra ? "#FDCC4B" : "#5C4033"} stroke="#FFFDF7" strokeWidth={1} vectorEffect="non-scaling-stroke" />
                       ))}
-                      {/* table body */}
                       {p.shape === "rect" ? (
                         <rect x={p.x - w / 2} y={p.y - l / 2} width={w} height={l} rx={0.06} fill={fill} fillOpacity={0.9} stroke={isSel ? "#1F1F1A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
                       ) : (
@@ -932,7 +890,6 @@ export default function FloorPlanClient({
                         {p.baseSeats + p.extraChairs}
                       </text>
                     </g>
-                    {/* must-see violation ring (unrotated, around the table centre) */}
                     {p.mustSeeViolation && (
                       <circle cx={p.x} cy={p.y} r={ringR} fill="none" stroke="#DC2626" strokeWidth={2.5} strokeDasharray="3 2" vectorEffect="non-scaling-stroke" />
                     )}
@@ -942,7 +899,6 @@ export default function FloorPlanClient({
             </svg>
           </div>
 
-          {/* ── Legend ── */}
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-[#5F624F]">
             <span className="flex items-center gap-1.5"><Dot color="#16A34A" /> Good view</span>
             <span className="flex items-center gap-1.5"><Dot color="#D97706" /> Acceptable</span>
@@ -953,7 +909,6 @@ export default function FloorPlanClient({
             <span className="flex items-center gap-1.5"><Dot color="#1B4332" /> Attached / docked bench</span>
           </div>
 
-          {/* Unplaced tables */}
           {result.unplaced.length > 0 && (
             <p className="text-[11px] font-bold text-amber-700">
               Unplaced: {result.unplaced.map((t) => t.name).join(", ")}
@@ -965,7 +920,6 @@ export default function FloorPlanClient({
   );
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
 
 function StatBadge({ label, value, sub, tone = "neutral" }: { label: string; value: string; sub?: string; tone?: "neutral" | "good" | "bad" }) {
   return (

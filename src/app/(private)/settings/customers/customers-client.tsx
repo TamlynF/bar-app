@@ -107,7 +107,6 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
   return (
     <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
 
-      {/* Customer List */}
       {initialContacts.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
           <Users className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
@@ -158,7 +157,6 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
                     onClick={() => openView(contact)}
                     className="flex cursor-pointer items-center gap-2 px-3 py-3 transition-colors hover:bg-[#F7F4EA]/50 active:scale-[0.99] sm:gap-3 sm:px-4"
                   >
-                    {/* Mobile layout */}
                     <div className="min-w-0 flex-1 sm:hidden">
                       <div className="flex items-center gap-2">
                         <p className="min-w-0 flex-1 truncate font-black text-xs leading-snug text-[#1F1F1A]">
@@ -177,7 +175,6 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
                       </div>
                     </div>
 
-                    {/* Desktop layout */}
                     <div className="hidden min-w-0 flex-1 sm:block">
                       <p className="truncate font-black text-sm leading-snug text-[#1F1F1A]">
                         {contact.full_name}
@@ -212,7 +209,6 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
         </div>
       )}
 
-      {/* Bottom Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
         <SheetContent
           side="bottom"
@@ -224,7 +220,6 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
-          {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -243,10 +238,8 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
             </div>
           </div>
 
-          {/* Scrollable body */}
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
 
-            {/* View mode */}
             {!showForm && selected && (() => {
               const phone = [selected.country_code, selected.phone_no].filter(Boolean).join(" ");
               return (
@@ -263,13 +256,11 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
               );
             })()}
 
-            {/* Edit / Add form */}
             {showForm && (
               <form id="customer-form" action={handleSubmit} className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
 
                 <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
-                  {/* Full Name */}
                   <FormRow label="Full Name" required>
                     <input
                       name="full_name"
@@ -280,7 +271,6 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
                     />
                   </FormRow>
 
-                  {/* Email */}
                   <FormRow label="Email" required>
                     <input
                       name="email"
@@ -292,7 +282,6 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
                     />
                   </FormRow>
 
-                  {/* Phone */}
                   <FormRow label="Phone">
                     <div className="flex flex-1 items-center justify-end gap-2">
                       <input
@@ -312,7 +301,6 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
                     </div>
                   </FormRow>
 
-                  {/* Birthday */}
                   <FormRow label="Birthday">
                     <input
                       title="Birthday"
@@ -335,7 +323,6 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
             <div className="h-4" />
           </div>
 
-          {/* Footer */}
           <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">

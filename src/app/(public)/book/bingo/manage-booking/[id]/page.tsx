@@ -38,7 +38,6 @@ export default async function ManageBingoBookingPage({
 
   if (error || !booking) notFound();
 
-  // Normalise Supabase join shapes (may return array or object)
   const raw = booking as Record<string, unknown>;
   const contacts = Array.isArray(raw.contacts) ? raw.contacts[0] : raw.contacts;
   const events = Array.isArray(raw.events) ? raw.events[0] : raw.events;

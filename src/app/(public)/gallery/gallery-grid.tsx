@@ -33,7 +33,6 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
 
   return (
     <>
-      {/* Thumbnail Grid — awwwards-style, hover-zoom */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
         {items.map((item) => (
           <button
@@ -75,13 +74,11 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
         ))}
       </div>
 
-      {/* Lightbox — full-screen with info overlayed on bottom-right */}
       {selected && (
         <div
           className="fixed inset-0 z-50 flex animate-in items-center justify-center bg-black/80 backdrop-blur-xl duration-200 fade-in"
           onClick={close}
         >
-          {/* Close button */}
           <button
             type="button"
             title="Close"
@@ -91,12 +88,10 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
             <X className="h-5 w-5" />
           </button>
 
-          {/* Media + overlay container */}
           <div
             className="relative flex h-full w-full animate-in items-center justify-center p-4 duration-200 zoom-in-95 sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* The media */}
             {selected.media_type === "video" ? (
               <video
                 src={selected.image_url}
@@ -117,7 +112,6 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
               />
             )}
 
-            {/* Info overlay — bottom right corner on the media */}
             <div className="absolute right-6 bottom-6 max-w-xs rounded-2xl border border-white/10 bg-black/70 px-4 py-3 backdrop-blur-md sm:right-10 sm:bottom-10">
               <h3 className="font-black text-sm leading-tight tracking-tight text-white uppercase sm:text-base">
                 {selected.title}

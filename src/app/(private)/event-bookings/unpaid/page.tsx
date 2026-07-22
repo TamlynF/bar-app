@@ -106,9 +106,6 @@ export default async function UnpaidBookingsPage() {
 
   const rows = (data ?? []) as unknown as RawBooking[];
 
-  // Group confirmed bookings that still owe money (paid < total) by their event.
-  // Column-to-column comparison isn't expressible in the PostgREST filter, so the
-  // paid < total check is applied here.
   const groupMap = new Map<number, EventGroup>();
   for (const b of rows) {
     const ev = first(b.events);
@@ -120,13 +117,6 @@ export default async function UnpaidBookingsPage() {
     if (!groupMap.has(ev.id)) {
       const et = first(ev.event_types);
       const es = first(ev.event_subtypes);
-      // Reuse the shared admin-nav grouping to build the destination href, so the
-      // link matches how each category's bookings are surfaced elsewhere:
-      //   per_event   → /event-bookings/event/[id]
-      //   per_subtype → /event-bookings/general/[type]/[subtype]
-      //   per_type    → /event-bookings/general/[type]/__all__
-      // per_type / per_subtype land on a shared screen, so also pre-select this
-      // event (?eventId). Every link filters bookings to status=confirmed.
       const group = buildAdminBookingGroups([ev as unknown as AdminBookingGroupEvent])[0];
       const base = group?.href ?? `/event-bookings/event/${ev.id}`;
       const href =
@@ -175,7 +165,6 @@ export default async function UnpaidBookingsPage() {
     <div className="min-h-screen flex-1 bg-background">
       <div className="mx-auto max-w-4xl space-y-4 px-3 py-3 sm:py-0 md:px-8">
 
-        {/* Header */}
         <div className="flex items-center justify-between gap-3">
           <div>
             <h2 className="font-black text-xl tracking-tight text-[#1F1F1A] uppercase">Unpaid Bookings</h2>
@@ -185,7 +174,6 @@ export default async function UnpaidBookingsPage() {
           </div>
         </div>
 
-        {/* Summary bar */}
         <div className="flex items-stretch gap-3 rounded-2xl border border-[#E6DFC8] bg-white p-3 shadow-sm">
           <div className="flex flex-1 flex-col items-center justify-center gap-0.5">
             <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">Outstanding</span>
@@ -205,7 +193,6 @@ export default async function UnpaidBookingsPage() {
           </div>
         </div>
 
-        {/* Grouped list */}
         {groups.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E6DFC8] bg-white p-10 text-center">
             <div className="rounded-2xl bg-[#F7F4EA] p-3">
@@ -220,7 +207,6 @@ export default async function UnpaidBookingsPage() {
           <div className="space-y-4">
             {groups.map((g) => (
               <section key={g.eventId} className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
-                {/* Event header */}
                 <Link
                   href={g.href}
                   className="flex items-center gap-3 border-b border-[#E6DFC8] px-4 py-3 transition-colors hover:bg-[#F7F4EA]"
@@ -255,7 +241,6 @@ export default async function UnpaidBookingsPage() {
                   <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F] opacity-40" />
                 </Link>
 
-                {/* Bookings */}
                 <ul className="divide-y divide-[#E6DFC8]/60">
                   {g.bookings.map((bk) => (
                     <li key={bk.id} className="flex items-center gap-3 px-4 py-2.5">

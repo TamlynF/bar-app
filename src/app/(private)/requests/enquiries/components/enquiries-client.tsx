@@ -128,7 +128,6 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
 
   return (
     <>
-      {/* Card row */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -161,13 +160,11 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
         <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
       </button>
 
-      {/* Detail sheet */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
           className="right-auto bottom-6 flex h-auto max-h-[85vh] w-140 -translate-x-1/2 flex-col rounded-4xl rounded-t-4xl border-[#E6DFC8] bg-[#F7F4EA] p-0 sm:left-1/2"
         >
-          {/* Header */}
           <div className="shrink-0 border-b-2 border-[#E6DFC8] px-6 pt-6 pb-4">
             <SheetTitle className="flex items-center gap-2 font-black text-sm tracking-widest text-[#1F1F1A] uppercase">
               Enquiry
@@ -177,9 +174,7 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
             </SheetTitle>
           </div>
 
-          {/* Scrollable body */}
           <div className="min-h-0 flex-1 touch-pan-y space-y-5 overflow-y-auto px-6 py-5">
-            {/* Contact */}
             <div className="space-y-2">
               <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Contact</p>
               <div className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white px-4">
@@ -214,7 +209,6 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
               </div>
             </div>
 
-            {/* Message */}
             <div className="space-y-2">
               <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                 {enquiry.subject ? `Message — ${enquiry.subject}` : "Message"}
@@ -224,7 +218,6 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
               </div>
             </div>
 
-            {/* Previous reply */}
             {enquiry.reply_message && (
               <div className="rounded-3xl border-2 border-[#5C4033]/15 bg-[#5C4033]/5 p-5">
                 <div className="mb-2 flex items-center gap-2">
@@ -240,7 +233,6 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
             <div className="h-4" />
           </div>
 
-          {/* Footer — reply + close for open enquiries */}
           {status !== "closed" && (
             <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:pb-5">
               <div className="space-y-3">
@@ -339,7 +331,6 @@ export default function EnquiriesClient({ initialEnquiries, initialStatus }: { i
 
   return (
     <div className="animate-in space-y-3 duration-500 fade-in">
-      {/* Stats + Search grouped card */}
       <div className="rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
         <div className="flex flex-col items-center sm:flex-row">
           <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:flex-1">
@@ -384,7 +375,6 @@ export default function EnquiriesClient({ initialEnquiries, initialStatus }: { i
         </div>
       </div>
 
-      {/* Cards */}
       <div className="space-y-2 pb-2">
         {filtered.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">

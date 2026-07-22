@@ -11,7 +11,6 @@ import AllTimeLeaderboard from "./_components/all-time-leaderboard";
 
 const parseDate = (d: string) => new Date(d + "T00:00:00");
 
-// Podium identity for the top three ranks; everything else is neutral espresso.
 const PODIUM: Record<number, { ring: string; chip: string; bar: string; Icon: React.ComponentType<{ className?: string }> }> = {
   1: { ring: "border-[#D4AF37]/60", chip: "bg-[#FBF1CD] text-[#8A6D00]", bar: "bg-[#D4AF37]", Icon: Crown },
   2: { ring: "border-slate-300", chip: "bg-slate-100 text-slate-600", bar: "bg-slate-400", Icon: Medal },
@@ -120,7 +119,6 @@ export default async function QuizLeaderboardsPage({
   const scored = teams.filter((t) => t.score != null).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
   const unscored = teams.filter((t) => t.score == null);
 
-  // Standard competition ranking — equal scores share a rank.
   const ranked = scored.map((row) => ({
     row,
     rank: scored.findIndex((r) => r.score === row.score) + 1,
@@ -130,7 +128,6 @@ export default async function QuizLeaderboardsPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-4 px-2 py-2 sm:px-4 sm:py-0 md:px-6">
-      {/* Controls + event summary */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-black text-[10px] tracking-[0.2em] text-[#5F624F] uppercase">Leaderboard</p>
@@ -142,7 +139,6 @@ export default async function QuizLeaderboardsPage({
         </div>
       </div>
 
-      {/* Quick stats */}
       <div className="flex items-center gap-2">
         <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-white px-3 font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
           <ListOrdered className="h-3.5 w-3.5" /> {teams.length} teams
@@ -154,7 +150,6 @@ export default async function QuizLeaderboardsPage({
         )}
       </div>
 
-      {/* Standings */}
       {teams.length === 0 ? (
         <EmptyState title="No teams booked" hint="No non-cancelled teams are booked on this quiz event yet." />
       ) : scored.length === 0 ? (
@@ -167,7 +162,6 @@ export default async function QuizLeaderboardsPage({
         </div>
       )}
 
-      {/* Unscored teams (only once some are scored, to surface who still needs entering) */}
       {scored.length > 0 && unscored.length > 0 && (
         <div className="space-y-2.5">
           <p className="px-0.5 pt-2 font-black text-[10px] tracking-[0.2em] text-[#5F624F]/70 uppercase">
@@ -179,7 +173,6 @@ export default async function QuizLeaderboardsPage({
         </div>
       )}
 
-      {/* All-time standings across every quiz (moved here from the dashboard) */}
       <section className="space-y-2.5 pt-2">
         <div className="flex items-center gap-2 px-0.5">
           <Crown className="h-4 w-4 text-[#D4AF37]" />

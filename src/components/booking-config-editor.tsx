@@ -18,9 +18,7 @@ const supabase = createBrowserClient(
 
 const BUCKET = "booking-images";
 
-// ---- Shared chrome (mirrors the Event Categories redesign) ----
 
-/** Collapsible white section card with a tan header — matches the entity sheet. */
 function SectionCard({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
@@ -38,7 +36,6 @@ function SectionCard({ title, children, defaultOpen = true }: { title: string; c
   );
 }
 
-/** Pill switch with a colour variant (green for visibility, orange for required). */
 function Switch({ value, onChange, locked, color = "green", label }: {
   value: boolean; onChange?: (v: boolean) => void; locked?: boolean; color?: "green" | "orange"; label: string;
 }) {
@@ -82,7 +79,6 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
 }) {
   return (
     <div className={cn("overflow-hidden rounded-xl border border-[#E6DFC8] bg-[#F7F4EA]", !field.visible && "opacity-60")}>
-      {/* Header: field name + visibility */}
       <div className="flex items-center justify-between gap-2 px-3 py-2.5">
         <span className="text-xs font-extrabold text-[#1F1F1A]">{name}</span>
         <div className="flex items-center gap-2">
@@ -95,7 +91,6 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
 
       {field.visible && (
         <div className="border-t border-[#E6DFC8] bg-white">
-          {/* Label */}
           <div className="flex items-center gap-3 px-4 py-3">
             <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Label</span>
             {editable ? (
@@ -110,7 +105,6 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
             )}
           </div>
 
-          {/* Min / max for group size */}
           {isGroupSize && (
             <div className="flex gap-3 border-t border-[#E6DFC8] px-4 py-3">
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -140,7 +134,6 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
             </div>
           )}
 
-          {/* Required */}
           <div className="flex items-center justify-between border-t border-[#E6DFC8] px-4 py-3">
             <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Required</span>
             <Switch label={`${name} required`} color="orange" value={field.required} locked={locked} onChange={editable && !locked ? (v) => onChange({ required: v }) : undefined} />
@@ -151,13 +144,6 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
   );
 }
 
-/**
- * Shared editor for a `booking_config` object. Drives the nested per-field shape
- * (see `@/lib/booking-config`). Used for whichever level owns the booking page for a
- * category's `booking_grouping`: `event_types.booking_config` (per_type),
- * `event_subtypes.booking_config` (per_subtype), or `events.booking_config` (per_event).
- * Pass `readOnly` to render a non-editable summary (used in the view sheets).
- */
 export function BookingConfigEditor({
   value,
   onChange,
@@ -197,7 +183,6 @@ export function BookingConfigEditor({
 
   return (
     <div className="flex flex-col gap-2.5">
-      {/* Booking page — logo + tagline */}
       <SectionCard title="Booking Page">
         <div className="flex flex-col gap-2 px-4 py-3">
           <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Booking image (logo)</span>
@@ -250,7 +235,6 @@ export function BookingConfigEditor({
         </div>
       </SectionCard>
 
-      {/* Form fields */}
       <SectionCard title="Form Fields">
         <p className="px-4 pt-3 text-[11px] leading-relaxed text-[#5F624F]">The fields shown on the public booking form.</p>
         <div className="flex flex-col gap-2 p-3.5">

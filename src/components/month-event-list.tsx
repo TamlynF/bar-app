@@ -27,7 +27,6 @@ function parseDate(dateStr: string): Date {
   return new Date(dateStr + "T00:00:00");
 }
 
-/** Groups an already-ordered event array into same-date buckets, preserving order. */
 function groupByDate(evs: MonthEvent[]): MonthEvent[][] {
   const groups: MonthEvent[][] = [];
   const idx = new Map<string, MonthEvent[]>();
@@ -39,16 +38,6 @@ function groupByDate(evs: MonthEvent[]): MonthEvent[][] {
   return groups;
 }
 
-/**
- * Renders the current month's events in two clearly separated buckets:
- *
- *  1. UPCOMING (date >= today, excluding the hero date) — grouped by ISO week
- *     (Monday start), always visible, full opacity. Filterable by sub-type via
- *     the chip row. Same-date events are clustered under one shared date column.
- *  2. PAST (date < today) — collapsed behind an "earlier this month" toggle,
- *     rendered at 50% opacity with struck-through titles. Respects the active
- *     filter, same as the upcoming bucket, and shows a count in its label.
- */
 export function MonthEventList({
   events,
   todayStr,
@@ -116,7 +105,6 @@ export function MonthEventList({
 
   return (
     <div className="space-y-3">
-      {/* Filter chips */}
       {filters.length > 1 && (
         <div
           className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1"
@@ -153,7 +141,6 @@ export function MonthEventList({
         </div>
       )}
 
-      {/* Upcoming, grouped by week then by date */}
       {Array.from(weeks.entries()).map(([weekKey, weekEvents], index) => (
         <div key={weekKey}>
           <div className="mb-1 flex items-center gap-2 px-1">
@@ -174,7 +161,6 @@ export function MonthEventList({
         </div>
       ))}
 
-      {/* Empty state when the active filter matches nothing this month */}
       {visibleUpcoming.length === 0 &&
         visiblePast.length === 0 &&
         (upcoming.length > 0 || past.length > 0) && (
@@ -183,7 +169,6 @@ export function MonthEventList({
           </p>
         )}
 
-      {/* Past — collapsed toggle */}
       {visiblePast.length > 0 && (
         <div>
           <button
@@ -227,9 +212,6 @@ export function MonthEventList({
   );
 }
 
-// ---------------------------------------------------------------------------
-// Sub-components
-// ---------------------------------------------------------------------------
 
 function EventDateCell({
   dateObj,
@@ -348,7 +330,6 @@ function EventBody({ event, isPast }: { event: MonthEvent; isPast: boolean }) {
   );
 }
 
-/** Two or more events on the same date — shared date column + gold accent bar. */
 function EventCluster({ events, isPast }: { events: MonthEvent[]; isPast: boolean }) {
   const dateObj = parseDate(events[0].date);
   const inner = (

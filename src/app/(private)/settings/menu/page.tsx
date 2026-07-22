@@ -11,7 +11,6 @@ export default async function MenuSettingsPage() {
 
   if (catError) console.error("Error fetching menu:", catError);
 
-  // Sort items within each category by display_order
   type RawCategory = {
     id: number;
     name: string;

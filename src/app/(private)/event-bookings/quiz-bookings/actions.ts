@@ -82,7 +82,6 @@ export async function getBookings(type: string, subType: string, selectedDate: s
     }
 
     const { data: bookings, error } = await query;
-    //console.log("Fetched bookings:", { bookings, error })
 
     if (error) {
       console.error("Error fetching bookings:", error)
@@ -96,14 +95,8 @@ export async function getBookings(type: string, subType: string, selectedDate: s
   }
 }
 
-/**
- * Fetches tables that are available for a specific event and can accommodate the group size.
- * Excludes tables already mapped to other bookings for the same event.
- */
 export async function getAvailableTablesForEvent(eventId: string, groupSize: number, currentTableId?: string) {
   const supabase = await createClient();
-  // Delegates to the shared module (single source of truth). The booking's own
-  // current table is re-included via excludeTableId so it stays selectable.
   return getFreeTablesForEvent(supabase, Number(eventId), {
     groupSize,
     excludeTableId: currentTableId ? Number(currentTableId) : undefined,
@@ -201,10 +194,6 @@ export async function getQuizEvents(type: string, subType: string) {
   }
 }
 
-/**
- * Updates comprehensive booking details including table assignment.
- * Calculates 'add_seat' count if the group size exceeds table capacity.
- */
 export async function updateBookingDetails(
   id: string, 
   updates: { 
@@ -217,7 +206,6 @@ export async function updateBookingDetails(
 ) {
   const supabase = await createClient()
 
-  // Resolve which employee is making this change
   let updatedById: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
   if (user?.email) {
@@ -229,7 +217,6 @@ export async function updateBookingDetails(
     if (emp) updatedById = emp.id;
   }
 
-  // 1. Capture the pre-edit size + status + event (needed for downsize relocation).
   const { data: prev } = await supabase
     .from("bookings")
     .select("group_size, status, event_id")
@@ -238,7 +225,6 @@ export async function updateBookingDetails(
   const oldSize = (prev?.group_size as number) ?? 0;
   const eventId = (prev?.event_id as number) ?? null;
 
-  // 2. Update primary booking record
   const { table_id, ...bookingUpdates } = updates;
   const { error: bookingError } = await supabase
     .from("bookings")
@@ -255,8 +241,6 @@ export async function updateBookingDetails(
     throw new Error("Failed to update booking")
   }
 
-  // 3. Reconcile the table assignment through the shared module
-  //    (3c clear / 3d explicit pick / confirm-needs-a-table / downsize relocate).
   const newSize = updates.group_size ?? oldSize;
   const finalStatus = (updates.status ?? (prev?.status as string) ?? "").toLowerCase();
   const result = await reconcileSeatedBookingTable(supabase, {
@@ -272,7 +256,6 @@ export async function updateBookingDetails(
     throw new Error(seatingErrorMessage(result.reason));
   }
 
-  // 4. Keep is_fully_booked in sync after any allocation change.
   if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
 
   revalidatePath("/dashboard")
@@ -297,7 +280,6 @@ export async function updateBookingStatus(id: string, status: string) {
   const eventId = bookingRow?.event_id as number | null;
   const wantConfirmed = status.toLowerCase() === "confirmed";
 
-  // Confirm only if a table can be mapped (seated events). Plan before writing.
   let tableToAssign = null;
   if (wantConfirmed && eventId != null) {
     const plan = await planConfirmSeating(supabase, {
@@ -325,7 +307,6 @@ export async function updateBookingStatus(id: string, status: string) {
   }
 
   if (wantConfirmed) {
-    // Seat it if a free table was found (already-mapped bookings return null).
     if (tableToAssign && eventId != null) {
       await commitMapping(supabase, {
         bookingId: id,
@@ -335,7 +316,6 @@ export async function updateBookingStatus(id: string, status: string) {
       });
     }
   } else {
-    // Rule 3c: moving away from `confirmed` frees the booking's table.
     await clearMappingOnStatusChange(supabase, id);
   }
   if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
@@ -347,14 +327,12 @@ export async function updateBookingStatus(id: string, status: string) {
 export async function deleteBooking(id: string) {
   const supabase = await createClient()
 
-  // Get event_id before deleting
   const { data: booking } = await supabase
     .from("bookings")
     .select("event_id")
     .eq("id", id)
     .single()
 
-  // Cascade delete mappings first (if not handled by DB constraints)
   await supabase.from("booking_table_mappings").delete().eq("booking_id", id);
 
   const { error } = await supabase
@@ -364,7 +342,6 @@ export async function deleteBooking(id: string) {
 
   if (error) throw new Error("Failed to delete")
 
-  // Update fully booked status after freeing the table
   if (booking?.event_id) {
     await updateFullyBookedStatus(supabase, booking.event_id)
   }

@@ -1,10 +1,5 @@
 import type { TrendKind } from "./types";
 
-/**
- * Deterministic dedupe key for a trend. Trends with the same signature are
- * stored once (unique index), so a refresh never resurfaces a trend the user
- * already saved or ignored. Derived from kind + normalised title (+ source).
- */
 export function trendSignature(kind: TrendKind, title: string, sourceName?: string | null): string {
   const norm = (s: string) =>
     s

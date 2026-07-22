@@ -6,7 +6,6 @@ import {
   type EventRow,
 } from "@/lib/events-display";
 
-/** Minimal valid EventRow with overridable fields. */
 function makeEvent(overrides: Partial<EventRow> = {}): EventRow {
   return {
     id: 1,
@@ -72,7 +71,6 @@ describe("getEventType", () => {
 
     const bogusBehavior = getEventType(
       makeEvent({
-        // a value not in EVENT_BEHAVIORS (e.g. a stale row) must not leak through
         event_subtypes: { name: "trivia", color: null, behavior: "games" },
       })
     );
@@ -92,7 +90,6 @@ describe("serializeEvent", () => {
       subType: "quiz",
       isKaraoke: false,
     });
-    // colour resolves to a brightened hex string
     expect(s.color).toMatch(/^#[0-9a-f]{6}$/i);
   });
 });

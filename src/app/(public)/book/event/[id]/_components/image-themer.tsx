@@ -2,15 +2,6 @@
 
 import { useEffect } from "react";
 
-/**
- * Samples the booking image client-side and exposes its dominant *vibrant* colour
- * as a CSS variable (`--ev-theme`) on <html>, so the page's gradient layers can
- * theme themselves to the image. Renders nothing.
- *
- * Degrades silently: if the image can't be read (CORS-tainted canvas) or has no
- * vibrant colour (e.g. a greyscale logo), the variable is left unset and the page
- * keeps its default olive theme via the `var(--ev-theme, …)` fallbacks.
- */
 export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
   useEffect(() => {
     let cancelled = false;
@@ -30,8 +21,6 @@ export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
         ctx.drawImage(img, 0, 0, size, size);
         const { data } = ctx.getImageData(0, 0, size, size);
 
-        // Bucket pixels by a coarse (4-bit/channel) colour key, weighting each
-        // bucket by saturation so vibrant colours win over muddy/grey ones.
         type Bucket = { count: number; weight: number; r: number; g: number; b: number };
         const buckets = new Map<number, Bucket>();
         for (let i = 0; i < data.length; i += 4) {
@@ -60,9 +49,6 @@ export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
         const g = Math.round(best.g / best.count);
         const b = Math.round(best.b / best.count);
 
-        // Shift the wash away from the artwork's own lightness so the image reads
-        // clearly against it (a gold logo shouldn't sit on a gold field): deepen a
-        // bright image, lift a dark one — keeping the hue so the page still themes.
         const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
         let wr: number, wg: number, wb: number;
         if (lum > 0.5) {
@@ -76,15 +62,11 @@ export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
         }
         root.style.setProperty("--ev-theme", `rgb(${wr} ${wg} ${wb})`);
 
-        // Publish a legible foreground for text/icons on the wash + inputs, contrasting
-        // the *shifted* wash colour. `--ev-fg` is solid (labels, icons); `--ev-fg-dim`
-        // is muted (placeholders, subtext).
         const washLum = (0.299 * wr + 0.587 * wg + 0.114 * wb) / 255;
         const fgRgb = washLum > 0.58 ? "28 25 23" : "245 245 244"; // near-black vs near-white
         root.style.setProperty("--ev-fg", `rgb(${fgRgb})`);
         root.style.setProperty("--ev-fg-dim", `rgb(${fgRgb} / 0.62)`);
       } catch {
-        /* tainted canvas / CORS failure — keep default theme */
       }
     };
 

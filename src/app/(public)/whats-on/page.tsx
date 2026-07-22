@@ -48,8 +48,6 @@ export default async function WhatsOnPage() {
       (e.date < todayStr || e.is_active)
   );
 
-  // For music-act events, pull the socials + video showreel from the linked
-  // band request so the flip card can show them on its back face.
   const musicActIds = events
     .filter((e) => getEventType(e)?.behavior === "music_act")
     .map((e) => e.id);
@@ -90,13 +88,10 @@ export default async function WhatsOnPage() {
   const monthEvents = events.filter((e) => parseDate(e.date) <= monthEnd);
   const serializedMonthEvents = monthEvents.map(toSerialized);
 
-  // Grid buckets: upcoming (today onward) + past (before today). The grid marks
-  // the first upcoming event inline as "NEXT UP" — no separate hero.
   const upcoming = serializedMonthEvents.filter((e) => e.date >= todayStr);
   const past = serializedMonthEvents.filter((e) => e.date < todayStr);
   const nextEventId = upcoming[0]?.id ?? null;
 
-  // Subtype filter tabs, built from upcoming + hero (not past), preserving colour.
   const tabSeen = new Map<string, string>();
   for (const e of serializedMonthEvents) {
     if (e.date < todayStr || !e.subType) continue;
@@ -108,8 +103,6 @@ export default async function WhatsOnPage() {
     color,
   }));
 
-  // Future months (beyond this month) — same serialized shape so the grid can
-  // render them with the same EventCard, behind a "View {month}" toggle.
   const later = events
     .filter((e) => parseDate(e.date) > monthEnd)
     .map(toSerialized);
@@ -119,7 +112,6 @@ export default async function WhatsOnPage() {
 
   return (
     <main className="relative isolate min-h-dvh w-full overflow-hidden bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
-      {/* Ambient glow wash across the top — matches the home hero band */}
       <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
       <div className="pointer-events-none absolute top-20 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
@@ -128,8 +120,6 @@ export default async function WhatsOnPage() {
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-6 sm:py-10">
         <SectionHeading eyebrow={`${thisMonthLabel} · The schedule`} title="What's On" />
 
-        {/* Search + filterable flip-card grid: past (collapsed, above) →
-            "Coming up" (next event marked inline) → next month (collapsed). */}
         {(serializedMonthEvents.length > 0 || later.length > 0) && (
           <WhatsOnGrid
             upcoming={upcoming}

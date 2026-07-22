@@ -21,8 +21,6 @@ export type ListItem = {
     href: string;
 };
 
-// Matches the public home hero's "On tonight" indicator — a blinking burnt-orange
-// dot + neon-orange label (see home-hero.tsx / --neon #ff6b35).
 function TonightBadge() {
     return (
         <span className="inline-flex shrink-0 items-center gap-1.5">
@@ -61,7 +59,6 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                         title="Open event"
                         className="group flex items-center gap-3 border-b border-[#E6DFC8] px-3 py-2.5 transition-colors last:border-0 hover:bg-amber-50"
                     >
-                        {/* Date pill */}
                         <div className={cn(
                             "w-11 shrink-0 rounded-lg py-0.5 text-center sm:w-12 sm:py-1",
                             today ? "bg-[#FF6B35]" : "bg-[#F7F4EA]"
@@ -77,7 +74,6 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             </p>
                         </div>
 
-                        {/* Title + time */}
                         <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 items-center gap-1.5">
                                 <p className="truncate font-black text-sm text-[#1F1F1A]">{item.title}</p>
@@ -89,7 +85,6 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             </div>
                         </div>
 
-                        {/* Event-type badge (sm+) */}
                         {item.eventType && (
                             <span className={cn(
                                 "hidden shrink-0 rounded-md px-2 py-0.5 text-[9px] font-bold tracking-wide whitespace-nowrap uppercase sm:inline-block",
@@ -99,7 +94,6 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             </span>
                         )}
 
-                        {/* Clickable affordance */}
                         <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/40 transition-colors group-hover:text-[#5C4033]" />
                     </Link>
                 );

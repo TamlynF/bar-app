@@ -4,15 +4,6 @@ import { Clock } from "lucide-react";
 import { EventCta } from "@/components/editorial/event-cta";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
 
-/**
- * Public home hero — "After Dark" direction. A centred, late-night signage
- * moment on the dark olive/gold palette: a live "open" pill, the brand
- * wordmark lit by a gold glow, the tagline, and a featured "on tonight / next
- * up" card for the soonest event. Soft gold + burgundy blurs sit behind.
- *
- * Per STYLE_GUIDE.md the brand wordmark is sanctioned here (home hero) + nav
- * only — this is the one page that gets hero brand treatment.
- */
 export function HomeHero({
   tagline,
   openLabel,
@@ -27,7 +18,6 @@ export function HomeHero({
   return (
     <section className="relative pt-10 pb-4 text-center sm:pt-14 sm:pb-6">
       <div className="relative z-10 flex flex-col items-center">
-        {/* Live open pill */}
         <div className="animate-reveal inline-flex items-center gap-2 rounded-full border border-[#FDCC4B]/25 bg-[#FDCC4B]/10 px-3.5 py-1.5">
           <span className="ad-ping h-1.5 w-1.5 rounded-full bg-[#FDCC4B]" aria-hidden="true" />
           <span className="font-black text-[10px] tracking-[0.2em] text-[#FDCC4B] uppercase">
@@ -35,7 +25,6 @@ export function HomeHero({
           </span>
         </div>
 
-        {/* Brand wordmark — lit from above */}
         <h1 className="animate-reveal m-0 mt-6 w-full [animation-delay:80ms]">
           <Image
             src="/CompanyName.png"
@@ -51,7 +40,6 @@ export function HomeHero({
           {tagline}
         </p>
 
-        {/* Featured "on tonight / next up" card */}
         {featured && (
           <FeaturedCard event={featured} isTonight={isTonight} />
         )}
@@ -82,7 +70,6 @@ function FeaturedCard({
       </div>
 
       <div className="mt-3 flex items-center gap-4">
-        {/* Gold date chip */}
         <div className="flex h-18 w-18 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#FDCC4B] text-[#1a2008] shadow-lg shadow-[#FDCC4B]/30">
           <span className="font-black text-[11px] tracking-widest uppercase">
             {format(dateObj, "EEE")}

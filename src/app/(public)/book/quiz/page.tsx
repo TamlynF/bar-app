@@ -15,7 +15,6 @@ export const metadata = {
   description: 'Secure your spot for our next quiz night.',
 };
 
-// Map of available icons to match strings stored in database
 const ICON_MAP: Record<string, React.ElementType> = {
   Banknote, Calendar, Users, Trophy, Wine,
   MapPin, Clock, DollarSign, Star, CheckCircle,
@@ -68,18 +67,15 @@ export default async function QuizBookingPage({
     is_fully_booked: (e.is_fully_booked as boolean) ?? false,
   }));
 
-  // Pre-select a specific date when linked from the events page
   if (preselect) {
     events.sort((a, b) => (a.date === preselect ? -1 : b.date === preselect ? 1 : 0));
   }
 
-  // Map database items to badge format
   const dbBadges = (infoItems || []).map(item => ({
     icon: ICON_MAP[item.icon || ""] || Info,
     text: item.title
   }));
 
-  // Fallback to defaults if no records found in database
   const eventBadges = dbBadges.length > 0 ? dbBadges : [
     { icon: Banknote, text: "Free Entry" },
     { icon: Calendar, text: "Thursdays: 8:00PM" },
@@ -115,10 +111,6 @@ export default async function QuizBookingPage({
       
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-4 sm:px-6 sm:py-12 lg:px-8">
 
-        {/* Header Section 
-            - Constrained image size on mobile to prevent a 'messy' or oversized appearance.
-            - Added 'priority' for LCP optimization.
-        */}
         <div className="mb-6 flex flex-col items-center text-center sm:mb-10">
           <div className="relative aspect-600/260 w-full max-w-50 transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98] sm:max-w-md">
             <Image
@@ -137,7 +129,6 @@ export default async function QuizBookingPage({
           </div>
         </div>
 
-        {/* Event Badges - Horizontal Scroll on Mobile, Full Width Dynamic Grid on Desktop */}
         <div className="no-scrollbar -mx-4 mb-4 flex flex-row gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:mb-12 sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0">
           {eventBadges.map((badge, index) => (
             <div
@@ -153,7 +144,6 @@ export default async function QuizBookingPage({
           ))}
         </div>
 
-        {/* Booking Form Card */}
         <div className="relative mb-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/3 p-6 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl sm:p-10">
           <div className="pointer-events-none absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]"></div>
 
@@ -178,7 +168,6 @@ export default async function QuizBookingPage({
           </div>
         </div>
 
-        {/* Footer info */}
         <div className="mt-auto mb-6 flex flex-col items-center gap-4 pt-8">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50"></div>

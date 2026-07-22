@@ -16,10 +16,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-/**
- * BookingCalendarFilter
- * Updated to match the Dashboard's Popover-based date selection UI.
- */
 export default function BookingCalendarFilter({ selectedDate }: { selectedDate?: string }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -30,7 +26,6 @@ export default function BookingCalendarFilter({ selectedDate }: { selectedDate?:
   const handleSelect = (date: Date | undefined) => {
     const params = new URLSearchParams(searchParams.toString());
     if (date) {
-      // Normalize date to avoid timezone shifts
       const dateStr = date.toLocaleDateString('en-CA'); // YYYY-MM-DD
       params.set("date", dateStr);
     } else {

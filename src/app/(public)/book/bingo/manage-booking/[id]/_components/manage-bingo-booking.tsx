@@ -150,7 +150,6 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
 
   return (
     <div className="w-full">
-      {/* Status header */}
       <div className="mb-8 animate-in text-center duration-500 fade-in">
         {isCancelled ? (
           <XCircle className="mx-auto mb-4 h-16 w-16 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
@@ -167,10 +166,8 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
         )}
       </div>
 
-      {/* Status banner */}
       <StatusBanner status={booking.status} paymentStatus={booking.payment_status} />
 
-      {/* Error / success feedback */}
       {error && (
         <div className="mb-6 flex animate-in items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 slide-in-from-top-2">
           <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
@@ -184,7 +181,6 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
         </div>
       )}
 
-      {/* Edit mode — special requests only */}
       {isEditing ? (
         <div className="animate-in space-y-6 duration-300 fade-in slide-in-from-bottom-4">
           <div className="space-y-1.5">
@@ -218,7 +214,6 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
           </div>
         </div>
       ) : (
-        /* View mode */
         <div className="animate-in space-y-8 duration-500 fade-in">
           <div className="group relative space-y-6 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-inner sm:p-8">
             <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 bg-[#fdcc4b]/5 blur-3xl transition-colors group-hover:bg-[#fdcc4b]/10" />

@@ -20,7 +20,6 @@ export type SpecialRow = {
 
 const DAY_LABELS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-/** Short uppercase day tag for the stub corner, e.g. "TUE" or "FRI · SAT". */
 function dayTag(days: number[]): string | null {
   if (!days || days.length === 0) return null;
   return [...days]
@@ -38,11 +37,6 @@ function shortRange(start: string | null, end: string | null): string | null {
   return `Until ${fmt(end!)}`;
 }
 
-/**
- * Home "Specials" — After Dark: burgundy ticket-stubs you can tap for the full
- * details (run dates, which days it's on, terms). Burgundy flags offers per the
- * STYLE_GUIDE; the detail modal is the requested "tap for more info" flow.
- */
 export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
   const [selected, setSelected] = useState<SpecialRow | null>(null);
 
@@ -81,7 +75,6 @@ function SpecialStub({
       onClick={onOpen}
       className="group relative overflow-hidden rounded-2xl bg-[#7A1F1F] p-5 pl-7 text-left text-[#ffeede] transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-black/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDCC4B] active:scale-[0.99]"
     >
-      {/* Perforated ticket edge */}
       <span
         className="ad-stub-perf absolute top-0 bottom-0 left-0 w-3.5"
         aria-hidden="true"

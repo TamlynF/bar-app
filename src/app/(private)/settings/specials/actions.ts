@@ -13,7 +13,6 @@ export async function saveSpecialAction(formData: FormData) {
     .map((b) => b.trim().toUpperCase())
     .filter(Boolean);
 
-  // ISO weekday numbers (1=Mon … 7=Sun), de-duped and sorted. Empty = every day.
   const days_of_week = Array.from(
     new Set(
       formData
@@ -39,7 +38,6 @@ export async function saveSpecialAction(formData: FormData) {
     return { error: "Title is required." };
   }
 
-  // Resolve current employee
   let currentEmployeeId: number | null = null;
   const {
     data: { user },

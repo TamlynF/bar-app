@@ -5,11 +5,6 @@ type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
 const FALLBACK_AREA = "your local area";
 
-/**
- * Best-effort area from the venue's freeform `company_information.address`
- * (no structured town/postcode field exists). Takes the last comma-separated
- * segment that isn't a UK postcode, e.g. "Regent Street, Hinckley" → "Hinckley".
- */
 export function deriveAreaFromAddress(address?: string | null): string | null {
   if (!address) return null;
   const postcode = /^[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}$/i;
@@ -20,7 +15,6 @@ export function deriveAreaFromAddress(address?: string | null): string | null {
   return segments.length ? segments[segments.length - 1] : null;
 }
 
-/** Read the single marketing_settings row (null if not created yet). */
 export async function readMarketingSettings(
   supabase: ServerClient,
 ): Promise<MarketingSettings | null> {
@@ -33,10 +27,6 @@ export async function readMarketingSettings(
   return (data as MarketingSettings | null) ?? null;
 }
 
-/**
- * Read the single marketing_settings row, creating it if missing so callers
- * always have a stable id to update. Call only from Server Actions (it writes).
- */
 export async function ensureMarketingSettings(
   supabase: ServerClient,
   defaultArea?: string | null,
@@ -51,7 +41,6 @@ export async function ensureMarketingSettings(
   return (data as MarketingSettings | null) ?? null;
 }
 
-/** Read the venue's freeform address for area derivation. */
 export async function readCompanyAddress(supabase: ServerClient): Promise<string | null> {
   const { data } = await supabase
     .from("company_information")
@@ -61,10 +50,6 @@ export async function readCompanyAddress(supabase: ServerClient): Promise<string
   return (data?.address as string | undefined) ?? null;
 }
 
-/**
- * The effective comparison area: explicit setting → derived from address →
- * a readable fallback. Never empty, so prompts always have a locality.
- */
 export function resolveComparisonArea(
   settings: MarketingSettings | null,
   address: string | null,

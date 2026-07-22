@@ -33,7 +33,6 @@ export async function saveQuizCategoryAction(formData: FormData) {
     return { error: "Category name is required." };
   }
 
-  // Check for duplicate order_no among active categories
   if (is_active) {
     let dupQuery = supabase
       .from("quiz_category_configs")
@@ -67,7 +66,6 @@ export async function saveQuizCategoryAction(formData: FormData) {
         .eq("id", id);
       if (error) throw error;
     } else {
-      // Auto-increment order_no for new categories
       const { data: maxRow } = await supabase
         .from("quiz_category_configs")
         .select("order_no")

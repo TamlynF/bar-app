@@ -30,7 +30,6 @@ describe("computeTableChairs — round", () => {
     const { chairs, benches } = computeTableChairs({ ...baseInput, shape: "round", baseSeats: 6, layout: null });
     expect(chairs).toHaveLength(6);
     expect(benches).toHaveLength(0);
-    // every chair sits at radius diameter/2 + gap from the centre
     const r = 1.1 / 2 + 0.3;
     chairs.forEach((c) => {
       expect(Math.hypot(c.x - 5, c.y - 5)).toBeCloseTo(r, 2);
@@ -51,7 +50,6 @@ describe("computeTableChairs — rect", () => {
     const right = chairs.filter((c) => c.x > 5);
     expect(left).toHaveLength(3);
     expect(right).toHaveLength(3);
-    // long sides sit off the width edges (x = cx ± (w/2 + gap))
     const off = 0.7 / 2 + 0.3;
     expect(left[0].x).toBeCloseTo(5 - off, 5);
     expect(right[0].x).toBeCloseTo(5 + off, 5);
@@ -63,7 +61,6 @@ describe("computeTableChairs — rect", () => {
     expect(chairs).toHaveLength(8); // 3 + 3 + 1 + 1
     expect(chairs.filter((c) => c.x < 5 - 0.001)).toHaveLength(3);
     expect(chairs.filter((c) => c.x > 5 + 0.001)).toHaveLength(3);
-    // ends sit off the top/bottom (y beyond length edges)
     expect(chairs.filter((c) => Math.abs(c.y - 5) > 1.4 / 2)).toHaveLength(2);
   });
 
@@ -72,7 +69,6 @@ describe("computeTableChairs — rect", () => {
     const { chairs, benches } = computeTableChairs({ ...baseInput, shape: "rect", baseSeats: 6, layout });
     expect(chairs).toHaveLength(0);
     expect(benches).toHaveLength(2);
-    // benches flank the long sides (one left of centre, one right)
     expect(benches.some((b) => b.x + b.width / 2 < 5)).toBe(true);
     expect(benches.some((b) => b.x + b.width / 2 > 5)).toBe(true);
   });

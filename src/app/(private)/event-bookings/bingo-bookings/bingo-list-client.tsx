@@ -252,7 +252,6 @@ export default function BingoBookingListClient({
   const handleSaveDetails = async () => {
     if (!selectedBooking) return;
 
-    // Warn before a destructive save that frees the booking's table (rules 3c / 3a.3).
     const origStatus = normStatus(selectedBooking.status) || "pending";
     const origTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id ?? "";
     const hadTable = String(origTableId) !== "";
@@ -344,11 +343,9 @@ export default function BingoBookingListClient({
 
   return (
     <div className="animate-in space-y-3 duration-500 fade-in">
-      {/* Stats + Search grouped card */}
       <div className="rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center">
 
-          {/* Stats Bar */}
           <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:flex-1 sm:pt-0">
             <div className="flex w-full min-w-max items-stretch gap-3 px-2 py-3 sm:min-w-0 sm:justify-evenly sm:gap-0">
               <StatusCircle
@@ -394,11 +391,9 @@ export default function BingoBookingListClient({
             </div>
           </div>
 
-          {/* Divider */}
           <div className="mx-3 border-t border-[#E6DFC8] sm:hidden" />
           <div className="hidden w-px bg-[#E6DFC8] sm:my-2 sm:block sm:self-stretch" />
 
-          {/* Search */}
           <div className="mb-3 flex justify-center px-4 sm:mb-0 sm:shrink-0 sm:px-3 sm:py-2">
             <div className="flex h-10 w-full max-w-sm items-center gap-3 rounded-xl border border-[#E6DFC8] px-4 transition-colors focus-within:border-[#5C4033] sm:w-56">
               <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -427,7 +422,6 @@ export default function BingoBookingListClient({
         </div>
       </div>
 
-      {/* Booking Cards */}
       <div className="space-y-2 pb-2">
         {filteredBookings.length === 0 ? (
           <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">
@@ -446,7 +440,6 @@ export default function BingoBookingListClient({
         )}
       </div>
 
-      {/* Detail Sheet */}
       <Sheet
         open={!!selectedBooking}
         onOpenChange={(open) => {
@@ -465,7 +458,6 @@ export default function BingoBookingListClient({
             <>
               <span ref={topFocusRef} tabIndex={-1} className="sr-only" />
 
-              {/* Header */}
               <div className="sticky top-0 z-30 flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#E6DFC8] bg-white/80 p-2 pb-2 backdrop-blur-md">
                 <div className="min-w-0 flex-1 text-left">
                   <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase sm:text-2xl">
@@ -480,10 +472,8 @@ export default function BingoBookingListClient({
                 </div>
               </div>
 
-              {/* Scrollable Body */}
               <div ref={scrollContainerRef} className="min-h-0 flex-1 touch-pan-y space-y-6 overflow-y-auto overscroll-contain px-6 py-6 text-left">
 
-                {/* Status + Group Size Banner */}
                 {!isEditing && (
                   <div
                     className={cn(
@@ -509,7 +499,6 @@ export default function BingoBookingListClient({
                 {isEditing ? (
                   <div className="animate-in space-y-6 duration-300 fade-in slide-in-from-bottom-2">
 
-                    {/* Event */}
                     <div className="space-y-2">
                       <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Event Date & Session</Label>
                       <div className="group relative">
@@ -535,7 +524,6 @@ export default function BingoBookingListClient({
                       )}
                     </div>
 
-                    {/* Group Name */}
                     <div className="space-y-2">
                       <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Group Name</Label>
                       <Input
@@ -547,7 +535,6 @@ export default function BingoBookingListClient({
                       />
                     </div>
 
-                    {/* Group Size */}
                     <div className="space-y-2">
                       <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Group Size</Label>
                       <Input
@@ -561,7 +548,6 @@ export default function BingoBookingListClient({
                       />
                     </div>
 
-                    {/* Table Assignment */}
                     <div className="space-y-2">
                       <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Table Assignment</Label>
                       <div className="group relative">
@@ -599,7 +585,6 @@ export default function BingoBookingListClient({
                       )}
                     </div>
 
-                    {/* Status */}
                     <div className="border-t border-[#E6DFC8] pt-6">
                       <Label className="mb-3 ml-1 block text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Status</Label>
                       <div
@@ -639,7 +624,6 @@ export default function BingoBookingListClient({
                       )}
                     </div>
 
-                    {/* Special Requests */}
                     <div className="space-y-2">
                       <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Special Requests</Label>
                       <Textarea
@@ -653,10 +637,8 @@ export default function BingoBookingListClient({
                     </div>
                   </div>
                 ) : (
-                  // View Mode
                   <div className="animate-in space-y-8 duration-300 fade-in">
 
-                    {/* Payment pill */}
                     {selectedBooking.payment_status && (
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={cn(
@@ -709,7 +691,6 @@ export default function BingoBookingListClient({
                       />
                     </div>
 
-                    {/* Contact */}
                     <div className="space-y-3">
                       <h3 className="px-1 font-black text-[10px] tracking-[0.2em] text-[#5F624F] uppercase opacity-40">Primary Contact</h3>
                       <div className="group/contact flex items-center gap-4 rounded-3xl border-2 border-[#E6DFC8] bg-white p-5 shadow-sm transition-all hover:border-[#5C4033]/30">
@@ -742,7 +723,6 @@ export default function BingoBookingListClient({
                 <div className="h-32" />
               </div>
 
-              {/* Sticky Footer */}
               <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 p-6 pt-4 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.05)] backdrop-blur-md">
                 {isEditing ? (
                   <div className="grid grid-cols-2 gap-3">
@@ -818,7 +798,6 @@ export default function BingoBookingListClient({
         </SheetContent>
       </Sheet>
 
-      {/* Syncing indicator */}
       {isPending && (
         <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#5C4033] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
           <Loader2 className="h-4 w-4 animate-spin" /> Syncing with DB...

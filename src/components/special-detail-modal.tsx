@@ -7,7 +7,6 @@ import { RichTextContent } from "@/components/rich-text-content";
 import { cn } from "@/lib/utils";
 import type { SpecialRow } from "@/components/specials-section";
 
-/** ISO weekday numbers (1=Mon … 7=Sun) and short labels for the day pills. */
 const WEEKDAYS: { value: number; label: string }[] = [
   { value: 1, label: "Mon" },
   { value: 2, label: "Tue" },
@@ -26,12 +25,6 @@ function formatDateRange(start: string | null, end: string | null): string | nul
   return `Until ${fmt(end!)}`;
 }
 
-/**
- * Detail view for a single special — opened by tapping a special on the home
- * page. Surfaces the things a customer asks about: when it runs (start/end),
- * which days of the week it's on, and the full terms. Bottom sheet on mobile,
- * centred dialog on desktop. Closes on backdrop click and Escape.
- */
 export function SpecialDetailModal({
   special,
   onClose,
@@ -76,7 +69,6 @@ export function SpecialDetailModal({
           <X className="h-4.5 w-4.5" aria-hidden="true" />
         </button>
 
-        {/* Image */}
         {special.image_url && (
           <div className="h-48 w-full overflow-hidden border-b border-hairline">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -112,7 +104,6 @@ export function SpecialDetailModal({
             </div>
           )}
 
-          {/* Runs */}
           {dateRange && (
             <div className="mt-5 flex items-center gap-3 rounded-2xl border border-hairline bg-canvas/60 px-4 py-3">
               <CalendarDays className="h-4 w-4 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
@@ -125,7 +116,6 @@ export function SpecialDetailModal({
             </div>
           )}
 
-          {/* Available on */}
           <p className="mt-5 mb-2 font-black text-[10px] tracking-[0.16em] text-stone-400 uppercase">
             Available on{everyDay && " · every day"}
           </p>

@@ -1,8 +1,6 @@
 import { parseGbp } from "@/lib/price";
 import type { CompetitorPrice, MenuItemLite } from "./types";
 
-// Benchmark products we compare on. Matching is keyword-based on item names —
-// pragmatic and clearly labelled "AI-estimated" in the UI.
 type Benchmark = { key: string; label: string; keywords: string[] };
 
 const BENCHMARKS: Benchmark[] = [
@@ -41,10 +39,6 @@ function verdictFor(own: number | null, avg: number | null): Verdict {
   return "inline";
 }
 
-/**
- * Build the per-benchmark comparison of the venue's own menu prices against
- * local competitor prices. Pure function — safe to unit test / reuse.
- */
 export function buildComparison(
   competitorPrices: CompetitorPrice[],
   menuItems: MenuItemLite[],
@@ -61,7 +55,6 @@ export function buildComparison(
       ? Math.round((compAmounts.reduce((s, v) => s + v, 0) / compAmounts.length) * 100) / 100
       : null;
 
-    // Representative own item = cheapest menu item matching this benchmark.
     const ownMatches = menuItems
       .map((m) => ({ name: m.name, price: parseGbp(m.price) }))
       .filter((m) => matchBenchmark(m.name)?.key === b.key && m.price != null)
@@ -82,7 +75,6 @@ export function buildComparison(
   });
 }
 
-// ── Named-competitor matrix — your price vs each nearby venue, per benchmark ──
 export type VenueMatrix = {
   venues: string[];
   rows: { key: string; label: string; ownPrice: number | null; cells: (number | null)[] }[];
@@ -100,10 +92,6 @@ function pricedEntries(competitorPrices: CompetitorPrice[]): PricedEntry[] {
     .filter((p): p is PricedEntry => !!p.venue && !!p.key && p.amount != null);
 }
 
-/**
- * All venues that have at least one benchmark-matching price, ranked by coverage
- * (most matches first). The UI defaults to the top few and lets the user pick.
- */
 export function rankedVenues(competitorPrices: CompetitorPrice[]): string[] {
   const coverage = new Map<string, number>();
   pricedEntries(competitorPrices).forEach((p) => coverage.set(p.venue, (coverage.get(p.venue) ?? 0) + 1));
@@ -112,11 +100,6 @@ export function rankedVenues(competitorPrices: CompetitorPrice[]): string[] {
     .map(([v]) => v);
 }
 
-/**
- * Build a "your price vs each named venue" grid for a chosen set of venues:
- * benchmark rows × the given venues (in order). Each cell is that venue's
- * cheapest price matching the benchmark, or null if none found.
- */
 export function buildVenueMatrix(
   competitorPrices: CompetitorPrice[],
   comparison: BenchmarkComparison[],
@@ -125,7 +108,6 @@ export function buildVenueMatrix(
   const priced = pricedEntries(competitorPrices);
   const venueSet = new Set(venues);
 
-  // Cheapest price per (venue, benchmark).
   const cellMin = new Map<string, number>();
   priced.forEach((p) => {
     if (!venueSet.has(p.venue)) return;

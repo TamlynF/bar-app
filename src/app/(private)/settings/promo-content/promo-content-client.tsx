@@ -51,7 +51,6 @@ export default function PromoContentClient({
   const [formError, setFormError] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Upload state
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaType, setMediaType] = useState("image");
   const [uploading, setUploading] = useState(false);
@@ -163,7 +162,6 @@ export default function PromoContentClient({
 
   return (
     <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
-      {/* List */}
       {initialPromos.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
           <ImageIcon className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
@@ -281,7 +279,6 @@ export default function PromoContentClient({
         </section>
       )}
 
-      {/* Bottom Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
         <SheetContent
           side="bottom"
@@ -293,7 +290,6 @@ export default function PromoContentClient({
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
-          {/* Header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -312,9 +308,7 @@ export default function PromoContentClient({
             </div>
           </div>
 
-          {/* Body */}
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-            {/* View mode */}
             {!showForm && selected && (
               <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
@@ -326,7 +320,6 @@ export default function PromoContentClient({
                   <DetailCell label="Display Order" value={String(selected.display_order)} />
                 </div>
 
-                {/* Media preview */}
                 <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white p-3">
                   <div className="mb-2 flex items-center gap-1.5">
                     <ImageIcon className="h-3 w-3 text-[#5F624F]" />
@@ -355,7 +348,6 @@ export default function PromoContentClient({
               </div>
             )}
 
-            {/* Form */}
             {showForm && (
               <form
                 id="promo-form"
@@ -384,7 +376,6 @@ export default function PromoContentClient({
                     />
                   </FormRow>
 
-                  {/* Media upload */}
                   <div className="px-4 py-2.5 sm:px-5 sm:py-4">
                     <div className="mb-2 flex items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
                       <span className="text-[10px] font-bold tracking-wide uppercase">
@@ -484,7 +475,6 @@ export default function PromoContentClient({
             <div className="h-4" />
           </div>
 
-          {/* Footer */}
           <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">

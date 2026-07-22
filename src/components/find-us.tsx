@@ -23,11 +23,6 @@ export type CompanyInfo = {
   facebook?: string | null;
 } | null;
 
-/**
- * Home "Find Us" — After Dark: a two-column block with the address + socials on
- * the left and the full week's opening hours on the right. Today's row is
- * marked in gold. Renders nothing when there's no company information.
- */
 export function FindUs({ info }: { info: CompanyInfo }) {
   if (!info) return null;
 
@@ -55,7 +50,6 @@ export function FindUs({ info }: { info: CompanyInfo }) {
       />
 
       <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
-        {/* Left — address + socials */}
         <div className="rounded-2xl border border-hairline bg-canvas-2 p-5">
           {info.address && (
             <div className="flex items-start gap-3">
@@ -117,7 +111,6 @@ export function FindUs({ info }: { info: CompanyInfo }) {
           </div>
         </div>
 
-        {/* Right — opening hours */}
         {hasAnyHours ? (
           <div className="rounded-2xl border border-hairline bg-canvas-2 px-5 py-2">
             {DAYS.map((d) => {

@@ -2,14 +2,6 @@ import { CalendarDays, Mic2, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SerializedEvent } from "@/lib/events-display";
 
-/**
- * The single source of truth for an event's call-to-action on the public site:
- * Sold Out → Sing (karaoke) → Not Started (karaoke pre-open) → Book → Walk in.
- * Mirrors the status logic in NextEventHero / EventCard so every surface agrees.
- *
- * `size="lg"` renders the full-width pill used in the home hero's "on tonight"
- * card; `size="sm"` (default) renders the compact pill used in schedule rows.
- */
 export function EventCta({
   event,
   size = "sm",
@@ -79,7 +71,6 @@ export function EventCta({
     );
   }
 
-  // No booking action — walk-in. Keeps the row/card rhythm without implying a flow.
   return (
     <span
       className={cn(

@@ -1,16 +1,3 @@
-/**
- * Server-only Google Gemini helper with Google Search grounding.
- *
- * Mirrors the raw-`fetch` pattern already used by the quiz generator
- * (`event-setups/quiz-generator/actions.ts`) — no SDK — but adds the
- * `google_search` tool so the model can answer from live web results and
- * return source citations.
- *
- * NOTE: Gemini does not allow `responseMimeType: "application/json"` /
- * `responseSchema` together with the `google_search` tool, so callers prompt
- * for JSON in the text and parse it with `parseJsonLoose`.
- */
-
 const MODEL = "gemini-2.5-flash";
 
 export type GroundingCitation = { uri: string; title: string };
@@ -23,11 +10,6 @@ function getApiKey(): string {
   return process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 }
 
-/**
- * Run a grounded generation. Returns the model's text plus any web citations
- * from `groundingMetadata`. Never throws — returns `{ error }` on failure so
- * server actions can surface a friendly message.
- */
 export async function generateGrounded(
   prompt: string,
   opts: { temperature?: number } = {},
@@ -58,7 +40,6 @@ export async function generateGrounded(
   if (!response.ok) {
     const data = await response.json().catch(() => ({}));
     const message = data?.error?.message || "The AI service is currently unavailable.";
-    // A 400 on the tool usually means Search grounding isn't enabled on the key's project.
     return { error: `AI error (${response.status}): ${message}` };
   }
 
@@ -82,19 +63,13 @@ export async function generateGrounded(
   return { text, citations };
 }
 
-/**
- * Tolerant JSON extraction from an LLM text response: strips ```json fences and
- * any prose around the first JSON array/object. Returns null if nothing parses.
- */
 export function parseJsonLoose<T>(text: string): T | null {
   const cleaned = text.replace(/```json/gi, "```").trim();
 
-  // Prefer a fenced block if present.
   const fenceMatch = cleaned.match(/```\s*([\s\S]*?)```/);
   const candidates: string[] = [];
   if (fenceMatch) candidates.push(fenceMatch[1].trim());
 
-  // Fall back to the outermost array or object in the text.
   const firstArr = cleaned.indexOf("[");
   const lastArr = cleaned.lastIndexOf("]");
   if (firstArr !== -1 && lastArr > firstArr) candidates.push(cleaned.slice(firstArr, lastArr + 1));
@@ -106,7 +81,6 @@ export function parseJsonLoose<T>(text: string): T | null {
     try {
       return JSON.parse(c) as T;
     } catch {
-      // try the next candidate
     }
   }
   return null;

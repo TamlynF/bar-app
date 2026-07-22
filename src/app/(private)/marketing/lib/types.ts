@@ -1,6 +1,3 @@
-// Hand-declared row types for the Marketing feature (the app has no generated
-// Supabase types file — types live next to the code that uses them).
-
 export type TrendKind = "advertising" | "event_idea" | "price";
 export type TrendState = "new" | "saved" | "ignored";
 export type TrendEffort = "Easy" | "Medium" | "Big";
@@ -51,10 +48,8 @@ export type MarketingSettings = {
   updated_by?: number | null;
 };
 
-// A menu item as read for the comparison view (price is free text, e.g. "£4.50").
 export type MenuItemLite = { id: number; name: string; price: string; category?: string | null };
 
-// Shapes returned by the AI (before we stamp DB columns).
 export type AiTrend = {
   title: string;
   summary?: string;

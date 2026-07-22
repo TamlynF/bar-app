@@ -4,7 +4,6 @@ import { useFormStatus } from "react-dom";
 import { useState } from "react";
 import { updatePassword } from "./actions";
 
-// The submit button must be a child of the form to use useFormStatus
 function SubmitButton() {
   const { pending } = useFormStatus();
 
@@ -33,7 +32,6 @@ export function UpdatePasswordForm() {
     setError(null);
     const result = await updatePassword(formData);
     
-    // If the server action returned an error, display it
     if (result?.error) {
       setError(result.error);
     }

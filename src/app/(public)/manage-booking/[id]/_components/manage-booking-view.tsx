@@ -50,7 +50,6 @@ export default function ManageBookingView({
   const [isCancelled, setIsCancelled] = useState(initialCancelled);
 
   const eventDateStr = booking.events?.event_date;
-  // Parse as local midnight to avoid timezone shifts (DB stores YYYY-MM-DD).
   const eventDate = eventDateStr ? new Date(eventDateStr + "T00:00:00") : null;
   const status = (booking.status || "").toLowerCase();
   const isPending = !isCancelled && status === "pending";
@@ -79,7 +78,6 @@ export default function ManageBookingView({
 
   return (
     <div className="w-full">
-      {/* STATUS HEADER */}
       <div className="mb-8 animate-in text-center duration-500 fade-in">
         {isCancelled ? (
           <XCircle className="mx-auto mb-4 h-16 w-16 text-red-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.3)]" />
@@ -97,7 +95,6 @@ export default function ManageBookingView({
         </p>
       </div>
 
-      {/* ERROR */}
       {error && (
         <div className="mb-6 flex animate-in items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 slide-in-from-top-2">
           <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
@@ -105,7 +102,6 @@ export default function ManageBookingView({
         </div>
       )}
 
-      {/* PENDING-PAYMENT NOTICE */}
       {isPending && isUnpaid && (
         <div className="mb-6 flex animate-in items-start gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/10 p-4 slide-in-from-top-2">
           <Clock3 className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
@@ -115,7 +111,6 @@ export default function ManageBookingView({
         </div>
       )}
 
-      {/* DETAILS */}
       <div className="animate-in space-y-8 duration-500 fade-in">
         <div className="group relative space-y-6 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-inner sm:p-8">
           <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 bg-[#fdcc4b]/5 blur-3xl transition-colors group-hover:bg-[#fdcc4b]/10" />

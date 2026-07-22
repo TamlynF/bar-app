@@ -5,7 +5,6 @@ import { UpdatePasswordForm } from "./update-password-form";
 export default async function UpdatePasswordPage() {
   const supabase = await createClient();
   
-  // Verify the user is actually logged in via the recovery link
   const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {

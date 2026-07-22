@@ -34,7 +34,6 @@ const ICON_OPTIONS = {
   Beer, Banknote, Trophy, Wine, Speaker, User, Disc3, Mic, Tag, Check, Ghost,
 };
 
-/** Lucide icon per sub-category behaviour. */
 const BEHAVIOR_ICON: Record<EventBehavior, React.ComponentType<{ className?: string }>> = {
   standard: Sparkles, quiz: Trophy, bingo: Disc3, karaoke: Mic, music_act: Music, private: Users,
 };
@@ -46,7 +45,6 @@ export type Badge = {
   description: string | null;
 };
 
-/** Booking-card branding fields shared by event_types / event_subtypes / events. */
 export type BookingCardFields = {
   booking_card_title: string | null;
   booking_card_tagline: string | null;
@@ -87,8 +85,6 @@ export type EventTypeRecord = {
 const toTitleCase = (str?: string | null) =>
   !str ? "" : str.trim().split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
-// ---- Editable form state shapes ----
-/** Card fields in form state — empty strings instead of nulls. */
 type CardForm = {
   booking_card_title: string;
   booking_card_tagline: string;
@@ -153,19 +149,16 @@ const appendCardFields = (fd: FormData, c: CardForm) => {
   fd.set("booking_card_badge", c.booking_card_badge);
 };
 
-/** CSS custom properties driving a category card's tint (header bg + name + accent). */
 const catVars = (color: string | null): React.CSSProperties => {
   const c = colorHexFromKey(color);
   return { "--accent": c.solid, "--cat-bg": c.bg, "--cat-text": c.text } as React.CSSProperties;
 };
 
-/** CSS custom properties driving a sub-category card's tint (accent + name + badge icon). */
 const subVars = (color: string | null): React.CSSProperties => {
   const c = colorHexFromKey(color);
   return { "--accent": c.solid, "--sub-bg": c.bg, "--sub-text": c.text, "--sub-border": c.border } as React.CSSProperties;
 };
 
-/** Filtered view of the categories driven by the filter bar. */
 function applyFilters(types: EventTypeRecord[], f: Filters): EventTypeRecord[] {
   const q = f.q.trim().toLowerCase();
   return types
@@ -218,7 +211,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       return next;
     });
 
-  // ---- Open helpers ----
   const openNewType = () =>
     setTypeForm({ name: "", title: "", description: "", color: null, booking_grouping: "per_event", is_bookable: false, booking_config: {}, ...EMPTY_CARD });
 
@@ -251,7 +243,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
       ...cardFromRecord(s),
     });
 
-  // ---- Submit handlers ----
   const submitType = () => {
     if (!typeForm) return;
     if (!typeForm.name.trim()) { setError("Category name is required."); return; }
@@ -356,8 +347,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
   const hasAny = types.length > 0;
 
-  // Live per-field validation for the open sheet. Recomputed each render so messages
-  // appear inline under the offending field and Save can be disabled until resolved.
   const typeErrors: { name?: string; title?: string } = {};
   if (typeForm) {
     if (!typeForm.name.trim()) typeErrors.name = "Category name is required.";
@@ -380,7 +369,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
   return (
     <div className="space-y-4 px-2 sm:px-4 md:px-6 py-3 max-w-3xl">
-      {/* Header */}
       <div className="flex justify-between items-center gap-3">
         <p className="font-medium text-[#5F624F] text-[13px]">Manage your event categories and sub-categories.</p>
         <button
@@ -419,7 +407,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 style={catVars(t.color)}
                 className="bg-[#FFFDF7] border border-[#E6DFC8] rounded-2xl overflow-hidden"
               >
-                {/* Category header */}
                 <header className="flex items-center gap-2 px-4 py-3 bg-(--cat-bg) sm:px-5">
                   <button
                     type="button"
@@ -451,7 +438,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                   </div>
                 </header>
 
-                {/* Sub-categories — badges always visible inline */}
                 {open && (
                   <div className="flex flex-col gap-2 px-3 sm:px-4 pt-1 pb-3.5">
                     {subtypes.length === 0 && (
@@ -481,7 +467,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                             </div>
                           </div>
 
-                          {/* Always-visible badge chips + inline add */}
                           <div className="flex flex-wrap gap-2 px-3 sm:px-3.5 py-3">
                             {badges.map((bg) => (
                               <BadgeChip
@@ -513,7 +498,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         )}
       </div>
 
-      {/* ===== TYPE SHEET ===== */}
       <Sheet open={!!typeForm} onOpenChange={(o) => { if (!o) { setTypeForm(null); setError(null); } }}>
         <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={SHEET_CLASS}>
           <SheetGrab />
@@ -575,7 +559,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         </SheetContent>
       </Sheet>
 
-      {/* ===== SUBTYPE SHEET ===== */}
       <Sheet open={!!subtypeForm} onOpenChange={(o) => { if (!o) { setSubtypeForm(null); setError(null); } }}>
         <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={SHEET_CLASS}>
           <SheetGrab />
@@ -680,7 +663,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         </SheetContent>
       </Sheet>
 
-      {/* ===== BADGE SHEET (quick single-badge editor from the list) ===== */}
       <Sheet open={!!badgeForm} onOpenChange={(o) => { if (!o) { setBadgeForm(null); setError(null); } }}>
         <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={cn(SHEET_CLASS, "sm:w-120")}>
           <SheetGrab />
@@ -692,7 +674,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-5 min-h-0 overflow-y-auto touch-pan-y">
             {badgeForm && (
               <>
-                {/* Live preview */}
                 <div className="flex justify-center py-1">
                   <BadgeChip badge={{ id: -1, title: badgeForm.title || "Badge title", description: badgeForm.description || null, icon: badgeForm.icon || null }} large />
                 </div>
@@ -720,7 +701,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   );
 }
 
-// ===== Filter bar =====
 
 function FilterBar({ filters, setFilters, types }: { filters: Filters; setFilters: (f: Filters) => void; types: EventTypeRecord[] }) {
   const [open, setOpen] = useState(false);
@@ -830,7 +810,6 @@ function FToggle({ on, onClick, label }: { on: boolean; onClick: () => void; lab
   );
 }
 
-// ===== List display bits =====
 
 function IconBtn({ label, onClick, danger, children }: { label: string; onClick: () => void; danger?: boolean; children: React.ReactNode }) {
   return (
@@ -896,7 +875,6 @@ function FlagDots({ s }: { s: Subtype }) {
   );
 }
 
-/** Prominent ticket marker. `inverted` signals per-event booking (outlined). */
 function BookingMark({ inverted = false, title = "Bookable" }: { inverted?: boolean; title?: string }) {
   return (
     <span title={title} className="inline-flex items-center shrink-0">
@@ -912,7 +890,6 @@ function BookingMark({ inverted = false, title = "Bookable" }: { inverted?: bool
   );
 }
 
-// ===== Sheet chrome =====
 
 const SHEET_CLASS = "bg-[#F7F4EA] border-t border-[#E6DFC8] rounded-t-[28px] p-0 h-[92vh] flex flex-col outline-none shadow-2xl gap-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-165 sm:h-auto sm:max-h-[84vh] sm:rounded-[28px] sm:bottom-5.5 sm:border sm:border-[#E6DFC8]";
 
@@ -959,7 +936,6 @@ function SheetFooter({ onCancel, onSave, pending, saveLabel, disableSave }: { on
   );
 }
 
-/** Collapsible white section card used across the sheets. */
 function CollapsibleCard({ title, count, action, defaultOpen = true, bodyClassName, children }: {
   title: string; count?: number; action?: React.ReactNode; defaultOpen?: boolean; bodyClassName?: string; children: React.ReactNode;
 }) {
@@ -981,7 +957,6 @@ function CollapsibleCard({ title, count, action, defaultOpen = true, bodyClassNa
   );
 }
 
-/** Green wrapper grouping the bookable-only booking page + form-field sections. */
 function BookingGroup({ children }: { children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
@@ -997,7 +972,6 @@ function BookingGroup({ children }: { children: React.ReactNode }) {
   );
 }
 
-// ===== Field primitives =====
 
 function FieldRow({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
   return (
@@ -1023,7 +997,6 @@ function FieldCol({ label, error, children }: { label: string; error?: string; c
   );
 }
 
-/** Inline validation message shown under a field. */
 function FieldError({ message }: { message: string }) {
   return (
     <p className="flex items-center gap-1 mt-1.5 font-bold text-[#DC2626] text-[11px] leading-snug">
@@ -1061,7 +1034,6 @@ function SheetTextarea({ value, onChange, placeholder }: { value: string; onChan
   );
 }
 
-/** Segmented control (e.g. booking grouping). */
 function SegRow<T extends string>({ options, value, onChange, render }: { options: T[]; value: T; onChange: (v: T) => void; render?: (v: T) => string }) {
   return (
     <div className="flex gap-0.75 bg-[#F7F4EA] p-0.75 border border-[#E6DFC8] rounded-xl">
@@ -1184,7 +1156,6 @@ function BookingCardSection({ value, onChange }: { value: CardForm; onChange: (p
   );
 }
 
-// ===== Badge editing bits =====
 
 const renderBadgeIcon = (iconStr: string | null, size = "w-4 h-4") => {
   if (!iconStr || !(iconStr in ICON_OPTIONS)) return <Tag className={size} />;
@@ -1192,7 +1163,6 @@ const renderBadgeIcon = (iconStr: string | null, size = "w-4 h-4") => {
   return <I className={size} />;
 };
 
-/** Icon picker grid shared by the badge editors (8 columns, redesign). */
 function IconGrid({ value, onChange }: { value: string | null; onChange: (name: string) => void }) {
   return (
     <div className="gap-1.5 grid grid-cols-6 sm:grid-cols-8">
@@ -1218,7 +1188,6 @@ function IconGrid({ value, onChange }: { value: string | null; onChange: (name: 
   );
 }
 
-/** Inline badge row inside the sub-category sheet (saved with the sub-category). */
 function BadgeEditorRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onChange: (b: BadgeDraft) => void; onDelete: () => void }) {
   const [pickOpen, setPickOpen] = useState(false);
   return (

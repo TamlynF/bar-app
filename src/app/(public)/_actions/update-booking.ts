@@ -23,7 +23,6 @@ export async function updateBooking(
   try {
     const supabase = await createClient();
 
-    // 1. Fetch current booking + event seating flags.
     const { data: currentBooking, error: fetchError } = await supabase
       .from("bookings")
       .select(`
@@ -41,14 +40,12 @@ export async function updateBooking(
       return { success: false, error: "Booking not found." };
     }
 
-    // Supabase joins can return as object OR single-element array.
     type EventRel = { date: string; seating_required: boolean; is_bookable: boolean };
     const eventData = currentBooking.events as EventRel | EventRel[] | null;
     const ev = Array.isArray(eventData) ? eventData[0] : eventData;
     const eventDate = ev?.date;
     const eventId = currentBooking.event_id as number;
 
-    // 2. If the team name is being changed, verify it isn't already taken.
     if (updates.group_name && eventDate) {
       const { isAvailable } = await checkTeamName(updates.group_name, eventDate, bookingId);
       if (!isAvailable) {
@@ -69,9 +66,7 @@ export async function updateBooking(
         })
       : false;
 
-    // 3. Table re-allocation (seated events only).
     if (seated) {
-      // The booking's current table mapping (if any).
       const { data: mapping } = await supabase
         .from("booking_table_mappings")
         .select("table_id, tables(max_capacity)")
@@ -86,7 +81,6 @@ export async function updateBooking(
         currentBooking.status === "confirmed" && mappedTableId != null && mappedCap != null;
 
       if (isConfirmedMapped && sizeChanged) {
-        // Rules 3a / 3b — plan then apply.
         const plan = await planSizeChange(supabase, {
           booking: {
             bookingId: Number(bookingId),
@@ -98,7 +92,6 @@ export async function updateBooking(
         });
 
         if (plan.outcome === "no_space") {
-          // Public surface: block the change, leave the booking + mapping intact.
           return {
             success: false,
             blocked: true,
@@ -109,7 +102,6 @@ export async function updateBooking(
         await applySizeChange(supabase, plan, { bookingId, eventId, surface: "public" });
         finalStatus = "confirmed";
       } else if (!isConfirmedMapped && (sizeChanged || currentBooking.status !== "confirmed")) {
-        // Not seated yet (waitlisted/pending/unmapped) — (re)attempt allocation.
         const allocation = await allocateOnCreate(supabase, { eventId, groupSize: newSize });
         await supabase.from("booking_table_mappings").delete().eq("booking_id", bookingId);
         if (allocation.status === "confirmed") {
@@ -126,7 +118,6 @@ export async function updateBooking(
       }
     }
 
-    // 4. Update the primary booking record.
     const { error: updateError } = await supabase
       .from("bookings")
       .update({
@@ -142,10 +133,8 @@ export async function updateBooking(
       return { success: false, error: "Failed to update booking. Please try again." };
     }
 
-    // 5. Keep is_fully_booked in sync after any allocation change.
     await updateFullyBookedStatus(supabase, eventId);
 
-    // Revalidate for both public and admin views
     revalidatePath(`/manage-booking/${bookingId}`);
     revalidatePath("/dashboard");
     revalidatePath("/event-bookings/quiz-bookings");

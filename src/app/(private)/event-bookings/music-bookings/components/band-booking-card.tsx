@@ -56,17 +56,13 @@ import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail, type BandEmai
 
 const DEFAULT_START_TIME = "22:00"; // 10pm
 
-/** Same ceiling as the public application form, so the admin can't outgrow it. */
 const MAX_VIDEOS = 10;
 const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
 
-/** Applicant's booking note collapses to this many characters behind a "…" toggle. */
 const NOTE_PREVIEW_LEN = 50;
 
-/** Preferred-date pills shown before the "Show all" toggle takes over. */
 const PREFERRED_DATES_VISIBLE = 4;
 
-/** The Decline Reason row lives in a narrow popover, so it previews less than a sheet row. */
 const DECLINE_PREVIEW_LEN = 28;
 
 interface SocialLinks {
@@ -76,16 +72,13 @@ interface SocialLinks {
   tiktok?: string;
 }
 
-/** One internal note on a request — a row of `band_booking_notes`. */
 export interface BandNote {
   id: string;
   body: string;
   created_at: string;
-  /** Joined employee for `created_by` — who wrote it. */
   author?: { full_name: string | null } | { full_name: string | null }[] | null;
 }
 
-/** The slice of the linked `events` row the card reads. */
 interface LinkedEvent {
   is_active: boolean;
   date: string | null;
@@ -103,19 +96,12 @@ export interface BandRequest {
   phone_no: string | null;
   social_links: SocialLinks | null;
   spotify_url: string | null;
-  /** FK to the master music_acts row this request is linked to (null for legacy rows). */
   music_acts_id: string | null;
   video_urls: string[] | null;
-  /** Parallel to `video_urls` — the applicant's short description per video. */
   video_descriptions: string[] | null;
   preferred_dates: string[] | null;
   notes: string | null;
-  /**
-   * @deprecated Superseded by `band_notes_list` (`band_booking_notes`). Kept only
-   * because the column still exists; nothing writes it any more.
-   */
   band_notes: string | null;
-  /** Internal notes, oldest first. */
   band_notes_list?: BandNote[] | null;
   status: string;
   admin_notes: string | null;
@@ -134,35 +120,20 @@ export interface BandRequest {
   event_id: number | null;
   updated_at?: string | null;
   updated_by?: number | null;
-  /** Joined employee for `updated_by` — who last modified the request. */
   updated_by_employee?: { full_name: string | null } | null;
-  /**
-   * Joined `events` row for `event_id`. `is_active` tells a linked event that's
-   * on the schedule from one that's been taken off it; the date and times place
-   * the booking in time for the lifecycle badge. Supabase returns the join as an
-   * object or a single-element array.
-   */
   linked_event?: LinkedEvent | LinkedEvent[] | null;
 }
 
-/**
- * A video row in the sheet's Act Media manager. The applicant's saved videos load
- * with a `url` straight away; a freshly picked file has none until its resumable
- * upload finishes, and carries the local preview + progress in the meantime.
- */
 interface SheetVideo {
   id: string;
-  /** Public url once uploaded; null while a picked file is still uploading. */
   url: string | null;
   description: string;
-  /** Object URL for the local file, so a not-yet-uploaded pick still previews. */
   previewUrl?: string;
   uploading?: boolean;
   progress?: number;
   error?: string | null;
 }
 
-/** The applicant's saved videos as editable rows — url + description, paired by index. */
 function seedSheetVideos(request: BandRequest): SheetVideo[] {
   return (request.video_urls ?? [])
     .map((url, i) => ({
@@ -248,14 +219,6 @@ export const statusTheme: Record<
   },
 };
 
-/**
- * Which status buttons each stage shows, and where they lead. Booked is terminal
- * here (aside from Decline) because slot changes go through the reschedule flow,
- * which lands on "offered". Colours are semantic per stage, matching the app's
- * existing status-button convention (not the Edit/Save identity colours).
- * Exactly one transition per stage is `primary` (the natural next step) and gets
- * the solid fill; the rest use soft tints so a single saturated action leads.
- */
 export const BAND_TRANSITIONS: Record<
   BandStatus,
   { label: string; next: BandStatus; className: string; primary?: boolean }[]
@@ -282,7 +245,6 @@ export const BAND_TRANSITIONS: Record<
   ],
 };
 
-/** Success-toast copy per destination status. */
 const STATUS_TOAST: Record<BandStatus, string> = {
   new: "Moved to New",
   reviewing: "Moved to Reviewing",
@@ -291,13 +253,6 @@ const STATUS_TOAST: Record<BandStatus, string> = {
   declined: "Application declined",
 };
 
-/**
- * Per-platform brand colours for the social links. `className` fills the sheet's
- * pill; `glyph` colours a bare icon, for the card row where there's no pill to
- * carry the brand — each platform's own colour is what makes it identifiable at
- * 16px, so Instagram's pink is picked out of the gradient rather than flattened
- * to the palette.
- */
 const SOCIAL_META: Record<string, { icon: React.ElementType; className: string; glyph: string; label: string }> = {
   instagram: {
     icon: SiInstagram,
@@ -325,17 +280,10 @@ const SOCIAL_META: Record<string, { icon: React.ElementType; className: string; 
   },
 };
 
-/** A marker with nothing behind it — same "off" tone as the unfilled heart. */
 const MARKER_OFF = "text-[#5F624F]/25";
 
-/** Fixed pill order — every platform always shows, filled or not. */
 const SOCIAL_ORDER: (keyof SocialLinks)[] = ["instagram", "facebook", "youtube", "tiktok"];
 
-/**
- * Trimmed, blank-dropped links in a stable key order. Emptying a field clears the
- * key rather than persisting "", and the stable order makes two normalised objects
- * safe to compare with JSON.stringify for the dirty check.
- */
 function normalizeSocials(links: SocialLinks | null | undefined): Record<string, string> {
   const out: Record<string, string> = {};
   for (const key of SOCIAL_ORDER) {
@@ -347,26 +295,10 @@ function normalizeSocials(links: SocialLinks | null | undefined): Record<string,
 
 const normStatus = (s?: string) => (s || "").trim().toLowerCase();
 
-/** Pipeline order for the header stepper. `declined` is a terminal exit, not a stage. */
 const PIPELINE: BandStatus[] = ["new", "reviewing", "offered", "booked"];
 
-/**
- * The pipeline, as the control. Past stages get a check, the current stage gets
- * its statusTheme tint, future stages stay muted — and any stage reachable from
- * the current one is a button that moves the request there. Reachability comes
- * straight from BAND_TRANSITIONS, so this stays in step with the state machine
- * without restating it.
- *
- * A terminal exit (declined) isn't a pipeline stage, so it renders as its own
- * chip alongside whatever it can reach — which is what makes "Reopen" reachable.
- */
 type StageTone = "current" | "past" | "future";
 
-/**
- * One stage chip. Declared at module scope (not inside StageStepper) so React
- * keeps the same component type across renders instead of remounting it.
- * A reachable stage is a live button; everything else is inert but explains why.
- */
 function StageChip({
   stage,
   tone,
@@ -378,16 +310,10 @@ function StageChip({
 }: {
   stage: BandStatus;
   tone: StageTone;
-  /** Why this stage can't be clicked; null when it can. */
   reason: string | null;
   isPending: boolean;
-  /** Some stage is mid-flight — freeze the whole row. */
   anyPending: boolean;
   onSelect: (next: BandStatus) => void;
-  /**
-   * Given when the block is something the admin can fix right now — the chip
-   * stays live and points at the fix instead of being a dead end.
-   */
   onBlockedClick?: () => void;
 }) {
   const t = statusTheme[stage];
@@ -401,14 +327,12 @@ function StageChip({
       onClick={() => (interactive ? onSelect(stage) : onBlockedClick?.())}
       title={reason ?? `Move to ${t.label}`}
       aria-current={tone === "current" ? "step" : undefined}
-      // Still announced as unavailable — it just explains itself when clicked.
       aria-disabled={!interactive || undefined}
       className={cn(
         "flex h-12 shrink-0 items-center gap-2 rounded-full border-2 px-3.5 transition-all sm:h-10",
         tone === "current" && cn(t.bg, t.text, t.border),
         tone === "past" && "border-[#E6DFC8] bg-white text-[#5F624F]",
         tone === "future" && "border-transparent text-[#5F624F]/45",
-        // A reachable stage advertises itself; an unreachable one stays flat.
         interactive
           ? cn(
               "cursor-pointer hover:brightness-95",
@@ -442,20 +366,9 @@ function StageStepper({
 }: {
   status: string;
   onSelect: (next: BandStatus) => void;
-  /** Stage currently being applied — shows a spinner on that chip. */
   pendingStage: BandStatus | null;
-  /**
-   * Per-stage reasons a transition can't happen yet, beyond what the state
-   * machine allows. Every one of these is fixable in the slot console, so a
-   * blocked chip points there rather than sitting dead.
-   */
   blockers: Partial<Record<BandStatus, string | undefined>>;
-  /** Points the admin at the slot console when a stage is blocked only by it. */
   onRevealSlot: () => void;
-  /**
-   * The reason shown to the applicant on decline (admin_notes). The declined chip
-   * opens this for viewing/editing and flags a dot when one is on file.
-   */
   declineReason: string;
   onDeclineReasonChange: (v: string) => void;
 }) {
@@ -463,15 +376,12 @@ function StageStepper({
   const currentLabel = statusTheme[status]?.label ?? status;
   const reachable = (s: BandStatus) => transitions.some((t) => t.next === s);
 
-  // Allowed by the state machine, then clear of any slot problem.
   const blockedReason = (s: BandStatus): string | null => {
     if (!reachable(s)) return `Not available from ${currentLabel}`;
     return blockers[s] ?? null;
   };
 
-  /** A chip per stage — `reason` null means it's reachable, so it's a button. */
   const chip = (s: BandStatus, tone: StageTone) => {
-    // Reachable but slot-blocked → keep it live and send them to the fix.
     const slotFixable = reachable(s) && !!blockers[s];
     return (
       <StageChip
@@ -489,15 +399,12 @@ function StageStepper({
 
   const idx = PIPELINE.indexOf(status as BandStatus);
 
-  // Off-pipeline (declined): its own chip, plus whatever it can reach.
   if (idx === -1) {
     const t = statusTheme[status];
     if (!t) return null;
     const exits = transitions.filter((tr) => PIPELINE.includes(tr.next));
     return (
       <div className="no-scrollbar mt-3 flex items-center gap-1.5 overflow-x-auto" aria-label={`Status: ${t.label}`}>
-        {/* The current (declined) chip opens the applicant's decline reason for
-            viewing/editing, and carries a dot when a reason is on file. */}
         <Popover>
           <PopoverTrigger asChild>
             <button
@@ -558,8 +465,6 @@ function StageStepper({
     >
       {PIPELINE.map((s, i) => (
         <React.Fragment key={s}>
-          {/* An arrow, not a bar — it points at the next step. Espresso once the
-              stage is reached, muted while it's still ahead. */}
           {i > 0 && (
             <ArrowRight
               className={cn("h-4 w-4 shrink-0", i <= idx ? "text-[#5C4033]" : "text-[#5F624F]/30")}
@@ -570,9 +475,6 @@ function StageStepper({
         </React.Fragment>
       ))}
 
-      {/* Decline — a terminal exit, deliberately NOT part of the approval pipeline:
-          pushed clear to the right with no arrow leading in, and outlined in dashed
-          red so it reads as the bad, off-workflow action it is. */}
       {reachable("declined") && (
         <button
           type="button"
@@ -593,10 +495,6 @@ function StageStepper({
   );
 }
 
-/**
- * Renders exactly what the band is about to receive, for the confirm dialogs.
- * Reads a built BandEmail, so the preview can't drift from the sent message.
- */
 function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to: string; slotLabel?: string }) {
   return (
     <div className="space-y-1.5 rounded-xl border border-[#E6DFC8] bg-white p-3 text-left">
@@ -626,15 +524,6 @@ function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to:
   );
 }
 
-/**
- * Dialog body for the outbound emails: an optional message, plus a preview that
- * rebuilds as you type it.
- *
- * The draft lives in here rather than in the card because `useConfirm` snapshots
- * `content` when the dialog opens — a textarea bound to the card's state would
- * render stale and swallow keystrokes. This component mounts once and owns its
- * own state; `onNoteChange` reports back so the caller can read the final value.
- */
 function EmailWithNote({
   initialNote,
   onNoteChange,
@@ -646,7 +535,6 @@ function EmailWithNote({
 }: {
   initialNote: string;
   onNoteChange: (v: string) => void;
-  /** Rebuilds the email for the given note — keeps the preview honest. */
   build: (note: string) => BandEmail;
   to: string;
   label: string;
@@ -687,7 +575,6 @@ function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   );
 }
 
-/** A label + value row that becomes an input/select when `editable`. */
 function EditRow({
   label,
   value,
@@ -740,7 +627,6 @@ function EditRow({
   );
 }
 
-/** Collapsible card section — matches the layout/format of the event-setups sheet. */
 function Section({
   title,
   defaultOpen = true,
@@ -757,24 +643,15 @@ function Section({
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
-      {/* Header bar. The title and chevron are their own toggle buttons so that
-          `headerRight` can carry an interactive element (e.g. a link) as a sibling
-          rather than nested inside a button. The title button flex-fills, so almost
-          the whole bar still toggles — only headerRight itself doesn't. */}
       <div
         className={cn(
-          // Tinted band (the border tone) against the sheet's #F7F4EA and the card's
-          // white rows, so the header reads as a header rather than as surface.
           "flex w-full items-center gap-3 bg-[#E6DFC8] px-4 py-3 sm:px-5",
-          // Same hairline as the field-row dividers below it. Only while open, so a
-          // collapsed header doesn't draw a stray line against the card's own edge.
           open && "border-b border-[#E6DFC8]"
         )}
       >
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
-          // brightness-95 darkens on hover without inventing a shade below #E6DFC8.
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
           <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
@@ -794,11 +671,6 @@ function Section({
   );
 }
 
-/**
- * "Tamlyn Fourie" → "T.Fourie" — the card row is narrow, and the surname is what
- * gets recognised. A middle name drops out (the last word is the surname); a
- * single-word name has nothing to abbreviate and is left whole.
- */
 function abbreviateName(name?: string | null): string {
   const parts = (name ?? "").trim().split(/\s+/).filter(Boolean);
   if (parts.length < 2) return parts[0] ?? "";
@@ -811,7 +683,6 @@ function toTitleCase(str?: string | null) {
   return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
 }
 
-/** Payment status is derived from amount vs paid — never set by hand. */
 function derivePaymentStatus(amount: number, paid: number): string {
   if (!(amount > 0)) return "no_payment";
   if (paid > amount) return "over_paid";
@@ -828,19 +699,11 @@ const PAYMENT_STATUS_META: Record<string, { label: string; className: string }> 
   over_paid: { label: "Over paid", className: "bg-purple-50 border-purple-200 text-purple-700" },
 };
 
-/**
- * Lifecycle tag fills, matching the type tag's solid treatment at the opposite
- * corner. Deliberately off the green "booked" status theme these sit beside —
- * they report where the night sits in time, not the status, so a neutral "done"
- * and a distinct blue "ahead" don't restate the status colour. The 600/500 tones
- * (rather than the lighter blue-500/gray-400) are what carry white text at 9px.
- */
 const LIFECYCLE_META: Record<BandLifecycleStage, { label: string; className: string }> = {
   completed: { label: "Completed", className: "bg-gray-500" },
   upcoming: { label: "Upcoming", className: "bg-blue-600" },
 };
 
-/** Full date + time, e.g. "8 May 2026, 14:32" — used in the audit trail. */
 function formatDateTime(iso?: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("en-GB", {
@@ -860,32 +723,12 @@ export function BandBookingCard({
   lifecycle = null,
 }: {
   request: BandRequest;
-  /**
-   * This card's column has the board to itself, so the row can spread into the
-   * width instead of staying at board-column proportions. Drives the `lg:` row
-   * layout below (there's only room for it on a real screen) and unlocks the
-   * detail a 288px column can't carry: video count, socials, unabbreviated name.
-   */
   wide?: boolean;
-  /**
-   * Where this night sits in time, for the corner tag. Handed down rather than
-   * worked out here: "upcoming" belongs to only the next booked night, which is
-   * a fact about the whole board that a single card can't see. Null until the
-   * board has a client clock to compare against.
-   */
   lifecycle?: BandLifecycleStage | null;
 }) {
   const { confirm: baseConfirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
-  /**
-   * Raised while a confirm dialog is open. That dialog is a Radix layer portalled
-   * out to <body>, so every click and focus inside it (and its own dismissal) reads
-   * to the sheet as an interaction *outside* itself — which would fire the sheet's
-   * onOpenChange(false) and, since a plain status change has no unsaved edits, close
-   * the sheet from under the dialog. The sheet checks this flag before honouring any
-   * outside-dismissal (see the SheetContent guards below).
-   */
   const confirmOpen = useRef(false);
   const confirm = useCallback(
     async (opts: Parameters<typeof baseConfirm>[0]) => {
@@ -899,7 +742,6 @@ export function BandBookingCard({
     [baseConfirm]
   );
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
-  // Footer "note to applicant" is tucked away unless one already exists.
   const [selectedDate, setSelectedDate] = useState(request.selected_date || "");
   const [selectedStartTime, setSelectedStartTime] = useState(toHHMM(request.selected_start_time));
   const [selectedEndTime, setSelectedEndTime] = useState(toHHMM(request.selected_end_time));
@@ -907,25 +749,17 @@ export function BandBookingCard({
   const [clashes, setClashes] = useState<ClashEvent[]>([]);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  /** Stage being applied — drives the spinner on that stepper chip. */
   const [pendingStage, setPendingStage] = useState<BandStatus | null>(null);
-  /** Brief highlight on the slot console after a blocked Booked chip points at it. */
   const [slotFlash, setSlotFlash] = useState(false);
   const startTimeRef = useRef<HTMLInputElement>(null);
-  /** Re-entry guard for the unsaved-changes prompt. */
   const askingToClose = useRef(false);
-  /** Live value of the note being written inside an email dialog. */
   const noteDraft = useRef("");
 
-  // Favourite persists on click (not via Save), so it gets its own transition —
-  // sharing `isPending` would grey out the footer actions on every heart tap.
   const [isFavorite, setIsFavorite] = useState(request.is_favorite);
   const [, startFavTransition] = useTransition();
   const [noteExpanded, setNoteExpanded] = useState(false);
   const [declineReasonOpen, setDeclineReasonOpen] = useState(false);
 
-  // Editable detail fields (act, contact & payment). Seeded from the request; a
-  // cancelled request is read-only, everything else can be edited.
   const [actName, setActName] = useState(request.group_name ?? "");
   const [reqType, setReqType] = useState(request.type ?? "");
   const [genre, setGenre] = useState(request.genre ?? "");
@@ -943,43 +777,25 @@ export function BandBookingCard({
   const [bankPaymentRef, setBankPaymentRef] = useState(request.bank_payment_ref ?? "");
   const [showBankDetails, setShowBankDetails] = useState(false);
   const [showContactDetails, setShowContactDetails] = useState(false);
-  // Audit trail — reference only, so it lives behind a header icon rather than
-  // taking a full card slot in the rail. Mirrors the Band Notes popover.
   const [sysInfoOpen, setSysInfoOpen] = useState(false);
   const [showAllDates, setShowAllDates] = useState(false);
-  // Act Media videos as an editable list — seeded from the request, with new picks
-  // uploaded straight to the band-videos bucket and persisted on Save.
   const [sheetVideos, setSheetVideos] = useState<SheetVideo[]>(() => seedSheetVideos(request));
   const videoInputRef = useRef<HTMLInputElement>(null);
-  /** In-flight resumable uploads, keyed by row id, so a removal can abort one. */
   const videoUploadHandles = useRef<Record<string, ResumableHandle>>({});
 
   const status = normStatus(request.status);
   const theme = statusTheme[status] || statusTheme.new;
   const editable = status !== "declined";
 
-  // Applicant's note. Long ones sit on one row as a preview + "…" toggle rather
-  // than pushing every other field down the sheet.
   const bookingNote = (request.notes ?? "").trim();
   const noteIsLong = bookingNote.length > NOTE_PREVIEW_LEN;
   const noteHead = bookingNote.slice(0, NOTE_PREVIEW_LEN).trimEnd();
 
-  /**
-   * Open/close the sheet, mirroring its state into the URL as `?open=<request id>`.
-   *
-   * The sheet is local state, so a round-trip to the linked event and back would
-   * otherwise land on the bare list. The marker lets the effect below reopen this
-   * request — both on browser Back (which restores this entry) and on the events
-   * page sending us back explicitly. replaceState rather than router.push: the
-   * marker annotates where we already are, it isn't a place worth a history entry.
-   */
   function setSheetOpen(next: boolean) {
     setOpen(next);
     window.history.replaceState(null, "", next ? `${LIST_HREF}?open=${request.id}` : LIST_HREF);
   }
 
-  // Reopen this request's sheet when we're the one named in `?open=`, then drop the
-  // marker so a later refresh doesn't resurrect a sheet the admin has closed.
   useEffect(() => {
     const openId = searchParams.get("open") ?? new URLSearchParams(window.location.search).get("open");
     if (openId !== request.id) return;
@@ -987,35 +803,17 @@ export function BandBookingCard({
     window.history.replaceState(null, "", LIST_HREF);
   }, [searchParams, request.id]);
 
-  // Where the linked event lives, if one has been placed. Null → System
-  // Information shows "—".
-  // `back` carries our own reopen marker, so closing the event's sheet returns to
-  // this request rather than stranding the admin on the events list.
   const eventHref = request.event_id
     ? `/event-setups/events?open=${request.event_id}&back=${encodeURIComponent(`${LIST_HREF}?open=${request.id}`)}`
     : null;
-  // Is that event actually on the schedule? Only `booked` keeps its event active;
-  // every other status deactivates it, so the badge colour reports the event's
-  // real state rather than just the fact a row exists.
   const linkedEvent = Array.isArray(request.linked_event) ? request.linked_event[0] : request.linked_event;
   const eventIsActive = linkedEvent?.is_active === true;
-  /** Is there a corner ribbon at all? Drives the top padding and the heart's drop. */
   const hasRibbon = !!(request.type || request.genre || lifecycle);
-  // The id is a uuid — too long to show whole. First 8 chars is a workable human
-  // reference; the full value is on hover and on the clipboard.
   const shortRef = request.id.slice(0, 8).toUpperCase();
 
-  // A selected slot exists to show once one has been offered or booked.
   const hasSlot = status === "offered" || status === "booked";
-  // Triage stages where the admin picks a slot and the note-to-applicant shows.
   const isWorkingStage = status === "new" || status === "reviewing" || status === "offered";
-  // No event is expected until a request is booked, so during triage an "unlinked"
-  // badge would just be noise — only show it once a link exists or its absence means
-  // something (booked with no event = a fault; declined = merely informational).
   const showEventBadge = !!eventHref || !isWorkingStage;
-  // One consolidated slot warning. Two stacked lines (one under Date, one under
-  // Time) nag without adding information, so state the precondition to book once,
-  // naming only what's actually missing. Rendered below the Date+Time pair.
   const needsDate = isWorkingStage && !selectedDate;
   const needsTime = isWorkingStage && (!selectedStartTime || !selectedEndTime);
   const slotWarning =
@@ -1027,60 +825,41 @@ export function BandBookingCard({
           ? "A start and end time must be set to book this act."
           : undefined;
 
-  // The reason the band was given when declined. Lives in admin_notes (the same
-  // field the offer/booked messages use) — it's whatever was last said to them.
   const isDeclined = status === "declined";
   const declineReason = adminNotes.trim();
   const declineIsLong = declineReason.length > DECLINE_PREVIEW_LEN;
   const declineHead = declineReason.slice(0, DECLINE_PREVIEW_LEN).trimEnd();
 
-  // A slot that overlaps another active event can't be committed — it would double-
-  // book the venue. Blocks Save and the Booked chip until the time moves.
   const hasClashes = clashes.length > 0;
   const clashWarning = hasClashes
     ? `Clashes with ${clashes.map((c) => c.title).join(", ")} — pick another time.`
     : undefined;
-  // A complete, clash-free slot — the console then wears the Save/book green
-  // (#1B4332) to read as "ready", rather than the neutral resting espresso.
   const slotIsSet = !!selectedDate && !!selectedStartTime && !!selectedEndTime && !hasClashes;
 
-  // Every platform gets a pill; unfilled ones render deactivated and can be filled
-  // in. Read-only requests only show what's actually there.
   const hasAnySocial = SOCIAL_ORDER.some((k) => (socialLinks[k] ?? "").trim());
   const hasSpotify = !!spotifyUrl.trim();
   const showSocials = editable || hasAnySocial || hasSpotify;
 
-  // Pair each url with its description by index *before* dropping blanks, so a
-  // missing url can't shift every description onto the wrong video.
   const videos = (request.video_urls ?? [])
     .map((url, i) => ({ url, description: (request.video_descriptions ?? [])[i]?.trim() || "" }))
     .filter((v) => Boolean(v.url));
   const dates = (request.preferred_dates ?? []).filter(Boolean);
-  // Internal notes, oldest first (the query orders them). Server-owned: they save
-  // on their own, so they're read straight off the request rather than mirrored
-  // into state like the editable fields below.
   const bandNoteList = request.band_notes_list ?? [];
-  /** Drives the fee marker in the icon rail, and how much room the name must leave. */
   const hasFee = (request.payment_amount ?? 0) > 0;
 
-  // Payment status is derived live from the amount + paid inputs, never edited.
   const amountNum = paymentAmount === "" ? 0 : Number(paymentAmount) || 0;
   const paidNum = paidAmount === "" ? 0 : Number(paidAmount) || 0;
   const derivedStatus = derivePaymentStatus(amountNum, paidNum);
   const isNoPayment = derivedStatus === "no_payment";
-  // Collapse Payment Details by default when the saved record has no fee yet.
   const initialPaymentOpen =
     derivePaymentStatus(request.payment_amount ?? 0, request.paid_amount ?? 0) !== "no_payment";
 
-  // Original (normalised) values, to detect whether date/time actually changed.
   const origDate = request.selected_date || "";
   const origStart = toHHMM(request.selected_start_time);
   const origEnd = toHHMM(request.selected_end_time);
   const dateTimeChanged =
     selectedDate !== origDate || selectedStartTime !== origStart || selectedEndTime !== origEnd;
 
-  // Only successfully-uploaded videos are persistable; a row still uploading has no
-  // url yet, so it stays out of the saved arrays until it lands.
   const uploadedSheetVideos = sheetVideos.filter((v) => v.url);
   const videosUploading = sheetVideos.some((v) => v.uploading);
   const savedVideoUrls = (request.video_urls ?? []).filter(Boolean);
@@ -1092,7 +871,6 @@ export function BandBookingCard({
     JSON.stringify(uploadedSheetVideos.map((v) => v.description.trim())) !==
       JSON.stringify(savedVideoDescriptions);
 
-  // Have any editable fields diverged from the saved record? Drives the Save button.
   const detailsChanged =
     actName !== (request.group_name ?? "") ||
     reqType !== (request.type ?? "") ||
@@ -1112,8 +890,6 @@ export function BandBookingCard({
     adminNotes !== (request.admin_notes ?? "");
   const hasChanges = detailsChanged || dateTimeChanged;
 
-  // All editable detail fields except the schedule (date/time is handled separately
-  // because a confirmed reschedule also emails the band and moves the linked event).
   const detailFields = () => ({
     group_name: actName || null,
     type: reqType || null,
@@ -1135,8 +911,6 @@ export function BandBookingCard({
     admin_notes: adminNotes || null,
   });
 
-  // Picking a date defaults the start to 10pm (if unset); changing the start always
-  // re-derives the end as start + 2 hours.
   const applyDate = (d: string) => {
     setSelectedDate(d);
     setClashes([]);
@@ -1151,16 +925,7 @@ export function BandBookingCard({
     setClashes([]);
   };
 
-  /**
-   * Validate the slot against the schedule as it's edited, so a clash surfaces
-   * while you're still choosing rather than on the way out. Debounced — the time
-   * inputs fire per keystroke. The action-time findClashes() below still runs as
-   * the authoritative check; this is the live one that drives the UI.
-   */
   useEffect(() => {
-    // A declined request places no event, so its slot can't collide with anything —
-    // and its clash list would have nowhere to render (the footer's second column
-    // carries the decline reason), leaving Save mysteriously disabled.
     if (status === "declined" || !selectedDate || !selectedStartTime || !selectedEndTime) {
       setClashes([]);
       return;
@@ -1171,7 +936,6 @@ export function BandBookingCard({
         const list = await getClashingEvents(selectedDate, selectedStartTime, selectedEndTime, request.event_id);
         if (!cancelled) setClashes(list);
       } catch {
-        // A failed lookup shouldn't wedge the sheet — booking re-checks anyway.
         if (!cancelled) setClashes([]);
       }
     }, 350);
@@ -1181,8 +945,6 @@ export function BandBookingCard({
     };
   }, [status, selectedDate, selectedStartTime, selectedEndTime, request.event_id]);
 
-  // Look up active events that overlap the chosen slot (excluding this booking's own
-  // linked event). Returns the clashes and stores them for display.
   async function findClashes(): Promise<ClashEvent[]> {
     if (!selectedDate) {
       setClashes([]);
@@ -1198,24 +960,14 @@ export function BandBookingCard({
     return list;
   }
 
-  /**
-   * Guard every dismissal of the sheet (✕ / Escape / click outside): unsaved edits
-   * ask to be saved or discarded first, rather than vanishing silently. Mirrors
-   * `guardedClose` in the general-bookings list.
-   */
   async function requestClose() {
     if (!hasChanges) {
       setSheetOpen(false);
       return;
     }
-    // The sheet stays mounted while we ask, so a second Escape would fire
-    // onOpenChange again and stack another dialog over the first. `pendingStage`
-    // covers an Escape landing while a status change is mid-flight.
     if (askingToClose.current || !!pendingStage) return;
     askingToClose.current = true;
     try {
-      // A clashing slot can't be saved at all, so don't offer a Save that would
-      // quietly do nothing — discarding is the only way out that isn't "fix it".
       if (hasClashes) {
         const discard = await confirm({
           title: "Discard changes?",
@@ -1233,10 +985,8 @@ export function BandBookingCard({
         description: "You've made changes to this request. Save them before closing?",
         confirmLabel: "Save changes",
         cancelLabel: "Discard",
-        // Cancel means Discard here, so a stray click or Escape must not answer.
         dismissible: false,
       });
-      // handleSave closes on success and stays put if its own confirm is backed out of.
       if (save) handleSave();
       else handleCancel();
     } finally {
@@ -1244,7 +994,6 @@ export function BandBookingCard({
     }
   }
 
-  // Discard any unsaved edits and close the sheet.
   function handleCancel() {
     setActName(request.group_name ?? "");
     setReqType(request.type ?? "");
@@ -1264,8 +1013,6 @@ export function BandBookingCard({
     setSelectedStartTime(toHHMM(request.selected_start_time));
     setSelectedEndTime(toHHMM(request.selected_end_time));
     setAdminNotes(request.admin_notes || "");
-    // Abort any in-flight uploads, free their previews, and drop back to the saved
-    // videos — a discarded pick shouldn't keep uploading in the background.
     Object.values(videoUploadHandles.current).forEach((h) => h.abort());
     videoUploadHandles.current = {};
     sheetVideos.forEach((v) => v.previewUrl && URL.revokeObjectURL(v.previewUrl));
@@ -1275,8 +1022,6 @@ export function BandBookingCard({
     setSheetOpen(false);
   }
 
-  // Favourite is a bookmark, not an edit — it saves on click and is deliberately
-  // left alone by handleCancel. Optimistic, reverting if the write fails.
   function handleToggleFavorite() {
     const next = !isFavorite;
     setIsFavorite(next);
@@ -1293,11 +1038,6 @@ export function BandBookingCard({
   const updateSheetVideo = (id: string, patch: Partial<SheetVideo>) =>
     setSheetVideos((prev) => prev.map((v) => (v.id === id ? { ...v, ...patch } : v)));
 
-  /**
-   * Pick files → upload each to the band-videos bucket (resumable, same helper the
-   * public form uses), adding a row that shows progress and lands a url on success.
-   * The saved arrays only pick these up on Save.
-   */
   function handleVideoSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
@@ -1338,7 +1078,6 @@ export function BandBookingCard({
     if (videoInputRef.current) videoInputRef.current.value = "";
   }
 
-  /** Drop a video row, aborting its upload and freeing the local preview first. */
   function removeSheetVideo(id: string) {
     videoUploadHandles.current[id]?.abort();
     delete videoUploadHandles.current[id];
@@ -1349,11 +1088,6 @@ export function BandBookingCard({
     });
   }
 
-  /**
-   * A blocked Booked chip points at what's missing rather than doing nothing:
-   * highlight the slot console (it's always on screen — the footer doesn't
-   * scroll) and open whichever control still needs filling in.
-   */
   function revealSlot() {
     setSlotFlash(true);
     window.setTimeout(() => setSlotFlash(false), 1200);
@@ -1361,7 +1095,6 @@ export function BandBookingCard({
     else startTimeRef.current?.focus();
   }
 
-  // Copies the *full* uuid, not the shortened form on screen.
   async function handleCopyRef() {
     try {
       await navigator.clipboard.writeText(request.id);
@@ -1371,18 +1104,6 @@ export function BandBookingCard({
     }
   }
 
-  /**
-   * The band only hears about offered / booked / declined — those get a preview
-   * of the exact email before anything is sent. new / reviewing are silent, so
-   * they stay one-click.
-   */
-  /**
-   * The band only hears about offered / booked / declined — each gets a dialog to
-   * write an optional message and see the exact email before it goes. Returns the
-   * note alongside the verdict, since it's written *in* the dialog and the caller
-   * has to persist and send it. new / reviewing send nothing, so they stay
-   * one-click and keep whatever note is already on the record.
-   */
   async function confirmEmail(newStatus: BandStatus): Promise<{ ok: boolean; note: string }> {
     const slot = {
       name: bookerName || request.booker_name,
@@ -1438,9 +1159,6 @@ export function BandBookingCard({
         label: "Reason for declining (optional)",
         placeholder: "Shared with the band in the email. Leave blank to say nothing.",
         destructive: true,
-        // Always starts blank — the reason box is not pre-filled from any existing
-        // admin_notes, so leaving it blank clears the field. What's typed is emailed
-        // and saved as the new decline reason.
         build: (note) => buildOutcomeEmail({ ...slot, outcome: "cancelled", notes: note }),
       },
     };
@@ -1448,8 +1166,6 @@ export function BandBookingCard({
     const d = dialogs[newStatus];
     if (!d) return { ok: true, note: adminNotes };
 
-    // Every outbound message — offer, booked, and decline — is written fresh each
-    // send: the box starts blank rather than inheriting anything in admin_notes.
     const initial = "";
     noteDraft.current = initial;
     const ok = await confirm({
@@ -1477,23 +1193,12 @@ export function BandBookingCard({
   function handleAction(newStatus: BandStatus) {
     setError(null);
     setClashes([]);
-    // Asking the admin something is NOT a transition. React 19 holds an async
-    // transition's state updates until the action settles, so a confirm() called
-    // inside one never paints its dialog — and the transition then waits forever on
-    // a click that can't happen. Only the server work below goes in startTransition.
     void (async () => {
       try {
-        // Booking places an event, and an offer promises one — neither may commit a
-        // slot that collides with something already on. Re-checked here (not just via
-        // the live effect) so a clash landing between render and click still stops it.
-        // The clashes render inline under the slot fields, so no footer error here.
-        // Checked before the preview so we never preview an unsendable email.
         if (newStatus === "booked" || newStatus === "offered") {
           const c = await findClashes();
           if (c.length) return;
         }
-        // Last chance to back out before the band is emailed, and where the note
-        // that goes with it gets written.
         const { ok, note } = await confirmEmail(newStatus);
         if (!ok) return;
         applyStatus(newStatus, note);
@@ -1503,15 +1208,10 @@ export function BandBookingCard({
     })();
   }
 
-  /** The server half of a status change — this part is a real pending update. */
   function applyStatus(newStatus: BandStatus, note: string) {
-    // Set outside the transition: updates made *inside* an async transition don't
-    // paint until it settles, so a spinner set in there would never be seen.
     setPendingStage(newStatus);
     startTransition(async () => {
       try {
-        // admin_notes holds the decline reason and nothing else — an offer/booked
-        // message is per-send, so it must leave whatever's on the record alone.
         const isDecline = newStatus === "declined";
         const persistedNote = isDecline ? note : adminNotes;
         if (hasChanges) {
@@ -1523,21 +1223,13 @@ export function BandBookingCard({
             selected_end_time: selectedEndTime || null,
           });
         }
-        // `note` is what the band reads; the action decides what (if anything) sticks.
         const result = await updateBandStatus(request.id, newStatus, note || undefined);
-        // The server re-checks the slot as the last word before an event is placed.
-        // A clash landing between our own check and this one leaves the request where
-        // it was — surface it inline under the slot fields, like every other clash.
         if (result?.clashes?.length) {
           setClashes(result.clashes);
           toast.error("This slot now clashes with another event — pick another time.");
           return;
         }
         if (isDecline) setAdminNotes(note);
-        // The sheet stays open on every status change — the stepper is the control
-        // now, so you land on the new stage and see the result (including Declined,
-        // which can be reopened straight from the stepper). Close it yourself.
-        // offered / booked / declined email the band; new / reviewing are silent.
         const emails = newStatus === "offered" || newStatus === "booked" || newStatus === "declined";
         const label = STATUS_TOAST[newStatus];
         if (emails) {
@@ -1557,19 +1249,12 @@ export function BandBookingCard({
     });
   }
 
-  // Save Changes. A pending/other booking saves straight away. A CONFIRMED booking
-  // always confirms first (its edits flow through to the linked event); a date/time
-  // change additionally re-emails the band and moves the event off the schedule.
   function handleSave() {
     if (!hasChanges) return;
     setError(null);
     setClashes([]);
-    // Same rule as handleAction: a dialog that waits on the admin can't live inside
-    // startTransition or it never paints. Ask everything first, then hand the writes
-    // to runSave().
     void (async () => {
       try {
-        // Confirmed + date/time change → clash check + reschedule email flow.
         if (status === "booked" && dateTimeChanged) {
           const c = await findClashes();
           if (c.length) return;
@@ -1609,8 +1294,6 @@ export function BandBookingCard({
           return;
         }
 
-        // Confirmed, detail-only change → its edits flow through to the linked
-        // event, so it's worth a nod first.
         if (status === "booked") {
           const ok = await confirm({
             title: "Save changes?",
@@ -1627,7 +1310,6 @@ export function BandBookingCard({
           return;
         }
 
-        // Anything else saves straight away.
         runSave(async () => {
           await updateBandBookingFields(request.id, {
             ...detailFields(),
@@ -1644,7 +1326,6 @@ export function BandBookingCard({
     })();
   }
 
-  /** Runs the write half of a save inside a transition, so Save shows as pending. */
   function runSave(work: () => Promise<void>) {
     startTransition(async () => {
       try {
@@ -1657,19 +1338,10 @@ export function BandBookingCard({
 
   return (
     <>
-      {/* Card row.
-          A container rather than one big button: the favourite toggle has to be a
-          real button, and a button can't nest inside another. Opening the sheet is
-          instead a transparent button stretched across the card, sitting under the
-          content and over nothing else — so the whole row still opens it. */}
       <div
         className={cn(
           "relative w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
           "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]",
-          // The row below lays itself out against *this* card's width, not the
-          // viewport's — two columns halve the board, so the same screen can hold
-          // a card with room to spread and one without. Only the eligible card
-          // becomes a container; the board's cards never consult it.
           wide && "@container"
         )}
       >
@@ -1681,15 +1353,7 @@ export function BandBookingCard({
           <span className="sr-only">Open {request.group_name || request.booker_name}</span>
         </button>
 
-        {/* A full-width top ribbon: type + genre tucked into the left corner in the
-            request's own status hue (new = blue, booked = green, ...), and the
-            lifecycle tag mirrored into the right corner. Eyebrow treatment per the
-            style guide: tiny, black, wide-tracked caps — the wide tracking is what
-            keeps 9px legible. Type takes the solid fill, genre the light tint at a
-            lighter weight, so type leads. The left group is width-capped so a long
-            genre can't crowd out the lifecycle tag. */}
         {hasRibbon && (
-          // Decorative, so it doesn't intercept clicks meant for the card.
           <span className="pointer-events-none absolute top-0 left-0 z-10 flex w-full items-stretch text-[9px] tracking-widest uppercase">
             <span className="flex max-w-[65%] min-w-0 items-stretch overflow-hidden rounded-tl-xl rounded-br-lg">
               {request.type && (
@@ -1703,10 +1367,6 @@ export function BandBookingCard({
                 </span>
               )}
             </span>
-            {/* The type tag's mirror image in the opposite corner: same eyebrow
-                treatment and solid fill, rounded into the card's own edge. Its
-                own hue, not the status theme's — where the night sits in time is
-                a separate fact from where the request sits in the pipeline. */}
             {lifecycle && (
               <span
                 className={cn(
@@ -1720,16 +1380,12 @@ export function BandBookingCard({
           </span>
         )}
 
-        {/* Content sits above the stretched button but passes clicks through to it,
-            so only the rail's icons are separately clickable. The extra top padding
-            when a type tag is present keeps the badge clear of the corner. */}
         <div
           className={cn(
             "pointer-events-none relative z-10 flex items-center gap-3 px-3 pb-3 text-left",
             hasRibbon ? "pt-5" : "pt-3"
           )}
         >
-          {/* Status badge circle (left) */}
           <div
             className={cn(
               "flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-full border",
@@ -1739,8 +1395,6 @@ export function BandBookingCard({
             )}
           >
             {hasSlot && request.selected_date ? (
-              // The badge carries the whole slot date (weekday / day / month), so the
-              // row below doesn't repeat it.
               <div className="flex flex-col items-center justify-center leading-none">
                 <span className="font-black text-[8px] tracking-tighter uppercase opacity-70">
                   {format(new Date(request.selected_date + "T00:00:00"), "EEE")}
@@ -1757,13 +1411,7 @@ export function BandBookingCard({
             )}
           </div>
 
-          {/* Three stacked blocks in a board column. Given room, this wrapper
-              dissolves (`contents`) so the blocks become columns of the row above
-              — one set of nodes, laid on whichever axis fits. */}
           <div className={cn("min-w-0 flex-1", wide && "@2xl:contents")}>
-            {/* Only the name has to clear the favourite in the corner — the rows
-                below it are short and left-aligned, so they run the full width.
-                On one line the favourite is a column, so it clears itself. */}
             <p
               className={cn(
                 "truncate pr-11 font-black text-sm tracking-tight text-[#1F1F1A] uppercase",
@@ -1781,12 +1429,8 @@ export function BandBookingCard({
             >
               <User className="h-3 w-3 shrink-0 opacity-70" aria-hidden="true" />
               <p className="truncate text-xs font-semibold" title={request.booker_name}>
-                {/* The abbreviation buys width a board column doesn't have. Given
-                    the room, the whole name is more use than "T.Fourie". */}
                 {wide ? request.booker_name : abbreviateName(request.booker_name)}
               </p>
-              {/* A fee is a yes/no signal on the row — the amount itself is in the
-                  sheet (and on hover). No fee shows nothing. */}
               {hasFee && (
                 <span
                   className="inline-flex shrink-0 items-center rounded-sm border border-amber-200 bg-amber-50 px-px py-px text-amber-700"
@@ -1798,18 +1442,12 @@ export function BandBookingCard({
               )}
             </div>
 
-            {/* Booking facts — the slot (offered/booked) or the applicant's preferred
-                dates, with the fee marker closing the row. */}
-            {/* Dissolves too, so the slot and the notes button become columns in
-                their own right rather than a row nested inside one. */}
             <div
               className={cn(
                 "mt-1 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5F624F]",
                 wide && "@2xl:contents"
               )}
             >
-              {/* The wrapper's type still reaches here once it dissolves —
-                  `contents` drops the box, not the inheritance. */}
               <span className={cn("min-w-0 truncate", wide && "@2xl:w-28 @2xl:shrink-0")}>
                 {hasSlot
                   ? (request.selected_start_time || request.selected_end_time) && (
@@ -1831,28 +1469,16 @@ export function BandBookingCard({
                     )}
               </span>
 
-              {/* Internal notes — same log as the sheet, read and written from here
-                  too. pointer-events-auto: the content around it deliberately lets
-                  clicks fall through to the card, this must not. The negative margin
-                  keeps a 44px tap target from padding the row out to 44px tall. */}
               <BandNotesPopover requestId={request.id} notes={bandNoteList} editable={editable}>
                 <button
                   type="button"
                   title={`Band notes (internal) — ${bandNoteList.length}`}
                   className={cn(
                     "pointer-events-auto relative z-20 -my-3 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90",
-                    // Reclaiming the gutter is free while this sits on its own line
-                    // below the favourite. As a column it's a column like any other:
-                    // no negative gutter, and ordered past the markers that are
-                    // declared after it (the wrapper it sits in has dissolved, so
-                    // DOM order alone would put it in the wrong place).
                     wide && "@2xl:order-1 @2xl:mr-0"
                   )}
                 >
                   <span className="relative">
-                    {/* Filled when there are notes, outline when there aren't — the
-                        same on/off read as the favourite heart. Blue is its own
-                        identity (like the heart's rose), independent of status. */}
                     <NotebookPen
                       className={cn(
                         "h-4 w-4 transition-colors",
@@ -1874,10 +1500,6 @@ export function BandBookingCard({
             </div>
           </div>
 
-          {/* Markers — what the act sent in, as presence rather than content; the
-              material itself is a click away in the sheet. Both stay off until the
-              row has actually spread, since a stacked card has nowhere to put them.
-              Sized to the act name, so they read as row data, not decoration. */}
           {wide && (
             <span
               className={cn(
@@ -1892,11 +1514,6 @@ export function BandBookingCard({
             </span>
           )}
 
-          {/* Every platform always shows — an absent link is a fact worth seeing,
-              so it greys out rather than disappearing and shifting the others.
-              Four across once there's room for them; 2x2 when the card is tighter
-              (two columns splitting the board), which keeps the marker square
-              instead of squeezing the row. */}
           {wide && (
             <span className="hidden shrink-0 place-items-center gap-1 @2xl:grid @2xl:w-11 @2xl:grid-cols-2 @4xl:flex @4xl:w-28 @4xl:items-center @4xl:justify-between">
               {SOCIAL_ORDER.map((key) => {
@@ -1914,12 +1531,6 @@ export function BandBookingCard({
             </span>
           )}
 
-          {/* Favourite — persists on click, no Save needed. Pinned to the right
-              edge while the card is stacked, dropping clear of the lifecycle tag
-              that now owns the corner; the row's last column once it spreads.
-              `relative` (not static) so it keeps its z-index either way — which
-              is also why the drop has to be undone there, or it would shift the
-              heart down out of the row. */}
           <button
             type="button"
             onClick={handleToggleFavorite}
@@ -1943,17 +1554,10 @@ export function BandBookingCard({
         </div>
       </div>
 
-      {/* Bottom sheet */}
-      {/* Dismissals route through requestClose so unsaved edits can't slip away;
-          opening stays direct. */}
       <Sheet open={open} onOpenChange={(next) => (next ? setSheetOpen(true) : requestClose())}>
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          // A confirm dialog opened from inside the sheet is portalled to <body>, so
-          // interacting with it (or dismissing it) looks "outside" to the sheet.
-          // While one is open, don't let that dismiss the sheet — otherwise changing
-          // a status (which has no unsaved edits to prompt about) closes it outright.
           onPointerDownOutside={(e) => {
             if (confirmOpen.current) e.preventDefault();
           }}
@@ -1965,14 +1569,11 @@ export function BandBookingCard({
           }}
           className="left-1/2 flex h-auto max-h-[90vh] w-full max-w-6xl -translate-x-1/2 flex-col rounded-[2.5rem] rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 lg:max-h-[94vh]"
         >
-          {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#1F1F1A] uppercase">
                   {request.group_name || request.booker_name}
-                  {/* Reference inline — bracketed, italic and smaller. The copyable
-                      value lives in the System Information popover now. */}
                   <span className="ml-1.5 text-sm font-semibold tracking-wide text-[#5F624F] normal-case italic">
                     (#Ref: {shortRef})
                   </span>
@@ -1982,8 +1583,6 @@ export function BandBookingCard({
                 </SheetDescription>
               </div>
 
-              {/* Quick actions (favourite, notes, audit). The linked-event pill now
-                  lives in the footer, beside the slot console. */}
               <div className="flex shrink-0 items-center gap-1.5">
                 <button
                   type="button"
@@ -1993,7 +1592,6 @@ export function BandBookingCard({
                   title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
                   className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white transition-colors hover:bg-[#F7F4EA] sm:h-9 sm:w-9"
                 >
-                  {/* Background stays white; only the heart changes colour/fill. */}
                   <Heart
                     className={cn(
                       "h-4 w-4 transition-colors",
@@ -2002,8 +1600,6 @@ export function BandBookingCard({
                   />
                 </button>
 
-                {/* The same notes log the card row shows — notes save themselves,
-                    so this sits outside the sheet's Save/discard cycle. */}
                 <BandNotesPopover requestId={request.id} notes={bandNoteList} editable={editable}>
                   <button
                     type="button"
@@ -2011,8 +1607,6 @@ export function BandBookingCard({
                     title="Band notes (internal)"
                     className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white transition-colors hover:bg-[#F7F4EA] sm:h-9 sm:w-9"
                   >
-                    {/* Background stays white; only the pen changes colour/fill —
-                        blue when notes exist, the same on/off read as the card row. */}
                     <NotebookPen
                       className={cn(
                         "h-4 w-4 transition-colors",
@@ -2027,8 +1621,6 @@ export function BandBookingCard({
                   </button>
                 </BandNotesPopover>
 
-                {/* System information — audit trail. Reference-only, so it sits
-                    behind an icon here rather than as a card in the rail. */}
                 <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
                   <PopoverTrigger asChild>
                     <button
@@ -2044,7 +1636,6 @@ export function BandBookingCard({
                     <span className="block border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
                       System Information
                     </span>
-                    {/* Reference — the shortened uuid; click copies the full value. */}
                     <SheetRow
                       label="Reference"
                       value={
@@ -2076,8 +1667,6 @@ export function BandBookingCard({
                         ) : null
                       }
                     />
-                    {/* Decline reason — previewed short, opens into an editable box
-                        so a badly-worded reason can be corrected after the fact. */}
                     {(isDeclined || !!declineReason) && (
                       <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                         <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -2120,16 +1709,11 @@ export function BandBookingCard({
                 </Popover>
               </div>
             </div>
-            {/* Divider — the pipeline reads as its own zone, set apart from the act
-                name and the quick-action buttons in the row above. */}
             <div className="mt-3 border-t border-[#E6DFC8]" />
             <StageStepper
               status={status}
               onSelect={handleAction}
               pendingStage={pendingStage}
-              // Booking needs a complete, clash-free slot. Offering only needs a
-              // clash-free one — an offer with no slot yet is legitimate ("to be
-              // arranged"), but never one we couldn't honour.
               blockers={{ booked: slotWarning ?? clashWarning, offered: clashWarning }}
               onRevealSlot={revealSlot}
               declineReason={adminNotes}
@@ -2137,19 +1721,14 @@ export function BandBookingCard({
             />
           </div>
 
-          {/* Scrollable body */}
           <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 pt-3 pb-6 sm:px-6">
             <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-8 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid">
-              {/* Main column — the workflow: event, payment, notes */}
               <div className="min-w-0 space-y-4 sm:space-y-5">
-              {/* Event details */}
               <Section
                 title="Event Details"
                 headerRight={
                   showEventBadge ? (
                     eventHref ? (
-                      // Neutral pill (no fill, inherited text) — the green tick / red
-                      // cross carries the active/deactivated state now, not the colour.
                       <Link
                         href={eventHref}
                         onClick={(e) => e.stopPropagation()}
@@ -2193,8 +1772,6 @@ export function BandBookingCard({
                 }
               >
                 <EditRow label="Act Name" value={actName} onChange={setActName} editable={editable} placeholder="Act name" />
-                {/* Type / Genre — combined on one row (e.g. "Band / Pop"). Both stay
-                    independently editable, so this can't collapse to a single field. */}
                 <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                   <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Type / Genre</span>
                   {!editable ? (
@@ -2228,9 +1805,6 @@ export function BandBookingCard({
                   )}
                 </div>
 
-                {/* Preferred dates — inline with the label. Only the first few show;
-                    a toggle expands the rest onto wrapped rows. The chosen slot always
-                    leads, so it can never fall past the cut-off. */}
                 {dates.length > 0 && (() => {
                   const orderedDates =
                     selectedDate && dates.includes(selectedDate)
@@ -2241,8 +1815,6 @@ export function BandBookingCard({
                     ? orderedDates
                     : orderedDates.slice(0, PREFERRED_DATES_VISIBLE);
                   const pills = shownDates.map((d) => {
-                    // Matches the chosen slot date. Once booked, the pills lock
-                    // (inactive), keeping the matched date visibly highlighted.
                     const isSelected = !!selectedDate && selectedDate === d;
                     const locked = status === "booked" && !!selectedDate;
                     const interactive = editable && !locked;
@@ -2268,8 +1840,6 @@ export function BandBookingCard({
                       </button>
                     );
                   });
-                  // A tinted espresso pill so the toggle reads as a control, set off
-                  // from the sheet's #F7F4EA and the #E6DFC8 section headers alike.
                   const toggleClass =
                     "flex shrink-0 items-center gap-1 rounded-lg border border-[#5C4033]/15 bg-[#5C4033]/8 px-2 py-1 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033]/15 hover:text-[#1F1F1A]";
                   return (
@@ -2307,13 +1877,7 @@ export function BandBookingCard({
                   );
                 })()}
 
-                {/* Selected date & time live in the footer action console (below), next
-                    to the note + booking actions — they're what you commit to, not
-                    part of the applicant's submitted details. */}
 
-                {/* Notes from the booking (applicant) — read-only; hidden when blank.
-                    Collapsed to a preview so a rambling note can't dominate the sheet;
-                    the trailing "…" opens it in place. */}
                 {bookingNote && (
                   <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                     <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -2347,10 +1911,6 @@ export function BandBookingCard({
                 )}
               </Section>
 
-              {/* Act Media — socials + videos together: both answer the same question
-                  ("are they any good, do they have a following?"), so they're one
-                  scouting section rather than two cards of chrome. Socials lead
-                  because they're the cheaper glance. */}
               {(showSocials || sheetVideos.length > 0) && (
                 <Section title="Act Media">
                   {showSocials && (
@@ -2361,8 +1921,6 @@ export function BandBookingCard({
                         const url = (socialLinks[key] ?? "").trim();
                         const pillClass =
                           "flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 text-[11px] font-bold transition-all";
-                        // Filled → straight to the profile (the whole point of the row).
-                        // Empty → a deactivated pill that opens the editor instead.
                         return url ? (
                           <a
                             key={key}
@@ -2394,8 +1952,6 @@ export function BandBookingCard({
                         );
                       })}
 
-                      {/* Spotify sits beside the socials but lives in its own column
-                          (spotify_url), so it's rendered here rather than in the map. */}
                       {(() => {
                         const url = spotifyUrl.trim();
                         const pillClass =
@@ -2429,8 +1985,6 @@ export function BandBookingCard({
                         );
                       })()}
 
-                      {/* One editor for all four — also reachable by clicking any
-                          empty pill, and the only way to fix an existing url. */}
                       {editable && (
                         <Popover open={socialEditorOpen} onOpenChange={setSocialEditorOpen}>
                           <PopoverTrigger asChild>
@@ -2497,18 +2051,12 @@ export function BandBookingCard({
                     </div>
                   )}
 
-                  {/* Videos — the applicant's, plus any the admin adds here. Saved
-                      ones play inline (facade: loads on click); a fresh pick shows
-                      its upload progress until it lands a url. Only rule off from the
-                      socials above when there's a row of pills to divide from. */}
                   {(sheetVideos.length > 0 || editable) && (
                     <div className={cn(showSocials && "border-t border-[#E6DFC8]")}>
                       {(sheetVideos.length > 0 || (editable && sheetVideos.length < MAX_VIDEOS)) && (
                         <div
                           className={cn(
                             "grid grid-cols-2 gap-3 px-4 pt-3 sm:grid-cols-3 sm:px-5",
-                            // Helper line below carries the bottom padding when it shows;
-                            // otherwise the grid owns it.
                             !(editable && sheetVideos.length < MAX_VIDEOS) && "pb-3"
                           )}
                         >
@@ -2577,12 +2125,6 @@ export function BandBookingCard({
                             </div>
                           ))}
 
-                          {/* Add more — a small icon button sitting in the grid to the
-                              right of the last video. Same white/#E6DFC8 treatment as the
-                              social row's edit button. Reuses the public form's resumable
-                              upload, so a big performance video survives a flaky
-                              connection; centred in an aspect-video cell so it lines up
-                              with the thumbnails beside it. */}
                           {editable && sheetVideos.length < MAX_VIDEOS && (
                             <div className="flex aspect-video min-w-0 items-center justify-center">
                               <input
@@ -2619,18 +2161,12 @@ export function BandBookingCard({
                 </Section>
               )}
 
-              {/* Band Notes now live in the sheet-header popover (internal, quick
-                  access at any scroll position) — see the NotebookPen button above. */}
 
               </div>
 
-              {/* Side rail — reference info: contact, socials, media, audit */}
               <div className="min-w-0 space-y-4 sm:space-y-5">
-              {/* Contact info */}
               <Section title="Contact Information">
                 <EditRow label="Name" value={bookerName} onChange={setBookerName} editable={editable} placeholder="Contact name" />
-                {/* Email + phone behind "View more" — the name identifies the request;
-                    the contact channels are only needed when reaching out. */}
                 {showContactDetails && (
                   <>
                     <EditRow
@@ -2686,7 +2222,6 @@ export function BandBookingCard({
                 </button>
               </Section>
 
-              {/* Payment Details section */}
               {(editable || (request.payment_amount ?? 0) > 0) && (
                 <Section
                   title="Payment Details"
@@ -2699,7 +2234,6 @@ export function BandBookingCard({
                     ) : undefined
                   }
                 >
-                  {/* Amount */}
                   <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
                     <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Amount</span>
                     {editable ? (
@@ -2723,11 +2257,6 @@ export function BandBookingCard({
                       </span>
                     )}
                   </div>
-                  {/* Status is derived from amount vs paid and never edited, so it
-                      lives as a badge in the section header rather than as a row —
-                      which also keeps the payment state readable while Paid is collapsed. */}
-                  {/* Paid + bank details — hidden when there is no payment, and tucked
-                      behind "View more" so the section stays compact by default. */}
                   {!isNoPayment && (
                     <>
                       {showBankDetails && (
@@ -2772,9 +2301,6 @@ export function BandBookingCard({
                 </Section>
               )}
 
-              {/* Decline reason — the message given to the applicant. Editable here,
-                  and mirrored to the declined stage chip's popover. Only shown once
-                  the request has actually been declined. */}
               {isDeclined && (
                 <Section title="Decline Reason for Applicant">
                   <div className="p-4 sm:p-5">
@@ -2793,36 +2319,17 @@ export function BandBookingCard({
                 </Section>
               )}
 
-              {/* System information (audit trail) now lives in the sheet-header
-                  popover — reference-only data, reachable at any scroll position
-                  without taking a card slot in the rail. See the Info button above. */}
               </div>
             </div>
             <div className="h-4" />
           </div>
 
-          {/* Footer — compact single row: Cancel (left), stage transitions with one
-              primary action (right), Save only once something changed. The note to
-              the applicant is tucked behind a toggle since it's optional. */}
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#5C4033]/15 bg-[#E6DFC8] px-4 py-3 pb-6 sm:px-6">
             <div className="space-y-2">
-                {/* Slot console on the left (three fifths), the linked-event pill and
-                    any decline reason on the right. */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-                  {/* Left: the slot being committed to, with its warnings under the
-                      fields. The blocked Booked chip flashes it via revealSlot(). */}
                   <div
                     className={cn(
-                      // This is what you commit to, so it's dressed to outrank
-                      // everything around it: a raised card that lifts off the tan
-                      // footer with a strong shadow and heavy border, and whose
-                      // background itself carries the state — amber while a slot is
-                      // still required, red when the chosen slot clashes, calm cream
-                      // once it's set. The flash still pulses when the Booked chip
-                      // points here.
                       "space-y-2 rounded-2xl border-2 p-3 shadow-lg transition-all",
-                      // Three fifths of the footer width from sm up (full width on a
-                      // phone), leaving the rest for the linked-event pill / decline.
                       "sm:w-3/5",
                       hasClashes
                         ? "border-red-300 bg-red-50"
@@ -2834,8 +2341,6 @@ export function BandBookingCard({
                       slotFlash && "ring-2 ring-amber-400/70"
                     )}
                   >
-                    {/* Heading and fields share a row; the fields grow to fill what
-                        the heading leaves and wrap under it only when there's no room. */}
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
                     <span
                       className={cn(
@@ -2875,8 +2380,6 @@ export function BandBookingCard({
                             }}
                             autoFocus
                           />
-                          {/* react-day-picker won't deselect the active day in single
-                              mode, so clearing needs its own control. */}
                           {selectedDate && (
                             <button
                               type="button"
@@ -2921,7 +2424,6 @@ export function BandBookingCard({
                           }}
                           className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none"
                         />
-                        {/* Start drives end, so one control clears the pair. */}
                         {(selectedStartTime || selectedEndTime) && (
                           <button
                             type="button"
@@ -2936,17 +2438,10 @@ export function BandBookingCard({
                       </div>
                     </div>
                     </div>
-                    {/* Warning (slot required) and error (clash) sit under the fields
-                        they're about, inside the console rather than off to the side. */}
                     {slotWarning && <FieldMessage warning={slotWarning} />}
                     {clashes.length > 0 && <ClashList clashes={clashes} />}
                   </div>
 
-                  {/* Actions sit beside the slot console on one row (stacking under
-                      it only on a phone). With nothing changed there's just Close;
-                      an edit splits it into Cancel (discard) + Save. The decline
-                      reason moved to the header's declined chip, so this is all the
-                      right of the footer carries now. */}
                   <div className="flex items-center justify-end gap-2 sm:flex-1">
                     {!hasChanges ? (
                       <button
@@ -3001,7 +2496,6 @@ export function BandBookingCard({
   );
 }
 
-/** Inline error/warning line shown neatly under the field it relates to. */
 function FieldMessage({ error, warning }: { error?: string; warning?: string }) {
   const message = error ?? warning;
   if (!message) return null;

@@ -39,25 +39,20 @@ console.log("Booking fetcheddd:", booking);
     return { status: "pending" as const, booking };
   }
   try {
-    // Verify order is completed
     const { order } = await squareClient.orders.get({ orderId: booking.square_order_id });
     console.log("order fetched from Square:", order);
 
-    // Check tenders instead of order.state — tenders are added when payment is applied,
-    // but order.state may still be OPEN at redirect time (Square updates it asynchronously)
     const tender = order?.tenders?.[0];
     if (!tender) {
       console.log("No tenders found — payment not yet applied for booking ID:", bookingId);
       return { status: "pending" as const, booking };
     }
 
-    // Extract payment ID from the order's tenders (tender.id === payment ID)
     const squarePaymentId = tender?.id ?? null;
     const paidAmount = tender?.amountMoney?.amount
       ? Number(tender.amountMoney.amount) / 100
       : (booking.total_amount ?? 0);
 
-    // Update booking
     await supabase
       .from("bookings")
       .update({
@@ -70,7 +65,6 @@ console.log("Booking fetcheddd:", booking);
       .eq("id", bookingId);
 
 
-    // Send confirmation email
     const contactRaw = booking.contacts;
     const contact = (Array.isArray(contactRaw) ? contactRaw[0] : contactRaw) as { full_name: string; email: string } | null;
     const eventRaw = booking.events;

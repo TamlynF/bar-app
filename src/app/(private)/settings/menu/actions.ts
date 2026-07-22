@@ -3,7 +3,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 
-/* ── Category actions ── */
 
 export async function saveCategoryAction(formData: FormData) {
   const supabase = await createClient();
@@ -52,7 +51,6 @@ export async function deleteCategoryAction(id: number) {
   }
 }
 
-/* ── Item actions ── */
 
 export async function saveItemAction(formData: FormData) {
   const supabase = await createClient();

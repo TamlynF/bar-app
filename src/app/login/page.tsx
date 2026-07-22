@@ -9,9 +9,6 @@ export const metadata = {
 };
 
 export default async function LoginPage() {
-  // Already signed in? Send staff straight to the dashboard. Doing this here
-  // (rather than in proxy.ts) keeps client-side <Link> navigations into /login
-  // from hitting a spurious App-Router 404 on the middleware redirect.
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,7 +22,6 @@ export default async function LoginPage() {
       }} />
 
       <div className="w-full max-w-sm">
-        {/* Brand */}
         <div className="mb-8 text-center">
           <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-[#FDCC4B] shadow-lg">
             <span className="font-black text-xl text-[#26300D]">DF</span>
@@ -34,7 +30,6 @@ export default async function LoginPage() {
           <p className="mt-1 text-xs font-medium tracking-widest text-stone-500 uppercase">Staff Portal</p>
         </div>
 
-        {/* Form Card */}
         <div className="rounded-3xl border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl">
           <LoginForm signIn={signIn} />
         </div>

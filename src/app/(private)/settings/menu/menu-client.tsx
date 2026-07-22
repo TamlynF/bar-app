@@ -123,7 +123,6 @@ export default function MenuClient({
 
   return (
     <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
-      {/* Hidden iframe for printing the public menu page */}
       <iframe
         id="menu-print-frame"
         src="/menu"
@@ -131,7 +130,6 @@ export default function MenuClient({
         title="Menu print frame"
       />
 
-      {/* Header + Actions */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <h3 className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">
@@ -176,7 +174,6 @@ export default function MenuClient({
         </div>
       </div>
 
-      {/* Categories */}
       {initialCategories.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
           <UtensilsCrossed className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
@@ -196,7 +193,6 @@ export default function MenuClient({
                 key={cat.id}
                 className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white"
               >
-                {/* Category header */}
                 <div className="flex items-center gap-1.5 bg-[#F7F4EA] px-3 py-2.5 sm:px-4">
                   <button
                     type="button"
@@ -264,7 +260,6 @@ export default function MenuClient({
                   </button>
                 </div>
 
-                {/* Items */}
                 {!isCollapsed && cat.menu_items.length > 0 && (
                   <div className="divide-y divide-[#E6DFC8]/50">
                     {cat.menu_items.map((item) => (
@@ -304,7 +299,6 @@ export default function MenuClient({
         </div>
       )}
 
-      {/* ── Sheet ── */}
       <Sheet
         open={!!sheet}
         onOpenChange={(open) => {
@@ -321,7 +315,6 @@ export default function MenuClient({
             sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
-          {/* Header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <SheetTitle className="font-black text-lg leading-tight tracking-tighter text-[#1F1F1A] uppercase">
               {sheet?.type === "edit-category"
@@ -338,9 +331,7 @@ export default function MenuClient({
             </SheetTitle>
           </div>
 
-          {/* Body */}
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
-            {/* View Category */}
             {sheet?.type === "view-category" && (
               <div className="space-y-3">
                 <DetailCell label="Name" value={sheet.category.name} />
@@ -352,7 +343,6 @@ export default function MenuClient({
               </div>
             )}
 
-            {/* Edit Category Form */}
             {sheet?.type === "edit-category" && (
               <form id="menu-form" action={handleCategorySave} className="space-y-3">
                 {sheet.category && <input type="hidden" name="id" value={sheet.category.id} />}
@@ -377,7 +367,6 @@ export default function MenuClient({
               </form>
             )}
 
-            {/* View Item */}
             {sheet?.type === "view-item" && (
               <div className="space-y-3">
                 <DetailCell label="Name" value={sheet.item.name} />
@@ -389,7 +378,6 @@ export default function MenuClient({
               </div>
             )}
 
-            {/* Edit Item Form */}
             {sheet?.type === "edit-item" && (
               <form id="menu-form" action={handleItemSave} className="space-y-3">
                 {sheet.item && <input type="hidden" name="id" value={sheet.item.id} />}
@@ -416,7 +404,6 @@ export default function MenuClient({
             )}
           </div>
 
-          {/* Footer */}
           <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-4 pb-8 backdrop-blur-md sm:rounded-b-4xl sm:pb-4">
             {(sheet?.type === "view-category" || sheet?.type === "view-item") && (
               <div className="grid grid-cols-2 gap-3">

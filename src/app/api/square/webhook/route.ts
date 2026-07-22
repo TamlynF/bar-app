@@ -3,8 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { createHmac, timingSafeEqual } from "crypto";
 import { Resend } from "resend";
 
-// Constructed per-request: the Resend constructor throws when RESEND_API_KEY is
-// absent, which at module scope crashes `next build` page-data collection.
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
 }
@@ -27,7 +25,6 @@ export async function POST(req: NextRequest) {
   const body = await req.text();
   const signature = req.headers.get("x-square-hmacsha256-signature") ?? "";
 
-  // Verify Square HMAC-SHA256 signature
   if (WEBHOOK_SIGNATURE_KEY && signature) {
     const hmac = createHmac("sha256", WEBHOOK_SIGNATURE_KEY);
     hmac.update(WEBHOOK_URL + body);
@@ -85,7 +82,6 @@ export async function POST(req: NextRequest) {
       })
       .eq("id", booking.id);
 
-    // Send confirmation email
     const contactRaw = booking.contacts;
     const contact = (Array.isArray(contactRaw) ? contactRaw[0] : contactRaw) as { full_name: string; email: string } | null;
     const eventRaw = booking.events;

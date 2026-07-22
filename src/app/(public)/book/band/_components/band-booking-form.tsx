@@ -68,7 +68,6 @@ const MAX_VIDEOS = 10;
 const MAX_VIDEO_BYTES = 250 * 1024 * 1024; // 250 MB
 const MAX_DATES = 8;
 
-/** "singer / solo artist" → "Singer / Solo Artist" (first letter of each word up, rest down). */
 const titleCase = (s: string) => s.toLowerCase().replace(/\b[a-z]/g, (c) => c.toUpperCase());
 
 const inputClass =
@@ -273,7 +272,6 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
   return (
     <form onSubmit={handleSubmit} className="space-y-0">
 
-      {/* Step indicator */}
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-2">
           {STEPS.map((s) => (
@@ -294,7 +292,6 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
         </span>
       </div>
 
-      {/* Step heading */}
       <div className="mb-7">
         <h4 className="mb-1 font-black text-2xl leading-none tracking-tight text-white uppercase">
           {currentStep.title}
@@ -302,10 +299,8 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
         <p className="text-xs font-medium text-stone-500">{currentStep.subtitle}</p>
       </div>
 
-      {/* Step content */}
       <div key={step} className="animate-in space-y-4 duration-200 fade-in">
 
-        {/* Step 1: Act Details */}
         {step === 1 && (
           <>
             <div>
@@ -344,7 +339,6 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           </>
         )}
 
-        {/* Step 2: Contact Details */}
         {step === 2 && (
           <>
             <div>
@@ -381,7 +375,6 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           </>
         )}
 
-        {/* Step 3: Online & Media */}
         {step === 3 && (
           <>
             <div className="space-y-3">
@@ -579,10 +572,8 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           </>
         )}
 
-        {/* Step 4: Availability */}
         {step === 4 && (
           <>
-            {/* <p className="-mt-4 text-[11px] text-stone-500">Tap the dates you&apos;re available to play.</p> */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <p className={labelClass}>Preferred Dates</p>
@@ -590,7 +581,6 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
               </div>
 
               <div className="grid grid-cols-1 items-start gap-3 sm:grid-cols-[auto_1fr]">
-                {/* Left: compact calendar */}
                 <div
                   style={{
                     "--primary": "#FDCC4B",
@@ -615,7 +605,6 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                   />
                 </div>
 
-                {/* Right: selected date pills */}
                 {sortedDates.length > 0 ? (
                   <div className="flex flex-wrap content-start gap-2">
                     {sortedDates.map((d) => (
@@ -644,7 +633,6 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           </>
         )}
 
-        {/* Step 5: Fee & Notes */}
         {step === 5 && (
           <>
             <div>
@@ -675,21 +663,18 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
 
       </div>
 
-      {/* Step error */}
       {stepError && (
         <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {stepError}
         </p>
       )}
 
-      {/* Submit error */}
       {error && step === 5 && (
         <p className="mt-4 rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
           {error}
         </p>
       )}
 
-      {/* Navigation buttons */}
       <div className={`mt-8 flex gap-3 ${step === 1 ? "" : ""}`}>
         {step > 1 && (
           <button

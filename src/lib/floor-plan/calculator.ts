@@ -1,4 +1,3 @@
-// Floor-plan calculator — pure packing, sightline scoring and stats. No DOM/React.
 import {
   polygonBounds,
   polygonArea,
@@ -18,7 +17,6 @@ import type {
 } from "./types";
 import { FOCAL_FIXTURE_TYPES, BLOCKING_FIXTURE_TYPES } from "./types";
 
-// ── Public types ───────────────────────────────────────────────────────────────
 export type SightRating = "good" | "acceptable" | "poor";
 
 export type CalcTable = {
@@ -95,9 +93,6 @@ export type FloorPlanResult = {
 
 export const MIN_AISLE = 0.9; // WCAG clearance minimum (m)
 
-// ── Geometry helpers ───────────────────────────────────────────────────────────
-
-/** Footprint span of a table (the table itself, before the chair zone). */
 export function tableSpan(t: Pick<CalcTable, "shape" | "diameter" | "width" | "length">): number {
   if (t.shape === "round") return t.diameter && t.diameter > 0 ? t.diameter : 1.1;
   const w = t.width && t.width > 0 ? t.width : 1.2;
@@ -122,7 +117,6 @@ function aabbContains(box: AABB, p: Point): boolean {
   return p.x >= box.minX && p.x <= box.maxX && p.y >= box.minY && p.y <= box.maxY;
 }
 
-/** Liang–Barsky: does the segment p1→p2 cross/touch the axis-aligned box? */
 export function segmentIntersectsAABB(p1: Point, p2: Point, box: AABB): boolean {
   let t0 = 0;
   let t1 = 1;
@@ -151,7 +145,6 @@ export function segmentIntersectsAABB(p1: Point, p2: Point, box: AABB): boolean 
   return false;
 }
 
-/** Focal points (stage / projector / tv / dj_booth) derived from the fixtures. */
 export function focalPointsFrom(fixtures: Fixture[]): FocalPoint[] {
   return fixtures
     .filter((f) => FOCAL_FIXTURE_TYPES.includes(f.type))
@@ -164,7 +157,6 @@ export function focalPointsFrom(fixtures: Fixture[]): FocalPoint[] {
     }));
 }
 
-/** Blocking AABBs: obstacles, blocking fixtures, benches, and door keep-clear zones. */
 export function buildBlockers(obstacles: Obstacle[], fixtures: Fixture[], features: Feature[]): AABB[] {
   const blockers: AABB[] = [];
   for (const o of obstacles) {
@@ -193,11 +185,6 @@ export function buildBlockers(obstacles: Obstacle[], fixtures: Fixture[], featur
   return blockers;
 }
 
-/**
- * Does a square footprint (centre c, half side) sit fully inside the room polygon?
- * Corners are nudged a hair toward the centre so a cell sitting flush against a
- * wall still counts as inside (boundary points are ambiguous for ray-casting).
- */
 function footprintInside(room: Point[], c: Point, half: number): boolean {
   const k = 0.999; // pull corners just inside
   const probes: Point[] = [
@@ -210,10 +197,6 @@ function footprintInside(room: Point[], c: Point, half: number): boolean {
   return probes.every((p) => pointInPolygon(p, room));
 }
 
-/**
- * Candidate table-cell centres packed into the room, theatre-staggered on
- * alternate rows, skipping any cell that leaves the room or hits a blocker.
- */
 export function generateCells(
   room: Point[],
   blockers: AABB[],
@@ -240,7 +223,6 @@ export function generateCells(
   return cells;
 }
 
-// ── Sightlines ─────────────────────────────────────────────────────────────────
 const DIST_GOOD = 8;
 const DIST_OK = 16;
 const ANGLE_GOOD = 50; // degrees off the focal's forward axis
@@ -251,7 +233,6 @@ function worse(a: SightRating, b: SightRating): SightRating {
   return order[Math.max(order.indexOf(a), order.indexOf(b))];
 }
 
-/** Rate how well a viewer at `center` can see `focal`, given blockers in the way. */
 export function scoreSightline(center: Point, focal: FocalPoint, blockers: AABB[]): SightRating {
   const dx = focal.center.x - center.x;
   const dy = focal.center.y - center.y;
@@ -261,7 +242,6 @@ export function scoreSightline(center: Point, focal: FocalPoint, blockers: AABB[
 
   if (focal.facing != null && dist > 1e-6) {
     const fwd = facingToVector(focal.facing);
-    // Direction from the focal out toward the viewer.
     const toViewer = { x: -dx / dist, y: -dy / dist };
     const cos = Math.max(-1, Math.min(1, fwd.x * toViewer.x + fwd.y * toViewer.y));
     const angle = (Math.acos(cos) * 180) / Math.PI;
@@ -269,7 +249,6 @@ export function scoreSightline(center: Point, focal: FocalPoint, blockers: AABB[
     rating = worse(rating, angleRating);
   }
 
-  // Obstruction: a blocker (that doesn't itself contain the focal) on the line of sight.
   for (const bl of blockers) {
     if (aabbContains(bl, focal.center) || aabbContains(bl, center)) continue;
     if (segmentIntersectsAABB(center, focal.center, bl)) return "poor";
@@ -277,7 +256,6 @@ export function scoreSightline(center: Point, focal: FocalPoint, blockers: AABB[
   return rating;
 }
 
-/** Score a viewer position against every focal, flagging must-see violations. */
 function evaluatePosition(
   center: Point,
   focals: FocalPoint[],
@@ -296,18 +274,15 @@ function evaluatePosition(
   return { sightlines, worst, mustSeeViolation };
 }
 
-/** Chair-inclusive square footprint (AABB) of a placed table. */
 export function tableFootprint(center: Point, span: number, chairZone: number): AABB {
   const half = span / 2 + Math.max(0, chairZone);
   return { minX: center.x - half, minY: center.y - half, maxX: center.x + half, maxY: center.y + half };
 }
 
-/** Does the chair-inclusive footprint sit fully inside the room polygon? */
 export function footprintWithinRoom(room: Point[], center: Point, span: number, chairZone: number): boolean {
   return footprintInside(room, center, span / 2 + Math.max(0, chairZone));
 }
 
-// ── Main entry point ─────────────────────────────────────────────────────────────
 export type TableOverride = { x: number; y: number; rotation: number };
 
 export type FloorPlanInput = {
@@ -318,7 +293,6 @@ export type FloorPlanInput = {
   availableCount: number;
   benchSeats: number;
   settings: CalcSettings;
-  /** Manual position overrides keyed by mappingId — re-scored after packing. */
   overrides?: Record<number, TableOverride>;
 };
 
@@ -348,13 +322,11 @@ export function computeFloorPlan(input: FloorPlanInput): FloorPlanResult {
     return { placements: [], unplaced: tables, cellsAvailable: 0, warnings, stats: baseStats };
   }
 
-  // Uniform cell sized to the largest table + chair zone on every side.
   const maxSpan = tables.length ? Math.max(...tables.map(tableSpan)) : 1.1;
   const cellSize = round(maxSpan + 2 * Math.max(0, settings.chairZone));
 
   const cells = generateCells(roomPts, blockers, cellSize, settings.aisleWidth);
 
-  // Prioritise cells that satisfy every "must-see" focal, keeping reading order within each group.
   const ordered = cells
     .map((c, i) => {
       const mustSeeOk = settings.mustSee.every((id) => {
@@ -369,7 +341,6 @@ export function computeFloorPlan(input: FloorPlanInput): FloorPlanResult {
   const placements: TablePlacement[] = [];
   for (let k = 0; k < n; k++) {
     const t = tables[k];
-    // A manual override pins this table; otherwise it lands in the next packed cell.
     const ov = overrides[t.mappingId];
     const center = ov ? { x: ov.x, y: ov.y } : ordered[k].c;
     const { sightlines, worst, mustSeeViolation } = evaluatePosition(center, focals, blockers, settings.mustSee);
@@ -400,7 +371,6 @@ export function computeFloorPlan(input: FloorPlanInput): FloorPlanResult {
 
   const unplaced = tables.slice(n);
 
-  // ── Warnings ──
   if (tables.length > availableCount) {
     warnings.push({
       level: "error",
@@ -419,7 +389,6 @@ export function computeFloorPlan(input: FloorPlanInput): FloorPlanResult {
       message: `Aisle ${round(settings.aisleWidth)} m is below the WCAG minimum of ${MIN_AISLE} m.`,
     });
   }
-  // Must-see violations grouped by focal.
   for (const id of settings.mustSee) {
     const focal = focals.find((f) => f.id === id);
     if (!focal) continue;
@@ -433,7 +402,6 @@ export function computeFloorPlan(input: FloorPlanInput): FloorPlanResult {
   }
   const mustSeeCompliant = !placements.some((p) => p.mustSeeViolation);
 
-  // ── Edge-case checks (mainly catch manual nudges) ──
   const foots = placements.map((p) => tableFootprint({ x: p.x, y: p.y }, p.span, settings.chairZone));
   let outside = 0;
   let blockedTables = 0;

@@ -1,16 +1,9 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// DROP-IN REPLACEMENT for: src/app/layout.tsx
-// Adds the After Dark type system (Anton / Archivo / Archivo Black) via next/font,
-// sets the dark surface on <html>, and makes Archivo the default UI font.
-// Everything else (metadata, viewport, Toaster) is unchanged from your original.
-// ─────────────────────────────────────────────────────────────────────────────
 import type { Metadata, Viewport } from "next";
 import { Anton, Archivo, Archivo_Black } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-// Display — huge titles, ticker, date numerals
 const anton = Anton({
   subsets: ["latin"],
   weight: "400",
@@ -18,7 +11,6 @@ const anton = Anton({
   display: "swap",
 });
 
-// UI / body — labels, buttons, paragraphs (also covers font-black titles at weight 900)
 const archivo = Archivo({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -26,7 +18,6 @@ const archivo = Archivo({
   display: "swap",
 });
 
-// Heavy card / event titles
 const archivoBlack = Archivo_Black({
   subsets: ["latin"],
   weight: "400",

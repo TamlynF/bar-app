@@ -13,8 +13,6 @@ export default async function BandBookingPage() {
   const supabase = await createClient();
 
 
-  // Act types come from the music_act subtypes: label = title (fallback name),
-  // value = camelCase of the label.
   const { data: subtypeRows } = await supabase
     .from("event_subtypes")
     .select("name, title")
@@ -55,7 +53,6 @@ export default async function BandBookingPage() {
 
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-14 pb-12 sm:px-6 lg:px-8">
 
-        {/* Booking Form Card */}
         <div className="relative mb-12 overflow-hidden rounded-[2.5rem] border border-white/10 bg-white/[0.07] p-6 shadow-2xl ring-1 ring-white/10 backdrop-blur-xl sm:p-10">
           <div className="pointer-events-none absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]" />
 
@@ -69,7 +66,6 @@ export default async function BandBookingPage() {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="mt-auto mb-6 flex flex-col items-center gap-3 pt-8">
           <div className="flex items-center gap-4 text-stone-300">
             <div className="h-px w-6 bg-white/20" />

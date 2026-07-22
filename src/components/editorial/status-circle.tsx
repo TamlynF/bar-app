@@ -16,7 +16,6 @@ export default function StatusCircle({
   label: string,
   isActive: boolean,
   onClick: () => void,
-  /** Sub-label shown beneath the count inside the circle. */
   unit?: string,
 }) {
   const theme = statusTheme[status] || statusTheme.pending

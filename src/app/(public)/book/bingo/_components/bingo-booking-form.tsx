@@ -42,7 +42,6 @@ function formatEventDate(dateStr: string) {
   });
 }
 
-/** Dropdown label: date, plus the start time when present (disambiguates same-day events). */
 function eventOptionLabel(ev: BingoEvent) {
   const time = formatTime(ev.start_time);
   return time ? `${formatEventDate(ev.date)} · ${time}` : formatEventDate(ev.date);
@@ -64,7 +63,6 @@ export default function BingoBookingForm({ events }: Props) {
     specialRequests: "",
   });
 
-  // Resolve the chosen event by id (unique) — two events can share a date.
   const selectedEvent =
     events.find((e) => String(e.id) === formData.eventId) ?? events[0];
   const selectedDate = selectedEvent?.date ?? "";
@@ -178,7 +176,6 @@ export default function BingoBookingForm({ events }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-      {/* Date and Group Size Row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
         <div className="space-y-1">
           <label className={labelClasses}>
@@ -231,7 +228,6 @@ export default function BingoBookingForm({ events }: Props) {
         </div>
       </div>
 
-      {/* Larger bookings notice */}
       <p className="text-center text-[10px] leading-relaxed font-medium text-stone-400">
         For larger bookings please contact us on Instagram at{' '}
         <a
@@ -245,7 +241,6 @@ export default function BingoBookingForm({ events }: Props) {
         </a>
       </p>
 
-      {/* Name */}
       <div className="space-y-1">
         <label className={labelClasses}>
           Your Name <span className="text-red-500">*</span>
@@ -266,7 +261,6 @@ export default function BingoBookingForm({ events }: Props) {
         </div>
       </div>
 
-      {/* Table Name */}
       <div className="space-y-1">
         <label className={labelClasses}>
           Table Name
@@ -293,7 +287,6 @@ export default function BingoBookingForm({ events }: Props) {
       <input type="hidden" name="phone_no" value={formData.phoneNo} />
       <input type="hidden" name="special_requests" value={formData.specialRequests} />
 
-      {/* Email */}
       <div className="space-y-1">
         <label className={labelClasses}>
           Email Address <span className="text-red-500">*</span>
@@ -314,7 +307,6 @@ export default function BingoBookingForm({ events }: Props) {
         </div>
       </div>
 
-      {/* Phone */}
       <div className="space-y-1">
         <label className={labelClasses}>Phone Number</label>
         <div className="flex gap-2">
@@ -352,7 +344,6 @@ export default function BingoBookingForm({ events }: Props) {
         </div>
       </div>
 
-      {/* Price Preview */}
       {hasPricing && (
         <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/40 px-5 py-4">
           <div>
@@ -370,7 +361,6 @@ export default function BingoBookingForm({ events }: Props) {
         </div>
       )}
 
-      {/* Special Requests */}
       <div className="space-y-1">
         <label className={labelClasses}>
           Additional Requests (Optional)

@@ -52,7 +52,6 @@ import type {
 } from "@/lib/floor-plan/types";
 import { saveVenueLayoutAction } from "../actions";
 
-// ── Constants ────────────────────────────────────────────────────────────────
 type Mode = "outline" | "obstacles" | "fixtures" | "features";
 type Shape = "rect" | "circle" | "polygon";
 const GRID = 0.1; // snap step (m)
@@ -87,7 +86,6 @@ function genId(prefix: string): string {
 
 const shapeOf = (s?: Shape): Shape => s ?? "rect";
 const rotOf = (r?: number): number => r ?? 0;
-/** SVG transform that spins a footprint about its centre (skipped for polygons). */
 function rotTransform(rotation: number, cx: number, cy: number, shape: Shape): string | undefined {
   return shape !== "polygon" && rotation ? `rotate(${rotation} ${round(cx, 3)} ${round(cy, 3)})` : undefined;
 }
@@ -149,7 +147,6 @@ export default function VenueEditorClient({
   const svgRef = useRef<SVGSVGElement | null>(null);
   const dragRef = useRef<DragState>(null);
 
-  // ── Derived viewport — encompass the room AND anything placed outside it ────
   const view = useMemo(() => {
     const bboxPts = (e: { x: number; y: number; width: number; length: number; shape?: Shape; points?: Point[] }) =>
       shapeOf(e.shape) === "polygon" && e.points
@@ -179,7 +176,6 @@ export default function VenueEditorClient({
     setSavedAt(false);
   };
 
-  // ── Coordinate helpers ──────────────────────────────────────────────────────
   const eventToWorld = (e: React.PointerEvent): Point => {
     const el = svgRef.current;
     if (!el) return { x: 0, y: 0 };
@@ -188,7 +184,6 @@ export default function VenueEditorClient({
     return { x: clamp(snap(w.x, GRID), 0, view.width), y: clamp(snap(w.y, GRID), 0, view.length) };
   };
 
-  // ── Outline editing ─────────────────────────────────────────────────────────
   const resetRectangle = () => {
     const r = defaultRoomOutline(roomW, roomL);
     setPoints(r.points);
@@ -210,7 +205,6 @@ export default function VenueEditorClient({
     markDirty();
   };
 
-  // ── Obstacles ──────────────────────────────────────────────────────────────
   const addRectObstacle = (shape: "rect" | "circle") => {
     const size = shape === "circle" ? 0.6 : 1;
     const o: Obstacle = {
@@ -287,7 +281,6 @@ export default function VenueEditorClient({
     markDirty();
   };
 
-  // ── Fixtures ───────────────────────────────────────────────────────────────
   const addFixture = (type: FixtureType) => {
     const meta = FIXTURE_META[type];
     const f: Fixture = {
@@ -359,7 +352,6 @@ export default function VenueEditorClient({
     markDirty();
   };
 
-  // ── Features (doors / windows / benches) ─────────────────────────────────────
   const addFeature = (kind: FeatureKind) => {
     const meta = FEATURE_META[kind];
     const f: Feature = {
@@ -388,7 +380,6 @@ export default function VenueEditorClient({
     markDirty();
   };
 
-  // ── Pointer drag plumbing ───────────────────────────────────────────────────
   const onSvgPointerDown = (e: React.PointerEvent) => {
     if (mode === "outline") {
       addVertexAt(eventToWorld(e));
@@ -433,12 +424,10 @@ export default function VenueEditorClient({
       try {
         svgRef.current?.releasePointerCapture(e.pointerId);
       } catch {
-        /* already released */
       }
     }
   };
 
-  // ── Save ────────────────────────────────────────────────────────────────────
   const handleSave = () => {
     setFormError(null);
     if (!companyId) {
@@ -464,7 +453,6 @@ export default function VenueEditorClient({
     });
   };
 
-  // ── Rendering values ────────────────────────────────────────────────────────
   const fontSize = clamp(Math.min(view.width, view.length) * 0.04, 0.18, 0.5);
   const handleR = clamp(Math.min(view.width, view.length) * 0.018, 0.08, 0.22);
   const gridLines = useMemo(() => {
@@ -489,7 +477,6 @@ export default function VenueEditorClient({
 
   return (
     <div className="max-w-5xl space-y-4 px-2 py-2 sm:px-4 sm:py-0">
-      {/* ── Header ── */}
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">Venue Layout</h2>
@@ -509,7 +496,6 @@ export default function VenueEditorClient({
         ) : null}
       </div>
 
-      {/* ── Mode toolbar ── */}
       <div className="flex flex-wrap items-center gap-2">
         <ModeButton active={mode === "outline"} onClick={() => { setMode("outline"); setSelection(null); setDrawingPoly(null); }} icon={<Pentagon className="h-4 w-4" />} label="Room" />
         <ModeButton active={mode === "obstacles"} onClick={() => { setMode("obstacles"); setSelection(null); }} icon={<Ban className="h-4 w-4" />} label="Obstacles" />
@@ -517,7 +503,6 @@ export default function VenueEditorClient({
         <ModeButton active={mode === "features"} onClick={() => { setMode("features"); setSelection(null); setDrawingPoly(null); }} icon={<DoorOpen className="h-4 w-4" />} label="Doors & Seating" />
       </div>
 
-      {/* ── Mode controls ── */}
       <div className="rounded-2xl border border-[#E6DFC8] bg-white p-3">
         {mode === "outline" && (
           <div className="space-y-3">
@@ -617,7 +602,6 @@ export default function VenueEditorClient({
         )}
       </div>
 
-      {/* ── Canvas ── */}
       <div
         className="aspect-(--venue-ar) w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-[#FFFDF7]"
         style={{ "--venue-ar": `${view.width} / ${view.length}` } as React.CSSProperties}
@@ -631,7 +615,6 @@ export default function VenueEditorClient({
           onPointerUp={onSvgPointerUp}
           onPointerCancel={onSvgPointerUp}
         >
-          {/* Grid */}
           <g stroke="#E6DFC8" strokeWidth={1} vectorEffect="non-scaling-stroke" opacity={0.6}>
             {gridLines.xs.map((x) => (
               <line key={`gx${x}`} x1={x} y1={0} x2={x} y2={view.length} />
@@ -641,7 +624,6 @@ export default function VenueEditorClient({
             ))}
           </g>
 
-          {/* Room outline */}
           {points.length >= 2 && (
             <polygon
               points={outlinePath}
@@ -654,7 +636,6 @@ export default function VenueEditorClient({
             />
           )}
 
-          {/* Obstacles */}
           {obstacles.map((o) => {
             const isSel = selection?.kind === "obstacle" && selection.id === o.id;
             const stroke = isSel ? "#B45309" : "#DC2626";
@@ -681,13 +662,11 @@ export default function VenueEditorClient({
             );
           })}
 
-          {/* Obstacle polygon vertex handles */}
           {mode === "obstacles" && !drawingPoly && selectedObstacle?.shape === "polygon" && selectedObstacle.points &&
             selectedObstacle.points.map((p, i) => (
               <circle key={`ov${i}`} cx={p.x} cy={p.y} r={handleR} fill={selection?.kind === "obstacleVertex" && selection.index === i ? "#B45309" : "#FFFFFF"} stroke="#DC2626" strokeWidth={2} vectorEffect="non-scaling-stroke" className="cursor-move" onPointerDown={(e) => beginDrag(e, { kind: "obstacleVertex", id: selectedObstacle.id, index: i }, { kind: "obstacleVertex", id: selectedObstacle.id, index: i })} />
             ))}
 
-          {/* In-progress polygon drawing */}
           {drawingPoly && drawingPoly.length > 0 && (
             <g>
               <polyline points={drawingPoly.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#B45309" strokeWidth={2} strokeDasharray="4 2" vectorEffect="non-scaling-stroke" />
@@ -697,7 +676,6 @@ export default function VenueEditorClient({
             </g>
           )}
 
-          {/* Fixtures */}
           {fixtures.map((f) => {
             const isSel = (selection?.kind === "fixture" || selection?.kind === "fixtureVertex") && selection.id === f.id;
             const meta = FIXTURE_META[f.type];
@@ -729,13 +707,11 @@ export default function VenueEditorClient({
             );
           })}
 
-          {/* Fixture polygon vertex handles */}
           {mode === "fixtures" && selectedFixture && shapeOf(selectedFixture.shape) === "polygon" && selectedFixture.points &&
             selectedFixture.points.map((p, i) => (
               <circle key={`fv${i}`} cx={p.x} cy={p.y} r={handleR} fill={selection?.kind === "fixtureVertex" && selection.index === i ? "#B45309" : "#FFFFFF"} stroke={FIXTURE_META[selectedFixture.type].stroke} strokeWidth={2} vectorEffect="non-scaling-stroke" className="cursor-move" onPointerDown={(e) => beginDrag(e, { kind: "fixtureVertex", id: selectedFixture.id, index: i }, { kind: "fixtureVertex", id: selectedFixture.id, index: i })} />
             ))}
 
-          {/* Features (doors / windows / benches) */}
           {features.map((f) => {
             const isSel = selection?.kind === "feature" && selection.id === f.id;
             const meta = FEATURE_META[f.kind];
@@ -765,7 +741,6 @@ export default function VenueEditorClient({
             );
           })}
 
-          {/* Outline vertex handles (outline mode only) */}
           {mode === "outline" &&
             points.map((p, i) => {
               const isSel = selection?.kind === "vertex" && selection.index === i;
@@ -776,7 +751,6 @@ export default function VenueEditorClient({
         </svg>
       </div>
 
-      {/* ── Stats ── */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-bold text-[#5F624F]">
         <span className="tabular-nums">{points.length} outline point{points.length !== 1 ? "s" : ""}</span>
         <span className="tabular-nums">Area {round(roomArea, 1)} m²</span>
@@ -787,7 +761,6 @@ export default function VenueEditorClient({
         <span className="tabular-nums">{features.filter((f) => f.kind === "bench").length} bench(es) · {benchSeatTotal} seat{benchSeatTotal !== 1 ? "s" : ""}</span>
       </div>
 
-      {/* Outline vertex inspector */}
       {mode === "outline" && selection?.kind === "vertex" && points[selection.index] && (
         <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-[#E6DFC8] bg-white p-3">
           <DimInput id="vx" label="Point X (m)" value={points[selection.index].x} onChange={(v) => setPoints((prev) => prev.map((p, i) => (i === selection.index ? { ...p, x: v } : p)))} />
@@ -805,7 +778,6 @@ export default function VenueEditorClient({
         </div>
       )}
 
-      {/* ── Save ── */}
       <div className="flex justify-end">
         <Button type="button" onClick={handleSave} disabled={isPending || !companyId} className="h-12 rounded-xl bg-[#1B4332] px-6 font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:opacity-50">
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save layout</>}
@@ -815,7 +787,6 @@ export default function VenueEditorClient({
   );
 }
 
-// ── Sub-components ─────────────────────────────────────────────────────────────
 
 function ModeButton({ active, onClick, icon, label }: { active: boolean; onClick: () => void; icon: React.ReactNode; label: string }) {
   return (

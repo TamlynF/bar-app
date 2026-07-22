@@ -7,7 +7,6 @@ export interface ActionItem {
   label: string;
   count: number;
   href: string;
-  /** Tailwind background class for the segment + legend dot. */
   color: string;
 }
 
@@ -44,7 +43,6 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
         </div>
       </div>
 
-      {/* Segmented breakdown bar */}
       <div className="mt-3.5 flex h-3.5 overflow-hidden rounded-full bg-[#F7F4EA]">
         {active.map((i) => (
           <span
@@ -55,7 +53,6 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
         ))}
       </div>
 
-      {/* Legend chips */}
       <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-0.5">
         {active.map((i) => (
           <Link

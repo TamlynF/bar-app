@@ -72,7 +72,6 @@ describe("buildOfferEmail", () => {
   it("carries a note to the applicant through, trimmed", () => {
     const e = buildOfferEmail({ ...base, paymentAmount: 0, notes: "  Load in from the rear door.  " });
     expect(e.noteLabel).toBe("Load in from the rear door.");
-    // £0 is a real fee decision, not a missing one.
     expect(e.feeLabel).toBe("Fee: £0");
   });
 

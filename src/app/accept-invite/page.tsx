@@ -13,9 +13,6 @@ export default function AcceptInvitePage() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Explicitly exchange the hash token into a cookie-based session.
-  // onAuthStateChange alone isn't enough — @supabase/ssr stores sessions in
-  // cookies, so we must call setSession() to persist it before updateUser().
   useEffect(() => {
     const hash = window.location.hash.substring(1);
     const params = new URLSearchParams(hash);
@@ -23,9 +20,6 @@ export default function AcceptInvitePage() {
     const refreshToken = params.get("refresh_token");
 
     if (!accessToken || !refreshToken) {
-      // Reading window.location.hash is inherently client-only, so this must run
-      // after mount — the canonical "sync external browser state" effect. The one
-      // synchronous setState here is safe and intentional.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setError("No valid invite link found. Please request a new one from your admin.");
       return;

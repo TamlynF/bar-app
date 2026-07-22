@@ -5,7 +5,6 @@ import { QuizCategoryConfig } from "./actions";
 export default async function QuizCategoriesPage() {
   const supabase = await createClient();
 
-  // Fetch configs from Supabase. Assumes table 'quiz_category_configs' exists.
   const { data, error } = await supabase
     .from("quiz_category_configs")
     .select("*")

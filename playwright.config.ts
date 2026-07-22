@@ -2,7 +2,6 @@ import { defineConfig, devices } from "@playwright/test";
 import { config as loadEnv } from "dotenv";
 import path from "path";
 
-// Load the test env so webServer + globalSetup see local-Supabase config.
 loadEnv({ path: path.resolve(__dirname, ".env.test") });
 
 const PORT = 3100;
@@ -22,15 +21,11 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
 
-  // Each spec runs on BOTH a phone and a desktop viewport. The app's `sm`
-  // breakpoint is 640px, so behaviour genuinely differs across these.
   projects: [
     { name: "mobile", use: { ...devices["iPhone 13"] } },
     { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1280, height: 800 } } },
   ],
 
-  // Boot the app against the LOCAL Supabase stack. Vars passed here are already
-  // in process.env, so Next's .env.local (prod) will NOT override them.
   webServer: {
     command: `next dev -p ${PORT}`,
     url: BASE_URL,

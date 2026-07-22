@@ -5,11 +5,6 @@ import { Filter, ChevronDown } from 'lucide-react'
 import { format } from 'date-fns'
 import { QuizEventSummary } from '@/app/(private)/event-setups/quiz-generator/actions'
 
-/**
- * Client component to handle the quiz event filtering interactivity.
- * Uses standard window.location to update search parameters, avoiding 
- * resolution issues with Next.js specific navigation hooks in certain environments.
- */
 export default function QuizHistoryFilter({ 
   quizEvents, 
   currentFilter 
@@ -21,7 +16,6 @@ export default function QuizHistoryFilter({
   const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const value = e.target.value
     
-    // Using standard Web URL API to construct the new path
     const url = new URL(window.location.href)
     
     if (value === 'all') {
@@ -30,8 +24,6 @@ export default function QuizHistoryFilter({
       url.searchParams.set('event', value)
     }
     
-    // Trigger a navigation to the updated URL
-    // This will cause the Server Component (page.tsx) to re-render with new data
     window.location.href = url.pathname + url.search
   }
 

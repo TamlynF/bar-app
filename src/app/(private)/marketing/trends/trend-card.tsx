@@ -5,14 +5,12 @@ import { Loader2, Bookmark, BookmarkCheck, EyeOff, RotateCcw, ExternalLink, Chev
 import { cn } from "@/lib/utils";
 import type { MarketingTrend, TrendEffort, TrendKind, TrendState } from "../lib/types";
 
-// Kind → emoji tile + label + colour (matches the Marketing Trends design).
 const KIND: Record<TrendKind, { emoji: string; label: string; text: string; tile: string }> = {
   advertising: { emoji: "🔥", label: "Ad / Social", text: "text-[#7C3AED]", tile: "bg-[#F3EBFE] border-[#E2D4FB]" },
   event_idea: { emoji: "🎪", label: "Event idea", text: "text-[#1D4ED8]", tile: "bg-[#EAF1FE] border-[#D3E1FC]" },
   price: { emoji: "💷", label: "Price play", text: "text-[#B45309]", tile: "bg-[#FDF1E3] border-[#F5DFC0]" },
 };
 
-// Effort → ⚡ bolts + rough time + colour.
 const EFFORT: Record<TrendEffort, { bolts: string; note: string; text: string }> = {
   Easy: { bolts: "⚡", note: "one evening", text: "text-green-700" },
   Medium: { bolts: "⚡⚡", note: "a weekend", text: "text-[#B45309]" },
@@ -41,7 +39,6 @@ export function TrendCard({
         open ? "border-[#5C4033] shadow-[0_8px_24px_rgba(92,64,51,0.14)]" : "border-[#E6DFC8]",
       )}
     >
-      {/* Collapsed head — tap to expand */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -68,7 +65,6 @@ export function TrendCard({
         <ChevronDown className={cn("h-4 w-4 shrink-0 text-[#5F624F] transition-transform", open && "rotate-180")} />
       </button>
 
-      {/* Expanded body */}
       {open && (
         <div className="flex flex-col gap-2.5 px-3 pb-3">
           {trend.summary && <p className="text-[12.5px] leading-relaxed text-[#5F624F]">{trend.summary}</p>}

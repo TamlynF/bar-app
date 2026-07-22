@@ -1,13 +1,8 @@
-// Server-only Spotify helpers that act on behalf of the connected USER
-// (Authorization-Code token in cookies), used for playlist create/replace.
-// This is distinct from the client-credentials app token used for track search.
 import { cookies } from "next/headers";
 
 const API = "https://api.spotify.com/v1";
 
-/** Thrown when the user's token lacks the playlist-modify scope (HTTP 403). */
 export class SpotifyScopeError extends Error {}
-/** Thrown when there is no usable user token (not connected). */
 export class SpotifyNotConnectedError extends Error {}
 
 async function refreshUserToken(): Promise<string | null> {
@@ -29,8 +24,6 @@ async function refreshUserToken(): Promise<string | null> {
   if (!res.ok) return null;
 
   const tokens = await res.json();
-  // Best-effort: persist the refreshed token for the browser/SDK. Setting cookies
-  // is only allowed in some server contexts (e.g. Server Actions) — ignore if not.
   try {
     cookieStore.set("spotify_access_token", tokens.access_token, {
       httpOnly: false,
@@ -49,22 +42,15 @@ async function refreshUserToken(): Promise<string | null> {
       });
     }
   } catch {
-    /* cookie mutation not permitted in this context */
   }
   return tokens.access_token as string;
 }
 
-/** Returns the current user access token from cookies (no refresh), or null. */
 export async function getUserSpotifyToken(): Promise<string | null> {
   const cookieStore = await cookies();
   return cookieStore.get("spotify_access_token")?.value ?? null;
 }
 
-/**
- * Calls the Spotify Web API with the user token, refreshing once on 401.
- * Throws SpotifyNotConnectedError when no token is available, and
- * SpotifyScopeError on 403 (token lacks playlist-modify scope → reconnect).
- */
 async function spotifyUserFetch(path: string, init?: RequestInit): Promise<Response> {
   const token = (await getUserSpotifyToken()) ?? (await refreshUserToken());
   if (!token) throw new SpotifyNotConnectedError();
@@ -102,7 +88,6 @@ export async function createPublicPlaylist(userId: string, name: string): Promis
   return { id: data.id, url: data.external_urls?.spotify ?? `https://open.spotify.com/playlist/${data.id}` };
 }
 
-/** Replaces ALL items in the playlist with the given track URIs (≤100). */
 export async function replacePlaylistTracks(playlistId: string, uris: string[]): Promise<void> {
   const res = await spotifyUserFetch(`/playlists/${playlistId}/tracks`, {
     method: "PUT",

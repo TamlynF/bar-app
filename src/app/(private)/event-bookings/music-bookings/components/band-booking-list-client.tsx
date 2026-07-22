@@ -15,39 +15,32 @@ import { cn } from "@/lib/utils";
 
 const normStatus = (s?: string) => (s || "").trim().toLowerCase();
 
-/** Board column order — the pipeline, left to right, with the terminal exit last. */
 const COLUMNS = ["new", "reviewing", "offered", "booked", "declined"] as const;
 
 const toTitle = (s: string) =>
   s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 
-/** The mount clock never ticks — the tags are read once, when the board mounts. */
 const subscribeToNothing = () => () => {};
 
-/** No clock worth quoting on the server — see `nowMs` in the component. */
 const serverNow = () => null;
 
-/** Today as YYYY-MM-DD, to compare against the date columns (also YYYY-MM-DD). */
 const todayISO = () => {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };
 
-/** Earliest preferred date, or null. ISO dates sort lexicographically. */
 function firstPreferred(r: BandRequest): string | null {
   const ds = (r.preferred_dates ?? []).filter(Boolean).slice().sort();
   return ds[0] ?? null;
 }
 
-/** The value a request is ordered by, per the chosen sort. "" = missing (sorts last). */
 function sortValue(r: BandRequest, key: BandFilterState["sortKey"]): string {
   if (key === "modified") return r.updated_at || r.created_at || "";
   if (key === "preferred") return firstPreferred(r) ?? "";
   return r.created_at || "";
 }
 
-/** Distinct non-empty values of a field, as {key,label}, alphabetical. */
 function optionsFor(requests: BandRequest[], field: "type" | "genre") {
   const keys = new Set<string>();
   for (const r of requests) {
@@ -62,7 +55,6 @@ export default function BandBookingListClient({
   initialStatuses = [],
 }: {
   initialRequests: BandRequest[];
-  /** Status keys to pre-select in the filter (e.g. from ?status=new). */
   initialStatuses?: string[];
 }) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -73,8 +65,6 @@ export default function BandBookingListClient({
   const patchFilters = (patch: Partial<BandFilterState>) =>
     setFilters((f) => ({ ...f, ...patch }));
 
-  // Only offer types/genres that actually exist in the data — a fixed list would
-  // show options that match nothing.
   const typeOptions = useMemo(() => optionsFor(initialRequests, "type"), [initialRequests]);
   const genreOptions = useMemo(() => optionsFor(initialRequests, "genre"), [initialRequests]);
 
@@ -85,8 +75,6 @@ export default function BandBookingListClient({
     setActiveStatusFilters(next);
   };
 
-  // Search + the filter panel narrow what's on the board; the status circles choose
-  // which columns show.
   const searchedRequests = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     const today = todayISO();
@@ -105,7 +93,6 @@ export default function BandBookingListClient({
       if (filters.fee === "free" && amount > 0) return false;
       if (filters.fee === "paid" && !(amount > 0)) return false;
 
-      // Past/upcoming is about the booked slot, so an undated request is neither.
       if (filters.when !== "any") {
         if (!r.selected_date) return false;
         if (filters.when === "past" && r.selected_date >= today) return false;
@@ -137,17 +124,14 @@ export default function BandBookingListClient({
     return initialRequests
       .filter((r) => passesSearch(r) && passesFilters(r))
       .sort((a, b) => {
-        // Favourites stay pinned to the top of their column, whatever the sort.
         if (a.is_favorite !== b.is_favorite) return a.is_favorite ? -1 : 1;
         const va = sortValue(a, filters.sortKey);
         const vb = sortValue(b, filters.sortKey);
-        // A request with nothing to sort on (no preferred dates) goes last either way.
         if (!va || !vb) return !va && !vb ? 0 : va ? -1 : 1;
         return filters.sortAsc ? va.localeCompare(vb) : vb.localeCompare(va);
       });
   }, [initialRequests, searchQuery, filters]);
 
-  /** Which columns to render — all of them, unless the circles have narrowed it. */
   const visibleColumns = useMemo(
     () =>
       COLUMNS.filter(
@@ -162,29 +146,14 @@ export default function BandBookingListClient({
     return map;
   }, [searchedRequests]);
 
-  // Which night is next, and which have been and gone. Read off the client's
-  // clock, not the server's: this SSRs in UTC while the venue (and the admin) run
-  // on UK time, and the slots sit at 22:00–00:00 — right where the two disagree.
-  // So the server renders no tags at all (`serverNow` is null) and the client
-  // fills them in from its own clock on the first paint — hydration-stable, which
-  // a render-time `new Date()` would not be.
   const mountedAt = useRef<number | null>(null);
-  // Frozen on first read: useSyncExternalStore compares snapshots with Object.is,
-  // so a fresh Date.now() per call would re-render forever.
   const clientNow = useCallback(() => (mountedAt.current ??= Date.now()), []);
   const nowMs = useSyncExternalStore(subscribeToNothing, clientNow, serverNow);
 
-  /**
-   * The lifecycle tag per request id. Computed over every request rather than the
-   * filtered board on purpose: which night is next is a fact about the schedule,
-   * so narrowing the board must not promote whichever card survives the filter
-   * into "Upcoming".
-   */
   const lifecycles = useMemo(() => {
     if (nowMs == null) return new Map<string, BandLifecycleStage>();
     return bandLifecycleStages(
       initialRequests.map((r) => {
-        // Supabase hands the join back as an object or a single-element array.
         const ev = Array.isArray(r.linked_event) ? r.linked_event[0] : r.linked_event;
         return {
           id: r.id,
@@ -205,16 +174,8 @@ export default function BandBookingListClient({
     0
   );
 
-  /**
-   * One or two statuses selected, so their columns have the board between them
-   * rather than a fifth of it each. The cards become eligible to spread into that
-   * width and spend it on detail a board column can't carry — how far they
-   * actually spread is the card's own call, since two columns leave each half of
-   * what one leaves.
-   */
   const spreadColumns = visibleColumns.length <= 2;
 
-  /** One removable chip per active filter, in panel order. */
   const activeChips: { key: string; label: string; clear: () => void }[] = [];
   if (filters.favOnly)
     activeChips.push({ key: "fav", label: "Favourites", clear: () => patchFilters({ favOnly: false }) });
@@ -262,13 +223,8 @@ export default function BandBookingListClient({
 
   return (
     <div className="animate-in space-y-3 duration-500 fade-in">
-      {/* Stats + Search grouped card — a warm tone a shade off both the white cards
-          and the #F7F4EA page, lifted off the page with a soft shadow so the
-          controls read as their own bar. */}
       <div className="rounded-2xl border border-[#E6DFC8] bg-[#EFE8D4] shadow-md">
         <div className="flex flex-col items-center sm:flex-row">
-          {/* Stats Bar — takes only the width it needs, so the search can have the
-              rest (it used to flex-1 and spread the circles across the header). */}
           <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:shrink-0 sm:pt-0">
             <div className="flex w-full min-w-max items-stretch gap-1 px-2 py-3">
               <StatusCircle
@@ -316,11 +272,9 @@ export default function BandBookingListClient({
             </div>
           </div>
 
-          {/* Divider */}
           <div className="mx-3 border-t border-[#E6DFC8] sm:hidden" />
           <div className="my-2 hidden w-px self-stretch bg-[#E6DFC8] sm:block" />
 
-          {/* Search + Filters — takes the width the stats bar no longer claims. */}
           <div className="mb-3 flex w-full min-w-0 flex-1 items-center gap-2 px-3 py-2 sm:mb-0 sm:px-4">
             <div className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#E6DFC8] bg-white px-4 transition-colors focus-within:border-[#5C4033]">
               <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -356,8 +310,6 @@ export default function BandBookingListClient({
         </div>
       </div>
 
-      {/* What's on, and how to take it off — so the panel doesn't have to be
-          reopened just to see (or undo) what's applied. */}
       {(activeChips.length > 0 || filters.sortKey !== "created" || filters.sortAsc) && (
         <div className="flex flex-wrap items-center gap-1.5">
           {activeChips.map((chip) => (
@@ -387,7 +339,6 @@ export default function BandBookingListClient({
         </div>
       )}
 
-      {/* Status board — one column per pipeline stage */}
       {totalShown === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">
           <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5F624F]/50" />
@@ -396,8 +347,6 @@ export default function BandBookingListClient({
           </p>
         </div>
       ) : (
-        // Stacked on mobile; a scrolling row of fixed columns from sm; from xl the
-        // columns share the width equally and the scroll goes away entirely.
         <div className="no-scrollbar flex flex-col gap-2 pb-2 sm:flex-row sm:overflow-x-auto xl:overflow-x-visible">
           {visibleColumns.map((col) => {
             const theme = statusTheme[col];
@@ -406,10 +355,6 @@ export default function BandBookingListClient({
               <section
                 key={col}
                 aria-label={`${theme.label} — ${items.length} request${items.length === 1 ? "" : "s"}`}
-                // min-w-0 is what lets a column shrink past its cards' natural
-                // width — without it five columns overflow the row. A solo column
-                // takes the board from sm up: the fixed 72 belongs to a row of
-                // columns that scrolls, and there's nothing to scroll past here.
                 className={cn(
                   "flex flex-col gap-2",
                   spreadColumns
@@ -417,7 +362,6 @@ export default function BandBookingListClient({
                     : "sm:w-72 sm:shrink-0 xl:w-auto xl:min-w-0 xl:flex-1"
                 )}
               >
-                {/* Column header — sticks while the column scrolls past it */}
                 <div
                   className={cn(
                     "sticky top-0 z-10 flex items-center justify-between gap-2 rounded-xl border px-3 py-2",

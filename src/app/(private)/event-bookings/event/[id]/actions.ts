@@ -30,7 +30,6 @@ export async function updateBookingStatusAction(bookingId: number, status: strin
     const groupSize = (bookingRow?.group_size as number) ?? 0;
     const wantConfirmed = status.toLowerCase() === "confirmed";
 
-    // Confirm only if a table can be mapped (seated events). Plan before writing.
     let tableToAssign = null;
     if (wantConfirmed && eventId != null) {
       const plan = await planConfirmSeating(supabase, { eventId, bookingId, groupSize });
@@ -50,12 +49,10 @@ export async function updateBookingStatusAction(bookingId: number, status: strin
     if (error) throw error;
 
     if (wantConfirmed) {
-      // Seat it if a free table was found (already-mapped bookings return null).
       if (tableToAssign && eventId != null) {
         await commitMapping(supabase, { bookingId, eventId, tableId: tableToAssign.id, groupSize });
       }
     } else {
-      // Rule 3c: moving away from `confirmed` frees the booking's table.
       await clearMappingOnStatusChange(supabase, bookingId);
     }
     if (eventId != null) await updateFullyBookedStatus(supabase, eventId);

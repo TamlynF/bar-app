@@ -1,25 +1,4 @@
-/**
- * Centralised, single-source-of-truth table-allocation logic for seated bookings.
- *
- * Every booking flow (create / update size / status change / admin table-edit,
- * public + admin, quiz / event / bingo / general) routes through this module so
- * the seating algorithm stays consistent. See `table-allocation-prompt.md` for
- * the full ruleset; the pure decision helpers below are unit-tested in
- * `src/lib/__tests__/table-allocation.test.ts`.
- *
- * This only governs bookings whose linked event has `seating_required = true`
- * AND `is_bookable = true` (see `seatingApplies`). For any other event, seating
- * logic is skipped and the booking is confirmed as-is.
- *
- * Source of truth for "which tables are taken for an event": `booking_table_mappings`
- * rows for that `event_id` with `booking_id IS NOT NULL`. Rows with a null
- * booking_id are event-level floor-plan placements (a table placed on the layout
- * but not occupied) and are NOT treated as taken.
- */
-
 import type { SupabaseClient } from "@supabase/supabase-js";
-
-// ─── Types ──────────────────────────────────────────────────────────────────
 
 export interface SeatingEvent {
   id: number;
@@ -27,14 +6,12 @@ export interface SeatingEvent {
   is_bookable: boolean;
 }
 
-/** A free/available table the algorithm can hand out. */
 export interface FreeTable {
   id: number;
   max_capacity: number;
   name?: string | null;
 }
 
-/** A confirmed booking together with the table it currently holds. */
 export interface MappedBooking {
   bookingId: number;
   groupSize: number;
@@ -60,24 +37,14 @@ export type SizeChangeOutcome =
 
 type IdRef = number | string;
 
-// ─── Guard ──────────────────────────────────────────────────────────────────
-
-/** Seating logic only applies to bookable, seating-required events. */
 export function seatingApplies(event: SeatingEvent): boolean {
   return event.seating_required === true && event.is_bookable === true;
 }
 
-// ─── Pure decision helpers (no Supabase — unit-tested) ───────────────────────
-
-/** Extra chairs needed when a group overflows a table's capacity. Never negative. */
 export function computeAddSeat(groupSize: number, tableCapacity: number): number {
   return Math.max(0, groupSize - tableCapacity);
 }
 
-/**
- * The available table with the smallest `max_capacity` that still seats the
- * group (`>= groupSize`), or null. Input order is not assumed.
- */
 export function pickSmallestFittingTable(
   freeTables: FreeTable[],
   groupSize: number
@@ -92,11 +59,6 @@ export function pickSmallestFittingTable(
   );
 }
 
-/**
- * The tightest free table strictly smaller than the current one that still
- * seats `newSize` — i.e. `newSize <= max_capacity < currentCapacity`, closest
- * to `newSize`. Used by the downsize relocation rule (3b.1). Null if none.
- */
 export function pickTighterFreeTable(
   freeTables: FreeTable[],
   newSize: number,
@@ -106,7 +68,6 @@ export function pickTighterFreeTable(
     (t) => t.max_capacity >= newSize && t.max_capacity < currentCapacity
   );
   if (tighter.length === 0) return null;
-  // All candidates fit, so closest-to-newSize === smallest max_capacity.
   return tighter.reduce((best, t) =>
     t.max_capacity < best.max_capacity ||
     (t.max_capacity === best.max_capacity && t.id < best.id)
@@ -115,16 +76,6 @@ export function pickTighterFreeTable(
   );
 }
 
-/**
- * Upsize swap (rule 3a.2). `current` grew to `newSize` and outgrew its table,
- * and no free table fits. Find another confirmed mapped booking B to trade
- * tables with, where:
- *   - B's group is now smaller than this one (`B.groupSize < newSize`), and
- *   - B's table is bigger than current's AND actually fits `newSize`
- *     (`B.tableCapacity > current.tableCapacity` && `>= newSize`), and
- *   - B still fits on current's table (`B.groupSize <= current.tableCapacity`).
- * Deterministic pick: smallest qualifying B-table (tie-break by bookingId). Null if none.
- */
 export function findUpsizeSwap(
   current: MappedBooking,
   candidates: MappedBooking[],
@@ -147,17 +98,6 @@ export function findUpsizeSwap(
   );
 }
 
-/**
- * Downsize swap (rule 3b.2). `current` shrank to `newSize` and no tighter free
- * table exists. Find a confirmed booking B sitting at a table tighter than
- * current's that we should hand the big table to, where:
- *   - B's table is tighter than current's but still fits `newSize`
- *     (`newSize <= B.tableCapacity < current.tableCapacity`), and
- *   - B is the larger group (`B.groupSize > newSize`) — so B benefits from the
- *     bigger table current is vacating, and B still fits current's table
- *     (guaranteed since `B.groupSize <= B.tableCapacity < current.tableCapacity`).
- * Deterministic pick: B-table closest to `newSize` (tie-break by bookingId). Null if none.
- */
 export function findDownsizeSwap(
   current: MappedBooking,
   candidates: MappedBooking[],
@@ -180,31 +120,21 @@ export function findDownsizeSwap(
   );
 }
 
-/** Pure CREATE decision: smallest fitting free table → confirmed, else waitlisted. */
 export function decideCreate(freeTables: FreeTable[], groupSize: number): CreateOutcome {
   const table = pickSmallestFittingTable(freeTables, groupSize);
   return table ? { status: "confirmed", table } : { status: "waitlisted" };
 }
 
-/**
- * Pure UPDATE decision for a confirmed, mapped booking whose group_size changed.
- * `freeTables` = available tables for the event (excluding this booking's own),
- * unfiltered by size. `candidates` = other confirmed mapped bookings on the event.
- * Implements rules 3a (increase) and 3b (decrease).
- */
 export function decideSizeChange(
   booking: MappedBooking,
   newSize: number,
   freeTables: FreeTable[],
   candidates: MappedBooking[]
 ): SizeChangeOutcome {
-  // ── INCREASE ──────────────────────────────────────────────────────────────
   if (newSize > booking.groupSize) {
     if (newSize <= booking.tableCapacity) {
-      // Still fits its current table.
       return { outcome: "kept", tableId: booking.tableId, addSeat: 0 };
     }
-    // Needs a bigger table. 1) reassign to a free fitting table.
     const reassign = pickSmallestFittingTable(freeTables, newSize);
     if (reassign) {
       return {
@@ -213,7 +143,6 @@ export function decideSizeChange(
         addSeat: computeAddSeat(newSize, reassign.max_capacity),
       };
     }
-    // 2) swap with a confirmed neighbour holding a bigger table.
     const swap = findUpsizeSwap(booking, candidates, newSize);
     if (swap) {
       return {
@@ -224,18 +153,14 @@ export function decideSizeChange(
         swappedToTableId: booking.tableId,
       };
     }
-    // 3) no space.
     return { outcome: "no_space" };
   }
 
-  // ── DECREASE ──────────────────────────────────────────────────────────────
   if (newSize < booking.groupSize) {
-    // 1) relocate to a tighter free table.
     const tighter = pickTighterFreeTable(freeTables, newSize, booking.tableCapacity);
     if (tighter) {
       return { outcome: "reassigned", tableId: tighter.id, addSeat: 0 };
     }
-    // 2) tighten via swap with a larger group on a tighter table.
     const swap = findDownsizeSwap(booking, candidates, newSize);
     if (swap) {
       return {
@@ -246,7 +171,6 @@ export function decideSizeChange(
         swappedToTableId: booking.tableId,
       };
     }
-    // 3) keep on current table.
     return {
       outcome: "kept",
       tableId: booking.tableId,
@@ -254,7 +178,6 @@ export function decideSizeChange(
     };
   }
 
-  // ── UNCHANGED ─────────────────────────────────────────────────────────────
   return {
     outcome: "kept",
     tableId: booking.tableId,
@@ -262,15 +185,12 @@ export function decideSizeChange(
   };
 }
 
-// ─── Data access (Supabase) ──────────────────────────────────────────────────
-
 const UNIQUE_VIOLATION = "23505";
 
 function isUniqueViolation(error: unknown): boolean {
   return !!error && typeof error === "object" && (error as { code?: string }).code === UNIQUE_VIOLATION;
 }
 
-/** Table ids held by *booking* mappings (booking_id not null) for an event. */
 async function getTakenTableIds(
   supabase: SupabaseClient,
   eventId: number,
@@ -290,13 +210,6 @@ async function getTakenTableIds(
   return (data ?? []).map((m) => m.table_id as number);
 }
 
-/**
- * Tables with `available = true` not currently held by a booking mapping for the
- * event, capacity `>= groupSize` (when given), ordered smallest-fit first.
- *   - `excludeBookingId` ignores that booking's own mapping (for re-allocation).
- *   - `excludeTableId` re-includes a specific table even if held (used by the
- *     admin edit dropdown to keep the booking's current table selectable).
- */
 export async function getFreeTablesForEvent(
   supabase: SupabaseClient,
   eventId: number,
@@ -327,10 +240,6 @@ export async function getFreeTablesForEvent(
   return (data ?? []) as FreeTable[];
 }
 
-/**
- * Confirmed bookings for the event that currently hold a table, as
- * `MappedBooking[]` — the candidate pool for upsize/downsize swaps.
- */
 export async function getMappedBookingsForEvent(
   supabase: SupabaseClient,
   eventId: number,
@@ -354,7 +263,6 @@ export async function getMappedBookingsForEvent(
   }
 
   return (data ?? []).map((row) => {
-    // Supabase joins can come back as object OR single-element array.
     const b = Array.isArray(row.bookings) ? row.bookings[0] : row.bookings;
     const t = Array.isArray(row.tables) ? row.tables[0] : row.tables;
     return {
@@ -366,12 +274,6 @@ export async function getMappedBookingsForEvent(
   });
 }
 
-// ─── Orchestrators (the things server actions call) ──────────────────────────
-
-/**
- * CREATE allocation. Returns the decision; the caller inserts the booking row
- * with the returned status, then calls `commitMapping` for a confirmed result.
- */
 export async function allocateOnCreate(
   supabase: SupabaseClient,
   args: { eventId: number; groupSize: number }
@@ -382,12 +284,6 @@ export async function allocateOnCreate(
   return decideCreate(freeTables, args.groupSize);
 }
 
-/**
- * Inserts the confirmed booking→table mapping. The DB's partial unique index
- * (`booking_table_mappings_event_table_uq`) is the authoritative concurrency
- * backstop: a lost race surfaces as a unique violation and is reported as
- * `table_taken` so the caller can waitlist the loser.
- */
 export async function commitMapping(
   supabase: SupabaseClient,
   args: { bookingId: IdRef; eventId: number; tableId: number; groupSize: number }
@@ -413,10 +309,6 @@ export async function commitMapping(
   return { ok: true, addSeat };
 }
 
-/**
- * Read-only PLAN for a group_size change on a confirmed, mapped booking. Does
- * no writes, so admin UI can preview/warn before saving. Pair with `applySizeChange`.
- */
 export async function planSizeChange(
   supabase: SupabaseClient,
   args: { booking: MappedBooking; newSize: number }
@@ -432,18 +324,6 @@ export async function planSizeChange(
   return decideSizeChange(args.booking, args.newSize, freeTables, candidates);
 }
 
-/**
- * Executes a `planSizeChange` plan's writes.
- *   - kept       → refresh add_seat on the existing mapping
- *   - reassigned → move this booking's mapping to the new table
- *   - swapped    → trade tables between this booking and the swapped one
- *   - no_space   → public: no-op (caller blocks); admin: demote to `pending`
- *                  and delete the mapping.
- *
- * Swaps and reassigns delete-then-insert mappings (no multi-row transaction in
- * the JS client), so there's a brief window where a table is free; the partial
- * unique index still prevents a third party from double-booking either table.
- */
 export async function applySizeChange(
   supabase: SupabaseClient,
   plan: SizeChangeOutcome,
@@ -468,7 +348,6 @@ export async function applySizeChange(
       return;
     }
     case "swapped": {
-      // Free both rows first, then re-insert with traded tables.
       await supabase
         .from("booking_table_mappings")
         .delete()
@@ -494,20 +373,11 @@ export async function applySizeChange(
         await supabase.from("bookings").update({ status: "pending" }).eq("id", args.bookingId);
         await supabase.from("booking_table_mappings").delete().eq("booking_id", args.bookingId);
       }
-      // public: leave booking + mapping untouched; caller surfaces the block.
       return;
     }
   }
 }
 
-/**
- * Guard for confirming a booking: on a seated event a booking may only be set to
- * `confirmed` if it ends up holding a table. Call whenever the target status is
- * `confirmed` (it self-skips non-seated events).
- *   - { ok: true,  tableToAssign: null }      → not seated, or already mapped — nothing to assign
- *   - { ok: true,  tableToAssign: FreeTable } → a free table is available; caller should map it
- *   - { ok: false }                           → seated, unmapped, and no free table fits → block the confirm
- */
 export async function planConfirmSeating(
   supabase: SupabaseClient,
   args: { eventId: number; bookingId: IdRef; groupSize: number }
@@ -518,12 +388,10 @@ export async function planConfirmSeating(
     .eq("id", args.eventId)
     .single();
 
-  // Only seated, bookable events constrain confirmation.
   if (!event || !seatingApplies(event as SeatingEvent)) {
     return { ok: true, tableToAssign: null };
   }
 
-  // Already holds a table → fine to confirm, nothing to assign.
   const { data: existing } = await supabase
     .from("booking_table_mappings")
     .select("table_id")
@@ -532,7 +400,6 @@ export async function planConfirmSeating(
     .limit(1);
   if (existing && existing.length > 0) return { ok: true, tableToAssign: null };
 
-  // Otherwise a free fitting table must exist.
   const freeTables = await getFreeTablesForEvent(supabase, args.eventId, {
     groupSize: args.groupSize,
     excludeBookingId: args.bookingId,
@@ -541,7 +408,6 @@ export async function planConfirmSeating(
   return table ? { ok: true, tableToAssign: table } : { ok: false };
 }
 
-/** Rule 3c: free a booking's table when it moves away from `confirmed`. */
 export async function clearMappingOnStatusChange(
   supabase: SupabaseClient,
   bookingId: IdRef
@@ -549,7 +415,6 @@ export async function clearMappingOnStatusChange(
   await supabase.from("booking_table_mappings").delete().eq("booking_id", bookingId);
 }
 
-/** Human-readable messages for the table-reconciliation failure reasons. */
 export function seatingErrorMessage(reason: "no_table" | "double_booked" | "unavailable"): string {
   if (reason === "no_table") {
     return "Cannot confirm this booking — no available table for this group size. Free up a table or adjust the group size first.";
@@ -560,7 +425,6 @@ export function seatingErrorMessage(reason: "no_table" | "double_booked" | "unav
   return "That table is not available.";
 }
 
-/** The table a booking currently holds (id + capacity), or null. */
 async function getCurrentMapping(
   supabase: SupabaseClient,
   bookingId: IdRef
@@ -576,21 +440,6 @@ async function getCurrentMapping(
   return { tableId: data.table_id as number, capacity: (t?.max_capacity as number) ?? 0 };
 }
 
-/**
- * Reconciles a booking's table during an admin details edit. Centralises the
- * seating rules so quiz / general / bingo all behave identically:
- *   - leaving `confirmed` (or an explicit unassign) → free the table (3c).
- *   - confirming with a deliberate explicit table pick → assign it (3d).
- *   - confirming a seated booking with no table → assign the smallest fitting
- *     free table, or BLOCK if none is available (req: confirm needs a table).
- *   - a confirmed seated booking whose group shrank (`newSize < oldSize`) →
- *     relocate to the tightest available table no larger than its current one,
- *     freeing the bigger table (req: downsize optimisation). Falls back to next
- *     higher free capacity automatically via smallest-fit; keeps the current
- *     table if nothing tighter is free.
- *   - otherwise keep the current table and refresh `add_seat` for the new size.
- * Non-seated events are never blocked or auto-relocated.
- */
 export async function reconcileSeatedBookingTable(
   supabase: SupabaseClient,
   args: {
@@ -608,13 +457,11 @@ export async function reconcileSeatedBookingTable(
 
   const confirming = finalStatus === "confirmed";
 
-  // Leaving confirmed (or an explicit unassign) → free the table (3c).
   if (!confirming) {
     if (tableFieldPresent) await clearMappingOnStatusChange(supabase, bookingId);
     return { ok: true };
   }
 
-  // Confirming — only seated, bookable events constrain/optimise allocation.
   const { data: event } = await supabase
     .from("events")
     .select("id, seating_required, is_bookable")
@@ -633,13 +480,10 @@ export async function reconcileSeatedBookingTable(
     return { ok: true };
   }
 
-  // Seated + confirming.
-  // 1. Deliberate explicit table change → honour it (3d).
   if (tableId != null && (!current || current.tableId !== tableId)) {
     return assignTableDirect(supabase, { bookingId, eventId, tableId, groupSize: newSize });
   }
 
-  // 2. No table yet → confirm only if one can be assigned.
   if (!current) {
     const plan = await planConfirmSeating(supabase, { eventId, bookingId, groupSize: newSize });
     if (!plan.ok) return { ok: false, reason: "no_table" };
@@ -649,9 +493,6 @@ export async function reconcileSeatedBookingTable(
     return { ok: true };
   }
 
-  // 3. Group shrank → relocate to the tightest available table no larger than
-  //    the current one (smallest-fit picks the lowest capacity, stepping up only
-  //    as needed; nothing larger than the current table is ever chosen).
   if (newSize < oldSize) {
     const freeTables = await getFreeTablesForEvent(supabase, eventId, {
       groupSize: newSize,
@@ -663,7 +504,6 @@ export async function reconcileSeatedBookingTable(
     }
   }
 
-  // 4. Keep the current table; refresh add_seat for the new size.
   await supabase
     .from("booking_table_mappings")
     .update({ add_seat: computeAddSeat(newSize, current.capacity) })
@@ -671,11 +511,6 @@ export async function reconcileSeatedBookingTable(
   return { ok: true };
 }
 
-/**
- * Rule 3d: validate + write an admin's direct table pick for a booking. The
- * table must be available and not already held by another booking on the event;
- * `add_seat` is computed from the overflow. The unique index is the backstop.
- */
 export async function assignTableDirect(
   supabase: SupabaseClient,
   args: { bookingId: IdRef; eventId: number; tableId: number; groupSize: number }
@@ -692,7 +527,6 @@ export async function assignTableDirect(
     return { ok: false, reason: "unavailable" };
   }
 
-  // Already held by a different booking on this event?
   const { data: clash } = await supabase
     .from("booking_table_mappings")
     .select("booking_id")
@@ -723,11 +557,6 @@ export async function assignTableDirect(
   return { ok: true, addSeat };
 }
 
-/**
- * Rule 3e (dashboard flag): count of `waitlisted` bookings on seated, bookable
- * events that a currently-free table could now seat. Batched per event (no
- * N+1 per booking). Never auto-promotes — this is purely a "needs action" count.
- */
 export async function countSeatableWaitlist(supabase: SupabaseClient): Promise<number> {
   const { data, error } = await supabase
     .from("bookings")
@@ -741,7 +570,6 @@ export async function countSeatableWaitlist(supabase: SupabaseClient): Promise<n
     return 0;
   }
 
-  // Group waitlisted bookings by event.
   const byEvent = new Map<number, number[]>();
   for (const b of data) {
     const eventId = b.event_id as number;
@@ -762,7 +590,6 @@ export async function countSeatableWaitlist(supabase: SupabaseClient): Promise<n
   return count;
 }
 
-/** Internal helper: resolve a booking's event id. */
 async function getEventIdForBooking(
   supabase: SupabaseClient,
   bookingId: IdRef

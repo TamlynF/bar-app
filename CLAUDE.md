@@ -174,6 +174,15 @@ If you find yourself styling a public page with espresso/cream tones, or an admi
 
 ---
 
+## Code style
+
+- **Do not add comments to code.** The code should be self-documenting — prefer a clearer name or a small extracted function over a comment explaining what something does.
+- **Never add change-narration comments** (`// added X`, `// new`, `// updated to handle Y`, `// removed old handler`). The diff already says this.
+- Only write a comment when the user explicitly asks for one, or when the surrounding file already comments that exact kind of construct and omitting it would be inconsistent.
+- **Keep existing comments** — don't strip comments already in the file unless the code they describe is being deleted or the comment has become wrong.
+
+---
+
 ## Booking page route map
 
 The booking pages share a public dark theme but each has its own logic:

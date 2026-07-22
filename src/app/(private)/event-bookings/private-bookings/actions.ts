@@ -10,7 +10,6 @@ import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subty
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
-/** Resolve the employee id of the signed-in admin, for created_by/updated_by stamps. */
 async function currentEmployeeId(): Promise<number | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -19,11 +18,6 @@ async function currentEmployeeId(): Promise<number | null> {
   return emp?.id ?? null;
 }
 
-/**
- * Booking-display fields a private-hire linked event inherits from its parent
- * event_types row (is_bookable, booking_config, and the booking-card branding).
- * Keeps the auto-created event's public booking surface in step with the category.
- */
 async function eventTypeBookingFields(eventTypeId: number) {
   const supabase = await createClient();
   const { data } = await supabase
@@ -52,7 +46,6 @@ export async function getPrivateHireById(id: string) {
   return data;
 }
 
-/** Event types + subtypes available for a private-hire enquiry (behaviour = private). */
 export async function getPrivateEventOptions() {
   const supabase = await createClient();
   const [{ data: subs }, { data: allTypes }] = await Promise.all([
@@ -65,11 +58,6 @@ export async function getPrivateEventOptions() {
   return { types, subtypes };
 }
 
-/**
- * Persist admin edits to a private-hire enquiry (guests, reason, chosen event
- * sub-type, and the selected date/time). When the enquiry is already confirmed
- * and has a linked event, that event is kept in sync with the new details.
- */
 export async function updatePrivateHireFields(
   id: string,
   fields: {
@@ -96,7 +84,6 @@ export async function updatePrivateHireFields(
 
   if (error || !record) throw new Error("Failed to save changes.");
 
-  // Keep a confirmed enquiry's linked event aligned with the edited details.
   if ((record.status || "").toLowerCase() === "confirmed" && record.event_id) {
     const sub = unwrapSubtype(
       record.event_subtypes as { id: number; name: string; default_event_title: string | null; event_types_id: number } | { id: number; name: string; default_event_title: string | null; event_types_id: number }[] | null
@@ -109,7 +96,6 @@ export async function updatePrivateHireFields(
       date: record.selected_date,
       start_time: record.selected_start_time,
       end_time: record.selected_end_time,
-      // Private-hire linked events are always free — deposits are tracked on the request.
       payment_amount: 0,
       updated_by: empId,
       updated_at: new Date().toISOString(),
@@ -117,7 +103,6 @@ export async function updatePrivateHireFields(
     if (sub) {
       eventUpdate.event_types_id = sub.event_types_id;
       eventUpdate.event_subtypes_id = sub.id;
-      // Keep the public booking surface in step with the category.
       Object.assign(eventUpdate, await eventTypeBookingFields(sub.event_types_id));
     }
     await supabase.from("events").update(eventUpdate).eq("id", record.event_id);
@@ -149,7 +134,6 @@ export async function updatePrivateHireStatus(
     throw new Error("Failed to update status.");
   }
 
-  // Decide how this status change affects the request's linked `events` row.
   const plan = planPrivateEventSync({
     status,
     selectedDate: record.selected_date,
@@ -157,8 +141,6 @@ export async function updatePrivateHireStatus(
   });
 
   if (plan.action === "insert" || plan.action === "update") {
-    // Prefer the linked private subtype; fall back to lazily resolving by the
-    // legacy `reason` for rows created before event_subtypes_id existed.
     const sub = unwrapSubtype(
       record.event_subtypes as { id: number; name: string; default_event_title: string | null; event_types_id: number } | { id: number; name: string; default_event_title: string | null; event_types_id: number }[] | null
     );
@@ -184,17 +166,14 @@ export async function updatePrivateHireStatus(
       end_time: record.selected_end_time,
       event_types_id: eventTypeId,
       event_subtypes_id: eventSubtypeId,
-      // Private-hire linked events are always free — deposits are tracked on the request.
       payment_amount: 0,
       is_active: true,
-      // Inherit the public booking surface (bookable + card branding) from the category.
       ...(await eventTypeBookingFields(eventTypeId)),
       updated_by: empId,
       updated_at: now,
     };
 
     if (plan.action === "update") {
-      // Keep the existing linked event in sync — never create a duplicate.
       await supabase.from("events").update(eventFields).eq("id", plan.eventId);
     } else {
       const { data: newEvent } = await supabase
@@ -210,7 +189,6 @@ export async function updatePrivateHireStatus(
       }
     }
   } else if (plan.action === "deactivate") {
-    // Canceling takes the linked event off the schedule.
     await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
   }
 

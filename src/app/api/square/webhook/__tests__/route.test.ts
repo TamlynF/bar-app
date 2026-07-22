@@ -2,14 +2,10 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 import { createHmac } from "crypto";
 import type { NextRequest } from "next/server";
 
-// The route computes WEBHOOK_SIGNATURE_KEY / WEBHOOK_URL at module load, so these
-// must be set before the dynamic import in beforeAll (env assignment runs first;
-// static `import` is hoisted, a dynamic import() is not).
 process.env.SQUARE_WEBHOOK_SIGNATURE_KEY = "test-signing-key";
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
 const WEBHOOK_URL = "http://localhost:3000/api/square/webhook";
 
-// Mutable Supabase + Resend seams, referenced from the hoisted vi.mock factories.
 const h = vi.hoisted(() => ({
   client: null as unknown,
   sendMock: vi.fn(),
@@ -33,11 +29,6 @@ type BookingRow = {
   events: { date: string; title: string } | null;
 } | null;
 
-/**
- * Chainable Supabase mock. The select chain ends in `.maybeSingle()` returning
- * the seeded booking; the update chain ends by awaiting the builder (which is
- * thenable), and each update payload is captured in `updates`.
- */
 function makeSupabase(bookingRow: BookingRow) {
   const updates: Array<Record<string, unknown>> = [];
   const builder: Record<string, unknown> = {};
@@ -46,7 +37,6 @@ function makeSupabase(bookingRow: BookingRow) {
   builder.eq = chain;
   builder.update = (payload: Record<string, unknown>) => { updates.push(payload); return builder; };
   builder.maybeSingle = () => Promise.resolve({ data: bookingRow });
-  // Makes `await builder` (the update path's terminal `.eq(...)`) resolve.
   builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: null, error: null });
   return { client: { from: () => builder }, updates };
 }

@@ -38,18 +38,10 @@ async function currentEmployeeId(
   return emp?.id ?? null;
 }
 
-/**
- * Build a compact snapshot of the venue's own prices vs local rivals for the
- * price-trends prompt, so the AI can name the exact gap and the real venues it
- * beats (instead of a generic national average). Uses the last stored competitor
- * snapshot for the area — empty on the very first run, in which case the prompt
- * falls back to pure web search.
- */
 async function buildPriceContext(
   supabase: Awaited<ReturnType<typeof createClient>>,
   area: string,
 ): Promise<string> {
-  // Venue's own active menu items (name + free-text price).
   const { data: cats } = await supabase
     .from("menu_categories")
     .select("name, menu_items(id, name, price, is_active)")
@@ -63,7 +55,6 @@ async function buildPriceContext(
     },
   );
 
-  // Latest stored competitor prices for this area.
   const { data: comp } = await supabase
     .from("competitor_prices")
     .select("id, venue_name, item_name, item_type, price_text, price_amount, area, source_url, source_name, fetched_at")
@@ -71,7 +62,6 @@ async function buildPriceContext(
   const competitorPrices = (comp ?? []) as CompetitorPrice[];
   if (!competitorPrices.length && !menuItems.length) return "";
 
-  // Per-benchmark gap: our price vs local min/avg/max.
   const gapLines = buildComparison(competitorPrices, menuItems)
     .filter((c) => c.ownPrice != null && c.competitorAvg != null && c.sampleCount > 0)
     .map((c) => {
@@ -81,7 +71,6 @@ async function buildPriceContext(
       return `- ${c.label}: you ${formatGbp(c.ownPrice)}${c.ownItemName ? ` (${c.ownItemName})` : ""} vs local ${formatGbp(c.competitorMin)}–${formatGbp(c.competitorMax)} (avg ${formatGbp(c.competitorAvg)}) across ${c.sampleCount} venue${c.sampleCount === 1 ? "" : "s"} → you're ${stance} local avg`;
     });
 
-  // A few named nearby venues + a sample price, for concrete call-outs.
   const venueSamples = new Map<string, string>();
   competitorPrices.forEach((p) => {
     if (!venueSamples.has(p.venue_name)) {
@@ -119,13 +108,6 @@ function toRows(kind: TrendKind, area: string, aiTrends: AiTrend[], employeeId: 
     }));
 }
 
-/**
- * Fetch fresh trends from Gemini (grounded on Google Search), dedupe on
- * `signature` so saved/ignored trends never resurface, and cache them.
- *
- * Pass a `kind` to scan only that tab (advertising OR event ideas); omit it to
- * scan both.
- */
 export async function refreshTrendsAction(
   kind?: TrendKind,
 ): Promise<{ success: true; added: number } | { error: string }> {
@@ -138,11 +120,8 @@ export async function refreshTrendsAction(
   const area = resolveComparisonArea(settings, address);
   const todayISO = new Date().toISOString().split("T")[0];
 
-  // Only scan the requested kind(s).
   const kinds: TrendKind[] = kind ? [kind] : ["advertising", "event_idea"];
 
-  // Feed already-triaged titles (of the same kind) back to the model so it avoids
-  // near-identical repeats (semantic de-dup on top of the exact-signature DB de-dup).
   const { data: dismissed } = await supabase
     .from("marketing_trends")
     .select("title")
@@ -152,7 +131,6 @@ export async function refreshTrendsAction(
     .limit(40);
   const blocklist = (dismissed ?? []).map((d) => d.title).filter(Boolean);
 
-  // Only fetch the real local price snapshot when we're actually scanning price trends.
   const priceContext = kinds.includes("price") ? await buildPriceContext(supabase, area) : "";
 
   const jobs = kinds.map((k) => ({
@@ -166,7 +144,6 @@ export async function refreshTrendsAction(
   }));
   const results = await Promise.all(jobs.map((j) => generateGrounded(j.prompt)));
 
-  // If every call failed, surface the first error.
   if (results.every((r) => "error" in r)) {
     const firstError = results.find((r) => "error" in r) as { error: string };
     return { error: firstError.error };
@@ -181,7 +158,6 @@ export async function refreshTrendsAction(
     return { error: "The AI didn't return any usable trends. Try refreshing again." };
   }
 
-  // Insert new trends only; existing signatures (incl. saved/ignored) are left untouched.
   const { error, count } = await supabase
     .from("marketing_trends")
     .upsert(rows, { onConflict: "signature", ignoreDuplicates: true, count: "exact" });
@@ -202,7 +178,6 @@ export async function refreshTrendsAction(
   return { success: true, added: count ?? 0 };
 }
 
-/** Save / ignore / restore a trend (direct state assignment). */
 export async function setTrendStateAction(
   id: string,
   state: TrendState,

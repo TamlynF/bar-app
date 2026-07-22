@@ -40,11 +40,9 @@ export async function saveEventAction(formData: FormData) {
     booking_card_tagline: formData.get("booking_card_tagline")?.toString() || null,
     booking_card_icon: formData.get("booking_card_icon")?.toString() || null,
     booking_card_badge: formData.get("booking_card_badge")?.toString() || null,
-    // A non-bookable event has no shareable link, so drop any stored QR code.
     ...(isBookable ? {} : { booking_qr_url: null }),
   };
 
-  // --- Validation (shared with the client form via @/lib/event-form-validation) ---
   const { data: sameDay } = await supabase
     .from("events")
     .select("id, title, start_time, end_time, date, is_active")
@@ -79,7 +77,6 @@ export async function saveEventAction(formData: FormData) {
     return { error: `Clashes with an active event on ${friendlyDate}: ${c.title} (${c.start}${c.end ? ` - ${c.end}` : ""}).` };
   }
 
-  // Fetch the category's grouping to determine the right booking URL path
   const { data: type } = await supabase.from("event_types").select("booking_grouping")
     .eq("id", eventTypesId).maybeSingle();
   const grouping = isBookingGrouping(type?.booking_grouping) ? type.booking_grouping : "per_event";
@@ -96,7 +93,6 @@ export async function saveEventAction(formData: FormData) {
     });
   }
 
-  // Resolve current logged-in user to an employee id
   let currentEmployeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
   console.log("Current user:", user);
@@ -107,8 +103,6 @@ export async function saveEventAction(formData: FormData) {
   }
 
   try {
-    // Holds the freshly saved row so the client can refresh its view without a
-    // round-trip — the list still updates via revalidatePath below.
     let savedEvent;
     if (id) {
       const { data: prevEvent } = await supabase.from("events").select("is_active").eq("id", id).maybeSingle();
@@ -122,14 +116,11 @@ export async function saveEventAction(formData: FormData) {
       if (error) throw error;
       savedEvent = updated;
 
-      // When an event becomes inactive and its date has passed, purge its draft
-      // exclusion log (generated_quiz_questions) for this event.
       const today = new Date().toISOString().split("T")[0];
       if (payload.is_active === false && prevEvent?.is_active !== false && date < today) {
         await supabase.from("generated_quiz_questions").delete().eq("events_id", parseInt(id, 10));
       }
     } else {
-      // INSERT first to get the generated ID, then compute and store the URL
       const { data: inserted, error: insertError } = await supabase.from("events").insert({
         ...payload,
         created_by: currentEmployeeId,
@@ -156,10 +147,6 @@ export async function saveEventAction(formData: FormData) {
   }
 }
 
-/**
- * Persist (or clear) the QR code for an event's shareable booking link. The QR is
- * generated client-side as a PNG data URL; pass null to remove it.
- */
 export async function setEventQr(id: number, qrDataUrl: string | null) {
   const supabase = await createClient();
   try {

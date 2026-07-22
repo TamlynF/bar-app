@@ -211,22 +211,14 @@ export default function EventsClient({
   quizQuestions: QuizQuestion[];
   bookings: BookingRecord[];
   filter?: string;
-  /** Optional URL-driven date range (YYYY-MM-DD) — e.g. dashboard "needs action" links. */
   initialFrom?: string;
   initialTo?: string;
-  /** Optional comma-separated quick-filter keys to pre-activate (e.g. "quiz"). */
   initialQuick?: string;
 }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [selected, setSelected] = useState<EventRecord | null>(null);
-  /**
-   * Where `?back=` says to go when this sheet closes — set when another page linked
-   * us here to look at one specific event (e.g. a band request's linked event). It
-   * survives the effect below stripping the URL, so closing returns the admin to
-   * the sheet they came from instead of dumping them on the events list.
-   */
   const [returnHref, setReturnHref] = useState<string | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -234,11 +226,7 @@ export default function EventsClient({
   const [formError, setFormError] = useState<string | null>(null);
   const [catFilter, setCatFilter] = useState<number | "all">("all");
   const [sortSoon, setSortSoon] = useState(true);
-  // List (flat, date-grouped) vs calendar (month grid). The month grid drives its
-  // own navigation via calendarMonth and ignores the header's date-range filter.
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
-  // Category / sort / quick filters are collapsed behind the Filters button; the
-  // search bar stays visible. Hidden by default.
   const [showFilters, setShowFilters] = useState(!!initialQuick);
   const [calendarMonth, setCalendarMonth] = useState(() => {
     const now = new Date();
@@ -249,8 +237,6 @@ export default function EventsClient({
   );
   const [searchQuery, setSearchQuery] = useState("");
   const [dateRange, setDateRange] = useState<DateRange | null>(() => {
-    // A URL-supplied range (e.g. dashboard "needs action" links) wins over the
-    // default current-month window.
     if (initialFrom) return { start: initialFrom, end: initialTo ?? initialFrom };
     const now = new Date();
     const y = now.getFullYear();
@@ -263,12 +249,10 @@ export default function EventsClient({
   const [formGroupName, setFormGroupName] = useState<string>("");
   const [formIsBookable, setFormIsBookable] = useState(false);
   const [formBookingConfig, setFormBookingConfig] = useState<BookingConfig>({});
-  // Booking-card branding (shown only for per_event categories when bookable)
   const [formCardTitle, setFormCardTitle] = useState("");
   const [formCardTagline, setFormCardTagline] = useState("");
   const [formCardIcon, setFormCardIcon] = useState<string | null>(null);
   const [formCardBadge, setFormCardBadge] = useState("");
-  // Controlled form fields (so subtype selection can prefill them)
   const [formTypeId, setFormTypeId] = useState<string>("");
   const [formSubtypeId, setFormSubtypeId] = useState<string>("");
   const [formTitle, setFormTitle] = useState<string>("");
@@ -279,9 +263,6 @@ export default function EventsClient({
   const [formTagline, setFormTagline] = useState<string>("");
   const [formPayment, setFormPayment] = useState<string>("");
   const [formBookingPageUrl, setFormBookingPageUrl] = useState<string>("");
-  // True once the admin manually edits the booking URL. While false, the field is
-  // kept in sync with the Public Booking toggle (auto-filled on / cleared off) and
-  // is submitted blank so the server generates the canonical URL with the real id.
   const [bookingUrlManual, setBookingUrlManual] = useState(false);
   const [formKaraokeUrl, setFormKaraokeUrl] = useState<string>("");
   const [formSeating, setFormSeating] = useState<boolean>(true);
@@ -299,7 +280,6 @@ export default function EventsClient({
   const [bookingSettingsOpen, setBookingSettingsOpen] = useState(false);
   const [bookingPageOpen, setBookingPageOpen] = useState(false);
 
-  // ---- Lookups ----
   const typeById = new Map(eventTypes.map((t) => [t.id, t]));
   const subtypeById = new Map(eventSubtypes.map((s) => [s.id, s]));
   const subtypesByType = new Map<number, EventSubtype[]>();
@@ -308,13 +288,9 @@ export default function EventsClient({
     subtypesByType.get(s.event_types_id)!.push(s);
   }
 
-  // Auto-open sheet when returning from another page (?open=id)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const back = searchParams.get("back") || params.get("back");
-    // Only ever a path on this app: `back` is attacker-controllable via the URL, and
-    // pushing it blind would turn this page into an open redirect. A leading "//"
-    // (or "/\") is protocol-relative — an absolute URL wearing a path's clothes.
     if (back && back.startsWith("/") && !back.startsWith("//") && !back.startsWith("/\\")) {
       setReturnHref(back);
     }
@@ -340,9 +316,6 @@ export default function EventsClient({
   const isSearching = searchQuery.trim() !== "";
   const isSheetOpen = !!selected || isAdding;
 
-  // Preview of the public booking URL for the current form context. The server
-  // regenerates the canonical URL (with the real event id) on save; this value is
-  // only shown in the field and only persisted if the admin manually edits it.
   const bookingUrlFor = (opts: { typeId: number; subtypeId: number; grouping: string | null | undefined; eventId: number | null }): string => {
     if (typeof window === "undefined") return "";
     const origin = window.location.origin;
@@ -357,10 +330,6 @@ export default function EventsClient({
     setFormTagline(sub?.tagline ?? "");
     setFormPayment(sub?.default_payment_amount != null ? String(sub.default_payment_amount) : "");
     setFormSeating(sub?.seating_required ?? true);
-    // is_bookable / booking_config are inherited from whichever level owns the
-    // booking page for this category's grouping: the type (per_type) or the
-    // sub-type (per_subtype). per_event events own their own config, so they
-    // start blank and are filled in on the event itself.
     const owner = type ?? (sub ? typeById.get(sub.event_types_id) : undefined);
     let bookable = false;
     if (owner?.booking_grouping === "per_type") {
@@ -373,15 +342,12 @@ export default function EventsClient({
       setFormBookingConfig({});
     }
     setFormIsBookable(bookable);
-    // Keep the booking URL in step with the toggle unless the admin has typed one.
     if (!bookingUrlManual) {
       const eventId = isEditing ? (selected?.id ?? null) : null;
       setFormBookingPageUrl(bookable ? bookingUrlFor({ typeId: owner?.id ?? 0, subtypeId: sub?.id ?? 0, grouping: owner?.booking_grouping, eventId }) : "");
     }
   };
 
-  // Toggle handler for Public Booking: mirrors the on/off state into the URL field
-  // (auto-fill / clear) while the admin hasn't manually overridden it.
   const toggleBookable = () => {
     setFormIsBookable((prev) => {
       const next = !prev;
@@ -400,8 +366,6 @@ export default function EventsClient({
     setIsEditing(false);
     setIsAdding(false);
     setSelected(event);
-    // Reflect the open event in the URL so navigating away (e.g. "View All") and
-    // pressing Back returns here with this sheet reopened in view mode.
     window.history.replaceState(null, "", `/event-setups/events?open=${event.id}`);
   };
 
@@ -444,8 +408,6 @@ export default function EventsClient({
     setFormStartTime(selected.start_time ? formatTime(selected.start_time) : "");
     setFormEndTime(selected.end_time ? formatTime(selected.end_time) : "");
     setFormHostId(selected.host_employee_id ? String(selected.host_employee_id) : "");
-    // A stored URL is treated as a manual override (preserved on save); if the event
-    // is bookable but has no stored URL, auto-fill a preview from its grouping.
     if (selected.booking_page_url) {
       setFormBookingPageUrl(selected.booking_page_url);
       setBookingUrlManual(true);
@@ -496,27 +458,19 @@ export default function EventsClient({
     setIsAdding(false);
     setIsEditing(false);
     setFormError(null);
-    // Came here to look at one event on another page's behalf → closing the sheet
-    // means "done", so hand the admin back rather than leaving them on a list they
-    // never asked for. push, not replace: this is a real navigation.
     if (returnHref) {
       router.push(returnHref);
       return;
     }
-    // Drop the ?open marker so a closed sheet isn't restored on Back/refresh.
     window.history.replaceState(null, "", "/event-setups/events");
   };
 
-  // --- Booking-link QR code ---
-  // The public booking URL used for this event's QR — the stored link, or the
-  // canonical per-event fallback when none has been generated yet.
   const bookingUrlOf = (ev: EventRecord) =>
     ev.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${ev.id}` : `/book/event/${ev.id}`);
 
   const makeQrDataUrl = (url: string) =>
     QRCode.toDataURL(url, { width: 512, margin: 1, errorCorrectionLevel: "M", color: { dark: "#26300D", light: "#ffffff" } });
 
-  // Generate (or regenerate) and persist the QR code for the selected event.
   const generateQr = async () => {
     if (!selected) return;
     setQrBusy(true);
@@ -530,7 +484,6 @@ export default function EventsClient({
     }
   };
 
-  // Copy the QR image (PNG) to the clipboard.
   const copyQr = async () => {
     if (!selected?.booking_qr_url) return;
     try {
@@ -539,12 +492,9 @@ export default function EventsClient({
       setQrCopied(true);
       setTimeout(() => setQrCopied(false), 2000);
     } catch {
-      /* clipboard image write unsupported in this browser — ignore */
     }
   };
 
-  // After saving an edit: if the booking link changed and a QR was already stored,
-  // ask whether to refresh it so the code points at the new link.
   const reconcileQrAfterSave = async (saved: EventRecord, prevUrl: string | null, prevQr: string | null) => {
     if (!saved.is_bookable) return; // server already cleared any stored QR
     if (!prevQr || prevUrl === (saved.booking_page_url ?? null)) return;
@@ -561,16 +511,11 @@ export default function EventsClient({
 
   const handleSubmit = (formData: FormData) => {
     setFormError(null);
-    // Validation errors are computed live (see `fieldErrors` below) and shown
-    // inline under each field; the Save button is disabled while any exist. This
-    // is a defensive guard in case a submit is triggered some other way.
     if (Object.keys(fieldErrors).length > 0) {
       setFormDetailsOpen(true);
       return;
     }
 
-    // When the URL is the auto-derived preview (not manually overridden), send it
-    // blank so the server generates the canonical URL with the real event id.
     if (!bookingUrlManual) formData.set("booking_page_url", "");
 
     startTransition(async () => {
@@ -581,17 +526,10 @@ export default function EventsClient({
         const saved = result.event as EventRecord;
         const prevUrl = selected?.booking_page_url ?? null;
         const prevQr = selected?.booking_qr_url ?? null;
-        // Editing: drop back into the sheet's view mode showing the freshly
-        // saved values (revalidatePath in the action refreshes the list too).
         setSelected(saved);
         setIsEditing(false);
         setFormError(null);
-        // Clear the ?open marker. The searchParams effect re-selects from
-        // initialEvents on refresh; leaving ?open set lets it clobber the fresh
-        // row above with a stale list entry after revalidation.
         window.history.replaceState(null, "", "/event-setups/events");
-        // If the link changed and a QR was already saved, ask to refresh it.
-        // Run outside the transition so the confirm dialog doesn't hold it pending.
         void reconcileQrAfterSave(saved, prevUrl, prevQr);
       } else {
         closeSheet();
@@ -618,7 +556,6 @@ export default function EventsClient({
     });
   };
 
-  // --- Filtering ---
   const todayStr = new Date().toISOString().split("T")[0];
   const hostById = new Map(employees.map((e) => [e.id, e.full_name]));
 
@@ -650,7 +587,6 @@ export default function EventsClient({
       })
     : null;
 
-  // --- Flat, filterable, date-sorted list ---
   const baseEvents = filter === "quiz-incomplete" && quizIncompleteBase ? quizIncompleteBase : initialEvents;
 
   const needsQuiz = (e: EventRecord) => {
@@ -660,9 +596,6 @@ export default function EventsClient({
     return total < target;
   };
 
-  // Mirrors the edit form's required-field validation (see `fieldErrors` /
-  // `fieldWarnings` below): flags a saved event whose required or sub-type-driven
-  // fields are still unset.
   const missingInfo = (e: EventRecord) => {
     const sub = subtypeById.get(e.event_subtypes_id);
     if (!e.title?.trim()) return true;
@@ -688,7 +621,6 @@ export default function EventsClient({
   const passesQuick = (e: EventRecord) =>
     [...quickFilters].every((k) => QUICK_FILTERS.find((q) => q.key === k)!.test(e));
 
-  // Category chips reflect search + month + quick filters (but not the chosen category).
   const chipBase = baseEvents.filter((e) => matchesFilters(e) && passesQuick(e));
   const typeCounts = new Map<number, number>();
   for (const e of chipBase) typeCounts.set(e.event_types_id, (typeCounts.get(e.event_types_id) ?? 0) + 1);
@@ -704,11 +636,9 @@ export default function EventsClient({
     });
 
   const anyFilterActive = isSearching || catFilter !== "all" || quickFilters.size > 0;
-  // Filters hidden behind the toggle button (category + quick filters, not search).
   const activeFilterCount = (catFilter !== "all" ? 1 : 0) + quickFilters.size;
   const clearAllFilters = () => { setCatFilter("all"); setQuickFilters(new Set()); setSearchQuery(""); };
 
-  // Group the (already date-sorted) list into day buckets for sticky day headers.
   const dayGroups: { date: string; events: EventRecord[] }[] = [];
   for (const e of visibleEvents) {
     const last = dayGroups[dayGroups.length - 1];
@@ -716,9 +646,6 @@ export default function EventsClient({
     else dayGroups.push({ date: e.date, events: [e] });
   }
 
-  // --- Calendar (month grid) view ---
-  // The grid honours search + category + quick filters, but not the header date
-  // range (it has its own month navigation). Events are bucketed by date string.
   const matchesSearchOnly = (e: EventRecord) => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
@@ -781,7 +708,6 @@ export default function EventsClient({
           inactive && "opacity-60"
         )}
       >
-        {/* colour spine */}
         <span className="absolute top-3 bottom-3 left-0 w-1 rounded-full bg-(--spine)" />
 
         {isTonight && (
@@ -790,13 +716,11 @@ export default function EventsClient({
           </span>
         )}
 
-        {/* date badge */}
         <div className={cn("flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border sm:h-12 sm:w-12", badgeClass)}>
           <span className="font-black text-[9px] leading-none tracking-tighter uppercase">{monthAbbrOf(event.date)}</span>
           <span className="font-black text-base leading-none sm:text-lg">{dayNumOf(event.date)}</span>
         </div>
 
-        {/* middle */}
         <div className="min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-1.5">
             {sub && <span className={cn("rounded px-1.5 py-0.5 font-black text-[9px] tracking-wide uppercase", badgeClass)}>{toTitleCase(sub.name)}</span>}
@@ -829,7 +753,6 @@ export default function EventsClient({
           </div>
         </div>
 
-        {/* right */}
         <div className="flex shrink-0 flex-col items-end gap-1.5">
           {(event.is_bookable || bStats.confirmedPeople > 0) && (
             <span className="inline-flex items-center gap-1 font-black text-xs text-[#5F624F] tabular-nums sm:text-sm">
@@ -844,9 +767,6 @@ export default function EventsClient({
     );
   };
 
-  // A calendar day cell reads as a mini day-timeline: the vertical axis is the time
-  // of day, so an event sits lower in the cell the later it starts. The window runs
-  // 08:00 (top) → 02:00 next-day (bottom), covering typical venue hours.
   const TL_START_MIN = 8 * 60;
   const TL_END_MIN = 26 * 60;
   const TL_MIN_GAP = 26; // % — keep stacked pills from overlapping (fits 2-line phone pills)
@@ -858,8 +778,6 @@ export default function EventsClient({
     const f = (mins - TL_START_MIN) / (TL_END_MIN - TL_START_MIN);
     return Math.min(1, Math.max(0, f)) * 100;
   };
-  // Position each event by its time, then nudge later-but-clashing ones down so
-  // they never overlap while staying in chronological order.
   const layoutDayByTime = (events: EventRecord[]) => {
     const sorted = [...events].sort((a, b) => timeTopPct(a.start_time) - timeTopPct(b.start_time));
     let last = -Infinity;
@@ -871,9 +789,6 @@ export default function EventsClient({
     });
   };
 
-  // Compact event pill for a calendar day cell — colour-coded by sub-type/type.
-  // On phones it stacks time over title (two lines) so more of the event shows;
-  // wider screens lay time + title on one line.
   const renderCalendarChip = (event: EventRecord) => {
     const sub = subtypeById.get(event.event_subtypes_id);
     const type = typeById.get(event.event_types_id);
@@ -904,14 +819,7 @@ export default function EventsClient({
   const selectedTypeForForm = typeById.get(Number(formTypeId));
   const formSubtypeOptions = subtypesByType.get(Number(formTypeId)) ?? [];
 
-  // Live per-field validation for the edit/add form. Recomputed every render from
-  // the controlled fields so messages appear as soon as the form opens (not only
-  // on Save) and the Save button can be disabled while any error is present.
-  // Keyed by field name (event_types_id, event_subtypes_id, title, date, time);
-  // the clash helper is shared with the server action via @/lib/event-form-validation.
   const fieldErrors: Record<string, string> = {};
-  // Non-blocking warnings (amber). These flag likely-missing details based on the
-  // selected sub-type's requirements but never prevent saving.
   const fieldWarnings: Record<string, string> = {};
   if (showForm) {
     if (!formTypeId) fieldErrors.event_types_id = "Choose an event type.";
@@ -939,7 +847,6 @@ export default function EventsClient({
       }
     }
 
-    // Sub-type-driven warnings + the bookable-URL error.
     if (selectedSubtype?.host_required && (!formHostId || Number(formHostId) === 0)) {
       fieldWarnings.host_employee_id = "This sub-type usually has a host, but none is assigned.";
     }
@@ -958,14 +865,11 @@ export default function EventsClient({
   return (
     <div className={cn(
       "mx-auto space-y-3 bg-[#F7F4EA] px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
-      // The calendar grid needs the full screen width to breathe; the list stays a
-      // comfortable reading column.
       viewMode === "calendar"
         ? "sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-368 2xl:max-w-432"
         : "sm:max-w-2xl md:max-w-3xl lg:max-w-5xl"
     )}>
 
-      {/* Filter notice */}
       {filter === "quiz-incomplete" && (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5">
           <p className="font-black text-[11px] tracking-wide text-amber-700 uppercase">
@@ -977,7 +881,6 @@ export default function EventsClient({
         </div>
       )}
 
-      {/* View toggle (top-left) + Filters toggle (right) */}
       <div className="flex items-center justify-between gap-2">
         <div className="inline-flex items-center rounded-xl border border-[#E6DFC8] bg-white p-0.5">
           <button
@@ -1017,7 +920,6 @@ export default function EventsClient({
         </button>
       </div>
 
-      {/* Header bar: search + date + compact Filters */}
       <div className="flex items-center gap-2">
         <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#E6DFC8] bg-white px-3 transition-colors focus-within:border-[#5C4033]">
           <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
@@ -1058,10 +960,8 @@ export default function EventsClient({
         </button>
       </div>
 
-      {/* Filter bar: category chips + sort / quick filters (collapsed behind Filters) */}
       {showFilters && (
       <div className="space-y-2 pt-1 pb-1">
-        {/* Category chips */}
         <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
@@ -1091,7 +991,6 @@ export default function EventsClient({
           })}
         </div>
 
-        {/* Sort + quick filters */}
         <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
@@ -1121,7 +1020,6 @@ export default function EventsClient({
       </div>
       )}
 
-      {/* Result line */}
       {viewMode === "list" && anyFilterActive && (
         <div className="flex items-center gap-1.5 px-1 text-xs font-semibold text-[#5F624F]">
           <b className="font-black text-[13px] text-[#1F1F1A]">{visibleEvents.length}</b>
@@ -1135,10 +1033,8 @@ export default function EventsClient({
         </div>
       )}
 
-      {/* Calendar grid or flat event list */}
       {viewMode === "calendar" ? (
         <div className="space-y-3">
-          {/* Month navigation */}
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => shiftMonth(-1)} title="Previous month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5C4033] transition-colors hover:bg-[#EFE8D4]">
               <ChevronLeft className="h-4 w-4" />
@@ -1152,15 +1048,12 @@ export default function EventsClient({
             </button>
           </div>
 
-          {/* Weekday header */}
           <div className="grid grid-cols-7 gap-1 sm:gap-1.5 lg:gap-2">
             {WEEKDAYS.map((w) => (
               <div key={w} className="py-1 text-center font-black text-[9px] tracking-wide text-[#5F624F] uppercase sm:text-[11px] lg:text-xs">{w}</div>
             ))}
           </div>
 
-          {/* Day cells — every cell the same fixed width (grid-cols-7) and height;
-              inside each, events are positioned vertically by their start time. */}
           <div className="grid grid-cols-7 gap-1 sm:gap-1.5 lg:gap-2">
             {calendarCells.map((dateStr, i) => {
               if (!dateStr) return <div key={`blank-${i}`} className="h-32 rounded-xl border border-transparent bg-[#F0EDE0]/50 sm:h-36 lg:h-44" />;
@@ -1172,12 +1065,10 @@ export default function EventsClient({
               const extra = laid.length - shown.length;
               return (
                 <div key={dateStr} className={cn("relative h-32 overflow-hidden rounded-xl border bg-white sm:h-36 lg:h-44", isToday ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#E6DFC8]")}>
-                  {/* day number + event count */}
                   <div className="flex items-center justify-between px-1 pt-1">
                     <span className={cn("font-black text-[10px] tabular-nums sm:text-xs lg:text-sm", isToday ? "text-[#FF6B35]" : "text-[#5F624F]")}>{Number(dateStr.slice(-2))}</span>
                     {dayEvents.length > 0 && <span className="font-black text-[8px] text-[#5F624F]/60 tabular-nums sm:text-[9px]">{dayEvents.length}</span>}
                   </div>
-                  {/* timeline area below the day number — top = earlier, bottom = later */}
                   <div className="absolute inset-x-0 top-5 bottom-1 lg:top-6">
                     {shown.map(({ event, top }) => (
                       <div
@@ -1220,7 +1111,6 @@ export default function EventsClient({
         <div className="space-y-1.5 sm:space-y-2">
           {dayGroups.map((group) => (
             <section key={group.date} className="space-y-1.5 sm:space-y-2">
-              {/* Sticky day separator */}
               <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#F7F4EA] py-1.5">
                 <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase sm:text-xs lg:text-sm">{relativeDayOf(group.date, todayStr)}</span>
                 <span className="h-px flex-1 bg-[#E6DFC8]" />
@@ -1232,7 +1122,6 @@ export default function EventsClient({
         </div>
       )}
 
-      {/* Bottom Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
         <SheetContent
           side="bottom"
@@ -1243,7 +1132,6 @@ export default function EventsClient({
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2
             sm:rounded-4xl sm:border-2 lg:max-h-[90vh] lg:w-6xl xl:w-7xl"
         >
-          {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -1275,10 +1163,8 @@ export default function EventsClient({
             </div>
           </div>
 
-          {/* Scrollable body */}
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
 
-            {/* View mode */}
             {!showForm && selected && (() => {
               const sub = subtypeById.get(selected.event_subtypes_id);
               const type = typeById.get(selected.event_types_id);
@@ -1286,9 +1172,6 @@ export default function EventsClient({
               const host = employees.find((e) => e.id === selected.host_employee_id);
               const isQuiz = sub?.behavior === "quiz";
               const bk = getBookingStats(selected.id, bookings);
-              // "View All" target: collapse this event the same way the nav/hub do
-              // (honouring the category's booking_grouping), then drill into this
-              // specific event via ?eventId for the grouped (general) routes.
               const viewAllGroup = buildAdminBookingGroups([{
                 id: selected.id,
                 title: selected.title,
@@ -1301,8 +1184,6 @@ export default function EventsClient({
                     ? `${viewAllGroup.href}?eventId=${selected.id}`
                     : viewAllGroup.href)
                 : `/event-bookings/event/${selected.id}`;
-              // Carry the return target so the bookings page's Back button comes
-              // back here with this event's sheet reopened in view mode.
               const returnHref = `/event-setups/events?open=${selected.id}`;
               const viewAllHref = `${baseViewAllHref}${baseViewAllHref.includes("?") ? "&" : "?"}from=${encodeURIComponent(returnHref)}`;
               return (
@@ -1434,7 +1315,6 @@ export default function EventsClient({
                               </Button>
                             </div>
 
-                            {/* QR code for the booking link */}
                             <div className="mt-3 border-t border-[#E6DFC8] pt-3">
                               <div className="mb-2 flex items-center gap-1.5">
                                 <QrCode className="h-3.5 w-3.5 text-[#5F624F]" />
@@ -1465,7 +1345,6 @@ export default function EventsClient({
                           </div>
                         )}
 
-                        {/* Booking page config — shown whenever the event is bookable. */}
                         {selected.is_bookable && (
                           <div className="border-t border-[#E6DFC8]">
                             <button type="button" onClick={() => setBookingPageOpen(o => !o)} className="flex w-full items-center justify-between bg-[#E6DFC8]/60 px-4 py-3 text-left transition-colors hover:bg-[#E6DFC8]/80 sm:px-5">
@@ -1488,19 +1367,15 @@ export default function EventsClient({
               );
             })()}
 
-            {/* Edit / Add form */}
             {showForm && (
               <form id="event-form" action={handleSubmit} className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
-                {/* Boolean fields live in the collapsible Settings section; keep their
-                    hidden inputs at the form root so they submit even when collapsed. */}
                 <input type="hidden" name="seating_required" value={formSeating ? "on" : ""} />
                 <input type="hidden" name="is_active" value={formActive ? "on" : ""} />
                 <input type="hidden" name="is_fully_booked" value={formFullyBooked ? "on" : ""} />
                 <input type="hidden" name="is_bookable" value={formIsBookable ? "on" : ""} />
 
                 <FormSection title="Details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
-                  {/* Event Type */}
                   <FormRow label="Event Type" required error={fieldErrors.event_types_id}>
                     <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
                       <select
@@ -1518,7 +1393,6 @@ export default function EventsClient({
                     </div>
                   </FormRow>
 
-                  {/* Sub-Type */}
                   <FormRow label="Sub-Type" required error={fieldErrors.event_subtypes_id}>
                     <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
                       <select
@@ -1537,7 +1411,6 @@ export default function EventsClient({
                     </div>
                   </FormRow>
 
-                  {/* Title */}
                   <FormRow label="Title" required error={fieldErrors.title}>
                     <input
                       name="title"
@@ -1548,14 +1421,12 @@ export default function EventsClient({
                     />
                   </FormRow>
 
-                  {/* Date */}
                   <FormRow label="Date" required error={fieldErrors.date}>
                     <div className="flex flex-1 items-center justify-end">
                       <input title="Date" name="date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="bg-transparent font-black text-xs text-[#1F1F1A] outline-none sm:text-sm" />
                     </div>
                   </FormRow>
 
-                  {/* Time */}
                   <FormRow label="Time" required error={fieldErrors.time}>
                     <div className="flex flex-1 items-center justify-end gap-2">
                       <input title="Start time" name="start_time" type="time" value={formStartTime} onChange={(e) => { const v = e.target.value; setFormStartTime(v); if (v && !formEndTime) { const end = addHoursToTime(v, 2); if (end) setFormEndTime(end); } }} className="w-22 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none sm:text-sm" />
@@ -1564,7 +1435,6 @@ export default function EventsClient({
                     </div>
                   </FormRow>
 
-                  {/* Host — only when subtype requires a host */}
                   {selectedSubtype?.host_required && (
                     <FormRow label="Host" warning={fieldWarnings.host_employee_id}>
                       <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
@@ -1579,12 +1449,10 @@ export default function EventsClient({
                     </FormRow>
                   )}
 
-                  {/* Payment */}
                   <FormRow label="Payment (£)" warning={fieldWarnings.payment_amount}>
                     <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
                   </FormRow>
 
-                  {/* Tagline */}
                   <div className="px-4 py-2.5 sm:px-5 sm:py-4">
                     <div className="mb-2 flex items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
                       <span className="font-black text-[10px] tracking-wide uppercase">Tagline</span>
@@ -1592,12 +1460,10 @@ export default function EventsClient({
                     <textarea name="tagline" placeholder="Brief tagline for the event..." rows={2} value={formTagline} onChange={(e) => setFormTagline(e.target.value)} className="w-full resize-none bg-transparent font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
                   </div>
 
-                  {/* External Link */}
                   <FormRow label="External Link">
                     <input name="external_link" type="url" placeholder="https://instagram.com/..." defaultValue={formDefault?.external_link ?? ""} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
                   </FormRow>
 
-                  {/* Karaoke Song Request Link — only when subtype is karaoke */}
                   {selectedSubtype?.behavior === "karaoke" && (
                     <FormRow label="Singa Link" warning={fieldWarnings.karaoke_request_url}>
                       <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." value={formKaraokeUrl} onChange={(e) => setFormKaraokeUrl(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
@@ -1606,7 +1472,6 @@ export default function EventsClient({
 
                 </FormSection>
 
-                {/* Right column on desktop: the two shorter sections stacked beside Details. */}
                 <div className="space-y-4 sm:space-y-5">
                 <FormSection title="Settings" open={formSettingsOpen} onToggle={() => setFormSettingsOpen((o) => !o)}>
                   <FormRow label="Seating">
@@ -1625,7 +1490,6 @@ export default function EventsClient({
                     <FormToggle label="Public booking" on={formIsBookable} onToggle={toggleBookable} />
                   </FormRow>
 
-                  {/* fully booked, booking_url, linked booking & group name only apply to a publicly bookable event. */}
                   {formIsBookable && (
                     <>
                       <FormRow label="Fully Booked">
@@ -1633,13 +1497,10 @@ export default function EventsClient({
                         <FormToggle label="Fully booked" on={formFullyBooked} onToggle={() => setFormFullyBooked((o) => !o)} danger />
                       </FormRow>
 
-                      {/* Booking URL — required for a bookable event. Seeded from the
-                          saved value when editing; blocks save while empty. */}
                       <FormRow label="Booking URL" required error={fieldErrors.booking_page_url}>
                         <input name="booking_page_url" type="url" placeholder="https://..." value={formBookingPageUrl} onChange={(e) => { setFormBookingPageUrl(e.target.value); setBookingUrlManual(true); }} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
                       </FormRow>
 
-                      {/* Linked Booking & Group Name (games only) */}
                       {selectedTypeForForm?.name === "games" && (() => {
                         const eventBookings = formDefault ? bookings.filter(b => b.event_id === formDefault.id && b.status !== "cancelled") : [];
                         return (
@@ -1657,7 +1518,6 @@ export default function EventsClient({
                                       const bk = eventBookings.find(b => String(b.id) === bId);
                                       if (bk?.group_name) setFormGroupName(bk.group_name);
                                     } else {
-                                      // "No booking" selected — clear the linked group name.
                                       setFormGroupName("");
                                     }
                                   }}
@@ -1683,8 +1543,6 @@ export default function EventsClient({
                 </FormSection>
                 </div>
 
-                {/* Booking page/form config — editable whenever the event is bookable.
-                    Saved onto this event's own booking_config regardless of grouping. */}
                 {formIsBookable && (
                   <div className="lg:col-span-2">
                     <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
@@ -1692,7 +1550,6 @@ export default function EventsClient({
                   </div>
                 )}
 
-                {/* Booking card branding — only when this category owns the card (per_event) and it's bookable. */}
                 {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
                   <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white lg:col-span-2">
                     <div className="bg-[#E6DFC8]/60 px-4 py-2.5 sm:px-5 sm:py-3">
@@ -1725,7 +1582,6 @@ export default function EventsClient({
             <div className="h-4" />
           </div>
 
-          {/* Footer */}
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
@@ -1758,7 +1614,6 @@ export default function EventsClient({
 }
 
 function FormRow({ label, required, error, warning, children }: { label: string; required?: boolean; error?: string; warning?: string; children: React.ReactNode }) {
-  // Errors (red) take precedence over warnings (amber); both render underneath.
   const message = error ?? warning;
   const isWarning = !error && !!warning;
   return (
@@ -1798,7 +1653,6 @@ function DetailCell({ label, value, icon, toggle, accent }: { label: string; val
   );
 }
 
-/** Read-only iOS-style toggle for displaying boolean fields in the detail sheet. */
 function ToggleSlider({ on, danger }: { on: boolean; danger?: boolean }) {
   return (
     <span
@@ -1823,9 +1677,6 @@ function ErrorBox({ message }: { message: string }) {
   );
 }
 
-/** Collapsible section wrapper for the edit/new form. Body stays mounted (hidden
- * when collapsed) so field values — including uncontrolled inputs — survive a
- * collapse and remain submittable. */
 function FormSection({ title, open, onToggle, children, className }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode; className?: string }) {
   return (
     <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
@@ -1838,7 +1689,6 @@ function FormSection({ title, open, onToggle, children, className }: { title: st
   );
 }
 
-/** Interactive iOS-style toggle for the edit/new form. */
 function FormToggle({ on, onToggle, danger, label }: { on: boolean; onToggle: () => void; danger?: boolean; label: string }) {
   return (
     <button

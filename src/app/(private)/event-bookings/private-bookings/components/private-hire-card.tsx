@@ -36,11 +36,9 @@ export interface PrivateHireRequest {
   created_at: string;
   updated_at: string | null;
   updated_by: number | null;
-  /** Joined employee for `updated_by` — who last modified the enquiry. */
   updated_by_employee?: { full_name: string | null } | null;
 }
 
-/** The event_subtypes join carried on a private-hire request. */
 type PrivateHireSubtypeJoin = Pick<PrivateHireSubtype, "id" | "name" | "default_event_title"> & { event_types_id: number };
 
 const STATUS_THEME: Record<
@@ -106,7 +104,6 @@ function toTitleCase(s?: string | null): string {
   return s.replace(/\w\S*/g, (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
 }
 
-/** Full date + time, e.g. "8 May 2026, 14:32" — used in the system information. */
 function formatDateTime(iso?: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("en-GB", {
@@ -114,7 +111,6 @@ function formatDateTime(iso?: string | null): string {
   });
 }
 
-/** A label + value row that becomes an input/select when `editable`. */
 function EditRow({
   label, value, onChange, editable, type = "text", placeholder, options, readOnlyValue,
 }: {
@@ -157,7 +153,6 @@ function EditRow({
   );
 }
 
-/** A "Requested Time" row that, when applicable, copies its value into the selected slot on click. */
 function RequestedRow({ label, value, canApply, onApply }: { label: string; value?: string; canApply: boolean; onApply: () => void }) {
   const content = (
     <>
@@ -180,7 +175,6 @@ function RequestedRow({ label, value, canApply, onApply }: { label: string; valu
   );
 }
 
-/** Contact row whose value links out to the mail app / phone dialer via an icon. */
 function ContactRow({ label, value, href, icon: Icon }: { label: string; value: string | null; href: string | null; icon: React.ElementType }) {
   return (
     <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-3 last:border-0 sm:px-5">
@@ -203,7 +197,6 @@ function ContactRow({ label, value, href, icon: Icon }: { label: string; value: 
   );
 }
 
-/** Collapsible card section — matches the layout/format of the event-setups sheet. */
 function Section({
   title,
   defaultOpen = true,
@@ -244,7 +237,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   const currentSub = unwrapSubtype(request.event_subtypes);
   const reasonLabel = privateHireSubtypeLabel(currentSub, request.reason_for_hire);
 
-  // Editable fields — seeded from the request; a cancelled enquiry is read-only.
   const [guestCount, setGuestCount] = useState(String(request.guest_count ?? ""));
   const [reason, setReason] = useState(request.reason ?? "");
   const [typeId, setTypeId] = useState(currentSub?.event_types_id != null ? String(currentSub.event_types_id) : "");
@@ -254,7 +246,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   const [selectedEndTime, setSelectedEndTime] = useState(toHHMM(request.selected_end_time));
   const [datePickerOpen, setDatePickerOpen] = useState(false);
 
-  // Event type/sub-type option lists — fetched once, the first time the sheet opens.
   const [options, setOptions] = useState<PrivateEventOptions | null>(null);
   useEffect(() => {
     if (!open || options) return;
@@ -284,13 +275,11 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   });
 
   const applyDate = (d: string) => setSelectedDate(d);
-  // Copy the applicant's requested date/time into the selected slot.
   const applyPreferred = () => {
     if (request.preferred_date) setSelectedDate(request.preferred_date);
     setSelectedStartTime(toHHMM(request.preferred_start_time));
     setSelectedEndTime(toHHMM(request.preferred_end_time));
   };
-  // Selecting a type resets the sub-type to the first one under it.
   const onSelectType = (v: string) => {
     setTypeId(v);
     const first = (options?.subtypes ?? []).find((s) => String(s.event_types_id) === v);
@@ -331,8 +320,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
     setError(null);
     startTransition(async () => {
       try {
-        // Persist any field edits before the status change so the linked event
-        // (created on confirm) uses the latest details.
         if (hasChanges) await updatePrivateHireFields(request.id, editFields());
         await updatePrivateHireStatus(request.id, newStatus, adminNotes || undefined);
         setOpen(false);
@@ -344,7 +331,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
 
   return (
     <>
-      {/* Card row */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -354,7 +340,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]"
         )}
       >
-        {/* Status badge circle (left) */}
         <div
           className={cn(
             "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border",
@@ -366,7 +351,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           {theme.icon}
         </div>
 
-        {/* Name + email + guests */}
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
             <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
@@ -390,7 +374,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
         <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
       </button>
 
-      {/* Bottom sheet */}
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
@@ -401,7 +384,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
             sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 sm:border-[#E6DFC8] lg:max-h-[90vh]
             lg:w-6xl xl:w-7xl"
         >
-          {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -424,24 +406,20 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
             </div>
           </div>
 
-          {/* Scrollable body */}
           <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-4 sm:px-6 sm:py-6">
             <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-5 lg:space-y-0">
-              {/* Event details */}
               <Section title="Event Details">
                 <SheetRow label="Reason for Hire" value={reasonLabel} />
                 <EditRow label="Reason" value={reason} onChange={setReason} editable={editable} placeholder="Add a reason…" />
                 <EditRow label="Guests" value={guestCount} onChange={setGuestCount} editable={editable} type="number" placeholder="0" readOnlyValue={request.guest_count} />
               </Section>
 
-              {/* Contact — icons link out to the mail app / phone dialer */}
               <Section title="Contact">
                 <SheetRow label="Name" value={request.full_name} />
                 <ContactRow label="Email" value={request.email} href={request.email ? `mailto:${request.email}` : null} icon={Mail} />
                 <ContactRow label="Phone" value={request.phone_no} href={request.phone_no ? `tel:${request.phone_no.replace(/\s+/g, "")}` : null} icon={Phone} />
               </Section>
 
-              {/* Requested time — click a row to copy it into the selected slot */}
               <Section title="Requested Time">
                 <RequestedRow
                   label="Date"
@@ -469,7 +447,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                 )}
               </Section>
 
-              {/* Selected time — editable: calendar popover + time inputs */}
               <Section title="Selected Time">
                 <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-3 sm:px-5">
                   <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Date</span>
@@ -511,7 +488,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                 </div>
               </Section>
 
-              {/* Additional requirements */}
               {request.additional_requirements && (
                 <Section title="Additional Requirements" className="lg:col-span-2">
                   <p className="px-4 py-3 text-sm text-[#1F1F1A] sm:px-5">
@@ -520,7 +496,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                 </Section>
               )}
 
-              {/* System information — classification + audit trail; collapsed by default */}
               <Section title="System Information" defaultOpen={false} className="lg:col-span-2">
                 {options ? (
                   <>
@@ -549,7 +524,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                 <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "—"} />
               </Section>
 
-              {/* Admin notes (read-only once cancelled; pending & confirmed edit it in the footer) */}
               {status === "cancelled" && request.admin_notes && (
                 <Section title="Admin Notes" className="lg:col-span-2">
                   <div className="px-4 py-3 sm:px-5">
@@ -571,7 +545,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
             <div className="h-4" />
           </div>
 
-          {/* Footer — actions for pending (confirm/cancel) and confirmed (cancel) enquiries */}
           {(status === "pending" || status === "confirmed") && (
             <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
               <div className="space-y-3">
@@ -624,7 +597,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                   </button>
                 )}
 
-                {/* Cancel / Save Changes */}
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"

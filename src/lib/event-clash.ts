@@ -1,8 +1,3 @@
-// Pure helpers for the band-booking time-slot clash check. Kept free of Supabase
-// so the overlap logic can be unit-tested; the server action just feeds it the
-// active events for a date.
-
-/** Parse "HH:MM", "HH:MM:SS", or "HH:MM:SS+00" into minutes since midnight. */
 export function parseTimeToMinutes(t: string | null | undefined): number | null {
   if (!t) return null;
   const m = t.match(/^(\d{1,2}):(\d{2})/);
@@ -13,14 +8,12 @@ export function parseTimeToMinutes(t: string | null | undefined): number | null 
   return h * 60 + min;
 }
 
-/** Normalise any time string down to "HH:MM" (drops seconds / timezone). */
 export function toHHMM(t: string | null | undefined): string {
   const mins = parseTimeToMinutes(t);
   if (mins == null) return "";
   return `${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`;
 }
 
-/** Add whole hours to an "HH:MM" time, wrapping past midnight. "22:00" + 2 → "00:00". */
 export function addHoursToTime(time: string | null | undefined, hours: number): string {
   const mins = parseTimeToMinutes(time);
   if (mins == null) return "";
@@ -28,7 +21,6 @@ export function addHoursToTime(time: string | null | undefined, hours: number): 
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
 }
 
-/** A [start, end) window in minutes, with overnight windows (end ≤ start) pushed past midnight. */
 function toRange(start: string | null | undefined, end: string | null | undefined): { s: number; e: number } | null {
   const s = parseTimeToMinutes(start);
   if (s == null) return null;
@@ -38,7 +30,6 @@ function toRange(start: string | null | undefined, end: string | null | undefine
   return { s, e };
 }
 
-/** Half-open overlap test for two normalised ranges. */
 export function rangesOverlap(a: { s: number; e: number }, b: { s: number; e: number }): boolean {
   return a.s < b.e && b.s < a.e;
 }
@@ -52,11 +43,6 @@ export type ClashEventInput = {
 
 export type ClashEvent = { id: number; title: string; start: string; end: string };
 
-/**
- * Return the events whose time window overlaps `target`. Events with no start time
- * are skipped (can't be placed). The caller is responsible for only passing events
- * on the relevant date that are active (and excluding the booking's own event).
- */
 export function findEventClashes(
   target: { start: string | null | undefined; end: string | null | undefined },
   events: ClashEventInput[]

@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 
-// Using relative paths to resolve build errors and environment pathing issues
 import {
   generateQuizAction,
   saveQuizToDatabase,
@@ -95,26 +94,22 @@ export default function QuizGeneratorPage() {
   const [eventHistory, setEventHistory] = useState<PastQuestionRecord[]>([])
   const [filterCategory, setFilterCategory] = useState<string | null>(null)
   
-  // State for category detail popup and inline editing
   const [viewingCategory, setViewingCategory] = useState<CategoryStat | null>(null)
   const [editingQuestionId, setEditingQuestionId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ question: '', answer: '' })
   const [isActionPending, setIsActionPending] = useState(false)
 
-  // Music Snippets state
   const [musicSnippets, setMusicSnippets] = useState<MusicSnippetCandidate[]>([])
   const [selectedSnippetIndices, setSelectedSnippetIndices] = useState<Set<number>>(new Set())
   const [savedSnippets, setSavedSnippets] = useState<SavedMusicSnippet[]>([])
   const [spotifyConnected, setSpotifyConnected] = useState(false)
 
-  // Picture Round state
   const [pictureItems, setPictureItems] = useState<PictureRoundItem[]>([])
   const [selectedPictureIndices, setSelectedPictureIndices] = useState<Set<number>>(new Set())
   const [pictureTopicLocked, setPictureTopicLocked] = useState(false)
   const [previousPictureAnswers, setPreviousPictureAnswers] = useState<string[]>([])
   const [formOpen, setFormOpen] = useState(true)
 
-  // Check Spotify connection on mount
   useEffect(() => {
     const hasCookie = document.cookie.includes('spotify_access_token')
     const urlParams = new URLSearchParams(window.location.search)
@@ -122,10 +117,8 @@ export default function QuizGeneratorPage() {
       setSpotifyConnected(true)
     }
   }, [])
-  // Ref to handle scrolling the detail popup to the top
   const scrollContainerRef = useRef<HTMLDivElement>(null)
 
-  // Load initial data
   useEffect(() => {
     async function loadInitialData() {
       try {
@@ -137,7 +130,6 @@ export default function QuizGeneratorPage() {
         setUpcomingEvents(events);
         setCategories(categoryConfigs);
 
-        // Event: prefer URL param, fallback to first
         console.log('Upcoming events:', events);
         const targetEventId = presetEventId && events.some(e => String(e.id) === presetEventId)
           ? presetEventId
@@ -148,7 +140,6 @@ export default function QuizGeneratorPage() {
           loadEventHistory(targetEventId);
         }
 
-        // Category: prefer URL param, fallback to first
         const targetCategory = presetCategory && categoryConfigs.some(c => c.category_name === presetCategory)
           ? presetCategory
           : categoryConfigs.length > 0 ? categoryConfigs[0].category_name : '';
@@ -166,7 +157,6 @@ export default function QuizGeneratorPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Force scroll reset when category details open
   useEffect(() => {
     if (viewingCategory) {
       const timer = setTimeout(() => {
@@ -188,7 +178,6 @@ export default function QuizGeneratorPage() {
     }
   };
 
-  // Derived state: Includes ALL categories from config even if they have 0 questions
   const categoryStats = useMemo((): CategoryStat[] => {
     if (!categories.length) return [];
     return categories.map(config => {
@@ -212,8 +201,6 @@ export default function QuizGeneratorPage() {
 
   const currentCategoryIsFull = currentCategoryStat?.isFull ?? false;
 
-  // Approving must not push the saved count over the category's question_count.
-  // Returns true when (already-saved + currently-selected) exceeds the target.
   const approveExceedsCapacity = (selectedCount: number) => {
     if (!currentCategoryStat) return false;
     return currentCategoryStat.currentCount + selectedCount > currentCategoryStat.question_count;
@@ -227,7 +214,6 @@ export default function QuizGeneratorPage() {
   const isHigherOrLower = isMusicSnippets && (selectedCategoryConfig?.is_higher_lower ?? false)
   const isPictureRound = selectedCategoryConfig?.is_picture ?? false
 
-  // Load saved snippets when event or spotify category changes
   useEffect(() => {
     if (selectedEventId && selectedCategoryConfig?.include_spotify) {
       getMusicSnippetsForEventAction(selectedEventId, selectedCategoryConfig.id).then(setSavedSnippets).catch(() => {});
@@ -236,7 +222,6 @@ export default function QuizGeneratorPage() {
     }
   }, [selectedEventId, selectedCategoryConfig])
 
-  // For picture rounds, lock the topic to the saved question_text if one exists for this event+category
   useEffect(() => {
     if (!selectedCategoryConfig?.is_picture) {
       setPictureTopicLocked(false)
@@ -407,7 +392,6 @@ export default function QuizGeneratorPage() {
     }
   }
 
-  // --- Inline Actions for existing questions ---
 
   const startEditing = (record: PastQuestionRecord) => {
     setEditingQuestionId(record.id)
@@ -453,12 +437,10 @@ export default function QuizGeneratorPage() {
   }
 
   const filteredQuestions = useMemo(() => {
-    //console.log("Filtering questions with filterCategory:", filterCategory, " and questions:", questions);
     if (!filterCategory) return questions;
     return questions.filter(q => q.category.toLowerCase() === filterCategory.toLowerCase());
   }, [questions, filterCategory]);
 
-  // --- Select all / clear toggles for each draft type ---
   const allQuestionsSelected = filteredQuestions.length > 0
     && filteredQuestions.every(q => selectedIndices.has(questions.indexOf(q)));
   const toggleSelectAllQuestions = () => {
@@ -478,7 +460,6 @@ export default function QuizGeneratorPage() {
     setSelectedPictureIndices(allPicturesSelected ? new Set() : new Set(pictureItems.map((_, i) => i)));
   };
 
-  // Questions specifically for the viewing category detail popup
   const savedQuestionsForCategory = useMemo(() => {
     if (!viewingCategory) return [];
     return eventHistory.filter((q: PastQuestionRecord) => {
@@ -490,51 +471,7 @@ export default function QuizGeneratorPage() {
   return (
     <div className="mx-auto max-w-6xl animate-in space-y-2 px-2 py-2 pb-32 text-left duration-700 fade-in sm:space-y-4 sm:px-6 sm:py-4">
 
-      {/* CATEGORY PROGRESS INDICATORS */}
-      {/* <div className={styles.pillsContainer}>
-        {categoryStats.map((stat) => {
-          const isFull = stat.isFull;
-          const hasQuestions = stat.currentCount > 0;
 
-          return (
-            <button
-              key={stat.id}
-              type="button"
-              onClick={() => setViewingCategory(stat)}
-              style={{ borderColor: isFull ? '#047857' : hasQuestions ? '#b45309' : '#b91c1c' }}
-              className={cn(
-                "flex flex-row! items-center gap-1.5 shadow-md hover:shadow-lg px-3 border border-solid rounded-lg h-9 whitespace-nowrap active:scale-[0.98] transition-all shrink-0",
-                isFull
-                  ? "bg-green-50"
-                  : hasQuestions
-                    ? "bg-amber-50"
-                    : "bg-red-50",
-                filterCategory === stat.category_name && "ring-2 ring-[#5C4033] ring-offset-1 z-10"
-              )}
-            >
-              <span className={cn(
-                "font-black text-[11px] uppercase leading-none tracking-tight",
-                isFull ? "text-green-700" : hasQuestions ? "text-amber-700" : "text-red-700"
-              )}>
-                {stat.short_name || stat.category_name}:
-              </span>
-
-              {isFull ? (
-                <CheckCircle className="w-3 h-3 text-green-600 shrink-0" />
-              ) : (
-                <span className={cn(
-                  "font-black tabular-nums text-[11px] leading-none shrink-0",
-                  hasQuestions ? "text-amber-700" : "text-red-700"
-                )}>
-                  {stat.currentCount}/{stat.question_count}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div> */}
-
-      {/* POPUP: Category Details Sheet with Edit/Delete */}
       <Sheet open={!!viewingCategory} onOpenChange={(open) => {
         if(!open) {
           setViewingCategory(null)
@@ -570,12 +507,8 @@ export default function QuizGeneratorPage() {
                     </p>
                   </div>
                 </div>
-                {/* <SheetDescription className="mt-2 font-bold text-[#5F624F] text-xs uppercase tracking-wider">
-                  Showing questions saved for {upcomingEvents.find(e => String(e.id) === selectedEventId)?.title || 'this event'}.
-                </SheetDescription> */}
               </SheetHeader>
 
-              {/* Scrollable Container Fix: Added overflow-y-auto and min-h-0 for flex context */}
               <div 
                 ref={scrollContainerRef}
                 className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 text-left sm:p-6"
@@ -711,9 +644,7 @@ export default function QuizGeneratorPage() {
         </SheetContent>
       </Sheet>
 
-      {/* GENERATOR FORM */}
       <form onSubmit={handleGenerate} className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
-        {/* Collapsible header — Event & Category on same row */}
         <button
           type="button"
           onClick={() => setFormOpen(o => !o)}
@@ -737,10 +668,8 @@ export default function QuizGeneratorPage() {
           )} />
         </button>
 
-        {/* Collapsible body */}
         {formOpen && (
           <div className="space-y-4 border-t border-[#E6DFC8] p-4">
-            {/* Topic */}
             <div className="space-y-1.5">
               <Label className="ml-0.5 block text-left font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
                 {isMusicSnippets ? 'Theme' : 'Topic'}
@@ -761,7 +690,6 @@ export default function QuizGeneratorPage() {
               />
             </div>
 
-            {/* Difficulty — segmented buttons */}
             <div className="space-y-1.5">
               <Label className="ml-0.5 block text-left font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Difficulty</Label>
               <div className="flex gap-2">
@@ -783,7 +711,6 @@ export default function QuizGeneratorPage() {
               </div>
             </div>
 
-            {/* Generate button — full width */}
             <Button
               type="submit"
               disabled={isLoading || categories.length === 0 || currentCategoryIsFull || (isPictureRound && !topic.trim())}
@@ -836,11 +763,9 @@ export default function QuizGeneratorPage() {
         </div>
       )}
 
-      {/* DRAFT RESULTS SECTION */}
       {questions.length > 0 && (
         <div className="animate-in space-y-2 rounded-xl bg-[#F7F4EA] p-2 duration-500 fade-in slide-in-from-bottom-3 sm:p-3">
 
-          {/* STICKY ACTION BAR */}
           <div className="sticky top-16 z-20 flex items-center justify-between rounded-lg border border-[#E6DFC8] bg-white p-2 shadow-md">
             <div className="flex items-center gap-2 px-0.5">
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#5C4033] font-black text-[10px] text-white">
@@ -877,7 +802,6 @@ export default function QuizGeneratorPage() {
             </div>
           </div>
 
-          {/* DRAFT CARDS GRID */}
           <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
             {filteredQuestions.map((q, idx) => {
               const originalIndex = questions.indexOf(q);
@@ -925,11 +849,9 @@ export default function QuizGeneratorPage() {
         </div>
       )}
 
-      {/* MUSIC SNIPPETS DRAFT SECTION */}
       {musicSnippets.length > 0 && (
         <div className="animate-in space-y-2 rounded-xl bg-[#F7F4EA] p-2 duration-500 fade-in slide-in-from-bottom-3 sm:p-3">
 
-          {/* STICKY ACTION BAR */}
           <div className="sticky top-16 z-20 flex items-center justify-between rounded-lg border border-[#E6DFC8] bg-white p-2 shadow-md">
             <div className="flex items-center gap-2 px-0.5">
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#5C4033] font-black text-[10px] text-white">
@@ -966,7 +888,6 @@ export default function QuizGeneratorPage() {
             </div>
           </div>
 
-          {/* SONG CARDS */}
           <div className="grid grid-cols-1 gap-2">
             {musicSnippets.map((song, idx) => {
               const isSelected = selectedSnippetIndices.has(idx)
@@ -980,7 +901,6 @@ export default function QuizGeneratorPage() {
                       : "border border-transparent opacity-60 hover:opacity-100"
                   )}
                 >
-                  {/* Clickable header row */}
                   <div
                     className="flex cursor-pointer items-center gap-2 px-2.5 py-2 select-none"
                     onClick={() => {
@@ -1026,7 +946,6 @@ export default function QuizGeneratorPage() {
                     </div>
                   </div>
 
-                  {/* Spotify player or fallback */}
                   <div className="px-2.5 pb-2" onClick={(e) => e.stopPropagation()}>
                     {song.spotify_track_id ? (
                       <SpotifyPlayer trackId={song.spotify_track_id} title={`${song.artist} - ${song.title}`} compact />
@@ -1052,10 +971,8 @@ export default function QuizGeneratorPage() {
         </div>
       )}
 
-      {/* PICTURE ROUND DRAFT SECTION */}
       {pictureItems.length > 0 && (
         <div className="animate-in space-y-2 rounded-xl bg-[#F7F4EA] p-2 duration-500 fade-in slide-in-from-bottom-3 sm:p-3">
-          {/* Sticky action bar */}
           <div className="sticky top-16 z-20 flex items-center justify-between rounded-lg border border-[#E6DFC8] bg-white p-2 shadow-md">
             <div className="flex items-center gap-2 px-0.5">
               <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#5C4033] font-black text-[10px] text-white">
@@ -1092,7 +1009,6 @@ export default function QuizGeneratorPage() {
             </div>
           </div>
 
-          {/* Picture cards grid */}
           <div className="grid grid-cols-1 gap-2">
             {pictureItems.map((item, idx) => {
               const isSelected = selectedPictureIndices.has(idx)
@@ -1140,7 +1056,6 @@ export default function QuizGeneratorPage() {
         </div>
       )}
 
-      {/* SAVED SNIPPETS FOR EVENT */}
       {isMusicSnippets && savedSnippets.length > 0 && musicSnippets.length === 0 && questions.length === 0 && (
         <div className="animate-in space-y-2 rounded-xl bg-[#F7F4EA] p-2 duration-500 fade-in sm:p-3">
           <p className="ml-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -1194,7 +1109,6 @@ export default function QuizGeneratorPage() {
         </div>
       )}
 
-      {/* EMPTY STATE */}
       {!isLoading && questions.length === 0 && musicSnippets.length === 0 && pictureItems.length === 0 && (
         <div className={cn(
           "flex flex-col items-center rounded-xl border border-dashed border-[#E6DFC8] bg-white/40 py-10 text-center",

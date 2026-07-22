@@ -100,7 +100,6 @@ export default async function QuizBookingsPage({
   const type = "games";
   const subType = "quiz";
 
-  // 1. Fetch quiz events for the filter dropdown
   const quizEventsRaw = await getQuizEvents(type, subType);
   const quizEvents = (quizEventsRaw ?? []).map((e) => ({
     id: String(e.id),
@@ -108,15 +107,12 @@ export default async function QuizBookingsPage({
     title: e.title ?? null,
   }));
 
-  // 2. Fetch current bookings
   const allBookings = await getBookings(type, subType, selectedDate || null, selectedEventId);
   const quizBookings = (allBookings as unknown as Booking[]) ?? [];
 
-  // 3. Fetch all physical tables
   const allTablesRaw = await getAvailableTables();
   const allTables = allTablesRaw || [];
 
-  // 4. Fetch event details + quiz stats for selected date
   const eventDetails = selectedDate
     ? await getEventDetails(selectedDate, type, subType, selectedEventId)
     : null;
@@ -125,7 +121,6 @@ export default async function QuizBookingsPage({
     ? await getQuizStatusStats(Number(eventDetails.id))
     : null;
 
-  // 5. Derive quiz status
   const quizStatus =
     !quizStats || quizStats.categoryTotal === 0
       ? "Not Started"
@@ -135,7 +130,6 @@ export default async function QuizBookingsPage({
       ? "Incomplete"
       : "Not Started";
 
-  // 6. Table status by capacity
   let tableStatusByCapacity: { capacity: number; total: number; assigned: number }[] = [];
 
   if (selectedDate) {
@@ -158,25 +152,20 @@ export default async function QuizBookingsPage({
 
   return (
     <div className="relative min-h-screen flex-1 overflow-hidden bg-background">
-      {/* Visual background blurs */}
       <div className="pointer-events-none fixed top-0 right-0 -z-10 h-96 w-96 rounded-full bg-primary/5 blur-[120px]" />
       <div className="pointer-events-none fixed bottom-0 left-0 -z-10 h-80 w-80 rounded-full bg-blue-500/5 blur-[100px]" />
 
       <div className="mx-auto max-w-7xl space-y-5 px-3 py-3 text-left sm:py-0 md:px-8">
 
-        {/* Full-width Event Selection Section */}
         <div className="w-full rounded-2xl border border-[#E6DFC8] bg-white p-1.5 shadow-sm">
           <QuizEventFilter events={quizEvents} selectedDate={selectedDate} />
         </div>
 
-        {/* Event Summary / Empty State */}
         {selectedDate ? (
           <div className="animate-in overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white shadow-sm duration-500 fade-in slide-in-from-top-2">
 
-            {/* Main summary */}
             <div className="space-y-3 p-4">
 
-              {/* sm+: Time · Host · Quiz Status — evenly spaced with labels */}
               <div className="hidden items-start justify-evenly gap-4 sm:flex">
                 <div className="flex flex-col items-center gap-1">
                   <span className="text-[10px] leading-none font-bold tracking-wide text-[#5F624F]/50 uppercase">Time</span>
@@ -217,10 +206,8 @@ export default async function QuizBookingsPage({
                 </div>
               </div>
 
-              {/* Divider — only needed on sm+ where content sits above Table Status */}
               <div className="hidden border-t border-[#E6DFC8] sm:block" />
 
-              {/* Table Status */}
               <div className="flex flex-col gap-2">
                 <span className="text-[10px] leading-none font-bold tracking-wide text-[#5F624F]/50 uppercase">Table Status</span>
                 <div className="flex flex-wrap gap-2">
@@ -245,7 +232,6 @@ export default async function QuizBookingsPage({
               </div>
             </div>
 
-            {/* Expandable event details */}
             <details className="group border-t border-[#E6DFC8]">
               <summary className="flex cursor-pointer list-none items-center justify-between px-4 py-3 transition-colors select-none hover:bg-[#F7F4EA]">
                 <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Event Details</span>
@@ -253,7 +239,6 @@ export default async function QuizBookingsPage({
               </summary>
               <div className="space-y-2.5 border-t border-[#E6DFC8]/60 px-4 pb-4">
 
-                {/* Mobile-only: Time, Host, Quiz Status */}
                 <div className="space-y-2.5 border-b border-[#E6DFC8] pb-2.5 sm:hidden">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-1.5">
@@ -287,7 +272,6 @@ export default async function QuizBookingsPage({
                   </div>
                 </div>
 
-                {/* Title — all screen sizes */}
                 <div>
                   <p className="mb-0.5 text-[10px] font-bold tracking-wide text-[#5F624F]/50 uppercase">Title</p>
                   <p className="text-sm font-bold text-[#1F1F1A]">{eventDetails?.title || "—"}</p>
@@ -326,7 +310,6 @@ export default async function QuizBookingsPage({
           </div>
         )}
 
-        {/* Main List Section */}
         <div className="space-y-3">
           <Suspense fallback={
             <div className="space-y-2.5">

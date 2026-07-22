@@ -42,11 +42,5 @@ export default function BookingItem({
 
     <div className="min-w-17.5 text-right">{formattedAmount}</div>
 
-    {/* <div className="min-w-25 flex justify-end">
-      <Link href={`/dashboard/transaction/${id}/edit`} className={`${variants['ghost']} ${sizes['xs']}`}>
-        <Pencil className="w-4 h-4" />
-      </Link>
-      <TransactionItemRemoveButton id={id} onRemoved={onRemoved} />
-    </div> */}
   </div>)
 }

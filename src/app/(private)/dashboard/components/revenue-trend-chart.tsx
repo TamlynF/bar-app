@@ -1,4 +1,3 @@
-// dashboard/components/revenue-trend-chart.tsx
 "use client";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 

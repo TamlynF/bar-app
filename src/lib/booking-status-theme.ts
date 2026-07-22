@@ -1,9 +1,3 @@
-// Single source of truth for the booking-status colour/icon theme used across
-// the event-bookings admin surfaces (quiz, bingo) and the shared StatusCircle.
-// Icons are stored as Lucide *components* (not rendered JSX) so this stays a
-// plain .ts module — consumers render <theme.icon className="w-5 h-5" />.
-// Mirrors the convention in booking-card-icons.ts.
-
 import {
   Table as TableIcon,
   CheckCircle2,

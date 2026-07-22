@@ -64,8 +64,6 @@ export default function EventTypeFilter({
   };
 
   const handleClear = () => {
-    // Sentinel so the server knows the user deliberately wants all history and
-    // doesn't re-default the filter to the next upcoming event.
     router.push(`${window.location.pathname}?all=1`);
     setQuery("");
     setOpen(false);

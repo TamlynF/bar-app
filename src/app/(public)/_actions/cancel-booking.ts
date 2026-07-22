@@ -27,7 +27,6 @@ export async function cancelBooking(bookingId: string | number) {
       return { success: false, error: "Failed to cancel booking. Please try again or contact us." };
     }
 
-    // Revalidate the page so it instantly shows the "Cancelled" status
     revalidatePath(`/manage-booking/${bookingId}`);
     
     return { success: true };

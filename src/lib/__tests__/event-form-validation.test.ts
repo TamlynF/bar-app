@@ -63,7 +63,6 @@ describe("findActiveEventClashes", () => {
   });
 
   it("allows back-to-back times (touching edges do not clash)", () => {
-    // New 17:00–19:30 ends exactly when the gig starts (19:30).
     const clashes = findActiveEventClashes({ date: "2026-06-25", start: "17:00", end: "19:30" }, candidates);
     expect(clashes).toEqual([]);
   });

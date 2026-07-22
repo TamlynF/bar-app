@@ -29,8 +29,6 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
     startTransition(async () => {
       try {
         const result = await updateBandStatus(request.id, status, adminNotes || undefined);
-        // Booking into an occupied slot is refused server-side — stay put and say why
-        // rather than navigating away as though it had gone through.
         if (result?.clashes?.length) {
           setError(
             `This slot clashes with ${result.clashes.map((c) => c.title).join(", ")} — pick another time.`
@@ -46,7 +44,6 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
 
   return (
     <>
-      {/* Performance Videos */}
       {videos.length > 0 && (
         <div>
           <p className="mb-2 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
@@ -89,9 +86,6 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
         </div>
       )}
 
-      {/* Action area — editable stages (declined is read-only). This quick view
-          has no date picker, so "Mark Booked" is disabled until a slot exists;
-          set the slot in the full sheet. */}
       {request.status !== "declined" && (
         <div className="space-y-3 border-t border-[#E6DFC8] pt-4">
           <div>
@@ -134,7 +128,6 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
         </div>
       )}
 
-      {/* Video modal */}
       <Dialog open={!!activeVideo} onOpenChange={(v) => !v && setActiveVideo(null)}>
         <DialogContent className="w-full max-w-2xl overflow-hidden rounded-2xl border-0 bg-black p-0">
           <button

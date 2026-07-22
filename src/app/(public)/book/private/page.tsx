@@ -31,8 +31,6 @@ export default async function PrivateHirePage() {
     .select(`icon, title, event_subtypes!inner(behavior)`)
     .eq("event_subtypes.behavior", "private");
 
-  // Private event subtypes the enquiry can be for (behavior 'private' under the
-  // 'private' event type). Offered in the form, labelled by default_event_title.
   const { data: subtypeRows } = await supabase
     .from("event_subtypes")
     .select("id, name, default_event_title, event_types!inner(name)")
@@ -82,7 +80,6 @@ export default async function PrivateHirePage() {
 
       <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-12 pb-4 sm:px-6 sm:pt-14 sm:pb-12 lg:px-8">
 
-        {/* Header */}
         <div className="mb-6 flex flex-col items-center text-center sm:mb-10">
           <div className="w-full max-w-45 transition-transform duration-700 hover:scale-[1.02] active:scale-[0.98] sm:max-w-xs">
             <Image
@@ -104,7 +101,6 @@ export default async function PrivateHirePage() {
           </div>
         </div>
 
-        {/* Event Badges */}
         <div className="no-scrollbar -mx-4 mb-4 flex flex-row gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:mb-12 sm:flex-wrap sm:justify-center sm:gap-3 sm:overflow-visible sm:px-0">
           {eventBadges.map((badge, index) => (
             <div
@@ -120,7 +116,6 @@ export default async function PrivateHirePage() {
           ))}
         </div>
 
-        {/* Enquiry Form Card */}
         <div className="relative mb-12 rounded-[2.5rem] border border-white/10 bg-white/3 p-6 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl sm:p-10">
           <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[2.5rem]">
             <div className="absolute -top-32 -left-32 h-64 w-64 rounded-full bg-[#fdcc4b]/10 blur-[100px]" />
@@ -136,7 +131,6 @@ export default async function PrivateHirePage() {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="mt-auto mb-6 flex flex-col items-center gap-4 pt-8">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />

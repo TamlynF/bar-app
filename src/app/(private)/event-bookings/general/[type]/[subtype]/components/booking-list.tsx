@@ -95,11 +95,8 @@ interface SelectableEvent {
 
 const normStatus = (s?: string | null) => (s || "").trim().toLowerCase();
 
-// Date strings come from the DB as YYYY-MM-DD — anchor to local midnight to
-// avoid timezone shifts (see CLAUDE.md).
 const parseDate = (d?: string | null) => (d ? new Date(d + "T00:00:00") : null);
 
-// Time strings arrive as "HH:mm(:ss)" — render a compact 12-hour label.
 const formatTime = (t?: string | null) => {
   if (!t) return null;
   const [hh, mm] = t.split(":");
@@ -118,8 +115,6 @@ const initials = (name?: string | null) =>
     .join("")
     .toUpperCase();
 
-// The master–detail two-pane kicks in here; below this the detail opens as a
-// bottom sheet. Keep in sync with the `xl:` grid class on the layout.
 const WIDE_QUERY = "(min-width: 1280px)";
 
 export default function BookingList({
@@ -140,9 +135,6 @@ export default function BookingList({
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  // Derive the selected booking from the (possibly refreshed) list so it always
-  // reflects the latest server data without a sync effect — and resolves to null
-  // once a booking is deleted.
   const selectedBooking = selectedId ? bookings.find(b => b.id === selectedId) ?? null : null;
   const [availableTables, setAvailableTables] = useState<SelectableTable[]>([]);
   const [availableEvents, setAvailableEvents] = useState<SelectableEvent[]>([]);
@@ -159,7 +151,6 @@ export default function BookingList({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const topFocusRef = useRef<HTMLSpanElement>(null);
 
-  // Reset the overlay sheet scroll whenever a booking opens (bottom-sheet only).
   useEffect(() => {
     if (selectedId && !isWide) {
       const timer = setTimeout(() => {
@@ -171,7 +162,6 @@ export default function BookingList({
   }, [selectedId, isWide]);
 
   const handleSelectBooking = (booking: GeneralBooking) => {
-    // Switching booking is an exit from the current editor — guard it too.
     guardedClose(() => {
       setSelectedId(booking.id);
       setIsEditing(false);
@@ -208,13 +198,11 @@ export default function BookingList({
       setAvailableTables(tables as unknown as SelectableTable[]);
     }
 
-    // All events of this type/subtype, so the booking can be moved.
     const events = await getEventsForType(type, subtype);
     setAvailableEvents(events as unknown as SelectableEvent[]);
   };
 
   const handleEventChange = async (newEventId: string) => {
-    // Moving event clears the (date-specific) table assignment.
     setEditForm(prev => ({ ...prev, event_id: newEventId, table_id: "" }));
     const tables = await getAvailableTablesForEventGeneral(newEventId, editForm.group_size, "");
     setAvailableTables(tables as unknown as SelectableTable[]);
@@ -269,8 +257,6 @@ export default function BookingList({
     }
   };
 
-  // Whether the edit form diverges from the selected booking's saved values.
-  // Mirrors the initial form seeded in handleEnterEditMode.
   const isDirty = () => {
     if (!selectedBooking) return false;
     const currentTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id || "";
@@ -284,12 +270,9 @@ export default function BookingList({
     );
   };
 
-  // Persist the current edits. Resolves true on success (or when there's nothing
-  // to do), false if the user backs out of the destructive prompt or it fails.
   const persistEdits = async (): Promise<boolean> => {
     if (!selectedBooking) return true;
 
-    // Warn before a destructive save that frees the booking's table (rules 3c / 3a.3).
     const origStatus = normStatus(selectedBooking.status) || "pending";
     const origTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id ?? "";
     const hadTable = String(origTableId) !== "";
@@ -325,9 +308,6 @@ export default function BookingList({
     });
   };
 
-  // Guard any exit from an active edit (close panel / dismiss sheet / switch
-  // booking): if there are unsaved changes, ask whether to save or discard
-  // before running `proceed`.
   const guardedClose = async (proceed: () => void) => {
     if (isEditing && isDirty()) {
       const save = await confirm({
@@ -335,7 +315,6 @@ export default function BookingList({
         description: "You've made changes to this booking. Save them before closing?",
         confirmLabel: "Save changes",
         cancelLabel: "Discard",
-        // Cancel means Discard here, so a stray click or Escape must not answer.
         dismissible: false,
       });
       if (save) {
@@ -360,7 +339,6 @@ export default function BookingList({
     });
   };
 
-  // Reactive hint flags for edit-mode UI feedback
   const originalTableId = selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
   const originalStatus = normStatus(selectedBooking?.status) || "pending";
   const originalEventId = String(selectedBooking?.event_id || "");
@@ -373,11 +351,6 @@ export default function BookingList({
   const showEventMoveHint =
     selectedBooking?.events?.seating_required !== false && originalEventId !== editForm.event_id;
 
-  /**
-   * The view/edit/delete surface, rendered either inline (desktop right pane)
-   * or inside the bottom sheet (mobile). Returns plain JSX (not a component) so
-   * the edit-form inputs keep their identity across re-renders.
-   */
   const renderPanel = (placement: "inline" | "bottom") => {
     const isOverlay = placement === "bottom";
 
@@ -451,7 +424,6 @@ export default function BookingList({
 
     const viewBody = (
       <div className="animate-in space-y-5 duration-300 fade-in">
-        {/* Key facts grid */}
         <div className="grid grid-cols-2 gap-2.5">
           <Fact icon={<Calendar className="h-4 w-4" />} label="Event date" value={eventDate ? format(eventDate, "do MMM yyyy") : "—"} />
           <Fact icon={<Users className="h-4 w-4" />} label="Group size" value={`${selectedBooking.group_size ?? 0} guests`} />
@@ -466,7 +438,6 @@ export default function BookingList({
           />
         </div>
 
-        {/* Payment strip */}
         {hasPayment && (
           <div className="flex items-center justify-between rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] p-4">
             <div className="flex items-center gap-2.5">
@@ -485,7 +456,6 @@ export default function BookingList({
           </div>
         )}
 
-        {/* Primary contact */}
         {selectedBooking.contacts && (
           <section>
             <SectionLabel>Primary contact</SectionLabel>
@@ -525,7 +495,6 @@ export default function BookingList({
           </section>
         )}
 
-        {/* Staff instructions */}
         {selectedBooking.special_requests && (
           <div className="rounded-2xl border border-[#5C4033]/15 bg-[#5C4033]/5 p-4">
             <div className="mb-2 flex items-center gap-2">
@@ -536,7 +505,6 @@ export default function BookingList({
           </div>
         )}
 
-        {/* Manage event */}
         {selectedBooking.event_id && (
           <Link
             href={`/event-bookings/event/${selectedBooking.event_id}`}
@@ -554,7 +522,6 @@ export default function BookingList({
 
     const editBody = (
       <div className="animate-in space-y-5 duration-300 fade-in slide-in-from-bottom-2">
-        {/* Event */}
         <div className="space-y-2">
           <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Event Date &amp; Session</Label>
           <div className="relative">
@@ -577,7 +544,6 @@ export default function BookingList({
           )}
         </div>
 
-        {/* Group name */}
         <div className="space-y-2">
           <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Group Name</Label>
           <Input
@@ -588,7 +554,6 @@ export default function BookingList({
           />
         </div>
 
-        {/* Group size + Table */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
             <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Group Size</Label>
@@ -633,7 +598,6 @@ export default function BookingList({
           <Hint tone="red" icon={<AlertCircle className="h-3.5 w-3.5" />}>Table removed. Status will update to Cancelled.</Hint>
         )}
 
-        {/* Status */}
         <div>
           <Label className="mb-2 ml-1 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Status</Label>
           <div className="grid grid-cols-2 gap-2">
@@ -663,7 +627,6 @@ export default function BookingList({
           )}
         </div>
 
-        {/* Special requests */}
         <div className="space-y-2">
           <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Special Requests</Label>
           <Textarea
@@ -677,9 +640,6 @@ export default function BookingList({
       </div>
     );
 
-    // In edit mode there are no action buttons — closing the panel/sheet with
-    // unsaved changes prompts to save (see guardedClose). View mode keeps
-    // Delete + Edit.
     const footer = isEditing ? null : (
       <div className="shrink-0 border-t border-[#E6DFC8] bg-white/90 px-5 py-4 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md sm:px-6">
         <div className="grid grid-cols-[auto_1fr] gap-3">
@@ -745,7 +705,6 @@ export default function BookingList({
     <div className="xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
       {isWide ? (
         <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          {/* Left column scrolls on its own; the detail panel stays fixed. */}
           <div className="h-full min-h-0 overflow-y-auto pr-1">
             {listItems}
           </div>
@@ -770,7 +729,6 @@ export default function BookingList({
         </>
       )}
 
-      {/* Global transition overlay */}
       {isPending && (
         <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#5C4033] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
           <Loader2 className="h-4 w-4 animate-spin" /> Syncing with DB...
@@ -781,7 +739,6 @@ export default function BookingList({
   );
 }
 
-// ---- List card ------------------------------------------------------------
 function RefinedCard({
   booking,
   onClick,
@@ -825,7 +782,6 @@ function RefinedCard({
         )}
       </div>
       <div className="min-w-0 flex-1">
-        {/* Event context — only when no event is filtered, and only on ≥ sm. */}
         {showDate && (
           <div className="mb-1 hidden min-w-0 items-center gap-1.5 sm:flex">
             <CalendarDays className="h-3 w-3 shrink-0 text-[#5F624F]/55" />
@@ -887,7 +843,6 @@ function EmptyList() {
   );
 }
 
-// ---- Detail building blocks ----------------------------------------------
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return <p className="mb-2 font-black text-[10px] tracking-[0.2em] text-[#5F624F]/70 uppercase">{children}</p>;
 }

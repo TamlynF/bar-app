@@ -12,7 +12,6 @@ import { type BandRequest } from "../../../music-bookings/components/band-bookin
 import PrivateHireListClient from "../../../private-bookings/components/private-hire-list-client";
 import { type PrivateHireRequest } from "../../../private-bookings/components/private-hire-card";
 
-/** Page shell for the request/enquiry pipelines (band + private hire). */
 function RequestsShell({ title, subtitle, children }: { title: string; subtitle: string; children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex-1 bg-background">
@@ -53,18 +52,12 @@ export default async function GeneralEventBookingsPage({
   const { type, subtype } = await params;
   const { eventId, status, all } = await searchParams;
   let selectedEventId = eventId ?? null;
-  // Optional status pre-filter for the request pipelines (e.g. ?status=pending),
-  // used by the dashboard "needs action" links. Comma-separated, case-insensitive.
   const initialStatuses = status
     ? status.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
     : [];
-  // per_type grouping uses the ALL_SUBTYPES sentinel — label the page by category.
   const isAllSubtypes = subtype === ALL_SUBTYPES;
   const filterLabel = isAllSubtypes ? toTitleCase(type) : toTitleCase(subtype);
 
-  // Requests & Enquiries surfaces: a per_type category whose sub-type behaviour is a
-  // music act or private hire. For these the event *is* the booking, so show the
-  // review-pipeline request tables instead of the per-event bookings list.
   const requestKind = isAllSubtypes ? await getTypeRequestKind(type) : null;
   if (requestKind === "music_act") {
     const requests = (await getBandRequestsForType()) as unknown as BandRequest[];
@@ -83,10 +76,6 @@ export default async function GeneralEventBookingsPage({
     );
   }
 
-  // With no filters in the URL, default the event filter to the next upcoming
-  // active event so the page opens on the most relevant event rather than all
-  // history. The ?all=1 sentinel (set by "Clear") and explicit ?status opt out
-  // and show everything.
   if (!selectedEventId && !status && !all) {
     selectedEventId = await getNextActiveEventIdForType(type, subtype);
   }
@@ -116,8 +105,6 @@ export default async function GeneralEventBookingsPage({
   const paymentAmount = (eventDetails as { payment_amount?: number | null } | null)?.payment_amount ?? null;
   const isActive = (eventDetails as { is_active?: boolean | null } | null)?.is_active !== false;
 
-  // Payment totals across non-cancelled bookings: expected (price × guests, or the
-  // stored booking total) and the amount actually paid.
   let totalExpected = 0;
   let totalPaid = 0;
   for (const b of bookings) {
@@ -129,7 +116,6 @@ export default async function GeneralEventBookingsPage({
     totalExpected += lineTotal;
   }
 
-  // Table statistics (capacity buckets) — only when this event needs seating.
   let tableStats: { capacity: number; total: number; assigned: number }[] | null = null;
   if (selectedEventId && eventDetails && seatingRequired) {
     const allTables = await getAllTables();
@@ -150,7 +136,6 @@ export default async function GeneralEventBookingsPage({
       .sort((a, b) => a.capacity - b.capacity);
   }
 
-  // Quiz status — only when this sub-category behaves as a quiz.
   let quiz: EventSummary["quiz"] = null;
   if (selectedEventId && eventDetails && isQuiz) {
     const stats = await getQuizStatsForEvent(Number(eventDetails.id));
@@ -165,7 +150,6 @@ export default async function GeneralEventBookingsPage({
     quiz = { status, count: stats.questionCount, total: stats.categoryTotal };
   }
 
-  // Pre-format the event summary so the client section stays presentational.
   const summary: EventSummary | null = selectedEventId && eventDetails
     ? {
         title: eventDetails.title ?? "",
@@ -187,13 +171,8 @@ export default async function GeneralEventBookingsPage({
 
   return (
     <div className="min-h-screen flex-1 bg-background xl:min-h-0">
-      {/* On xl the page fills the viewport (minus header + main padding) so the
-          bookings list scrolls on its own while the filter/search header and the
-          detail panel stay fixed. Below xl it's normal document flow. */}
       <div className="mx-auto max-w-7xl space-y-4 px-3 py-3 sm:py-0 md:px-8 xl:flex xl:h-[calc(100vh-7.5rem)] xl:flex-col xl:overflow-hidden">
 
-        {/* Event summary + interactive stats bar + bookings list. The event
-            selector is passed in so it shares the search/filters row on sm+. */}
         <BookingsSection
           bookings={bookings}
           summary={summary}

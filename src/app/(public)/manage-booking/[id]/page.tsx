@@ -6,12 +6,6 @@ export const metadata = {
   title: "Manage Booking | Don Fenticas",
 };
 
-/**
- * Generic public manage page for event / general bookings (the flow that goes
- * through `createEventBooking`). Quiz and bingo have their own nested manage
- * pages under /book/{quiz,bingo}/manage-booking/[id]; this is the destination
- * the event confirmation emails and Square success page link to.
- */
 export default async function ManageBookingPage({
   params,
 }: {
@@ -41,7 +35,6 @@ export default async function ManageBookingPage({
     notFound();
   }
 
-  // Supabase joins can return as object OR single-element array — normalise both.
   const eventsRel = booking.events as ManageEventBooking["events"] | ManageEventBooking["events"][] | null;
   const contactsRel = booking.contacts as ManageEventBooking["contacts"] | ManageEventBooking["contacts"][] | null;
   const normalised: ManageEventBooking = {

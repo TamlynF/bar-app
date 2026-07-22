@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 
-// Module-load consts in the action read these; set before the dynamic import.
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
-//process.env.SQUARE_LOCATION_ID = "LOC_TEST";
 
-// Mutable seams referenced from the hoisted vi.mock factories.
 const h = vi.hoisted(() => ({
   client: null as unknown,
   squareCreate: vi.fn(),
@@ -23,11 +20,6 @@ vi.mock("@/lib/update-fully-booked", () => ({ updateFullyBookedStatus: h.updateF
 
 type Result = { data: unknown; error?: unknown };
 
-/**
- * Table-dispatched Supabase mock. Each table has a FIFO of results consumed by
- * whichever terminal (`single`/`maybeSingle`) ends the chain; update/delete are
- * awaited on the (thenable) builder. All inserts/updates/deletes are recorded.
- */
 function makeSupabase(queues: Record<string, Result[]>) {
   const calls = {
     inserts: [] as Array<{ table: string; payload: unknown }>,
@@ -107,7 +99,6 @@ describe("createEventBooking — paid path", () => {
 
     expect(result).toEqual({ checkoutUrl: "https://checkout.square/xyz" });
 
-    // Square called exactly once with our booking linked into the order.
     expect(h.squareCreate).toHaveBeenCalledTimes(1);
     const req = h.squareCreate.mock.calls[0][0];
     expect(req.idempotencyKey).toBeTruthy();
@@ -115,7 +106,6 @@ describe("createEventBooking — paid path", () => {
     expect(req.order.locationId).toBe("LOC_TEST");
     expect(req.prePopulatedData.buyerEmail).toBe("jane@example.com");
 
-    // Booking inserted pending/unpaid, then stamped with the Square order id.
     expect(calls.inserts.find((i) => i.table === "bookings")?.payload).toMatchObject([
       { status: "pending", payment_status: "unpaid", total_amount: 45 },
     ]);
@@ -138,7 +128,6 @@ describe("createEventBooking — paid path", () => {
 
     expect(result.error).toBeTruthy();
     expect(result.checkoutUrl).toBeUndefined();
-    // Both the mapping and the booking rows are cleaned up.
     expect(calls.deletes.map((d) => d.table)).toEqual(["booking_table_mappings", "bookings"]);
     expect(calls.updates).toHaveLength(0); // never got to the square_order_id stamp
     expect(h.send).not.toHaveBeenCalled();

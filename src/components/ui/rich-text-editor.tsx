@@ -81,7 +81,6 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
     },
   });
 
-  // Sync initial value into hidden input
   useEffect(() => {
     if (hiddenRef.current && editor) {
       hiddenRef.current.value = editor.getHTML();
@@ -92,10 +91,8 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
 
   return (
     <div className="flex flex-1 flex-col gap-0">
-      {/* Hidden input carries the HTML value in the form */}
       <input type="hidden" name={name} ref={hiddenRef} defaultValue={defaultValue} />
 
-      {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-0.5 rounded-t-2xl border-b border-[#E6DFC8] bg-[#F7F4EA] px-2 py-1.5">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
@@ -167,7 +164,6 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
 
         <div className="mx-0.5 h-5 w-px bg-[#E6DFC8]" />
 
-        {/* Colour swatches */}
         {COLORS.map((c) => (
           <button
             key={c.label}
@@ -216,7 +212,6 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
         </ToolbarButton>
       </div>
 
-      {/* Editor area */}
       <EditorContent
         editor={editor}
         className="rich-editor min-h-30 overflow-y-auto rounded-b-2xl bg-white px-3 py-2 text-sm leading-snug text-[#1F1F1A] outline-none"

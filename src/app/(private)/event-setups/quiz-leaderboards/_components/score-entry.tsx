@@ -12,16 +12,10 @@ import { getEventTeams, saveEventScores, type TeamRow, type LeaderboardEvent } f
 
 type Draft = TeamRow & { scoreInput: string };
 
-// DB stores `date` as YYYY-MM-DD — anchor to local midnight (see CLAUDE.md).
 const parseDate = (d: string) => new Date(d + "T00:00:00");
 
 const toDraft = (t: TeamRow): Draft => ({ ...t, scoreInput: t.score != null ? String(t.score) : "" });
 
-/**
- * Self-contained "Edit Scores" sheet: pick the quiz event inside the sheet, then
- * set each team's score and mark a winner. Teams are (re)loaded whenever the
- * selected event changes.
- */
 export default function ScoreEntry({
   events,
   initialEventId,
@@ -53,12 +47,10 @@ export default function ScoreEntry({
   };
 
   const setScore = (bookingId: string, value: string) => {
-    // Allow digits and a single decimal point only.
     if (value !== "" && !/^\d*\.?\d*$/.test(value)) return;
     setRows((prev) => prev.map((r) => (r.bookingId === bookingId ? { ...r, scoreInput: value } : r)));
   };
 
-  // Single winner — selecting one clears the others.
   const toggleWinner = (bookingId: string) => {
     setRows((prev) =>
       prev.map((r) => ({ ...r, isWinner: r.bookingId === bookingId ? !r.isWinner : false })),
@@ -79,7 +71,6 @@ export default function ScoreEntry({
       } else {
         toast.success("Scores saved");
         setOpen(false);
-        // Navigate the standings to the event just scored so the change is visible.
         router.push(`/event-setups/quiz-leaderboards?event=${encodeURIComponent(eventId)}`);
         router.refresh();
       }
@@ -103,7 +94,6 @@ export default function ScoreEntry({
           onOpenAutoFocus={(e) => e.preventDefault()}
           className="flex h-[88vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none"
         >
-          {/* Header + event picker */}
           <div className="shrink-0 space-y-3 border-b border-[#E6DFC8] bg-white/90 px-5 pt-5 pb-4 backdrop-blur-md sm:px-6">
             <div>
               <p className="font-black text-[10px] tracking-[0.18em] text-[#5F624F] uppercase">Edit Scores</p>
@@ -129,7 +119,6 @@ export default function ScoreEntry({
             </div>
           </div>
 
-          {/* Team rows */}
           <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-[#F7F4EA] px-5 py-4 sm:px-6">
             {isLoadingTeams ? (
               <div className="flex items-center justify-center gap-2 py-10 text-[#5F624F]">
@@ -154,7 +143,6 @@ export default function ScoreEntry({
                     </div>
                   </div>
 
-                  {/* Winner toggle */}
                   <button
                     type="button"
                     onClick={() => toggleWinner(r.bookingId)}
@@ -171,7 +159,6 @@ export default function ScoreEntry({
                     <Trophy className={cn("h-4 w-4", r.isWinner && "fill-current")} />
                   </button>
 
-                  {/* Score input */}
                   <div className="w-20 shrink-0">
                     <label htmlFor={`score-${r.bookingId}`} className="sr-only">
                       Score for {r.groupName}
@@ -190,7 +177,6 @@ export default function ScoreEntry({
             )}
           </div>
 
-          {/* Footer */}
           <div className="grid shrink-0 grid-cols-[auto_1fr] gap-3 border-t border-[#E6DFC8] bg-white/90 px-5 py-4 backdrop-blur-md sm:px-6">
             <Button
               variant="secondary"

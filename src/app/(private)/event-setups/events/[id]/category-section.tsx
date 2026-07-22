@@ -75,13 +75,10 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
   const isHigherOrLower = includeSpotify && !!isHigherLower;
-  // Spotify (non higher/lower) rounds answer by the track itself — no question text to edit.
   const hideQuestionText = !!includeSpotify && !isHigherLower;
   const count = questions.length;
   const isComplete = count >= question_count;
   const hasAny = count > 0;
-  // Past events are read-only for question generation — hide the Generate button
-  // once the event date has passed (dates are YYYY-MM-DD strings).
   const isPastEvent = !!eventDate && eventDate < new Date().toISOString().split("T")[0];
   const [open, setOpen] = useState(!!autoOpen);
   const sectionRef = useRef<HTMLElement>(null);
@@ -91,7 +88,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const [playlistCopied, setPlaylistCopied] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  // Resolve the category config id (prop, or fall back to a saved question's).
   const configId = categoryConfigId ?? questions.find((q) => q.quiz_category_configs_id != null)?.quiz_category_configs_id ?? null;
 
   const handleSyncPlaylist = async () => {
@@ -129,8 +125,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     }
   }, [autoOpen]);
 
-  // Detect existing Spotify connection (cookie set by the OAuth callback, or the
-  // return redirect flag) so the connect prompt only shows when needed.
   useEffect(() => {
     const hasCookie = document.cookie.includes('spotify_access_token');
     const urlParams = new URLSearchParams(window.location.search);
@@ -209,7 +203,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         } : q);
         const currentNo = prev.find(q => q.id === id)?.question_no;
         if (currentNo === editForm.questionNo) return updated;
-        // Re-sort: remove edited, splice at new position, renumber
         const others = updated.filter(q => q.id !== id);
         const editedQ = updated.find(q => q.id === id)!;
         const clamped = Math.max(1, Math.min(editForm.questionNo, prev.length));
@@ -241,7 +234,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       await deletePastQuestionAction(id);
       setQuestions((prev) => prev.filter((q) => q.id !== id));
       toast.success("Question deleted");
-      // Keep the Spotify playlist in sync after removing a song (best-effort).
       if (includeSpotify && configId != null) {
         syncCategoryPlaylistAction(eventId, configId).catch(() => {});
       }
@@ -263,7 +255,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     if (sorted.length > total) {
       toast.info("Sheet fits a 3×3 grid — printing the first 9 questions");
     }
-    // Always render exactly 9 slots; fill from the questions, leave the rest blank.
     const cells = Array.from({ length: total }, (_, i) => {
       const q = sorted[i];
       return { no: q?.question_no ?? i + 1, img: q?.image_url ?? "" };
@@ -315,7 +306,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
 
   return (
     <section ref={sectionRef} className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
-      {/* Category header */}
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -346,7 +336,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         </div>
       </button>
 
-      {/* Questions body */}
       {open && (
         <>
           {includeSpotify && !spotifyConnected && (
@@ -622,7 +611,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
             )}
           </div>
 
-          {/* Generate button — hidden for events whose date has passed */}
           {!isPastEvent && (
             <div className="border-t border-[#E6DFC8] bg-[#F7F4EA]/50 px-5 py-3.5">
               <Link

@@ -50,7 +50,6 @@ export default function TrendsClient({
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startMutate] = useTransition();
 
-  // Saved + ignored live in the Ideas view; the Ads/Events feeds show everything not ignored.
   const savedTrends = initialTrends.filter((t) => t.state === "saved");
   const ignoredTrends = initialTrends.filter((t) => t.state === "ignored");
   const adsTrends = initialTrends.filter((t) => t.kind === "advertising" && t.state !== "ignored");
@@ -59,7 +58,6 @@ export default function TrendsClient({
   const feed = trendTab === "ads" ? adsTrends : eventsTrends;
 
   const handleRefresh = () => {
-    // Only scan the tab you're on — ads → advertising, events → event ideas.
     const kind: "advertising" | "event_idea" = trendTab === "ads" ? "advertising" : "event_idea";
     startRefresh(async () => {
       const result = await refreshTrendsAction(kind);
@@ -84,7 +82,6 @@ export default function TrendsClient({
 
   return (
     <div className="max-w-3xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
-      {/* Title + Ideas toggle */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="font-black text-xl tracking-tight text-[#1F1F1A] uppercase">Trends</h1>
@@ -109,7 +106,6 @@ export default function TrendsClient({
       </div>
 
       {showSaved ? (
-        /* Ideas view: saved trends + a restore list for ignored ones */
         <div className="space-y-5">
           <div className="space-y-3">
             <p className="font-black text-[10px] tracking-widest text-[#5C4033] uppercase">My saved ideas</p>
@@ -152,7 +148,6 @@ export default function TrendsClient({
         </div>
       ) : (
         <>
-          {/* Tabs */}
           <div className="grid grid-cols-3 gap-2">
             {TABS.map((tab) => (
               <button
@@ -184,7 +179,6 @@ export default function TrendsClient({
             />
           ) : (
             <>
-              {/* Full-width scan button + caption (mirrors the app's Trends scan block) */}
               <div className="space-y-2">
                 <button
                   type="button"

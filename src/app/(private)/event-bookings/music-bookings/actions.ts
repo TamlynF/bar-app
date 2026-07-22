@@ -18,7 +18,6 @@ const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
 export type BandStatus = BandStatusType;
 
-/** Resolve the employee id of the signed-in admin, for created_by/updated_by stamps. */
 async function currentEmployeeId(): Promise<number | null> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -27,16 +26,10 @@ async function currentEmployeeId(): Promise<number | null> {
   return emp?.id ?? null;
 }
 
-/**
- * The title a linked event carries: the act's name, falling back to the booker's
- * when the request has no group name. Single source of truth so the title written
- * on insert, on a status change, and on a detail edit can't drift apart.
- */
 function eventTitleFor(record: { group_name: string | null; booker_name: string }): string {
   return record.group_name || record.booker_name;
 }
 
-/** Every write to a band-linked `events` row goes through here, so the audit stamp is never forgotten. */
 async function updateLinkedEvent(
   supabase: Awaited<ReturnType<typeof createClient>>,
   eventId: number,
@@ -71,10 +64,8 @@ export async function updateBandBookingFields(
     phone_no?: string | null;
     notes?: string | null;
     band_notes?: string | null;
-    /** text[] — public video urls, aligned index-for-index with the descriptions. */
     video_urls?: string[] | null;
     video_descriptions?: string[] | null;
-    /** jsonb — platform → url, blanks already dropped by the caller. */
     social_links?: Record<string, string> | null;
     spotify_url?: string | null;
     selected_date?: string | null;
@@ -101,18 +92,11 @@ export async function updateBandBookingFields(
 
   if (error || !record) throw new Error("Failed to save changes.");
 
-  // Renaming the act renames its event — the linked event's title is the act name,
-  // so leaving it behind would put a stale name on the schedule. Only the title
-  // flows through; date/time changes go via the reschedule flow, not a detail edit.
   const renamed = "group_name" in fields || "booker_name" in fields;
   if (record.event_id && renamed) {
     await updateLinkedEvent(supabase, record.event_id, { title: eventTitleFor(record) }, empId);
   }
 
-  // Sync the shared profile back to the master music act so it stays the single
-  // source of truth. Guarded on a full detail save (`group_name` present) so a
-  // slot-only status update can't blank the act. Legacy requests with no linked
-  // act get one created and stamped back onto the request.
   if ("group_name" in fields) {
     const shared = {
       group_name: fields.group_name ?? record.group_name ?? "",
@@ -156,15 +140,6 @@ export async function updateBandBookingFields(
   revalidatePath("/");
 }
 
-/**
- * Internal notes on a band application (`band_booking_notes`) — a list, each note
- * its own row with an author and timestamp. Separate from the applicant's own
- * booking note (`notes`) and from `admin_notes`, which carries the decline reason.
- *
- * These write straight through rather than going via the sheet's Save: a note is
- * a self-contained thing you add or amend, not a field of the request, so it
- * isn't part of the request's dirty/save cycle.
- */
 const NOTE_REVALIDATE = ["/event-bookings/music-bookings"] as const;
 
 function revalidateNotes() {
@@ -208,11 +183,6 @@ export async function deleteBandNote(noteId: string) {
   revalidateNotes();
 }
 
-/**
- * Flags/unflags a request as a favourite. Unlike `updateBandBookingFields` this
- * deliberately does NOT stamp updated_by/updated_at — a favourite is a bookmark,
- * not an edit to the record, so it stays out of the audit trail.
- */
 export async function toggleBandFavorite(id: string, value: boolean) {
   const supabase = await createClient();
   const { error } = await supabase
@@ -225,10 +195,6 @@ export async function toggleBandFavorite(id: string, value: boolean) {
   revalidatePath("/event-bookings/music-bookings");
 }
 
-/**
- * Returns the active events on `date` whose time window overlaps [startTime, endTime).
- * `excludeEventId` skips the booking's own linked event so it never clashes with itself.
- */
 export async function getClashingEvents(
   date: string,
   startTime: string | null,
@@ -249,11 +215,6 @@ export async function getClashingEvents(
   return findEventClashes({ start: startTime, end: endTime }, (data ?? []) as ClashEventInput[]);
 }
 
-/**
- * Used when an admin edits the date/time of an already-booked booking. The
- * booking drops back to "offered", its linked event is deactivated, and the band
- * is emailed to re-confirm the new slot.
- */
 export async function rescheduleConfirmedBooking(
   id: string,
   fields: {
@@ -275,7 +236,6 @@ export async function rescheduleConfirmedBooking(
 
   if (error || !record) throw new Error("Failed to update booking.");
 
-  // Back to offered → take the linked event off the schedule until re-booked.
   const plan = planBandEventSync({ status: "offered", selectedDate: record.selected_date, eventId: record.event_id });
   if (plan.action === "deactivate") {
     await updateLinkedEvent(supabase, plan.eventId, { is_active: false }, empId);
@@ -299,11 +259,6 @@ export async function rescheduleConfirmedBooking(
   return { emailError };
 }
 
-/**
- * `emailNote` is the message the band reads on this transition. Only a decline
- * keeps it on the record (as the decline reason) — offer/booked messages are
- * written per-send, so they must neither overwrite nor blank out admin_notes.
- */
 export async function updateBandStatus(
   id: string,
   status: BandStatus,
@@ -312,17 +267,12 @@ export async function updateBandStatus(
   const supabase = await createClient();
   const empId = await currentEmployeeId();
 
-  // Read the request as it stands *before* writing: booking into an occupied slot
-  // has to be refused, and refusing it after the status has already flipped would
-  // leave the record booked with no event behind it.
   const { data: before } = await supabase
     .from("band_booking_requests")
     .select("status, selected_date, selected_start_time, selected_end_time, event_id")
     .eq("id", id)
     .single();
 
-  // Only the move *into* booked places an event, so only it needs the check —
-  // re-saving an already-booked request must not fail against its own slot.
   if (status === "booked" && before && before.status !== "booked" && before.selected_date) {
     const clashes = await getClashingEvents(
       before.selected_date,
@@ -351,7 +301,6 @@ export async function updateBandStatus(
     throw new Error("Failed to update status.");
   }
 
-  // Decide how this status change affects the booking's linked `events` row.
   const plan = planBandEventSync({
     status,
     selectedDate: record.selected_date,
@@ -361,12 +310,8 @@ export async function updateBandStatus(
   if (plan.action === "insert" || plan.action === "update") {
     const bandSubType = record.type?.toLowerCase() || "other";
 
-    // Resolve the music event type + subtype, creating both if missing
     const { eventTypeId, eventSubtypeId } = await resolveEventSubtype(supabase, "music", bandSubType, "music_act");
 
-    // Inherit the booking config / card branding from the owning event type so the
-    // linked event matches the category. Band-linked events never charge, so
-    // payment_amount is forced to 0.
     const { data: et } = await supabase
       .from("event_types")
       .select("is_bookable, booking_config, booking_card_title, booking_card_tagline, booking_card_icon, booking_card_badge")
@@ -391,8 +336,6 @@ export async function updateBandStatus(
     };
 
     if (plan.action === "update") {
-      // Keep the existing linked event in sync with the (possibly changed) date/time,
-      // and put it back on the schedule (is_active) now the act is booked again.
       await updateLinkedEvent(supabase, plan.eventId, eventFields, empId);
     } else {
       const { data: newEvent } = await supabase
@@ -409,13 +352,9 @@ export async function updateBandStatus(
       }
     }
   } else if (plan.action === "deactivate") {
-    // Any non-booked status takes the linked event off the schedule.
     await updateLinkedEvent(supabase, plan.eventId, { is_active: false }, empId);
   }
 
-  // Emails per stage: offered → offer email; booked/declined → the existing
-  // outcome templates (mapped onto their old confirmed/cancelled names);
-  // new/reviewing → silent.
   let emailError: string | null = null;
   if (status === "offered") {
     emailError = await sendOfferEmail(

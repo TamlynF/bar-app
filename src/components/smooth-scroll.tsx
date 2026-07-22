@@ -4,16 +4,6 @@ import { useEffect } from "react";
 import Lenis from "lenis";
 import "lenis/dist/lenis.css";
 
-/**
- * Mounts Lenis smooth-scroll for the public site (an awwwards-style buttery
- * scroll feel). Renders nothing. Respects prefers-reduced-motion — when the
- * user asks for reduced motion we skip Lenis entirely and leave native scroll.
- *
- * Mounted in (public)/layout.tsx (covers /book, /menu, /gallery, /contact,
- * /whats-on) and directly in the home page (which lives outside the (public)
- * route group). Deliberately NOT mounted in the root layout so the admin
- * portal keeps native scrolling.
- */
 export function SmoothScroll() {
   useEffect(() => {
     if (
@@ -23,7 +13,6 @@ export function SmoothScroll() {
       return;
     }
 
-    // anchors: true lets in-page #hash links (the home sticky sub-nav) scroll smoothly.
     const lenis = new Lenis({ anchors: true });
     let rafId = 0;
 

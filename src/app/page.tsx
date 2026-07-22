@@ -62,8 +62,6 @@ export default async function HomePage() {
   const highlightedEvents = ((rawEvents ?? []) as EventRow[])
     .filter((e) => getEventType(e)?.behavior !== "private")
     .map((e) => serializeEvent(e));
-  // The soonest event headlines the hero ("on tonight" if it's today); the rest
-  // fill the schedule list below.
   const featured = highlightedEvents[0] ?? null;
   const isTonight = featured?.date === todayStr;
   const scheduleEvents = highlightedEvents.slice(1);
@@ -80,7 +78,6 @@ export default async function HomePage() {
   const companyInfo = (info ?? null) as CompanyInfo;
   const tagline = DEFAULT_TAGLINE;
 
-  // Live "open" pill: today's hours if we have them, else an evergreen line.
   const todayName = today
     .toLocaleDateString("en-GB", { weekday: "long" })
     .toLowerCase();
@@ -93,7 +90,6 @@ export default async function HomePage() {
       ? `Open today · til ${todayHours.close}`
       : "Live music & late nights";
 
-  // Section anchors for the sticky sub-nav (only those with content).
   const sections = [
     { id: "whats-on", label: "What's On", show: true },
     { id: "specials", label: "Specials", show: specials.length > 0 },
@@ -106,8 +102,6 @@ export default async function HomePage() {
       <SmoothScroll />
       <PublicNav currentPath="/" />
 
-      {/* Hero band — full-bleed so the ambient glow washes across the whole
-          top of the page (not trapped inside the centred hero column). */}
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
         <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
@@ -126,7 +120,6 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* Sticky section sub-nav (awwwards-style category bar) */}
       <nav
         aria-label="Page sections"
         className="sticky top-14 z-30 border-y border-hairline bg-canvas/85 backdrop-blur-xl sm:top-16"
@@ -151,7 +144,6 @@ export default async function HomePage() {
 
         <GalleryPeek items={peekItems} />
 
-        {/* Menu teaser */}
         <section className="scroll-mt-24">
           <SectionHeading eyebrow="Eat & drink" title="The Menu" action={{ href: "/menu", label: "Full menu" }} />
           <Link
@@ -173,10 +165,8 @@ export default async function HomePage() {
           </Link>
         </section>
 
-        {/* Find us / hours */}
         <FindUs info={companyInfo} />
 
-        {/* Footer */}
         <footer className="pt-4 text-center">
           <div className="flex items-center justify-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />

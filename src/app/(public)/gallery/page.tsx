@@ -45,10 +45,8 @@ export default async function GalleryPage() {
       <PublicNav currentPath="/gallery" />
 
       <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
-        {/* Page header — H1 is "GALLERY", not the bar's name */}
         <SectionHeading eyebrow="Photos & videos" title="Gallery" />
 
-        {/* Gallery */}
         {galleryItems.length === 0 ? (
           <div className="rounded-2xl border border-white/5 bg-white/3 py-20 text-center">
             <Camera className="mx-auto mb-3 h-8 w-8 text-stone-700" />
@@ -61,7 +59,6 @@ export default async function GalleryPage() {
           <GalleryGrid items={galleryItems} />
         )}
 
-        {/* Footer */}
         <div className="mt-8 flex flex-col items-center gap-4 pt-12">
           <div className="flex items-center gap-4 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />

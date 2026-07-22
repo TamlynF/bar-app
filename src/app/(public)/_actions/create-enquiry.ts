@@ -5,7 +5,6 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Match these to the constants in create-private-hire.ts
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "admin@bookingsdonfenticas.co.uk";
 

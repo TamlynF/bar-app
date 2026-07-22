@@ -19,8 +19,6 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         { count: pendingEnquiryCount },
     ] = await Promise.all([
         supabase.auth.getUser(),
-        // Upcoming bookable events with taxonomy metadata, so the sidebar's
-        // booking links are built from the same grouping logic as the hub.
         supabase
             .from("events")
             .select("id, title, date, booking_card_title, booking_card_icon, event_types!inner(name, title, color, booking_grouping, booking_card_title, booking_card_icon), event_subtypes(name, title, color, behavior, booking_card_title, booking_card_icon)")
@@ -29,19 +27,14 @@ export default async function PrivateLayout({ children }: { children: React.Reac
             .gte("date", today)
             .order("date", { ascending: true })
             .limit(200),
-        // Pending band applications — drives the amber Requests badge.
         supabase
             .from("band_booking_requests")
             .select("id", { count: "exact", head: true })
             .in("status", ["new", "reviewing"]),
-        // Pending private-hire enquiries.
-        // NOTE: check this table name against your schema — it should be the
-        // table your private-bookings pages query.
         supabase
             .from("private_hire_requests")
             .select("id", { count: "exact", head: true })
             .eq("status", "pending"),
-        // Pending general enquiries.
         supabase
             .from("enquiries")
             .select("id", { count: "exact", head: true })
@@ -62,8 +55,6 @@ export default async function PrivateLayout({ children }: { children: React.Reac
         }
     }
 
-    // Collapse events per each category's booking_grouping, keeping only the
-    // guest bookings — requests are fixed review queues rendered by the client.
     const allGroups = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[])
         .sort((a, b) => a.label.localeCompare(b.label));
     const { guest: guestGroups } = partitionBookingGroups(allGroups);

@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/sheet";
 import { Trophy, Medal, Target, Users, Calendar, Hash } from "lucide-react";
 
-// The raw joined data type as it comes from Supabase
 export type RawBookingScore = {
   id: number;
   score: number | null;
@@ -28,7 +27,6 @@ export type RawBookingScore = {
   } | { id: number; title: string | null; date: string; }[] | null;
 };
 
-// The aggregated stats for a single team
 export type TeamStats = {
   team_name: string;
   quizzes_attended: number;
@@ -41,15 +39,12 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
   const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
 
-  // Group the raw booking scores by team name to create the leaderboard
   const teamLeaderboard = useMemo(() => {
     const statsMap: Record<string, TeamStats> = {};
 
     initialScores.forEach((record) => {
-      // Handle potential array from Supabase join
       const booking = Array.isArray(record.bookings) ? record.bookings[0] : record.bookings;
 
-      // Fallback if group_name is missing
       const teamName = booking?.group_name || "Unknown Team";
 
       if (!statsMap[teamName]) {
@@ -70,7 +65,6 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
       statsMap[teamName].history.push(record);
     });
 
-    // Convert to an array and sort by total score descending, then by wins
     return Object.values(statsMap).sort((a, b) => {
       if (b.total_score !== a.total_score) {
         return b.total_score - a.total_score;
@@ -168,7 +162,6 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
         </div>
       </div>
 
-      {/* --- SHEET: TEAM HISTORY --- */}
       <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
         <SheetContent className="overflow-y-auto sm:max-w-md">
           <SheetHeader className="border-b pb-4">
@@ -201,7 +194,6 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
               
               return (
               <div key={record.id} className="relative flex flex-col gap-2 overflow-hidden rounded-lg border bg-card p-4">
-                {/* Visual indicator for a win */}
                 {record.is_winner && (
                   <div className="absolute top-0 right-0 flex h-16 w-16 items-start justify-end rounded-bl-full bg-green-50 p-2">
                     <Trophy className="h-4 w-4 text-green-600" />

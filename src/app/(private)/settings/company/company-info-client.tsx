@@ -197,7 +197,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
 
   return (
     <div className="animate-in space-y-6 px-4 py-4 duration-500 fade-in sm:px-8 sm:py-0">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="font-black text-2xl tracking-tighter text-[#1F1F1A] uppercase">Company Info</h1>
@@ -221,7 +220,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
 
       {isEditing ? (
         <div className="animate-in space-y-8 duration-300 fade-in slide-in-from-bottom-2">
-          {/* Logo */}
           <div>
             <h3 className={sectionLabel}>Logo</h3>
             <div className="rounded-3xl border-2 border-[#E6DFC8] bg-white p-6 shadow-sm">
@@ -243,7 +241,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
             </div>
           </div>
 
-          {/* Business Details */}
           <div>
             <h3 className={sectionLabel}>Business Details</h3>
             <div className="space-y-5 rounded-3xl border-2 border-[#E6DFC8] bg-white p-6 shadow-sm">
@@ -272,7 +269,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
             </div>
           </div>
 
-          {/* Opening Hours */}
           <div>
             <h3 className={sectionLabel}>Opening Hours</h3>
             <div className="space-y-3 rounded-3xl border-2 border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-6">
@@ -302,7 +298,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
             </div>
           </div>
 
-          {/* Social Media */}
           <div>
             <h3 className={sectionLabel}>Social Media</h3>
             <div className="space-y-5 rounded-3xl border-2 border-[#E6DFC8] bg-white p-6 shadow-sm">
@@ -316,7 +311,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
             </div>
           </div>
 
-          {/* Capacity */}
           <div>
             <h3 className={sectionLabel}>Capacity</h3>
             <div className="rounded-3xl border-2 border-[#E6DFC8] bg-white p-6 shadow-sm">
@@ -329,7 +323,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
         </div>
       ) : (
         <div className="animate-in space-y-8 duration-300 fade-in">
-          {/* Logo */}
           {data.logo_url && (
             <div>
               <h3 className={sectionLabel}>Logo</h3>
@@ -340,7 +333,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
             </div>
           )}
 
-          {/* Business Details */}
           <div>
             <h3 className={sectionLabel}>Business Details</h3>
             <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white shadow-sm">
@@ -352,7 +344,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
             </div>
           </div>
 
-          {/* Opening Hours */}
           {Object.keys(openingHours).length > 0 && (
             <div>
               <h3 className={sectionLabel}>Opening Hours</h3>
@@ -376,7 +367,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
             </div>
           )}
 
-          {/* Social Media */}
           <div>
             <h3 className={sectionLabel}>Social Media</h3>
             <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white shadow-sm">
@@ -397,7 +387,6 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
             </div>
           </div>
 
-          {/* Capacity */}
           <div>
             <h3 className={sectionLabel}>Capacity</h3>
             <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white shadow-sm">

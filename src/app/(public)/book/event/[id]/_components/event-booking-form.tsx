@@ -142,7 +142,6 @@ export default function EventBookingForm({ event, config }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-      {/* Hidden fields */}
       <input type="hidden" name="event_id" value={event.id} />
       <input type="hidden" name="full_name" value={formData.fullName} />
       <input type="hidden" name="group_name" value={f.group_name.visible ? (formData.groupName.trim() || formData.fullName) : formData.fullName} />
@@ -151,7 +150,6 @@ export default function EventBookingForm({ event, config }: Props) {
       <input type="hidden" name="phone_no" value={formData.phoneNo} />
       <input type="hidden" name="special_requests" value={formData.specialRequests} />
 
-      {/* Name */}
       <div className="space-y-1">
         <label className={labelClasses}>
           {f.name.label} <span className="text-red-500">*</span>
@@ -172,7 +170,6 @@ export default function EventBookingForm({ event, config }: Props) {
         </div>
       </div>
 
-      {/* Email */}
       <div className="space-y-1">
         <label className={labelClasses}>
           {f.email.label} <span className="text-red-500">*</span>
@@ -193,7 +190,6 @@ export default function EventBookingForm({ event, config }: Props) {
         </div>
       </div>
 
-      {/* Phone (optional per config) */}
       {f.phone.visible && (
         <div className="space-y-1">
           <label className={labelClasses}>
@@ -222,7 +218,6 @@ export default function EventBookingForm({ event, config }: Props) {
         </div>
       )}
 
-      {/* Group Name (optional per config) */}
       {f.group_name.visible && (
         <div className="space-y-1">
           <label className={labelClasses}>
@@ -245,7 +240,6 @@ export default function EventBookingForm({ event, config }: Props) {
         </div>
       )}
 
-      {/* Group Size */}
       {f.group_size.visible && (
         <div className="space-y-1">
           <label className={labelClasses}>
@@ -272,7 +266,6 @@ export default function EventBookingForm({ event, config }: Props) {
         </div>
       )}
 
-      {/* Price Preview */}
       {hasPricing && (
         <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-black/40 px-5 py-4">
           <div>
@@ -285,7 +278,6 @@ export default function EventBookingForm({ event, config }: Props) {
         </div>
       )}
 
-      {/* Special Requests */}
       {f.special_requests.visible && (
         <div className="space-y-1">
           <label className={labelClasses}>

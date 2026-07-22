@@ -14,7 +14,6 @@ const GENERAL_PATH = "/event-bookings/general/[type]/[subtype]";
 
 export async function getEventsForType(type: string, subType: string) {
   const supabase = await createClient();
-  // The ALL_SUBTYPES sentinel (per_type grouping) lists every sub-type's events.
   const allSubtypes = subType === ALL_SUBTYPES;
   let query = supabase
     .from("events")
@@ -30,11 +29,6 @@ export async function getEventsForType(type: string, subType: string) {
   }));
 }
 
-/**
- * The id of the next upcoming *active* event for this type/subtype (date today
- * or later, is_active = true, soonest first). Used to seed the page's event
- * filter when it's opened with no search params. Returns null if none upcoming.
- */
 export async function getNextActiveEventIdForType(
   type: string,
   subType: string,
@@ -104,9 +98,6 @@ export async function getBookingsForType(
     return [];
   }
 
-  // Always order by event date then start_time, both descending. The DB order
-  // above keeps group_name ascending as a stable secondary within an event
-  // (Array.sort is stable, so equal date+time keys preserve that order).
   const rows = data ?? [];
   const eventOf = (b: (typeof rows)[number]) => {
     const ev = (b as { events?: unknown }).events;
@@ -122,29 +113,18 @@ export async function getBookingsForType(
   return rows;
 }
 
-/**
- * Tables available for a specific event that can seat the group — excludes tables
- * already taken by other (non-cancelled) bookings on that event, but keeps the
- * booking's current table. Mirrors the quiz-bookings helper.
- */
 export async function getAvailableTablesForEventGeneral(
   eventId: string,
   groupSize: number,
   currentTableId?: string,
 ) {
   const supabase = await createClient();
-  // Delegates to the shared module (single source of truth). The booking's own
-  // current table is re-included via excludeTableId so it stays selectable.
   return getFreeTablesForEvent(supabase, Number(eventId), {
     groupSize,
     excludeTableId: currentTableId ? Number(currentTableId) : undefined,
   });
 }
 
-/**
- * Updates a booking's details and (re)assigns its table. Mirrors the quiz-bookings
- * `updateBookingDetails`, including add_seat calculation and updated_by tracking.
- */
 export async function updateGeneralBookingDetails(
   id: string,
   updates: {
@@ -158,7 +138,6 @@ export async function updateGeneralBookingDetails(
 ) {
   const supabase = await createClient();
 
-  // Resolve which employee is making this change
   let updatedById: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
   if (user?.email) {
@@ -170,7 +149,6 @@ export async function updateGeneralBookingDetails(
     if (emp) updatedById = emp.id;
   }
 
-  // Capture the pre-edit size + status + event (needed for downsize relocation).
   const { data: prev } = await supabase
     .from("bookings")
     .select("group_size, status, event_id")
@@ -197,8 +175,6 @@ export async function updateGeneralBookingDetails(
     throw new Error("Failed to update booking");
   }
 
-  // Reconcile the table assignment through the shared module
-  // (3c clear / 3d explicit pick / confirm-needs-a-table / downsize relocate).
   const newSize = updates.group_size ?? oldSize;
   const finalStatus = (updates.status ?? (prev?.status as string) ?? "").toLowerCase();
   const result = await reconcileSeatedBookingTable(supabase, {
@@ -267,11 +243,6 @@ export async function getEventDetailsForType(eventId: string) {
   return data;
 }
 
-/**
- * For a per_type category, whether it's a review-pipeline surface: "music_act" and
- * "private" categories treat the event itself as the booking, so the bookings hub
- * shows their request tables instead of per-event bookings. Returns null otherwise.
- */
 export async function getTypeRequestKind(type: string): Promise<"music_act" | "private" | null> {
   const supabase = await createClient();
   const { data } = await supabase
@@ -286,7 +257,6 @@ export async function getTypeRequestKind(type: string): Promise<"music_act" | "p
   return null;
 }
 
-/** Band applications (music_act request pipeline) — mirrors the music-bookings page. */
 export async function getBandRequestsForType() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -299,7 +269,6 @@ export async function getBandRequestsForType() {
   return data ?? [];
 }
 
-/** Private hire enquiries (private request pipeline) — mirrors the private-bookings page. */
 export async function getPrivateHireRequestsForType() {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -310,7 +279,6 @@ export async function getPrivateHireRequestsForType() {
   return data ?? [];
 }
 
-/** All bookable tables (capacity only) — feeds the seating "Table Status" stats. */
 export async function getAllTables() {
   const supabase = await createClient();
   const { data } = await supabase
@@ -320,10 +288,6 @@ export async function getAllTables() {
   return data ?? [];
 }
 
-/**
- * Quiz progress for an event: how many questions are saved vs the configured
- * total. Mirrors the quiz-bookings page's getQuizStatusStats.
- */
 export async function getQuizStatsForEvent(eventId: number) {
   const supabase = await createClient();
   try {

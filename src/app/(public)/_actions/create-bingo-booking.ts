@@ -39,8 +39,6 @@ export async function createBingoBooking(formData: FormData) {
   }
 
   try {
-    // Resolve the chosen event by its unique id (the form sends event_id). Two
-    // events can share a date, so we target the exact one rather than look up by date.
     const { data: eventRow, error: eventLookupError } = await supabase
       .from("events")
       .select("id, date, payment_amount, seating_required, is_bookable")
@@ -54,7 +52,6 @@ export async function createBingoBooking(formData: FormData) {
     const eventDate = eventRow.date as string;
     const paymentAmount = Math.round((eventRow.payment_amount ?? 0) * 100);
 
-    // 3. Table allocation — route through the shared module (seated events only).
     let chosenTable: FreeTable | null = null;
     let status: "confirmed" | "waitlisted" = "confirmed";
     if (seatingApplies(eventRow)) {
@@ -63,7 +60,6 @@ export async function createBingoBooking(formData: FormData) {
       chosenTable = allocation.status === "confirmed" ? allocation.table : null;
     }
 
-    // 4. Upsert contact
     let contactId: number;
     const { data: existingContact } = await supabase
       .from("contacts")
@@ -91,7 +87,6 @@ export async function createBingoBooking(formData: FormData) {
     const totalPence = paymentAmount * groupSize;
     const isFree = paymentAmount === 0;
 
-    // 5. Create booking
     const { data: newBooking, error: bookingError } = await supabase
       .from("bookings")
       .insert([{
@@ -113,7 +108,6 @@ export async function createBingoBooking(formData: FormData) {
       throw new Error(`Failed to create booking: ${bookingError?.message || "unknown error"}`);
     }
 
-    // 6. Table mapping — commit with the unique-index concurrency backstop.
     if (chosenTable) {
       const mapped = await commitMapping(supabase, {
         bookingId: newBooking.id,
@@ -122,16 +116,13 @@ export async function createBingoBooking(formData: FormData) {
         groupSize,
       });
       if (!mapped.ok) {
-        // Lost the last table to a concurrent booking — waitlist this one.
         status = "waitlisted";
         if (isFree) {
           await supabase.from("bookings").update({ status: "waitlisted" }).eq("id", newBooking.id);
         }
-        // Paid path: the square_order_id update below persists the new status.
       }
     }
 
-    // 6b. Free booking — no payment required, confirm immediately
     if (isFree) {
       await sendBookingEmail(
         newBooking.id, email, fullName, eventDate, groupSize, status, 0, 0
@@ -142,11 +133,6 @@ export async function createBingoBooking(formData: FormData) {
       return { success: true };
     }
 
-    // 7. Create Square Payment Link
-    // Attach the real booker to the order so the Square dashboard shows them,
-    // not Square's sandbox default buyer ("Jane Doe"). We split the name for the
-    // buyer address and use a PICKUP fulfillment recipient (tickets are collected
-    // at the venue) so the order's Recipient field is authoritative.
     const [firstName, ...restName] = fullName.trim().split(/\s+/);
     const lastName = restName.join(" ") || undefined;
     const buyerPhone = phoneNo ? `${countryCode ?? ""}${phoneNo}`.trim() : undefined;
@@ -155,9 +141,6 @@ export async function createBingoBooking(formData: FormData) {
       idempotencyKey: randomUUID(),
       order: {
         locationId: process.env.SQUARE_LOCATION_ID!,
-        // Link the order back to our booking without polluting the customer-facing
-        // line-item name. referenceId shows as "Reference ID" in the dashboard;
-        // metadata keeps the ids machine-readable for our own logic.
         referenceId: String(newBooking.id),
         metadata: { booking_id: String(newBooking.id), event_id: String(eventId) },
         lineItems: [{
@@ -197,13 +180,11 @@ export async function createBingoBooking(formData: FormData) {
     const orderId = paymentLink?.orderId;
 
     if (!checkoutUrl) {
-      // Clean up booking if Square fails
       await supabase.from("booking_table_mappings").delete().eq("booking_id", newBooking.id);
       await supabase.from("bookings").delete().eq("id", newBooking.id);
       throw new Error("Failed to create payment link. Please try again.");
     }
 
-    // 8. Store Square order ID on booking
     await supabase
       .from("bookings")
       .update({ square_order_id: orderId, status })

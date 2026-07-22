@@ -91,7 +91,6 @@ export default function QuizCategoriesClient({
   return (
     <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
 
-      {/* Category list */}
       <section className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
         <div className="flex items-center gap-2 bg-[#F7F4EA] px-4 py-3 sm:px-5">
           <p className="flex-1 truncate font-black text-[11px] tracking-wide text-[#5C4033] uppercase">
@@ -126,7 +125,6 @@ export default function QuizCategoriesClient({
                   className="flex cursor-pointer items-center gap-2 px-3 py-3 transition-colors hover:bg-[#F7F4EA]/50 active:scale-[0.99] sm:gap-3 sm:px-4"
                 >
                   <div className="min-w-0 flex-1 sm:hidden">
-                    {/* Mobile row 1: name + active */}
                     <div className="flex items-center gap-2">
                       <p className={cn("min-w-0 flex-1 truncate font-black text-xs leading-snug", inactive ? muted : "text-[#1F1F1A]")}>
                         {config.category_name}
@@ -138,7 +136,6 @@ export default function QuizCategoriesClient({
                         {config.is_active ? "Active" : "Inactive"}
                       </span>
                     </div>
-                    {/* Mobile row 2: order | questions | points | spotify */}
                     <div className="mt-0.5 flex items-center gap-1">
                       <span className={cn("text-[10px] font-medium", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
                         Round {config.order_no}
@@ -164,7 +161,6 @@ export default function QuizCategoriesClient({
                     </div>
                   </div>
 
-                  {/* Desktop */}
                   <div className="hidden min-w-0 flex-1 sm:block">
                     <p className={cn("truncate font-black text-sm leading-snug", inactive ? muted : "text-[#1F1F1A]")}>
                       {config.category_name}
@@ -209,7 +205,6 @@ export default function QuizCategoriesClient({
         )}
       </section>
 
-      {/* Bottom Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
         <SheetContent
           side="bottom"
@@ -221,7 +216,6 @@ export default function QuizCategoriesClient({
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
-          {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -250,10 +244,8 @@ export default function QuizCategoriesClient({
             </div>
           </div>
 
-          {/* Scrollable body */}
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
 
-            {/* View mode */}
             {!showForm && selected && (
               <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
@@ -270,7 +262,6 @@ export default function QuizCategoriesClient({
               </div>
             )}
 
-            {/* Edit / Add form */}
             {showForm && (
               <form id="category-form" action={handleSubmit} className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 {formDefault?.id && <input type="hidden" name="id" value={formDefault.id} />}
@@ -387,7 +378,6 @@ export default function QuizCategoriesClient({
             <div className="h-4" />
           </div>
 
-          {/* Footer */}
           <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">

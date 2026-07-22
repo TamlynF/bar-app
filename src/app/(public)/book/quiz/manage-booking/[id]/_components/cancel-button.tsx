@@ -73,23 +73,19 @@ export default function CancelButton({
   const [teamSize, setTeamSize] = useState(booking.group_size || 4);
   const [specialRequests, setSpecialRequests] = useState(booking.special_requests || ""); // State for special requests
 
-  // Seating validation state
   const [seatingWarning, setSeatingWarning] = useState<string | null>(null);
   const [isCheckingSeating, setIsCheckingSeating] = useState(false);
 
-  // Real-time validation state
   const [isCheckingName, setIsCheckingName] = useState(false);
   const [nameError, setNameError] = useState("");
 
   const eventDateStr = booking.events?.event_date;
   const eventDate = eventDateStr ? new Date(eventDateStr) : null;
 
-  // Logic to handle group size change validation
   useEffect(() => {
     if (!isEditing) return;
 
     const validateSeating = async () => {
-      // Rule: Only check for confirmed bookings when size changes
       if (booking.status?.toLowerCase() !== 'confirmed' || teamSize === booking.group_size) {
         setSeatingWarning(null);
         return;
@@ -97,11 +93,9 @@ export default function CancelButton({
 
       const currentTable = booking.booking_table_mappings?.[0]?.tables;
 
-      // Check if new size exceeds current table capacity
       if (currentTable && teamSize > (currentTable.max_capacity || 0)) {
         setIsCheckingSeating(true);
         try {
-          // Check if there are other tables that can fit the new size
           const available = await getAvailableTablesForEvent(
             String(booking.event_id),
             teamSize,
@@ -127,7 +121,6 @@ export default function CancelButton({
     return () => clearTimeout(timer);
   }, [teamSize, isEditing, booking]);
 
-  // Real-time duplicate check while editing
   useEffect(() => {
     if (!isEditing || teamName.trim().toLowerCase() === (booking.group_name || "").toLowerCase()) {
       setNameError("");
@@ -197,9 +190,7 @@ export default function CancelButton({
     if (response.success) {
       setSuccessMsg("Changes saved successfully.");
       setIsEditing(false);
-      // Success message will be cleared if they open edit mode again
     } else if (blocked) {
-      // No seating available for the larger group — nothing was changed.
       setBlockedMsg(
         response.error || "There's no available space for that group size. Please contact the bar."
       );
@@ -212,7 +203,6 @@ export default function CancelButton({
 
   return (
     <div className="w-full">
-      {/* 1. STATUS HEADER */}
       <div className="mb-8 animate-in text-center duration-500 fade-in">
         {isEditing ? (
            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#fdcc4b]/20 bg-[#fdcc4b]/10 px-3 py-1">
@@ -238,7 +228,6 @@ export default function CancelButton({
         )}
       </div>
 
-      {/* 2. ERROR & FEEDBACK MESSAGES */}
       {(error || nameError) && (
         <div className="mb-6 flex animate-in items-center gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4 slide-in-from-top-2">
           <AlertCircle className="h-5 w-5 shrink-0 text-red-400" />
@@ -275,9 +264,7 @@ export default function CancelButton({
         </div>
       )}
 
-      {/* 3. MAIN CONTENT: VIEW OR EDIT */}
       {isEditing ? (
-        /* EDIT MODE FORM */
         <div className="animate-in space-y-6 duration-300 fade-in slide-in-from-bottom-4">
           <div className="space-y-1.5">
             <label htmlFor="teamName" className={labelClasses}>Team Name</label>
@@ -324,7 +311,6 @@ export default function CancelButton({
             </div>
           </div>
 
-          {/* Added Special Requests Input in Edit Mode */}
           <div className="space-y-1.5">
             <label htmlFor="specialRequests" className={labelClasses}>Additional Requests</label>
             <div className="group relative">
@@ -369,7 +355,6 @@ export default function CancelButton({
           </div>
         </div>
       ) : (
-        /* VIEW MODE DETAILS CARD */
         <div className="animate-in space-y-8 duration-500 fade-in">
           <div className="group relative space-y-6 overflow-hidden rounded-3xl border border-white/10 bg-white/5 p-6 shadow-inner sm:p-8">
             <div className="pointer-events-none absolute top-0 right-0 h-32 w-32 bg-[#fdcc4b]/5 blur-3xl transition-colors group-hover:bg-[#fdcc4b]/10" />
@@ -379,7 +364,6 @@ export default function CancelButton({
             <DetailRow icon={<Users />} label="Team Size" value={`${booking.group_size} People`} />
             <DetailRow icon={<User />} label="Lead Booker" value={booking.contacts?.full_name || "N/A"} />
 
-            {/* Displaying Special Requests in View Mode */}
             {booking.special_requests && (
               <DetailRow
                 icon={<MessageSquareQuote />}
@@ -423,9 +407,6 @@ export default function CancelButton({
   );
 }
 
-/**
- * Enhanced row for displaying booking data with high contrast and icons
- */
 function DetailRow({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) {
   return (
     <div className="flex items-start">

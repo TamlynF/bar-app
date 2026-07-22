@@ -37,7 +37,6 @@ export async function GET(request: NextRequest) {
 
   const tokens = await tokenRes.json()
 
-  // Redirect back preserving the category selection
   const separator = state.includes('?') ? '&' : '?'
   const response = NextResponse.redirect(`${siteUrl}${state}${separator}spotify_connected=true`)
 

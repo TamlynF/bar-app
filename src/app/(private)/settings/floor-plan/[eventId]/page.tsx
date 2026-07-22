@@ -40,13 +40,9 @@ export default async function FloorPlanPage({
 
   const supabase = await createClient();
 
-  // `chair_layout` is a newer column; if the DB hasn't been migrated yet we
-  // retry without it rather than failing the page.
   const TABLE_COLS = "id, name, shape, diameter, width, length, max_capacity, chair_layout";
   const TABLE_COLS_FALLBACK = "id, name, shape, diameter, width, length, max_capacity";
 
-  // Mappings for this event: confirmed-booking tables AND event-level tables
-  // (booking_id is null — added directly on the calculator).
   const loadMappings = (cols: string) =>
     supabase
       .from("booking_table_mappings")
@@ -93,7 +89,6 @@ export default async function FloorPlanPage({
 
   const tables: CalcTable[] = rawMappings
     .filter((m) => {
-      // Keep event-level tables (no booking) and confirmed-booking tables only.
       if (m.booking_id == null) return true;
       const bk = Array.isArray(m.bookings) ? m.bookings[0] : m.bookings;
       return bk?.status === "confirmed";

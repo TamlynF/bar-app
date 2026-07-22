@@ -1,4 +1,3 @@
-// dashboard/components/venue-sales-section.tsx
 "use client";
 
 import { Area, AreaChart, Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
@@ -31,7 +30,6 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
 
   return (
     <div className="space-y-3">
-      {/* Headline stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatCard
           label="Takings"
@@ -61,7 +59,6 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        {/* Daily takings trend */}
         <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
           <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
             Takings · last 30 days
@@ -99,7 +96,6 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
           </div>
         </div>
 
-        {/* Category split */}
         <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
           <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
             Sales by category · this month
@@ -140,7 +136,6 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
         </div>
       </div>
 
-      {/* Takings per event night */}
       {byEvent.length > 0 && (
         <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
           <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">

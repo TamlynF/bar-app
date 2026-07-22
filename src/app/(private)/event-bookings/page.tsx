@@ -8,8 +8,6 @@ export default async function EventsHubPage() {
   const supabase = await createClient();
   const today = new Date().toISOString().split("T")[0];
 
-  // Fetch upcoming bookable events with their taxonomy metadata for grouping.
-  // event_subtypes is a left join so events without a sub-type still appear.
   const { data: bookableEvents } = await supabase
     .from("events")
     .select("id, title, date, booking_card_title, booking_card_icon, event_types!inner(name, title, color, booking_grouping, booking_card_title, booking_card_icon), event_subtypes(name, title, color, behavior, booking_card_title, booking_card_icon)")
@@ -19,8 +17,6 @@ export default async function EventsHubPage() {
     .order("date", { ascending: true })
     .limit(200);
 
-  // Collapse events per each category's booking_grouping (per_event / per_subtype / per_type),
-  // then keep only guest bookings — requests & enquiries are surfaced elsewhere.
   const allGroups = buildAdminBookingGroups((bookableEvents ?? []) as AdminBookingGroupEvent[])
     .sort((a, b) => a.label.localeCompare(b.label));
   const { guest: guestGroups } = partitionBookingGroups(allGroups);

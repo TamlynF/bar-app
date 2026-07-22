@@ -5,11 +5,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-/**
- * Convert an arbitrary label into a camelCase identifier: split on any
- * non-alphanumeric run, lowercase the first word, capitalize the rest.
- * e.g. "Singer / Solo Artist" → "singerSoloArtist", "DJ" → "dj".
- */
 export function toCamelCase(input: string): string {
   const words = input
     .trim()

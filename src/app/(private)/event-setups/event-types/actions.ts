@@ -5,7 +5,6 @@ import { revalidatePath } from "next/cache";
 import { isEventBehavior } from "@/lib/event-behavior";
 import { isBookingGrouping } from "@/lib/booking-grouping";
 
-/** Pull the four booking-card branding fields off a FormData (empty → null). */
 function readCardFields(formData: FormData) {
   return {
     booking_card_title: formData.get("booking_card_title")?.toString() || null,
@@ -23,8 +22,6 @@ async function currentEmployeeId() {
   return emp?.id ?? null;
 }
 
-// --- EVENT TYPE (category) ACTIONS ---
-
 export async function saveTypeAction(formData: FormData) {
   const supabase = await createClient();
 
@@ -36,12 +33,10 @@ export async function saveTypeAction(formData: FormData) {
   const groupingRaw = formData.get("booking_grouping")?.toString();
   const booking_grouping = isBookingGrouping(groupingRaw) ? groupingRaw : "per_event";
   const cardFields = readCardFields(formData);
-  // Only per_type categories own a shared booking page/config; force the flag off otherwise.
   const is_bookable = booking_grouping === "per_type" && formData.get("is_bookable") === "on";
   const booking_config = JSON.parse(formData.get("booking_config")?.toString() || "{}");
 
   if (!name) return { error: "Category name is required." };
-  // per_type categories supply the booking-navigation label, so title is mandatory there.
   if (booking_grouping === "per_type" && !title) return { error: "Title is required for a per-category booking page." };
 
   const empId = await currentEmployeeId();
@@ -79,7 +74,6 @@ export async function deleteTypeAction(id: number) {
       return { error: `Action Denied: This category is used by ${count} scheduled event(s).` };
     }
 
-    // Remove badges of all child subtypes first (no cascade on that FK).
     const { data: subs } = await supabase.from("event_subtypes").select("id").eq("event_types_id", id);
     const subIds = (subs ?? []).map((s) => s.id);
     if (subIds.length > 0) {
@@ -87,7 +81,6 @@ export async function deleteTypeAction(id: number) {
       if (badgeError) throw badgeError;
     }
 
-    // Deleting the type cascades its subtypes.
     const { error } = await supabase.from("event_types").delete().eq("id", id);
     if (error) throw error;
 
@@ -98,8 +91,6 @@ export async function deleteTypeAction(id: number) {
     return { error: error instanceof Error ? error.message : "Failed to delete category." };
   }
 }
-
-// --- EVENT SUBTYPE ACTIONS ---
 
 export async function saveSubtypeAction(formData: FormData) {
   const supabase = await createClient();
@@ -125,7 +116,6 @@ export async function saveSubtypeAction(formData: FormData) {
   if (!isEventBehavior(behavior)) {
     return { error: "A valid behaviour is required." };
   }
-  // per_subtype sub-types supply the booking-navigation label, so title is mandatory there.
   const { data: parentType } = await supabase.from("event_types").select("booking_grouping").eq("id", event_types_id).maybeSingle();
   if (parentType?.booking_grouping === "per_subtype" && !title) {
     return { error: "Title is required for a per-sub-category booking page." };
@@ -168,10 +158,6 @@ export async function saveSubtypeAction(formData: FormData) {
       subtypeId = data.id;
     }
 
-    // Inline badge reconciliation: when the editor sends a `badges` payload, the
-    // sub-type owns its badge set — insert new ones, update existing by id, and
-    // delete any the editor removed. Absent payload leaves badges untouched
-    // (the list's quick badge editor still uses the standalone badge actions).
     const badgesRaw = formData.get("badges")?.toString();
     if (badgesRaw != null && subtypeId) {
       const incoming = (JSON.parse(badgesRaw) as { id?: number; title: string; description?: string | null; icon?: string | null }[])
@@ -231,8 +217,6 @@ export async function deleteSubtypeAction(id: number) {
     return { error: error instanceof Error ? error.message : "Failed to delete sub-type." };
   }
 }
-
-// --- BADGE (event_subtype_badges) ACTIONS ---
 
 export async function saveBadgeAction(formData: FormData) {
   const supabase = await createClient();

@@ -162,7 +162,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
   return (
     <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
 
-      {/* Employee List */}
       {initialEmployees.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
           <Users className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
@@ -223,9 +222,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     onClick={() => openView(employee)}
                     className="flex cursor-pointer items-center gap-2 px-3 py-3 transition-colors hover:bg-[#F7F4EA]/50 active:scale-[0.99] sm:gap-3 sm:px-4"
                   >
-                    {/* Mobile layout */}
                     <div className="min-w-0 flex-1 sm:hidden">
-                      {/* Row 1: name + status */}
                       <div className="flex items-center gap-2">
                         <p className={cn("min-w-0 flex-1 truncate font-black text-xs leading-snug", inactive ? muted : "text-[#1F1F1A]")}>
                           {employee.full_name}
@@ -237,7 +234,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                           {isActive ? "Active" : isLeave ? "Leave" : "Inactive"}
                         </span>
                       </div>
-                      {/* Row 2: role | contract | initials */}
                       <div className="mt-0.5 flex items-center gap-1">
                         <p className={cn("min-w-0 flex-1 truncate text-[10px] font-medium", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
                           {toTitleCase(employee.role) || "No role"}
@@ -253,7 +249,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                       </div>
                     </div>
 
-                    {/* Desktop layout */}
                     <div className="hidden min-w-0 flex-1 sm:block">
                       <p className={cn("truncate font-black text-sm leading-snug", inactive ? muted : "text-[#1F1F1A]")}>
                         {employee.full_name}
@@ -291,7 +286,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
         </div>
       )}
 
-      {/* Bottom Sheet */}
       <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
         <SheetContent
           side="bottom"
@@ -303,7 +297,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#E6DFC8]"
         >
-          {/* Sheet header */}
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
@@ -334,15 +327,12 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
             </div>
           </div>
 
-          {/* Scrollable body */}
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
 
-            {/* View mode */}
             {!showForm && selected && (() => {
               const phone = [selected.country_code, selected.phone_no].filter(Boolean).join(" ");
               return (
                 <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                  {/* Employee details */}
                   <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                     <DetailCell label="Full Name" value={selected.full_name} />
                     <DetailCell label="Role" value={toTitleCase(selected.role) || "—"} />
@@ -354,7 +344,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
                   </div>
 
-                  {/* Account Access */}
                   <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                     <div className="flex items-center gap-2 border-b border-[#E6DFC8] px-4 py-2 sm:px-5 sm:py-3">
                       <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-[#5C4033] uppercase">
@@ -392,13 +381,11 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
               );
             })()}
 
-            {/* Edit / Add form */}
             {showForm && (
               <form id="employee-form" action={handleSubmit} className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
 
                 <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
-                  {/* Full Name */}
                   <FormRow label="Full Name" required>
                     <input
                       name="full_name"
@@ -409,7 +396,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     />
                   </FormRow>
 
-                  {/* Status */}
                   <FormRow label="Status">
                     <select
                       title="Status"
@@ -421,7 +407,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     </select>
                   </FormRow>
 
-                  {/* Role */}
                   <FormRow label="Role">
                     <input
                       name="role"
@@ -431,7 +416,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     />
                   </FormRow>
 
-                  {/* Contract Type */}
                   <FormRow label="Contract">
                     <select
                       title="Employment Type"
@@ -443,7 +427,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     </select>
                   </FormRow>
 
-                  {/* Start Date */}
                   <FormRow label="Started" required>
                     <input
                       title="Start Date"
@@ -459,7 +442,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     />
                   </FormRow>
 
-                  {/* End Date */}
                   <FormRow label="Left">
                     <input
                       title="End Date"
@@ -474,7 +456,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     />
                   </FormRow>
 
-                  {/* Email */}
                   <FormRow label="Email" required>
                     <input
                       name="email"
@@ -486,7 +467,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     />
                   </FormRow>
 
-                  {/* Phone */}
                   <FormRow label="Phone">
                     <div className="flex flex-1 items-center justify-end gap-2">
                       <select
@@ -510,7 +490,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     </div>
                   </FormRow>
 
-                  {/* Birthday */}
                   <FormRow label="Birthday">
                     <input
                       title="Birthday"
@@ -533,7 +512,6 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
             <div className="h-4" />
           </div>
 
-          {/* Footer */}
           <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">

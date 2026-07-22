@@ -3,11 +3,6 @@
 import { useRef } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
-/**
- * Horizontal "collection" slider (awwwards-style): a scroll-snap row of cards
- * with optional prev/next buttons on desktop. Mobile uses native touch
- * scrolling. Children are the slides (each should be `shrink-0` / sized).
- */
 export function Slider({
   children,
   ariaLabel,
@@ -33,7 +28,6 @@ export function Slider({
         {children}
       </div>
 
-      {/* Desktop nav buttons */}
       <button
         type="button"
         onClick={() => nudge(-1)}

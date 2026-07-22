@@ -1,13 +1,3 @@
-// src/app/(private)/dashboard/lib/venue-sales.ts
-//
-// Pure shaping helpers for the dashboard "Venue Sales" section, sourced from
-// the `square_sales` table (populated by /api/square/sync). These are ACTUAL
-// Square takings — bar/food/POS — and are shown DISTINCT from the app's
-// pre-booked booking revenue (see analytics.ts). The two are never summed.
-//
-// Same pattern as analytics.ts: fetch raw rows, run pure functions, hand plain
-// serialisable objects to client chart components.
-
 import type { CategoryBreakdown, SalesBucket } from "@/lib/square-sync";
 import { delta, type Delta } from "./analytics";
 
@@ -25,8 +15,6 @@ export type VenueSaleRow = {
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
 }
-
-// ── Totals ───────────────────────────────────────────────────────────────────
 
 export type SalesTotals = {
   takings: number;        // net sales (goods/services, ex-tips)
@@ -57,8 +45,6 @@ export function sumSales(rows: VenueSaleRow[]): SalesTotals {
   };
 }
 
-// ── Category split ───────────────────────────────────────────────────────────
-
 const BUCKETS: SalesBucket[] = ["drinks", "food", "tickets", "other"];
 const BUCKET_LABEL: Record<SalesBucket, string> = {
   drinks: "Drinks",
@@ -69,7 +55,6 @@ const BUCKET_LABEL: Record<SalesBucket, string> = {
 
 export type CategorySlice = { category: string; revenue: number };
 
-/** Aggregate per-category takings across rows, largest first, zero buckets dropped. */
 export function categoryTotals(rows: VenueSaleRow[]): CategorySlice[] {
   const totals: CategoryBreakdown = { drinks: 0, food: 0, tickets: 0, other: 0 };
   for (const r of rows) {
@@ -82,14 +67,8 @@ export function categoryTotals(rows: VenueSaleRow[]): CategorySlice[] {
     .sort((a, b) => b.revenue - a.revenue);
 }
 
-// ── Daily takings trend ──────────────────────────────────────────────────────
-
 export type DailyPoint = { date: string; label: string; takings: number };
 
-/**
- * Takings per calendar day for the trailing `days` days, zero-filled so the
- * chart never gaps.
- */
 export function dailyTakings(
   rows: VenueSaleRow[],
   days = 30,
@@ -100,8 +79,6 @@ export function dailyTakings(
     byDate.set(r.business_date, (byDate.get(r.business_date) ?? 0) + (r.net_sales ?? 0));
   }
   const out: DailyPoint[] = [];
-  // Anchor on the UTC calendar day so it lines up with `business_date` (a UTC
-  // date from Square) regardless of server timezone.
   const cursor = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
   cursor.setUTCDate(cursor.getUTCDate() - (days - 1));
   for (let i = 0; i < days; i++) {
@@ -116,16 +93,9 @@ export function dailyTakings(
   return out;
 }
 
-// ── Takings matched to event nights ──────────────────────────────────────────
-
 export type EventNight = { date: string; title: string };
 export type EventTakings = { date: string; title: string; takings: number; tips: number };
 
-/**
- * Match Square takings to event nights by trading date. Lets the dashboard show
- * "what did the bar take on quiz night". Only nights with a sale are returned,
- * most recent first.
- */
 export function takingsByEvent(
   rows: VenueSaleRow[],
   events: EventNight[]
@@ -146,8 +116,6 @@ export function takingsByEvent(
     .filter((e) => e.takings > 0 || e.tips > 0)
     .sort((a, b) => b.date.localeCompare(a.date));
 }
-
-// ── One-call fetch + compute for the dashboard page ──────────────────────────
 
 type SupabaseLike = {
   from: (table: string) => any; // eslint-disable-line @typescript-eslint/no-explicit-any

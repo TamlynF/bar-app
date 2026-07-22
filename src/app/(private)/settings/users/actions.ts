@@ -28,7 +28,6 @@ export async function saveEmployeeAction(formData: FormData) {
     return { error: "Full Name, Email, and Start Date are required." };
   }
 
-  // Resolve current logged-in user to an employee id
   let currentEmployeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -43,7 +42,6 @@ export async function saveEmployeeAction(formData: FormData) {
 
   try {
     if (id) {
-      // Update existing employee
       const { error } = await supabase.from("employees").update({
         ...payload,
         updated_at: new Date().toISOString(),
@@ -56,7 +54,6 @@ export async function saveEmployeeAction(formData: FormData) {
         throw error;
       }
     } else {
-      // Invite the employee as a Supabase auth user so they can log in
       const adminSupabase = createAdminClient();
       const redirectUrl = process.env.NEXT_PUBLIC_SITE_URL
         ? process.env.NEXT_PUBLIC_SITE_URL
@@ -73,7 +70,6 @@ export async function saveEmployeeAction(formData: FormData) {
         throw new Error(`Failed to send login invite: ${inviteError.message}`);
       }
 
-      // Resolve auth_user_id — either from the invite or by looking up an existing user
       let authUserId: string | null = inviteData?.user?.id ?? null;
       if (!authUserId) {
         const { data: { users } } = await adminSupabase.auth.admin.listUsers();
@@ -81,7 +77,6 @@ export async function saveEmployeeAction(formData: FormData) {
         if (existingUser) authUserId = existingUser.id;
       }
 
-      // Use admin client for the insert to bypass RLS (the acting user may not have an employee record yet)
       const { error } = await adminSupabase.from("employees").insert({
         ...payload,
         auth_user_id: authUserId,
@@ -119,7 +114,6 @@ export async function sendPasswordResetAction(email: string) {
     return { error: error.message };
   }
 
-  // Stamp the employee record with when the reset email was sent
   const supabase = await createClient();
   await supabase
     .from("employees")
@@ -142,7 +136,6 @@ export async function markInviteAcceptedAction() {
 export async function deleteEmployeeAction(id: number) {
   const supabase = await createClient();
 
-  // Prevent deleting your own employee record
   const { data: { user } } = await supabase.auth.getUser();
   const { data: target } = await supabase
     .from("employees")

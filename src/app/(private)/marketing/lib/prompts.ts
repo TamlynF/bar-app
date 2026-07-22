@@ -1,15 +1,11 @@
 import type { MenuItemLite } from "./types";
 
-// The venue the trends are for — gives the AI concrete grounding for its "action" ideas.
 const VENUE =
   '"Don Fenticas", a grassroots live-music bar & daytime café on Regent Street, Hinckley, Leicestershire, UK';
 
-// Every trend must relate to these business categories (the user's requirement).
 const SECTORS =
   "music venues, bars, pubs, hospitality, drink vendors, food vendors, and entertainment";
 
-// Ask the model to avoid regenerating anything the user has already saved or ignored
-// (semantic de-dup — catches near-identical trends, not just exact-title repeats).
 function blocklistLine(blocklist: string[]): string {
   if (!blocklist.length) return "";
   return `\nNEVER include these already-seen topics or anything near-identical: ${blocklist
@@ -17,29 +13,19 @@ function blocklistLine(blocklist: string[]): string {
     .join("; ")}.`;
 }
 
-// Voice/tone directive shared by both trend prompts — keeps the copy punchy,
-// plain and specific instead of formal marketing-speak.
 const TONE = `VOICE — write like the bar's own switched-on social manager talking to the owner: punchy, plain, human, a bit of cheek. Every line must be concrete and specific — never vague or corporate.
 - Name the ACTUAL thing driving it: the specific match, meme, song + artist, creator, headline, number or date — not "a trending audio" but the named track and roughly how many videos use it.
 - Keep sentences short and lively. One idea per sentence, no padding.
 - BANNED words/phrases (never use): leverage, utilise, engagement, content strategy, elevate, curate, synergy, "in today's fast-paced", "short-form video content that…", "reacts humorously to", "creating content that". Just say the thing plainly.`;
 
-// The two output fields shared by the advertising + event-idea prompts (content-led).
 const ACTION_EFFORT_SCHEMA =
   '  "action": "ONE concrete sentence: exactly what to film/post/run THIS WEEK — the specific shot, overlay text, audio or offer, and when to post it",\n' +
   '  "effort": "exactly one of: Easy, Medium, Big",';
 
-// Pricing plays get their OWN action shape: a real, ownable in-venue move — a named
-// chalkboard pledge, a house pour, a timed happy-hour, a bundle — NOT "film a reel",
-// which is what the content-led schema above pushes toward.
 const PRICE_ACTION_EFFORT_SCHEMA =
   '  "action": "ONE vivid sentence — the exact in-venue pricing play to run THIS WEEK. Give it a FUN, ownable name (a chalkboard pledge, a named house pour, a timed happy-hour, a bundle), commit to a specific price, say who and when it applies, and name the local rival or chain it undercuts. A REAL move at the bar — never \'film a reel\' or \'post a video\'.",\n' +
   '  "effort": "exactly one of: Easy, Medium, Big",';
 
-/**
- * Advertising / social-media trend prompt: funny, highly-interacted content
- * (e.g. Instagram reels) tied to current events that the bar could riff on.
- */
 export function buildAdvertisingTrendsPrompt(area: string, todayISO: string, blocklist: string[] = []): string {
   return `You are the social-media marketing scout inside the app of ${VENUE}. Comparison area: ${area}.
 Today's date is ${todayISO}. Use web search to find what is trending RIGHT NOW.
@@ -65,9 +51,6 @@ ${ACTION_EFFORT_SCHEMA}
 }`;
 }
 
-/**
- * Competitor event-ideas prompt: what other hospitality businesses are running.
- */
 export function buildEventIdeasPrompt(area: string, todayISO: string, blocklist: string[] = []): string {
   return `You are the events scout inside the app of ${VENUE}. Comparison area: ${area}.
 Today's date is ${todayISO}. Use web search for the latest, real examples.
@@ -91,11 +74,6 @@ ${ACTION_EFFORT_SCHEMA}
 }`;
 }
 
-/**
- * Price-positioning idea prompt — the "Live AI: local price insights" cards.
- * Actionable pricing plays (value pledges, happy hours, deals) tied to real
- * current pricing data/news, in the same punchy voice as the other trend cards.
- */
 export function buildPriceTrendsPrompt(
   area: string,
   radius: string | null,
@@ -133,10 +111,6 @@ ${PRICE_ACTION_EFFORT_SCHEMA}
 }`;
 }
 
-/**
- * Local competitor price prompt, scoped to the comparison area. We pass the
- * venue's own item names so the AI targets comparable products.
- */
 export function buildPricesPrompt(area: string, radius: string | null, menuItems: MenuItemLite[]): string {
   const ownItems = menuItems.slice(0, 40).map((m) => m.name).join(", ") || "common bar drinks and snacks";
   const radiusLine = radius ? ` (within roughly ${radius})` : "";

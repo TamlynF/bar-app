@@ -22,7 +22,6 @@ export default function BookingsHubClient({ groups }: { groups: AdminBookingGrou
 
   return (
     <div className="space-y-4 p-2 sm:p-8">
-      {/* Search */}
       <div className="flex h-11 min-w-0 items-center gap-2 rounded-xl border border-[#E6DFC8] bg-white px-3 transition-colors focus-within:border-[#5C4033]">
         <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
         <input

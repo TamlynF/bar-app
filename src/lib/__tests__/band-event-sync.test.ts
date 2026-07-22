@@ -16,7 +16,6 @@ describe("planBandEventSync", () => {
     it("does nothing when booked without a selected date", () => {
       expect(planBandEventSync({ status: "booked", selectedDate: null, eventId: null }))
         .toEqual({ action: "none" });
-      // even if an event is somehow linked, a dateless booking must not touch it
       expect(planBandEventSync({ status: "booked", selectedDate: null, eventId: 42 }))
         .toEqual({ action: "none" });
     });

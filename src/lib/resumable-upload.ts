@@ -1,20 +1,10 @@
 import * as tus from "tus-js-client";
 
-/**
- * Resumable (TUS) upload to Supabase Storage, used by the public band booking
- * form for large performance videos. Standard `.upload()` is unreliable for big
- * files; the TUS protocol chunks the file and survives transient network drops.
- *
- * Auth uses the public anon key (this is an unauthenticated public form). Whatever
- * storage policy permits anon inserts on the bucket in prod is what allows this.
- */
-
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const BUCKET = "band-videos";
 
 export interface ResumableHandle {
-  /** Abort the in-flight upload (also terminates it server-side). */
   abort: () => void;
 }
 
@@ -38,7 +28,6 @@ export function uploadVideoResumable(
     },
     uploadDataDuringCreation: true,
     removeFingerprintOnSuccess: true,
-    // Supabase requires a fixed 6 MB chunk size for resumable uploads.
     chunkSize: 6 * 1024 * 1024,
     metadata: {
       bucketName: BUCKET,

@@ -78,9 +78,6 @@ export type PictureRoundItem = {
   imageUrl: string | null;
 }
 
-/**
- * Retrieves all configured quiz categories.
- */
 export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig[]> {
   const supabase = await createClient();
   const { data, error } = await supabase
@@ -96,9 +93,6 @@ export async function getQuizCategoryConfigsAction(): Promise<QuizCategoryConfig
   return (data as QuizCategoryConfig[]) || [];
 }
 
-/**
- * Generates trivia using AI.
- */
 export async function generateQuizAction(
   topic: string,
   category: string,
@@ -110,13 +104,10 @@ export async function generateQuizAction(
   const supabase = await createClient()
 
   try {
-    // 1. Build exclusion list scoped to this event + category:
-    //    last 10 approved questions + every question already generated (draft log).
   const [{ data: approved }, { data: generated }] = await Promise.all([
     supabase
       .from('past_quiz_questions')
       .select('question_text')
-      //.eq('events_id', eventId)
       .eq('quiz_category_configs_id', categoryConfigId)
       .order('created_at', { ascending: false })
       .limit(100),
@@ -135,19 +126,13 @@ export async function generateQuizAction(
     ? combinedExclusions.join(' | ')
     : "None.";
 
-  // 2. Setup Gemini API
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ""; 
     if (!apiKey) {
       return { error: "API Key is missing. Please check your environment variables." };
     }
-  //const model = "gemini-2.5-flash-preview-09-2025";
-  //const model = "gemini-1.5-flash";
   const model = "gemini-2.5-flash";
-  //const model = "gemini-3.1-flash-preview"; 
-  //const model = "gemini-3.1-pro-preview";
   const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
-  //const prompt = `Act as the Pub Quiz Master. Generate a round for category: "${category}". ${topic ? `Theme: "${topic}"` : ""} Requirements: Exactly ${numberOfQuestions} unique questions. Format: JSON array.`;
 
  const prompt = `Act as the Pub Quiz Master for "Don Fenticas". 
   Generate a round for the category: "${category}".
@@ -203,8 +188,6 @@ export async function generateQuizAction(
 
     const questions = JSON.parse(content) as QuizQuestion[];
 
-    // Persist generated questions immediately so they're excluded on future
-    // regenerations — even before approval and across page reloads.
     if (questions.length) {
       const { error: logError } = await supabase
         .from('generated_quiz_questions')
@@ -224,11 +207,6 @@ export async function generateQuizAction(
   }
 }
 
-/**
- * Clears the generated-question exclusion log for an event once it is no longer
- * active. The log is only useful while a quiz is being built; reading is_active
- * server-side keeps the decision authoritative.
- */
 export async function cleanupGeneratedQuestionsForInactiveEventAction(eventId: number) {
   const supabase = await createClient()
   const { data: ev } = await supabase
@@ -243,7 +221,6 @@ export async function cleanupGeneratedQuestionsForInactiveEventAction(eventId: n
 
 type SupabaseClient = Awaited<ReturnType<typeof createClient>>
 
-/** Returns the current max question_no for a given event+category (0 if none). */
 async function getMaxQuestionNo(
   supabase: SupabaseClient,
   eventId: number,
@@ -259,9 +236,6 @@ async function getMaxQuestionNo(
   return data?.[0]?.question_no ?? 0
 }
 
-/**
- * Fetches question history with category joins and event filtering.
- */
 export async function getFullQuestionHistoryAction(eventIdFilter?: string): Promise<PastQuestionRecord[]> {
   const supabase = await createClient()
 
@@ -286,9 +260,6 @@ export async function getFullQuestionHistoryAction(eventIdFilter?: string): Prom
   return data as unknown as PastQuestionRecord[];
 }
 
-/**
- * Updates an existing question, optionally replacing its image.
- */
 export async function updatePastQuestionAction(
   id: string,
   question: string | null,
@@ -314,7 +285,6 @@ export async function updatePastQuestionAction(
 
   if (imageData) {
     const adminClient = createAdminClient()
-    // Delete old image from storage
     if (imageData.oldImageUrl) {
       try {
         const url = new URL(imageData.oldImageUrl)
@@ -327,7 +297,6 @@ export async function updatePastQuestionAction(
         console.error('Old image delete failed', err)
       }
     }
-    // Upload new image
     try {
       const ext = imageData.mimeType === 'image/jpeg' ? 'jpg' : 'png'
       const folder = eventId ? `quiz-pictures/${eventId}` : 'quiz-pictures'
@@ -355,7 +324,6 @@ export async function updatePastQuestionAction(
   if (question !== null) updateFields.question_text = question
   if (newImageUrl !== undefined) updateFields.image_url = newImageUrl
 
-  // Reorder if a new question_no was requested
   if (newQuestionNo != null) {
     const { data: currentQ } = await supabase
       .from('past_quiz_questions')
@@ -378,14 +346,11 @@ export async function updatePastQuestionAction(
         const allIds = allQs.map(q => q.id)
         const clamped = Math.max(1, Math.min(newQuestionNo, allQs.length))
 
-        // Null out all so uniqueness constraint won't block intermediate states
         await supabase.from('past_quiz_questions').update({ question_no: null }).in('id', allIds)
 
-        // New order: remove current, splice in at target position
         const others = allQs.map(q => q.id).filter(qid => qid !== id)
         others.splice(clamped - 1, 0, id)
 
-        // Assign sequential numbers — skip the current id (set via updateFields below)
         for (let i = 0; i < others.length; i++) {
           if (others[i] !== id) {
             await supabase
@@ -412,9 +377,6 @@ export async function updatePastQuestionAction(
   return { success: true, image_url: newImageUrl };
 }
 
-/**
- * Deletes a question from history, and its storage image if present.
- */
 export async function deletePastQuestionAction(id: string) {
   const supabase = await createClient()
 
@@ -428,7 +390,6 @@ export async function deletePastQuestionAction(id: string) {
     try {
       const adminClient = createAdminClient()
       const url = new URL(row.image_url)
-      // Path format: /storage/v1/object/public/{bucket}/{rest}
       const parts = url.pathname.split('/storage/v1/object/public/')
       if (parts[1]) {
         const [bucket, ...rest] = parts[1].split('/')
@@ -453,9 +414,6 @@ export async function deletePastQuestionAction(id: string) {
   return { success: true };
 }
 
-/**
- * Fetches events filtered by game/quiz types.
- */
 export async function getQuizEventsAction(): Promise<QuizEventSummary[]> {
     const supabase = await createClient();
     const { data, error } = await supabase
@@ -471,9 +429,6 @@ export async function getQuizEventsAction(): Promise<QuizEventSummary[]> {
     return (data as unknown as QuizEventSummary[]) || [];
 }
 
-/**
- * Retrieves upcoming quiz events.
- */
 export async function getUpcomingQuizzesAction(): Promise<QuizEventSummary[]> {
   const supabase = await createClient();
   const today = new Date().toISOString().split('T')[0];
@@ -492,10 +447,6 @@ export async function getUpcomingQuizzesAction(): Promise<QuizEventSummary[]> {
   return (data as unknown as QuizEventSummary[]) || [];
 }
 
-/**
- * Saves quiz to database, automatically resolving category config IDs.
- * Now includes the 'topic' field for better historical tracking.
- */
 export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: number | null, topic: string) {
   const supabase = await createClient()
 
@@ -521,7 +472,6 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
     if (event?.date) askedOn = event.date;
   }
 
-  // Pre-compute max question_no per configId for this event
   const configIds = [...new Set(
     questions.map(q => configMap.get(q.category.toLowerCase())).filter((id): id is number => !!id)
   )]
@@ -571,7 +521,6 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
   return { success: true };
 }
 
-// ─── Music Snippets ─────────────────────────────────────────────────────────
 
 async function getSpotifyAccessToken(): Promise<string | null> {
   const clientId = process.env.SPOTIFY_CLIENT_ID || ''
@@ -614,9 +563,6 @@ async function searchSpotifyTrack(
   }
 }
 
-/**
- * Generates music snippet suggestions via Gemini, then auto-searches Spotify for each.
- */
 export async function generateMusicSnippetsAction(
   numberOfSongs: number = 10,
   topic: string = '',
@@ -627,13 +573,10 @@ export async function generateMusicSnippetsAction(
   const supabase = await createClient()
 
   try {
-    // Build exclusion list scoped to this event + category:
-    // last 10 approved songs + every song already generated (draft log).
     const [{ data: approved }, { data: generated }, { data: config }] = await Promise.all([
       supabase
         .from('past_quiz_questions')
         .select('answer_text, answer_text_ext')
-        //.eq('events_id', eventId)
         .eq('quiz_category_configs_id', categoryConfigId)
         .order('created_at', { ascending: false })
         .limit(100),
@@ -651,8 +594,6 @@ export async function generateMusicSnippetsAction(
 
     const isHigherOrLower = config?.is_higher_lower ?? false
 
-    // For Higher/Lower rounds the song identity lives in answer_text_ext
-    // (answer_text holds "Higher"/"Lower"); other rounds keep it in answer_text.
     const combinedExclusions = [
       ...(approved?.map((q) => (isHigherOrLower ? q.answer_text_ext : q.answer_text)) ?? []),
       ...(generated?.map((g) => g.content_text) ?? []),
@@ -756,10 +697,6 @@ ${difficultyLine}
     const rawSongs = JSON.parse(content) as { artist: string; title: string; year: number; intro_description: string; hint_year?: number }[]
     rawSongs.sort((a, b) => a.year - b.year)
 
-    // Higher/Lower: force the correct answer to alternate (Higher, Lower, …) by
-    // placing hint_year on the matching side of the release year. Reuse the AI's
-    // offset magnitude when sensible (clamped to 3–5), guaranteeing release ≠ hint
-    // and a believable 3–5 year gap.
     if (isHigherOrLower) {
       rawSongs.forEach((s, i) => {
         const wantHigher = i % 2 === 0 // even → answer "Higher" (release > hint)
@@ -769,7 +706,6 @@ ${difficultyLine}
       })
     }
 
-    // Auto-search Spotify for each song
     const spotifyToken = await getSpotifyAccessToken()
     const songs: MusicSnippetCandidate[] = await Promise.all(
       rawSongs.map(async (s) => {
@@ -781,11 +717,6 @@ ${difficultyLine}
       })
     )
 
-    // Persist generated songs immediately so they're excluded on future
-    // regenerations — even before approval and across page reloads.
-    // content_text is the `artist - title` identity: it matches answer_text for
-    // non-HL rounds and answer_text_ext for Higher/Lower rounds (both used by the
-    // exclusion list above).
     if (songs.length) {
       const { error: logError } = await supabase
         .from('generated_quiz_questions')
@@ -804,9 +735,6 @@ ${difficultyLine}
   }
 }
 
-/**
- * Saves selected music snippets to the database.
- */
 export async function saveMusicSnippetsAction(
   songs: { artist: string; title: string; year: number; spotify_track_id: string | null; hint_year?: number }[],
   eventId: number,
@@ -844,7 +772,6 @@ export async function saveMusicSnippetsAction(
   const insertData = songs.map((s, i) => {
     const songIdentity = `${s.artist} - ${s.title}`
     if (isHigherOrLower && s.hint_year) {
-      // Direction matches the truth: "Higher" when release > hint, else "Lower".
       const dir = s.year > s.hint_year ? 'higher' : 'lower'
       return {
         question_text: `${songIdentity} is higher or lower than ${s.hint_year}?`,
@@ -897,7 +824,6 @@ export async function saveMusicSnippetsAction(
   revalidatePath('/event-setups/quiz-generator')
   revalidatePath('/event-setups/quiz-history')
 
-  // Create/refresh the Spotify playlist for this music round (best-effort).
   const playlist = await syncCategoryPlaylistAction(eventId, categoryConfigId)
   return { success: true, ...playlist }
 }
@@ -909,12 +835,6 @@ export type PlaylistSyncResult = {
   error?: string
 }
 
-/**
- * Makes the event+category's Spotify playlist exactly match the saved music
- * snippets (creates it on first use). The single primitive for create / add /
- * remove — callers just re-run it after any change. Never throws: returns a
- * status object so callers can save data even when Spotify isn't usable.
- */
 export async function syncCategoryPlaylistAction(
   eventId: number,
   categoryConfigId: number
@@ -938,7 +858,6 @@ export async function syncCategoryPlaylistAction(
 
     if (!config) return { ok: false, error: 'category_not_found' }
 
-    // Find or create the playlist row.
     const { data: existing } = await supabase
       .from('event_category_playlists')
       .select('playlist_id, playlist_url')
@@ -988,7 +907,6 @@ export async function syncCategoryPlaylistAction(
   }
 }
 
-// ─── Picture Round ──────────────────────────────────────────────────────────
 
 async function generateImageForAnswer(answer: string): Promise<string | null> {
   const apiKey = process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || ''
@@ -1026,11 +944,6 @@ async function generateImageForAnswer(answer: string): Promise<string | null> {
   }
 }
 
-/**
- * Generates a picture round: Gemini text produces answer list,
- * then Gemini image produces a photo for each (batched 3 at a time).
- * Returns base64 data URLs for the draft stage; images are uploaded on save.
- */
 export async function generatePictureRoundAction(
   numberOfItems: number = 10,
   topic: string,
@@ -1043,9 +956,6 @@ export async function generatePictureRoundAction(
   if (!apiKey) return { error: 'API Key is missing.' }
 
   try {
-    // Build the exclusion list for this event+category: approved answers plus
-    // every answer already generated (the draft log), so regenerating never
-    // repeats — even before approval and across reloads.
     const supabase = await createClient()
     let existingAnswers: string[] = []
     if (eventId && categoryConfigId) {
@@ -1069,7 +979,6 @@ export async function generatePictureRoundAction(
     if (excludeAnswers?.length) {
       existingAnswers = [...existingAnswers, ...excludeAnswers]
     }
-    // Step 1: Gemini text → list of answers
     const model = 'gemini-2.5-flash'
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`
 
@@ -1115,7 +1024,6 @@ Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border C
     if (!content) return { error: 'AI returned an empty response.' }
     const answers = JSON.parse(content) as string[]
 
-    // Step 2: Generate one image per answer, 3 at a time
     const items: PictureRoundItem[] = []
     for (let i = 0; i < answers.length; i += 3) {
       const batch = answers.slice(i, i + 3)
@@ -1123,8 +1031,6 @@ Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border C
       batch.forEach((answer, j) => items.push({ answer, imageUrl: images[j] }))
     }
 
-    // Persist generated answers so future regenerations exclude them (mirrors the
-    // standard quiz / music flow). content_text matches the saved answer_text.
     if (eventId && categoryConfigId && items.length) {
       const { error: logError } = await supabase
         .from('generated_quiz_questions')
@@ -1143,10 +1049,6 @@ Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border C
   }
 }
 
-/**
- * Saves approved picture round items: uploads base64 images to Supabase Storage,
- * then inserts rows to past_quiz_questions with the public image URL.
- */
 export async function savePictureRoundAction(
   items: PictureRoundItem[],
   eventId: number,
@@ -1229,9 +1131,6 @@ export async function savePictureRoundAction(
   revalidatePath('/event-setups/quiz-history')
 }
 
-/**
- * Fetches existing music snippets for an event.
- */
 export async function getMusicSnippetsForEventAction(
   eventId: string,
   categoryConfigId: number

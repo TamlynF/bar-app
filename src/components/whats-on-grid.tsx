@@ -9,7 +9,6 @@ import { parseDate, type SerializedEvent } from "@/lib/events-display";
 
 const ALL = "all";
 
-/** True if the event matches the (already-lowercased) search query. */
 function matchesQuery(e: SerializedEvent, q: string): boolean {
   return (
     !q ||
@@ -18,14 +17,6 @@ function matchesQuery(e: SerializedEvent, q: string): boolean {
   );
 }
 
-/**
- * Client island for the /whats-on schedule. Owns all interaction: the search
- * query, the active subtype filter, the "earlier this month" toggle, and the
- * single-open card (`openId`). Render order: search → full-bleed filter chips →
- * collapsible "Earlier this month" (past, above) → "Coming up" list → a
- * collapsible "{next month}" list. The `nextEventId` card is marked inline with
- * a pulsing "NEXT UP" label + neon ring.
- */
 export function WhatsOnGrid({
   upcoming,
   past,
@@ -73,8 +64,6 @@ export function WhatsOnGrid({
     [later, active, q]
   );
 
-  // Live counts reflect the search query but not the active filter, so the
-  // chips show how many events each subtype would surface for the current search.
   const allTabs: FilterTab[] = useMemo(() => {
     const pool = [...upcoming, ...past].filter((e) => matchesQuery(e, q));
     const counts = new Map<string, number>();
@@ -87,7 +76,6 @@ export function WhatsOnGrid({
     ];
   }, [tabs, upcoming, past, q]);
 
-  // The past + later lists auto-open while a search is active so matches aren't hidden.
   const pastOpen = showPast || q.length > 0;
   const laterOpen = showLater || q.length > 0;
 
@@ -95,7 +83,6 @@ export function WhatsOnGrid({
 
   return (
     <div className="mt-6">
-      {/* Search */}
       <div className="relative mb-4">
         <label htmlFor="whatson-search" className="sr-only">
           Search events
@@ -114,14 +101,12 @@ export function WhatsOnGrid({
         />
       </div>
 
-      {/* Filter chips — one full-bleed horizontal-scroll row */}
       {tabs.length > 0 && (
         <div className="mb-6">
           <FilterTabs tabs={allTabs} active={active} onChange={setActive} />
         </div>
       )}
 
-      {/* Earlier this month — collapsed by default, above the upcoming list */}
       {past.length > 0 && (
         <div className="mb-8">
           <button
@@ -162,7 +147,6 @@ export function WhatsOnGrid({
         </div>
       )}
 
-      {/* Coming up */}
       <div className="mb-4 flex items-center gap-4">
         <h3 className="shrink-0 font-black text-[10px] tracking-[0.25em] text-ink-2 uppercase">
           Coming up
@@ -209,7 +193,6 @@ export function WhatsOnGrid({
         </div>
       )}
 
-      {/* Next month — collapsed by default, shown with the same cards */}
       {later.length > 0 && (
         <div className="mt-8">
           <button
