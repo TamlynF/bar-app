@@ -99,13 +99,6 @@ export default async function HomePage() {
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(companyInfo.address)}`
     : null;
 
-  const sections = [
-    { id: "whats-on", label: "What's On", show: true },
-    { id: "specials", label: "Specials", show: specials.length > 0 },
-    { id: "gallery", label: "Gallery", show: peekItems.length > 0 },
-    { id: "find-us", label: "Find Us", show: companyInfo != null },
-  ].filter((s) => s.show);
-
   return (
     <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <SmoothScroll />
@@ -142,23 +135,6 @@ export default async function HomePage() {
           <MarqueeTicker />
         </div>
       </div>
-
-      <nav
-        aria-label="Page sections"
-        className="sticky top-14 z-30 border-y border-hairline bg-canvas/85 backdrop-blur-xl sm:top-16"
-      >
-        <div className="no-scrollbar mx-auto flex max-w-5xl gap-2 overflow-x-auto px-4 py-3">
-          {sections.map((s) => (
-            <a
-              key={s.id}
-              href={`#${s.id}`}
-              className="inline-flex h-9 shrink-0 items-center rounded-full border border-hairline bg-canvas-2 px-4 font-black text-[11px] tracking-wide text-stone-400 uppercase transition-colors hover:bg-white/10 hover:text-ink"
-            >
-              {s.label}
-            </a>
-          ))}
-        </div>
-      </nav>
 
       <div className="mt-6 space-y-16 sm:mt-8 sm:space-y-24">
         <HighlightedEvents events={scheduleEvents} />
