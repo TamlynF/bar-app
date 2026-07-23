@@ -19,6 +19,8 @@ import Image from "next/image";
 
 export const revalidate = 300;
 
+const HERO_BACKDROP = "/pexels-ikevinmoon-17895798.jpg";
+
 type GalleryRow = {
   id: number;
   title: string | null;
@@ -86,7 +88,7 @@ export default async function HomePage() {
   const photos = ((rawGallery ?? []) as GalleryRow[]).filter(
     (g) => g.media_type !== "video"
   );
-  const backdropUrl = photos[1]?.image_url ?? null;
+  const backdropUrl = HERO_BACKDROP;
   const peekItems: GalleryPeekItem[] = photos
     .slice(0, 8)
     .map((g) => ({ id: g.id, title: g.title, image_url: g.image_url }));
@@ -116,12 +118,13 @@ export default async function HomePage() {
               src={backdropUrl}
               alt=""
               fill
+              priority
               sizes="100vw"
-              className="scale-105 object-cover grayscale-[0.25] brightness-135 contrast-105"
+              className="scale-105 object-cover object-center brightness-115"
             />
-            <div className="absolute inset-0 bg-linear-to-br from-[#7A1F1F]/45 via-[#4A2A14]/40 to-[#26300D]/45 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-linear-to-br from-[#7A1F1F]/35 via-[#4A2A14]/25 to-[#26300D]/40 mix-blend-multiply" />
             <div className="absolute inset-0 bg-linear-to-b from-[#FDCC4B]/12 to-transparent mix-blend-overlay" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_58%_52%_at_50%_45%,rgba(20,24,10,0.55)_0%,rgba(20,24,10,0.15)_55%,transparent_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_58%_52%_at_50%_45%,rgba(20,24,10,0.5)_0%,rgba(20,24,10,0.12)_55%,transparent_100%)]" />
             <div className="absolute inset-0 bg-linear-to-b from-black/20 via-transparent to-canvas" />
           </div>
         )}
