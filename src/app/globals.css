@@ -154,6 +154,25 @@ body {
   animation: ad-marquee var(--marquee-duration, 30s) linear infinite;
 }
 
+/* Specials rail — drifts horizontally so every card is seen without the
+   visitor scrolling. Pauses on hover, on keyboard focus, and while a card
+   is flipped, so a moving target is never clicked by accident. */
+.ad-rail-track {
+  display: flex;
+  width: max-content;
+  animation: ad-marquee var(--rail-duration, 60s) linear infinite;
+}
+.ad-rail-track:hover,
+.ad-rail-track:focus-within,
+.ad-rail-track[data-paused='true'] {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ad-rail-track {
+    animation: none;
+  }
+}
+
 /* "Open" pill ping + "on tonight" blink */
 @keyframes ad-ping {
   0% {

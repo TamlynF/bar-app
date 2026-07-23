@@ -63,25 +63,42 @@ function shortRange(start: string | null, end: string | null): string | null {
   return `Until ${fmt(end!)}`;
 }
 
+const MIN_CARDS_PER_HALF = 8;
+const SECONDS_PER_CARD = 20;
+
 export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
   const [flippedId, setFlippedId] = useState<number | null>(null);
 
   if (specials.length === 0) return null;
 
+  const copies = Math.max(2, Math.ceil(MIN_CARDS_PER_HALF / specials.length));
+  const cardsPerHalf = copies * specials.length;
+
   return (
     <section id="specials" className="scroll-mt-24">
       <SectionHeading eyebrow="At the bar" title="Specials" />
 
-      <div className="rail-scrollbar snap-x snap-mandatory overflow-x-auto pb-4">
-        <div className="flex w-max items-start gap-3.5">
-          {specials.map((s) => (
-            <SpecialStub
-              key={s.id}
-              special={s}
-              flipped={flippedId === s.id}
-              onToggle={() => setFlippedId((id) => (id === s.id ? null : s.id))}
-            />
-          ))}
+      <div className="rail-scrollbar overflow-x-auto pb-4">
+        <div
+          className="ad-rail-track items-start"
+          data-paused={flippedId !== null}
+          style={
+            {
+              "--rail-duration": `${cardsPerHalf * SECONDS_PER_CARD}s`,
+            } as React.CSSProperties
+          }
+        >
+          {Array.from({ length: copies * 2 }, (_, copy) =>
+            specials.map((s) => (
+              <SpecialStub
+                key={`${copy}-${s.id}`}
+                copy={copy}
+                special={s}
+                flipped={flippedId === s.id}
+                onToggle={() => setFlippedId((id) => (id === s.id ? null : s.id))}
+              />
+            ))
+          )}
         </div>
       </div>
     </section>
@@ -90,10 +107,12 @@ export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
 
 function SpecialStub({
   special,
+  copy,
   flipped,
   onToggle,
 }: {
   special: SpecialRow;
+  copy: number;
   flipped: boolean;
   onToggle: () => void;
 }) {
@@ -105,10 +124,10 @@ function SpecialStub({
   const badges = isNew
     ? special.badges.filter((b) => b.trim().toLowerCase() !== "new")
     : special.badges;
-  const backId = `special-${special.id}-details`;
+  const backId = `special-${special.id}-${copy}-details`;
 
   return (
-    <div className="w-60 shrink-0 snap-start perspective-[1600px] sm:w-64 lg:w-72">
+    <div className="mr-3.5 w-60 shrink-0 perspective-[1600px] sm:w-64 lg:w-72">
       <div
         className={cn(
           "relative transform-3d transition-transform duration-500",
