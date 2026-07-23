@@ -110,15 +110,17 @@ export default async function HomePage() {
 
       <div className="relative overflow-hidden">
         {backdropUrl && (
-          <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="pointer-events-none absolute inset-0 isolate" aria-hidden="true">
             <Image
               src={backdropUrl}
               alt=""
               fill
               sizes="100vw"
-              className="scale-105 object-cover"
+              className="scale-105 object-cover grayscale contrast-125"
             />
-            <div className="absolute inset-0 bg-[#1a2008]/70" />
+            <div className="absolute inset-0 bg-linear-to-br from-[#7A1F1F] via-[#4A2A14] to-[#26300D] mix-blend-multiply" />
+            <div className="absolute inset-0 bg-linear-to-b from-[#FDCC4B]/35 via-[#FDCC4B]/10 to-transparent mix-blend-overlay" />
+            <div className="absolute inset-0 bg-[#1a2008]/55" />
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_55%_at_50%_45%,rgba(20,24,10,0.85)_0%,rgba(20,24,10,0.45)_55%,transparent_100%)]" />
             <div className="absolute inset-0 bg-linear-to-b from-black/45 via-transparent to-canvas" />
           </div>
