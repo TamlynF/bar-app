@@ -11,6 +11,13 @@ export type PromoRow = {
   external_url: string | null;
 };
 
+function instagramHandle(value: string | null): string | null {
+  const trimmed = value?.trim().replace(/\/+$/, "");
+  if (!trimmed) return null;
+  const fromUrl = trimmed.match(/instagram\.com\/([^/?#]+)/i);
+  return (fromUrl ? fromUrl[1] : trimmed).replace(/^@/, "").trim() || null;
+}
+
 export function InstagramStrip({
   posts,
   handle,
@@ -21,14 +28,14 @@ export function InstagramStrip({
   const tiles = posts.slice(0, 6);
   if (tiles.length === 0) return null;
 
-  const cleanHandle = handle?.replace("@", "").trim() || null;
+  const cleanHandle = instagramHandle(handle);
   const profileHref = cleanHandle ? `https://instagram.com/${cleanHandle}` : null;
 
   return (
     <section id="instagram" className="scroll-mt-24">
       <SectionHeading
         eyebrow="Follow along"
-        title={cleanHandle ? `@${cleanHandle}` : "On The Gram"}
+        title="Instagram Feed"
       />
 
       <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">
@@ -44,8 +51,8 @@ export function InstagramStrip({
           rel="noopener noreferrer"
           className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl border border-hairline bg-canvas-2 font-black text-[11px] tracking-widest text-ink-2 uppercase transition-colors hover:border-white/30 hover:bg-white/10 hover:text-ink sm:w-auto sm:px-6"
         >
-          <SiInstagram className="h-4 w-4 shrink-0" aria-hidden="true" />
-          Follow @{cleanHandle}
+          <SiInstagram className="h-4 w-4 shrink-0 text-[#E1306C]" aria-hidden="true" />
+          {cleanHandle}
         </a>
       )}
     </section>
