@@ -22,7 +22,7 @@ export function GalleryPeek({ items }: { items: GalleryPeekItem[] }) {
         action={{ href: "/gallery", label: "View gallery" }}
       />
 
-      <div className="grid auto-rows-[120px] grid-cols-2 gap-2.5 sm:auto-rows-[140px] sm:grid-cols-3">
+      <div className="grid auto-rows-[120px] grid-cols-2 gap-2.5 sm:auto-rows-[140px] sm:grid-cols-3 xl:auto-rows-[180px]">
         {shots.map((item, i) => (
           <Link
             key={item.id}

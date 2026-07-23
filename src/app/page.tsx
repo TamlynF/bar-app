@@ -125,7 +125,7 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
         <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
-        <div className="relative z-10 mx-auto max-w-5xl px-4 pt-14 sm:pt-16">
+        <div className="relative z-10 mx-auto w-full max-w-400 px-4 pt-14 sm:px-6 sm:pt-16 lg:px-10">
           <HomeHero
             tagline={tagline}
             accentWord={taglineAccent}
@@ -142,7 +142,7 @@ export default async function HomePage() {
       <div className="-mt-4 space-y-16 sm:-mt-6 sm:space-y-24">
         <HighlightedEvents events={scheduleEvents} />
 
-        <div className="mx-auto max-w-5xl space-y-16 px-4 sm:space-y-24">
+        <div className="mx-auto w-full max-w-400 space-y-16 px-4 sm:space-y-24 sm:px-6 lg:px-10">
           {specials.length > 0 && <SpecialsSection specials={specials} />}
 
           <GalleryPeek items={peekItems} />

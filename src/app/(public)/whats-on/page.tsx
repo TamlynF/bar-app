@@ -110,7 +110,7 @@ export default async function WhatsOnPage() {
 
       <PublicNav currentPath="/whats-on" />
 
-      <div className="relative z-10 mx-auto max-w-5xl px-4 py-6 sm:py-10">
+      <div className="relative z-10 mx-auto w-full max-w-400 px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
         <SectionHeading eyebrow={`${thisMonthLabel} · The schedule`} title="What's On" />
 
         {serialized.length > 0 && (

@@ -44,7 +44,7 @@ export default async function GalleryPage() {
 
       <PublicNav currentPath="/gallery" />
 
-      <div className="mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
+      <div className="mx-auto w-full max-w-400 px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
         <SectionHeading eyebrow="Photos & videos" title="Gallery" />
 
         {galleryItems.length === 0 ? (

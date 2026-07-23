@@ -123,7 +123,7 @@ export function WhatsOnGrid({
       )}
 
       {shown.length > 0 ? (
-        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {shown.map((ev) => (
             <EventGridCard key={ev.id} event={ev} />
           ))}
@@ -170,7 +170,7 @@ export function WhatsOnGrid({
 
           {pastOpen &&
             (filteredPast.length > 0 ? (
-              <ul className="mt-5 grid grid-cols-1 gap-5 opacity-60 sm:grid-cols-2 lg:grid-cols-3">
+              <ul className="mt-5 grid grid-cols-1 gap-5 opacity-60 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {filteredPast.map((ev) => (
                   <EventGridCard key={ev.id} event={ev} isPast />
                 ))}

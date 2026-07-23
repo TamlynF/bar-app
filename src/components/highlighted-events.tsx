@@ -7,7 +7,7 @@ import { parseDate, type SerializedEvent } from "@/lib/events-display";
 
 export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
   return (
-    <section id="whats-on" className="mx-auto max-w-5xl scroll-mt-24 px-4">
+    <section id="whats-on" className="mx-auto w-full max-w-400 scroll-mt-24 px-4 sm:px-6 lg:px-10">
       <SectionHeading
         eyebrow="The schedule"
         title="Rest Of The Week"

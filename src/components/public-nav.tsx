@@ -48,7 +48,7 @@ export function PublicNav({
             : "border-transparent bg-transparent"
         )}
       >
-        <div className="pt-safe-top mx-auto flex h-14 w-full max-w-300 items-center justify-between gap-6 px-4 sm:h-16 sm:px-6">
+        <div className="pt-safe-top mx-auto flex h-14 w-full max-w-400 items-center justify-between gap-6 px-4 sm:h-16 sm:px-6 lg:px-10">
           <Link
             href="/"
             className="inline-flex w-fit shrink-0 items-center"
@@ -134,7 +134,7 @@ export function PublicNav({
             id="public-nav-drawer"
             className="animate-in border-t border-[#FDCC4B]/10 bg-canvas/95 backdrop-blur-xl duration-200 fade-in slide-in-from-top-2 sm:hidden"
           >
-            <div className="mx-auto flex w-full max-w-300 flex-col px-4 py-3">
+            <div className="mx-auto flex w-full max-w-400 flex-col px-4 py-3">
               <Link
                 href="/book"
                 onClick={() => setMenuOpen(false)}
