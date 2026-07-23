@@ -1,6 +1,4 @@
-import Link from "next/link";
 import { endOfWeek, format } from "date-fns";
-import { UtensilsCrossed, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
@@ -8,24 +6,15 @@ import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
 import { MarqueeTicker } from "@/components/marquee-ticker";
 import { HighlightedEvents } from "@/components/highlighted-events";
-import { GalleryPeek, type GalleryPeekItem } from "@/components/gallery-peek";
 import { FindUs, type CompanyInfo } from "@/components/find-us";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
-import { SectionHeading } from "@/components/editorial/section-heading";
 import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
 import Image from "next/image";
 
 export const revalidate = 300;
 
 const HERO_BACKDROP = "/pexels-ikevinmoon-17895798.jpg";
-
-type GalleryRow = {
-  id: number;
-  title: string | null;
-  image_url: string;
-  media_type: string;
-};
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -35,7 +24,6 @@ export default async function HomePage() {
   const [
     { data: rawEvents },
     { data: rawSpecials },
-    { data: rawGallery },
     { data: rawPromos },
     { data: info },
   ] = await Promise.all([
@@ -54,12 +42,6 @@ export default async function HomePage() {
       .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order, created_at")
       .eq("is_active", true)
       .order("display_order", { ascending: true }),
-    supabase
-      .from("gallery_images")
-      .select("id, title, image_url, media_type")
-      .eq("is_active", true)
-      .order("display_order", { ascending: true })
-      .limit(12),
     supabase
       .from("promo_content")
       .select("id, title, description, media_url, media_type, external_url")
@@ -88,13 +70,7 @@ export default async function HomePage() {
   );
   const promos = (rawPromos ?? []) as PromoRow[];
 
-  const photos = ((rawGallery ?? []) as GalleryRow[]).filter(
-    (g) => g.media_type !== "video"
-  );
   const backdropUrl = HERO_BACKDROP;
-  const peekItems: GalleryPeekItem[] = photos
-    .slice(0, 8)
-    .map((g) => ({ id: g.id, title: g.title, image_url: g.image_url }));
 
   const companyInfo = (info ?? null) as CompanyInfo;
   const tagline = companyInfo?.tagline?.trim() || null;
@@ -145,32 +121,9 @@ export default async function HomePage() {
         <div className="mx-auto w-full max-w-400 space-y-16 px-4 sm:space-y-24 sm:px-6 lg:px-10">
           {specials.length > 0 && <SpecialsSection specials={specials} />}
 
-          <GalleryPeek items={peekItems} />
-
-          <section className="scroll-mt-24">
-            <SectionHeading eyebrow="Eat & drink" title="The Menu" action={{ href: "/menu", label: "Full menu" }} />
-            <Link
-              href="/menu"
-              className="group flex items-center gap-4 rounded-2xl border border-hairline bg-canvas-2 p-5 shadow-lg shadow-black/20 transition-all duration-300 hover:border-white/30 hover:bg-white/15 active:scale-[0.99] sm:p-6"
-            >
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#FDCC4B]/20 bg-[#FDCC4B]/10">
-                <UtensilsCrossed className="h-6 w-6 text-[#FDCC4B]" aria-hidden="true" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <span className="block font-black text-base tracking-tight text-ink uppercase">
-                  Drinks, Cocktails &amp; Snacks
-                </span>
-                <p className="mt-0.5 text-xs leading-relaxed text-stone-400">
-                  Draught, spirits, wine and bar bites — updated regularly.
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 shrink-0 text-stone-500 transition-all group-hover:translate-x-0.5 group-hover:text-ink" />
-            </Link>
-          </section>
+          <InstagramStrip posts={promos} handle={companyInfo?.instagram ?? null} />
 
           <FindUs info={companyInfo} />
-
-          <InstagramStrip posts={promos} handle={companyInfo?.instagram ?? null} />
 
           <PublicFooter info={companyInfo} />
         </div>
