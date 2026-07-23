@@ -2,6 +2,7 @@ import Image from "next/image";
 import { format } from "date-fns";
 import { MapPin } from "lucide-react";
 import { EventCta } from "@/components/editorial/event-cta";
+import { PosterTint } from "@/components/editorial/event-poster";
 import { cn } from "@/lib/utils";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
 import type { OpenState } from "@/lib/opening-hours";
@@ -212,6 +213,7 @@ function TonightCard({
             sizes="128px"
             className="object-cover"
           />
+          <PosterTint />
           <div className="absolute inset-0 bg-linear-to-r from-transparent to-canvas-2/60" />
         </div>
       )}

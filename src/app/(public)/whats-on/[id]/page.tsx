@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { format } from "date-fns";
@@ -15,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
 import { EventCta } from "@/components/editorial/event-cta";
 import { EventGridCard } from "@/components/editorial/event-grid-card";
+import { EventPoster } from "@/components/editorial/event-poster";
 import { BandMedia } from "@/components/editorial/band-media";
 import {
   entryText,
@@ -150,26 +150,21 @@ export default async function WhatsOnEventPage({
           className="mt-4"
           style={{ "--ev-c": event.color } as React.CSSProperties}
         >
-          <div className="ad-poster relative flex aspect-16/9 items-center justify-center overflow-hidden rounded-3xl border border-hairline">
-            {event.imageUrl ? (
-              <Image
-                src={event.imageUrl}
-                alt={event.title}
-                fill
-                priority
-                sizes="(max-width: 896px) 100vw, 896px"
-                className={"object-cover " + (isPast ? "grayscale" : "")}
-              />
-            ) : (
-              <Ticket className="h-12 w-12 text-ink-2/40" aria-hidden="true" />
-            )}
-
+          <EventPoster
+            event={event}
+            alt={event.title}
+            priority
+            grayscale={isPast}
+            aspect="aspect-16/9"
+            className="rounded-3xl border border-hairline"
+            sizes="(max-width: 896px) 100vw, 896px"
+          >
             {event.isFullyBooked && (
               <span className="absolute top-4 right-4 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 font-black text-[10px] tracking-widest text-red-400 uppercase backdrop-blur-sm">
                 Sold Out
               </span>
             )}
-          </div>
+          </EventPoster>
 
           <header className="mt-6">
             {event.subType && (
