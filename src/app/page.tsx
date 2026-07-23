@@ -117,13 +117,12 @@ export default async function HomePage() {
               alt=""
               fill
               sizes="100vw"
-              className="scale-105 object-cover grayscale contrast-125"
+              className="scale-105 object-cover grayscale-[0.25] brightness-135 contrast-105"
             />
-            <div className="absolute inset-0 bg-linear-to-br from-[#7A1F1F] via-[#4A2A14] to-[#26300D] mix-blend-multiply" />
-            <div className="absolute inset-0 bg-linear-to-b from-[#FDCC4B]/35 via-[#FDCC4B]/10 to-transparent mix-blend-overlay" />
-            <div className="absolute inset-0 bg-[#1a2008]/55" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_55%_at_50%_45%,rgba(20,24,10,0.85)_0%,rgba(20,24,10,0.45)_55%,transparent_100%)]" />
-            <div className="absolute inset-0 bg-linear-to-b from-black/45 via-transparent to-canvas" />
+            <div className="absolute inset-0 bg-linear-to-br from-[#7A1F1F]/45 via-[#4A2A14]/40 to-[#26300D]/45 mix-blend-multiply" />
+            <div className="absolute inset-0 bg-linear-to-b from-[#FDCC4B]/12 to-transparent mix-blend-overlay" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_58%_52%_at_50%_45%,rgba(20,24,10,0.55)_0%,rgba(20,24,10,0.15)_55%,transparent_100%)]" />
+            <div className="absolute inset-0 bg-linear-to-b from-black/20 via-transparent to-canvas" />
           </div>
         )}
         <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
