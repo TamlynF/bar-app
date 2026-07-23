@@ -2,6 +2,7 @@ import Link from "next/link";
 import { UtensilsCrossed, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
+import { PublicFooter } from "@/components/public-footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
 import { MarqueeTicker } from "@/components/marquee-ticker";
@@ -167,16 +168,7 @@ export default async function HomePage() {
 
           <FindUs info={companyInfo} />
 
-          <footer className="pt-4 text-center">
-            <div className="flex items-center justify-center gap-4 text-stone-800">
-              <div className="h-px w-6 bg-stone-800/50" />
-              <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
-              <div className="h-px w-6 bg-stone-800/50" />
-            </div>
-            <p className="mt-2 text-[9px] tracking-widest text-stone-700 uppercase">
-              &copy; {new Date().getFullYear()} &middot; Licensed Venue &middot; Drink Responsibly
-            </p>
-          </footer>
+          <PublicFooter info={companyInfo} />
         </div>
       </div>
     </main>
