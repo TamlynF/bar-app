@@ -21,7 +21,7 @@ export function SectionHeading({
         <span className="mb-2 block font-black text-[10px] tracking-[0.3em] text-[#FDCC4B] uppercase sm:text-xs">
           {eyebrow}
         </span>
-        <h2 className="font-black text-[clamp(2rem,8vw,4rem)] leading-[0.9] tracking-tighter text-white uppercase">
+        <h2 className="font-black text-[clamp(1.5rem,4.5vw,2.25rem)] leading-[0.95] tracking-tighter text-ink uppercase">
           {title}
         </h2>
       </div>

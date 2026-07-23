@@ -88,7 +88,7 @@ export function HomeHero({
         </div>
 
         {tagline && (
-          <h1 className="animate-reveal m-0 mt-5 max-w-3xl font-black text-[clamp(1.75rem,7.5vw,3.5rem)] leading-[0.92] tracking-tighter text-[#FFF4CC] uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
+          <h1 className="animate-reveal m-0 mt-5 max-w-3xl font-black text-[clamp(1.5rem,6.4vw,3rem)] leading-[0.92] tracking-tighter text-ink uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
             <OutlinedWord text={tagline} word={accentWord} />
           </h1>
         )}

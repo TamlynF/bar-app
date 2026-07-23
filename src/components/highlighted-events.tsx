@@ -126,7 +126,7 @@ function ScheduleCard({
           </span>
         )}
 
-        <h3 className="line-clamp-2 font-black text-lg leading-tight tracking-tight text-white uppercase">
+        <h3 className="line-clamp-2 font-black text-lg leading-tight tracking-tight text-ink uppercase">
           {event.title}
         </h3>
 
