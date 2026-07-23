@@ -1,27 +1,75 @@
 import { format } from "date-fns";
-import { Clock } from "lucide-react";
+import { Clock, MapPin } from "lucide-react";
 import { EventCta } from "@/components/editorial/event-cta";
+import { cn } from "@/lib/utils";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
+import type { OpenState } from "@/lib/opening-hours";
 
 export function HomeHero({
   tagline,
-  openLabel,
+  openState,
+  location,
+  mapsHref,
   featured,
   isTonight,
 }: {
   tagline: string;
-  openLabel: string;
+  openState: OpenState | null;
+  location: string | null;
+  mapsHref: string | null;
   featured: SerializedEvent | null;
   isTonight: boolean;
 }) {
   return (
     <section className="relative pt-1 pb-3 text-center sm:pt-3 sm:pb-4">
       <div className="relative z-10 flex flex-col items-center">
-        <div className="animate-reveal inline-flex items-center gap-2 rounded-full border border-[#FDCC4B]/25 bg-[#FDCC4B]/10 px-3.5 py-1.5">
-          <span className="ad-ping h-1.5 w-1.5 rounded-full bg-[#FDCC4B]" aria-hidden="true" />
-          <span className="font-black text-[10px] tracking-[0.2em] text-[#FDCC4B] uppercase">
-            {openLabel}
+        <div className="animate-reveal flex flex-wrap items-center justify-center gap-2">
+          <span
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5",
+              openState?.isOpen
+                ? "border-[#FDCC4B]/25 bg-[#FDCC4B]/10"
+                : "border-hairline bg-white/5"
+            )}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                openState?.isOpen ? "ad-ping bg-[#FDCC4B]" : "bg-stone-500"
+              )}
+              aria-hidden="true"
+            />
+            <span
+              className={cn(
+                "font-black text-[10px] tracking-[0.2em] uppercase",
+                openState?.isOpen ? "text-[#FDCC4B]" : "text-stone-400"
+              )}
+            >
+              {openState?.label ?? "Live music & late nights"}
+            </span>
           </span>
+
+          {location &&
+            (mapsHref ? (
+              <a
+                href={mapsHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-white/5 px-3.5 py-1.5 transition-colors hover:border-white/30 hover:bg-white/10"
+              >
+                <MapPin className="h-3 w-3 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
+                <span className="font-black text-[10px] tracking-[0.2em] text-ink-2 uppercase">
+                  {location}
+                </span>
+              </a>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-white/5 px-3.5 py-1.5">
+                <MapPin className="h-3 w-3 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
+                <span className="font-black text-[10px] tracking-[0.2em] text-ink-2 uppercase">
+                  {location}
+                </span>
+              </span>
+            ))}
         </div>
 
         <h1 className="animate-reveal m-0 mt-3 max-w-3xl font-black text-[clamp(1.75rem,7.5vw,3.5rem)] leading-[0.92] tracking-tighter text-[#FFF4CC] uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">

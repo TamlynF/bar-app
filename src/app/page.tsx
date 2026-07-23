@@ -12,6 +12,7 @@ import { FindUs, type CompanyInfo } from "@/components/find-us";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
+import { describeOpenState, shortLocation, type OpeningHours } from "@/lib/opening-hours";
 import Image from "next/image";
 
 export const revalidate = 300;
@@ -80,17 +81,14 @@ export default async function HomePage() {
   const companyInfo = (info ?? null) as CompanyInfo;
   const tagline = DEFAULT_TAGLINE;
 
-  const todayName = today
-    .toLocaleDateString("en-GB", { weekday: "long" })
-    .toLowerCase();
-  const todayHours = ((companyInfo?.opening_hours ?? {}) as Record<
-    string,
-    { open?: string; close?: string }
-  >)[todayName];
-  const openLabel =
-    todayHours?.open && todayHours?.close
-      ? `Open today · til ${todayHours.close}`
-      : "Live music & late nights";
+  const openState = describeOpenState(
+    companyInfo?.opening_hours as OpeningHours | null,
+    today
+  );
+  const location = shortLocation(companyInfo?.address);
+  const mapsHref = companyInfo?.address
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(companyInfo.address)}`
+    : null;
 
   const sections = [
     { id: "whats-on", label: "What's On", show: true },
@@ -123,7 +121,9 @@ export default async function HomePage() {
         <div className="relative z-10 mx-auto max-w-5xl px-4 pt-14 sm:pt-16">
           <HomeHero
             tagline={tagline}
-            openLabel={openLabel}
+            openState={openState}
+            location={location}
+            mapsHref={mapsHref}
             featured={featured}
             isTonight={isTonight}
           />
