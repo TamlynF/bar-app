@@ -1,6 +1,6 @@
-import { format } from "date-fns";
 import { Calendar, Clock } from "lucide-react";
 import { SectionHeading } from "@/components/editorial/section-heading";
+import { DateChip } from "@/components/editorial/date-chip";
 import { EventCta } from "@/components/editorial/event-cta";
 import { EventPoster } from "@/components/editorial/event-poster";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
@@ -56,17 +56,7 @@ function ScheduleCard({
         event={event}
         sizes="(max-width: 640px) 280px, (max-width: 1024px) 304px, 320px"
       >
-        <div className="absolute top-3 left-3 rounded-xl border border-hairline bg-canvas/80 px-2.5 py-1.5 text-center backdrop-blur-sm">
-          <span className="block font-black text-[9px] tracking-widest text-stone-400 uppercase">
-            {format(dateObj, "EEE")}
-          </span>
-          <span className="block font-black text-xl leading-none text-ink tabular-nums">
-            {format(dateObj, "d")}
-          </span>
-          <span className="mt-0.5 block font-black text-[9px] tracking-widest text-stone-400 uppercase">
-            {format(dateObj, "MMM")}
-          </span>
-        </div>
+        <DateChip date={dateObj} className="absolute top-3 left-3" />
 
         {event.isFullyBooked && (
           <span className="absolute top-3 right-3 rounded-full border border-red-500/30 bg-red-500/20 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-300 uppercase backdrop-blur-sm">

@@ -1,9 +1,11 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowRight} from "lucide-react";
+import { ArrowRight, Calendar } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
+import { PageHeader } from "@/components/editorial/page-header";
+import { DateChip } from "@/components/editorial/date-chip";
 import { cardIcon } from "@/lib/booking-card-icons";
 import { swatchHexFromColor } from "@/lib/event-type-colors";
 
@@ -45,14 +47,15 @@ type BookingCard = {
   title: string;
   tagline: string;
   icon: string | null; // Lucide icon name, resolved at render
-  badge: string | null; // explicit card badge; null → dynamic badge
+  note: string | null; // admin line under the title (e.g. "Thursdays")
+  cta: string; // footer verb — derived, never authored
   colorHex: string; // tint for icon + badge
-  date: string; // earliest upcoming date (YYYY-MM-DD)
+  date: string | null; // earliest upcoming date (YYYY-MM-DD); null on standing enquiries
   count: number; // number of events represented (1 = single event)
   isFree: boolean;
   isFullyBooked: boolean;
   paymentAmount: number | null;
-  requestKind: RequestKind | null; // private / music_act → shown under Requests & Enquiries
+  isRequest: boolean; // standing enquiry → shown under Requests & Enquiries
 };
 
 const first = <T,>(v: T | T[] | null): T | null =>
@@ -60,11 +63,43 @@ const first = <T,>(v: T | T[] | null): T | null =>
 
 const GOLD = "#FDCC4B";
 
-type RequestKind = "private" | "music_act";
-const requestKindOf = (behavior: string | null | undefined): RequestKind | null =>
-  behavior === "private" ? "private" : behavior === "music_act" ? "music_act" : null;
-const requestHrefOf = (kind: RequestKind | null): string | null =>
-  kind === "private" ? "/book/private" : kind === "music_act" ? "/book/band" : null;
+const isRequestBehavior = (behavior: string | null | undefined) =>
+  behavior === "private" || behavior === "music_act";
+
+const REQUEST_CARDS: BookingCard[] = [
+  {
+    key: "request-music_act",
+    href: "/book/band",
+    title: "Play Our Stage",
+    tagline: "Bands, DJs and solo artists — send us your links and we'll find you a date.",
+    icon: "Music",
+    note: null,
+    cta: "Apply",
+    colorHex: GOLD,
+    date: null,
+    count: 1,
+    isFree: true,
+    isFullyBooked: false,
+    paymentAmount: null,
+    isRequest: true,
+  },
+  {
+    key: "request-private",
+    href: "/book/private",
+    title: "Private Hire",
+    tagline: "Birthdays, wedding receptions, corporate nights — tell us what you need.",
+    icon: "Sparkles",
+    note: null,
+    cta: "Enquire",
+    colorHex: GOLD,
+    date: null,
+    count: 1,
+    isFree: true,
+    isFullyBooked: false,
+    paymentAmount: null,
+    isRequest: true,
+  },
+];
 
 function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
   const cards: BookingCard[] = [];
@@ -73,6 +108,7 @@ function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
   for (const ev of events) {
     const type = first(ev.event_types);
     const subtype = first(ev.event_subtypes);
+    if (isRequestBehavior(subtype?.behavior)) continue;
     const grouping = type?.booking_grouping ?? "per_event";
     const isFree = !ev.payment_amount || ev.payment_amount === 0;
 
@@ -82,24 +118,23 @@ function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
     const colorKey = mode === "per_type" ? type?.color : subtype?.color;
     const colorHex = swatchHexFromColor(colorKey) ?? GOLD;
     const taglineFallback = subtype?.tagline || ev.tagline || "";
-    const requestKind = requestKindOf(subtype?.behavior);
-    const requestHref = requestHrefOf(requestKind);
 
     if (mode === "per_event") {
       cards.push({
         key: `e-${ev.id}`,
-        href: requestHref ?? `/book/event/${ev.id}`,
+        href: `/book/event/${ev.id}`,
         title: source?.booking_card_title || ev.title || "Event",
         tagline: source?.booking_card_tagline || taglineFallback,
         icon: source?.booking_card_icon ?? null,
-        badge: source?.booking_card_badge || null,
+        note: source?.booking_card_badge || null,
+        cta: "Book",
         colorHex,
         date: ev.date,
         count: 1,
         isFree,
         isFullyBooked: !!ev.is_fully_booked,
         paymentAmount: ev.payment_amount ?? null,
-        requestKind,
+        isRequest: false,
       });
       continue;
     }
@@ -118,27 +153,27 @@ function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
     const card: BookingCard = {
       key: groupKey,
       href:
-        requestHref ??
-        (mode === "per_subtype"
+        mode === "per_subtype"
           ? `/book/group/subtype/${subtype!.id}`
-          : `/book/group/type/${ev.event_types_id}`),
+          : `/book/group/type/${ev.event_types_id}`,
       title: source?.booking_card_title || fallbackTitle,
       tagline: source?.booking_card_tagline || taglineFallback,
       icon: source?.booking_card_icon ?? null,
-      badge: source?.booking_card_badge || null,
+      note: source?.booking_card_badge || null,
+      cta: "Book",
       colorHex,
       date: ev.date,
       count: 1,
       isFree,
       isFullyBooked: !!ev.is_fully_booked,
       paymentAmount: ev.payment_amount ?? null,
-      requestKind,
+      isRequest: false,
     };
     groups.set(groupKey, card);
     cards.push(card);
   }
 
-  return cards.sort((a, b) => a.date.localeCompare(b.date));
+  return cards.sort((a, b) => (a.date ?? "").localeCompare(b.date ?? ""));
 }
 
 export default async function BookingHubPage() {
@@ -156,57 +191,73 @@ export default async function BookingHubPage() {
     .order("date", { ascending: true })
     .limit(50);
 
-  const cards = buildBookingCards((bookableEvents ?? []) as RawBookableEvent[]);
-  const ticketCards = cards.filter((c) => !c.requestKind);
-  const requestCards = cards.filter((c) => c.requestKind);
+  const ticketCards = buildBookingCards((bookableEvents ?? []) as RawBookableEvent[]);
+  const requestCards = REQUEST_CARDS;
 
   const renderCard = (card: BookingCard) => {
-    const dateStr = new Date(card.date + "T00:00:00").toLocaleDateString("en-GB", {
-      weekday: "short", day: "numeric", month: "short",
-    });
     const isGroup = card.count > 1;
     const Icon = cardIcon(card.icon);
-    const badgeText = card.badge
-      ? card.badge
+    const isFullBadge = !isGroup && card.isFullyBooked;
+    const badgeText = card.isFullyBooked
+      ? "Full"
       : isGroup
       ? `${card.count} dates`
-      : card.isFullyBooked
-      ? "Full"
       : card.isFree
       ? "Free"
       : `£${card.paymentAmount!.toFixed(2)}`;
-    const isFullBadge = !card.badge && !isGroup && card.isFullyBooked;
+
     return (
       <Link
         key={card.key}
         href={card.href}
         style={{ "--cc": card.colorHex } as React.CSSProperties}
-        className="group flex min-h-44 flex-col rounded-2xl border border-white/15 bg-white/5 p-6 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 hover:border-white/30 hover:bg-white/12 active:scale-[0.99]"
+        className={
+          "group flex flex-col rounded-2xl border p-4 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 hover:border-white/30 active:scale-[0.99] sm:p-5 " +
+          (card.isRequest
+            ? "border-white/10 border-l-[3px] border-l-[#FDCC4B] bg-canvas-2 hover:bg-canvas-2/70"
+            : "border-white/15 bg-white/5 hover:bg-white/12")
+        }
       >
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-(--cc)/25 bg-(--cc)/12">
-            <Icon className="h-4 w-4 text-(--cc)" />
+        <div className="flex gap-4">
+          {card.date && (
+            <DateChip date={new Date(card.date + "T00:00:00")} className="shrink-0" />
+          )}
+
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <span className="line-clamp-2 inline-flex items-center gap-2 font-black text-xl leading-[0.95] tracking-tighter text-white uppercase sm:text-2xl">
+                <Icon className="h-3.5 w-3.5 shrink-0 text-(--cc)" aria-hidden="true" />
+                {card.title}
+              </span>
+              {!card.isRequest && (
+                <span
+                  className={
+                    isFullBadge
+                      ? "shrink-0 rounded-full border border-red-500/30 bg-red-500/20 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-400 uppercase"
+                      : "shrink-0 rounded-full border border-(--cc)/25 bg-(--cc)/12 px-2 py-0.5 font-black text-[9px] tracking-widest text-(--cc) uppercase"
+                  }
+                >
+                  {badgeText}
+                </span>
+              )}
+            </div>
+
+            {card.note && (
+              <span className="mt-1.5 block font-black text-[10px] tracking-widest text-(--cc) uppercase">
+                {card.note}
+              </span>
+            )}
+
+            {card.tagline && (
+              <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-stone-400">
+                {card.tagline}
+              </p>
+            )}
           </div>
-          <span
-            className={
-              isFullBadge
-                ? "rounded-full border border-red-500/30 bg-red-500/20 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-400 uppercase"
-                : "rounded-full border border-(--cc)/25 bg-(--cc)/12 px-2 py-0.5 font-black text-[9px] tracking-widest text-(--cc) uppercase"
-            }
-          >
-            {badgeText}
-          </span>
         </div>
 
-        <span className="line-clamp-2 font-black text-2xl leading-[0.95] tracking-tighter text-white uppercase sm:text-3xl">
-          {card.title}
-        </span>
-        {card.tagline && (
-          <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-stone-400">{card.tagline}</p>
-        )}
-
-        <span className="mt-auto inline-flex items-center gap-1.5 pt-4 font-black text-[10px] tracking-widest text-(--cc) uppercase transition-all group-hover:gap-2.5">
-          {card.requestKind ? "Enquire now" : isGroup ? `Next: ${dateStr}` : dateStr}
+        <span className="mt-4 inline-flex items-center gap-1.5 border-t border-white/10 pt-3 font-black text-[10px] tracking-widest text-(--cc) uppercase transition-all group-hover:gap-2.5">
+          {card.cta}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </span>
       </Link>
@@ -214,22 +265,38 @@ export default async function BookingHubPage() {
   };
 
   return (
-    <main className="min-h-dvh w-full bg-[#26300D] px-4 pb-12 selection:bg-[#fdcc4b] selection:text-[#26300D]">
-      <style dangerouslySetInnerHTML={{
-        __html: `html, body { background-color: #26300D !important; margin: 0; padding: 0; overflow-x: hidden; }`
-      }} />
-
+    <main className="min-h-dvh w-full bg-canvas px-4 pb-12 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <PublicNav currentPath="/book" />
 
-      <div className="mx-auto max-w-5xl pt-1 sm:pt-1">
-        {ticketCards.length > 0 && (
-          <div className="mt-1 sm:mt-1">
-            <SectionHeading eyebrow="Tickets" title="Upcoming Events" />
+      <div className="mx-auto max-w-5xl py-8 sm:py-12">
+        <PageHeader
+          eyebrow="Bookings"
+          title="Book Your Experience"
+          subtitle="Tickets for what's on — or get in touch about playing our stage and private hire."
+        />
+
+        <div>
+          <SectionHeading eyebrow="Tickets" title="Upcoming Events" />
+          {ticketCards.length > 0 ? (
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {ticketCards.map(renderCard)}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="rounded-2xl border border-hairline bg-white/3 py-16 text-center">
+              <Calendar className="mx-auto mb-3 h-8 w-8 text-ink-2/50" aria-hidden="true" />
+              <p className="font-black text-sm tracking-tight text-ink-2 uppercase">
+                Nothing Ticketed Right Now
+              </p>
+              <Link
+                href="/whats-on"
+                className="mt-2 inline-flex items-center gap-1.5 font-black text-[10px] tracking-widest text-[#FDCC4B] uppercase transition-all hover:gap-2.5"
+              >
+                See what&apos;s on
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
+            </div>
+          )}
+        </div>
 
         {requestCards.length > 0 && (
           <div className="mt-16 sm:mt-20">
@@ -241,12 +308,12 @@ export default async function BookingHubPage() {
         )}
 
         <div className="mt-16 flex flex-col items-center gap-2">
-          <div className="flex items-center gap-3 text-stone-800">
-            <div className="h-px w-6 bg-stone-800/50" />
+          <div className="flex items-center gap-3 text-stone-500">
+            <div className="h-px w-6 bg-stone-500/40" />
             <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
-            <div className="h-px w-6 bg-stone-800/50" />
+            <div className="h-px w-6 bg-stone-500/40" />
           </div>
-          <p className="text-[8px] font-bold tracking-widest text-stone-700 uppercase opacity-40">
+          <p className="text-[8px] font-bold tracking-widest text-stone-500 uppercase">
             Licensed Venue · Please Drink Responsibly
           </p>
         </div>

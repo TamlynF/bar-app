@@ -3,13 +3,15 @@ import {
   CalendarDays, MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Info,
   Beer, Banknote, Trophy, Wine, Speaker, User, Disc3, Building2, Ghost,
+  Goal, Volleyball, Medal, Dices, Ticket, Mic, Cake, PartyPopper, Tv, Drama,
   type LucideIcon,
 } from "lucide-react";
 
 export const BOOKING_CARD_ICONS: Record<string, LucideIcon> = {
   CalendarDays, MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Info,
-  Beer, Banknote, Trophy, Wine, Speaker, User, Disc3, Building2, Ghost
+  Beer, Banknote, Trophy, Wine, Speaker, User, Disc3, Building2, Ghost,
+  Goal, Volleyball, Medal, Dices, Ticket, Mic, Cake, PartyPopper, Tv, Drama
 };
 
 export const BOOKING_CARD_ICON_NAMES = Object.keys(BOOKING_CARD_ICONS);

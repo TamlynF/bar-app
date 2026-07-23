@@ -1631,8 +1631,8 @@ export default function EventsClient({
                       </div>
                       <textarea name="booking_card_tagline" placeholder="Short line shown under the title..." rows={2} value={formCardTagline} onChange={(e) => setFormCardTagline(e.target.value)} className="w-full resize-none bg-transparent font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
                     </div>
-                    <FormRow label="Card Badge">
-                      <input name="booking_card_badge" placeholder="e.g. Thursdays, Book Now" value={formCardBadge} onChange={(e) => setFormCardBadge(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
+                    <FormRow label="Card Note">
+                      <input name="booking_card_badge" placeholder="e.g. Thursdays, Members only" value={formCardBadge} onChange={(e) => setFormCardBadge(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
                     </FormRow>
                     <input type="hidden" name="booking_card_icon" value={formCardIcon ?? ""} />
                     <IconPicker label="Card Icon" value={formCardIcon} onChange={setFormCardIcon} />

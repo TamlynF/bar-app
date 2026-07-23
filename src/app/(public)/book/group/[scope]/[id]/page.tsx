@@ -30,14 +30,14 @@ import {
   User,
   Ghost
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import {
   normalizeBookingConfig,
   type BookingConfig
 } from '@/lib/booking-config'
 import { PublicNav } from '@/components/public-nav'
+import { MarqueeTicker } from '@/components/marquee-ticker'
 
-const ICON_MAP: Record<string, React.ElementType> = {
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Banknote,
   Calendar,
   Users,
@@ -261,21 +261,8 @@ export default async function GroupedBookingPage ({
         </div>
 
         {badges.length > 0 && (
-          <div className='no-scrollbar -mx-4 mb-4 flex flex-row flex-wrap justify-center gap-2 overflow-x-auto px-4 pb-4 sm:mx-0 sm:mb-5 sm:gap-3 sm:overflow-visible sm:px-0'>
-            {badges.map((badge, index) => (
-              <div
-                key={index}
-                className={cn(
-                  'flex items-center justify-center rounded-xl border border-white/25 bg-black/30 px-4 py-2.5 font-black text-[10px] tracking-wider uppercase shadow-lg shadow-black/20 backdrop-blur-sm transition-all hover:border-white/40 hover:bg-black/40 sm:py-3 sm:text-[11px]',
-                  'flex-none sm:min-w-37.5 sm:flex-1'
-                )}
-              >
-                <badge.Icon className='mr-2 h-3.5 w-3.5 shrink-0 text-[#fdcc4b]' />
-                <span className='whitespace-nowrap text-stone-200'>
-                  {badge.text}
-                </span>
-              </div>
-            ))}
+          <div className='relative left-1/2 mb-8 w-screen -translate-x-1/2 sm:mb-10'>
+            <MarqueeTicker items={badges} straight />
           </div>
         )}
 

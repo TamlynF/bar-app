@@ -1146,8 +1146,8 @@ function BookingCardSection({ value, onChange }: { value: CardForm; onChange: (p
       <FieldCol label="Card Tagline">
         <SheetTextarea value={value.booking_card_tagline} placeholder="Short line shown under the title…" onChange={(v) => onChange({ booking_card_tagline: v })} />
       </FieldCol>
-      <FieldRow label="Card Badge">
-        <SheetInput value={value.booking_card_badge} placeholder="e.g. Thursdays, Book Now" onChange={(v) => onChange({ booking_card_badge: v })} />
+      <FieldRow label="Card Note">
+        <SheetInput value={value.booking_card_badge} placeholder="e.g. Thursdays, Members only" onChange={(v) => onChange({ booking_card_badge: v })} />
       </FieldRow>
       <div className="border-[#E6DFC8] border-t">
         <IconPicker label="Card Icon" value={value.booking_card_icon} onChange={(name) => onChange({ booking_card_icon: name })} />

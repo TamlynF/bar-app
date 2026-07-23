@@ -9,11 +9,11 @@ import {
   Music, Utensils, GlassWater, Heart, Smile,
   Sparkles, AlertCircle, Beer, Info, Speaker, User, Ghost
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { PublicNav } from "@/components/public-nav";
+import { MarqueeTicker } from "@/components/marquee-ticker";
 
-const ICON_MAP: Record<string, React.ElementType> = {
+const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   Banknote, Calendar, Users, Trophy, Wine,
   MapPin, Clock, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile,
@@ -69,7 +69,7 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
   const eventTitle = event.title || "Event";
 
   const dbBadges = (infoItems || []).map((item) => ({
-    icon: ICON_MAP[item.icon || ""] || Info,
+    Icon: ICON_MAP[item.icon || ""] || Info,
     text: item.title,
   }));
 
@@ -168,19 +168,8 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
         </div>
 
         {eventBadges.length > 0 && (
-          <div className="flex flex-row flex-wrap justify-center gap-3 mx-0 mb-5 px-4 pb-4 sm:overflow-visible overflow-x-auto no-scrollbar">
-            {eventBadges.map((badge, index) => (
-              <div
-                key={index}
-                className={cn(
-                  "flex justify-center items-center bg-black/30 hover:bg-black/40 shadow-black/20 shadow-lg backdrop-blur-sm px-4 py-2.5 sm:py-3 border border-white/25 hover:border-white/40 rounded-xl font-black text-[10px] sm:text-[11px] uppercase tracking-wider transition-all",
-                  "flex-none sm:min-w-37.5 sm:flex-1"
-                )}
-              >
-                <badge.icon className="mr-2 w-3.5 h-3.5 text-[#fdcc4b] shrink-0" />
-                <span className="text-stone-200 whitespace-nowrap">{badge.text}</span>
-              </div>
-            ))}
+          <div className="left-1/2 relative mb-8 sm:mb-10 w-screen -translate-x-1/2">
+            <MarqueeTicker items={eventBadges} straight />
           </div>
         )}
 
