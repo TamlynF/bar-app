@@ -102,7 +102,7 @@ export default async function HomePage() {
   return (
     <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <SmoothScroll />
-      <PublicNav currentPath="/" transparentAtTop />
+      <PublicNav currentPath="/" overlay />
 
       <div className="relative overflow-hidden">
         {backdropUrl && (

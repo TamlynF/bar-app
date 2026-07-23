@@ -8,23 +8,22 @@ import { cn } from "@/lib/utils";
 
 export function PublicNav({
   currentPath,
-  transparentAtTop = false,
+  overlay = false,
 }: {
   currentPath?: string;
-  transparentAtTop?: boolean;
+  overlay?: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    if (!transparentAtTop) return;
-    const onScroll = () => setScrolled(window.scrollY > 24);
+    const onScroll = () => setScrolled(window.scrollY > 16);
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [transparentAtTop]);
+  }, []);
 
-  const solid = !transparentAtTop || scrolled || menuOpen;
+  const solid = scrolled || menuOpen;
 
   const primaryLinks = [
     { href: "/whats-on", label: "What's On" },
@@ -43,16 +42,16 @@ export function PublicNav({
     <>
       <nav
         className={cn(
-          "fixed top-0 right-0 left-0 z-50 border-b transition-colors duration-300",
+          "fixed top-0 right-0 left-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-350",
           solid
-            ? "border-[#FDCC4B]/10 bg-canvas/85 backdrop-blur-xl"
+            ? "border-[#FDCC4B]/10 bg-canvas/88 backdrop-blur-xl"
             : "border-transparent bg-transparent"
         )}
       >
-        <div className="pt-safe-top grid h-14 w-full grid-cols-[1fr_auto_1fr] items-center px-4 sm:h-16 sm:px-6 lg:px-10">
+        <div className="pt-safe-top mx-auto flex h-14 w-full max-w-300 items-center justify-between gap-6 px-4 sm:h-16 sm:px-6">
           <Link
             href="/"
-            className="inline-flex w-fit items-center justify-self-start"
+            className="inline-flex w-fit shrink-0 items-center"
             onClick={() => setMenuOpen(false)}
             aria-label="Don Fenticas — home"
           >
@@ -66,16 +65,16 @@ export function PublicNav({
             />
           </Link>
 
-          <div className="hidden items-center gap-1.5 justify-self-center sm:flex lg:gap-2">
+          <div className="hidden items-center gap-7 sm:flex lg:gap-9">
             {primaryLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap uppercase transition-colors lg:px-4 lg:text-sm",
+                  "inline-flex items-center py-2 text-[11px] font-bold tracking-[0.14em] whitespace-nowrap uppercase transition-colors lg:text-xs",
                   currentPath === link.href
-                    ? "bg-canvas-2 text-[#FDCC4B]"
-                    : "text-stone-400 hover:bg-canvas-2 hover:text-ink"
+                    ? "text-[#FDCC4B]"
+                    : "text-stone-400 hover:text-ink"
                 )}
               >
                 {link.label}
@@ -83,7 +82,7 @@ export function PublicNav({
             ))}
           </div>
 
-          <div className="flex items-center gap-1 justify-self-end sm:gap-1.5">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Link
               href="/login"
               aria-label="Staff login"
@@ -122,7 +121,7 @@ export function PublicNav({
             id="public-nav-drawer"
             className="animate-in border-t border-[#FDCC4B]/10 bg-canvas/95 backdrop-blur-xl duration-200 fade-in slide-in-from-top-2 sm:hidden"
           >
-            <div className="flex w-full flex-col px-4 py-3">
+            <div className="mx-auto flex w-full max-w-300 flex-col px-4 py-3">
               <Link
                 href="/book"
                 onClick={() => setMenuOpen(false)}
@@ -150,7 +149,7 @@ export function PublicNav({
         )}
       </nav>
 
-      {!transparentAtTop && <div className="h-14 sm:h-16" aria-hidden="true" />}
+      {!overlay && <div className="h-14 sm:h-16" aria-hidden="true" />}
     </>
   );
 }
