@@ -10,6 +10,7 @@ import { HighlightedEvents } from "@/components/highlighted-events";
 import { GalleryPeek, type GalleryPeekItem } from "@/components/gallery-peek";
 import { FindUs, type CompanyInfo } from "@/components/find-us";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
+import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
 import { describeOpenState, shortLocation, type OpeningHours } from "@/lib/opening-hours";
@@ -35,6 +36,7 @@ export default async function HomePage() {
     { data: rawEvents },
     { data: rawSpecials },
     { data: rawGallery },
+    { data: rawPromos },
     { data: info },
   ] = await Promise.all([
     supabase
@@ -58,6 +60,12 @@ export default async function HomePage() {
       .eq("is_active", true)
       .order("display_order", { ascending: true })
       .limit(12),
+    supabase
+      .from("promo_content")
+      .select("id, title, description, media_url, media_type, external_url")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true })
+      .limit(6),
     supabase.from("company_information").select("*").maybeSingle(),
   ]);
 
@@ -69,6 +77,7 @@ export default async function HomePage() {
   const scheduleEvents = highlightedEvents.slice(1);
 
   const specials = (rawSpecials ?? []) as SpecialRow[];
+  const promos = (rawPromos ?? []) as PromoRow[];
 
   const photos = ((rawGallery ?? []) as GalleryRow[]).filter(
     (g) => g.media_type !== "video"
@@ -181,6 +190,8 @@ export default async function HomePage() {
           </section>
 
           <FindUs info={companyInfo} />
+
+          <InstagramStrip posts={promos} handle={companyInfo?.instagram ?? null} />
 
           <PublicFooter info={companyInfo} />
         </div>
