@@ -71,12 +71,14 @@ export default async function HomePage() {
   const highlightedEvents = ((rawEvents ?? []) as EventRow[])
     .filter((e) => getEventType(e)?.behavior !== "private")
     .map((e) => serializeEvent(e));
-  const featured = highlightedEvents[0] ?? null;
-  const isTonight = featured?.date === todayStr;
+  const tonight = highlightedEvents.filter((e) => e.date === todayStr);
+  const isTonight = tonight.length > 0;
+  const tonightEvents = isTonight ? tonight : highlightedEvents.slice(0, 1);
+  const heroIds = new Set(tonightEvents.map((e) => e.id));
   const weekEndStr = format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
-  const scheduleEvents = highlightedEvents
-    .slice(1)
-    .filter((e) => e.date <= weekEndStr);
+  const scheduleEvents = highlightedEvents.filter(
+    (e) => !heroIds.has(e.id) && e.date <= weekEndStr
+  );
 
   const specials = (rawSpecials ?? []) as SpecialRow[];
   const promos = (rawPromos ?? []) as PromoRow[];
@@ -134,7 +136,7 @@ export default async function HomePage() {
             openState={openState}
             location={location}
             mapsHref={mapsHref}
-            featured={featured}
+            tonightEvents={tonightEvents}
             isTonight={isTonight}
           />
         </div>
