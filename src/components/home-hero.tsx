@@ -162,7 +162,10 @@ function TonightCard({
       )}
 
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-4 sm:p-5">
-        <p className="ev-text line-clamp-2 font-black text-xl leading-[0.95] tracking-tight uppercase sm:text-2xl">
+        <p
+          className="ev-text line-clamp-2 font-black text-xl leading-[0.95] tracking-tight uppercase sm:text-2xl"
+          style={{ "--ev-c": event.color } as React.CSSProperties}
+        >
           {event.title}
         </p>
 
