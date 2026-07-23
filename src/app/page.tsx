@@ -6,7 +6,7 @@ import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
 import { MarqueeTicker } from "@/components/marquee-ticker";
 import { HighlightedEvents } from "@/components/highlighted-events";
-import { FindUs, type CompanyInfo } from "@/components/find-us";
+import { type CompanyInfo } from "@/components/find-us";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
 import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
@@ -122,8 +122,6 @@ export default async function HomePage() {
           {specials.length > 0 && <SpecialsSection specials={specials} />}
 
           <InstagramStrip posts={promos} handle={companyInfo?.instagram ?? null} />
-
-          <FindUs info={companyInfo} />
 
           <PublicFooter info={companyInfo} />
         </div>
