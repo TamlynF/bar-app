@@ -101,7 +101,7 @@ export function PosterChip({ event }: { event: SerializedEvent }) {
   if (!event.subType) return null;
   return (
     <span
-      className="ev-text absolute top-3 left-3 rounded-full border border-hairline bg-canvas/80 px-2.5 py-1 font-black text-[9px] tracking-[0.2em] uppercase backdrop-blur-sm"
+      className="absolute top-0 left-0 rounded-tl-3xl rounded-br-xl bg-(--ev-c) px-3.5 py-2 font-black text-xs tracking-[0.18em] text-canvas uppercase shadow-lg shadow-black/40"
       style={{ "--ev-c": event.color } as React.CSSProperties}
     >
       {event.subType}
