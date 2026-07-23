@@ -12,7 +12,7 @@ export function PageHeader({
       <span className="mb-3 block font-black text-[10px] tracking-[0.3em] text-[#FDCC4B] uppercase sm:text-xs">
         {eyebrow}
       </span>
-      <h1 className="font-black text-[clamp(2rem,7vw,3.5rem)] leading-[0.92] tracking-tighter text-ink uppercase">
+      <h1 className="m-0 max-w-3xl font-black text-[clamp(1.5rem,6.4vw,3rem)] leading-[0.92] tracking-tighter text-ink uppercase">
         {title}
       </h1>
       {subtitle && (

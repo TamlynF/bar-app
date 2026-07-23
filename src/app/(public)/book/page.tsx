@@ -63,6 +63,9 @@ const first = <T,>(v: T | T[] | null): T | null =>
 
 const GOLD = "#FDCC4B";
 
+const TILE =
+  "flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-hairline bg-canvas/80 text-center backdrop-blur-sm";
+
 const isRequestBehavior = (behavior: string | null | undefined) =>
   behavior === "private" || behavior === "music_act";
 
@@ -74,7 +77,7 @@ const REQUEST_CARDS: BookingCard[] = [
     tagline: "Bands, DJs and solo artists — send us your links and we'll find you a date.",
     icon: "Music",
     note: null,
-    cta: "Apply",
+    cta: "Apply to play",
     colorHex: GOLD,
     date: null,
     count: 1,
@@ -90,7 +93,7 @@ const REQUEST_CARDS: BookingCard[] = [
     tagline: "Birthdays, wedding receptions, corporate nights — tell us what you need.",
     icon: "Sparkles",
     note: null,
-    cta: "Enquire",
+    cta: "Send an enquiry",
     colorHex: GOLD,
     date: null,
     count: 1,
@@ -197,42 +200,66 @@ export default async function BookingHubPage() {
   const renderCard = (card: BookingCard) => {
     const isGroup = card.count > 1;
     const Icon = cardIcon(card.icon);
-    const isFullBadge = !isGroup && card.isFullyBooked;
     const badgeText = card.isFullyBooked
       ? "Full"
-      : isGroup
-      ? `${card.count} dates`
       : card.isFree
       ? "Free"
       : `£${card.paymentAmount!.toFixed(2)}`;
+    const ctaLabel = card.isRequest
+      ? card.cta
+      : isGroup
+      ? `Choose from ${card.count} dates`
+      : "Book this date";
+    const nextDateLabel =
+      isGroup && card.date
+        ? `Next: ${new Date(card.date + "T00:00:00").toLocaleDateString("en-GB", {
+            weekday: "short", day: "numeric", month: "short",
+          })}`
+        : null;
+    const metaText = card.isRequest
+      ? null
+      : [card.note, nextDateLabel].filter(Boolean).join(" · ");
 
     return (
       <Link
         key={card.key}
         href={card.href}
         style={{ "--cc": card.colorHex } as React.CSSProperties}
+        aria-label={`${card.title} — ${ctaLabel}`}
         className={
-          "group flex flex-col rounded-2xl border p-4 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 hover:border-white/30 active:scale-[0.99] sm:p-5 " +
+          "group flex cursor-pointer flex-col rounded-2xl border p-4 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 hover:border-(--cc)/50 hover:shadow-xl hover:shadow-black/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--cc) active:scale-[0.99] sm:p-5 " +
           (card.isRequest
             ? "border-white/10 border-l-[3px] border-l-[#FDCC4B] bg-canvas-2 hover:bg-canvas-2/70"
             : "border-white/15 bg-white/5 hover:bg-white/12")
         }
       >
         <div className="flex gap-4">
-          {card.date && (
-            <DateChip date={new Date(card.date + "T00:00:00")} className="shrink-0" />
+          {isGroup ? (
+            <div className={TILE + " flex-col justify-center"}>
+              <span className="font-black text-xl leading-none text-ink tabular-nums">
+                {card.count}
+              </span>
+              <span className="mt-1 font-black text-[9px] tracking-widest text-stone-400 uppercase">
+                Dates
+              </span>
+            </div>
+          ) : card.date ? (
+            <DateChip date={new Date(card.date + "T00:00:00")} className="w-14 shrink-0" />
+          ) : (
+            <div className={TILE}>
+              <Icon className="h-5 w-5 text-(--cc)" aria-hidden="true" />
+            </div>
           )}
 
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-3">
-              <span className="line-clamp-2 inline-flex items-center gap-2 font-black text-xl leading-[0.95] tracking-tighter text-white uppercase sm:text-2xl">
-                <Icon className="h-3.5 w-3.5 shrink-0 text-(--cc)" aria-hidden="true" />
+              <h3 className="line-clamp-2 font-black text-xl leading-[0.95] tracking-tighter text-white uppercase sm:text-2xl">
                 {card.title}
-              </span>
+              </h3>
               {!card.isRequest && (
                 <span
                   className={
-                    isFullBadge
+                    card.isFullyBooked
                       ? "shrink-0 rounded-full border border-red-500/30 bg-red-500/20 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-400 uppercase"
                       : "shrink-0 rounded-full border border-(--cc)/25 bg-(--cc)/12 px-2 py-0.5 font-black text-[9px] tracking-widest text-(--cc) uppercase"
                   }
@@ -242,9 +269,10 @@ export default async function BookingHubPage() {
               )}
             </div>
 
-            {card.note && (
-              <span className="mt-1.5 block font-black text-[10px] tracking-widest text-(--cc) uppercase">
-                {card.note}
+            {metaText && (
+              <span className="mt-1.5 flex items-center gap-1.5 font-black text-[10px] tracking-widest text-(--cc) uppercase">
+                <Icon className="h-3 w-3 shrink-0" aria-hidden="true" />
+                {metaText}
               </span>
             )}
 
@@ -256,9 +284,12 @@ export default async function BookingHubPage() {
           </div>
         </div>
 
-        <span className="mt-4 inline-flex items-center gap-1.5 border-t border-white/10 pt-3 font-black text-[10px] tracking-widest text-(--cc) uppercase transition-all group-hover:gap-2.5">
-          {card.cta}
-          <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+        <span className="mt-4 flex items-center justify-between gap-2 rounded-xl border border-(--cc)/30 bg-(--cc)/12 px-3.5 py-2.5 font-black text-[10px] tracking-widest text-(--cc) uppercase transition-colors group-hover:bg-(--cc) group-hover:text-[#1a2008]">
+          {ctaLabel}
+          <ArrowRight
+            className="h-3.5 w-3.5 shrink-0 transition-transform group-hover:translate-x-0.5"
+            aria-hidden="true"
+          />
         </span>
       </Link>
     );
