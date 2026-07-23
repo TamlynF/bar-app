@@ -67,7 +67,6 @@ export default async function EventBookingPage({ params }: { params: Promise<{ i
   const cfg = normalizeBookingConfig(config);
   const tagline = cfg.tag_line || (subtype?.tagline as string) || event.tagline || "";
   const eventTitle = event.title || "Event";
-  const bannerImage = cfg.booking_image_url || "/CompanyName.png";
 
   const dbBadges = (infoItems || []).map((item) => ({
     icon: ICON_MAP[item.icon || ""] || Info,
