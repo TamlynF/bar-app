@@ -151,7 +151,7 @@ body {
 .ad-marquee-track {
   display: flex;
   width: max-content;
-  animation: ad-marquee 30s linear infinite;
+  animation: ad-marquee var(--marquee-duration, 30s) linear infinite;
 }
 
 /* "Open" pill ping + "on tonight" blink */
