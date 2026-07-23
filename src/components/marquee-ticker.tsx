@@ -11,7 +11,7 @@ export function MarqueeTicker() {
   return (
     <div
       aria-hidden="true"
-      className="relative my-5 overflow-hidden border-y border-hairline bg-[#FDCC4B]/5 py-2.5 sm:my-7"
+      className="relative overflow-hidden border-t border-hairline bg-[#FDCC4B]/5 py-2.5"
     >
       <div className="ad-marquee-track">
         {[0, 1].map((row) => (

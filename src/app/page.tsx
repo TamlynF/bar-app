@@ -129,7 +129,7 @@ export default async function HomePage() {
           />
         </div>
 
-        <div className="relative z-10">
+        <div className="relative z-10 mt-8 sm:mt-12">
           <MarqueeTicker />
         </div>
       </div>
