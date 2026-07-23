@@ -37,7 +37,7 @@ export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
     <section id="whats-on" className="mx-auto max-w-5xl scroll-mt-24 px-4">
       <SectionHeading
         eyebrow="The schedule"
-        title="This Week"
+        title="Rest Of The Week"
         action={{ href: "/whats-on", label: "Full schedule" }}
       />
 
