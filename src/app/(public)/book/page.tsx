@@ -66,8 +66,8 @@ const GOLD = "#FDCC4B";
 const TILE =
   "flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-hairline bg-canvas/80 text-center backdrop-blur-sm";
 
-const isRequestBehavior = (behavior: string | null | undefined) =>
-  behavior === "private" || behavior === "music_act";
+const isPrivateBehavior = (behavior: string | null | undefined) =>
+  behavior === "private";
 
 const REQUEST_CARDS: BookingCard[] = [
   {
@@ -111,7 +111,7 @@ function buildBookingCards(events: RawBookableEvent[]): BookingCard[] {
   for (const ev of events) {
     const type = first(ev.event_types);
     const subtype = first(ev.event_subtypes);
-    if (isRequestBehavior(subtype?.behavior)) continue;
+    if (isPrivateBehavior(subtype?.behavior)) continue;
     const grouping = type?.booking_grouping ?? "per_event";
     const isFree = !ev.payment_amount || ev.payment_amount === 0;
 
