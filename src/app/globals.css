@@ -463,6 +463,32 @@ body {
   padding-left: 1rem;
 }
 
+/* Larger reading size — used where the copy is the main content of a panel
+   (flipped specials card) rather than a supporting line on a compact card. */
+.rich-content--lg {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+.rich-content--lg p {
+  margin: 0 0 0.5rem;
+}
+.rich-content--lg h1 {
+  font-size: 1.25rem;
+  margin: 0.4rem 0 0.25rem;
+}
+.rich-content--lg h2 {
+  font-size: 1.0625rem;
+  margin: 0.35rem 0 0.2rem;
+}
+.rich-content--lg ul,
+.rich-content--lg ol {
+  padding-left: 1.35rem;
+  margin: 0.35rem 0;
+}
+.rich-content--lg li {
+  margin: 0.2rem 0;
+}
+
 /* ===== Preserved custom: bar + admin semantic utilities ===== */
 /* Booking hub card accent colours */
 @layer utilities {

@@ -51,7 +51,7 @@ export default async function HomePage() {
       .limit(9),
     supabase
       .from("specials")
-      .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order")
+      .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order, created_at")
       .eq("is_active", true)
       .order("display_order", { ascending: true }),
     supabase
@@ -81,7 +81,11 @@ export default async function HomePage() {
     (e) => !heroIds.has(e.id) && e.date <= weekEndStr
   );
 
-  const specials = (rawSpecials ?? []) as SpecialRow[];
+  const specials = ((rawSpecials ?? []) as SpecialRow[]).filter(
+    (s) =>
+      (!s.start_date || s.start_date <= todayStr) &&
+      (!s.end_date || s.end_date >= todayStr)
+  );
   const promos = (rawPromos ?? []) as PromoRow[];
 
   const photos = ((rawGallery ?? []) as GalleryRow[]).filter(
