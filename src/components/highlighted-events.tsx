@@ -61,7 +61,7 @@ function ScheduleCard({
       >
         <EventPoster
           event={event}
-          aspect="aspect-square"
+          aspect="aspect-4/3"
           zoomOnHover
           sizes="(max-width: 640px) 280px, (max-width: 1024px) 304px, 320px"
         >
@@ -87,7 +87,7 @@ function ScheduleCard({
           </span>
         </EventPoster>
 
-        <div className="flex flex-col gap-1.5 p-4">
+        <div className="flex flex-col gap-1 px-3.5 pt-3 pb-2.5">
           {event.subType && (
             <span
               className="ev-text font-black text-[9px] tracking-[0.25em] uppercase"
@@ -97,20 +97,20 @@ function ScheduleCard({
             </span>
           )}
 
-          <h3 className="line-clamp-2 font-black text-base leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
+          <h3 className="line-clamp-1 font-black text-base leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
             {event.title}
           </h3>
 
           {timeLabel && (
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-400 tabular-nums">
-              <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-stone-400 tabular-nums">
+              <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
               {timeLabel}
             </span>
           )}
         </div>
       </Link>
 
-      <div className="mt-auto flex items-center gap-2 border-t border-hairline p-3">
+      <div className="mt-auto flex items-center gap-2 px-3.5 pb-3.5">
         <div className="min-w-0 flex-1">
           <EventCta event={event} size="lg" />
         </div>
