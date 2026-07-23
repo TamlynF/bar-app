@@ -137,46 +137,48 @@ export default async function HomePage() {
         </div>
       </nav>
 
-      <div className="mx-auto mt-12 max-w-5xl space-y-16 px-4 sm:mt-16 sm:space-y-24">
+      <div className="mt-12 space-y-16 sm:mt-16 sm:space-y-24">
         <HighlightedEvents events={scheduleEvents} />
 
-        {specials.length > 0 && <SpecialsSection specials={specials} />}
+        <div className="mx-auto max-w-5xl space-y-16 px-4 sm:space-y-24">
+          {specials.length > 0 && <SpecialsSection specials={specials} />}
 
-        <GalleryPeek items={peekItems} />
+          <GalleryPeek items={peekItems} />
 
-        <section className="scroll-mt-24">
-          <SectionHeading eyebrow="Eat & drink" title="The Menu" action={{ href: "/menu", label: "Full menu" }} />
-          <Link
-            href="/menu"
-            className="group flex items-center gap-4 rounded-2xl border border-hairline bg-canvas-2 p-5 shadow-lg shadow-black/20 transition-all duration-300 hover:border-white/30 hover:bg-white/15 active:scale-[0.99] sm:p-6"
-          >
-            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#FDCC4B]/20 bg-[#FDCC4B]/10">
-              <UtensilsCrossed className="h-6 w-6 text-[#FDCC4B]" aria-hidden="true" />
+          <section className="scroll-mt-24">
+            <SectionHeading eyebrow="Eat & drink" title="The Menu" action={{ href: "/menu", label: "Full menu" }} />
+            <Link
+              href="/menu"
+              className="group flex items-center gap-4 rounded-2xl border border-hairline bg-canvas-2 p-5 shadow-lg shadow-black/20 transition-all duration-300 hover:border-white/30 hover:bg-white/15 active:scale-[0.99] sm:p-6"
+            >
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-[#FDCC4B]/20 bg-[#FDCC4B]/10">
+                <UtensilsCrossed className="h-6 w-6 text-[#FDCC4B]" aria-hidden="true" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <span className="block font-black text-base tracking-tight text-ink uppercase">
+                  Drinks, Cocktails &amp; Snacks
+                </span>
+                <p className="mt-0.5 text-xs leading-relaxed text-stone-400">
+                  Draught, spirits, wine and bar bites — updated regularly.
+                </p>
+              </div>
+              <ArrowRight className="h-4 w-4 shrink-0 text-stone-500 transition-all group-hover:translate-x-0.5 group-hover:text-ink" />
+            </Link>
+          </section>
+
+          <FindUs info={companyInfo} />
+
+          <footer className="pt-4 text-center">
+            <div className="flex items-center justify-center gap-4 text-stone-800">
+              <div className="h-px w-6 bg-stone-800/50" />
+              <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
+              <div className="h-px w-6 bg-stone-800/50" />
             </div>
-            <div className="min-w-0 flex-1">
-              <span className="block font-black text-base tracking-tight text-ink uppercase">
-                Drinks, Cocktails &amp; Snacks
-              </span>
-              <p className="mt-0.5 text-xs leading-relaxed text-stone-400">
-                Draught, spirits, wine and bar bites — updated regularly.
-              </p>
-            </div>
-            <ArrowRight className="h-4 w-4 shrink-0 text-stone-500 transition-all group-hover:translate-x-0.5 group-hover:text-ink" />
-          </Link>
-        </section>
-
-        <FindUs info={companyInfo} />
-
-        <footer className="pt-4 text-center">
-          <div className="flex items-center justify-center gap-4 text-stone-800">
-            <div className="h-px w-6 bg-stone-800/50" />
-            <span className="text-[9px] font-bold tracking-[0.4em] uppercase">Don Fenticas</span>
-            <div className="h-px w-6 bg-stone-800/50" />
-          </div>
-          <p className="mt-2 text-[9px] tracking-widest text-stone-700 uppercase">
-            &copy; {new Date().getFullYear()} &middot; Licensed Venue &middot; Drink Responsibly
-          </p>
-        </footer>
+            <p className="mt-2 text-[9px] tracking-widest text-stone-700 uppercase">
+              &copy; {new Date().getFullYear()} &middot; Licensed Venue &middot; Drink Responsibly
+            </p>
+          </footer>
+        </div>
       </div>
     </main>
   );

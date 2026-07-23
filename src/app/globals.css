@@ -305,6 +305,26 @@ body {
   }
 }
 
+/* Gold-on-dark scrollbar for the public horizontal rails */
+@utility rail-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklab, #fdcc4b 55%, transparent) transparent;
+  &::-webkit-scrollbar {
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track {
+    background-color: rgb(255 255 255 / 0.06);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklab, #fdcc4b 55%, transparent);
+    border-radius: 9999px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: #fdcc4b;
+  }
+}
+
 /* ===== Preserved custom: rich text editor + renderer ===== */
 /* ── Rich text editor (Tiptap) ─────────────────────────────── */
 .rich-editor .ProseMirror {

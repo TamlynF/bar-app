@@ -34,7 +34,7 @@ function eventIcon(event: SerializedEvent, className: string) {
 
 export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
   return (
-    <section id="whats-on" className="scroll-mt-24">
+    <section id="whats-on" className="scroll-mt-24 px-4 sm:px-6 lg:px-10">
       <SectionHeading
         eyebrow="The schedule"
         title="What's On"
@@ -42,7 +42,7 @@ export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
       />
 
       {events.length > 0 ? (
-        <ul className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2">
+        <ul className="rail-scrollbar flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto pb-4">
           {events.map((event, i) => (
             <ScheduleCard key={event.id} event={event} index={i} />
           ))}
@@ -74,7 +74,7 @@ function ScheduleCard({
 
   return (
     <li
-      className="ad-card ad-rise flex w-70 shrink-0 snap-start flex-col overflow-hidden rounded-3xl border border-hairline bg-canvas-2 sm:w-76"
+      className="ad-card ad-rise flex w-70 shrink-0 snap-start flex-col overflow-hidden rounded-3xl border border-hairline bg-canvas-2 sm:w-76 lg:w-80"
       style={{ "--ev-c": event.color, "--i": index } as React.CSSProperties}
     >
       <div className="ad-poster relative flex aspect-4/3 items-center justify-center border-b border-hairline">
@@ -83,7 +83,7 @@ function ScheduleCard({
             src={event.imageUrl}
             alt={event.title}
             fill
-            sizes="(max-width: 640px) 280px, 304px"
+            sizes="(max-width: 640px) 280px, (max-width: 1024px) 304px, 320px"
             className="object-cover"
           />
         ) : (
