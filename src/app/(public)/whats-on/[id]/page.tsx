@@ -4,11 +4,9 @@ import { format } from "date-fns";
 import {
   ArrowLeft,
   CalendarDays,
-  Clock,
   ExternalLink,
   MapPin,
   Phone,
-  Ticket,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
@@ -16,6 +14,7 @@ import { EventCta } from "@/components/editorial/event-cta";
 import { EventGridCard } from "@/components/editorial/event-grid-card";
 import { EventPoster } from "@/components/editorial/event-poster";
 import { BandMedia } from "@/components/editorial/band-media";
+import { ShareLinks } from "@/components/editorial/share-links";
 import {
   entryText,
   getEventType,
@@ -111,9 +110,6 @@ export default async function WhatsOnEventPage({
   const event = serializeEvent(row, band);
   const dateObj = parseDate(event.date);
   const isPast = event.date < todayStr;
-  const timeLabel = event.startTimeLabel
-    ? `${event.startTimeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ""}`
-    : null;
 
   const more = ((rawMore ?? []) as EventRow[])
     .filter((e) => getEventType(e)?.behavior !== "private")
@@ -123,6 +119,10 @@ export default async function WhatsOnEventPage({
   const venueName = (info?.name as string) || "Don Fenticas";
   const address = info?.address as string | undefined;
   const phone = info?.phone as string | undefined;
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const shareUrl = `${siteUrl}/whats-on/${event.id}`;
+  const shareTitle = `${event.title} · ${format(dateObj, "d MMM yyyy")} · ${venueName}`;
 
   return (
     <main className="relative isolate min-h-dvh w-full overflow-hidden bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
@@ -137,7 +137,7 @@ export default async function WhatsOnEventPage({
 
       <PublicNav currentPath="/whats-on" />
 
-      <div className="relative z-10 mx-auto max-w-4xl px-4 py-6 sm:py-10">
+      <div className="relative z-10 mx-auto max-w-5xl px-4 py-6 sm:py-10">
         <Link
           href="/whats-on"
           className="inline-flex min-h-11 items-center gap-2 font-black text-[10px] tracking-[0.25em] text-ink-2 uppercase transition-colors hover:text-ink"
@@ -147,149 +147,199 @@ export default async function WhatsOnEventPage({
         </Link>
 
         <article
-          className="mt-4"
+          className="mt-4 grid grid-cols-1 gap-10 lg:grid-cols-2 lg:items-start lg:gap-14"
           style={{ "--ev-c": event.color } as React.CSSProperties}
         >
-          <EventPoster
-            event={event}
-            alt={event.title}
-            priority
-            grayscale={isPast}
-            aspect="aspect-16/9"
-            className="rounded-3xl border border-hairline"
-            sizes="(max-width: 896px) 100vw, 896px"
-          >
-            {event.isFullyBooked && (
-              <span className="absolute top-4 right-4 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 font-black text-[10px] tracking-widest text-red-400 uppercase backdrop-blur-sm">
-                Sold Out
-              </span>
-            )}
-          </EventPoster>
-
-          <header className="mt-6">
-            {event.subType && (
-              <span
-                className="ev-text mb-3 inline-block rounded-full border border-hairline bg-canvas-2 px-3 py-1.5 font-black text-[10px] tracking-[0.25em] uppercase"
-                style={{ "--ev-c": event.color } as React.CSSProperties}
-              >
-                {event.subType}
-              </span>
-            )}
-
-            <h1 className="font-black text-[clamp(2rem,7vw,3.5rem)] leading-[0.92] tracking-tighter text-ink uppercase">
-              {event.title}
-            </h1>
-
-            {event.tagline && (
-              <p className="mt-4 text-base leading-relaxed font-medium text-stone-400">
-                {event.tagline}
-              </p>
-            )}
-          </header>
-
-          <dl className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-hairline bg-canvas-2 p-4">
-              <dt className="flex items-center gap-2 font-black text-[10px] tracking-widest text-ink-2 uppercase">
-                <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Date
-              </dt>
-              <dd className="mt-1.5 font-black text-sm tracking-tight text-ink uppercase">
-                {format(dateObj, "EEEE d MMMM, yyyy")}
-              </dd>
-            </div>
-
-            <div className="rounded-2xl border border-hairline bg-canvas-2 p-4">
-              <dt className="flex items-center gap-2 font-black text-[10px] tracking-widest text-ink-2 uppercase">
-                <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Time
-              </dt>
-              <dd className="mt-1.5 font-black text-sm tracking-tight text-ink tabular-nums uppercase">
-                {timeLabel ?? "TBC"}
-              </dd>
-            </div>
-
-            <div className="rounded-2xl border border-hairline bg-canvas-2 p-4">
-              <dt className="flex items-center gap-2 font-black text-[10px] tracking-widest text-ink-2 uppercase">
-                <Ticket className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                Entry
-              </dt>
-              <dd className="mt-1.5 font-black text-sm tracking-tight text-ink uppercase">
-                {entryText(event)}
-              </dd>
-            </div>
-          </dl>
-
-          {!isPast && (
-            <div className="mt-6 flex flex-col gap-3">
-              <EventCta event={event} size="lg" bookLabel="Book Tickets Now" />
-              {event.externalLink && (
-                <a
-                  href={event.externalLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-white/5 font-black text-sm tracking-wide text-ink uppercase transition-colors hover:bg-white/10"
+          <div>
+            <header>
+              {event.subType && (
+                <span
+                  className="ev-text mb-3 inline-block rounded-full border border-hairline bg-canvas-2 px-3 py-1.5 font-black text-[10px] tracking-[0.25em] uppercase"
+                  style={{ "--ev-c": event.color } as React.CSSProperties}
                 >
-                  <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
-                  Get Tickets
-                </a>
+                  {event.subType}
+                </span>
               )}
-            </div>
-          )}
 
-          {isPast && (
-            <p className="mt-6 rounded-2xl border border-hairline bg-white/4 px-4 py-3 text-center text-xs font-bold tracking-widest text-ink-2 uppercase">
-              This show has already happened
-            </p>
-          )}
+              <h1 className="font-black text-[clamp(1.75rem,5.5vw,2.75rem)] leading-[0.95] tracking-tighter text-ink uppercase">
+                {event.title}
+              </h1>
 
-          {event.behavior === "music_act" && event.band && (
-            <section className="mt-10">
-              <h2 className="mb-4 font-black text-[10px] tracking-[0.25em] text-gold uppercase">
-                Listen &amp; follow
-              </h2>
-              <BandMedia band={event.band} title={event.title} />
-            </section>
-          )}
+              <p className="mt-4 flex items-center gap-2.5 font-black text-sm tracking-tight text-ink">
+                <CalendarDays className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
+                {format(dateObj, "d MMMM, yyyy")}
+              </p>
 
-          {(address || phone) && (
-            <section className="mt-10">
-              <h2 className="mb-4 font-black text-[10px] tracking-[0.25em] text-gold uppercase">
-                Where
-              </h2>
-              <div className="rounded-2xl border border-hairline bg-canvas-2 p-5">
-                <p className="font-black text-lg tracking-tight text-ink uppercase">
+              <p className="mt-2 flex items-start gap-2.5 text-sm font-bold text-ink-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
+                <span>
                   {venueName}
-                </p>
-                {address && (
-                  <p className="mt-1.5 text-sm leading-relaxed text-stone-400">{address}</p>
+                  {address ? ` — ${address}` : ""}
+                </span>
+              </p>
+            </header>
+
+            <section className="mt-7 rounded-2xl border border-hairline bg-canvas-2 p-5 sm:p-6">
+              <h2 className="font-black text-xl tracking-tight text-ink">
+                {isPast ? "This show has finished" : "Get your tickets!"}
+              </h2>
+
+              <div className="mt-5 flex items-center justify-between gap-4 border-b border-hairline pb-5">
+                <div className="min-w-0">
+                  <p className="font-bold text-sm text-ink">
+                    {event.subType && (
+                      <span className="capitalize">{event.subType} / </span>
+                    )}
+                    {event.title}
+                  </p>
+                  <p className="mt-1 text-xs font-medium text-ink-2">{entryText(event)}</p>
+                </div>
+                {event.isFullyBooked ? (
+                  <span className="shrink-0 rounded-full border border-red-500/25 bg-red-500/10 px-4 py-2 font-black text-[10px] tracking-widest text-red-400 uppercase">
+                    Sold Out
+                  </span>
+                ) : (
+                  <span className="shrink-0 font-black text-xl tracking-tight text-ink tabular-nums">
+                    {event.price != null && event.price > 0 ? `£${event.price}` : "Free"}
+                  </span>
                 )}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {address && (
+              </div>
+
+              <dl className="mt-5 space-y-2.5">
+                <div className="flex items-center justify-between gap-4">
+                  <dt className="font-bold text-[11px] tracking-widest text-ink-2 uppercase">
+                    Doors
+                  </dt>
+                  <dd className="font-black text-sm text-ink tabular-nums">
+                    {event.startTimeLabel ?? "TBC"}
+                  </dd>
+                </div>
+                {event.endTimeLabel && (
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="font-bold text-[11px] tracking-widest text-ink-2 uppercase">
+                      Finishes
+                    </dt>
+                    <dd className="font-black text-sm text-ink tabular-nums">
+                      {event.endTimeLabel}
+                    </dd>
+                  </div>
+                )}
+              </dl>
+
+              {!isPast ? (
+                <div className="mt-6 flex flex-col gap-3">
+                  <EventCta event={event} size="lg" bookLabel="Book Tickets Now" />
+                  {event.externalLink && (
                     <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                        `${venueName} ${address}`
-                      )}`}
+                      href={event.externalLink}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-white/5 px-4 font-black text-[10px] tracking-widest text-ink uppercase transition-colors hover:bg-white/10"
+                      className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-white/5 font-black text-sm tracking-wide text-ink uppercase transition-colors hover:bg-white/10"
                     >
-                      <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      Get directions
+                      <ExternalLink className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      Get Tickets
                     </a>
                   )}
-                  {phone && (
-                    <a
-                      href={`tel:${phone.replace(/\s/g, "")}`}
-                      className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-white/5 px-4 font-black text-[10px] tracking-widest text-ink uppercase transition-colors hover:bg-white/10"
-                    >
-                      <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                      {phone}
-                    </a>
-                  )}
+                  <p className="text-center text-[11px] font-medium text-ink-2/70">
+                    Over 18s only. Please drink responsibly.
+                  </p>
                 </div>
+              ) : (
+                <p className="mt-6 rounded-xl border border-hairline bg-white/4 px-4 py-3 text-center text-xs font-bold tracking-widest text-ink-2 uppercase">
+                  This show has already happened
+                </p>
+              )}
+            </section>
+          </div>
+
+          <div>
+            <EventPoster
+              event={event}
+              alt={event.title}
+              priority
+              grayscale={isPast}
+              aspect="aspect-square"
+              className="rounded-2xl border border-hairline"
+              sizes="(max-width: 1024px) 100vw, 480px"
+            >
+              {event.isFullyBooked && (
+                <span className="absolute top-4 right-4 rounded-full border border-red-500/20 bg-red-500/10 px-3 py-1 font-black text-[10px] tracking-widest text-red-400 uppercase backdrop-blur-sm">
+                  Sold Out
+                </span>
+              )}
+            </EventPoster>
+
+            <div className="mt-7 flex flex-wrap items-center gap-4">
+              <h2 className="font-black text-sm tracking-tight text-ink">Share Event:</h2>
+              <ShareLinks url={shareUrl} title={shareTitle} />
+            </div>
+
+            <section className="mt-8">
+              <h2 className="font-black text-xl tracking-tight text-ink">
+                Event Information
+              </h2>
+              <dl className="mt-4 space-y-2">
+                <div className="flex items-baseline gap-2">
+                  <dt className="font-bold text-sm text-ink">Start Time:</dt>
+                  <dd className="font-black text-sm text-gold tabular-nums">
+                    {event.startTimeLabel ?? "TBC"}
+                  </dd>
+                </div>
+                {event.endTimeLabel && (
+                  <div className="flex items-baseline gap-2">
+                    <dt className="font-bold text-sm text-ink">Last Orders:</dt>
+                    <dd className="font-black text-sm text-gold tabular-nums">
+                      {event.endTimeLabel}
+                    </dd>
+                  </div>
+                )}
+                <div className="flex items-baseline gap-2">
+                  <dt className="font-bold text-sm text-ink">Entry:</dt>
+                  <dd className="font-black text-sm text-gold">{entryText(event)}</dd>
+                </div>
+              </dl>
+
+              {event.tagline && (
+                <p className="mt-5 text-sm leading-relaxed font-medium text-ink-2">
+                  {event.tagline}
+                </p>
+              )}
+
+              <div className="mt-5 flex flex-wrap gap-2">
+                {address && (
+                  <a
+                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                      `${venueName} ${address}`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-white/5 px-4 font-black text-[10px] tracking-widest text-ink uppercase transition-colors hover:bg-white/10"
+                  >
+                    <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    Get directions
+                  </a>
+                )}
+                {phone && (
+                  <a
+                    href={`tel:${phone.replace(/\s/g, "")}`}
+                    className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-white/5 px-4 font-black text-[10px] tracking-widest text-ink uppercase transition-colors hover:bg-white/10"
+                  >
+                    <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                    {phone}
+                  </a>
+                )}
               </div>
             </section>
-          )}
+
+            {event.behavior === "music_act" && event.band && (
+              <section className="mt-8">
+                <h2 className="mb-4 font-black text-xl tracking-tight text-ink">
+                  Listen &amp; follow
+                </h2>
+                <BandMedia band={event.band} title={event.title} />
+              </section>
+            )}
+          </div>
         </article>
 
         {more.length > 0 && (
