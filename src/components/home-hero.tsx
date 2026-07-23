@@ -21,7 +21,7 @@ export function HomeHero({
   isTonight: boolean;
 }) {
   return (
-    <section className="relative pt-1 pb-3 text-center sm:pt-3 sm:pb-4">
+    <section className="relative pt-3 pb-4 text-center">
       <div className="relative z-10 flex flex-col items-center">
         <div className="animate-reveal flex flex-wrap items-center justify-center gap-2">
           <span
@@ -72,7 +72,7 @@ export function HomeHero({
             ))}
         </div>
 
-        <h1 className="animate-reveal m-0 mt-3 max-w-3xl font-black text-[clamp(1.75rem,7.5vw,3.5rem)] leading-[0.92] tracking-tighter text-[#FFF4CC] uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
+        <h1 className="animate-reveal m-0 mt-5 max-w-3xl font-black text-[clamp(1.75rem,7.5vw,3.5rem)] leading-[0.92] tracking-tighter text-[#FFF4CC] uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
           {tagline}
         </h1>
 
@@ -96,7 +96,7 @@ function TonightStrip({
     : null;
 
   return (
-    <div className="animate-reveal relative z-10 mt-7 w-full rounded-3xl border border-hairline bg-canvas-2/85 p-4 text-left shadow-2xl shadow-black/40 backdrop-blur-md [animation-delay:240ms] sm:mt-9 sm:p-5">
+    <div className="animate-reveal relative z-10 mt-7 w-full rounded-3xl border border-hairline bg-canvas-2/85 p-4 text-left shadow-2xl shadow-black/40 backdrop-blur-md [animation-delay:240ms] sm:p-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
         {!isTonight && (
           <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#FDCC4B] text-[#1a2008] shadow-lg shadow-[#FDCC4B]/30">
