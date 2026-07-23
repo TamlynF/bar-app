@@ -462,6 +462,14 @@ body {
 .rich-content--public ol {
   padding-left: 1rem;
 }
+/* The editor wraps coloured text as <span style="color:…"><strong>…</strong></span>,
+   so the rules above would repaint it white. Inside an explicitly coloured
+   element, inherit the author's colour instead. */
+.rich-content--public [style*='color'] strong,
+.rich-content--public [style*='color'] h1,
+.rich-content--public [style*='color'] h2 {
+  color: inherit;
+}
 
 /* Larger reading size — used where the copy is the main content of a panel
    (flipped specials card) rather than a supporting line on a compact card. */

@@ -72,15 +72,17 @@ export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
     <section id="specials" className="scroll-mt-24">
       <SectionHeading eyebrow="At the bar" title="Specials" />
 
-      <div className="grid grid-cols-1 items-start gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
-        {specials.map((s) => (
-          <SpecialStub
-            key={s.id}
-            special={s}
-            flipped={flippedId === s.id}
-            onToggle={() => setFlippedId((id) => (id === s.id ? null : s.id))}
-          />
-        ))}
+      <div className="rail-scrollbar snap-x snap-mandatory overflow-x-auto pb-4">
+        <div className="flex w-max items-start gap-3.5">
+          {specials.map((s) => (
+            <SpecialStub
+              key={s.id}
+              special={s}
+              flipped={flippedId === s.id}
+              onToggle={() => setFlippedId((id) => (id === s.id ? null : s.id))}
+            />
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -106,7 +108,7 @@ function SpecialStub({
   const backId = `special-${special.id}-details`;
 
   return (
-    <div className="perspective-[1600px]">
+    <div className="w-60 shrink-0 snap-start perspective-[1600px] sm:w-64 lg:w-72">
       <div
         className={cn(
           "relative transform-3d transition-transform duration-500",
@@ -138,16 +140,26 @@ function SpecialStub({
                 aria-hidden="true"
               />
               <span
-                className="absolute inset-0 bg-linear-to-t from-black/92 via-black/55 to-black/20"
+                className="absolute inset-0 bg-linear-to-t from-black/95 via-black/75 to-black/55"
                 aria-hidden="true"
               />
             </>
           )}
 
-          {isNew && (
-            <span className="absolute top-0 left-0 z-20 flex items-center gap-1 rounded-tl-3xl rounded-br-xl bg-[#FDCC4B] px-3 py-1 font-black text-[10px] tracking-widest text-[#1a2008] uppercase shadow-md shadow-black/30">
-              <Sparkles className="h-3 w-3" aria-hidden="true" />
-              New
+          {(isNew || endingSoon) && (
+            <span className="absolute top-0 left-0 z-20 flex items-stretch overflow-hidden rounded-tl-3xl rounded-br-xl shadow-md shadow-black/30">
+              {isNew && (
+                <span className="flex items-center gap-1 bg-[#FDCC4B] px-3 py-1 font-black text-[10px] tracking-widest text-[#1a2008] uppercase">
+                  <Sparkles className="h-3 w-3" aria-hidden="true" />
+                  New
+                </span>
+              )}
+              {endingSoon && (
+                <span className="flex items-center gap-1 bg-[#FF6B35] px-3 py-1 font-black text-[10px] tracking-widest text-[#1a2008] uppercase">
+                  <Clock className="h-3 w-3" aria-hidden="true" />
+                  {endingSoon}
+                </span>
+              )}
             </span>
           )}
 
@@ -160,21 +172,15 @@ function SpecialStub({
               )}
             </span>
 
-            <span className="line-clamp-1 block font-black text-xl leading-none tracking-tight uppercase">
+            <span className="line-clamp-1 block font-black text-xl leading-none tracking-tight text-white uppercase drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
               {special.title}
             </span>
 
-            <span className="block text-[11px] font-bold tracking-wide text-[#ffd9b0] uppercase tabular-nums">
+            <span className="block text-[11px] font-bold tracking-wide text-[#ffd9b0] uppercase tabular-nums drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
               {range}
             </span>
 
             <span className="flex flex-wrap items-center gap-1.5 overflow-hidden">
-              {endingSoon && (
-                <span className="inline-flex items-center gap-1 rounded-md border border-[#FF6B35]/40 bg-[#FF6B35]/20 px-2.5 py-1 font-black text-[10px] tracking-wide text-[#FF6B35] uppercase">
-                  <Clock className="h-3 w-3" aria-hidden="true" />
-                  {endingSoon}
-                </span>
-              )}
               {badges.map((b) => (
                 <span
                   key={b}
