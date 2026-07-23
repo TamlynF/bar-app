@@ -112,7 +112,7 @@
 html,
 body {
   background-color: #14180a;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Choreographed hero text reveal (slides up + fades in on load) */

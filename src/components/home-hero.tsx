@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
 import { EventCta } from "@/components/editorial/event-cta";
@@ -25,15 +24,8 @@ export function HomeHero({
           </span>
         </div>
 
-        <h1 className="animate-reveal m-0 mt-6 w-full [animation-delay:80ms]">
-          <Image
-            src="/CompanyName.png"
-            alt="Don Fenticas — live music bar in Hinckley"
-            width={560}
-            height={150}
-            priority
-            className="mx-auto h-auto w-[82%] max-w-150 object-contain drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)]"
-          />
+        <h1 className="animate-reveal m-0 mt-6 w-full font-black text-[clamp(2.5rem,12vw,5rem)] leading-[0.88] tracking-tighter text-[#FFF4CC] uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
+          Don Fenticas
         </h1>
 
         <p className="animate-reveal mt-4 max-w-md text-sm leading-relaxed font-medium text-ink-2 [animation-delay:160ms] sm:text-base">

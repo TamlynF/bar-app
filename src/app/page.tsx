@@ -100,13 +100,13 @@ export default async function HomePage() {
   return (
     <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <SmoothScroll />
-      <PublicNav currentPath="/" />
+      <PublicNav currentPath="/" transparentAtTop />
 
       <div className="relative overflow-hidden">
         <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
         <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
-        <div className="relative z-10 mx-auto max-w-5xl px-4 pt-4 sm:pt-6">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 pt-18 sm:pt-22">
           <HomeHero
             tagline={tagline}
             openLabel={openLabel}
