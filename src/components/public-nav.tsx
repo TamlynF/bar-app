@@ -60,7 +60,10 @@ export function PublicNav({
               alt=""
               width={869}
               height={176}
-              className="h-7 w-auto object-contain sm:h-8"
+              className={cn(
+                "h-10 w-auto object-contain sm:h-12",
+                !solid && "drop-shadow-[0_2px_14px_rgba(0,0,0,0.75)]"
+              )}
               priority
             />
           </Link>
@@ -72,9 +75,9 @@ export function PublicNav({
                 href={link.href}
                 className={cn(
                   "inline-flex items-center py-2 text-[11px] font-bold tracking-[0.14em] whitespace-nowrap uppercase transition-colors lg:text-xs",
-                  currentPath === link.href
-                    ? "text-[#FDCC4B]"
-                    : "text-stone-400 hover:text-ink"
+                  currentPath === link.href ? "text-[#FDCC4B]" : "hover:text-ink",
+                  currentPath !== link.href && (solid ? "text-stone-400" : "text-ink"),
+                  !solid && "drop-shadow-[0_1px_10px_rgba(0,0,0,0.9)]"
                 )}
               >
                 {link.label}
@@ -90,7 +93,12 @@ export function PublicNav({
                 "hidden h-9 w-9 items-center justify-center rounded-full transition-colors sm:inline-flex",
                 currentPath === "/login"
                   ? "bg-canvas-2 text-[#FDCC4B]"
-                  : "text-stone-500 hover:bg-canvas-2 hover:text-ink"
+                  : cn(
+                      "hover:bg-canvas-2 hover:text-ink",
+                      solid
+                        ? "text-stone-500"
+                        : "text-ink drop-shadow-[0_1px_10px_rgba(0,0,0,0.9)]"
+                    )
               )}
             >
               <LogIn className="h-4 w-4" />
@@ -109,7 +117,12 @@ export function PublicNav({
               aria-expanded={menuOpen}
               aria-controls="public-nav-drawer"
               onClick={() => setMenuOpen((o) => !o)}
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-ink-2 transition-colors hover:bg-canvas-2 hover:text-ink active:scale-95 sm:hidden"
+              className={cn(
+                "inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors hover:bg-canvas-2 hover:text-ink active:scale-95 sm:hidden",
+                solid
+                  ? "text-ink-2"
+                  : "text-ink drop-shadow-[0_1px_10px_rgba(0,0,0,0.9)]"
+              )}
             >
               {menuOpen ? <X className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
             </button>
