@@ -49,7 +49,7 @@ export function PublicNav({
             : "border-transparent bg-transparent"
         )}
       >
-        <div className="pt-safe-top mx-auto grid h-14 max-w-5xl grid-cols-[1fr_auto_1fr] items-center px-3 sm:h-16 sm:px-4">
+        <div className="pt-safe-top grid h-14 w-full grid-cols-[1fr_auto_1fr] items-center px-4 sm:h-16 sm:px-6 lg:px-10">
           <Link
             href="/"
             className="inline-flex w-fit items-center justify-self-start"
@@ -66,13 +66,13 @@ export function PublicNav({
             />
           </Link>
 
-          <div className="hidden items-center gap-1.5 justify-self-center sm:flex">
+          <div className="hidden items-center gap-1.5 justify-self-center sm:flex lg:gap-2">
             {primaryLinks.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap uppercase transition-colors",
+                  "inline-flex items-center rounded-full px-3 py-1.5 text-xs font-bold tracking-wide whitespace-nowrap uppercase transition-colors lg:px-4 lg:text-sm",
                   currentPath === link.href
                     ? "bg-canvas-2 text-[#FDCC4B]"
                     : "text-stone-400 hover:bg-canvas-2 hover:text-ink"
@@ -99,7 +99,7 @@ export function PublicNav({
 
             <Link
               href="/book"
-              className="rounded-full bg-[#FDCC4B] px-3.5 py-2 font-black text-[11px] tracking-wide text-[#1a2008]! uppercase transition-colors hover:bg-[#e5b843] active:scale-95 sm:px-4 sm:text-xs"
+              className="hidden rounded-full bg-[#FDCC4B] px-4 py-2 font-black text-xs tracking-wide text-[#1a2008]! uppercase transition-colors hover:bg-[#e5b843] active:scale-95 sm:inline-flex lg:px-5 lg:text-sm"
             >
               Book
             </Link>
@@ -122,7 +122,14 @@ export function PublicNav({
             id="public-nav-drawer"
             className="animate-in border-t border-[#FDCC4B]/10 bg-canvas/95 backdrop-blur-xl duration-200 fade-in slide-in-from-top-2 sm:hidden"
           >
-            <div className="mx-auto flex max-w-5xl flex-col px-3 py-2">
+            <div className="flex w-full flex-col px-4 py-3">
+              <Link
+                href="/book"
+                onClick={() => setMenuOpen(false)}
+                className="mb-2 inline-flex h-12 items-center justify-center rounded-2xl bg-[#FDCC4B] font-black text-sm tracking-wide text-[#1a2008]! uppercase transition-colors hover:bg-[#e5b843] active:scale-95"
+              >
+                Book
+              </Link>
               {mobileLinks.map((link) => (
                 <Link
                   key={link.href}

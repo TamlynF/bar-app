@@ -53,18 +53,25 @@ The decision is not "modern apps use bottom nav" or "hamburgers are bad" — it'
 
 Visitors arrive to find info (events, menu) or take an action (book, call). They are *not* cycling between sections like an app user. A visible top nav with the primary destinations + a primary CTA is the correct pattern.
 
-**Required composition:**
+The nav spans the **full screen width** at every breakpoint — no `max-w-*` container. Gutters are `px-4 sm:px-6 lg:px-10`, matching the full-bleed sections on the home page.
+
+**Required composition — desktop (`sm:` and up):**
 - Logo on the left (small, links home)
-- Primary destinations (`Menu`, `Gallery`, `Contact`) — visible as text links at **every breakpoint, including mobile**. The things people actually click should never be one tap behind a hamburger.
-- Primary CTA pill (`Book`) — gold, far right, always visible
-- Hamburger (mobile only) — holds *less-frequent* items: `Staff Login`, and any future items like `About`, `Events`, `FAQ`. On `sm:` and up those items appear inline beside the primary links and the hamburger disappears.
-- Total nav must fit on 375px width without wrapping. Mobile sizing: `text-[10px]`, `px-2 py-1.5` on the text links is the cap.
+- Primary destinations (`What's On`, `Menu`, `Gallery`, `Contact`) — text links, centred
+- `Staff Login` icon, then the gold `Book` CTA pill, far right
+- No hamburger
 
-**The rule for what goes where:** primary = visible. Secondary = hamburger. A link is "primary" if a visitor would tap it during a typical session. Menu and Gallery clearly qualify. Contact gets in because people genuinely look up address / phone on mobile. Staff Login does not — it's used by 2 people, not customers, so it belongs in the drawer.
+**Required composition — mobile (below `sm:`):**
+- Logo on the left, hamburger on the right — **nothing else in the bar**
+- The drawer opens with the gold `Book` CTA as a full-width pill at the top, then `Home`, the primary destinations, and `Staff Login` last
 
-**When to grow the visible row:** if you need to add a 4th primary link, drop the icon labels (just `Menu Gallery Contact Events` with very tight spacing), then if still too wide, demote the least-tapped one into the hamburger. Don't shrink text below `10px`.
+Mobile deliberately trades the always-visible Book pill for a clean two-element bar (the Bongo's Bingo pattern). Book stays the first and most prominent thing in the drawer, so it is never more than two taps away, and the home hero carries its own Book CTA above the fold.
 
-**When NOT to use a bottom nav on public pages:** never (unless the product becomes a full PWA with persistent in-app sections, which it currently isn't). The Book CTA must always be one tap away in the top nav, and a bottom nav competes with that.
+**The rule for what goes where:** on desktop, primary = visible, secondary = nowhere else to hide, so everything is inline. On mobile everything except the logo lives in the drawer, ordered by intent: CTA first, destinations next, `Staff Login` last (it's used by 2 people, not customers).
+
+**Nav link type sizing:** `text-xs` (12px) `font-bold uppercase tracking-wide` from `sm:`, stepping to `text-sm` (14px) at `lg:` where the full-width bar has room. Drawer links are `text-sm`. Don't go below `text-xs` in the bar or below `10px` anywhere.
+
+**When NOT to use a bottom nav on public pages:** never (unless the product becomes a full PWA with persistent in-app sections, which it currently isn't). A bottom nav competes with the Book CTA.
 
 ### Admin portal → sidebar + mobile bottom nav
 
@@ -128,7 +135,7 @@ Type on dark:
 ### Mobile-first rules (375px width is the design target)
 
 - The home page must show "what's on tonight / this week" above the fold without scrolling past the hero.
-- Nav stays ≤ 5 items. Staff Login is an icon on mobile.
+- Nav stays ≤ 5 items. On mobile the bar is logo + hamburger only; everything else is in the drawer.
 - All tappable elements ≥ 44px on the shorter side (Tailwind `h-11` or `h-12`).
 - Horizontal-scroll rows (events, gallery) need `snap-x snap-mandatory` and `no-scrollbar`.
 - Sticky elements: only one at a time. Either the top nav OR a bottom CTA bar — never both.
