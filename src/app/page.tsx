@@ -135,7 +135,7 @@ export default async function HomePage() {
         </div>
       </div>
 
-      <div className="mt-6 space-y-16 sm:mt-8 sm:space-y-24">
+      <div className="-mt-4 space-y-16 sm:-mt-6 sm:space-y-24">
         <HighlightedEvents events={scheduleEvents} />
 
         <div className="mx-auto max-w-5xl space-y-16 px-4 sm:space-y-24">
