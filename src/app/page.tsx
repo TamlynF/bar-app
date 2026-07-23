@@ -116,9 +116,11 @@ export default async function HomePage() {
               alt=""
               fill
               sizes="100vw"
-              className="scale-105 object-cover opacity-60 saturate-75"
+              className="scale-105 object-cover"
             />
-            <div className="absolute inset-0 bg-linear-to-b from-canvas/70 via-canvas/40 to-canvas" />
+            <div className="absolute inset-0 bg-[#1a2008]/70" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_55%_at_50%_45%,rgba(20,24,10,0.85)_0%,rgba(20,24,10,0.45)_55%,transparent_100%)]" />
+            <div className="absolute inset-0 bg-linear-to-b from-black/45 via-transparent to-canvas" />
           </div>
         )}
         <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
