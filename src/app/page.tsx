@@ -38,13 +38,13 @@ export default async function HomePage() {
     supabase
       .from("events")
       .select(
-        "id, title, date, start_time, end_time, tagline, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline)"
+        "id, title, date, start_time, end_time, tagline, image_url, is_active, is_fully_booked, is_bookable, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline)"
       )
       .eq("is_active", true)
       .gte("date", todayStr)
       .order("date", { ascending: true })
       .order("start_time", { ascending: true })
-      .limit(6),
+      .limit(9),
     supabase
       .from("specials")
       .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order")

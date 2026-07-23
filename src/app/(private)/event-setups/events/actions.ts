@@ -33,6 +33,7 @@ export async function saveEventAction(formData: FormData) {
     group_name: formData.get("group_name")?.toString() || null,
     booking_id: formData.get("booking_id") ? parseInt(formData.get("booking_id") as string, 10) : null,
     external_link: formData.get("external_link")?.toString() || null,
+    image_url: formData.get("image_url")?.toString() || null,
     karaoke_request_url: formData.get("karaoke_request_url")?.toString() || null,
     is_bookable: isBookable,
     booking_config: JSON.parse(formData.get("booking_config")?.toString() || "{}"),

@@ -31,6 +31,7 @@ export type EventRow = {
   booking_page_url: string | null;
   karaoke_request_url: string | null;
   tagline?: string | null;
+  image_url?: string | null;
   payment_amount?: number | null;
   event_types: TypeJoin | TypeJoin[];
   event_subtypes: SubtypeJoin | SubtypeJoin[];
@@ -113,6 +114,7 @@ export type SerializedEvent = {
   color: string;
   subType: string | null;
   tagline: string | null;
+  imageUrl: string | null;
   price: number | null;
   isKaraoke: boolean;
   karaokeRequestUrl: string | null;
@@ -135,6 +137,7 @@ export function serializeEvent(e: EventRow, band: BandInfo | null = null): Seria
     color: eventBadgeColor(e),
     subType: et?.sub_type ?? null,
     tagline: e.tagline ?? et?.tagline ?? null,
+    imageUrl: e.image_url ?? null,
     price: e.payment_amount ?? null,
     isKaraoke: et?.behavior === "karaoke",
     karaokeRequestUrl: e.karaoke_request_url ?? null,

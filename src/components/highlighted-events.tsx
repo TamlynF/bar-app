@@ -1,6 +1,8 @@
+import Image from "next/image";
 import { format } from "date-fns";
 import {
   Calendar,
+  Clock,
   Mic2,
   Music,
   Ticket,
@@ -40,9 +42,9 @@ export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
       />
 
       {events.length > 0 ? (
-        <ul className="flex flex-col gap-3">
+        <ul className="no-scrollbar -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2">
           {events.map((event, i) => (
-            <ScheduleRow key={event.id} event={event} index={i} />
+            <ScheduleCard key={event.id} event={event} index={i} />
           ))}
         </ul>
       ) : (
@@ -58,7 +60,7 @@ export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
   );
 }
 
-function ScheduleRow({
+function ScheduleCard({
   event,
   index,
 }: {
@@ -72,53 +74,75 @@ function ScheduleRow({
 
   return (
     <li
-      className="ad-row ad-rise flex items-center gap-3 rounded-3xl border border-hairline bg-canvas-2 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5"
+      className="ad-card ad-rise flex w-70 shrink-0 snap-start flex-col overflow-hidden rounded-3xl border border-hairline bg-canvas-2 sm:w-76"
       style={{ "--ev-c": event.color, "--i": index } as React.CSSProperties}
     >
-      <div className="w-11 shrink-0 text-center">
-        <span className="block font-black text-[9px] tracking-widest text-stone-400 uppercase">
-          {format(dateObj, "EEE")}
-        </span>
-        <span className="mt-0.5 block font-black text-2xl leading-none text-ink tabular-nums">
-          {format(dateObj, "d")}
-        </span>
+      <div className="ad-poster relative flex aspect-4/3 items-center justify-center border-b border-hairline">
+        {event.imageUrl ? (
+          <Image
+            src={event.imageUrl}
+            alt={event.title}
+            fill
+            sizes="(max-width: 640px) 280px, 304px"
+            className="object-cover"
+          />
+        ) : (
+          <span className="ad-kind flex h-16 w-16 items-center justify-center rounded-2xl border" aria-hidden="true">
+            {eventIcon(event, "w-7 h-7")}
+          </span>
+        )}
+
+        <div className="absolute top-3 left-3 rounded-xl border border-hairline bg-canvas/80 px-2.5 py-1.5 text-center backdrop-blur-sm">
+          <span className="block font-black text-[9px] tracking-widest text-stone-400 uppercase">
+            {format(dateObj, "EEE")}
+          </span>
+          <span className="block font-black text-xl leading-none text-ink tabular-nums">
+            {format(dateObj, "d")}
+          </span>
+          <span className="mt-0.5 block font-black text-[9px] tracking-widest text-stone-400 uppercase">
+            {format(dateObj, "MMM")}
+          </span>
+        </div>
+
+        {event.isFullyBooked && (
+          <span className="absolute top-3 right-3 rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-400 uppercase backdrop-blur-sm">
+            Sold Out
+          </span>
+        )}
       </div>
 
-      <div
-        className="ad-kind hidden h-11 w-11 shrink-0 items-center justify-center rounded-xl border sm:flex"
-        aria-hidden="true"
-      >
-        {eventIcon(event, "w-5 h-5")}
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-1 flex-col gap-3 p-4 sm:p-5">
+        <div className="min-w-0">
           <h3
-            className="ev-text line-clamp-1 font-black text-lg leading-none tracking-tight uppercase sm:text-xl"
+            className="ev-text line-clamp-2 font-black text-lg leading-tight tracking-tight uppercase"
             style={{ "--ev-c": event.color } as React.CSSProperties}
           >
             {event.title}
           </h3>
-          {event.isFullyBooked && (
-            <span className="rounded-full border border-red-500/20 bg-red-500/10 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-400 uppercase">
-              Sold Out
-            </span>
+          {(event.subType || event.tagline) && (
+            <p className="mt-1 line-clamp-2 text-xs font-medium text-stone-400">
+              {[event.subType, event.tagline].filter(Boolean).join(" · ")}
+            </p>
           )}
         </div>
-        {(event.subType || event.tagline) && (
-          <p className="mt-1 line-clamp-1 text-xs font-medium text-stone-400">
-            {[event.subType, event.tagline].filter(Boolean).join(" · ")}
-          </p>
-        )}
+
+        <dl className="mt-auto space-y-1 text-xs text-stone-400">
+          <div className="flex items-center gap-2">
+            <dt className="sr-only">Date</dt>
+            <Calendar className="h-3.5 w-3.5 shrink-0 text-stone-500" aria-hidden="true" />
+            <dd className="font-bold text-ink">{format(dateObj, "d MMMM, yyyy")}</dd>
+          </div>
+          {timeLabel && (
+            <div className="flex items-center gap-2">
+              <dt className="sr-only">Time</dt>
+              <Clock className="h-3.5 w-3.5 shrink-0 text-stone-500" aria-hidden="true" />
+              <dd className="font-bold text-ink tabular-nums">{timeLabel}</dd>
+            </div>
+          )}
+        </dl>
+
+        <EventCta event={event} size="lg" />
       </div>
-
-      {timeLabel && (
-        <span className="hidden shrink-0 text-right text-sm font-bold text-ink tabular-nums sm:block">
-          {timeLabel}
-        </span>
-      )}
-
-      <EventCta event={event} />
     </li>
   );
 }

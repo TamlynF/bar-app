@@ -33,8 +33,10 @@ import {
   Grid2X2,
   SlidersHorizontal,
   QrCode,
+  Upload,
 } from "lucide-react";
 import QRCode from "qrcode";
+import { createBrowserClient } from "@supabase/ssr";
 import { saveEventAction, deleteEventAction, setEventQr } from "./actions";
 import { DatePicker, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
@@ -49,6 +51,13 @@ import type { BookingConfig } from "@/lib/booking-config";
 import type { EventBehavior } from "@/lib/event-behavior";
 
 export type { BookingConfig };
+
+const storageClient = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+const EVENT_IMAGE_BUCKET = "booking-images";
 
 export type EventType = {
   id: number;
@@ -102,6 +111,7 @@ export type EventRecord = {
   booking_card_icon: string | null;
   booking_card_badge: string | null;
   booking_qr_url: string | null;
+  image_url: string | null;
 };
 
 function toTitleCase(str?: string | null) {
@@ -261,6 +271,8 @@ export default function EventsClient({
   const [formEndTime, setFormEndTime] = useState<string>("");
   const [formHostId, setFormHostId] = useState<string>("");
   const [formTagline, setFormTagline] = useState<string>("");
+  const [formImageUrl, setFormImageUrl] = useState<string>("");
+  const [imageUploading, setImageUploading] = useState(false);
   const [formPayment, setFormPayment] = useState<string>("");
   const [formBookingPageUrl, setFormBookingPageUrl] = useState<string>("");
   const [bookingUrlManual, setBookingUrlManual] = useState(false);
@@ -361,6 +373,27 @@ export default function EventsClient({
     });
   };
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImageUploading(true);
+    setFormError(null);
+    const ext = file.name.split(".").pop();
+    const path = `events/${crypto.randomUUID()}.${ext}`;
+    const { data, error } = await storageClient.storage
+      .from(EVENT_IMAGE_BUCKET)
+      .upload(path, file, { cacheControl: "3600", upsert: false });
+    if (error) {
+      setFormError(`Upload failed: ${error.message}`);
+      setImageUploading(false);
+      return;
+    }
+    setFormImageUrl(
+      storageClient.storage.from(EVENT_IMAGE_BUCKET).getPublicUrl(data.path).data.publicUrl
+    );
+    setImageUploading(false);
+  };
+
   const openView = (event: EventRecord) => {
     setFormError(null);
     setIsEditing(false);
@@ -390,6 +423,7 @@ export default function EventsClient({
     setFormCardTagline("");
     setFormCardIcon(null);
     setFormCardBadge("");
+    setFormImageUrl("");
     setFormActive(true);
     setFormFullyBooked(false);
     setFormDetailsOpen(true);
@@ -421,6 +455,7 @@ export default function EventsClient({
     }
     setFormKaraokeUrl(selected.karaoke_request_url ?? "");
     setFormTagline(selected.tagline ?? "");
+    setFormImageUrl(selected.image_url ?? "");
     setFormPayment(selected.payment_amount != null ? String(selected.payment_amount) : "");
     setFormSeating(selected.seating_required ?? true);
     setFormActive(selected.is_active ?? true);
@@ -1460,6 +1495,35 @@ export default function EventsClient({
                     <textarea name="tagline" placeholder="Brief tagline for the event..." rows={2} value={formTagline} onChange={(e) => setFormTagline(e.target.value)} className="w-full resize-none bg-transparent font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
                   </div>
 
+                  <div className="px-4 py-2.5 sm:px-5 sm:py-4">
+                    <div className="mb-2 flex items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+                      <span className="font-black text-[10px] tracking-wide uppercase">Poster Image</span>
+                    </div>
+                    <input type="hidden" name="image_url" value={formImageUrl} />
+                    {formImageUrl ? (
+                      <div className="relative overflow-hidden rounded-xl border border-[#E6DFC8]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={formImageUrl} alt="Event poster" className="max-h-50 w-full bg-[#F7F4EA] object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setFormImageUrl("")}
+                          title="Remove poster image"
+                          aria-label="Remove poster image"
+                          className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] py-7 transition-colors hover:border-[#5C4033]">
+                        {imageUploading ? <Loader2 className="h-7 w-7 animate-spin text-[#5F624F]" /> : <Upload className="h-7 w-7 text-[#5F624F] opacity-50" />}
+                        <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{imageUploading ? "Uploading…" : "Upload"}</span>
+                        <span className="text-[10px] text-[#5F624F]">Shown on the public What&apos;s On card</span>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
+                      </label>
+                    )}
+                  </div>
+
                   <FormRow label="External Link">
                     <input name="external_link" type="url" placeholder="https://instagram.com/..." defaultValue={formDefault?.external_link ?? ""} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
                   </FormRow>
@@ -1600,7 +1664,7 @@ export default function EventsClient({
                 <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
                   Cancel
                 </Button>
-                <Button type="button" disabled={isPending || hasFieldErrors} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50">
+                <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" />Save</>}
                 </Button>
               </div>
