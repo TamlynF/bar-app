@@ -76,15 +76,14 @@ export function HomeHero({
           {tagline}
         </h1>
 
-        {featured && (
-          <FeaturedCard event={featured} isTonight={isTonight} />
-        )}
       </div>
+
+      {featured && <TonightStrip event={featured} isTonight={isTonight} />}
     </section>
   );
 }
 
-function FeaturedCard({
+function TonightStrip({
   event,
   isTonight,
 }: {
@@ -97,53 +96,60 @@ function FeaturedCard({
     : null;
 
   return (
-    <div className="animate-reveal mt-4 w-full max-w-150 rounded-3xl border border-hairline bg-canvas-2 p-5 text-left shadow-2xl shadow-black/40 [animation-delay:240ms]">
-      <div className="flex items-center gap-2">
-        <span className="ad-blink h-2 w-2 rounded-full bg-[#FF6B35] shadow-[0_0_10px_#FF6B35]" aria-hidden="true" />
-        <span className="font-black text-[10px] tracking-[0.2em] text-neon uppercase">
-          {isTonight ? "On tonight" : "Next up"}
-        </span>
-      </div>
-
-      <div className="mt-3 flex items-center gap-4">
-        <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#FDCC4B] text-[#1a2008] shadow-lg shadow-[#FDCC4B]/30">
-          <span className="font-black text-[11px] tracking-widest uppercase">
-            {format(dateObj, "EEE")}
-          </span>
-          <span className="mt-0.5 font-black text-3xl leading-none tabular-nums">
-            {format(dateObj, "d")}
-          </span>
-        </div>
+    <div className="animate-reveal relative z-10 mt-7 w-full rounded-3xl border border-hairline bg-canvas-2/85 p-4 text-left shadow-2xl shadow-black/40 backdrop-blur-md [animation-delay:240ms] sm:mt-9 sm:p-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-5">
+        {!isTonight && (
+          <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#FDCC4B] text-[#1a2008] shadow-lg shadow-[#FDCC4B]/30">
+            <span className="font-black text-[10px] tracking-widest uppercase">
+              {format(dateObj, "EEE")}
+            </span>
+            <span className="font-black text-2xl leading-none tabular-nums">
+              {format(dateObj, "d")}
+            </span>
+          </div>
+        )}
 
         <div className="min-w-0 flex-1">
-          {event.subType && (
-            <p className="font-black text-[9px] tracking-[0.25em] text-stone-400 uppercase">
-              {event.subType}
-            </p>
-          )}
+          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            <span className="inline-flex items-center gap-2">
+              <span
+                className="ad-blink h-2 w-2 rounded-full bg-[#FF6B35] shadow-[0_0_10px_#FF6B35]"
+                aria-hidden="true"
+              />
+              <span className="font-black text-[10px] tracking-[0.2em] text-neon uppercase">
+                {isTonight ? "On tonight" : "Next up"}
+              </span>
+            </span>
+            {timeLabel && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-400 tabular-nums">
+                <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
+                {timeLabel}
+              </span>
+            )}
+            {event.subType && (
+              <span className="font-black text-[9px] tracking-[0.25em] text-stone-500 uppercase">
+                {event.subType}
+              </span>
+            )}
+          </div>
+
           <p
-            className="ev-text mt-0.5 line-clamp-2 font-black text-2xl leading-[0.95] tracking-tight uppercase sm:text-3xl"
+            className="ev-text mt-1.5 line-clamp-2 font-black text-2xl leading-[0.95] tracking-tight uppercase sm:text-3xl"
             style={{ "--ev-c": event.color } as React.CSSProperties}
           >
             {event.title}
           </p>
-          {(event.tagline || timeLabel) && (
-            <p className="mt-1 flex items-center gap-1.5 text-xs font-medium text-stone-400">
-              {timeLabel && (
-                <span className="inline-flex items-center gap-1 font-bold tabular-nums">
-                  <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
-                  {timeLabel}
-                </span>
-              )}
-              {event.tagline && timeLabel && <span aria-hidden="true">·</span>}
-              {event.tagline && <span className="truncate">{event.tagline}</span>}
+
+          {event.tagline && (
+            <p className="mt-1 line-clamp-1 text-xs font-medium text-stone-400">
+              {event.tagline}
             </p>
           )}
         </div>
-      </div>
 
-      <div className="mt-3">
-        <EventCta event={event} size="lg" />
+        <div className="w-full shrink-0 sm:w-48">
+          <EventCta event={event} size="lg" />
+        </div>
       </div>
     </div>
   );
