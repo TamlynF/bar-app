@@ -79,21 +79,21 @@ function ScheduleCard({
       className="ad-card ad-rise relative aspect-4/5 w-70 shrink-0 snap-start overflow-hidden rounded-2xl border border-hairline bg-canvas-2 sm:w-76 lg:w-80"
       style={{ "--ev-c": event.color, "--i": index } as React.CSSProperties}
     >
-      {event.imageUrl ? (
-        <Image
-          src={event.imageUrl}
-          alt=""
-          fill
-          sizes="(max-width: 640px) 280px, (max-width: 1024px) 304px, 320px"
-          className="object-cover"
-        />
-      ) : (
-        <div className="ad-poster absolute inset-0 flex items-center justify-center">
+      <div className="ad-poster absolute inset-0 flex items-center justify-center">
+        {event.imageUrl ? (
+          <Image
+            src={event.imageUrl}
+            alt=""
+            fill
+            sizes="(max-width: 640px) 280px, (max-width: 1024px) 304px, 320px"
+            className="object-cover"
+          />
+        ) : (
           <span className="ad-kind flex h-16 w-16 items-center justify-center rounded-2xl border" aria-hidden="true">
             {eventIcon(event, "w-7 h-7")}
           </span>
-        </div>
-      )}
+        )}
+      </div>
 
       <div className="absolute inset-0 bg-canvas/25" />
       <div className="absolute inset-x-0 bottom-0 h-3/4 bg-linear-to-t from-black/90 via-black/55 to-transparent" />

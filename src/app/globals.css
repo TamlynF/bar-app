@@ -256,6 +256,7 @@ body {
 }
 /* Poster panel standing in for an event photo, tinted to the event colour */
 .ad-poster {
+  background-color: var(--canvas-2);
   background-image: linear-gradient(
     145deg,
     color-mix(in oklab, var(--ev-c, #fdcc4b) 26%, transparent) 0%,
