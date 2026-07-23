@@ -83,6 +83,23 @@ export function HomeHero({
   );
 }
 
+function LiveEqualiser() {
+  return (
+    <span
+      className="inline-flex h-3 items-end gap-0.5 drop-shadow-[0_0_12px_rgba(255,107,53,0.6)]"
+      aria-hidden="true"
+    >
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          style={{ "--eq-i": i } as React.CSSProperties}
+          className="ad-eq-bar h-full w-0.5 rounded-full bg-neon"
+        />
+      ))}
+    </span>
+  );
+}
+
 function TonightStrip({
   event,
   isTonight,
@@ -113,12 +130,13 @@ function TonightStrip({
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <span className="inline-flex items-center gap-2">
               <span
-                className="ad-blink h-2 w-2 rounded-full bg-[#FF6B35] shadow-[0_0_10px_#FF6B35]"
+                className="ad-blink h-2 w-2 rounded-full bg-neon drop-shadow-[0_0_12px_rgba(255,107,53,0.6)]"
                 aria-hidden="true"
               />
-              <span className="font-black text-[10px] tracking-[0.2em] text-neon uppercase">
+              <span className="font-black text-[10px] tracking-[0.2em] text-neon uppercase drop-shadow-[0_0_12px_rgba(255,107,53,0.6)]">
                 {isTonight ? "On tonight" : "Next up"}
               </span>
+              {isTonight && <LiveEqualiser />}
             </span>
             {timeLabel && (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold text-stone-400 tabular-nums">

@@ -183,6 +183,22 @@ body {
   animation: ad-blink 1.4s infinite;
 }
 
+/* "On tonight" live equaliser — three bars bouncing off --eq-i */
+@keyframes ad-eq {
+  0%,
+  100% {
+    transform: scaleY(0.3);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+.ad-eq-bar {
+  transform-origin: bottom;
+  animation: ad-eq 0.9s ease-in-out infinite;
+  animation-delay: calc(var(--eq-i, 0) * 0.18s);
+}
+
 /* Staggered entrance for schedule rows */
 @keyframes ad-rise {
   from {
@@ -277,6 +293,10 @@ body {
   .ad-ping,
   .ad-blink {
     animation: none;
+  }
+  .ad-eq-bar {
+    animation: none;
+    transform: scaleY(0.6);
   }
   .ad-rise {
     opacity: 1;
