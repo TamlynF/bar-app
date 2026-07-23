@@ -34,26 +34,28 @@ function eventIcon(event: SerializedEvent, className: string) {
 
 export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
   return (
-    <section id="whats-on" className="scroll-mt-24 px-4 sm:px-6 lg:px-10">
+    <section id="whats-on" className="mx-auto max-w-5xl scroll-mt-24 px-4">
       <SectionHeading
         eyebrow="The schedule"
-        title="What's On"
+        title="This Week"
         action={{ href: "/whats-on", label: "Full schedule" }}
       />
 
       {events.length > 0 ? (
-        <ul className="rail-scrollbar flex snap-x snap-mandatory scroll-px-4 gap-4 overflow-x-auto pb-4">
-          {events.map((event, i) => (
-            <ScheduleCard key={event.id} event={event} index={i} />
-          ))}
-        </ul>
+        <div className="rail-scrollbar snap-x snap-mandatory scroll-px-4 overflow-x-auto pb-4">
+          <ul className="mx-auto flex w-max max-w-full items-stretch gap-4">
+            {events.map((event, i) => (
+              <ScheduleCard key={event.id} event={event} index={i} />
+            ))}
+          </ul>
+        </div>
       ) : (
         <div className="rounded-2xl border border-white/5 bg-white/3 py-16 text-center">
           <Calendar className="mx-auto mb-3 h-8 w-8 text-stone-700" aria-hidden="true" />
           <p className="font-black text-sm tracking-tight text-stone-500 uppercase">
-            More Nights Soon
+            Nothing Else This Week
           </p>
-          <p className="mt-1 text-xs text-stone-600">Check back for the next round</p>
+          <p className="mt-1 text-xs text-stone-600">See the full schedule for what&apos;s next</p>
         </div>
       )}
     </section>

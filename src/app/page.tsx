@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { endOfWeek, format } from "date-fns";
 import { UtensilsCrossed, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
@@ -74,7 +75,10 @@ export default async function HomePage() {
     .map((e) => serializeEvent(e));
   const featured = highlightedEvents[0] ?? null;
   const isTonight = featured?.date === todayStr;
-  const scheduleEvents = highlightedEvents.slice(1);
+  const weekEndStr = format(endOfWeek(today, { weekStartsOn: 1 }), "yyyy-MM-dd");
+  const scheduleEvents = highlightedEvents
+    .slice(1)
+    .filter((e) => e.date <= weekEndStr);
 
   const specials = (rawSpecials ?? []) as SpecialRow[];
   const promos = (rawPromos ?? []) as PromoRow[];
