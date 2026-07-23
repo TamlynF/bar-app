@@ -12,6 +12,7 @@ import { FindUs, type CompanyInfo } from "@/components/find-us";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
+import Image from "next/image";
 
 export const revalidate = 300;
 
@@ -71,6 +72,7 @@ export default async function HomePage() {
   const photos = ((rawGallery ?? []) as GalleryRow[]).filter(
     (g) => g.media_type !== "video"
   );
+  const backdropUrl = photos[0]?.image_url ?? null;
   const peekItems: GalleryPeekItem[] = photos
     .slice(0, 8)
     .map((g) => ({ id: g.id, title: g.title, image_url: g.image_url }));
@@ -103,6 +105,18 @@ export default async function HomePage() {
       <PublicNav currentPath="/" transparentAtTop />
 
       <div className="relative overflow-hidden">
+        {backdropUrl && (
+  <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+    <Image
+      src={backdropUrl}
+      alt=""
+      fill
+      sizes="100vw"
+      className="scale-105 object-cover opacity-25 saturate-50"
+    />
+    <div className="absolute inset-0 bg-linear-to-b from-canvas/80 via-canvas/40 to-canvas" />
+  </div>
+)}
         <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
         <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
