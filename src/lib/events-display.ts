@@ -122,6 +122,24 @@ export type SerializedEvent = {
   band: BandInfo | null;
 };
 
+export function formatGBP(n: number): string {
+  return Number.isInteger(n) ? `£${n}` : `£${n.toFixed(2)}`;
+}
+
+export function priceLabel(event: SerializedEvent): string | null {
+  if (event.isFullyBooked || event.price == null) return null;
+  return event.price > 0 ? formatGBP(event.price) : "FREE";
+}
+
+export function entryText(event: SerializedEvent): string {
+  if (event.isFullyBooked) return "Sold out";
+  if (event.price != null && event.price > 0) return `${formatGBP(event.price)} entry`;
+  if (event.isKaraoke)
+    return event.karaokeRequestUrl ? "Karaoke · requests open" : "Karaoke night";
+  if (event.externalLink) return "Tickets via link";
+  return "Free entry · walk in";
+}
+
 export function serializeEvent(e: EventRow, band: BandInfo | null = null): SerializedEvent {
   const et = getEventType(e);
   return {

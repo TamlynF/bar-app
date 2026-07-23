@@ -5,9 +5,11 @@ import type { SerializedEvent } from "@/lib/events-display";
 export function EventCta({
   event,
   size = "sm",
+  bookLabel = "Book",
 }: {
   event: SerializedEvent;
   size?: "sm" | "lg";
+  bookLabel?: string;
 }) {
   const lg = size === "lg";
   const icon = lg ? "w-4 h-4" : "w-3.5 h-3.5";
@@ -66,7 +68,7 @@ export function EventCta({
         aria-label={`Book ${event.title}`}
       >
         <CalendarDays className={cn(icon, "shrink-0")} aria-hidden="true" />
-        Book
+        {bookLabel}
       </a>
     );
   }

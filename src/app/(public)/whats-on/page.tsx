@@ -7,7 +7,6 @@ import { type FilterTab } from "@/components/editorial/filter-tabs";
 import { WhatsOnGrid } from "@/components/whats-on-grid";
 import {
   getEventType,
-  parseDate,
   serializeEvent,
   type BandInfo,
   type EventRow,
@@ -27,7 +26,6 @@ export default async function WhatsOnPage() {
 
   const monthStart = startOfMonth(today);
   const monthStartStr = format(monthStart, "yyyy-MM-dd");
-  const monthEnd = endOfMonth(today);
   const nextMonthEnd = endOfMonth(addMonths(today, 1));
   const nextMonthEndStr = format(nextMonthEnd, "yyyy-MM-dd");
 
@@ -85,16 +83,16 @@ export default async function WhatsOnPage() {
   const toSerialized = (e: EventRow) =>
     serializeEvent(e, bandByEvent.get(e.id) ?? null);
 
-  const monthEvents = events.filter((e) => parseDate(e.date) <= monthEnd);
-  const serializedMonthEvents = monthEvents.map(toSerialized);
+  const serialized = events.map(toSerialized);
 
-  const upcoming = serializedMonthEvents.filter((e) => e.date >= todayStr);
-  const past = serializedMonthEvents.filter((e) => e.date < todayStr);
-  const nextEventId = upcoming[0]?.id ?? null;
+  const upcoming = serialized.filter((e) => e.date >= todayStr);
+  const past = serialized
+    .filter((e) => e.date < todayStr)
+    .sort((a, b) => b.date.localeCompare(a.date));
 
   const tabSeen = new Map<string, string>();
-  for (const e of serializedMonthEvents) {
-    if (e.date < todayStr || !e.subType) continue;
+  for (const e of upcoming) {
+    if (!e.subType) continue;
     if (!tabSeen.has(e.subType)) tabSeen.set(e.subType, e.color);
   }
   const tabs: FilterTab[] = Array.from(tabSeen.entries()).map(([label, color]) => ({
@@ -103,12 +101,7 @@ export default async function WhatsOnPage() {
     color,
   }));
 
-  const later = events
-    .filter((e) => parseDate(e.date) > monthEnd)
-    .map(toSerialized);
-
   const thisMonthLabel = format(today, "MMMM");
-  const nextMonthLabel = format(addMonths(today, 1), "MMMM");
 
   return (
     <main className="relative isolate min-h-dvh w-full overflow-hidden bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
@@ -120,15 +113,8 @@ export default async function WhatsOnPage() {
       <div className="relative z-10 mx-auto max-w-5xl px-4 py-6 sm:py-10">
         <SectionHeading eyebrow={`${thisMonthLabel} · The schedule`} title="What's On" />
 
-        {(serializedMonthEvents.length > 0 || later.length > 0) && (
-          <WhatsOnGrid
-            upcoming={upcoming}
-            past={past}
-            later={later}
-            tabs={tabs}
-            nextEventId={nextEventId}
-            nextMonthLabel={nextMonthLabel}
-          />
+        {serialized.length > 0 && (
+          <WhatsOnGrid upcoming={upcoming} past={past} tabs={tabs} />
         )}
 
         {events.length === 0 && (
