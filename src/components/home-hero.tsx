@@ -1,11 +1,9 @@
 import Image from "next/image";
 import { format } from "date-fns";
-import { MapPin } from "lucide-react";
 import { EventCta } from "@/components/editorial/event-cta";
 import { PosterTint } from "@/components/editorial/event-poster";
 import { cn } from "@/lib/utils";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
-import type { OpenState } from "@/lib/opening-hours";
 
 function OutlinedWord({ text, word }: { text: string; word?: string }) {
   const start = word ? text.toLowerCase().indexOf(word.toLowerCase()) : -1;
@@ -23,74 +21,19 @@ function OutlinedWord({ text, word }: { text: string; word?: string }) {
 export function HomeHero({
   tagline,
   accentWord,
-  openState,
-  location,
-  mapsHref,
   tonightEvents,
   isTonight,
 }: {
   tagline: string | null;
   accentWord?: string;
-  openState: OpenState | null;
-  location: string | null;
-  mapsHref: string | null;
   tonightEvents: SerializedEvent[];
   isTonight: boolean;
 }) {
   return (
     <section className="relative pt-3 pb-4 text-center">
       <div className="relative z-10 flex flex-col items-center">
-        <div className="animate-reveal flex flex-wrap items-center justify-center gap-2">
-          <span
-            className={cn(
-              "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5",
-              openState?.isOpen
-                ? "border-[#FDCC4B]/25 bg-[#FDCC4B]/10"
-                : "border-hairline bg-white/5"
-            )}
-          >
-            <span
-              className={cn(
-                "h-1.5 w-1.5 rounded-full",
-                openState?.isOpen ? "ad-ping bg-[#FDCC4B]" : "bg-stone-500"
-              )}
-              aria-hidden="true"
-            />
-            <span
-              className={cn(
-                "font-black text-[10px] tracking-[0.2em] uppercase",
-                openState?.isOpen ? "text-[#FDCC4B]" : "text-stone-400"
-              )}
-            >
-              {openState?.label ?? "Live music & late nights"}
-            </span>
-          </span>
-
-          {location &&
-            (mapsHref ? (
-              <a
-                href={mapsHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-white/5 px-3.5 py-1.5 transition-colors hover:border-white/30 hover:bg-white/10"
-              >
-                <MapPin className="h-3 w-3 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
-                <span className="font-black text-[10px] tracking-[0.2em] text-ink-2 uppercase">
-                  {location}
-                </span>
-              </a>
-            ) : (
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-white/5 px-3.5 py-1.5">
-                <MapPin className="h-3 w-3 shrink-0 text-[#FDCC4B]" aria-hidden="true" />
-                <span className="font-black text-[10px] tracking-[0.2em] text-ink-2 uppercase">
-                  {location}
-                </span>
-              </span>
-            ))}
-        </div>
-
         {tagline && (
-          <h1 className="animate-reveal m-0 mt-5 max-w-3xl font-black text-[clamp(1.5rem,6.4vw,3rem)] leading-[0.92] tracking-tighter text-ink uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
+          <h1 className="animate-reveal m-0 max-w-3xl font-black text-[clamp(1.5rem,6.4vw,3rem)] leading-[0.92] tracking-tighter text-ink uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)]">
             <OutlinedWord text={tagline} word={accentWord} />
           </h1>
         )}

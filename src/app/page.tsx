@@ -14,7 +14,6 @@ import { SpecialsSection, type SpecialRow } from "@/components/specials-section"
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
-import { describeOpenState, shortLocation, type OpeningHours } from "@/lib/opening-hours";
 import Image from "next/image";
 
 export const revalidate = 300;
@@ -97,15 +96,6 @@ export default async function HomePage() {
   const tagline = companyInfo?.tagline?.trim() || null;
   const taglineAccent = companyInfo?.tagline_accent?.trim() || undefined;
 
-  const openState = describeOpenState(
-    companyInfo?.opening_hours as OpeningHours | null,
-    today
-  );
-  const location = shortLocation(companyInfo?.address);
-  const mapsHref = companyInfo?.address
-    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(companyInfo.address)}`
-    : null;
-
   return (
     <main className="relative isolate min-h-dvh w-full bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <SmoothScroll />
@@ -135,9 +125,6 @@ export default async function HomePage() {
           <HomeHero
             tagline={tagline}
             accentWord={taglineAccent}
-            openState={openState}
-            location={location}
-            mapsHref={mapsHref}
             tonightEvents={tonightEvents}
             isTonight={isTonight}
           />
