@@ -15,7 +15,7 @@ export function HomeHero({
   isTonight: boolean;
 }) {
   return (
-    <section className="relative pt-10 pb-4 text-center sm:pt-14 sm:pb-6">
+    <section className="relative pt-1 pb-3 text-center sm:pt-3 sm:pb-4">
       <div className="relative z-10 flex flex-col items-center">
         <div className="animate-reveal inline-flex items-center gap-2 rounded-full border border-[#FDCC4B]/25 bg-[#FDCC4B]/10 px-3.5 py-1.5">
           <span className="ad-ping h-1.5 w-1.5 rounded-full bg-[#FDCC4B]" aria-hidden="true" />
@@ -24,13 +24,9 @@ export function HomeHero({
           </span>
         </div>
 
-        <h1 className="animate-reveal m-0 mt-6 w-full font-black text-[clamp(2.5rem,12vw,5rem)] leading-[0.88] tracking-tighter text-[#FFF4CC] uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
-          Don Fenticas
-        </h1>
-
-        <p className="animate-reveal mt-4 max-w-md text-sm leading-relaxed font-medium text-ink-2 [animation-delay:160ms] sm:text-base">
+        <h1 className="animate-reveal m-0 mt-3 max-w-3xl font-black text-[clamp(1.75rem,7.5vw,3.5rem)] leading-[0.92] tracking-tighter text-[#FFF4CC] uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
           {tagline}
-        </p>
+        </h1>
 
         {featured && (
           <FeaturedCard event={featured} isTonight={isTonight} />
@@ -53,7 +49,7 @@ function FeaturedCard({
     : null;
 
   return (
-    <div className="animate-reveal mt-8 w-full max-w-150 rounded-3xl border border-hairline bg-canvas-2 p-6 text-left shadow-2xl shadow-black/40 [animation-delay:240ms]">
+    <div className="animate-reveal mt-4 w-full max-w-150 rounded-3xl border border-hairline bg-canvas-2 p-5 text-left shadow-2xl shadow-black/40 [animation-delay:240ms]">
       <div className="flex items-center gap-2">
         <span className="ad-blink h-2 w-2 rounded-full bg-[#FF6B35] shadow-[0_0_10px_#FF6B35]" aria-hidden="true" />
         <span className="font-black text-[10px] tracking-[0.2em] text-neon uppercase">
@@ -62,7 +58,7 @@ function FeaturedCard({
       </div>
 
       <div className="mt-3 flex items-center gap-4">
-        <div className="flex h-18 w-18 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#FDCC4B] text-[#1a2008] shadow-lg shadow-[#FDCC4B]/30">
+        <div className="flex h-16 w-16 shrink-0 flex-col items-center justify-center rounded-2xl bg-[#FDCC4B] text-[#1a2008] shadow-lg shadow-[#FDCC4B]/30">
           <span className="font-black text-[11px] tracking-widest uppercase">
             {format(dateObj, "EEE")}
           </span>
@@ -98,7 +94,7 @@ function FeaturedCard({
         </div>
       </div>
 
-      <div className="mt-4">
+      <div className="mt-3">
         <EventCta event={event} size="lg" />
       </div>
     </div>

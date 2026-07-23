@@ -14,8 +14,7 @@ import { getEventType, serializeEvent, type EventRow } from "@/lib/events-displa
 
 export const revalidate = 300;
 
-const DEFAULT_TAGLINE =
-  "Live music, indie & rock, DJs and karaoke — your local late-night bar.";
+const DEFAULT_TAGLINE = "Live music, indie & rock, DJs and karaoke";
 
 type GalleryRow = {
   id: number;
@@ -106,7 +105,7 @@ export default async function HomePage() {
         <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
         <div className="pointer-events-none absolute top-95 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 
-        <div className="relative z-10 mx-auto max-w-5xl px-4 pt-18 sm:pt-22">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 pt-14 sm:pt-16">
           <HomeHero
             tagline={tagline}
             openLabel={openLabel}
@@ -137,7 +136,7 @@ export default async function HomePage() {
         </div>
       </nav>
 
-      <div className="mt-12 space-y-16 sm:mt-16 sm:space-y-24">
+      <div className="mt-6 space-y-16 sm:mt-8 sm:space-y-24">
         <HighlightedEvents events={scheduleEvents} />
 
         <div className="mx-auto max-w-5xl space-y-16 px-4 sm:space-y-24">
