@@ -112,7 +112,9 @@ CREATE TABLE public.company_information (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   description text,
-  opening_hours jsonb DEFAULT '{}'::jsonb
+  opening_hours jsonb DEFAULT '{}'::jsonb,
+  tagline text,
+  tagline_accent text
 );
 
 CREATE TABLE public.contacts (

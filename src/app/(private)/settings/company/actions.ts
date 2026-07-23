@@ -35,6 +35,8 @@ export async function updateCompanyInfo(formData: FormData) {
     twitter: formData.get("twitter")?.toString() || null,
     tiktok: formData.get("tiktok")?.toString() || null,
     youtube: formData.get("youtube")?.toString() || null,
+    tagline: formData.get("tagline")?.toString() || null,
+    tagline_accent: formData.get("tagline_accent")?.toString() || null,
     description: formData.get("description")?.toString() || null,
     opening_hours: JSON.parse(formData.get("opening_hours")?.toString() || "{}"),
     max_capacity: parseInt(formData.get("max_capacity")?.toString() || "0", 10) || null,
@@ -51,6 +53,7 @@ export async function updateCompanyInfo(formData: FormData) {
     if (error) throw error;
 
     revalidatePath("/settings/company");
+    revalidatePath("/");
     return { success: true };
   } catch (error) {
     console.error("Error updating company info:", error);

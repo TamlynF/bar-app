@@ -18,6 +18,8 @@ type OpeningHours = Partial<Record<string, DayHours>>;
 
 export type CompanyInfo = {
   address?: string | null;
+  tagline?: string | null;
+  tagline_accent?: string | null;
   opening_hours?: OpeningHours | null;
   instagram?: string | null;
   facebook?: string | null;

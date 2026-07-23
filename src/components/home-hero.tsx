@@ -5,15 +5,30 @@ import { cn } from "@/lib/utils";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
 import type { OpenState } from "@/lib/opening-hours";
 
+function OutlinedWord({ text, word }: { text: string; word?: string }) {
+  const start = word ? text.toLowerCase().indexOf(word.toLowerCase()) : -1;
+  if (start < 0 || !word) return <>{text}</>;
+
+  return (
+    <>
+      {text.slice(0, start)}
+      <span className="ad-word-outline">{text.slice(start, start + word.length)}</span>
+      {text.slice(start + word.length)}
+    </>
+  );
+}
+
 export function HomeHero({
   tagline,
+  accentWord,
   openState,
   location,
   mapsHref,
   featured,
   isTonight,
 }: {
-  tagline: string;
+  tagline: string | null;
+  accentWord?: string;
   openState: OpenState | null;
   location: string | null;
   mapsHref: string | null;
@@ -72,9 +87,11 @@ export function HomeHero({
             ))}
         </div>
 
-        <h1 className="animate-reveal m-0 mt-5 max-w-3xl font-black text-[clamp(1.75rem,7.5vw,3.5rem)] leading-[0.92] tracking-tighter text-[#FFF4CC] uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
-          {tagline}
-        </h1>
+        {tagline && (
+          <h1 className="animate-reveal m-0 mt-5 max-w-3xl font-black text-[clamp(1.75rem,7.5vw,3.5rem)] leading-[0.92] tracking-tighter text-[#FFF4CC] uppercase drop-shadow-[0_8px_44px_rgba(253,204,75,0.26)] [animation-delay:80ms]">
+            <OutlinedWord text={tagline} word={accentWord} />
+          </h1>
+        )}
 
       </div>
 

@@ -6,8 +6,8 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- Company
-insert into public.company_information (id, name, max_capacity, address, email)
-values (1, 'Don Fenticas', 100, '1 Test Street', 'admin@example.com');
+insert into public.company_information (id, name, max_capacity, address, email, tagline, tagline_accent)
+values (1, 'Don Fenticas', 100, '1 Test Street', 'admin@example.com', 'Live music, indie & rock, DJs and karaoke', 'karaoke');
 
 -- Marketing settings (single row; comparison area seeded for local E2E)
 insert into public.marketing_settings (comparison_area, comparison_radius)

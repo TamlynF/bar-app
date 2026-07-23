@@ -19,8 +19,6 @@ import Image from "next/image";
 
 export const revalidate = 300;
 
-const DEFAULT_TAGLINE = "Live music, indie & rock, DJs and karaoke";
-
 type GalleryRow = {
   id: number;
   title: string | null;
@@ -92,7 +90,8 @@ export default async function HomePage() {
     .map((g) => ({ id: g.id, title: g.title, image_url: g.image_url }));
 
   const companyInfo = (info ?? null) as CompanyInfo;
-  const tagline = DEFAULT_TAGLINE;
+  const tagline = companyInfo?.tagline?.trim() || null;
+  const taglineAccent = companyInfo?.tagline_accent?.trim() || undefined;
 
   const openState = describeOpenState(
     companyInfo?.opening_hours as OpeningHours | null,
@@ -131,6 +130,7 @@ export default async function HomePage() {
         <div className="relative z-10 mx-auto max-w-5xl px-4 pt-14 sm:pt-16">
           <HomeHero
             tagline={tagline}
+            accentWord={taglineAccent}
             openState={openState}
             location={location}
             mapsHref={mapsHref}

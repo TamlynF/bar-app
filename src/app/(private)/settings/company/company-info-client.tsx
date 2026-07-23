@@ -3,7 +3,7 @@
 import React, { useState, useTransition } from "react";
 import {
   Building2, MapPin, Mail, Phone, Users,
-  Loader2, Pencil, Save, X, Upload, Trash2, Clock,
+  Loader2, Pencil, Save, X, Upload, Trash2, Clock, Quote, Highlighter,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
 import { updateCompanyInfo } from "./actions";
@@ -37,6 +37,8 @@ interface CompanyInfo {
   address: string | null;
   email: string | null;
   phone: string | null;
+  tagline: string | null;
+  tagline_accent: string | null;
   description: string | null;
   opening_hours: OpeningHours | null;
   instagram: string | null;
@@ -87,6 +89,8 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
     address: data?.address ?? "",
     email: data?.email ?? "",
     phone: data?.phone ?? "",
+    tagline: data?.tagline ?? "",
+    tagline_accent: data?.tagline_accent ?? "",
     description: data?.description ?? "",
     opening_hours: (data?.opening_hours ?? {}) as OpeningHours,
     instagram: data?.instagram ?? "",
@@ -105,6 +109,8 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
       address: data?.address ?? "",
       email: data?.email ?? "",
       phone: data?.phone ?? "",
+      tagline: data?.tagline ?? "",
+      tagline_accent: data?.tagline_accent ?? "",
       description: data?.description ?? "",
       opening_hours: (data?.opening_hours ?? {}) as OpeningHours,
       instagram: data?.instagram ?? "",
@@ -127,6 +133,8 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
     fd.set("address", form.address);
     fd.set("email", form.email);
     fd.set("phone", form.phone);
+    fd.set("tagline", form.tagline);
+    fd.set("tagline_accent", form.tagline_accent);
     fd.set("description", form.description);
     fd.set("opening_hours", JSON.stringify(form.opening_hours));
     fd.set("instagram", form.instagram);
@@ -155,6 +163,10 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
   };
 
   const update = (field: string, value: string) => setForm((prev) => ({ ...prev, [field]: value }));
+
+  const accentMissing =
+    form.tagline_accent.trim().length > 0 &&
+    !form.tagline.toLowerCase().includes(form.tagline_accent.trim().toLowerCase());
 
   const updateHours = (day: string, field: "open" | "close", value: string) => {
     setForm((prev) => ({
@@ -249,6 +261,22 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
                 <Input value={form.name} onChange={(e) => update("name", e.target.value)} className={inputClasses} placeholder="e.g. Don Fenticas" />
               </div>
               <div className="space-y-2">
+                <Label className={fieldLabel} htmlFor="company-tagline">Tagline</Label>
+                <Input id="company-tagline" value={form.tagline} onChange={(e) => update("tagline", e.target.value)} className={inputClasses} placeholder="e.g. Live music, indie & rock, DJs and karaoke" />
+                <p className="ml-1 text-[10px] font-bold text-[#5F624F] opacity-60">Shown as the main headline on the public home page.</p>
+              </div>
+              <div className="space-y-2">
+                <Label className={fieldLabel} htmlFor="company-tagline-accent">Tagline Accent Word</Label>
+                <Input id="company-tagline-accent" value={form.tagline_accent} onChange={(e) => update("tagline_accent", e.target.value)} className={inputClasses} placeholder="e.g. karaoke" />
+                {accentMissing ? (
+                  <p className="ml-1 text-[10px] font-bold text-[#B45309]">
+                    &ldquo;{form.tagline_accent}&rdquo; isn&apos;t in the tagline above, so no word will be outlined.
+                  </p>
+                ) : (
+                  <p className="ml-1 text-[10px] font-bold text-[#5F624F] opacity-60">One word from the tagline to draw as outlined text. Leave blank for a plain headline.</p>
+                )}
+              </div>
+              <div className="space-y-2">
                 <Label className={fieldLabel}>Description</Label>
                 <Textarea value={form.description} onChange={(e) => update("description", e.target.value)} className="min-h-20 resize-none rounded-2xl border-2 border-[#E6DFC8] bg-white p-4 text-sm font-bold focus:border-[#5C4033] focus:ring-2 focus:ring-[#5C4033]/10" placeholder="A short description of your venue" />
               </div>
@@ -337,6 +365,8 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
             <h3 className={sectionLabel}>Business Details</h3>
             <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white shadow-sm">
               <InfoRow icon={<Building2 className="h-4 w-4" />} label="Name" value={data.name} />
+              <InfoRow icon={<Quote className="h-4 w-4" />} label="Tagline" value={data.tagline} />
+              <InfoRow icon={<Highlighter className="h-4 w-4" />} label="Accent Word" value={data.tagline_accent} />
               {data.description && <InfoRow icon={<Building2 className="h-4 w-4" />} label="Description" value={data.description} />}
               <InfoRow icon={<MapPin className="h-4 w-4" />} label="Address" value={data.address} />
               <InfoRow icon={<Mail className="h-4 w-4" />} label="Email" value={data.email} href={data.email ? `mailto:${data.email}` : undefined} />

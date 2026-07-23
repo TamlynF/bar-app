@@ -199,6 +199,14 @@ body {
   animation-delay: calc(var(--eq-i, 0) * 0.18s);
 }
 
+/* Single outlined word in the home headline — no Tailwind equivalent for
+   -webkit-text-stroke. Both properties are vendor-paired, so browsers
+   without them fall back to solid cream rather than invisible text. */
+.ad-word-outline {
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0.045em #fff4cc;
+}
+
 /* Staggered entrance for schedule rows */
 @keyframes ad-rise {
   from {
