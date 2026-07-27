@@ -4,8 +4,6 @@ import { PHASE_DEVELOPMENT_SERVER } from "next/constants";
 const config = (phase: string): NextConfig => {
   const isDev = phase === PHASE_DEVELOPMENT_SERVER;
 
-  void isDev;
-
   const nextConfig: NextConfig = {
     reactCompiler: true,
     experimental: {
@@ -23,6 +21,15 @@ const config = (phase: string): NextConfig => {
           protocol: "https",
           hostname: "i.scdn.co",
         },
+        ...(isDev
+          ? ([
+              {
+                protocol: "http" as const,
+                hostname: "127.0.0.1",
+                port: "54321",
+              },
+            ])
+          : []),
       ],
     },
     allowedDevOrigins: [

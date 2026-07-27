@@ -132,6 +132,13 @@ public = true
 file_size_limit = "50MiB"
 allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/gif"]
 
+# Gallery media, specials and merchandise images. Public-read, declared here so
+# uploads work against a local stack; in prod this bucket is dashboard-configured.
+[storage.buckets.gallery]
+public = true
+file_size_limit = "50MiB"
+allowed_mime_types = ["image/png", "image/jpeg", "image/webp", "image/gif"]
+
 # Allow connections via S3 compatible clients
 [storage.s3_protocol]
 enabled = true

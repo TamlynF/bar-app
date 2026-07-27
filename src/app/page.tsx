@@ -8,6 +8,7 @@ import { HomeHero } from "@/components/home-hero";
 import { MarqueeTicker } from "@/components/marquee-ticker";
 import { HighlightedEvents } from "@/components/highlighted-events";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
+import { MerchandiseSection, type MerchandiseRow } from "@/components/merchandise-section";
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
 import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
 import Image from "next/image";
@@ -21,8 +22,13 @@ export default async function HomePage() {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
-  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawPromos }, info] =
-    await Promise.all([
+  const [
+    { data: rawEvents },
+    { data: rawSpecials },
+    { data: rawMerchandise },
+    { data: rawPromos },
+    info,
+  ] = await Promise.all([
     supabase
       .from("events")
       .select(
@@ -38,6 +44,12 @@ export default async function HomePage() {
       .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order, created_at")
       .eq("is_active", true)
       .order("display_order", { ascending: true }),
+    supabase
+      .from("merchandise")
+      .select("id, name, description, image_url, price, display_order")
+      .eq("is_active", true)
+      .order("display_order", { ascending: true })
+      .limit(8),
     supabase
       .from("promo_content")
       .select("id, title, description, media_url, media_type, external_url")
@@ -64,6 +76,7 @@ export default async function HomePage() {
       (!s.start_date || s.start_date <= todayStr) &&
       (!s.end_date || s.end_date >= todayStr)
   );
+  const merchandise = (rawMerchandise ?? []) as MerchandiseRow[];
   const promos = (rawPromos ?? []) as PromoRow[];
 
   const backdropUrl = HERO_BACKDROP;
@@ -116,6 +129,10 @@ export default async function HomePage() {
 
         <div className="mx-auto w-full max-w-400 space-y-16 px-4 sm:space-y-24 sm:px-6 lg:px-10">
           {specials.length > 0 && <SpecialsSection specials={specials} />}
+
+          {merchandise.length > 0 && (
+            <MerchandiseSection merchandise={merchandise} />
+          )}
 
           <InstagramStrip posts={promos} handle={companyInfo?.instagram ?? null} />
 

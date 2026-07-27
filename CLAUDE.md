@@ -223,6 +223,7 @@ The booking pages share a public dark theme but each has its own logic:
 | `past_quiz_questions` | Archive (fed back to Gemini to avoid repeats) |
 | `gallery_images` | Media on the public gallery and homepage |
 | `specials` | Drink deals on the homepage |
+| `merchandise` | Branded goods shown on the homepage — display only, no checkout. `display_order` is auto-resequenced 1..N across active rows (see `src/lib/merchandise-order.ts`); inactive rows sit at 0 |
 | `promo_content` | Social-style promo cards on the homepage |
 | `menu_categories` / `menu_items` | Public menu |
 | `company_information` | Address, socials, opening hours, capacity |

@@ -3,6 +3,7 @@ import Link from "next/link";
 import {
   ChevronRight,
   Sparkles,
+  ShoppingBag,
   UtensilsCrossed,
   ImageIcon,
   Camera,
@@ -22,6 +23,13 @@ const websiteItems = [
     href: "/settings/specials",
     icon: Sparkles,
     color: "bg-orange-50 text-orange-600",
+  },
+  {
+    title: "Merchandise",
+    description: "Branded items shown on the homepage",
+    href: "/settings/merchandise",
+    icon: ShoppingBag,
+    color: "bg-emerald-50 text-emerald-600",
   },
   {
     title: "Promo Content",

@@ -85,7 +85,7 @@ insert into public.band_booking_requests
   (id, booker_name, email, phone_no, type, genre, group_name, status, preferred_dates, notes)
 values
   ('b0000000-0000-0000-0000-000000000001', 'PW Band Booker', 'pwband@example.com', '+44 7700 900123',
-   'band', 'rock', 'The Test Band', 'pending',
+   'band', 'rock', 'The Test Band', 'new',
    ARRAY[(CURRENT_DATE + 21), (CURRENT_DATE + 28)]::date[], 'Flexible on set length.');
 
 -- ── Specials (drink/food deals shown on the public home page) ────────────────
@@ -99,6 +99,21 @@ values
    ARRAY['Draught'], CURRENT_DATE, null, ARRAY[4]::smallint[], true, 1),
   ('Last Orders Deal', '<p>Half-price shots in the final hour, Friday &amp; Saturday. Spirits &amp; shots only, subject to availability.</p>',
    ARRAY['Late'], CURRENT_DATE, null, ARRAY[5,6]::smallint[], true, 2);
+
+-- ── Merchandise (branded goods shown on the public home page) ────────────────
+-- Showcase only — price is a display label, nothing is ever charged here.
+-- display_order runs 1..N over the active rows; inactive rows always sit at 0.
+insert into public.merchandise
+  (name, description, image_url, price, is_active, display_order)
+values
+  ('Bar Tee', '<p>Heavyweight cotton tee with the house crest across the chest.</p>',
+   null, 25.00, true, 1),
+  ('Tote Bag', '<p>Screen-printed canvas tote. Holds a fair few records.</p>',
+   null, 12.50, true, 2),
+  ('Etched Pint Glass', '<p>Half-litre glass etched with the house mark. Ask at the bar.</p>',
+   null, null, true, 3),
+  ('Tour Poster 2025', '<p>Sold out — kept here for the archive.</p>',
+   null, 15.00, false, 0);
 
 -- ── Reset identity sequences past the seeded ids ─────────────────────────────
 

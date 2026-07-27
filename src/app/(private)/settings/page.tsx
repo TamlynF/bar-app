@@ -10,6 +10,12 @@ import {
   UserCog2,
   Building2,
   Shapes,
+  Guitar,
+  UtensilsCrossed,
+  Sparkles,
+  ShoppingBag,
+  Image as ImageIcon,
+  Camera,
 } from "lucide-react";
 
 const settingsItems = [
@@ -34,7 +40,14 @@ const settingsItems = [
     icon: Medal,
     color: "bg-indigo-50 text-indigo-600",
   },
-    {
+  {
+    title: "Music Acts",
+    description: "Bands, DJs and performers",
+    href: "/settings/music-acts",
+    icon: Guitar,
+    color: "bg-purple-50 text-purple-600",
+  },
+  {
     title: "Seating Plan",
     description: "Floor plans and capacities",
     href: "/settings/tables",
@@ -47,6 +60,41 @@ const settingsItems = [
     href: "/settings/venue",
     icon: Shapes,
     color: "bg-teal-50 text-teal-600",
+  },
+  {
+    title: "Menu",
+    description: "Categories and items",
+    href: "/settings/menu",
+    icon: UtensilsCrossed,
+    color: "bg-orange-50 text-orange-600",
+  },
+  {
+    title: "Specials",
+    description: "Drink deals and offers",
+    href: "/settings/specials",
+    icon: Sparkles,
+    color: "bg-yellow-50 text-yellow-600",
+  },
+  {
+    title: "Merchandise",
+    description: "Products and pricing",
+    href: "/settings/merchandise",
+    icon: ShoppingBag,
+    color: "bg-pink-50 text-pink-600",
+  },
+  {
+    title: "Promo Content",
+    description: "Homepage promo cards",
+    href: "/settings/promo-content",
+    icon: ImageIcon,
+    color: "bg-sky-50 text-sky-600",
+  },
+  {
+    title: "Gallery",
+    description: "Photos and videos",
+    href: "/settings/gallery",
+    icon: Camera,
+    color: "bg-cyan-50 text-cyan-600",
   },
   {
     title: "Event Categories",
