@@ -76,7 +76,11 @@ export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
 
   return (
     <section id="specials" className="scroll-mt-24">
-      <SectionHeading eyebrow="At the bar" title="Specials" />
+      <SectionHeading 
+      eyebrow="At the bar" 
+      title="Specials"
+      action={{ href: "/menu", label: "See the menu" }} 
+      />
 
       <div className="rail-scrollbar overflow-x-auto pb-4">
         <div
