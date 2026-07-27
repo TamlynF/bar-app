@@ -154,16 +154,16 @@ function TonightCard({
       style={{ "--ev-c": event.color } as React.CSSProperties}
     >
       {event.imageUrl && (
-        <div className="relative w-24 shrink-0 sm:w-32">
+        <div className="relative h-44 w-full shrink-0 min-[420px]:h-auto min-[420px]:w-28 sm:w-32">
           <Image
             src={event.imageUrl}
             alt=""
             fill
-            sizes="128px"
+            sizes="(max-width: 420px) 100vw, 128px"
             className="object-cover"
           />
           <PosterTint />
-          <div className="absolute inset-0 bg-linear-to-r from-transparent to-canvas-2/60" />
+          <div className="absolute inset-0 bg-linear-to-b from-transparent to-canvas-2/60 min-[420px]:bg-linear-to-r" />
         </div>
       )}
 
