@@ -5,11 +5,11 @@ export type MarqueeItem = {
 
 const PHRASES: MarqueeItem[] = [
   { text: "Live Music" },
-  { text: "Thursday Quiz" },
-  { text: "World-Famous Karaoke" },
-  { text: "Music Bingo" },
+  { text: "Quiz Thursday" },
   { text: "DJ Sets" },
-  { text: "Last Orders Late" },
+  { text: "Open Mic" },
+  { text: "World Famous Karaoke" },
+  { text: "Open until 2:00am on weekends" },
 ];
 
 const REPEATS_PER_HALF = 4;
