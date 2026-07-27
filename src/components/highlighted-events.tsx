@@ -5,7 +5,6 @@ import { DateChip } from "@/components/editorial/date-chip";
 import { BookingButton } from "@/components/editorial/booking-button";
 import {
   EventPoster,
-  PosterChip,
   PosterHoverHint,
   PriceChip,
 } from "@/components/editorial/event-poster";
@@ -71,13 +70,22 @@ function ScheduleCard({
         zoomOnHover
         sizes="(max-width: 640px) 280px, (max-width: 1024px) 304px, 320px"
       >
-        <PosterChip event={event} />
         <PriceChip event={event} />
-        <DateChip date={dateObj} tone="gold" className="absolute bottom-3 left-3" />
+        <DateChip date={dateObj} tone="dark" className="absolute top-3 left-3" />
         <PosterHoverHint />
       </EventPoster>
 
       <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3">
+        {event.subType && (
+          <span className="inline-flex items-center gap-1.5 font-black text-[10px] tracking-widest text-(--ev-c) uppercase">
+            <span
+              className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--ev-c)"
+              aria-hidden="true"
+            />
+            {event.subType}
+          </span>
+        )}
+
         <h3 className="line-clamp-2 font-black text-lg leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
           {event.title}
         </h3>
