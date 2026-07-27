@@ -9,40 +9,69 @@ import {
   PriceChip,
 } from "@/components/editorial/event-poster";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
-import { cn } from "@/lib/utils";
 
-const GRID_CAPACITY = 8;
+const HOMEPAGE_EVENT_LIMIT = 8;
 
-export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
-  const alwaysRail = events.length > GRID_CAPACITY;
+export function HighlightedEvents({
+  events,
+}: {
+  events: SerializedEvent[];
+}) {
+  const visibleEvents = events.slice(0, HOMEPAGE_EVENT_LIMIT);
 
   return (
-    <section id="whats-on" className="mx-auto w-full max-w-400 scroll-mt-24 px-4 sm:px-6 lg:px-10">
+    <section
+      id="whats-on"
+      className="mx-auto w-full max-w-400 scroll-mt-24 px-4 sm:px-6 lg:px-10"
+    >
       <SectionHeading
         eyebrow="The schedule"
         title="Rest Of The Week"
-        action={{ href: "/whats-on", label: "Full schedule" }}
+        action={{
+          href: "/whats-on",
+          label: events.length > HOMEPAGE_EVENT_LIMIT
+            ? `View all ${events.length} events`
+            : "Full schedule",
+        }}
       />
 
-      {events.length > 0 ? (
+      {visibleEvents.length > 0 ? (
         <ul
-          className={cn(
-            "no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 items-stretch gap-3.5 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:-mx-10 lg:scroll-px-10 lg:px-10",
-            !alwaysRail &&
-              "sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-x-visible sm:px-0 sm:pb-0 lg:mx-0 lg:grid-cols-3 lg:gap-5 lg:px-0 xl:grid-cols-4 xl:gap-6"
-          )}
+          className="
+            no-scrollbar -mx-4 flex snap-x snap-mandatory
+            scroll-px-4 items-stretch gap-3.5 overflow-x-auto
+            px-4 pb-3
+
+            sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2
+            sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0
+
+            lg:grid-cols-3 lg:gap-5
+
+            xl:grid-cols-4 xl:gap-6
+          "
         >
-          {events.map((event, i) => (
-            <ScheduleCard key={event.id} event={event} index={i} alwaysRail={alwaysRail} />
+          {visibleEvents.map((event, index) => (
+            <ScheduleCard
+              key={event.id}
+              event={event}
+              index={index}
+            />
           ))}
         </ul>
       ) : (
         <div className="rounded-2xl border border-white/5 bg-white/3 py-16 text-center">
-          <Calendar className="mx-auto mb-3 h-8 w-8 text-stone-700" aria-hidden="true" />
+          <Calendar
+            className="mx-auto mb-3 h-8 w-8 text-stone-700"
+            aria-hidden="true"
+          />
+
           <p className="font-black text-sm tracking-tight text-stone-500 uppercase">
             Nothing Else This Week
           </p>
-          <p className="mt-1 text-xs text-stone-600">See the full schedule for what&apos;s next</p>
+
+          <p className="mt-1 text-xs text-stone-600">
+            See the full schedule for what&apos;s next
+          </p>
         </div>
       )}
     </section>
@@ -52,38 +81,61 @@ export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
 function ScheduleCard({
   event,
   index,
-  alwaysRail,
 }: {
   event: SerializedEvent;
   index: number;
-  alwaysRail: boolean;
 }) {
   const dateLabel = format(parseDate(event.date), "EEE d MMM");
+
   const whenLabel = event.startTimeLabel
     ? `${dateLabel} · ${event.startTimeLabel}`
     : dateLabel;
+
   const detailsHref = `/whats-on/${event.id}`;
 
   return (
     <li
-      className={cn(
-        "ad-card ad-rise group relative flex w-[min(86vw,340px)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas-2",
-        alwaysRail ? "sm:w-76 lg:w-80" : "sm:w-auto sm:shrink sm:snap-align-none"
-      )}
-      style={{ "--ev-c": event.color, "--i": index } as React.CSSProperties}
+      className="
+        ad-card ad-rise group relative flex
+        w-[min(86vw,340px)] shrink-0 snap-start flex-col
+        overflow-hidden rounded-2xl border border-hairline
+        bg-canvas-2
+
+        sm:w-auto sm:min-w-0 sm:shrink sm:snap-none
+      "
+      style={
+        {
+          "--ev-c": event.color,
+          "--i": index,
+        } as React.CSSProperties
+      }
     >
       <Link
         href={detailsHref}
         aria-label={`View details for ${event.title}`}
-        className="absolute inset-0 z-10 rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-inset"
+        className="
+          absolute inset-0 z-10 rounded-2xl outline-none
+          focus-visible:ring-2 focus-visible:ring-gold
+          focus-visible:ring-inset
+        "
       />
 
       <EventPoster
         event={event}
         aspect="aspect-auto"
-        className="h-47.5 shrink-0 sm:h-50 lg:h-46.25 xl:h-47.5"
+        className="
+          h-47.5 shrink-0
+          sm:h-50
+          lg:h-46.25
+          xl:h-47.5
+        "
         zoomOnHover
-        sizes="(max-width: 640px) 340px, (max-width: 1024px) 360px, 340px"
+        sizes="
+          (max-width: 640px) 340px,
+          (max-width: 1024px) 50vw,
+          (max-width: 1280px) 33vw,
+          25vw
+        "
       >
         <PriceChip event={event} />
         <PosterHoverHint />
