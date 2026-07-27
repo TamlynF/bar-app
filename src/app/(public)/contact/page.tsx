@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCompanyInfo } from "@/lib/company-info";
 import {
   MapPin,
   Phone,
@@ -37,11 +37,7 @@ type DayHours = { open: string; close: string };
 type OpeningHours = Partial<Record<string, DayHours>>;
 
 export default async function ContactPage() {
-  const supabase = await createClient();
-  const { data: info } = await supabase
-    .from("company_information")
-    .select("*")
-    .single();
+  const info = await getCompanyInfo();
 
   const openingHours = (info?.opening_hours ?? {}) as OpeningHours;
   const hasHours = DAYS.some((d) => openingHours[d]?.open);

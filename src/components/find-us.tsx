@@ -3,6 +3,7 @@ import { MapPin, ArrowRight } from "lucide-react";
 import { SiInstagram, SiFacebook } from "react-icons/si";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
+import type { CompanyInfo, OpeningHours } from "@/lib/company-info";
 
 const DAYS: { key: string; label: string }[] = [
   { key: "monday", label: "Mon" },
@@ -14,17 +15,7 @@ const DAYS: { key: string; label: string }[] = [
   { key: "sunday", label: "Sun" },
 ];
 
-type DayHours = { open?: string; close?: string };
-type OpeningHours = Partial<Record<string, DayHours>>;
-
-export type CompanyInfo = {
-  address?: string | null;
-  tagline?: string | null;
-  tagline_accent?: string | null;
-  opening_hours?: OpeningHours | null;
-  instagram?: string | null;
-  facebook?: string | null;
-} | null;
+export type { CompanyInfo };
 
 export function FindUs({ info }: { info: CompanyInfo }) {
   if (!info) return null;

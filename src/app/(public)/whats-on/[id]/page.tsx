@@ -9,6 +9,7 @@ import {
   Phone,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getCompanyInfo } from "@/lib/company-info";
 import { PublicNav } from "@/components/public-nav";
 import { BookingButton } from "@/components/editorial/booking-button";
 import { EventGridCard } from "@/components/editorial/event-grid-card";
@@ -94,8 +95,8 @@ export default async function WhatsOnEventPage({
     }
   }
 
-  const [{ data: info }, { data: rawMore }] = await Promise.all([
-    supabase.from("company_information").select("*").maybeSingle(),
+  const [info, { data: rawMore }] = await Promise.all([
+    getCompanyInfo(),
     supabase
       .from("events")
       .select(EVENT_SELECT)

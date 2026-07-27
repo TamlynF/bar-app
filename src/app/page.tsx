@@ -1,12 +1,12 @@
 import { endOfWeek, format } from "date-fns";
 import { createClient } from "@/lib/supabase/server";
+import { getCompanyInfo } from "@/lib/company-info";
 import { PublicNav } from "@/components/public-nav";
 import { PublicFooter } from "@/components/public-footer";
 import { SmoothScroll } from "@/components/smooth-scroll";
 import { HomeHero } from "@/components/home-hero";
 import { MarqueeTicker } from "@/components/marquee-ticker";
 import { HighlightedEvents } from "@/components/highlighted-events";
-import { type CompanyInfo } from "@/components/find-us";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
 import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
@@ -21,12 +21,8 @@ export default async function HomePage() {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
-  const [
-    { data: rawEvents },
-    { data: rawSpecials },
-    { data: rawPromos },
-    { data: info },
-  ] = await Promise.all([
+  const [{ data: rawEvents }, { data: rawSpecials }, { data: rawPromos }, info] =
+    await Promise.all([
     supabase
       .from("events")
       .select(
@@ -48,8 +44,8 @@ export default async function HomePage() {
       .eq("is_active", true)
       .order("display_order", { ascending: true })
       .limit(6),
-    supabase.from("company_information").select("*").maybeSingle(),
-  ]);
+      getCompanyInfo(),
+    ]);
 
   const highlightedEvents = ((rawEvents ?? []) as EventRow[])
     .filter((e) => getEventType(e)?.behavior !== "private")
@@ -72,7 +68,7 @@ export default async function HomePage() {
 
   const backdropUrl = HERO_BACKDROP;
 
-  const companyInfo = (info ?? null) as CompanyInfo;
+  const companyInfo = info;
   const tagline = companyInfo?.tagline?.trim() || null;
   const taglineAccent = companyInfo?.tagline_accent?.trim() || undefined;
 
