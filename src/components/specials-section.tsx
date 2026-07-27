@@ -25,15 +25,6 @@ const ENDING_SOON_DAYS = 7;
 
 const DAY_LABELS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function dayTag(days: number[]): string | null {
-  if (!days || days.length === 0) return null;
-  return [...days]
-    .sort((a, b) => a - b)
-    .map((d) => DAY_LABELS[d]?.toUpperCase())
-    .filter(Boolean)
-    .join(" · ");
-}
-
 function isRecentlyAdded(createdAt: string | null): boolean {
   if (!createdAt) return false;
   const age = differenceInCalendarDays(new Date(), new Date(createdAt));
@@ -51,7 +42,7 @@ function endingSoonLabel(end: string | null): string | null {
 
 function dayPills(days: number[]): string[] {
   const list = [...(days ?? [])].sort((a, b) => a - b);
-  if (list.length === 0 || list.length >= 7) return ["Every day"];
+  if (list.length === 0 || list.length >= 7) return ["All week"];
   return list.map((d) => DAY_LABELS[d]).filter(Boolean);
 }
 
@@ -63,75 +54,66 @@ function shortRange(start: string | null, end: string | null): string | null {
   return `Until ${fmt(end!)}`;
 }
 
-const MIN_CARDS_PER_HALF = 8;
-const SECONDS_PER_CARD = 20;
+function plainText(html: string | null): string | null {
+  if (!html) return null;
+  return (
+    html
+      .replace(/<[^>]*>/g, " ")
+      .replace(/&nbsp;/g, " ")
+      .replace(/&amp;/g, "&")
+      .replace(/\s+/g, " ")
+      .trim() || null
+  );
+}
 
 export function SpecialsSection({ specials }: { specials: SpecialRow[] }) {
   const [flippedId, setFlippedId] = useState<number | null>(null);
 
   if (specials.length === 0) return null;
 
-  const copies = Math.max(2, Math.ceil(MIN_CARDS_PER_HALF / specials.length));
-  const cardsPerHalf = copies * specials.length;
-
   return (
     <section id="specials" className="scroll-mt-24">
-      <SectionHeading 
-      eyebrow="At the bar" 
-      title="Specials"
-      action={{ href: "/menu", label: "See the menu" }} 
+      <SectionHeading
+        eyebrow="At the bar"
+        title="Specials"
+        action={{ href: "/menu", label: "See the menu" }}
       />
 
-      <div className="rail-scrollbar overflow-x-auto pb-4">
-        <div
-          className="ad-rail-track items-start"
-          data-paused={flippedId !== null}
-          style={
-            {
-              "--rail-duration": `${cardsPerHalf * SECONDS_PER_CARD}s`,
-            } as React.CSSProperties
-          }
-        >
-          {Array.from({ length: copies * 2 }, (_, copy) =>
-            specials.map((s) => (
-              <SpecialStub
-                key={`${copy}-${s.id}`}
-                copy={copy}
-                special={s}
-                flipped={flippedId === s.id}
-                onToggle={() => setFlippedId((id) => (id === s.id ? null : s.id))}
-              />
-            ))
-          )}
-        </div>
-      </div>
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {specials.map((s) => (
+          <SpecialStub
+            key={s.id}
+            special={s}
+            flipped={flippedId === s.id}
+            onToggle={() => setFlippedId((id) => (id === s.id ? null : s.id))}
+          />
+        ))}
+      </ul>
     </section>
   );
 }
 
 function SpecialStub({
   special,
-  copy,
   flipped,
   onToggle,
 }: {
   special: SpecialRow;
-  copy: number;
   flipped: boolean;
   onToggle: () => void;
 }) {
-  const tag = dayTag(special.days_of_week);
   const range = shortRange(special.start_date, special.end_date);
   const pills = dayPills(special.days_of_week);
   const isNew = isRecentlyAdded(special.created_at);
   const endingSoon = endingSoonLabel(special.end_date);
+  const teaser = plainText(special.description);
   const badges = isNew
     ? special.badges.filter((b) => b.trim().toLowerCase() !== "new")
     : special.badges;
-  const backId = `special-${special.id}-${copy}-details`;
+  const backId = `special-${special.id}-details`;
 
   return (
-    <div className="mr-3.5 w-60 shrink-0 perspective-[1600px] sm:w-64 lg:w-72">
+    <li className="perspective-[1600px]">
       <div
         className={cn(
           "relative transform-3d transition-transform duration-500",
@@ -146,7 +128,7 @@ function SpecialStub({
           aria-label={`${special.title} — show details`}
           tabIndex={flipped ? -1 : 0}
           className={cn(
-            "group flex h-44 w-full flex-col overflow-hidden rounded-3xl bg-[#7A1F1F] p-4 text-left text-[#ffeede] shadow-lg shadow-black/30 backface-hidden transition-shadow duration-300 hover:shadow-2xl hover:shadow-black/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDCC4B] sm:p-5",
+            "group flex w-full flex-col overflow-hidden rounded-3xl border border-[#7A1F1F]/45 bg-[#241512] text-left text-[#ffeede] shadow-lg shadow-black/30 backface-hidden transition-shadow duration-300 hover:border-[#7A1F1F]/70 hover:shadow-2xl hover:shadow-black/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FDCC4B]",
             flipped ? "absolute inset-0" : "relative"
           )}
         >
@@ -156,78 +138,90 @@ function SpecialStub({
               <img
                 src={special.image_url}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                className="absolute inset-0 h-full w-full object-cover opacity-15 transition-transform duration-500 group-hover:scale-105"
               />
               <span
-                className="absolute inset-0 bg-[#7A1F1F]/45 mix-blend-multiply"
-                aria-hidden="true"
-              />
-              <span
-                className="absolute inset-0 bg-linear-to-t from-black/95 via-black/75 to-black/55"
+                className="absolute inset-0 bg-[#241512]/80"
                 aria-hidden="true"
               />
             </>
           )}
 
-          {(isNew || endingSoon) && (
-            <span className="absolute top-0 left-0 z-20 flex items-stretch overflow-hidden rounded-tl-3xl rounded-br-xl shadow-md shadow-black/30">
-              {isNew && (
-                <span className="flex items-center gap-1 bg-[#FDCC4B] px-3 py-1 font-black text-[10px] tracking-widest text-[#1a2008] uppercase">
-                  <Sparkles className="h-3 w-3" aria-hidden="true" />
-                  New
-                </span>
-              )}
-              {endingSoon && (
-                <span className="flex items-center gap-1 bg-[#FF6B35] px-3 py-1 font-black text-[10px] tracking-widest text-[#1a2008] uppercase">
-                  <Clock className="h-3 w-3" aria-hidden="true" />
-                  {endingSoon}
-                </span>
-              )}
-            </span>
-          )}
+          <div className="relative z-10 flex flex-1 flex-col p-5">
+            {(isNew || endingSoon) && (
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                {isNew && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#FDCC4B] px-2.5 py-1 font-black text-[10px] tracking-widest text-[#1a2008] uppercase">
+                    <Sparkles className="h-3 w-3" aria-hidden="true" />
+                    New
+                  </span>
+                )}
+                {endingSoon && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-[#FF6B35]/40 bg-[#FF6B35]/10 px-2.5 py-1 font-black text-[10px] tracking-widest text-[#FF6B35] uppercase">
+                    <Clock className="h-3 w-3" aria-hidden="true" />
+                    {endingSoon}
+                  </span>
+                )}
+              </div>
+            )}
 
-          <span className="relative z-10 grid h-full grid-rows-5 items-center">
-            <span aria-hidden="true">
-              {tag && (
-                <span className="block text-right font-black text-[10px] tracking-[0.12em] text-[#ffd9b0]/90 uppercase">
-                  {tag}
-                </span>
-              )}
-            </span>
-
-            <span className="line-clamp-1 block font-black text-xl leading-none tracking-tight text-white uppercase drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)]">
+            <h3 className="line-clamp-1 font-black text-xl leading-none tracking-tight text-white uppercase">
               {special.title}
-            </span>
+            </h3>
 
-            <span className="block text-[11px] font-bold tracking-wide text-[#ffd9b0] uppercase tabular-nums drop-shadow-[0_1px_4px_rgba(0,0,0,0.9)]">
-              {range}
-            </span>
+            {teaser && (
+              <p className="mt-2 line-clamp-2 text-xs leading-relaxed font-medium text-[#ffd9b0]/70">
+                {teaser}
+              </p>
+            )}
 
-            <span className="flex flex-wrap items-center gap-1.5 overflow-hidden">
-              {badges.map((b) => (
-                <span
-                  key={b}
-                  className="rounded-md bg-white/15 px-2.5 py-1 font-black text-[10px] tracking-wide uppercase"
-                >
-                  {b}
-                </span>
-              ))}
-            </span>
+            {range && (
+              <p className="mt-2.5 text-[11px] font-bold tracking-wide text-[#FDCC4B] uppercase tabular-nums">
+                {range}
+              </p>
+            )}
 
-            <span className="flex items-end justify-end self-end">
+            <div
+              className="relative mt-4 mb-3.5 border-t border-dashed border-white/15"
+              aria-hidden="true"
+            >
+              <span className="absolute top-0 -left-5 h-4 w-4 -translate-y-1/2 rounded-full bg-canvas" />
+              <span className="absolute top-0 -right-5 h-4 w-4 -translate-y-1/2 rounded-full bg-canvas" />
+            </div>
+
+            <div className="mt-auto flex items-end justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                {pills.map((p) => (
+                  <span
+                    key={p}
+                    className="rounded-full border border-[#FDCC4B]/30 bg-[#FDCC4B]/10 px-2.5 py-1 font-black text-[10px] tracking-widest text-[#FDCC4B] uppercase"
+                  >
+                    {p}
+                  </span>
+                ))}
+                {badges.map((b) => (
+                  <span
+                    key={b}
+                    className="rounded-full border border-white/15 bg-white/5 px-2.5 py-1 font-black text-[10px] tracking-widest uppercase"
+                  >
+                    {b}
+                  </span>
+                ))}
+              </div>
+
               <FlipHorizontal2
-                className="h-5 w-5 text-[#FDCC4B] transition-transform duration-300 group-hover:rotate-y-180"
+                className="h-5 w-5 shrink-0 text-[#FDCC4B] transition-transform duration-300 group-hover:rotate-y-180"
                 aria-hidden="true"
               />
-            </span>
-          </span>
+            </div>
+          </div>
         </button>
 
         <div
           id={backId}
           aria-hidden={!flipped}
           className={cn(
-            "flex w-full flex-col overflow-hidden rounded-3xl bg-[#1b210f] p-4 text-left text-[#ffeede] shadow-lg shadow-black/30 backface-hidden rotate-y-180 sm:p-5",
+            "flex w-full flex-col overflow-hidden rounded-3xl border border-[#7A1F1F]/45 bg-[#1b0f0c] p-5 text-left text-[#ffeede] shadow-lg shadow-black/30 backface-hidden rotate-y-180",
             flipped ? "relative" : "absolute inset-0"
           )}
         >
@@ -237,9 +231,9 @@ function SpecialStub({
               <img
                 src={special.image_url}
                 alt=""
-                className="absolute inset-0 h-full w-full object-cover opacity-20"
+                className="absolute inset-0 h-full w-full object-cover opacity-15"
               />
-              <span className="absolute inset-0 bg-[#1b210f]/70" aria-hidden="true" />
+              <span className="absolute inset-0 bg-[#1b0f0c]/80" aria-hidden="true" />
             </>
           )}
 
@@ -293,6 +287,6 @@ function SpecialStub({
           </div>
         </div>
       </div>
-    </div>
+    </li>
   );
 }
