@@ -123,6 +123,7 @@ SQUARE_LOCATION_ID
 SQUARE_WEBHOOK_SIGNATURE_KEY
 SPOTIFY_CLIENT_ID
 SPOTIFY_CLIENT_SECRET
+GOOGLE_MAPS_API_KEY                      # Static Maps image on /contact, proxied via /api/static-map (never sent to the browser)
 ```
 
 ---

@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getCompanyInfo } from "@/lib/company-info";
 import {
   MapPin,
@@ -11,6 +12,7 @@ import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { toMinutes, type OpeningHours } from "@/lib/opening-hours";
 import EnquiryForm from "./_components/enquiry-form";
+import CopyAddressButton from "./_components/copy-address-button";
 
 export const metadata = {
   title: "Contact Us | Don Fenticas",
@@ -62,11 +64,8 @@ export default async function ContactPage() {
           </div>
 
           <div className="order-3 min-w-0 space-y-8 lg:order-0 lg:col-span-2 lg:col-start-1 lg:row-start-2">
-            <section className="space-y-3">
-              {info?.address && (
-                <ContactCard icon={MapPin} label="Address" value={info.address} />
-              )}
-              {info?.phone && (
+            {info?.phone && (
+              <section className="space-y-3">
                 <ContactCard
                   icon={Phone}
                   label="Phone"
@@ -74,47 +73,51 @@ export default async function ContactPage() {
                   href={`tel:${info.phone}`}
                   action="Call"
                 />
-              )}
-            </section>
-
-            {openDays.length > 0 && (
-              <section>
-                <SectionLabel icon={Clock} label="Opening Hours" />
-                <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-                  {openDays.map((day) => {
-                    const hours = openingHours[day];
-                    const isToday = todayName === day;
-                    return (
-                      <div
-                        key={day}
-                        className={`flex items-center justify-between px-5 py-3 ${
-                          isToday ? "bg-[#FDCC4B]/5" : ""
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {isToday && (
-                            <span className="relative flex h-1.5 w-1.5">
-                              <span className="neon-bg absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
-                              <span className="neon-bg relative inline-flex h-1.5 w-1.5 rounded-full" />
-                            </span>
-                          )}
-                          <span
-                            className={`text-xs font-bold tracking-wide uppercase ${
-                              isToday ? "text-[#FDCC4B]" : "text-stone-300"
-                            }`}
-                          >
-                            {DAY_LABELS[day]}
-                          </span>
-                        </div>
-                        <span className="font-black text-xs text-white tabular-nums">
-                          {hours?.open} &ndash; {hours?.close}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
               </section>
             )}
+
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-2 lg:items-start">
+              {info?.address && <MapCard address={info.address} />}
+
+              {openDays.length > 0 && (
+                <section>
+                  <SectionLabel icon={Clock} label="Opening Hours" />
+                  <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                    {openDays.map((day) => {
+                      const hours = openingHours[day];
+                      const isToday = todayName === day;
+                      return (
+                        <div
+                          key={day}
+                          className={`flex items-center justify-between px-5 py-3 ${
+                            isToday ? "bg-[#FDCC4B]/5" : ""
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            {isToday && (
+                              <span className="relative flex h-1.5 w-1.5">
+                                <span className="neon-bg absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                                <span className="neon-bg relative inline-flex h-1.5 w-1.5 rounded-full" />
+                              </span>
+                            )}
+                            <span
+                              className={`text-xs font-bold tracking-wide uppercase ${
+                                isToday ? "text-[#FDCC4B]" : "text-stone-300"
+                              }`}
+                            >
+                              {DAY_LABELS[day]}
+                            </span>
+                          </div>
+                          <span className="font-black text-xs text-white tabular-nums">
+                            {hours?.open} &ndash; {hours?.close}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              )}
+            </div>
           </div>
 
           <section className="@container order-2 w-full min-w-0 lg:order-0 lg:col-start-3 lg:row-span-2 lg:row-start-1">
@@ -166,6 +169,61 @@ function SectionLabel({
       </span>
       <div className="h-px flex-1 bg-stone-800/50" />
     </div>
+  );
+}
+
+function MapCard({ address }: { address: string }) {
+  const query = encodeURIComponent(address);
+  const mapsHref = `https://www.google.com/maps/search/?api=1&query=${query}`;
+  const staticMapSrc = process.env.GOOGLE_MAPS_API_KEY ? "/api/static-map" : null;
+
+  return (
+    <section>
+      <SectionLabel icon={MapPin} label="Find Us" />
+      <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+        <a
+          href={mapsHref}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Open ${address} in Google Maps`}
+          className="group relative block h-56 w-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#FDCC4B] sm:h-64"
+        >
+          {staticMapSrc ? (
+            <Image
+              src={staticMapSrc}
+              alt={`Map showing Don Fenticas at ${address}`}
+              fill
+              sizes="(max-width: 1024px) 100vw, 480px"
+              className="object-cover"
+            />
+          ) : (
+            <iframe
+              src={`https://www.google.com/maps?q=${query}&z=18&output=embed`}
+              title="Map of Don Fenticas"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              className="pointer-events-none h-full w-full border-0"
+            />
+          )}
+          <span
+            className="absolute inset-0 bg-[#1a2008]/15 transition-colors group-hover:bg-transparent"
+            aria-hidden="true"
+          />
+        </a>
+
+        <div className="flex items-start gap-3 border-t border-white/10 p-4 sm:p-5">
+          <div className="min-w-0 flex-1">
+            <p className="font-black text-[10px] tracking-[0.2em] text-stone-500 uppercase">
+              Address
+            </p>
+            <p className="mt-1 text-sm font-bold whitespace-pre-line text-white select-all">
+              {address}
+            </p>
+          </div>
+          <CopyAddressButton address={address} />
+        </div>
+      </div>
+    </section>
   );
 }
 
