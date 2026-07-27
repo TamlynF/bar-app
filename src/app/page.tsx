@@ -36,7 +36,7 @@ export default async function HomePage() {
       .gte("date", todayStr)
       .order("date", { ascending: true })
       .order("start_time", { ascending: true })
-      .limit(9),
+      .limit(16),
     supabase
       .from("specials")
       .select("id, title, description, badges, image_url, start_date, end_date, days_of_week, display_order, created_at")

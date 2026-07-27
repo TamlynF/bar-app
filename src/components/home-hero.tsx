@@ -144,7 +144,13 @@ function TonightCard({
 
   return (
     <article
-      className="flex h-full overflow-hidden rounded-3xl border border-[#FDCC4B]/30 bg-canvas-2/85 shadow-[0_0_60px_-18px_rgba(253,204,75,0.55)] backdrop-blur-md"
+      className="
+        flex h-full flex-col overflow-hidden rounded-3xl
+        border border-[#FDCC4B]/30 bg-canvas-2/85
+        shadow-[0_0_60px_-18px_rgba(253,204,75,0.55)]
+        backdrop-blur-md
+        min-[420px]:flex-row
+      "
       style={{ "--ev-c": event.color } as React.CSSProperties}
     >
       {event.imageUrl && (
