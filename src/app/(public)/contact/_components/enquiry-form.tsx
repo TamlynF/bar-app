@@ -43,7 +43,7 @@ export default function EnquiryForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 @md:grid-cols-2">
         <div className="space-y-1.5">
           <label htmlFor="enquiry-name" className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
             Name *
@@ -74,32 +74,17 @@ export default function EnquiryForm() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <label htmlFor="enquiry-phone" className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
-            Phone
-          </label>
-          <input
-            id="enquiry-phone"
-            name="phone_no"
-            type="tel"
-            autoComplete="tel"
-            placeholder="Optional"
-            className={inputClasses}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="enquiry-subject" className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
-            Subject
-          </label>
-          <input
-            id="enquiry-subject"
-            name="subject"
-            type="text"
-            placeholder="What's it about?"
-            className={inputClasses}
-          />
-        </div>
+      <div className="space-y-1.5">
+        <label htmlFor="enquiry-subject" className="block font-black text-[11px] tracking-widest text-stone-400 uppercase">
+          Subject
+        </label>
+        <input
+          id="enquiry-subject"
+          name="subject"
+          type="text"
+          placeholder="What's it about?"
+          className={inputClasses}
+        />
       </div>
 
       <div className="space-y-1.5">

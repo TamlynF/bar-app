@@ -7,14 +7,9 @@ import {
   Clock,
   MessageSquare,
 } from "lucide-react";
-import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
 import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
-import {
-  SOCIAL_BRANDS,
-  type SocialPlatform,
-} from "@/components/editorial/social-brands";
-import { cn } from "@/lib/utils";
+import { toMinutes, type OpeningHours } from "@/lib/opening-hours";
 import EnquiryForm from "./_components/enquiry-form";
 
 export const metadata = {
@@ -33,20 +28,20 @@ const DAY_LABELS: Record<string, string> = {
   sunday: "Sunday",
 };
 
-type DayHours = { open: string; close: string };
-type OpeningHours = Partial<Record<string, DayHours>>;
-
 export default async function ContactPage() {
   const info = await getCompanyInfo();
 
   const openingHours = (info?.opening_hours ?? {}) as OpeningHours;
-  const hasHours = DAYS.some((d) => openingHours[d]?.open);
+  const openDays = DAYS.filter((day) => {
+    const hours = openingHours[day];
+    return toMinutes(hours?.open) !== null && toMinutes(hours?.close) !== null;
+  });
   const todayName = new Date()
     .toLocaleDateString("en-GB", { weekday: "long" })
     .toLowerCase();
 
   return (
-    <main className="min-h-dvh w-full bg-[#1a2008] text-white antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
+    <main className="flex min-h-dvh w-full flex-col bg-[#1a2008] text-white antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <style
         dangerouslySetInnerHTML={{
           __html: `html, body { background-color: #1a2008 !important; margin: 0; padding: 0; overflow-x: hidden; }`,
@@ -55,156 +50,83 @@ export default async function ContactPage() {
 
       <PublicNav currentPath="/contact" />
 
-      <div className="mx-auto max-w-xl px-4 py-6 sm:py-10">
-        <SectionHeading eyebrow="Find us · get in touch" title="About Us" />
-        {info?.description && (
-          <p className="-mt-2 mb-8 text-sm leading-relaxed font-medium text-stone-400">
-            {info.description}
-          </p>
-        )}
+      <div className="mx-auto flex w-full max-w-400 flex-1 flex-col px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:gap-x-14 lg:gap-y-10 xl:gap-x-24">
+          <div className="order-1 min-w-0 lg:order-0 lg:col-span-2 lg:col-start-1 lg:row-start-1">
+            <SectionHeading eyebrow="Find us · get in touch" title="About Us" />
+            {info?.description && (
+              <p className="-mt-2 text-sm leading-relaxed font-medium text-stone-400">
+                {info.description}
+              </p>
+            )}
+          </div>
 
-        <section className="space-y-3">
-          {info?.address && (
-            <ContactCard
-              icon={MapPin}
-              label="Address"
-              value={info.address}
-            />
-          )}
-          {info?.phone && (
-            <ContactCard
-              icon={Phone}
-              label="Phone"
-              value={info.phone}
-              href={`tel:${info.phone}`}
-              action="Call"
-            />
-          )}
-          {info?.email && (
-            <ContactCard
-              icon={Mail}
-              label="Email"
-              value={info.email}
-              href={`mailto:${info.email}`}
-              action="Send Email"
-            />
-          )}
-        </section>
+          <div className="order-3 min-w-0 space-y-8 lg:order-0 lg:col-span-2 lg:col-start-1 lg:row-start-2">
+            <section className="space-y-3">
+              {info?.address && (
+                <ContactCard icon={MapPin} label="Address" value={info.address} />
+              )}
+              {info?.phone && (
+                <ContactCard
+                  icon={Phone}
+                  label="Phone"
+                  value={info.phone}
+                  href={`tel:${info.phone}`}
+                  action="Call"
+                />
+              )}
+            </section>
 
-        {hasHours && (
-          <section className="mt-8">
-            <SectionLabel icon={Clock} label="Opening Hours" />
-            <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-              {DAYS.map((day) => {
-                const hours = openingHours[day];
-                const isToday = todayName === day;
-                const closed = !hours?.open && !hours?.close;
-                return (
-                  <div
-                    key={day}
-                    className={`flex items-center justify-between px-5 py-3 ${
-                      isToday ? "bg-[#FDCC4B]/5" : ""
-                    }`}
-                  >
-                    <div className="flex items-center gap-2">
-                      {isToday && (
-                        <span className="relative flex h-1.5 w-1.5">
-                          <span className="neon-bg absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
-                          <span className="neon-bg relative inline-flex h-1.5 w-1.5 rounded-full" />
-                        </span>
-                      )}
-                      <span
-                        className={`text-xs font-bold tracking-wide uppercase ${
-                          isToday ? "text-[#FDCC4B]" : closed ? "text-stone-500" : "text-stone-300"
+            {openDays.length > 0 && (
+              <section>
+                <SectionLabel icon={Clock} label="Opening Hours" />
+                <div className="mt-3 divide-y divide-white/5 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                  {openDays.map((day) => {
+                    const hours = openingHours[day];
+                    const isToday = todayName === day;
+                    return (
+                      <div
+                        key={day}
+                        className={`flex items-center justify-between px-5 py-3 ${
+                          isToday ? "bg-[#FDCC4B]/5" : ""
                         }`}
                       >
-                        {DAY_LABELS[day]}
-                      </span>
-                    </div>
-                    {closed ? (
-                      <span className="text-xs font-bold text-stone-600">Closed</span>
-                    ) : (
-                      <span className="font-black text-xs text-white tabular-nums">
-                        {hours!.open} &ndash; {hours!.close}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
+                        <div className="flex items-center gap-2">
+                          {isToday && (
+                            <span className="relative flex h-1.5 w-1.5">
+                              <span className="neon-bg absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+                              <span className="neon-bg relative inline-flex h-1.5 w-1.5 rounded-full" />
+                            </span>
+                          )}
+                          <span
+                            className={`text-xs font-bold tracking-wide uppercase ${
+                              isToday ? "text-[#FDCC4B]" : "text-stone-300"
+                            }`}
+                          >
+                            {DAY_LABELS[day]}
+                          </span>
+                        </div>
+                        <span className="font-black text-xs text-white tabular-nums">
+                          {hours?.open} &ndash; {hours?.close}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+          </div>
+
+          <section className="@container order-2 w-full min-w-0 lg:order-0 lg:col-start-3 lg:row-span-2 lg:row-start-1">
+            <SectionLabel icon={MessageSquare} label="Send Us a Message" />
+            <div className="mt-3 rounded-2xl border border-[#FDCC4B]/25 bg-white/5 p-4 shadow-[0_0_50px_-24px_rgba(253,204,75,0.8)] sm:p-5">
+              <EnquiryForm />
             </div>
           </section>
-        )}
+        </div>
 
-        <section className="mt-8">
-  <SectionLabel icon={MessageSquare} label="Send Us a Message" />
-  <div className="mt-3">
-    <EnquiryForm />
-  </div>
-</section>
-
-        {(info?.instagram || info?.facebook || info?.twitter || info?.tiktok || info?.youtube) && (
-          <section className="mt-8">
-            <SectionLabel icon={SiInstagram} label="Follow Us" />
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              {info?.instagram && (
-                <SocialCard
-                  icon={SiInstagram}
-                  brand="instagram"
-                  label="Instagram"
-                  handle={`@${info.instagram.replace("@", "")}`}
-                  href={`https://instagram.com/${info.instagram.replace("@", "")}`}
-                />
-              )}
-              {info?.facebook && (
-                <SocialCard
-                  icon={SiFacebook}
-                  brand="facebook"
-                  label="Facebook"
-                  handle={info.facebook}
-                  href={
-                    info.facebook.startsWith("http")
-                      ? info.facebook
-                      : `https://facebook.com/${info.facebook}`
-                  }
-                />
-              )}
-              {info?.tiktok && (
-                <SocialCard
-                  icon={SiTiktok}
-                  brand="tiktok"
-                  label="TikTok"
-                  handle={`@${info.tiktok.replace("@", "")}`}
-                  href={`https://tiktok.com/@${info.tiktok.replace("@", "")}`}
-                />
-              )}
-              {info?.twitter && (
-                <SocialCard
-                  icon={SiX}
-                  brand="x"
-                  label="X / Twitter"
-                  handle={`@${info.twitter.replace("@", "")}`}
-                  href={`https://x.com/${info.twitter.replace("@", "")}`}
-                />
-              )}
-              {info?.youtube && (
-                <SocialCard
-                  icon={SiYoutube}
-                  brand="youtube"
-                  label="YouTube"
-                  handle={info.youtube}
-                  href={
-                    info.youtube.startsWith("http")
-                      ? info.youtube
-                      : `https://youtube.com/${info.youtube}`
-                  }
-                />
-              )}
-            </div>
-          </section>
-        )}
-
-        {!info?.address && !info?.phone && !info?.email && (
-          <div className="rounded-2xl border border-white/5 bg-white/3 py-16 text-center">
+        {!info?.address && !info?.phone && (
+          <div className="rounded-2xl border border-white/5 bg-white/3 py-16 text-center sm:mx-auto sm:max-w-xl">
             <Mail className="mx-auto mb-3 h-8 w-8 text-stone-700" />
             <p className="text-sm font-bold tracking-tight text-stone-500 uppercase">
               Contact details coming soon
@@ -215,7 +137,7 @@ export default async function ContactPage() {
           </div>
         )}
 
-        <div className="mt-16 text-center">
+        <div className="mt-auto pt-16 text-center">
           <div className="flex items-center justify-center gap-3 text-stone-800">
             <div className="h-px w-6 bg-stone-800/50" />
             <span className="text-[9px] font-bold tracking-[0.4em] uppercase">
@@ -282,50 +204,5 @@ function ContactCard({
         )}
       </div>
     </div>
-  );
-}
-
-function SocialCard({
-  icon: Icon,
-  brand,
-  label,
-  handle,
-  href,
-}: {
-  icon?: React.ComponentType<{ className?: string }>;
-  brand?: SocialPlatform;
-  label: string;
-  handle: string;
-  href: string;
-}) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/8"
-    >
-      <div
-        className={cn(
-          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105",
-          brand
-            ? SOCIAL_BRANDS[brand].solid
-            : "border border-white/10 bg-white/5 text-stone-400"
-        )}
-      >
-        {Icon ? (
-          <Icon className="h-4 w-4" />
-        ) : (
-          <span className="font-black text-xs">{label.charAt(0)}</span>
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="font-black text-xs tracking-tight text-white uppercase">
-          {label}
-        </p>
-        <p className="truncate text-[11px] font-bold text-stone-500">{handle}</p>
-      </div>
-      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-stone-600 transition-colors group-hover:text-stone-400" />
-    </a>
   );
 }
