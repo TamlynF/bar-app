@@ -1,5 +1,6 @@
 import Image from "next/image";
 import {
+  ArrowUpRight,
   Disc3,
   Mic2,
   Music,
@@ -7,7 +8,8 @@ import {
   Star,
   Ticket,
 } from "lucide-react";
-import type { SerializedEvent } from "@/lib/events-display";
+import { cn } from "@/lib/utils";
+import { formatGBP, type SerializedEvent } from "@/lib/events-display";
 
 export function eventIcon(event: SerializedEvent, className: string) {
   const key = (event.subType ?? "").toLowerCase();
@@ -105,6 +107,34 @@ export function PosterChip({ event }: { event: SerializedEvent }) {
       style={{ "--ev-c": event.color } as React.CSSProperties}
     >
       {event.subType}
+    </span>
+  );
+}
+
+export function PriceChip({ event }: { event: SerializedEvent }) {
+  if (event.price == null) return null;
+  const paid = event.price > 0;
+  return (
+    <span
+      className={cn(
+        "absolute top-3 right-3 rounded-full px-2.5 py-1 font-black text-[10px] tracking-widest uppercase",
+        paid
+          ? "bg-gold text-on-gold shadow-lg shadow-black/40"
+          : "border border-gold/40 bg-canvas/80 text-gold backdrop-blur-sm"
+      )}
+    >
+      {paid ? formatGBP(event.price) : "Free"}
+    </span>
+  );
+}
+
+export function PosterHoverHint() {
+  return (
+    <span className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+      <span className="inline-flex items-center gap-1.5 rounded-full border border-hairline bg-canvas/85 px-4 py-2 font-black text-[11px] tracking-widest text-ink uppercase shadow-lg shadow-black/40 backdrop-blur-sm">
+        View details
+        <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+      </span>
     </span>
   );
 }

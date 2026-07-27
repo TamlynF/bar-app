@@ -36,6 +36,7 @@ export function InstagramStrip({
       <SectionHeading
         eyebrow="Follow along"
         title="Instagram Feed"
+        action={{ href: "/gallery", label: "View Gallery" }}
       />
 
       <ul className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-6">

@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { format } from "date-fns";
-import { EventCta } from "@/components/editorial/event-cta";
+import { BookingButton } from "@/components/editorial/booking-button";
 import { PosterTint } from "@/components/editorial/event-poster";
 import { cn } from "@/lib/utils";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
@@ -176,7 +176,7 @@ function TonightCard({
         )}
 
         <div className="mt-1 w-full sm:max-w-44">
-          <EventCta event={event} size="lg" />
+          <BookingButton event={event} />
         </div>
       </div>
     </article>

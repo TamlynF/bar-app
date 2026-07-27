@@ -30,6 +30,7 @@ export type EventRow = {
   external_link: string | null;
   booking_page_url: string | null;
   karaoke_request_url: string | null;
+  seating_required?: boolean | null;
   tagline?: string | null;
   image_url?: string | null;
   payment_amount?: number | null;
@@ -110,6 +111,7 @@ export type SerializedEvent = {
   externalLink: string | null;
   isFullyBooked: boolean;
   isBookable: boolean;
+  requiresSeating: boolean;
   bookingPageUrl: string | null;
   color: string;
   subType: string | null;
@@ -151,6 +153,7 @@ export function serializeEvent(e: EventRow, band: BandInfo | null = null): Seria
     externalLink: e.external_link,
     isFullyBooked: e.is_fully_booked,
     isBookable: e.is_bookable ?? false,
+    requiresSeating: e.seating_required ?? true,
     bookingPageUrl: e.booking_page_url ?? null,
     color: eventBadgeColor(e),
     subType: et?.sub_type ?? null,

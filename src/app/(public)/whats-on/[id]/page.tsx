@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PublicNav } from "@/components/public-nav";
-import { EventCta } from "@/components/editorial/event-cta";
+import { BookingButton } from "@/components/editorial/booking-button";
 import { EventGridCard } from "@/components/editorial/event-grid-card";
 import { EventPoster } from "@/components/editorial/event-poster";
 import { BandMedia } from "@/components/editorial/band-media";
@@ -27,7 +27,7 @@ import {
 export const revalidate = 300;
 
 const EVENT_SELECT =
-  "id, title, date, start_time, end_time, tagline, image_url, is_active, is_fully_booked, is_bookable, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline)";
+  "id, title, date, start_time, end_time, tagline, image_url, is_active, is_fully_booked, is_bookable, seating_required, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline)";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -181,7 +181,11 @@ export default async function WhatsOnEventPage({
 
             <section className="mt-7 rounded-2xl border border-hairline bg-canvas-2 p-5 sm:p-6">
               <h2 className="font-black text-xl tracking-tight text-ink">
-                {isPast ? "This show has finished" : "Get your tickets!"}
+                {isPast
+                  ? "This show has finished"
+                  : event.isBookable
+                    ? "Get your tickets!"
+                    : "Free entry — just walk in"}
               </h2>
 
               <div className="mt-5 flex items-center justify-between gap-4 border-b border-hairline pb-5">
@@ -228,7 +232,7 @@ export default async function WhatsOnEventPage({
 
               {!isPast ? (
                 <div className="mt-6 flex flex-col gap-3">
-                  <EventCta event={event} size="lg" bookLabel="Book Tickets Now" />
+                  <BookingButton event={event} />
                   {event.externalLink && (
                     <a
                       href={event.externalLink}
