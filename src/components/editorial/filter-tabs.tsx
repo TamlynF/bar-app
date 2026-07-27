@@ -18,8 +18,8 @@ export function FilterTabs({
   onChange: (key: string) => void;
 }) {
   return (
-    <div className="no-scrollbar -mx-[calc(50vw-50%)] overflow-x-auto">
-      <div className="mx-auto flex w-max gap-2 px-4 py-1">
+    <div className="no-scrollbar overflow-x-auto">
+      <div className="flex w-max gap-2 py-1">
         {tabs.map((tab) => {
           const isActive = tab.key === active;
           return (
@@ -29,7 +29,7 @@ export function FilterTabs({
               onClick={() => onChange(tab.key)}
               aria-pressed={isActive}
               className={
-                "inline-flex h-9 flex-none items-center gap-1.5 rounded-full px-4 font-black text-[11px] tracking-wide whitespace-nowrap uppercase transition-colors " +
+                "inline-flex h-11 flex-none items-center gap-1.5 rounded-full px-4 font-black text-[11px] tracking-wide whitespace-nowrap uppercase transition-colors sm:h-9 " +
                 (isActive
                   ? "bg-gold text-on-gold"
                   : "border border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink")

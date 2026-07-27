@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Search, ChevronDown, CalendarX2 } from "lucide-react";
 import { FilterTabs, type FilterTab } from "@/components/editorial/filter-tabs";
 import { EventGridCard } from "@/components/editorial/event-grid-card";
+import { cn } from "@/lib/utils";
 import type { SerializedEvent } from "@/lib/events-display";
 
 const ALL = "all";
@@ -71,56 +72,69 @@ export function WhatsOnGrid({
 
   return (
     <div className="mt-6">
-      <div className="relative mb-4">
-        <label htmlFor="whatson-search" className="sr-only">
-          Search events
-        </label>
-        <Search
-          className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-ink-2"
-          aria-hidden="true"
-        />
-        <input
-          id="whatson-search"
-          type="search"
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setVisible(PAGE_SIZE);
-          }}
-          placeholder="Search what's on…"
-          className="h-12 w-full rounded-full border border-hairline bg-canvas-2 pr-4 pl-11 text-sm font-medium text-ink transition-colors outline-none placeholder:text-ink-2/60 focus:border-white/25"
-        />
-      </div>
-
-      <label
-        htmlFor="whatson-sold-out"
-        className="mb-6 inline-flex min-h-11 cursor-pointer items-center gap-2.5 text-xs font-bold tracking-widest text-ink-2 uppercase"
-      >
-        <input
-          id="whatson-sold-out"
-          type="checkbox"
-          checked={showSoldOut}
-          onChange={(e) => {
-            setShowSoldOut(e.target.checked);
-            setVisible(PAGE_SIZE);
-          }}
-          className="h-4.5 w-4.5 shrink-0 accent-[#FDCC4B]"
-        />
-        Show sold out shows
-      </label>
-
-      {tabs.length > 0 && (
-        <div className="mb-6">
-          <FilterTabs
-            tabs={allTabs}
-            active={active}
-            onChange={(key) => {
-              setActive(key);
+      <div className="sticky top-14 z-30 -mx-4 mb-6 border-b border-hairline bg-canvas/90 px-4 pt-3 pb-3 backdrop-blur-xl sm:top-16 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+        <div className="relative">
+          <label htmlFor="whatson-search" className="sr-only">
+            Search events
+          </label>
+          <Search
+            className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-ink-2"
+            aria-hidden="true"
+          />
+          <input
+            id="whatson-search"
+            type="search"
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value);
               setVisible(PAGE_SIZE);
             }}
+            placeholder="Search what's on…"
+            className="h-12 w-full rounded-full border border-hairline bg-canvas-2 pr-4 pl-11 text-sm font-medium text-ink transition-colors outline-none placeholder:text-ink-2/60 focus:border-white/25"
           />
         </div>
-      )}
+
+        <div className="mt-3 flex items-center gap-3">
+          {tabs.length > 0 && (
+            <div className="min-w-0 flex-1">
+              <FilterTabs
+                tabs={allTabs}
+                active={active}
+                onChange={(key) => {
+                  setActive(key);
+                  setVisible(PAGE_SIZE);
+                }}
+              />
+            </div>
+          )}
+
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showSoldOut}
+            aria-label="Show sold out shows"
+            onClick={() => {
+              setShowSoldOut((v) => !v);
+              setVisible(PAGE_SIZE);
+            }}
+            className={cn(
+              "ml-auto inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-3.5 font-black text-[11px] tracking-wide uppercase transition-colors sm:h-9",
+              showSoldOut
+                ? "border-gold/40 bg-gold/15 text-gold"
+                : "border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink"
+            )}
+          >
+            <span
+              className={cn(
+                "h-2 w-2 shrink-0 rounded-full",
+                showSoldOut ? "bg-gold" : "bg-stone-600"
+              )}
+              aria-hidden="true"
+            />
+            Sold out
+          </button>
+        </div>
+      </div>
 
       {shown.length > 0 ? (
         <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

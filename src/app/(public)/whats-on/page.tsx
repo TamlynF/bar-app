@@ -104,7 +104,7 @@ export default async function WhatsOnPage() {
   const thisMonthLabel = format(today, "MMMM");
 
   return (
-    <main className="relative isolate min-h-dvh w-full overflow-hidden bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
+    <main className="relative isolate min-h-dvh w-full overflow-x-clip bg-canvas pb-24 text-ink-2 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
       <div className="pointer-events-none absolute -top-40 -left-30 h-130 w-130 rounded-full bg-[#FDCC4B]/10 blur-[120px]" aria-hidden="true" />
       <div className="pointer-events-none absolute top-20 -right-40 h-110 w-110 rounded-full bg-[#7A1F1F]/25 blur-[120px]" aria-hidden="true" />
 

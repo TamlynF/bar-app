@@ -88,7 +88,7 @@ export function EventPoster({
       <PosterTint />
 
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/92 via-black/55 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-1/3 bg-linear-to-t from-black/60 to-transparent"
         aria-hidden="true"
       />
 

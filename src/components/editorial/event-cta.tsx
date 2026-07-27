@@ -1,6 +1,6 @@
-import { CalendarDays, Mic2, ArrowRight } from "lucide-react";
+import { CalendarDays, Mic2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SerializedEvent } from "@/lib/events-display";
+import { formatGBP, type SerializedEvent } from "@/lib/events-display";
 
 export function EventCta({
   event,
@@ -77,11 +77,17 @@ export function EventCta({
     <span
       className={cn(
         pill,
-        "cursor-default border border-white/10 bg-white/5 text-stone-300"
+        "cursor-default border border-white/10 bg-white/5 text-stone-300",
+        lg && "text-xs"
       )}
     >
-      Walk in
-      <ArrowRight className={cn(icon, "shrink-0")} aria-hidden="true" />
+      <span
+        className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
+        aria-hidden="true"
+      />
+      {event.price != null && event.price > 0
+        ? `${formatGBP(event.price)} on the door`
+        : "Free entry · walk in"}
     </span>
   );
 }
