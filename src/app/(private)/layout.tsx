@@ -1,6 +1,7 @@
 import type { Viewport } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { buildAdminBookingGroups, partitionBookingGroups, type AdminBookingGroup, type AdminBookingGroupEvent } from "@/lib/admin-booking-groups";
+import { getPendingRequestCounts } from "@/lib/request-counts";
 import PrivateLayoutClient from "./private-layout-client";
 
 export const viewport: Viewport = {
@@ -14,9 +15,7 @@ export default async function PrivateLayout({ children }: { children: React.Reac
     const [
         { data: { user } },
         { data: bookableEvents },
-        { count: pendingBandCount },
-        { count: pendingHireCount },
-        { count: pendingEnquiryCount },
+        pendingCounts,
     ] = await Promise.all([
         supabase.auth.getUser(),
         supabase
@@ -27,18 +26,7 @@ export default async function PrivateLayout({ children }: { children: React.Reac
             .gte("date", today)
             .order("date", { ascending: true })
             .limit(200),
-        supabase
-            .from("band_booking_requests")
-            .select("id", { count: "exact", head: true })
-            .in("status", ["new", "reviewing"]),
-        supabase
-            .from("private_hire_requests")
-            .select("id", { count: "exact", head: true })
-            .eq("status", "pending"),
-        supabase
-            .from("enquiries")
-            .select("id", { count: "exact", head: true })
-            .eq("status", "pending"),
+        getPendingRequestCounts(supabase),
     ]);
 
     let employeeName = "";
@@ -67,18 +55,15 @@ export default async function PrivateLayout({ children }: { children: React.Reac
     });
     const guestNav = guestGroups.map(toNav);
 
-    const pendingRequestsCount =
-        (pendingBandCount ?? 0) + (pendingHireCount ?? 0) + (pendingEnquiryCount ?? 0);
-
     return (
         <PrivateLayoutClient
             employeeName={employeeName}
             employeeRole={employeeRole}
             guestNav={guestNav}
-            pendingRequestsCount={pendingRequestsCount}
-            pendingBandCount={pendingBandCount ?? 0}
-            pendingHireCount={pendingHireCount ?? 0}
-            pendingEnquiriesCount={pendingEnquiryCount ?? 0}
+            pendingRequestsCount={pendingCounts.total}
+            pendingBandCount={pendingCounts.band}
+            pendingHireCount={pendingCounts.privateHire}
+            pendingEnquiriesCount={pendingCounts.enquiries}
         >
             {children}
         </PrivateLayoutClient>
