@@ -4,13 +4,13 @@ import React from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-export default function SettingsLayout({
+export default function EventSetupsLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const isSettingsRoot = pathname === "/settings";
+  const isSettingsRoot = pathname === "/event-setups";
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-7xl flex-col bg-background px-2 pt-2 pb-2 transition-all duration-500 sm:pt-0 md:px-8 md:pb-8 lg:flex-row lg:space-x-12">  
