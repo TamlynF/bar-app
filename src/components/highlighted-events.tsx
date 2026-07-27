@@ -27,9 +27,9 @@ export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
       {events.length > 0 ? (
         <ul
           className={cn(
-            "rail-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 items-stretch gap-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:-mx-10 lg:scroll-px-10 lg:px-10",
+            "no-scrollbar -mx-4 flex snap-x snap-mandatory scroll-px-4 items-stretch gap-3.5 overflow-x-auto px-4 pb-3 sm:-mx-6 sm:scroll-px-6 sm:px-6 lg:-mx-10 lg:scroll-px-10 lg:px-10",
             !alwaysRail &&
-              "sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:overflow-x-visible sm:px-0 sm:pb-0 lg:mx-0 lg:grid-cols-4 lg:px-0"
+              "sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2 sm:gap-4 sm:overflow-x-visible sm:px-0 sm:pb-0 lg:mx-0 lg:grid-cols-3 lg:gap-5 lg:px-0 xl:grid-cols-4 xl:gap-6"
           )}
         >
           {events.map((event, i) => (
@@ -67,10 +67,8 @@ function ScheduleCard({
   return (
     <li
       className={cn(
-        "ad-card ad-rise group relative flex w-[86%] max-w-80 shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas-2",
-        alwaysRail
-          ? "sm:w-76 lg:w-80"
-          : "sm:w-auto sm:max-w-none sm:shrink sm:snap-align-none"
+        "ad-card ad-rise group relative flex w-[min(86vw,340px)] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-hairline bg-canvas-2",
+        alwaysRail ? "sm:w-76 lg:w-80" : "sm:w-auto sm:shrink sm:snap-align-none"
       )}
       style={{ "--ev-c": event.color, "--i": index } as React.CSSProperties}
     >
@@ -82,9 +80,10 @@ function ScheduleCard({
 
       <EventPoster
         event={event}
-        aspect="aspect-4/3"
+        aspect="aspect-auto"
+        className="h-47.5 shrink-0 sm:h-50 lg:h-46.25 xl:h-47.5"
         zoomOnHover
-        sizes="(max-width: 640px) 280px, (max-width: 1024px) 304px, 320px"
+        sizes="(max-width: 640px) 340px, (max-width: 1024px) 360px, 340px"
       >
         <PriceChip event={event} />
         <PosterHoverHint />
@@ -101,7 +100,7 @@ function ScheduleCard({
           </span>
         )}
 
-        <h3 className="line-clamp-2 font-black text-lg leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
+        <h3 className="line-clamp-2 font-black text-xl leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
           {event.title}
         </h3>
 

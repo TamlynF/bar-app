@@ -15,9 +15,9 @@ export function SectionHeading({
   return (
     <div
       id={id}
-      className="mb-6 flex scroll-mt-24 items-end justify-between gap-4 border-b border-white/10 pb-4 sm:mb-8"
+      className="mb-6 flex scroll-mt-24 flex-col items-start gap-3 border-b border-white/10 pb-4 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-4"
     >
-      <div className="min-w-0">
+      <div className="min-w-0 max-w-full">
         <span className="mb-2 block font-black text-[10px] tracking-[0.3em] text-[#FDCC4B] uppercase sm:text-xs">
           {eyebrow}
         </span>
@@ -28,7 +28,7 @@ export function SectionHeading({
       {action && (
         <Link
           href={action.href}
-          className="group inline-flex shrink-0 items-center gap-1.5 pb-1 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:text-white sm:text-xs"
+          className="group inline-flex min-h-11 shrink-0 items-center gap-1.5 font-black text-[10px] tracking-widest text-stone-400 uppercase transition-colors hover:text-white sm:min-h-0 sm:pb-1 sm:text-xs"
         >
           {action.label}
           <ArrowRight
