@@ -48,11 +48,11 @@ export default async function MenuPage() {
   const col2 = sorted.slice(mid);
 
   return (
-    <main className="min-h-dvh w-full bg-[#2a3612] antialiased">
+    <main className="min-h-dvh w-full bg-canvas antialiased">
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            html, body { background-color: #2a3612 !important; margin: 0; padding: 0; overflow-x: hidden; }
+            html, body { background-color: var(--canvas) !important; margin: 0; padding: 0; overflow-x: hidden; }
 
             @media print {
               @page { size: A4; margin: 0mm; }
