@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { getCompanyInfo } from "@/lib/company-info";
 import {
   MapPin,
@@ -174,49 +173,25 @@ function SectionLabel({
 
 function MapCard({ address }: { address: string }) {
   const query = encodeURIComponent(address);
-  const mapsHref = `https://www.google.com/maps/search/?api=1&query=${query}`;
-  const staticMapSrc = process.env.GOOGLE_MAPS_API_KEY ? "/api/static-map" : null;
 
   return (
     <section>
       <SectionLabel icon={MapPin} label="Find Us" />
       <div className="mt-3 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
-        <a
-          href={mapsHref}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label={`Open ${address} in Google Maps`}
-          className="group relative block h-56 w-full focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#FDCC4B] sm:h-64"
-        >
-          {staticMapSrc ? (
-            <Image
-              src={staticMapSrc}
-              alt={`Map showing Don Fenticas at ${address}`}
-              fill
-              sizes="(max-width: 1024px) 100vw, 480px"
-              className="object-cover"
-            />
-          ) : (
-            <iframe
-              src={`https://www.google.com/maps?q=${query}&z=18&output=embed`}
-              title="Map of Don Fenticas"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-              className="pointer-events-none h-full w-full border-0"
-            />
-          )}
-          <span
-            className="absolute inset-0 bg-[#1a2008]/15 transition-colors group-hover:bg-transparent"
-            aria-hidden="true"
-          />
-        </a>
+        <iframe
+          src={`https://www.google.com/maps?q=${query}&z=17&output=embed`}
+          title={`Map showing Don Fenticas at ${address}`}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+          className="h-56 w-full border-0 sm:h-64"
+        />
 
         <div className="flex items-start gap-3 border-t border-white/10 p-4 sm:p-5">
           <div className="min-w-0 flex-1">
             <p className="font-black text-[10px] tracking-[0.2em] text-stone-500 uppercase">
               Address
             </p>
-            <p className="mt-1 text-sm font-bold whitespace-pre-line text-white select-all">
+            <p className="mt-1 text-sm font-medium whitespace-pre-line text-white select-all">
               {address}
             </p>
           </div>
