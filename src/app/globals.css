@@ -490,6 +490,32 @@ body {
   color: inherit;
 }
 
+/* Mid reading size — used where the copy is the main content of a card but the
+   card itself is compact (specials card). */
+.rich-content--md {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.rich-content--md p {
+  margin: 0 0 0.4rem;
+}
+.rich-content--md h1 {
+  font-size: 0.9375rem;
+  margin: 0.35rem 0 0.2rem;
+}
+.rich-content--md h2 {
+  font-size: 0.875rem;
+  margin: 0.3rem 0 0.15rem;
+}
+.rich-content--md ul,
+.rich-content--md ol {
+  padding-left: 1.2rem;
+  margin: 0.3rem 0;
+}
+.rich-content--md li {
+  margin: 0.15rem 0;
+}
+
 /* Larger reading size — used where the copy is the main content of a panel
    (flipped specials card) rather than a supporting line on a compact card. */
 .rich-content--lg {
