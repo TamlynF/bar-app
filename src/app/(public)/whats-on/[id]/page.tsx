@@ -18,12 +18,14 @@ import { BandMedia } from "@/components/editorial/band-media";
 import { ShareLinks } from "@/components/editorial/share-links";
 import {
   entryText,
+  formatTime,
   getEventType,
   parseDate,
   serializeEvent,
   type BandInfo,
   type EventRow,
 } from "@/lib/events-display";
+import type { OpeningHours } from "@/lib/opening-hours";
 
 export const revalidate = 300;
 
@@ -121,6 +123,11 @@ export default async function WhatsOnEventPage({
   const address = info?.address as string | undefined;
   const phone = info?.phone as string | undefined;
 
+  const openingHours = (info?.opening_hours ?? {}) as OpeningHours;
+  const eventDayKey = format(dateObj, "EEEE").toLowerCase();
+  const doorsLabel = formatTime(openingHours[eventDayKey]?.open ?? null);
+  const startRowLabel = event.isKaraoke ? "Karaoke" : "Show time";
+
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
   const shareUrl = `${siteUrl}/whats-on/${event.id}`;
   const shareTitle = `${event.title} · ${format(dateObj, "d MMM yyyy")} · ${venueName}`;
@@ -216,9 +223,19 @@ export default async function WhatsOnEventPage({
                     Doors
                   </dt>
                   <dd className="font-black text-sm text-ink tabular-nums">
-                    {event.startTimeLabel ?? "TBC"}
+                    {doorsLabel ?? event.startTimeLabel ?? "TBC"}
                   </dd>
                 </div>
+                {event.startTimeLabel && (
+                  <div className="flex items-center justify-between gap-4">
+                    <dt className="font-bold text-[11px] tracking-widest text-ink-2 uppercase">
+                      {startRowLabel}
+                    </dt>
+                    <dd className="font-black text-sm text-ink tabular-nums">
+                      {event.startTimeLabel}
+                    </dd>
+                  </div>
+                )}
                 {event.endTimeLabel && (
                   <div className="flex items-center justify-between gap-4">
                     <dt className="font-bold text-[11px] tracking-widest text-ink-2 uppercase">
