@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { format } from "date-fns";
-import { Calendar } from "lucide-react";
+import { Calendar, Clock } from "lucide-react";
 import { SectionHeading } from "@/components/editorial/section-heading";
+import { DateChip } from "@/components/editorial/date-chip";
 import { BookingButton } from "@/components/editorial/booking-button";
 import {
   EventPoster,
+  PosterChip,
   PosterHoverHint,
   PriceChip,
 } from "@/components/editorial/event-poster";
@@ -85,11 +86,11 @@ function ScheduleCard({
   event: SerializedEvent;
   index: number;
 }) {
-  const dateLabel = format(parseDate(event.date), "EEE d MMM");
+  const dateObj = parseDate(event.date);
 
-  const whenLabel = event.startTimeLabel
-    ? `${dateLabel} · ${event.startTimeLabel}`
-    : dateLabel;
+  const timeLabel = event.startTimeLabel
+    ? `${event.startTimeLabel}${event.endTimeLabel ? ` – ${event.endTimeLabel}` : ""}`
+    : null;
 
   const detailsHref = `/whats-on/${event.id}`;
 
@@ -98,7 +99,7 @@ function ScheduleCard({
       className="
         ad-card ad-rise group relative flex
         w-[min(86vw,340px)] shrink-0 snap-start flex-col
-        overflow-hidden rounded-2xl border border-hairline
+        overflow-hidden rounded-3xl border border-hairline
         bg-canvas-2
 
         sm:w-auto sm:min-w-0 sm:shrink sm:snap-none
@@ -114,7 +115,7 @@ function ScheduleCard({
         href={detailsHref}
         aria-label={`View details for ${event.title}`}
         className="
-          absolute inset-0 z-10 rounded-2xl outline-none
+          absolute inset-0 z-10 rounded-3xl outline-none
           focus-visible:ring-2 focus-visible:ring-gold
           focus-visible:ring-inset
         "
@@ -137,31 +138,26 @@ function ScheduleCard({
           25vw
         "
       >
+        <PosterChip event={event} />
         <PriceChip event={event} />
+        <DateChip date={dateObj} tone="gold" className="absolute bottom-3 left-3" />
         <PosterHoverHint />
       </EventPoster>
 
-      <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3">
-        {event.subType && (
-          <span className="inline-flex items-center gap-1.5 font-black text-[10px] tracking-widest text-(--ev-c) uppercase">
-            <span
-              className="h-1.5 w-1.5 shrink-0 rounded-full bg-(--ev-c)"
-              aria-hidden="true"
-            />
-            {event.subType}
-          </span>
-        )}
-
-        <h3 className="line-clamp-2 font-black text-xl leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
+      <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3 sm:px-5">
+        <h3 className="line-clamp-2 font-black text-lg leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
           {event.title}
         </h3>
 
-        <span className="block font-black text-xs tracking-widest text-stone-400 uppercase tabular-nums">
-          {whenLabel}
-        </span>
+        {timeLabel && (
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-400 tabular-nums">
+            <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            {timeLabel}
+          </span>
+        )}
       </div>
 
-      <div className="relative z-20 mt-auto px-4 pb-4">
+      <div className="relative z-20 mt-auto px-4 pb-4 sm:px-5 sm:pb-5">
         <BookingButton event={event} />
       </div>
     </li>
