@@ -14,7 +14,7 @@ import Image from "next/image";
 
 export const revalidate = 300;
 
-const HERO_BACKDROP = "/pexels-ikevinmoon-17895798.jpg";
+const HERO_BACKDROP = "/backdrop.jpeg";
 
 export default async function HomePage() {
   const supabase = await createClient();
