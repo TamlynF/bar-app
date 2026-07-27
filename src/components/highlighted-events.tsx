@@ -26,7 +26,7 @@ export function HighlightedEvents({
     >
       <SectionHeading
         eyebrow="The schedule"
-        title="Rest Of The Week"
+        title="What's on this week"
         action={{
           href: "/whats-on",
           label: events.length > HOMEPAGE_EVENT_LIMIT
