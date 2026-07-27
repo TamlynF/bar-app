@@ -1,29 +1,18 @@
-import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
-import type { IconType } from "react-icons";
 import { VideoFacade } from "@/components/video-facade";
+import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import type { BandInfo } from "@/lib/events-display";
 
 const SOCIAL_META: {
   key: keyof BandInfo["socialLinks"];
-  Icon: IconType;
+  Icon: typeof SOCIAL_BRANDS.instagram.Icon;
   label: string;
   className: string;
-}[] = [
-  {
-    key: "instagram",
-    Icon: SiInstagram,
-    label: "Instagram",
-    className: "bg-linear-to-br from-[#F58529] via-[#DD2A7B] to-[#515BD4] text-white",
-  },
-  { key: "facebook", Icon: SiFacebook, label: "Facebook", className: "bg-[#1877F2] text-white" },
-  { key: "youtube", Icon: SiYoutube, label: "YouTube", className: "bg-[#FF0000] text-white" },
-  {
-    key: "tiktok",
-    Icon: SiTiktok,
-    label: "TikTok",
-    className: "bg-black text-white ring-1 ring-white/20",
-  },
-];
+}[] = (["instagram", "facebook", "youtube", "tiktok"] as const).map((key) => ({
+  key,
+  Icon: SOCIAL_BRANDS[key].Icon,
+  label: SOCIAL_BRANDS[key].label,
+  className: SOCIAL_BRANDS[key].solid,
+}));
 
 export function BandMedia({ band, title }: { band: BandInfo; title: string }) {
   const socials = SOCIAL_META.map((s) => ({ ...s, url: band.socialLinks[s.key] })).filter(

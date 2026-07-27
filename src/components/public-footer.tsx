@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 import { SiInstagram, SiFacebook } from "react-icons/si";
+import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 import type { CompanyInfo } from "@/components/find-us";
 
 const FOOTER_LINKS = [
@@ -74,7 +75,7 @@ export function PublicFooter({ info }: { info?: CompanyInfo }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Don Fenticas on Instagram"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-hairline bg-canvas-2 text-stone-400 transition-colors hover:border-white/30 hover:text-ink"
+                  className={`inline-flex h-10 w-10 items-center justify-center rounded-xl transition-transform hover:scale-105 active:scale-95 ${SOCIAL_BRANDS.instagram.solid}`}
                 >
                   <SiInstagram className="h-4 w-4" />
                 </a>
@@ -85,7 +86,7 @@ export function PublicFooter({ info }: { info?: CompanyInfo }) {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label="Don Fenticas on Facebook"
-                  className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-hairline bg-canvas-2 text-stone-400 transition-colors hover:border-white/30 hover:text-ink"
+                  className={`inline-flex h-10 w-10 items-center justify-center rounded-xl transition-transform hover:scale-105 active:scale-95 ${SOCIAL_BRANDS.facebook.solid}`}
                 >
                   <SiFacebook className="h-4 w-4" />
                 </a>

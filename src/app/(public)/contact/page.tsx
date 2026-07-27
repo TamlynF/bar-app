@@ -10,6 +10,11 @@ import {
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
 import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
+import {
+  SOCIAL_BRANDS,
+  type SocialPlatform,
+} from "@/components/editorial/social-brands";
+import { cn } from "@/lib/utils";
 import EnquiryForm from "./_components/enquiry-form";
 
 export const metadata = {
@@ -148,6 +153,7 @@ export default async function ContactPage() {
               {info?.instagram && (
                 <SocialCard
                   icon={SiInstagram}
+                  brand="instagram"
                   label="Instagram"
                   handle={`@${info.instagram.replace("@", "")}`}
                   href={`https://instagram.com/${info.instagram.replace("@", "")}`}
@@ -156,6 +162,7 @@ export default async function ContactPage() {
               {info?.facebook && (
                 <SocialCard
                   icon={SiFacebook}
+                  brand="facebook"
                   label="Facebook"
                   handle={info.facebook}
                   href={
@@ -168,6 +175,7 @@ export default async function ContactPage() {
               {info?.tiktok && (
                 <SocialCard
                   icon={SiTiktok}
+                  brand="tiktok"
                   label="TikTok"
                   handle={`@${info.tiktok.replace("@", "")}`}
                   href={`https://tiktok.com/@${info.tiktok.replace("@", "")}`}
@@ -176,6 +184,7 @@ export default async function ContactPage() {
               {info?.twitter && (
                 <SocialCard
                   icon={SiX}
+                  brand="x"
                   label="X / Twitter"
                   handle={`@${info.twitter.replace("@", "")}`}
                   href={`https://x.com/${info.twitter.replace("@", "")}`}
@@ -184,6 +193,7 @@ export default async function ContactPage() {
               {info?.youtube && (
                 <SocialCard
                   icon={SiYoutube}
+                  brand="youtube"
                   label="YouTube"
                   handle={info.youtube}
                   href={
@@ -281,11 +291,13 @@ function ContactCard({
 
 function SocialCard({
   icon: Icon,
+  brand,
   label,
   handle,
   href,
 }: {
   icon?: React.ComponentType<{ className?: string }>;
+  brand?: SocialPlatform;
   label: string;
   handle: string;
   href: string;
@@ -297,13 +309,18 @@ function SocialCard({
       rel="noopener noreferrer"
       className="group flex items-center gap-3 rounded-2xl border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/8"
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 transition-colors group-hover:bg-white/10">
+      <div
+        className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-transform group-hover:scale-105",
+          brand
+            ? SOCIAL_BRANDS[brand].solid
+            : "border border-white/10 bg-white/5 text-stone-400"
+        )}
+      >
         {Icon ? (
-          <Icon className="h-4 w-4 text-stone-400" />
+          <Icon className="h-4 w-4" />
         ) : (
-          <span className="font-black text-xs text-stone-400">
-            {label.charAt(0)}
-          </span>
+          <span className="font-black text-xs">{label.charAt(0)}</span>
         )}
       </div>
       <div className="min-w-0 flex-1">

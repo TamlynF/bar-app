@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MapPin, ArrowRight } from "lucide-react";
 import { SiInstagram, SiFacebook } from "react-icons/si";
 import { SectionHeading } from "@/components/editorial/section-heading";
+import { SOCIAL_BRANDS } from "@/components/editorial/social-brands";
 
 const DAYS: { key: string; label: string }[] = [
   { key: "monday", label: "Mon" },
@@ -76,7 +77,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Instagram"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-hairline bg-canvas-2 text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
+                className={`inline-flex h-11 w-11 items-center justify-center rounded-xl transition-transform hover:scale-105 active:scale-95 ${SOCIAL_BRANDS.instagram.solid}`}
               >
                 <SiInstagram className="h-5 w-5" aria-hidden="true" />
               </a>
@@ -87,7 +88,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Facebook"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-hairline bg-canvas-2 text-ink-2 transition-colors hover:bg-white/10 hover:text-ink"
+                className={`inline-flex h-11 w-11 items-center justify-center rounded-xl transition-transform hover:scale-105 active:scale-95 ${SOCIAL_BRANDS.facebook.solid}`}
               >
                 <SiFacebook className="h-5 w-5" aria-hidden="true" />
               </a>
