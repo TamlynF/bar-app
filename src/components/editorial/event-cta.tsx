@@ -1,6 +1,6 @@
 import { CalendarDays, Mic2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { formatGBP, type SerializedEvent } from "@/lib/events-display";
+import { type SerializedEvent } from "@/lib/events-display";
 
 export function EventCta({
   event,
@@ -85,9 +85,7 @@ export function EventCta({
         className="h-1.5 w-1.5 shrink-0 rounded-full bg-current"
         aria-hidden="true"
       />
-      {event.price != null && event.price > 0
-        ? `${formatGBP(event.price)} on the door`
-        : "Free entry · walk in"}
+      Walk in
     </span>
   );
 }

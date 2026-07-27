@@ -3,7 +3,7 @@ import { ArrowUpRight, Calendar, Clock } from "lucide-react";
 import { SectionHeading } from "@/components/editorial/section-heading";
 import { DateChip } from "@/components/editorial/date-chip";
 import { EventCta } from "@/components/editorial/event-cta";
-import { EventPoster } from "@/components/editorial/event-poster";
+import { EventPoster, PosterChip } from "@/components/editorial/event-poster";
 import { parseDate, priceLabel, type SerializedEvent } from "@/lib/events-display";
 
 export function HighlightedEvents({ events }: { events: SerializedEvent[] }) {
@@ -65,52 +65,38 @@ function ScheduleCard({
           zoomOnHover
           sizes="(max-width: 640px) 280px, (max-width: 1024px) 304px, 320px"
         >
-          <DateChip date={dateObj} className="absolute top-3 left-3" />
+          <PosterChip event={event} />
 
           {event.isFullyBooked ? (
-            <span className="absolute top-3 right-3 rounded-full border border-red-500/30 bg-red-500/20 px-2 py-0.5 font-black text-[9px] tracking-widest text-red-300 uppercase backdrop-blur-sm">
+            <span className="absolute top-3 right-3 rounded-full border border-red-500/30 bg-red-500/20 px-2.5 py-1 font-black text-[10px] tracking-widest text-red-300 uppercase backdrop-blur-sm">
               Sold Out
             </span>
           ) : (
             price && (
-              <span className="absolute top-3 right-3 rounded-full bg-gold px-2.5 py-1 font-black text-[10px] tracking-widest text-on-gold uppercase">
+              <span className="absolute top-3 right-3 rounded-full border border-gold/40 bg-canvas/80 px-2.5 py-1 font-black text-[10px] tracking-widest text-gold uppercase backdrop-blur-sm">
                 {price}
               </span>
             )
           )}
 
-          <span
-            className="absolute right-3 bottom-3 inline-flex h-8 w-8 items-center justify-center rounded-full border border-hairline bg-canvas/80 text-ink backdrop-blur-sm transition-colors group-hover:bg-gold group-hover:text-on-gold"
-            aria-hidden="true"
-          >
-            <ArrowUpRight className="h-4 w-4" />
-          </span>
+          <DateChip date={dateObj} tone="gold" className="absolute bottom-3 left-3" />
         </EventPoster>
 
-        <div className="flex flex-col gap-1 px-3.5 pt-3 pb-2.5">
-          {event.subType && (
-            <span
-              className="ev-text font-black text-[9px] tracking-[0.25em] uppercase"
-              style={{ "--ev-c": event.color } as React.CSSProperties}
-            >
-              {event.subType}
-            </span>
-          )}
-
-          <h3 className="line-clamp-1 font-black text-base leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
+        <div className="flex flex-col gap-1.5 px-4 pt-4 pb-3">
+          <h3 className="line-clamp-2 font-black text-lg leading-tight tracking-tight text-ink uppercase transition-colors group-hover:text-gold">
             {event.title}
           </h3>
 
           {timeLabel && (
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-stone-400 tabular-nums">
-              <Clock className="h-3 w-3 shrink-0" aria-hidden="true" />
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-400 tabular-nums">
+              <Clock className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               {timeLabel}
             </span>
           )}
         </div>
       </Link>
 
-      <div className="mt-auto flex items-center gap-2 px-3.5 pb-3.5">
+      <div className="mt-auto flex items-center gap-2 px-4 pb-4">
         <div className="min-w-0 flex-1">
           <EventCta event={event} size="lg" />
         </div>
