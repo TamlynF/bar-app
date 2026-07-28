@@ -215,7 +215,7 @@ The booking pages share a public dark theme but each has its own logic:
 |---|---|
 | `bookings` | Quiz / bingo / event bookings — status: `confirmed`, `waitlisted`, `pending`, `cancelled` |
 | `contacts` | Customer details (shared across booking types, keyed on email) |
-| `events` / `event_types` | Schedule; events lazily created on first booking for a date |
+| `events` / `event_types` / `event_subtypes` | Schedule. Events are created from exactly three places: the admin event sheet, the band `booked` transition, and private-hire `confirmed` — there is no lazy creation on booking. Poster images resolve at render (`src/lib/event-image.ts`): `events.image_url` → the booked act's `music_acts.cover_image_url` → `event_subtypes.default_image_url`. A null `events.image_url` means "inherit", so changing a subtype default updates every non-overridden event; nothing is ever copied between rows |
 | `booking_table_mappings` | Seating assignment for confirmed bookings |
 | `tables` | Physical tables with `max_capacity` |
 | `band_booking_requests` | Stage applications — five-stage pipeline: `new` → `reviewing` → `offered` → `booked` → `declined`. `booked` (with a date) places an active `events` row; every other status deactivates the linked event. `offered` emails an offer, `booked`/`declined` email the outcome; reschedule sends a request back to `offered`. Separate `payment_status` (`no_payment`/`unpaid`/`partially_paid`/`paid`/`over_paid`, derived from amounts) tracks the fee |

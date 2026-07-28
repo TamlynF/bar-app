@@ -8,6 +8,8 @@ import { WhatsOnGrid } from "@/components/whats-on-grid";
 import {
   getEventType,
   serializeEvent,
+  BOOKED_BAND_FILTER,
+  PUBLIC_EVENT_SELECT,
   type BandInfo,
   type EventRow,
 } from "@/lib/events-display";
@@ -31,9 +33,8 @@ export default async function WhatsOnPage() {
 
   const { data: rawEvents } = await supabase
     .from("events")
-    .select(
-      "id, title, date, start_time, end_time, tagline, image_url, is_active, is_fully_booked, is_bookable, seating_required, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline)"
-    )
+    .select(PUBLIC_EVENT_SELECT)
+    .eq(BOOKED_BAND_FILTER, "booked")
     .gte("date", monthStartStr)
     .lte("date", nextMonthEndStr)
     .order("date", { ascending: true })
@@ -56,7 +57,8 @@ export default async function WhatsOnPage() {
       .from("band_booking_requests")
       .select("event_id, social_links, video_urls, video_descriptions")
       .in("event_id", musicActIds)
-      .eq("status", "booked");
+      .eq("status", "booked")
+      .order("created_at", { ascending: true });
 
     for (const b of (bandRows ?? []) as {
       event_id: number | null;

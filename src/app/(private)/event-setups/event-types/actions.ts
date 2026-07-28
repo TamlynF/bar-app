@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicEventPages } from "@/lib/revalidate-public";
 import { isEventBehavior } from "@/lib/event-behavior";
 import { isBookingGrouping } from "@/lib/booking-grouping";
 
@@ -102,6 +103,7 @@ export async function saveSubtypeAction(formData: FormData) {
   const default_event_title = formData.get("default_event_title")?.toString() || null;
   const tagline = formData.get("tagline")?.toString() || null;
   const color = formData.get("color")?.toString() || null;
+  const default_image_url = formData.get("default_image_url")?.toString().trim() || null;
   const behavior = formData.get("behavior")?.toString();
   const is_bookable = formData.get("is_bookable") === "on";
   const host_required = formData.get("host_required") === "on";
@@ -130,6 +132,7 @@ export async function saveSubtypeAction(formData: FormData) {
     default_event_title,
     tagline,
     color,
+    default_image_url,
     behavior,
     is_bookable,
     host_required,
@@ -185,6 +188,7 @@ export async function saveSubtypeAction(formData: FormData) {
     }
 
     revalidatePath("/event-setups/event-types");
+    revalidatePublicEventPages();
     return { success: true };
   } catch (error) {
     console.error("Error saving sub-type:", error);

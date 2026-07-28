@@ -8,8 +8,10 @@ import {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
   Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Beer,
   ChevronDown, Banknote, Trophy, Wine, Speaker, User,
-  Search, X, SlidersHorizontal, Ticket, Armchair, PoundSterling, Disc3, Mic, Tag, Check, 
+  Search, X, SlidersHorizontal, Ticket, Armchair, PoundSterling, Disc3, Mic, Tag, Check,
+  Upload,
 } from "lucide-react";
+import { createBrowserClient } from "@supabase/ssr";
 import {
   saveTypeAction,
   deleteTypeAction,
@@ -27,6 +29,13 @@ import type { BookingConfig } from "@/lib/booking-config";
 import { BEHAVIOR_OPTIONS, type EventBehavior } from "@/lib/event-behavior";
 import { BOOKING_GROUPING_OPTIONS, type BookingGrouping } from "@/lib/booking-grouping";
 import { IconPicker } from "@/components/icon-picker";
+
+const storageClient = createBrowserClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+const SUBTYPE_IMAGE_BUCKET = "booking-images";
 
 const ICON_OPTIONS = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
@@ -58,6 +67,7 @@ export type Subtype = {
   name: string;
   title: string | null;
   default_event_title: string | null;
+  default_image_url: string | null;
   tagline: string | null;
   color: string | null;
   behavior: EventBehavior;
@@ -111,6 +121,7 @@ type SubtypeForm = {
   name: string;
   title: string;
   default_event_title: string;
+  default_image_url: string;
   tagline: string;
   color: string | null;
   behavior: EventBehavior;
@@ -197,6 +208,29 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const [badgeForm, setBadgeForm] = useState<BadgeForm | null>(null);
 
   const [error, setError] = useState<string | null>(null);
+  const [imageUploading, setImageUploading] = useState(false);
+
+  const handleSubtypeImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !subtypeForm) return;
+    setImageUploading(true);
+    setError(null);
+    const ext = file.name.split(".").pop();
+    const path = `event-subtypes/${crypto.randomUUID()}.${ext}`;
+    const { data, error: uploadError } = await storageClient.storage
+      .from(SUBTYPE_IMAGE_BUCKET)
+      .upload(path, file, { cacheControl: "3600", upsert: false });
+    if (uploadError) {
+      setError(`Upload failed: ${uploadError.message}`);
+      setImageUploading(false);
+      return;
+    }
+    const publicUrl = storageClient.storage
+      .from(SUBTYPE_IMAGE_BUCKET)
+      .getPublicUrl(data.path).data.publicUrl;
+    setSubtypeForm((prev) => (prev ? { ...prev, default_image_url: publicUrl } : prev));
+    setImageUploading(false);
+  };
 
   const types = useMemo(
     () => [...initialEventTypes].sort((a, b) => a.name.localeCompare(b.name)),
@@ -225,6 +259,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const openNewSubtype = (t: EventTypeRecord) =>
     setSubtypeForm({
       event_types_id: t.id, name: "", title: "", default_event_title: "", tagline: "", color: null,
+      default_image_url: "",
       behavior: "standard",
       is_bookable: false, host_required: false, seating_required: true, payment_required: false,
       default_payment_amount: "", booking_config: {}, badges: [],
@@ -235,6 +270,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     setSubtypeForm({
       id: s.id, event_types_id: s.event_types_id, name: toTitleCase(s.name), title: s.title ?? "",
       default_event_title: s.default_event_title ?? "", tagline: s.tagline ?? "", color: s.color ?? null,
+      default_image_url: s.default_image_url ?? "",
       behavior: s.behavior,
       is_bookable: s.is_bookable, host_required: s.host_required, seating_required: s.seating_required,
       payment_required: s.payment_required, default_payment_amount: s.default_payment_amount != null ? String(s.default_payment_amount) : "",
@@ -276,6 +312,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     fd.set("name", subtypeForm.name);
     fd.set("title", subtypeForm.title);
     fd.set("default_event_title", subtypeForm.default_event_title);
+    fd.set("default_image_url", subtypeForm.default_image_url);
     fd.set("tagline", subtypeForm.tagline);
     fd.set("color", subtypeForm.color ?? "");
     fd.set("behavior", subtypeForm.behavior);
@@ -454,6 +491,14 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                         >
                           <div className="flex items-start justify-between gap-2.5 px-3 py-2.5 bg-[color-mix(in_srgb,var(--sub-bg)_45%,#fff)] border-b border-(--sub-border) sm:px-3.5">
                             <div className="flex flex-wrap flex-1 items-center gap-2.5 min-w-0">
+                              {s.default_image_url && (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={s.default_image_url}
+                                  alt=""
+                                  className="h-6 w-6 shrink-0 rounded-md border border-[#E6DFC8] object-cover"
+                                />
+                              )}
                               <span className="font-black text-[14px] tracking-[0.01em] whitespace-nowrap text-(--sub-text) capitalize">
                                 {toTitleCase(s.name)}
                               </span>
@@ -590,6 +635,30 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     </FieldCol>
                     <FieldCol label="Colour">
                       <ColorSwatches value={subtypeForm.color} onChange={(c) => setSubtypeForm({ ...subtypeForm, color: c })} />
+                    </FieldCol>
+                    <FieldCol label="Default Image">
+                      {subtypeForm.default_image_url ? (
+                        <div className="relative overflow-hidden rounded-xl border border-[#E6DFC8]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={subtypeForm.default_image_url} alt="Default poster" className="max-h-50 w-full bg-[#F7F4EA] object-cover" />
+                          <button
+                            type="button"
+                            onClick={() => setSubtypeForm({ ...subtypeForm, default_image_url: "" })}
+                            title="Clear default image"
+                            aria-label="Clear default image"
+                            className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] py-7 transition-colors hover:border-[#5C4033]">
+                          {imageUploading ? <Loader2 className="h-7 w-7 animate-spin text-[#5F624F]" /> : <Upload className="h-7 w-7 text-[#5F624F] opacity-50" />}
+                          <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{imageUploading ? "Uploading…" : "Upload"}</span>
+                          <span className="px-4 text-center text-[10px] text-[#5F624F]">Used on every event of this sub-category that has no image of its own</span>
+                          <input type="file" accept="image/*" aria-label="Upload default image" className="hidden" onChange={handleSubtypeImageUpload} disabled={imageUploading} />
+                        </label>
+                      )}
                     </FieldCol>
                   </CollapsibleCard>
 

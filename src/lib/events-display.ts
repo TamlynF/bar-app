@@ -1,5 +1,6 @@
 import { swatchHexFromColor } from "@/lib/event-type-colors";
 import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
+import { resolveEventImage } from "@/lib/event-image";
 
 
 export type TypeJoin = { name: string; color: string | null };
@@ -8,6 +9,11 @@ export type SubtypeJoin = {
   color: string | null;
   behavior: string | null;
   tagline?: string | null;
+  default_image_url?: string | null;
+};
+
+export type ActCoverJoin = {
+  music_acts: { cover_image_url: string | null } | { cover_image_url: string | null }[] | null;
 };
 
 export type EventTypeJoin = {
@@ -16,6 +22,7 @@ export type EventTypeJoin = {
   badge_color: string | null;
   behavior: EventBehavior;
   tagline: string | null;
+  default_image_url: string | null;
 };
 
 export type EventRow = {
@@ -36,7 +43,23 @@ export type EventRow = {
   payment_amount?: number | null;
   event_types: TypeJoin | TypeJoin[];
   event_subtypes: SubtypeJoin | SubtypeJoin[];
+  band_booking_requests?: ActCoverJoin[] | null;
 };
+
+export const PUBLIC_EVENT_SELECT =
+  "id, title, date, start_time, end_time, tagline, image_url, is_active, is_fully_booked, is_bookable, seating_required, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline, default_image_url), band_booking_requests!band_booking_requests_event_id_fkey(music_acts(cover_image_url))" as const;
+
+export const BOOKED_BAND_FILTER = "band_booking_requests.status";
+
+export function actCoverFromRow(event: EventRow): string | null {
+  for (const request of event.band_booking_requests ?? []) {
+    const act = Array.isArray(request.music_acts)
+      ? request.music_acts[0]
+      : request.music_acts;
+    if (act?.cover_image_url) return act.cover_image_url;
+  }
+  return null;
+}
 
 export function parseDate(dateStr: string) {
   return new Date(dateStr + "T00:00:00");
@@ -62,6 +85,7 @@ export function getEventType(event: EventRow): EventTypeJoin | null {
     badge_color: s?.color ?? null,
     behavior: isEventBehavior(s?.behavior) ? s.behavior : "standard",
     tagline: s?.tagline ?? null,
+    default_image_url: s?.default_image_url ?? null,
   };
 }
 
@@ -158,7 +182,11 @@ export function serializeEvent(e: EventRow, band: BandInfo | null = null): Seria
     color: eventBadgeColor(e),
     subType: et?.sub_type ?? null,
     tagline: e.tagline ?? et?.tagline ?? null,
-    imageUrl: e.image_url ?? null,
+    imageUrl: resolveEventImage({
+      eventImageUrl: e.image_url,
+      actCoverUrl: actCoverFromRow(e),
+      subtypeDefaultUrl: et?.default_image_url,
+    }).url,
     price: e.payment_amount ?? null,
     isKaraoke: et?.behavior === "karaoke",
     karaokeRequestUrl: e.karaoke_request_url ?? null,

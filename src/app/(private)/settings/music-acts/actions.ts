@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicEventPages } from "@/lib/revalidate-public";
 import { upsertContactByEmail, type SocialLinks } from "@/lib/music-acts";
 
 export interface MusicActInput {
@@ -91,6 +92,7 @@ export async function saveMusicActAction(
         .eq("id", input.id);
       if (error) throw error;
       revalidatePath("/settings/music-acts");
+      revalidatePublicEventPages();
       return { success: true, id: input.id };
     }
 
@@ -101,6 +103,7 @@ export async function saveMusicActAction(
       .single();
     if (error) throw error;
     revalidatePath("/settings/music-acts");
+    revalidatePublicEventPages();
     return { success: true, id: data.id as string };
   } catch (error) {
     const code = (error as { code?: string })?.code;

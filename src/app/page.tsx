@@ -10,7 +10,13 @@ import { HighlightedEvents } from "@/components/highlighted-events";
 import { SpecialsSection, type SpecialRow } from "@/components/specials-section";
 import { MerchandiseSection, type MerchandiseRow } from "@/components/merchandise-section";
 import { InstagramStrip, type PromoRow } from "@/components/instagram-strip";
-import { getEventType, serializeEvent, type EventRow } from "@/lib/events-display";
+import {
+  getEventType,
+  serializeEvent,
+  BOOKED_BAND_FILTER,
+  PUBLIC_EVENT_SELECT,
+  type EventRow,
+} from "@/lib/events-display";
 import Image from "next/image";
 
 export const revalidate = 300;
@@ -31,9 +37,8 @@ export default async function HomePage() {
   ] = await Promise.all([
     supabase
       .from("events")
-      .select(
-        "id, title, date, start_time, end_time, tagline, image_url, is_active, is_fully_booked, is_bookable, seating_required, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline)"
-      )
+      .select(PUBLIC_EVENT_SELECT)
+      .eq(BOOKED_BAND_FILTER, "booked")
       .eq("is_active", true)
       .gte("date", todayStr)
       .order("date", { ascending: true })

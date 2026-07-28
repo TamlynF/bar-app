@@ -65,6 +65,10 @@ values
 insert into public.event_subtype_badges (id, event_subtypes_id, icon, title, description)
 values (1, 1, 'Calendar', 'Every Thursday', '8:00PM start');
 
+-- Default poster for the quiz subtype. Events never copy this — it is resolved at
+-- render time, so every quiz event without its own image_url picks it up.
+update public.event_subtypes set default_image_url = '/backdrop.jpeg' where id = 1;
+
 -- ── Events (all upcoming, mix of bookable/non-bookable) ──────────────────────
 
 insert into public.events

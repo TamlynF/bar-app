@@ -22,15 +22,14 @@ import {
   getEventType,
   parseDate,
   serializeEvent,
+  BOOKED_BAND_FILTER,
+  PUBLIC_EVENT_SELECT,
   type BandInfo,
   type EventRow,
 } from "@/lib/events-display";
 import type { OpeningHours } from "@/lib/opening-hours";
 
 export const revalidate = 300;
-
-const EVENT_SELECT =
-  "id, title, date, start_time, end_time, tagline, image_url, is_active, is_fully_booked, is_bookable, seating_required, payment_amount, external_link, booking_page_url, karaoke_request_url, event_types!inner(name, color), event_subtypes!inner(name, color, behavior, tagline)";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -61,7 +60,8 @@ export default async function WhatsOnEventPage({
 
   const { data: raw } = await supabase
     .from("events")
-    .select(EVENT_SELECT)
+    .select(PUBLIC_EVENT_SELECT)
+    .eq(BOOKED_BAND_FILTER, "booked")
     .eq("id", id)
     .maybeSingle();
 
@@ -79,6 +79,8 @@ export default async function WhatsOnEventPage({
       .select("social_links, video_urls, video_descriptions")
       .eq("event_id", row.id)
       .eq("status", "booked")
+      .order("created_at", { ascending: true })
+      .limit(1)
       .maybeSingle();
 
     if (bandRow) {
@@ -101,7 +103,8 @@ export default async function WhatsOnEventPage({
     getCompanyInfo(),
     supabase
       .from("events")
-      .select(EVENT_SELECT)
+      .select(PUBLIC_EVENT_SELECT)
+      .eq(BOOKED_BAND_FILTER, "booked")
       .gte("date", todayStr)
       .neq("id", row.id)
       .eq("is_active", true)

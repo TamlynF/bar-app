@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { revalidatePublicEventPages } from "@/lib/revalidate-public";
 import { publicBookingUrl } from "@/lib/booking-links";
 import { isBookingGrouping } from "@/lib/booking-grouping";
 import { validateEventForm, type EventClashCandidate } from "@/lib/event-form-validation";
@@ -141,6 +142,7 @@ export async function saveEventAction(formData: FormData) {
     }
 
     revalidatePath("/event-setups/events");
+    revalidatePublicEventPages();
     return { success: true, event: savedEvent };
   } catch (error) {
     console.error("Error saving event:", error);
@@ -167,6 +169,7 @@ export async function deleteEventAction(id: number) {
     const { error } = await supabase.from("events").delete().eq("id", id);
     if (error) throw error;
     revalidatePath("/event-setups/events");
+    revalidatePublicEventPages();
     return { success: true };
   } catch (error) {
     console.error("Error deleting event:", error);

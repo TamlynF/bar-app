@@ -40,6 +40,7 @@ import { createBrowserClient } from "@supabase/ssr";
 import { saveEventAction, deleteEventAction, setEventQr } from "./actions";
 import { DatePicker, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
+import { resolveEventImage, type EventImageSource } from "@/lib/event-image";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
 import { buildAdminBookingGroups } from "@/lib/admin-booking-groups";
@@ -82,6 +83,7 @@ export type EventSubtype = {
   payment_required: boolean;
   default_payment_amount: number | null;
   booking_config: BookingConfig | null;
+  default_image_url: string | null;
 };
 
 export type EventRecord = {
@@ -208,6 +210,7 @@ export default function EventsClient({
   quizCategories = [],
   quizQuestions = [],
   bookings = [],
+  actCoverByEvent = {},
   filter,
   initialFrom,
   initialTo,
@@ -220,6 +223,7 @@ export default function EventsClient({
   quizCategories: QuizCategory[];
   quizQuestions: QuizQuestion[];
   bookings: BookingRecord[];
+  actCoverByEvent?: Record<number, string>;
   filter?: string;
   initialFrom?: string;
   initialTo?: string;
@@ -854,6 +858,17 @@ export default function EventsClient({
   const selectedTypeForForm = typeById.get(Number(formTypeId));
   const formSubtypeOptions = subtypesByType.get(Number(formTypeId)) ?? [];
 
+  const inheritedForForm = resolveEventImage({
+    actCoverUrl: formDefault ? actCoverByEvent[formDefault.id] : undefined,
+    subtypeDefaultUrl: selectedSubtype?.default_image_url,
+  });
+
+  const imageSourceLabel = (source: EventImageSource, subtypeName?: string | null) => {
+    if (source === "act") return "Using the booked act's cover image";
+    if (source === "subtype") return `Using the ${subtypeName ?? "sub-category"} default image`;
+    return null;
+  };
+
   const fieldErrors: Record<string, string> = {};
   const fieldWarnings: Record<string, string> = {};
   if (showForm) {
@@ -1221,8 +1236,26 @@ export default function EventsClient({
                 : `/event-bookings/event/${selected.id}`;
               const returnHref = `/event-setups/events?open=${selected.id}`;
               const viewAllHref = `${baseViewAllHref}${baseViewAllHref.includes("?") ? "&" : "?"}from=${encodeURIComponent(returnHref)}`;
+              const poster = resolveEventImage({
+                eventImageUrl: selected.image_url,
+                actCoverUrl: actCoverByEvent[selected.id],
+                subtypeDefaultUrl: sub?.default_image_url,
+              });
+              const posterNote = imageSourceLabel(poster.source, sub?.name);
               return (
                 <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
+                  {poster.url && (
+                    <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white lg:col-span-2">
+                      <div className="flex items-center justify-between gap-2 bg-[#E6DFC8] px-4 py-3 sm:px-5">
+                        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Poster Image</span>
+                        {posterNote && (
+                          <span className="truncate text-[10px] font-bold text-[#5F624F]">{posterNote}</span>
+                        )}
+                      </div>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="max-h-64 w-full bg-[#F7F4EA] object-cover" />
+                    </div>
+                  )}
                   <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                     <button type="button" onClick={() => setDetailsOpen(o => !o)} className="flex w-full items-center justify-between bg-[#E6DFC8] px-4 py-3 text-left transition-colors hover:bg-[#DDD4B8] sm:px-5">
                       <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Event Details</span>
@@ -1507,19 +1540,34 @@ export default function EventsClient({
                         <button
                           type="button"
                           onClick={() => setFormImageUrl("")}
-                          title="Remove poster image"
-                          aria-label="Remove poster image"
+                          title={inheritedForForm.url ? "Clear and use the default image" : "Clear poster image"}
+                          aria-label={inheritedForForm.url ? "Clear and use the default image" : "Clear poster image"}
                           className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
+                      </div>
+                    ) : inheritedForForm.url ? (
+                      <div className="space-y-2">
+                        <div className="relative overflow-hidden rounded-xl border border-dashed border-[#E6DFC8]">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={inheritedForForm.url} alt="Inherited poster" className="max-h-50 w-full bg-[#F7F4EA] object-cover opacity-75" />
+                        </div>
+                        <p className="text-[10px] text-[#5F624F]">
+                          {imageSourceLabel(inheritedForForm.source, selectedSubtype?.name)}. It updates automatically when that image changes.
+                        </p>
+                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] py-3 transition-colors hover:border-[#5C4033]">
+                          {imageUploading ? <Loader2 className="h-4 w-4 animate-spin text-[#5F624F]" /> : <Upload className="h-4 w-4 text-[#5F624F] opacity-50" />}
+                          <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{imageUploading ? "Uploading…" : "Use a different image"}</span>
+                          <input type="file" accept="image/*" aria-label="Upload a different poster image" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
+                        </label>
                       </div>
                     ) : (
                       <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] py-7 transition-colors hover:border-[#5C4033]">
                         {imageUploading ? <Loader2 className="h-7 w-7 animate-spin text-[#5F624F]" /> : <Upload className="h-7 w-7 text-[#5F624F] opacity-50" />}
                         <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{imageUploading ? "Uploading…" : "Upload"}</span>
                         <span className="text-[10px] text-[#5F624F]">Shown on the public What&apos;s On card</span>
-                        <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
+                        <input type="file" accept="image/*" aria-label="Upload poster image" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
                       </label>
                     )}
                   </div>

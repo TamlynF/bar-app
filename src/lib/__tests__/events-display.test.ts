@@ -93,3 +93,69 @@ describe("serializeEvent", () => {
     expect(s.color).toMatch(/^#[0-9a-f]{6}$/i);
   });
 });
+
+describe("serializeEvent image fallback", () => {
+  const EVENT_IMG = "https://cdn.test/event.png";
+  const ACT_IMG = "https://cdn.test/act.png";
+  const SUBTYPE_IMG = "https://cdn.test/subtype.png";
+
+  const withSubtypeDefault = {
+    event_subtypes: {
+      name: "quiz",
+      color: "blue",
+      behavior: "quiz",
+      default_image_url: SUBTYPE_IMG,
+    },
+  } satisfies Partial<EventRow>;
+
+  const withActCover = {
+    band_booking_requests: [{ music_acts: { cover_image_url: ACT_IMG } }],
+  } satisfies Partial<EventRow>;
+
+  it("uses the event's own image when set", () => {
+    const s = serializeEvent(
+      makeEvent({ image_url: EVENT_IMG, ...withActCover, ...withSubtypeDefault })
+    );
+    expect(s.imageUrl).toBe(EVENT_IMG);
+  });
+
+  it("falls back to the booked act's cover when the event has none", () => {
+    const s = serializeEvent(makeEvent({ ...withActCover, ...withSubtypeDefault }));
+    expect(s.imageUrl).toBe(ACT_IMG);
+  });
+
+  it("falls back to the subtype default when event and act have none", () => {
+    const s = serializeEvent(makeEvent(withSubtypeDefault));
+    expect(s.imageUrl).toBe(SUBTYPE_IMG);
+  });
+
+  it("is null when nothing resolves", () => {
+    expect(serializeEvent(makeEvent()).imageUrl).toBeNull();
+  });
+
+  it("treats an empty event image as absent and inherits", () => {
+    const s = serializeEvent(makeEvent({ image_url: "", ...withSubtypeDefault }));
+    expect(s.imageUrl).toBe(SUBTYPE_IMG);
+  });
+
+  it("skips band requests that have no linked act", () => {
+    const s = serializeEvent(
+      makeEvent({
+        band_booking_requests: [
+          { music_acts: null },
+          { music_acts: { cover_image_url: ACT_IMG } },
+        ],
+      })
+    );
+    expect(s.imageUrl).toBe(ACT_IMG);
+  });
+
+  it("handles the act embed arriving as an array", () => {
+    const s = serializeEvent(
+      makeEvent({
+        band_booking_requests: [{ music_acts: [{ cover_image_url: ACT_IMG }] }],
+      })
+    );
+    expect(s.imageUrl).toBe(ACT_IMG);
+  });
+});
