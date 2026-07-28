@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import {
   ArrowLeft,
   CalendarDays,
+  Clock,
   ExternalLink,
   MapPin,
   Phone,
@@ -99,7 +100,21 @@ export default async function WhatsOnEventPage({
     }
   }
 
-  const [info, { data: rawMore }] = await Promise.all([
+  const followOnQuery = row.start_time
+    ? supabase
+        .from("events")
+        .select(PUBLIC_EVENT_SELECT)
+        .eq(BOOKED_BAND_FILTER, "booked")
+        .eq("date", row.date)
+        .eq("is_active", true)
+        .neq("id", row.id)
+        .gt("start_time", row.start_time)
+        .order("start_time", { ascending: true })
+        .limit(3)
+        .then(({ data }) => data)
+    : Promise.resolve(null);
+
+  const [info, { data: rawMore }, rawFollowOn] = await Promise.all([
     getCompanyInfo(),
     supabase
       .from("events")
@@ -111,6 +126,7 @@ export default async function WhatsOnEventPage({
       .order("date", { ascending: true })
       .order("start_time", { ascending: true })
       .limit(8),
+    followOnQuery,
   ]);
 
   const event = serializeEvent(row, band);
@@ -121,6 +137,13 @@ export default async function WhatsOnEventPage({
     .filter((e) => getEventType(e)?.behavior !== "private")
     .slice(0, 3)
     .map((e) => serializeEvent(e));
+
+  const followOnRow = ((rawFollowOn ?? []) as EventRow[]).find(
+    (e) => getEventType(e)?.behavior !== "private"
+  );
+  const followOn = followOnRow ? serializeEvent(followOnRow) : null;
+  const followOnIsDjSet =
+    followOn?.subType?.trim().toLowerCase().startsWith("dj") ?? false;
 
   const venueName = (info?.name as string) || "Don Fenticas";
   const address = info?.address as string | undefined;
@@ -175,6 +198,22 @@ export default async function WhatsOnEventPage({
               <h1 className="font-black text-[clamp(1.75rem,5.5vw,2.75rem)] leading-[0.95] tracking-tighter text-ink uppercase">
                 {event.title}
               </h1>
+
+              {followOn && (
+                <Link
+                  href={`/whats-on/${followOn.id}`}
+                  className="mt-3 inline-flex min-h-11 items-start gap-2.5 text-sm font-bold text-ink-2 transition-colors hover:text-ink"
+                >
+                  <Clock className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
+                  <span>
+                    Followed by{" "}
+                    <span className="font-black text-gold underline underline-offset-4">
+                      {followOn.title}
+                    </span>
+                    {followOnIsDjSet ? " DJ set" : ""}.
+                  </span>
+                </Link>
+              )}
 
               <p className="mt-4 flex items-center gap-2.5 font-black text-sm tracking-tight text-ink">
                 <CalendarDays className="h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
