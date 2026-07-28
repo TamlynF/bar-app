@@ -166,7 +166,7 @@ export default function EventBookingForm({ event, config }: Props) {
     );
   }
 
-  const inputBaseClasses = "w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white placeholder:text-(--ev-fg-dim,#44403c) focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-300 text-sm font-bold";
+  const inputBaseClasses = "w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white placeholder:text-(--ev-fg-dim,#44403c) focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-300 text-sm font-bold autofill:transition-[background-color] autofill:duration-[600000s] autofill:filter-none autofill:[-webkit-text-fill-color:#fff] autofill:caret-white";
   const labelClasses = "block text-[10px] font-black text-(--ev-fg,#78716c) mb-2 uppercase tracking-[0.15em] ml-1";
   const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
   const iconClasses = "w-4 h-4 text-(--ev-fg,#57534e) transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
