@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { upsertContactByEmail, upsertMusicActFromBand } from "@/lib/music-acts";
+import { getAvailableBandDates } from "@/lib/band-availability-data";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -31,6 +32,22 @@ export interface BandBookingData {
 }
 
 export async function createBandBooking(data: BandBookingData) {
+  const videoUrls = data.video_urls.filter(Boolean);
+  if (videoUrls.length === 0) {
+    throw new Error("Please upload at least one performance video.");
+  }
+
+  const preferredDates = data.preferred_dates.filter(Boolean);
+  if (preferredDates.length > 0) {
+    const available = new Set(await getAvailableBandDates());
+    const unavailable = preferredDates.filter((d) => !available.has(d));
+    if (unavailable.length > 0) {
+      throw new Error(
+        `${unavailable.join(", ")} ${unavailable.length === 1 ? "is" : "are"} no longer available. Please pick another date.`
+      );
+    }
+  }
+
   const supabase = await createClient();
 
   const contactId = await upsertContactByEmail(supabase, {
@@ -62,9 +79,9 @@ export async function createBandBooking(data: BandBookingData) {
         phone_no: data.phone_no || null,
         social_links: data.social_links,
         spotify_url: data.spotify_url || null,
-        video_urls: data.video_urls.filter(Boolean),
+        video_urls: videoUrls,
         video_descriptions: data.video_descriptions ?? [],
-        preferred_dates: data.preferred_dates.filter(Boolean),
+        preferred_dates: preferredDates,
         notes: data.notes || null,
         status: "new",
         payment_status: "no_payment",

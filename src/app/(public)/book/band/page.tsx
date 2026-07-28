@@ -1,6 +1,7 @@
 import React from "react";
 import { createClient } from "@/lib/supabase/server";
 import { toCamelCase } from "@/lib/utils";
+import { getAvailableBandDates } from "@/lib/band-availability-data";
 import BandBookingForm from "./_components/band-booking-form";
 import { PublicNav } from "@/components/public-nav";
 
@@ -29,6 +30,8 @@ export default async function BandBookingPage() {
     { value: "singer", label: "Singer / Solo Artist" },
     { value: "dj", label: "DJ" },
   ];
+
+  const availableDates = await getAvailableBandDates();
 
   return (
     <main className="flex min-h-dvh w-full flex-col overflow-x-hidden bg-[#26300D] text-stone-300 antialiased selection:bg-[#fdcc4b] selection:text-[#26300D]">
@@ -62,7 +65,7 @@ export default async function BandBookingPage() {
           </div>
 
           <div className="relative z-10">
-            <BandBookingForm typeOptions={typeOptions} />
+            <BandBookingForm typeOptions={typeOptions} availableDates={availableDates} />
           </div>
         </div>
 

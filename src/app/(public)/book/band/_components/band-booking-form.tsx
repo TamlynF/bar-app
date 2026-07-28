@@ -8,7 +8,7 @@ import {
   ChevronRight, ArrowLeft, ExternalLink,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiSpotify } from "react-icons/si";
-import { format, startOfToday } from "date-fns";
+import { format, startOfToday, startOfMonth } from "date-fns";
 import {
   Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
 } from "@/components/ui/select";
@@ -84,14 +84,16 @@ const STEPS = [
 
 interface BandBookingFormProps {
   typeOptions: { value: string; label: string }[];
+  availableDates: string[];
 }
 
-export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
+export default function BandBookingForm({ typeOptions, availableDates }: BandBookingFormProps) {
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
   const [stepError, setStepError] = useState<string | null>(null);
+  const [videoError, setVideoError] = useState<string | null>(null);
 
   const [groupName, setGroupName] = useState("");
   const [actType, setActType] = useState(typeOptions[0]?.value ?? "");
@@ -129,6 +131,13 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
 
   const sortedDates = [...preferredDates].sort((a, b) => a.getTime() - b.getTime());
 
+  const availableDateSet = new Set(availableDates);
+  const isDateAvailable = (d: Date) => availableDateSet.has(format(d, "yyyy-MM-dd"));
+  const firstAvailable = availableDates.length ? new Date(`${availableDates[0]}T00:00:00`) : null;
+  const lastAvailable = availableDates.length
+    ? new Date(`${availableDates[availableDates.length - 1]}T00:00:00`)
+    : null;
+
   function handleNext() {
     setStepError(null);
     if (step === 1) {
@@ -139,9 +148,16 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
       if (!name.trim()) { setStepError("Please enter your name."); return; }
       if (!email.trim() || !email.includes("@")) { setStepError("Please enter a valid email address."); return; }
     }
-    if (step === 3 && videoFiles.some((v) => !v.uploadedUrl)) {
-      setStepError("Please wait for all videos to finish uploading (or remove any that failed).");
-      return;
+    if (step === 3) {
+      if (videoFiles.length === 0) {
+        setVideoError("Please upload at least one performance video.");
+        return;
+      }
+      if (videoFiles.some((v) => !v.uploadedUrl)) {
+        setVideoError("Please wait for all videos to finish uploading (or remove any that failed).");
+        return;
+      }
+      setVideoError(null);
     }
     setStep((s) => s + 1);
   }
@@ -162,6 +178,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
   function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     if (!files.length) return;
+    setVideoError(null);
 
     const remaining = MAX_VIDEOS - videoFiles.length;
     const toAdd = files.slice(0, remaining);
@@ -216,8 +233,15 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
     e.preventDefault();
     setError(null);
 
+    if (videoFiles.length === 0) {
+      setVideoError("Please upload at least one performance video.");
+      setStep(3);
+      return;
+    }
+
     if (videoFiles.some((v) => !v.uploadedUrl)) {
-      setError("Please wait for all videos to finish uploading (or remove any that failed).");
+      setVideoError("Please wait for all videos to finish uploading (or remove any that failed).");
+      setStep(3);
       return;
     }
 
@@ -479,11 +503,11 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
 
             <div className="space-y-3 pt-2">
               <div className="flex items-center justify-between">
-                <p className={labelClass}>Performance Videos</p>
+                <p className={labelClass}>Performance Videos <span className="text-red-400">*</span></p>
                 <span className="text-[10px] font-bold text-stone-400">{videoFiles.length}/{MAX_VIDEOS}</span>
               </div>
               <p className="-mt-1 text-[11px] text-stone-500">
-                Upload videos of your act (MP4, WebM, MOV — max 250 MB each).
+                Upload at least one video of your act (MP4, WebM, MOV — max 250 MB each).
               </p>
 
               {videoFiles.length > 0 && (
@@ -561,12 +585,20 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 py-4 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:text-stone-400"
+                    className={`flex w-full items-center justify-center gap-2 rounded-xl border bg-white/5 py-4 text-xs font-bold tracking-wider text-stone-500 uppercase transition-all hover:border-[#FDCC4B]/30 hover:text-stone-400 ${
+                      videoError ? "border-red-500/40" : "border-white/10"
+                    }`}
                   >
                     <Upload className="h-4 w-4" />
                     {videoFiles.length === 0 ? "Upload Videos" : "Add Another Video"}
                   </button>
                 </>
+              )}
+
+              {videoError && (
+                <p className="flex items-center gap-1.5 text-[11px] font-medium text-red-400">
+                  <AlertCircle className="h-3 w-3 shrink-0" /> {videoError}
+                </p>
               )}
             </div>
           </>
@@ -598,14 +630,21 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                     mode="multiple"
                     max={MAX_DATES}
                     selected={preferredDates}
-                    onSelect={(dates) => setPreferredDates(dates ?? [])}
-                    disabled={{ before: startOfToday() }}
-                    defaultMonth={new Date()}
+                    onSelect={(dates) => setPreferredDates((dates ?? []).filter(isDateAvailable))}
+                    disabled={(date) => !isDateAvailable(date)}
+                    startMonth={startOfMonth(firstAvailable ?? startOfToday())}
+                    endMonth={lastAvailable ? startOfMonth(lastAvailable) : undefined}
+                    defaultMonth={firstAvailable ?? new Date()}
                     className="bg-transparent text-white [--cell-size:1.9rem]"
                   />
                 </div>
 
-                {sortedDates.length > 0 ? (
+                {availableDates.length === 0 ? (
+                  <p className="flex items-center text-[11px] text-stone-500">
+                    No stage slots are open at the moment. Carry on and add a note on the next step
+                    and we&apos;ll be in touch.
+                  </p>
+                ) : sortedDates.length > 0 ? (
                   <div className="flex flex-wrap content-start gap-2">
                     {sortedDates.map((d) => (
                       <span
@@ -628,6 +667,11 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
                   <p className="flex items-center text-[11px] text-stone-600">No dates selected yet.</p>
                 )}
               </div>
+
+              <p className="text-[11px] text-stone-500">
+                Only nights with a free 2-hour stage slot are selectable — Fridays, Saturdays, and
+                public holidays (plus the night before).
+              </p>
             </div>
 
           </>
@@ -691,7 +735,6 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
             key="next"
             type="button"
             onClick={handleNext}
-            disabled={step === 3 && videoFiles.some((v) => !v.uploadedUrl)}
             className="flex h-14 flex-1 items-center justify-center gap-2 rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             Next
@@ -701,7 +744,7 @@ export default function BandBookingForm({ typeOptions }: BandBookingFormProps) {
           <button
             key="submit"
             type="submit"
-            disabled={isPending || videoFiles.some((v) => !v.uploadedUrl)}
+            disabled={isPending}
             className="h-14 flex-1 rounded-xl bg-[#FDCC4B] font-black text-sm tracking-wider text-[#26300D] uppercase shadow-lg shadow-[#FDCC4B]/20 transition-all hover:bg-[#FDCC4B]/90 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
           >
             {isPending ? "Submitting…" : "Submit Application"}
