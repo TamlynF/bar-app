@@ -210,7 +210,8 @@ export default async function WhatsOnEventPage({
                     <span className="font-black text-gold underline underline-offset-4">
                       {followOn.title}
                     </span>
-                    {followOnIsDjSet ? " DJ set" : ""}.
+                    {followOnIsDjSet ? " DJ set" : ""}
+                    {followOn.startTimeLabel ? ` from ${followOn.startTimeLabel}` : ""}.
                   </span>
                 </Link>
               )}
@@ -223,8 +224,7 @@ export default async function WhatsOnEventPage({
               <p className="mt-2 flex items-start gap-2.5 text-sm font-bold text-ink-2">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
                 <span>
-                  {venueName}
-                  {address ? ` — ${address}` : ""}
+                  {address ? `${address}` : ""}
                 </span>
               </p>
             </header>
