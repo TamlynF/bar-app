@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { CountryCodeSelect } from "@/components/country-code-select";
 import { formatTime } from "@/lib/events-display";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
+import { normalizeGroupName } from "@/lib/group-name";
 
 export interface GroupedEvent {
   id: number;
@@ -100,7 +101,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
 
   useEffect(() => {
     const validateGroupName = async () => {
-      if (!groupNameVisible || formData.groupName.trim().length < 2 || !eventId) {
+      if (!groupNameVisible || normalizeGroupName(formData.groupName).length < 2 || !eventId) {
         setGroupNameError("");
         return;
       }

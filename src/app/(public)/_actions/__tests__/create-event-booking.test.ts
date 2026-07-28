@@ -45,7 +45,7 @@ function makeSupabase(queues: Record<string, Result[]>) {
     };
     builder.single = next;
     builder.maybeSingle = next;
-    builder.then = (resolve: (v: unknown) => unknown) => resolve({ data: null, error: null });
+    builder.then = (resolve: (v: unknown) => unknown) => resolve(next());
     return builder;
   };
   return { client: { from }, calls };
@@ -177,7 +177,7 @@ describe("createEventBooking — guards", () => {
     expect(h.squareCreate).not.toHaveBeenCalled();
   });
 
-  it("refuses a duplicate group name when the group name field is collected", async () => {
+  it("refuses a duplicate group name ignoring case and spacing", async () => {
     const { client, calls } = makeSupabase({
       events: [{
         data: {
@@ -186,11 +186,11 @@ describe("createEventBooking — guards", () => {
           booking_config: { fields: { group_name: { visible: true, label: "Team Name", required: true } } },
         },
       }],
-      bookings: [{ data: { id: 99 } }],
+      bookings: [{ data: [{ id: 99, group_name: "Happy Days" }] }],
     });
     h.client = client;
 
-    const result = await createEventBooking(formData({ group_name: "The Quizzards" }));
+    const result = await createEventBooking(formData({ group_name: "  happy  days " }));
 
     expect(result.error).toMatch(/team name is already taken/i);
     expect(calls.inserts).toHaveLength(0);
@@ -206,7 +206,7 @@ describe("createEventBooking — guards", () => {
           booking_config: { fields: { group_name: { visible: true, label: "Team Name", required: true } } },
         },
       }],
-      bookings: [{ data: null }, { data: { id: 44 } }],
+      bookings: [{ data: [{ id: 99, group_name: "Happy Days" }] }, { data: { id: 44 } }],
       contacts: [{ data: { id: 100 } }],
     });
     h.client = client;

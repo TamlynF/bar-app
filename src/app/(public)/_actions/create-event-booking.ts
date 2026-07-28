@@ -15,6 +15,7 @@ import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { buildBuyerPhone, buildEventOrder, buildPrePopulatedData } from "@/lib/square-order";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
+import { normalizeGroupName } from "@/lib/group-name";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -44,25 +45,28 @@ export async function checkEventGroupName(
   eventId: number | string,
   excludeBookingId?: string | number
 ) {
-  const trimmed = (groupName || "").trim();
-  if (!trimmed || !eventId) return { isAvailable: true };
+  const normalized = normalizeGroupName(groupName);
+  if (!normalized || !eventId) return { isAvailable: true };
 
   const supabase = await createClient();
 
   let query = supabase
     .from("bookings")
-    .select("id")
+    .select("id, group_name")
     .eq("event_id", eventId)
-    .ilike("group_name", trimmed)
     .not("status", "eq", "cancelled");
 
   if (excludeBookingId) {
     query = query.neq("id", excludeBookingId);
   }
 
-  const { data: duplicate } = await query.limit(1).maybeSingle();
+  const { data: existing } = await query;
 
-  return { isAvailable: !duplicate };
+  const isTaken = (existing ?? []).some(
+    (booking) => normalizeGroupName(booking.group_name) === normalized
+  );
+
+  return { isAvailable: !isTaken };
 }
 
 export async function createEventBooking(formData: FormData) {

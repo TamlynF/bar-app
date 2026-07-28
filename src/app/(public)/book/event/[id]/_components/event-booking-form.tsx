@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CountryCodeSelect } from "@/components/country-code-select";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
+import { normalizeGroupName } from "@/lib/group-name";
 
 interface EventData {
   id: number;
@@ -75,7 +76,7 @@ export default function EventBookingForm({ event, config }: Props) {
 
   useEffect(() => {
     const validateGroupName = async () => {
-      if (!groupNameVisible || formData.groupName.trim().length < 2) {
+      if (!groupNameVisible || normalizeGroupName(formData.groupName).length < 2) {
         setGroupNameError("");
         return;
       }
