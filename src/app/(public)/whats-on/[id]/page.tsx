@@ -230,12 +230,12 @@ export default async function WhatsOnEventPage({
                 {format(dateObj, "d MMMM, yyyy")}
               </p>
 
-              <p className="mt-2 flex items-start gap-2.5 text-sm font-bold text-ink-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
-                <span>
-                  {address ? `${address}` : ""}
-                </span>
-              </p>
+              {address && (
+                <p className="mt-2 flex items-start gap-2.5 text-sm font-bold text-ink-2">
+                  <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-gold" aria-hidden="true" />
+                  <span>{address}</span>
+                </p>
+              )}
             </header>
 
             <section className="mt-7 rounded-2xl border border-hairline bg-canvas-2 p-5 sm:p-6">
