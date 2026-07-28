@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, ChevronDown, CalendarX2, SlidersHorizontal } from "lucide-react";
 import { FilterTabs, type FilterTab } from "@/components/editorial/filter-tabs";
 import { EventGridCard } from "@/components/editorial/event-grid-card";
@@ -67,6 +67,28 @@ export function WhatsOnGrid({
   const [showPast, setShowPast] = useState(false);
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [stuck, setStuck] = useState(false);
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el) return;
+
+    let stickyTop = 0;
+    const update = () => setStuck(el.getBoundingClientRect().top <= stickyTop + 1);
+    const measure = () => {
+      stickyTop = parseFloat(window.getComputedStyle(el).top) || 0;
+      update();
+    };
+
+    measure();
+    window.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", measure);
+    return () => {
+      window.removeEventListener("scroll", update);
+      window.removeEventListener("resize", measure);
+    };
+  }, []);
 
   const q = query.trim().toLowerCase();
 
@@ -112,7 +134,13 @@ export function WhatsOnGrid({
 
   return (
     <div className="mt-6">
-      <div className="sticky top-14 z-30 -mx-4 mb-6 bg-canvas/90 px-4 pt-3 pb-3 backdrop-blur-xl sm:top-16 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+      <div
+        ref={barRef}
+        className={cn(
+          "sticky top-14 z-30 -mx-4 mb-6 px-4 pt-3 pb-3 transition-colors duration-200 sm:top-16 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10",
+          stuck && "bg-canvas/90 backdrop-blur-xl"
+        )}
+      >
         <div className="rounded-3xl border border-hairline bg-white/3 p-3 sm:p-4">
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="relative min-w-0 flex-1">
