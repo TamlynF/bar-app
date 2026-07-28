@@ -13,6 +13,7 @@ const config = (phase: string): NextConfig => {
       },
     },
     images: {
+      ...(isDev ? { dangerouslyAllowLocalIP: true } : {}),
       remotePatterns: [
         {
           protocol: "https",
