@@ -122,18 +122,24 @@ export default function BookingList({
   showDate = true,
   type,
   subtype,
+  initialSelectedId = null,
 }: {
   bookings: GeneralBooking[];
   showDate?: boolean;
   type: string;
   subtype: string;
+  initialSelectedId?: string | null;
 }) {
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
   const isWide = useMediaQuery(WIDE_QUERY);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    if (!initialSelectedId) return null;
+    const match = bookings.find(b => String(b.id) === String(initialSelectedId));
+    return match ? match.id : null;
+  });
   const [isEditing, setIsEditing] = useState(false);
   const selectedBooking = selectedId ? bookings.find(b => b.id === selectedId) ?? null : null;
   const [availableTables, setAvailableTables] = useState<SelectableTable[]>([]);

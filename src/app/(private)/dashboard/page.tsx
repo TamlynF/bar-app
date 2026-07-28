@@ -152,7 +152,7 @@ function getSaturdaysInMonth(year: number, month: number): string[] {
 
 export function getBookingsHref(et: EventTypeRow, eventId?: number): string {
   if (!et) return "/event-bookings";
-  return adminBookingsHref(et.behavior, eventId);
+  return adminBookingsHref({ behavior: et.behavior, eventId });
 }
 
 export default async function DashboardPage() {

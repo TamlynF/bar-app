@@ -47,10 +47,10 @@ export default async function GeneralEventBookingsPage({
   searchParams,
 }: {
   params: Promise<{ type: string; subtype: string }>;
-  searchParams: Promise<{ eventId?: string; status?: string; all?: string }>;
+  searchParams: Promise<{ eventId?: string; status?: string; all?: string; bookingId?: string }>;
 }) {
   const { type, subtype } = await params;
-  const { eventId, status, all } = await searchParams;
+  const { eventId, status, all, bookingId } = await searchParams;
   let selectedEventId = eventId ?? null;
   const initialStatuses = status
     ? status.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
@@ -179,6 +179,7 @@ export default async function GeneralEventBookingsPage({
           type={type}
           subtype={subtype}
           initialStatuses={initialStatuses}
+          initialSelectedId={bookingId ?? null}
           eventFilter={
             <div className="w-full rounded-2xl border border-[#E6DFC8] bg-white p-1.5 shadow-sm sm:rounded-xl sm:p-1">
               <EventTypeFilter

@@ -1,15 +1,43 @@
 import type { EventBehavior } from "@/lib/event-behavior";
-import type { BookingGrouping } from "@/lib/booking-grouping";
+import { ALL_SUBTYPES, type BookingGrouping } from "@/lib/booking-grouping";
 
-export function adminBookingsHref(behavior: EventBehavior, eventId?: number): string {
-  console.log("adminBookingsHref", behavior, eventId);
-  switch (behavior) {
-    case "bingo": return "/event-bookings/bingo-bookings";
-    case "quiz": return "/event-bookings/quiz-bookings";
-    case "music_act": return "/event-bookings/music-bookings";
-    case "private": return "/event-bookings/private-bookings";
+export interface AdminBookingsHrefOptions {
+  behavior?: EventBehavior | null;
+  bookingGrouping?: BookingGrouping | null;
+  eventType?: string | null;
+  eventSubtype?: string | null;
+  eventId?: number | string | null;
+  bookingId?: number | string | null;
+}
+
+function withQuery(path: string, params: Record<string, string | number | null | undefined>): string {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== null && value !== undefined && value !== "")
+    .map(([key, value]) => `${key}=${encodeURIComponent(String(value))}`)
+    .join("&");
+  return query ? `${path}?${query}` : path;
+}
+
+export function adminBookingsHref(opts: AdminBookingsHrefOptions): string {
+  const { bookingGrouping, eventType, eventSubtype, eventId, bookingId } = opts;
+
+  if (bookingGrouping && eventId) {
+    if (bookingGrouping === "per_event") {
+      return withQuery(`/event-bookings/event/${eventId}`, { bookingId });
+    }
+    if (eventType) {
+      const subtypeSegment =
+        bookingGrouping === "per_subtype" && eventSubtype
+          ? encodeURIComponent(eventSubtype)
+          : ALL_SUBTYPES;
+      return withQuery(
+        `/event-bookings/general/${encodeURIComponent(eventType)}/${subtypeSegment}`,
+        { eventId, bookingId }
+      );
+    }
   }
-  if (eventId) return `/event-bookings/event/${eventId}`;
+
+  if (eventId) return withQuery(`/event-bookings/event/${eventId}`, { bookingId });
   return "/event-bookings";
 }
 

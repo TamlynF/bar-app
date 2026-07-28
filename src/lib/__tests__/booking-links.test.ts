@@ -1,26 +1,92 @@
 import { describe, it, expect } from "vitest";
 import { adminBookingsHref, checkoutReturnPath, manageBookingPath, publicBookingUrl } from "@/lib/booking-links";
 
-describe("adminBookingsHref", () => {
-  it("routes each specialised behavior to its dedicated admin screen", () => {
-    expect(adminBookingsHref("bingo")).toBe("/event-bookings/bingo-bookings");
-    expect(adminBookingsHref("quiz")).toBe("/event-bookings/quiz-bookings");
-    expect(adminBookingsHref("music_act")).toBe("/event-bookings/music-bookings");
-    expect(adminBookingsHref("private")).toBe("/event-bookings/private-bookings");
+describe("adminBookingsHref — grouping-driven routing", () => {
+  const base = {
+    behavior: "standard" as const,
+    eventType: "Live Music",
+    eventSubtype: "Acoustic",
+    eventId: 7,
+    bookingId: 42,
+  };
+
+  it("per_event deep-links to the single-event page with the booking selected", () => {
+    expect(adminBookingsHref({ ...base, bookingGrouping: "per_event" })).toBe(
+      "/event-bookings/event/7?bookingId=42"
+    );
   });
 
-  it("falls back to the per-event page for generic behaviors when an id is known", () => {
-    expect(adminBookingsHref("standard", 42)).toBe("/event-bookings/event/42");
-    expect(adminBookingsHref("karaoke", 7)).toBe("/event-bookings/event/7");
+  it("per_subtype deep-links to the sub-type list scoped to the event", () => {
+    expect(adminBookingsHref({ ...base, bookingGrouping: "per_subtype" })).toBe(
+      "/event-bookings/general/Live%20Music/Acoustic?eventId=7&bookingId=42"
+    );
   });
 
-  it("falls back to the hub for generic behaviors with no id", () => {
-    expect(adminBookingsHref("standard")).toBe("/event-bookings");
-    expect(adminBookingsHref("karaoke")).toBe("/event-bookings");
+  it("per_type deep-links to the all-subtypes list scoped to the event", () => {
+    expect(adminBookingsHref({ ...base, bookingGrouping: "per_type" })).toBe(
+      "/event-bookings/general/Live%20Music/__all__?eventId=7&bookingId=42"
+    );
   });
 
-  it("ignores the id for specialised behaviors (dedicated screen wins)", () => {
-    expect(adminBookingsHref("quiz", 99)).toBe("/event-bookings/quiz-bookings");
+  it("falls back to all-subtypes when per_subtype has no sub-type name", () => {
+    expect(adminBookingsHref({ ...base, bookingGrouping: "per_subtype", eventSubtype: null })).toBe(
+      "/event-bookings/general/Live%20Music/__all__?eventId=7&bookingId=42"
+    );
+  });
+
+  it("omits the bookingId when there is none", () => {
+    expect(adminBookingsHref({ ...base, bookingGrouping: "per_event", bookingId: null })).toBe(
+      "/event-bookings/event/7"
+    );
+    expect(adminBookingsHref({ ...base, bookingGrouping: "per_type", bookingId: null })).toBe(
+      "/event-bookings/general/Live%20Music/__all__?eventId=7"
+    );
+  });
+
+  it("encodes names that contain url-unsafe characters", () => {
+    expect(
+      adminBookingsHref({
+        ...base,
+        bookingGrouping: "per_subtype",
+        eventType: "Food & Drink",
+        eventSubtype: "Wine / Cheese",
+      })
+    ).toBe("/event-bookings/general/Food%20%26%20Drink/Wine%20%2F%20Cheese?eventId=7&bookingId=42");
+  });
+
+  it("routes on grouping regardless of behavior", () => {
+    expect(adminBookingsHref({ ...base, behavior: "quiz", bookingGrouping: "per_event" })).toBe(
+      "/event-bookings/event/7?bookingId=42"
+    );
+    expect(adminBookingsHref({ ...base, behavior: "bingo", bookingGrouping: "per_type" })).toBe(
+      "/event-bookings/general/Live%20Music/__all__?eventId=7&bookingId=42"
+    );
+  });
+});
+
+describe("adminBookingsHref — fallbacks when grouping is unknown", () => {
+  it("falls back to the per-event page when an id is known", () => {
+    expect(adminBookingsHref({ behavior: "standard", eventId: 42 })).toBe("/event-bookings/event/42");
+    expect(adminBookingsHref({ behavior: "karaoke", eventId: 7, bookingId: 3 })).toBe(
+      "/event-bookings/event/7?bookingId=3"
+    );
+  });
+
+  it("falls back to the hub with no id", () => {
+    expect(adminBookingsHref({ behavior: "standard" })).toBe("/event-bookings");
+    expect(adminBookingsHref({})).toBe("/event-bookings");
+  });
+
+  it("needs an event id before grouping can be applied", () => {
+    expect(adminBookingsHref({ behavior: "standard", bookingGrouping: "per_type", eventType: "X" })).toBe(
+      "/event-bookings"
+    );
+  });
+
+  it("falls back to the per-event page when per_type has no type name", () => {
+    expect(
+      adminBookingsHref({ bookingGrouping: "per_type", eventType: null, eventId: 7, bookingId: 42 })
+    ).toBe("/event-bookings/event/7?bookingId=42");
   });
 });
 

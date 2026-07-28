@@ -244,6 +244,7 @@ export default function BookingsSection({
   type,
   subtype,
   initialStatuses = [],
+  initialSelectedId = null,
   eventFilter,
 }: {
   bookings: GeneralBooking[];
@@ -251,6 +252,7 @@ export default function BookingsSection({
   type: string;
   subtype: string;
   initialStatuses?: string[];
+  initialSelectedId?: string | null;
   eventFilter?: React.ReactNode;
 }) {
   const seededStatuses = initialStatuses.map((s) => s.trim().toLowerCase()).filter(Boolean);
@@ -391,7 +393,13 @@ export default function BookingsSection({
         )}
       </div>
 
-      <BookingList bookings={filteredBookings} showDate={!summary} type={type} subtype={subtype} />
+      <BookingList
+        bookings={filteredBookings}
+        showDate={!summary}
+        type={type}
+        subtype={subtype}
+        initialSelectedId={initialSelectedId}
+      />
     </>
   );
 }

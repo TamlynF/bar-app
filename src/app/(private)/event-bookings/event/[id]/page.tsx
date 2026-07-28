@@ -66,10 +66,10 @@ export default async function EventDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; bookingId?: string }>;
 }) {
   const { id } = await params;
-  const { status } = await searchParams;
+  const { status, bookingId } = await searchParams;
   const eventId = Number(id);
   if (isNaN(eventId)) notFound();
 
@@ -222,6 +222,7 @@ export default async function EventDetailPage({
           type={type}
           subtype={subtype}
           initialStatuses={initialStatuses}
+          initialSelectedId={bookingId ?? null}
         />
       </div>
     </div>

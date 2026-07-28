@@ -2,6 +2,7 @@ import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { adminBookingsHref, manageBookingPath } from "@/lib/booking-links";
 import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
+import { isBookingGrouping, type BookingGrouping } from "@/lib/booking-grouping";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import {
   ADMIN_EMAIL,
@@ -30,6 +31,9 @@ export interface LoadedBooking {
   snapshot: BookingSnapshot;
   behavior: EventBehavior | null;
   eventId: number | null;
+  eventType: string | null;
+  eventSubtype: string | null;
+  bookingGrouping: BookingGrouping | null;
 }
 
 function unwrap<T>(rel: T | T[] | null | undefined): T | null {
@@ -45,7 +49,11 @@ export async function loadBookingSnapshot(
     .select(`
       id, event_id, group_name, group_size, status, special_requests, total_amount, paid_amount,
       contacts!bookings_contact_id_fkey(full_name, email),
-      events!bookings_event_id_fkey(id, title, date, booking_config, event_subtypes(behavior))
+      events!bookings_event_id_fkey(
+        id, title, date, booking_config,
+        event_types(name, booking_grouping),
+        event_subtypes(name, behavior)
+      )
     `)
     .eq("id", bookingId)
     .maybeSingle();
@@ -60,12 +68,15 @@ export async function loadBookingSnapshot(
   }
 
   type ContactRel = { full_name: string | null; email: string | null };
+  type TypeRel = { name: string | null; booking_grouping: string | null };
+  type SubtypeRel = { name: string | null; behavior: string | null };
   type EventRel = {
     id: number;
     title: string | null;
     date: string | null;
     booking_config: BookingConfig | null;
-    event_subtypes: { behavior: string | null } | { behavior: string | null }[] | null;
+    event_types: TypeRel | TypeRel[] | null;
+    event_subtypes: SubtypeRel | SubtypeRel[] | null;
   };
 
   const contact = unwrap(data.contacts as unknown as ContactRel | ContactRel[] | null);
@@ -76,13 +87,19 @@ export async function loadBookingSnapshot(
     return null;
   }
 
-  const rawBehavior = unwrap(event?.event_subtypes)?.behavior;
-  const behavior = isEventBehavior(rawBehavior) ? rawBehavior : null;
+  const eventType = unwrap(event?.event_types);
+  const eventSubtype = unwrap(event?.event_subtypes);
+  const behavior = isEventBehavior(eventSubtype?.behavior) ? eventSubtype.behavior : null;
+  const rawGrouping = eventType?.booking_grouping;
+  const bookingGrouping = isBookingGrouping(rawGrouping) ? rawGrouping : null;
   const groupNameField = normalizeBookingConfig(event?.booking_config).fields.group_name;
 
   return {
     behavior,
     eventId: (data.event_id as number | null) ?? null,
+    eventType: eventType?.name ?? null,
+    eventSubtype: eventSubtype?.name ?? null,
+    bookingGrouping,
     snapshot: {
       bookingId: data.id as number,
       customerName: contact.full_name || "there",
@@ -118,7 +135,14 @@ function urls(loaded: LoadedBooking) {
   console.log("LoadedBooking: ", JSON.stringify(loaded, null, 2));
   return {
     manageUrl: `${appUrl}${manageBookingPath(loaded.behavior, loaded.snapshot.bookingId)}`,
-    adminUrl: `${appUrl}${adminBookingsHref(loaded.behavior ?? "standard", loaded.eventId ?? undefined)}`,
+    adminUrl: `${appUrl}${adminBookingsHref({
+      behavior: loaded.behavior ?? "standard",
+      bookingGrouping: loaded.bookingGrouping,
+      eventType: loaded.eventType,
+      eventSubtype: loaded.eventSubtype,
+      eventId: loaded.eventId,
+      bookingId: loaded.snapshot.bookingId,
+    })}`,
   };
 }
 
