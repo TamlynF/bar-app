@@ -1421,18 +1421,6 @@ export default function EventsClient({
               const posterNote = imageSourceLabel(poster.source, sub?.name);
               return (
                 <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
-                  {poster.url && (
-                    <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white lg:col-span-2">
-                      <div className="flex items-center justify-between gap-2 bg-[#E6DFC8] px-4 py-3 sm:px-5">
-                        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Poster Image</span>
-                        {posterNote && (
-                          <span className="truncate text-[10px] font-bold text-[#5F624F]">{posterNote}</span>
-                        )}
-                      </div>
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="max-h-40 w-full bg-[#F7F4EA] object-cover" />
-                    </div>
-                  )}
                   <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                     <button type="button" onClick={() => setDetailsOpen(o => !o)} className="flex w-full items-center justify-between bg-[#E6DFC8] px-4 py-3 text-left transition-colors hover:bg-[#DDD4B8] sm:px-5">
                       <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Event Details</span>
@@ -1440,6 +1428,26 @@ export default function EventsClient({
                     </button>
                     {detailsOpen && (
                       <>
+                        {poster.url && (
+                          <div className="flex items-start gap-2 border-b border-[#E6DFC8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
+                            <span className="shrink-0 pt-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">Poster</span>
+                            <div className="flex min-w-0 flex-1 flex-col items-end gap-1">
+                              <a
+                                href={poster.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Open the full-size poster"
+                                className="block shrink-0 overflow-hidden rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] transition-colors hover:border-[#5C4033]"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="h-16 w-28 object-contain" />
+                              </a>
+                              {posterNote && (
+                                <span className="text-right text-[10px] leading-snug font-bold text-[#5F624F]">{posterNote}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
                         <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
                         <DetailCell label="Date" value={formatDate(selected.date)} />
                         <DetailCell label="Time" value={selected.start_time || selected.end_time ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}` : "—"} />
