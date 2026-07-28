@@ -1358,25 +1358,27 @@ export default function EventsClient({
                         System Information
                       </span>
                       <SheetRow label="Creation Method" value={eventCreationMethodLabel(selected.creation_method)} />
-                      <SheetRow
-                        label="Creation Source"
-                        value={(() => {
-                          const href = eventCreationSourceHref(selected.creation_method, selected.creation_source_id);
-                          const label = eventCreationSourceLabel(selected.creation_method, selected.creation_source_id);
-                          if (!href || !label) return null;
-                          return (
-                            <Link
-                              href={href}
-                              title={selected.creation_source_id ?? undefined}
-                              className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] tabular-nums hover:underline"
-                            >
-                              <Hash className="h-3 w-3 shrink-0" />
-                              <span>{label}</span>
-                              <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
-                            </Link>
-                          );
-                        })()}
-                      />
+                      {selected.creation_method && selected.creation_method !== "manual" && (
+                        <SheetRow
+                          label="Creation Source"
+                          value={(() => {
+                            const href = eventCreationSourceHref(selected.creation_method, selected.creation_source_id);
+                            const label = eventCreationSourceLabel(selected.creation_method, selected.creation_source_id);
+                            if (!href || !label) return null;
+                            return (
+                              <Link
+                                href={href}
+                                title={selected.creation_source_id ?? undefined}
+                                className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] tabular-nums hover:underline"
+                              >
+                                <Hash className="h-3 w-3 shrink-0" />
+                                <span>{label}</span>
+                                <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                              </Link>
+                            );
+                          })()}
+                        />
+                      )}
                       <SheetRow label="Created" value={formatDateTime(selected.created_at)} />
                       <SheetRow label="Created By" value={selected.created_by ? (employeeById.get(selected.created_by) ?? "—") : "—"} />
                       <SheetRow label="Last Modified" value={formatDateTime(selected.updated_at)} />
