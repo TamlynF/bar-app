@@ -4,6 +4,7 @@ import { adminBookingsHref, manageBookingPath } from "@/lib/booking-links";
 import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
 import { isBookingGrouping, type BookingGrouping } from "@/lib/booking-grouping";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
+import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
 import {
   ADMIN_EMAIL,
   EMAIL_FROM,
@@ -51,8 +52,8 @@ export async function loadBookingSnapshot(
       contacts!bookings_contact_id_fkey(full_name, email),
       events!bookings_event_id_fkey(
         id, title, date, booking_config,
-        event_types(name, booking_grouping),
-        event_subtypes(name, behavior)
+        event_types(name, booking_grouping, booking_config),
+        event_subtypes(name, behavior, booking_config)
       )
     `)
     .eq("id", bookingId)
@@ -68,8 +69,8 @@ export async function loadBookingSnapshot(
   }
 
   type ContactRel = { full_name: string | null; email: string | null };
-  type TypeRel = { name: string | null; booking_grouping: string | null };
-  type SubtypeRel = { name: string | null; behavior: string | null };
+  type TypeRel = { name: string | null; booking_grouping: string | null; booking_config: BookingConfig | null };
+  type SubtypeRel = { name: string | null; behavior: string | null; booking_config: BookingConfig | null };
   type EventRel = {
     id: number;
     title: string | null;
@@ -92,7 +93,14 @@ export async function loadBookingSnapshot(
   const behavior = isEventBehavior(eventSubtype?.behavior) ? eventSubtype.behavior : null;
   const rawGrouping = eventType?.booking_grouping;
   const bookingGrouping = isBookingGrouping(rawGrouping) ? rawGrouping : null;
-  const groupNameField = normalizeBookingConfig(event?.booking_config).fields.group_name;
+  const groupNameField = normalizeBookingConfig(
+    resolveOwningBookingConfig({
+      grouping: bookingGrouping,
+      eventConfig: event?.booking_config,
+      typeConfig: eventType?.booking_config,
+      subtypeConfig: eventSubtype?.booking_config,
+    })
+  ).fields.group_name;
 
   return {
     behavior,

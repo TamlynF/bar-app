@@ -18,6 +18,9 @@ import { buildBuyerPhone, buildEventOrder, buildPrePopulatedData } from "@/lib/s
 import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
 import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
+import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
+import { isBookingGrouping } from "@/lib/booking-grouping";
+import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { normalizeGroupName } from "@/lib/group-name";
 
@@ -101,7 +104,11 @@ export async function createEventBooking(formData: FormData) {
   try {
     const { data: event } = await supabase
       .from("events")
-      .select("id, date, title, payment_amount, seating_required, is_fully_booked, is_active, is_bookable, booking_config")
+      .select(`
+        id, date, title, payment_amount, seating_required, is_fully_booked, is_active, is_bookable, booking_config,
+        event_types(booking_grouping, booking_config),
+        event_subtypes(booking_config, behavior)
+      `)
       .eq("id", eventId)
       .single();
 
@@ -113,7 +120,24 @@ export async function createEventBooking(formData: FormData) {
       return { error: "This event is fully booked." };
     }
 
-    const groupNameField = normalizeBookingConfig(event.booking_config as BookingConfig).fields.group_name;
+    type TypeRel = { booking_grouping: string | null; booking_config: BookingConfig | null };
+    type SubtypeRel = { booking_config: BookingConfig | null; behavior: string | null };
+    const unwrap = <T,>(rel: T | T[] | null | undefined): T | null =>
+      Array.isArray(rel) ? rel[0] ?? null : rel ?? null;
+
+    const eventType = unwrap(event.event_types as unknown as TypeRel | TypeRel[] | null);
+    const eventSubtype = unwrap(event.event_subtypes as unknown as SubtypeRel | SubtypeRel[] | null);
+    const behavior = isEventBehavior(eventSubtype?.behavior) ? eventSubtype.behavior : null;
+    const rawGrouping = eventType?.booking_grouping;
+
+    const bookingConfig = resolveOwningBookingConfig({
+      grouping: isBookingGrouping(rawGrouping) ? rawGrouping : null,
+      eventConfig: event.booking_config as BookingConfig | null,
+      typeConfig: eventType?.booking_config ?? null,
+      subtypeConfig: eventSubtype?.booking_config ?? null,
+    });
+
+    const groupNameField = normalizeBookingConfig(bookingConfig).fields.group_name;
     if (groupNameField.visible) {
       const { isAvailable } = await checkEventGroupName(groupName, eventId);
       if (!isAvailable) {
@@ -239,7 +263,7 @@ export async function createEventBooking(formData: FormData) {
           buyerPhone,
         }),
         checkoutOptions: {
-          redirectUrl: `${appUrl}/book/event/${eventId}/success?bookingId=${newBooking.id}`,
+          redirectUrl: `${appUrl}${checkoutReturnPath({ behavior, eventId, bookingId: newBooking.id })}`,
           merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
         },
         prePopulatedData: buildPrePopulatedData({ email, fullName, buyerPhone }),
@@ -279,6 +303,7 @@ export async function createEventBooking(formData: FormData) {
     await sendPaymentPendingEmail({
       bookingId: newBooking.id,
       eventId,
+      behavior,
       email,
       name: fullName,
       eventTitle: event.title || "Event",
@@ -301,6 +326,7 @@ export async function createEventBooking(formData: FormData) {
 async function sendPaymentPendingEmail(args: {
   bookingId: number;
   eventId: number;
+  behavior: EventBehavior | null;
   email: string;
   name: string;
   eventTitle: string;
@@ -315,7 +341,7 @@ async function sendPaymentPendingEmail(args: {
     groupSize: args.groupSize,
     amountDue: args.amountDue,
     payUrl: `${appUrl}${checkoutReturnPath({
-      behavior: "standard",
+      behavior: args.behavior,
       eventId: args.eventId,
       bookingId: args.bookingId,
     })}`,

@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
+import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
+import { isBookingGrouping } from "@/lib/booking-grouping";
 import ManageBookingView, { type ManageEventBooking } from "./_components/manage-booking-view";
 
 export const metadata = {
@@ -27,7 +29,11 @@ export default async function ManageBookingPage({
       total_amount,
       paid_amount,
       special_requests,
-      events!bookings_event_id_fkey (event_title: title, event_date: date, seating_required, booking_config),
+      events!bookings_event_id_fkey (
+        event_title: title, event_date: date, seating_required, booking_config,
+        event_types (booking_grouping, booking_config),
+        event_subtypes (booking_config)
+      ),
       contacts!bookings_contact_id_fkey (full_name, email)
     `)
     .eq("id", id)
@@ -37,14 +43,21 @@ export default async function ManageBookingPage({
     notFound();
   }
 
+  type ConfigRel = { booking_config: BookingConfig | null };
+  type TypeRel = ConfigRel & { booking_grouping: string | null };
   type EventRel = {
     event_title: string | null;
     event_date: string | null;
     seating_required: boolean | null;
     booking_config: BookingConfig | null;
+    event_types: TypeRel | TypeRel[] | null;
+    event_subtypes: ConfigRel | ConfigRel[] | null;
   };
 
-  const eventsRel = booking.events as EventRel | EventRel[] | null;
+  const unwrap = <T,>(rel: T | T[] | null | undefined): T | null =>
+    Array.isArray(rel) ? rel[0] ?? null : rel ?? null;
+
+  const eventsRel = booking.events as unknown as EventRel | EventRel[] | null;
   const contactsRel = booking.contacts as ManageEventBooking["contacts"] | ManageEventBooking["contacts"][] | null;
   const ev = Array.isArray(eventsRel) ? eventsRel[0] ?? null : eventsRel;
 
@@ -68,7 +81,15 @@ export default async function ManageBookingPage({
     contacts: Array.isArray(contactsRel) ? contactsRel[0] ?? null : contactsRel,
   };
 
-  const bookingFields = normalizeBookingConfig(ev?.booking_config).fields;
+  const rawGrouping = unwrap(ev?.event_types)?.booking_grouping;
+  const bookingFields = normalizeBookingConfig(
+    resolveOwningBookingConfig({
+      grouping: isBookingGrouping(rawGrouping) ? rawGrouping : null,
+      eventConfig: ev?.booking_config,
+      typeConfig: unwrap(ev?.event_types)?.booking_config,
+      subtypeConfig: unwrap(ev?.event_subtypes)?.booking_config,
+    })
+  ).fields;
 
   const isCancelled = (booking.status || "").toLowerCase() === "cancelled";
 

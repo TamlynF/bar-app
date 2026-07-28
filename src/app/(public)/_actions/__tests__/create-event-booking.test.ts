@@ -135,6 +135,47 @@ describe("createEventBooking — paid path", () => {
     expect(h.notifyAdminBookingCreated).not.toHaveBeenCalled();
   });
 
+  it("returns the customer to the per-event success page by default", async () => {
+    const { client } = makeSupabase({
+      events: [{ data: { ...bookableEvent, payment_amount: 15 } }],
+      contacts: [{ data: { id: 100 } }],
+      bookings: [{ data: { id: 42 } }],
+    });
+    h.client = client;
+    h.squareCreate.mockResolvedValue({ paymentLink: { url: "https://checkout.square/xyz", orderId: "ord_1" } });
+
+    await createEventBooking(formData());
+
+    expect(h.squareCreate.mock.calls[0][0].checkoutOptions.redirectUrl).toBe(
+      "http://localhost:3000/book/event/7/success?bookingId=42"
+    );
+    expect(h.send.mock.calls[0][0].html).toContain("/book/event/7/success?bookingId=42");
+  });
+
+  it("returns a grouped bingo booking to the bingo success page, matching the retry link", async () => {
+    const { client } = makeSupabase({
+      events: [{
+        data: {
+          ...bookableEvent,
+          payment_amount: 15,
+          event_types: { booking_grouping: "per_subtype", booking_config: {} },
+          event_subtypes: { behavior: "bingo", booking_config: {} },
+        },
+      }],
+      contacts: [{ data: { id: 100 } }],
+      bookings: [{ data: { id: 42 } }],
+    });
+    h.client = client;
+    h.squareCreate.mockResolvedValue({ paymentLink: { url: "https://checkout.square/xyz", orderId: "ord_1" } });
+
+    await createEventBooking(formData());
+
+    expect(h.squareCreate.mock.calls[0][0].checkoutOptions.redirectUrl).toBe(
+      "http://localhost:3000/book/bingo/success?bookingId=42"
+    );
+    expect(h.send.mock.calls[0][0].html).toContain("/book/bingo/success?bookingId=42");
+  });
+
   it("rolls back the booking when Square returns no checkout url", async () => {
     const { client, calls } = makeSupabase({
       events: [{ data: { ...bookableEvent, payment_amount: 15 } }],
@@ -213,6 +254,76 @@ describe("createEventBooking — guards", () => {
     expect(result.error).toMatch(/team name is already taken/i);
     expect(calls.inserts).toHaveLength(0);
     expect(h.squareCreate).not.toHaveBeenCalled();
+  });
+
+  it("enforces the sub-type's group name rule for a per_subtype grouped event", async () => {
+    const { client, calls } = makeSupabase({
+      events: [{
+        data: {
+          ...bookableEvent,
+          payment_amount: 15,
+          booking_config: {}, // grouped events own no per-event config
+          event_types: { booking_grouping: "per_subtype", booking_config: {} },
+          event_subtypes: {
+            behavior: "standard",
+            booking_config: { fields: { group_name: { visible: true, label: "Team Name", required: true } } },
+          },
+        },
+      }],
+      bookings: [{ data: [{ id: 99, group_name: "Happy Days" }] }],
+    });
+    h.client = client;
+
+    const result = await createEventBooking(formData({ group_name: "happy days" }));
+
+    expect(result.error).toMatch(/team name is already taken/i);
+    expect(calls.inserts).toHaveLength(0);
+  });
+
+  it("enforces the category's group name rule for a per_type grouped event", async () => {
+    const { client, calls } = makeSupabase({
+      events: [{
+        data: {
+          ...bookableEvent,
+          payment_amount: 15,
+          booking_config: {},
+          event_types: {
+            booking_grouping: "per_type",
+            booking_config: { fields: { group_name: { visible: true, label: "Crew Name", required: true } } },
+          },
+          event_subtypes: { behavior: "standard", booking_config: {} },
+        },
+      }],
+      bookings: [{ data: [{ id: 99, group_name: "Happy Days" }] }],
+    });
+    h.client = client;
+
+    const result = await createEventBooking(formData({ group_name: "happy days" }));
+
+    expect(result.error).toMatch(/crew name is already taken/i);
+    expect(calls.inserts).toHaveLength(0);
+  });
+
+  it("ignores a per-event config when the category owns the booking page", async () => {
+    const { client } = makeSupabase({
+      events: [{
+        data: {
+          ...bookableEvent,
+          payment_amount: 0,
+          // stale per-event config that must not apply to a grouped booking
+          booking_config: { fields: { group_name: { visible: true, label: "Team Name", required: true } } },
+          event_types: { booking_grouping: "per_subtype", booking_config: {} },
+          event_subtypes: { behavior: "standard", booking_config: {} },
+        },
+      }],
+      contacts: [{ data: { id: 100 } }],
+      bookings: [{ data: { id: 44 } }],
+    });
+    h.client = client;
+
+    const result = await createEventBooking(formData({ group_name: "Happy Days" }));
+
+    expect(result).toEqual({ success: true }); // no uniqueness check ran
   });
 
   it("allows a group name that is free for the event", async () => {
