@@ -152,7 +152,7 @@ describe("createEventBooking — paid path", () => {
     expect(h.send.mock.calls[0][0].html).toContain("/book/event/7/success?bookingId=42");
   });
 
-  it("returns a grouped bingo booking to the bingo success page, matching the retry link", async () => {
+  it("returns a grouped bingo booking to the per-event success page, matching the retry link", async () => {
     const { client } = makeSupabase({
       events: [{
         data: {
@@ -171,9 +171,9 @@ describe("createEventBooking — paid path", () => {
     await createEventBooking(formData());
 
     expect(h.squareCreate.mock.calls[0][0].checkoutOptions.redirectUrl).toBe(
-      "http://localhost:3000/book/bingo/success?bookingId=42"
+      "http://localhost:3000/book/event/7/success?bookingId=42"
     );
-    expect(h.send.mock.calls[0][0].html).toContain("/book/bingo/success?bookingId=42");
+    expect(h.send.mock.calls[0][0].html).toContain("/book/event/7/success?bookingId=42");
   });
 
   it("rolls back the booking when Square returns no checkout url", async () => {
