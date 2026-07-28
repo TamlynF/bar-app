@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planPrivateEventSync } from "@/lib/private-event-sync";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
+import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
+import { buildPrivateHireOutcomeEmail } from "@/lib/private-hire-emails";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
@@ -56,6 +58,26 @@ export async function getPrivateEventOptions() {
   const typeIds = new Set(subtypes.map((s) => s.event_types_id));
   const types = ((allTypes ?? []) as { id: number; name: string }[]).filter((t) => typeIds.has(t.id));
   return { types, subtypes };
+}
+
+export async function getClashingEvents(
+  date: string,
+  startTime: string | null,
+  endTime: string | null,
+  excludeEventId?: number | null
+): Promise<ClashEvent[]> {
+  if (!date) return [];
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("events")
+    .select("id, title, start_time, end_time")
+    .eq("date", date)
+    .eq("is_active", true);
+  if (excludeEventId != null) query = query.neq("id", excludeEventId);
+
+  const { data } = await query;
+  return findEventClashes({ start: startTime, end: endTime }, (data ?? []) as ClashEventInput[]);
 }
 
 export async function updatePrivateHireFields(
@@ -206,22 +228,17 @@ async function sendOutcomeEmail(
   status: "confirmed" | "cancelled",
   notes?: string | null
 ) {
-  const isConfirmed = status === "confirmed";
-  const subject = isConfirmed
-    ? "Your Private Hire Enquiry Has Been Confirmed! 🎉"
-    : "Update on Your Private Hire Enquiry — Don Fenticas";
+  const e = buildPrivateHireOutcomeEmail({ name, outcome: status, notes });
 
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
       <div style="background:#fff;padding:40px;border-radius:8px;border:1px solid #e5e7eb;">
-        <h2 style="margin-top:0;color:#111827;">Hi ${name}!</h2>
-        <p>${isConfirmed
-          ? "We're delighted to confirm your private hire booking at <strong>Don Fenticas</strong>. Our team will be in touch shortly with the next steps."
-          : "Thank you for your private hire enquiry. Unfortunately we're unable to accommodate your request at this time."}</p>
-        ${notes ? `<div style="background:#f3f4f6;padding:16px;border-radius:8px;margin:20px 0;"><p style="margin:0;"><strong>Note from our team:</strong> ${notes}</p></div>` : ""}
+        <h2 style="margin-top:0;color:#111827;">${e.greeting}</h2>
+        ${e.body.map((p) => `<p>${p}</p>`).join("")}
+        ${e.noteLabel ? `<div style="background:#f3f4f6;padding:16px;border-radius:8px;margin:20px 0;"><p style="margin:0;"><strong>Note from our team:</strong> ${e.noteLabel}</p></div>` : ""}
         <p style="font-size:12px;color:#6b7280;">If you have questions, please reply to this email.</p>
       </div>
     </div>`;
 
-  await resend.emails.send({ from: FROM, to: email, subject, html });
+  await resend.emails.send({ from: FROM, to: email, subject: e.subject, html });
 }
