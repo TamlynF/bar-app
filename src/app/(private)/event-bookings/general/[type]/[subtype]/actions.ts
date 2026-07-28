@@ -10,6 +10,7 @@ import {
   seatingErrorMessage,
 } from "@/lib/table-allocation";
 import { ALL_SUBTYPES } from "@/lib/booking-grouping";
+import { withStringBookingIds, type RawBookingRowIds } from "@/lib/booking-row-ids";
 
 const GENERAL_PATH = "/event-bookings/general/[type]/[subtype]";
 
@@ -99,9 +100,9 @@ export async function getBookingsForType(
     return [];
   }
 
-  const rows = data ?? [];
+  const rows = (data ?? []) as unknown as (RawBookingRowIds & { events?: unknown })[];
   const eventOf = (b: (typeof rows)[number]) => {
-    const ev = (b as { events?: unknown }).events;
+    const ev = b.events;
     return (Array.isArray(ev) ? ev[0] : ev) as { event_date?: string; event_start_time?: string | null } | undefined;
   };
   rows.sort((a, b) => {
@@ -111,7 +112,7 @@ export async function getBookingsForType(
     if (dateCmp !== 0) return dateCmp;
     return (eb?.event_start_time ?? "").localeCompare(ea?.event_start_time ?? "");
   });
-  return rows;
+  return rows.map(withStringBookingIds);
 }
 
 export async function getAvailableTablesForEventGeneral(
