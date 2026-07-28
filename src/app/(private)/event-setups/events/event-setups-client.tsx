@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Plus,
   Loader2,
@@ -34,6 +35,9 @@ import {
   SlidersHorizontal,
   QrCode,
   Upload,
+  Info,
+  ExternalLink,
+  CopyPlus,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { createBrowserClient } from "@supabase/ssr";
@@ -50,6 +54,11 @@ import { BookingConfigEditor } from "@/components/booking-config-editor";
 import { IconPicker } from "@/components/icon-picker";
 import type { BookingConfig } from "@/lib/booking-config";
 import type { EventBehavior } from "@/lib/event-behavior";
+import {
+  eventCreationMethodLabel,
+  eventCreationSourceHref,
+  eventCreationSourceLabel,
+} from "@/lib/event-creation";
 
 export type { BookingConfig };
 
@@ -86,9 +95,16 @@ export type EventSubtype = {
   default_image_url: string | null;
 };
 
+export type LinkedRequest = { kind: "band" | "private"; id: string };
+
 export type EventRecord = {
   id: number;
   created_at?: string;
+  created_by?: number | null;
+  updated_at?: string | null;
+  updated_by?: number | null;
+  creation_method?: string | null;
+  creation_source_id?: string | null;
   date: string;
   start_time: string | null;
   end_time: string | null;
@@ -134,6 +150,24 @@ function formatDate(dateStr: string | null) {
 function formatTime(timeStr: string | null) {
   if (!timeStr) return "—";
   return timeStr.substring(0, 5);
+}
+
+function formatDateTime(iso?: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("en-GB", {
+    day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+        {label}
+      </span>
+      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "—"}</span>
+    </div>
+  );
 }
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -211,6 +245,7 @@ export default function EventsClient({
   quizQuestions = [],
   bookings = [],
   actCoverByEvent = {},
+  linkedRequestByEvent = {},
   filter,
   initialFrom,
   initialTo,
@@ -224,6 +259,7 @@ export default function EventsClient({
   quizQuestions: QuizQuestion[];
   bookings: BookingRecord[];
   actCoverByEvent?: Record<number, string>;
+  linkedRequestByEvent?: Record<number, LinkedRequest>;
   filter?: string;
   initialFrom?: string;
   initialTo?: string;
@@ -275,6 +311,9 @@ export default function EventsClient({
   const [formEndTime, setFormEndTime] = useState<string>("");
   const [formHostId, setFormHostId] = useState<string>("");
   const [formTagline, setFormTagline] = useState<string>("");
+  const [formExternalLink, setFormExternalLink] = useState<string>("");
+  const [copySourceId, setCopySourceId] = useState<number | null>(null);
+  const [sysInfoOpen, setSysInfoOpen] = useState(false);
   const [formImageUrl, setFormImageUrl] = useState<string>("");
   const [imageUploading, setImageUploading] = useState(false);
   const [formPayment, setFormPayment] = useState<string>("");
@@ -402,6 +441,7 @@ export default function EventsClient({
     setFormError(null);
     setIsEditing(false);
     setIsAdding(false);
+    setCopySourceId(null);
     setSelected(event);
     window.history.replaceState(null, "", `/event-setups/events?open=${event.id}`);
   };
@@ -410,6 +450,7 @@ export default function EventsClient({
     setFormError(null);
     setIsEditing(false);
     setSelected(null);
+    setCopySourceId(null);
     const sub = subtypeId ? subtypeById.get(subtypeId) : undefined;
     const ownerType = sub ? typeById.get(sub.event_types_id) : (eventTypes[0] ? typeById.get(eventTypes[0].id) : undefined);
     setFormTypeId(sub ? String(sub.event_types_id) : (eventTypes[0]?.id ? String(eventTypes[0].id) : ""));
@@ -428,6 +469,7 @@ export default function EventsClient({
     setFormCardIcon(null);
     setFormCardBadge("");
     setFormImageUrl("");
+    setFormExternalLink("");
     setFormActive(true);
     setFormFullyBooked(false);
     setFormDetailsOpen(true);
@@ -436,9 +478,55 @@ export default function EventsClient({
     setIsAdding(true);
   };
 
+  const openCopy = (source: EventRecord) => {
+    setFormError(null);
+    setIsEditing(false);
+    setSelected(null);
+    setCopySourceId(source.id);
+    const ownerType = typeById.get(source.event_types_id);
+    setFormTypeId(String(source.event_types_id));
+    setFormSubtypeId(String(source.event_subtypes_id));
+    setFormTitle(source.title ?? "");
+    setFormTagline(source.tagline ?? "");
+    setFormSeating(source.seating_required ?? true);
+    setFormPayment(source.payment_amount != null ? String(source.payment_amount) : "");
+    setFormHostId(source.host_employee_id ? String(source.host_employee_id) : "");
+    setFormExternalLink(source.external_link ?? "");
+    setFormImageUrl(source.image_url ?? "");
+    setFormIsBookable(!!source.is_bookable);
+    setFormBookingConfig(source.booking_config ?? {});
+    setFormCardTitle(source.booking_card_title ?? "");
+    setFormCardTagline(source.booking_card_tagline ?? "");
+    setFormCardIcon(source.booking_card_icon ?? null);
+    setFormCardBadge(source.booking_card_badge ?? "");
+    setFormBookingPageUrl(
+      source.is_bookable
+        ? bookingUrlFor({
+            typeId: source.event_types_id,
+            subtypeId: source.event_subtypes_id,
+            grouping: ownerType?.booking_grouping,
+            eventId: null,
+          })
+        : ""
+    );
+    setBookingUrlManual(false);
+    setFormDate("");
+    setFormStartTime("");
+    setFormEndTime("");
+    setFormKaraokeUrl("");
+    setFormBookingId("");
+    setFormGroupName("");
+    setFormActive(true);
+    setFormFullyBooked(false);
+    setFormDetailsOpen(true);
+    setFormSettingsOpen(true);
+    setIsAdding(true);
+  };
+
   const openEdit = () => {
     if (!selected) return;
     setFormError(null);
+    setCopySourceId(null);
     setFormTypeId(String(selected.event_types_id));
     setFormSubtypeId(String(selected.event_subtypes_id));
     setFormTitle(selected.title ?? "");
@@ -459,6 +547,7 @@ export default function EventsClient({
     }
     setFormKaraokeUrl(selected.karaoke_request_url ?? "");
     setFormTagline(selected.tagline ?? "");
+    setFormExternalLink(selected.external_link ?? "");
     setFormImageUrl(selected.image_url ?? "");
     setFormPayment(selected.payment_amount != null ? String(selected.payment_amount) : "");
     setFormSeating(selected.seating_required ?? true);
@@ -496,6 +585,7 @@ export default function EventsClient({
     setSelected(null);
     setIsAdding(false);
     setIsEditing(false);
+    setCopySourceId(null);
     setFormError(null);
     if (returnHref) {
       router.push(returnHref);
@@ -596,12 +686,14 @@ export default function EventsClient({
   };
 
   const todayStr = new Date().toISOString().split("T")[0];
-  const hostById = new Map(employees.map((e) => [e.id, e.full_name]));
+  const employeeById = new Map(employees.map((e) => [e.id, e.full_name]));
+
+  const canCopy = (e: EventRecord) => !linkedRequestByEvent[e.id];
 
   const matchesFilters = (e: EventRecord) => {
     const q = searchQuery.trim().toLowerCase();
     if (q) {
-      const host = e.host_employee_id ? (hostById.get(e.host_employee_id) ?? "") : "";
+      const host = e.host_employee_id ? (employeeById.get(e.host_employee_id) ?? "") : "";
       const hay = `${e.title ?? ""} ${formatDate(e.date)} ${e.date ?? ""} ${host}`.toLowerCase();
       if (!hay.includes(q)) return false;
     }
@@ -688,7 +780,7 @@ export default function EventsClient({
   const matchesSearchOnly = (e: EventRecord) => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
-    const host = e.host_employee_id ? (hostById.get(e.host_employee_id) ?? "") : "";
+    const host = e.host_employee_id ? (employeeById.get(e.host_employee_id) ?? "") : "";
     return `${e.title ?? ""} ${formatDate(e.date)} ${e.date ?? ""} ${host}`.toLowerCase().includes(q);
   };
   const eventsByDate = new Map<string, EventRecord[]>();
@@ -736,10 +828,8 @@ export default function EventsClient({
     const isTonight = event.date === todayStr && !inactive;
 
     return (
-      <button
+      <div
         key={event.id}
-        type="button"
-        onClick={() => openView(event)}
         style={{ "--spine": accentHex } as React.CSSProperties}
         className={cn(
           "relative flex w-full items-center gap-3 rounded-2xl border bg-white py-3 pr-3 pl-4 text-left transition hover:shadow-md active:scale-[0.99] sm:gap-4 sm:py-4 sm:pr-4 sm:pl-5",
@@ -747,6 +837,13 @@ export default function EventsClient({
           inactive && "opacity-60"
         )}
       >
+        <button
+          type="button"
+          onClick={() => openView(event)}
+          aria-label={`Open ${event.title || "Untitled Event"}`}
+          className="absolute inset-0 rounded-2xl"
+        />
+
         <span className="absolute top-3 bottom-3 left-0 w-1 rounded-full bg-(--spine)" />
 
         {isTonight && (
@@ -755,12 +852,26 @@ export default function EventsClient({
           </span>
         )}
 
-        <div className={cn("flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border sm:h-12 sm:w-12", badgeClass)}>
+        {canCopy(event) && (
+          <button
+            type="button"
+            onClick={() => openCopy(event)}
+            title="Copy this event"
+            aria-label={`Copy ${event.title || "Untitled Event"}`}
+            className="absolute -top-3 right-1 z-2 flex h-11 w-11 items-center justify-center sm:h-9 sm:w-9"
+          >
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E6DFC8] bg-white text-[#5C4033] shadow-sm transition-colors hover:bg-[#EFE8D4]">
+              <CopyPlus className="h-3.5 w-3.5" />
+            </span>
+          </button>
+        )}
+
+        <div className={cn("pointer-events-none relative flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border sm:h-12 sm:w-12", badgeClass)}>
           <span className="font-black text-[9px] leading-none tracking-tighter uppercase">{monthAbbrOf(event.date)}</span>
           <span className="font-black text-base leading-none sm:text-lg">{dayNumOf(event.date)}</span>
         </div>
 
-        <div className="min-w-0 flex-1">
+        <div className="pointer-events-none relative min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-1.5">
             {sub && <span className={cn("rounded px-1.5 py-0.5 font-black text-[9px] tracking-wide uppercase", badgeClass)}>{toTitleCase(sub.name)}</span>}
             {inactive && <span className="rounded bg-gray-100 px-1.5 py-0.5 font-black text-[9px] tracking-wide text-gray-500 uppercase">Inactive</span>}
@@ -792,7 +903,7 @@ export default function EventsClient({
           </div>
         </div>
 
-        <div className="flex shrink-0 flex-col items-end gap-1.5">
+        <div className={cn("pointer-events-none relative flex shrink-0 flex-col items-end gap-1.5", canCopy(event) && "pt-6 sm:pt-5")}>
           {(event.is_bookable || bStats.confirmedPeople > 0) && (
             <span className="inline-flex items-center gap-1 font-black text-xs text-[#5F624F] tabular-nums sm:text-sm">
               <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />{bStats.confirmedPeople}
@@ -802,7 +913,7 @@ export default function EventsClient({
           {event.is_fully_booked && <span className="rounded bg-red-50 px-1.5 py-0.5 font-black text-[9px] tracking-wide text-red-600 uppercase">Full</span>}
           <ChevronRight className="h-4 w-4 text-[#5F624F] opacity-40" />
         </div>
-      </button>
+      </div>
     );
   };
 
@@ -1186,15 +1297,23 @@ export default function EventsClient({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase">
-                  {isAdding ? "New Event" : isEditing ? "Edit Event" : (() => {
+                  {isAdding ? (copySourceId ? "Copy Event" : "New Event") : isEditing ? "Edit Event" : (() => {
                     const sub = selected ? subtypeById.get(selected.event_subtypes_id) : null;
                     const subType = toTitleCase(sub?.name);
                     return subType ? `${subType} Event` : "View Event";
                   })()}
                 </SheetTitle>
                 <SheetDescription className="sr-only">
-                  {isAdding ? "Create a new event." : isEditing ? "Edit this event's details." : "View this event's details."}
+                  {isAdding
+                    ? copySourceId ? "Create a new event from a copy." : "Create a new event."
+                    : isEditing ? "Edit this event's details." : "View this event's details."}
                 </SheetDescription>
+                {isAdding && copySourceId && (
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <CopyPlus className="h-3 w-3 text-[#5F624F]" />
+                    <span className="font-black text-xs tracking-wide text-[#5F624F] uppercase tabular-nums">Copied from #{copySourceId}</span>
+                  </div>
+                )}
                 {selected && (
                   <div className="mt-1 flex items-center gap-1.5">
                     <Hash className="h-3 w-3 text-[#5F624F]" />
@@ -1203,12 +1322,68 @@ export default function EventsClient({
                 )}
               </div>
               {selected && !isAdding && (
-                <span className={cn(
-                  "shrink-0 rounded-full border px-3 py-1.5 font-black text-[10px]",
-                  selected.is_active !== false ? "border-green-300 bg-green-100 text-green-700" : "border-red-300 bg-red-100 text-red-600"
-                )}>
-                  {selected.is_active !== false ? "Active" : "Inactive"}
-                </span>
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <span className={cn(
+                    "shrink-0 rounded-full border px-3 py-1.5 font-black text-[10px]",
+                    selected.is_active !== false ? "border-green-300 bg-green-100 text-green-700" : "border-red-300 bg-red-100 text-red-600"
+                  )}>
+                    {selected.is_active !== false ? "Active" : "Inactive"}
+                  </span>
+
+                  {canCopy(selected) && (
+                    <button
+                      type="button"
+                      onClick={() => openCopy(selected)}
+                      aria-label="Copy this event"
+                      title="Copy this event"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033] sm:h-9 sm:w-9"
+                    >
+                      <CopyPlus className="h-4 w-4" />
+                    </button>
+                  )}
+
+                  <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
+                    <PopoverTrigger asChild>
+                      <button
+                        type="button"
+                        aria-label="System information"
+                        title="System information"
+                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033] sm:h-9 sm:w-9"
+                      >
+                        <Info className="h-4 w-4" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
+                      <span className="block border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+                        System Information
+                      </span>
+                      <SheetRow label="Creation Method" value={eventCreationMethodLabel(selected.creation_method)} />
+                      <SheetRow
+                        label="Creation Source"
+                        value={(() => {
+                          const href = eventCreationSourceHref(selected.creation_method, selected.creation_source_id);
+                          const label = eventCreationSourceLabel(selected.creation_method, selected.creation_source_id);
+                          if (!href || !label) return null;
+                          return (
+                            <Link
+                              href={href}
+                              title={selected.creation_source_id ?? undefined}
+                              className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] tabular-nums hover:underline"
+                            >
+                              <Hash className="h-3 w-3 shrink-0" />
+                              <span>{label}</span>
+                              <ExternalLink className="h-3 w-3 shrink-0 opacity-60 transition-opacity group-hover:opacity-100" />
+                            </Link>
+                          );
+                        })()}
+                      />
+                      <SheetRow label="Created" value={formatDateTime(selected.created_at)} />
+                      <SheetRow label="Created By" value={selected.created_by ? (employeeById.get(selected.created_by) ?? "—") : "—"} />
+                      <SheetRow label="Last Modified" value={formatDateTime(selected.updated_at)} />
+                      <SheetRow label="Modified By" value={selected.updated_by ? (employeeById.get(selected.updated_by) ?? "—") : "—"} />
+                    </PopoverContent>
+                  </Popover>
+                </div>
               )}
             </div>
           </div>
@@ -1253,7 +1428,7 @@ export default function EventsClient({
                         )}
                       </div>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="max-h-64 w-full bg-[#F7F4EA] object-cover" />
+                      <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="max-h-40 w-full bg-[#F7F4EA] object-cover" />
                     </div>
                   )}
                   <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
@@ -1438,6 +1613,8 @@ export default function EventsClient({
             {showForm && (
               <form id="event-form" action={handleSubmit} className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
+                <input type="hidden" name="creation_method" value={copySourceId ? "copy" : "manual"} />
+                <input type="hidden" name="creation_source_id" value={copySourceId ? String(copySourceId) : ""} />
                 <input type="hidden" name="seating_required" value={formSeating ? "on" : ""} />
                 <input type="hidden" name="is_active" value={formActive ? "on" : ""} />
                 <input type="hidden" name="is_fully_booked" value={formFullyBooked ? "on" : ""} />
@@ -1573,7 +1750,7 @@ export default function EventsClient({
                   </div>
 
                   <FormRow label="External Link">
-                    <input name="external_link" type="url" placeholder="https://instagram.com/..." defaultValue={formDefault?.external_link ?? ""} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
+                    <input name="external_link" type="url" placeholder="https://instagram.com/..." value={formExternalLink} onChange={(e) => setFormExternalLink(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
                   </FormRow>
 
                   {selectedSubtype?.behavior === "karaoke" && (
@@ -1694,14 +1871,14 @@ export default function EventsClient({
             <div className="h-4" />
           </div>
 
-          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:pb-5">
+          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#5C4033]/15 bg-[#E6DFC8] px-4 py-3 pb-6 sm:px-6">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50">
+                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-12 rounded-xl border-2 border-[#E6DFC8] bg-white px-4 font-black text-[10px] tracking-widest text-red-500 uppercase hover:border-red-200 hover:bg-red-50">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   Delete
                 </Button>
-                <Button onClick={openEdit} className="h-14 flex-1 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95">
+                <Button onClick={openEdit} className="h-12 flex-1 rounded-xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95">
                   <Pencil className="mr-2 h-4 w-4" />Edit
                 </Button>
               </div>
@@ -1709,10 +1886,10 @@ export default function EventsClient({
 
             {showForm && (
               <div className="grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-12 rounded-xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-widest text-[#5F624F] uppercase">
                   Cancel
                 </Button>
-                <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-14 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50">
+                <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-12 rounded-xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" />Save</>}
                 </Button>
               </div>

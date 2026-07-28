@@ -200,7 +200,13 @@ export async function updatePrivateHireStatus(
     } else {
       const { data: newEvent } = await supabase
         .from("events")
-        .insert({ ...eventFields, created_by: empId, created_at: now })
+        .insert({
+          ...eventFields,
+          creation_method: "private_hire_request",
+          creation_source_id: id,
+          created_by: empId,
+          created_at: now,
+        })
         .select("id")
         .single();
       if (newEvent) {

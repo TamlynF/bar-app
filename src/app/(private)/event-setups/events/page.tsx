@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import EventsClient from "./event-setups-client";
+import EventsClient, { type LinkedRequest } from "./event-setups-client";
 
 export default async function EventsPage({
   searchParams,
@@ -9,7 +9,7 @@ export default async function EventsPage({
   const { filter, from, to, quick } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: events }, { data: eventTypes }, { data: eventSubtypes }, { data: employees }, { data: quizCategories }, { data: quizQuestions }, { data: bookings }, { data: actCovers }] = await Promise.all([
+  const [{ data: events }, { data: eventTypes }, { data: eventSubtypes }, { data: employees }, { data: quizCategories }, { data: quizQuestions }, { data: bookings }, { data: actCovers }, { data: bandLinks }, { data: privateLinks }] = await Promise.all([
     supabase.from("events").select("*").order("date", { ascending: false }),
     supabase.from("event_types").select("id, name, color, booking_grouping, is_bookable, booking_config").order("name"),
     supabase.from("event_subtypes").select("id, event_types_id, name, color, default_event_title, tagline, behavior, host_required, seating_required, is_bookable, payment_required, default_payment_amount, booking_config, default_image_url").order("name"),
@@ -23,6 +23,8 @@ export default async function EventsPage({
       .eq("status", "booked")
       .not("event_id", "is", null)
       .order("created_at", { ascending: true }),
+    supabase.from("band_booking_requests").select("id, event_id").not("event_id", "is", null),
+    supabase.from("private_hire_requests").select("id, event_id").not("event_id", "is", null),
   ]);
 
   const actCoverByEvent: Record<number, string> = {};
@@ -33,5 +35,13 @@ export default async function EventsPage({
     }
   }
 
-  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} actCoverByEvent={actCoverByEvent} filter={filter} initialFrom={from} initialTo={to} initialQuick={quick} />;
+  const linkedRequestByEvent: Record<number, LinkedRequest> = {};
+  for (const row of bandLinks ?? []) {
+    if (row.event_id != null) linkedRequestByEvent[row.event_id] = { kind: "band", id: row.id };
+  }
+  for (const row of privateLinks ?? []) {
+    if (row.event_id != null) linkedRequestByEvent[row.event_id] = { kind: "private", id: row.id };
+  }
+
+  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} actCoverByEvent={actCoverByEvent} linkedRequestByEvent={linkedRequestByEvent} filter={filter} initialFrom={from} initialTo={to} initialQuick={quick} />;
 }

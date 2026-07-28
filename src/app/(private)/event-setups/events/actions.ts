@@ -6,6 +6,7 @@ import { revalidatePublicEventPages } from "@/lib/revalidate-public";
 import { publicBookingUrl } from "@/lib/booking-links";
 import { isBookingGrouping } from "@/lib/booking-grouping";
 import { validateEventForm, type EventClashCandidate } from "@/lib/event-form-validation";
+import { isEventCreationMethod } from "@/lib/event-creation";
 
 export async function saveEventAction(formData: FormData) {
   const supabase = await createClient();
@@ -123,8 +124,13 @@ export async function saveEventAction(formData: FormData) {
         await supabase.from("generated_quiz_questions").delete().eq("events_id", parseInt(id, 10));
       }
     } else {
+      const rawMethod = formData.get("creation_method")?.toString();
+      const creationMethod = isEventCreationMethod(rawMethod) ? rawMethod : "manual";
+      const creationSourceId = formData.get("creation_source_id")?.toString().trim() || null;
       const { data: inserted, error: insertError } = await supabase.from("events").insert({
         ...payload,
+        creation_method: creationMethod,
+        creation_source_id: creationMethod === "manual" ? null : creationSourceId,
         created_by: currentEmployeeId,
         updated_by: currentEmployeeId,
       }).select("*").single();

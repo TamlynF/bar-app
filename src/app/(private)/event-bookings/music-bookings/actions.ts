@@ -340,7 +340,13 @@ export async function updateBandStatus(
     } else {
       const { data: newEvent } = await supabase
         .from("events")
-        .insert({ ...eventFields, created_by: empId, updated_by: empId })
+        .insert({
+          ...eventFields,
+          creation_method: "band_request",
+          creation_source_id: id,
+          created_by: empId,
+          updated_by: empId,
+        })
         .select("id")
         .single();
 
