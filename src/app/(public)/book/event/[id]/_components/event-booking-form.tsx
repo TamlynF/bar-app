@@ -211,7 +211,7 @@ export default function EventBookingForm({ event, config }: Props) {
                 value={formData.phoneNo}
                 onChange={handleInputChange}
                 className={inputBaseClasses}
-                placeholder="7123 456789"
+                placeholder="e.g. 7123 456789"
               />
             </div>
           </div>
@@ -234,7 +234,7 @@ export default function EventBookingForm({ event, config }: Props) {
               value={formData.groupName}
               onChange={handleInputChange}
               className={inputBaseClasses}
-              placeholder={formData.fullName || "Defaults to your name"}
+              placeholder="e.g. The Thirsty Trivia Titans"
             />
           </div>
         </div>
@@ -273,7 +273,7 @@ export default function EventBookingForm({ event, config }: Props) {
             <p className="font-black text-2xl text-white tabular-nums">£{total.toFixed(2)}</p>
           </div>
           <p className="text-right text-[11px] leading-snug font-bold text-stone-500">
-            £{pricePerPerson.toFixed(2)} per person<br />× {formData.groupSize} {parseInt(formData.groupSize) === 1 ? "person" : "people"}
+            £{pricePerPerson.toFixed(2)} per person<br />x {formData.groupSize} {parseInt(formData.groupSize) === 1 ? "person" : "people"}
           </p>
         </div>
       )}
@@ -293,7 +293,7 @@ export default function EventBookingForm({ event, config }: Props) {
               value={formData.specialRequests}
               onChange={handleInputChange}
               className={`${inputBaseClasses} min-h-25 resize-none py-3 text-sm`}
-              placeholder="Dietary requirements, accessibility needs..."
+              placeholder="Type your requests here..."
             />
           </div>
         </div>
