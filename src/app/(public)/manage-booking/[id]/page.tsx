@@ -96,8 +96,7 @@ export default async function ManageBookingPage({
             <ManageBookingView
               booking={normalised}
               isCancelled={isCancelled}
-              groupSizeField={bookingFields.group_size}
-              groupNameField={bookingFields.group_name}
+              fields={bookingFields}
             />
           </div>
         </div>

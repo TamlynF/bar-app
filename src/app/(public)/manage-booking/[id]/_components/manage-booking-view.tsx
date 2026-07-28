@@ -26,7 +26,7 @@ import { updateBooking } from "@/app/(public)/_actions/update-booking";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
 import { normalizeGroupName } from "@/lib/group-name";
-import type { FieldConfig, GroupSizeFieldConfig } from "@/lib/booking-config";
+import type { ResolvedBookingConfig } from "@/lib/booking-config";
 
 export interface ManageEventBooking {
   id: string | number;
@@ -61,14 +61,15 @@ const iconClasses = "w-4 h-4 text-[#fdcc4b]/40";
 export default function ManageBookingView({
   booking,
   isCancelled: initialCancelled,
-  groupSizeField,
-  groupNameField,
+  fields,
 }: {
   booking: ManageEventBooking;
   isCancelled: boolean;
-  groupSizeField: GroupSizeFieldConfig;
-  groupNameField: FieldConfig;
+  fields: ResolvedBookingConfig["fields"];
 }) {
+  const groupSizeField = fields.group_size;
+  const groupNameField = fields.group_name;
+  const specialRequestsField = fields.special_requests;
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isCancelling, setIsCancelling] = useState(false);
   const [error, setError] = useState("");
@@ -183,7 +184,7 @@ export default function ManageBookingView({
 
     const response = await updateBooking(booking.id, {
       group_size: parseInt(groupSize, 10),
-      special_requests: specialRequests,
+      ...(specialRequestsField.visible ? { special_requests: specialRequests } : {}),
       ...(groupNameVisible && groupName.trim() ? { group_name: groupName.trim() } : {}),
     });
 
@@ -345,26 +346,28 @@ export default function ManageBookingView({
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <label htmlFor="specialRequests" className={labelClasses}>
-              Special Requests
-            </label>
-            <div className="relative">
-              <div className={iconContainerClasses}>
-                <MessageSquareQuote className={iconClasses} />
+          {specialRequestsField.visible && (
+            <div className="space-y-1.5">
+              <label htmlFor="specialRequests" className={labelClasses}>
+                {specialRequestsField.label} {specialRequestsField.required && <span className="text-red-500">*</span>}
+              </label>
+              <div className="relative">
+                <div className={iconContainerClasses}>
+                  <MessageSquareQuote className={iconClasses} />
+                </div>
+                <textarea
+                  id="specialRequests"
+                  value={specialRequests}
+                  onChange={(e) => {
+                    setError("");
+                    setSpecialRequests(e.target.value);
+                  }}
+                  className={cn(inputBaseClasses, "min-h-25 resize-none py-3")}
+                  placeholder="Dietary requirements, table preference..."
+                />
               </div>
-              <textarea
-                id="specialRequests"
-                value={specialRequests}
-                onChange={(e) => {
-                  setError("");
-                  setSpecialRequests(e.target.value);
-                }}
-                className={cn(inputBaseClasses, "min-h-25 resize-none py-3")}
-                placeholder="Dietary requirements, table preference..."
-              />
             </div>
-          </div>
+          )}
 
           <div className="flex flex-col gap-3 pt-2">
             <button
@@ -405,7 +408,11 @@ export default function ManageBookingView({
             {groupNameVisible && savedGroupName && (
               <DetailRow icon={<Tag />} label={groupNameLabel} value={savedGroupName} />
             )}
-            <DetailRow icon={<Users />} label="Party Size" value={`${booking.group_size ?? 0} People`} />
+            <DetailRow
+              icon={<Users />}
+              label={groupSizeField.label}
+              value={`${booking.group_size ?? 0} ${booking.group_size === 1 ? "Person" : "People"}`}
+            />
             <DetailRow icon={<User />} label="Lead Booker" value={booking.contacts?.full_name || "N/A"} />
             {booking.total_amount != null && booking.total_amount > 0 && (
               <DetailRow
@@ -415,7 +422,11 @@ export default function ManageBookingView({
               />
             )}
             {booking.special_requests && (
-              <DetailRow icon={<MessageSquareQuote />} label="Special Requests" value={booking.special_requests} />
+              <DetailRow
+                icon={<MessageSquareQuote />}
+                label={specialRequestsField.label}
+                value={booking.special_requests}
+              />
             )}
           </div>
 
