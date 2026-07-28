@@ -380,7 +380,7 @@ export default function BookingList({
     const eventDate = parseDate(selectedBooking.events?.event_date);
     const tableName = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned";
     const hasTable = !!selectedBooking.booking_table_mappings?.[0]?.tables;
-    const hasPayment = selectedBooking.paid_amount != null || selectedBooking.total_amount != null;
+    const hasPayment = (selectedBooking.total_amount ?? 0) > 0;
     const seatingRequired = selectedBooking.events?.seating_required !== false;
 
     const header = (
