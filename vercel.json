@@ -3,6 +3,10 @@
     {
       "path": "/api/square/sync",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/bookings/release-unpaid",
+      "schedule": "*/15 * * * *"
     }
   ]
 }

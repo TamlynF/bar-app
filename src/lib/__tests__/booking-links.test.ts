@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { adminBookingsHref, publicBookingUrl } from "@/lib/booking-links";
+import { adminBookingsHref, checkoutReturnPath, publicBookingUrl } from "@/lib/booking-links";
 
 describe("adminBookingsHref", () => {
   it("routes each specialised behavior to its dedicated admin screen", () => {
@@ -75,5 +75,27 @@ describe("publicBookingUrl", () => {
     expect(
       publicBookingUrl({ ...base, grouping: null, isBookable: true, manualUrl: null })
     ).toBe("https://df.test/book/event/5");
+  });
+});
+
+describe("checkoutReturnPath", () => {
+  it("sends bingo bookings back to the shared bingo success page", () => {
+    expect(checkoutReturnPath({ behavior: "bingo", eventId: 7, bookingId: 42 })).toBe(
+      "/book/bingo/success?bookingId=42"
+    );
+  });
+
+  it("sends every other behavior back to the per-event success page", () => {
+    for (const behavior of ["standard", "quiz", "karaoke", "music_act", "private"] as const) {
+      expect(checkoutReturnPath({ behavior, eventId: 7, bookingId: 42 })).toBe(
+        "/book/event/7/success?bookingId=42"
+      );
+    }
+  });
+
+  it("falls back to the per-event page when the behavior is unknown", () => {
+    expect(checkoutReturnPath({ behavior: null, eventId: 7, bookingId: 42 })).toBe(
+      "/book/event/7/success?bookingId=42"
+    );
   });
 });

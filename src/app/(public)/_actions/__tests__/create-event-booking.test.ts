@@ -119,7 +119,11 @@ describe("createEventBooking — paid path", () => {
       { table: "bookings", payload: { square_order_id: "ord_1" } },
     ]);
     expect(calls.deletes).toHaveLength(0);
-    expect(h.send).not.toHaveBeenCalled(); // nothing to confirm until Square settles
+
+    // not a confirmation — just a link back to finish checkout
+    expect(h.send).toHaveBeenCalledTimes(1);
+    expect(h.send.mock.calls[0][0].subject).toMatch(/finish your booking/i);
+    expect(h.send.mock.calls[0][0].html).toContain("/book/event/7/success?bookingId=42");
   });
 
   it("rolls back the booking when Square returns no checkout url", async () => {

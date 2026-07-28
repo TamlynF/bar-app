@@ -15,6 +15,8 @@ import {
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { buildBuyerPhone, buildEventOrder, buildPrePopulatedData } from "@/lib/square-order";
+import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
+import { checkoutReturnPath } from "@/lib/booking-links";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { normalizeGroupName } from "@/lib/group-name";
 
@@ -272,6 +274,17 @@ export async function createEventBooking(formData: FormData) {
       .update({ square_order_id: orderId })
       .eq("id", newBooking.id);
 
+    await sendPaymentPendingEmail({
+      bookingId: newBooking.id,
+      eventId,
+      email,
+      name: fullName,
+      eventTitle: event.title || "Event",
+      eventDate: event.date,
+      groupSize,
+      amountDue: totalPence / 100,
+    });
+
     revalidatePath("/dashboard");
 
     return { checkoutUrl };
@@ -280,6 +293,42 @@ export async function createEventBooking(formData: FormData) {
     return {
       error: err instanceof Error ? err.message : "An unexpected error occurred. Please try again.",
     };
+  }
+}
+
+async function sendPaymentPendingEmail(args: {
+  bookingId: number;
+  eventId: number;
+  email: string;
+  name: string;
+  eventTitle: string;
+  eventDate: string;
+  groupSize: number;
+  amountDue: number;
+}) {
+  const { subject, html } = buildPaymentPendingEmail({
+    name: args.name,
+    eventTitle: args.eventTitle,
+    eventDate: args.eventDate,
+    groupSize: args.groupSize,
+    amountDue: args.amountDue,
+    payUrl: `${appUrl}${checkoutReturnPath({
+      behavior: "standard",
+      eventId: args.eventId,
+      bookingId: args.bookingId,
+    })}`,
+  });
+
+  try {
+    const { error: resendError } = await resend.emails.send({
+      from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
+      to: args.email,
+      subject,
+      html,
+    });
+    if (resendError) console.error("Resend API Error:", resendError);
+  } catch (emailError) {
+    console.error("Email failed (non-blocking):", emailError);
   }
 }
 

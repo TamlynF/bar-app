@@ -12,6 +12,17 @@ export function adminBookingsHref(behavior: EventBehavior, eventId?: number): st
   return "/event-bookings";
 }
 
+export function checkoutReturnPath(opts: {
+  behavior: EventBehavior | null | undefined;
+  eventId: number | string;
+  bookingId: number | string;
+}): string {
+  if (opts.behavior === "bingo") {
+    return `/book/bingo/success?bookingId=${opts.bookingId}`;
+  }
+  return `/book/event/${opts.eventId}/success?bookingId=${opts.bookingId}`;
+}
+
 export function publicBookingUrl(opts: {
   grouping: BookingGrouping | null | undefined;
   isBookable: boolean;

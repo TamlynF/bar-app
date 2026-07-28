@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { settlePaidBooking } from "@/lib/settle-paid-booking";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Resend } from "resend";
+import RetryPaymentButton from "@/components/retry-payment-button";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -150,14 +151,15 @@ export default async function BingoSuccessPage({
   if (result.status === "pending") {
     return (
       <StatusPage
-        icon={<Clock className="h-10 w-10 text-amber-500" />}
+        icon={<AlertTriangle className="h-10 w-10 text-amber-500" />}
         color="amber"
-        title="Payment Processing"
-        message="Your payment is being processed. You'll receive a confirmation email shortly. If you have any issues, please contact us."
+        title="Payment Not Completed"
+        message="We haven't received a payment for this booking, so your spot isn't secured yet. Nothing has been charged — you can try again below."
         eventDate={eventDate}
         groupSize={booking.group_size}
         name={contact?.full_name}
         total={booking.total_amount}
+        action={<RetryPaymentButton bookingId={booking.id} amount={booking.total_amount} />}
       />
     );
   }
@@ -199,6 +201,7 @@ function StatusPage({
   eventDate,
   groupSize,
   total,
+  action,
 }: {
   icon: React.ReactNode;
   color: "green" | "amber";
@@ -208,6 +211,7 @@ function StatusPage({
   groupSize?: number;
   name?: string;
   total?: number | null;
+  action?: React.ReactNode;
 }) {
   const borderColor = color === "green" ? "border-green-200" : "border-amber-200";
   const bgColor = color === "green" ? "bg-green-50" : "bg-amber-50";
@@ -245,15 +249,22 @@ function StatusPage({
           )}
           {total != null && (
             <div className="px-5 py-3.5">
-              <p className="mb-0.5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">Paid</p>
+              <p className="mb-0.5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">
+                {action ? "Amount Due" : "Paid"}
+              </p>
               <p className="font-black text-sm text-[#1F1F1A]">£{total.toFixed(2)}</p>
             </div>
           )}
         </div>
 
+        {action}
         <Link
           href="/book"
-          className="inline-block h-14 w-full rounded-2xl bg-[#26300D] text-center font-black text-[11px] leading-14 tracking-widest text-[#FDCC4B] uppercase shadow-lg"
+          className={
+            action
+              ? "inline-block h-14 w-full rounded-2xl border-2 border-[#E6DFC8] text-center font-black text-[11px] leading-13 tracking-widest text-[#5F624F] uppercase"
+              : "inline-block h-14 w-full rounded-2xl bg-[#26300D] text-center font-black text-[11px] leading-14 tracking-widest text-[#FDCC4B] uppercase shadow-lg"
+          }
         >
           Back to Bookings
         </Link>

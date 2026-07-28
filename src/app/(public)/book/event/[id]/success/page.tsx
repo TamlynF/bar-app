@@ -1,9 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { settlePaidBooking } from "@/lib/settle-paid-booking";
-import { CheckCircle2, XCircle, Clock } from "lucide-react";
+import { CheckCircle2, XCircle, Clock, AlertTriangle } from "lucide-react";
 import Link from "next/link";
 import { Resend } from "resend";
+import RetryPaymentButton from "@/components/retry-payment-button";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -125,14 +126,15 @@ export default async function EventSuccessPage({
   if (result.status === "pending") {
     return (
       <StatusPage
-        icon={<Clock className="h-10 w-10 text-amber-500" />}
+        icon={<AlertTriangle className="h-10 w-10 text-amber-500" />}
         color="amber"
-        title="Payment Processing"
-        message="Your payment is being processed. You'll receive a confirmation email shortly."
+        title="Payment Not Completed"
+        message="We haven't received a payment for this booking, so your spot isn't secured yet. Nothing has been charged — you can try again below."
         eventTitle={eventTitle}
         eventDate={eventDate}
         groupSize={booking.group_size}
         total={booking.total_amount}
+        action={<RetryPaymentButton bookingId={booking.id} amount={booking.total_amount} />}
       />
     );
   }
@@ -167,7 +169,7 @@ export default async function EventSuccessPage({
 }
 
 function StatusPage({
-  icon, color, title, message, eventTitle, eventDate, groupSize, total,
+  icon, color, title, message, eventTitle, eventDate, groupSize, total, action,
 }: {
   icon: React.ReactNode;
   color: "green" | "amber";
@@ -177,6 +179,7 @@ function StatusPage({
   eventDate: string;
   groupSize?: number;
   total?: number | null;
+  action?: React.ReactNode;
 }) {
   return (
     <main className="flex min-h-dvh w-full flex-col items-center justify-center bg-[#26300D] px-4 py-12">
@@ -204,12 +207,22 @@ function StatusPage({
           )}
           {total != null && (
             <div className="px-5 py-3.5">
-              <p className="mb-0.5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">Paid</p>
+              <p className="mb-0.5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">
+                {action ? "Amount Due" : "Paid"}
+              </p>
               <p className="font-black text-sm text-[#1F1F1A]">£{total.toFixed(2)}</p>
             </div>
           )}
         </div>
-        <Link href="/book" className="inline-block h-14 w-full rounded-2xl bg-[#26300D] text-center font-black text-[11px] leading-14 tracking-widest text-[#FDCC4B] uppercase shadow-lg">
+        {action}
+        <Link
+          href="/book"
+          className={
+            action
+              ? "inline-block h-14 w-full rounded-2xl border-2 border-[#E6DFC8] text-center font-black text-[11px] leading-13 tracking-widest text-[#5F624F] uppercase"
+              : "inline-block h-14 w-full rounded-2xl bg-[#26300D] text-center font-black text-[11px] leading-14 tracking-widest text-[#FDCC4B] uppercase shadow-lg"
+          }
+        >
           Back to Bookings
         </Link>
       </div>

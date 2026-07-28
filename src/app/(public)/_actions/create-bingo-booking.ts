@@ -12,6 +12,8 @@ import {
 } from "@/lib/table-allocation";
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
+import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
+import { checkoutReturnPath } from "@/lib/booking-links";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -188,6 +190,15 @@ export async function createBingoBooking(formData: FormData) {
       .update({ square_order_id: orderId })
       .eq("id", newBooking.id);
 
+    await sendPaymentPendingEmail({
+      bookingId: newBooking.id,
+      email,
+      name: fullName,
+      eventDate,
+      groupSize,
+      amountDue: totalPence / 100,
+    });
+
     revalidatePath("/dashboard");
     revalidatePath("/book/bingo/success");
     revalidatePath(`/book/bingo/manage-booking/${newBooking.id}`);
@@ -201,6 +212,40 @@ export async function createBingoBooking(formData: FormData) {
           ? err.message
           : "An unexpected error occurred. Please try again.",
     };
+  }
+}
+
+async function sendPaymentPendingEmail(args: {
+  bookingId: number;
+  email: string;
+  name: string;
+  eventDate: string;
+  groupSize: number;
+  amountDue: number;
+}) {
+  const { subject, html } = buildPaymentPendingEmail({
+    name: args.name,
+    eventTitle: "Music Bingo",
+    eventDate: args.eventDate,
+    groupSize: args.groupSize,
+    amountDue: args.amountDue,
+    payUrl: `${appUrl}${checkoutReturnPath({
+      behavior: "bingo",
+      eventId: 0,
+      bookingId: args.bookingId,
+    })}`,
+  });
+
+  try {
+    const { error: resendError } = await resend.emails.send({
+      from: "Don Fenticas <admin@bookingsdonfenticas.co.uk>",
+      to: args.email,
+      subject,
+      html,
+    });
+    if (resendError) console.error("Resend API Error:", resendError);
+  } catch (emailError) {
+    console.error("Email failed (non-blocking):", emailError);
   }
 }
 
