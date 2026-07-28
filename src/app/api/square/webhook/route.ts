@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { settlePaidBooking } from "@/lib/settle-paid-booking";
 import { createHmac, timingSafeEqual } from "crypto";
 import { Resend } from "resend";
 
@@ -71,16 +72,15 @@ export async function POST(req: NextRequest) {
     const amountPaid = event.data?.object?.payment?.amount_money?.amount;
     const paymentId = event.data?.object?.payment?.id ?? null;
 
-    await supabase
-      .from("bookings")
-      .update({
-        payment_status: "paid",
-        status: booking.status === "pending" ? "confirmed" : booking.status,
-        paid_amount: amountPaid ? amountPaid / 100 : (booking.total_amount ?? 0),
-        square_payment_id: paymentId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", booking.id);
+    const settlement = await settlePaidBooking(supabase, {
+      bookingId: booking.id,
+      paidAmount: amountPaid ? amountPaid / 100 : (booking.total_amount ?? 0),
+      squarePaymentId: paymentId,
+    });
+
+    if (settlement.outcome !== "settled" || settlement.status === "waitlisted") {
+      return NextResponse.json({ received: true });
+    }
 
     const contactRaw = booking.contacts;
     const contact = (Array.isArray(contactRaw) ? contactRaw[0] : contactRaw) as { full_name: string; email: string } | null;

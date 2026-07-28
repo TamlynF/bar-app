@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
+import { settlePaidBooking } from "@/lib/settle-paid-booking";
 import { CheckCircle2, XCircle, Clock } from "lucide-react";
 import Link from "next/link";
 import { Resend } from "resend";
@@ -39,16 +40,15 @@ async function confirmAndNotify(bookingId: string) {
       ? Number(tender.amountMoney.amount) / 100
       : (booking.total_amount ?? 0);
 
-    await supabase
-      .from("bookings")
-      .update({
-        payment_status: "paid",
-        status: booking.status === "pending" ? "confirmed" : booking.status,
-        paid_amount: paidAmount,
-        square_payment_id: squarePaymentId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", bookingId);
+    const settlement = await settlePaidBooking(supabase, {
+      bookingId,
+      paidAmount,
+      squarePaymentId,
+    });
+
+    if (settlement.outcome === "settled" && settlement.status === "waitlisted") {
+      return { status: "waitlisted" as const, booking };
+    }
 
     const contactRaw = booking.contacts;
     const contact = (Array.isArray(contactRaw) ? contactRaw[0] : contactRaw) as { full_name: string; email: string } | null;
@@ -129,6 +129,21 @@ export default async function EventSuccessPage({
         color="amber"
         title="Payment Processing"
         message="Your payment is being processed. You'll receive a confirmation email shortly."
+        eventTitle={eventTitle}
+        eventDate={eventDate}
+        groupSize={booking.group_size}
+        total={booking.total_amount}
+      />
+    );
+  }
+
+  if (result.status === "waitlisted") {
+    return (
+      <StatusPage
+        icon={<Clock className="h-10 w-10 text-amber-500" />}
+        color="amber"
+        title="You're on the Waitlist"
+        message="Your payment went through, but the last table for this event was taken while you were checking out. We'll contact you to sort out a table or a refund."
         eventTitle={eventTitle}
         eventDate={eventDate}
         groupSize={booking.group_size}

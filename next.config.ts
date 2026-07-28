@@ -5,6 +5,7 @@ const config = (phase: string): NextConfig => {
   const isDev = phase === PHASE_DEVELOPMENT_SERVER;
 
   const nextConfig: NextConfig = {
+    ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
     reactCompiler: true,
     experimental: {
       serverActions: {

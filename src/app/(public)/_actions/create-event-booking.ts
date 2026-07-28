@@ -136,7 +136,7 @@ export async function createEventBooking(formData: FormData) {
 
     let chosenTable: FreeTable | null = null;
     let status: "confirmed" | "waitlisted" = "confirmed";
-    if (seatingApplies(event)) {
+    if (isFree && seatingApplies(event)) {
       const allocation = await allocateOnCreate(supabase, { eventId, groupSize });
       status = allocation.status;
       chosenTable = allocation.status === "confirmed" ? allocation.table : null;
@@ -195,9 +195,7 @@ export async function createEventBooking(formData: FormData) {
       });
       if (!mapped.ok) {
         status = "waitlisted";
-        if (isFree) {
-          await supabase.from("bookings").update({ status: "waitlisted" }).eq("id", newBooking.id);
-        }
+        await supabase.from("bookings").update({ status: "waitlisted" }).eq("id", newBooking.id);
       }
     }
 
@@ -267,14 +265,9 @@ export async function createEventBooking(formData: FormData) {
 
     await supabase
       .from("bookings")
-      .update({ square_order_id: orderId, status })
+      .update({ square_order_id: orderId })
       .eq("id", newBooking.id);
 
-    await sendEventBookingEmail(
-      newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, totalPence / 100, 0, groupNameRow
-    );
-
-    await updateFullyBookedStatus(supabase, eventId);
     revalidatePath("/dashboard");
 
     return { checkoutUrl };

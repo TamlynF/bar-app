@@ -113,9 +113,10 @@ describe("createEventBooking — paid path", () => {
       { status: "pending", payment_status: "unpaid", total_amount: 45 },
     ]);
     expect(calls.updates).toEqual([
-      { table: "bookings", payload: { square_order_id: "ord_1", status: "confirmed" } },
+      { table: "bookings", payload: { square_order_id: "ord_1" } },
     ]);
     expect(calls.deletes).toHaveLength(0);
+    expect(h.send).not.toHaveBeenCalled(); // nothing to confirm until Square settles
   });
 
   it("rolls back the booking when Square returns no checkout url", async () => {

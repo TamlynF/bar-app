@@ -51,10 +51,11 @@ export async function createBingoBooking(formData: FormData) {
 
     const eventDate = eventRow.date as string;
     const paymentAmount = Math.round((eventRow.payment_amount ?? 0) * 100);
+    const isFree = paymentAmount === 0;
 
     let chosenTable: FreeTable | null = null;
     let status: "confirmed" | "waitlisted" = "confirmed";
-    if (seatingApplies(eventRow)) {
+    if (isFree && seatingApplies(eventRow)) {
       const allocation = await allocateOnCreate(supabase, { eventId, groupSize });
       status = allocation.status;
       chosenTable = allocation.status === "confirmed" ? allocation.table : null;
@@ -85,7 +86,6 @@ export async function createBingoBooking(formData: FormData) {
     }
 
     const totalPence = paymentAmount * groupSize;
-    const isFree = paymentAmount === 0;
 
     const { data: newBooking, error: bookingError } = await supabase
       .from("bookings")
@@ -117,9 +117,7 @@ export async function createBingoBooking(formData: FormData) {
       });
       if (!mapped.ok) {
         status = "waitlisted";
-        if (isFree) {
-          await supabase.from("bookings").update({ status: "waitlisted" }).eq("id", newBooking.id);
-        }
+        await supabase.from("bookings").update({ status: "waitlisted" }).eq("id", newBooking.id);
       }
     }
 
@@ -187,21 +185,9 @@ export async function createBingoBooking(formData: FormData) {
 
     await supabase
       .from("bookings")
-      .update({ square_order_id: orderId, status })
+      .update({ square_order_id: orderId })
       .eq("id", newBooking.id);
 
-    await sendBookingEmail(
-      newBooking.id,
-      email,
-      fullName,
-      eventDate,
-      groupSize,
-      status,
-      totalPence / 100,
-      0
-    );
-
-    await updateFullyBookedStatus(supabase, eventId);
     revalidatePath("/dashboard");
     revalidatePath("/book/bingo/success");
     revalidatePath(`/book/bingo/manage-booking/${newBooking.id}`);
