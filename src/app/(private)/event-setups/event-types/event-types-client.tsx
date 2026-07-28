@@ -622,11 +622,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     <FieldRow label="Name" required error={subtypeErrors.name}>
                       <SheetInput value={subtypeForm.name} placeholder="e.g. Quiz" onChange={(v) => setSubtypeForm({ ...subtypeForm, name: v })} />
                     </FieldRow>
-                    {ownsBookingPage && (
-                      <FieldRow label="Title" required error={subtypeErrors.title}>
-                        <SheetInput value={subtypeForm.title} placeholder="e.g. Quiz Night" onChange={(v) => setSubtypeForm({ ...subtypeForm, title: v })} />
-                      </FieldRow>
-                    )}
+                    <FieldRow label="Title" required={ownsBookingPage} error={subtypeErrors.title}>
+                      <SheetInput value={subtypeForm.title} placeholder="e.g. Quiz Night" onChange={(v) => setSubtypeForm({ ...subtypeForm, title: v })} />
+                    </FieldRow>
                     <FieldRow label="Default Title">
                       <SheetInput value={subtypeForm.default_event_title} placeholder="e.g. Thursday Quiz Night" onChange={(v) => setSubtypeForm({ ...subtypeForm, default_event_title: v })} />
                     </FieldRow>
