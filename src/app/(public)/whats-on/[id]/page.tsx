@@ -74,10 +74,11 @@ export default async function WhatsOnEventPage({
   if (row.date >= todayStr && !row.is_active) notFound();
 
   let band: BandInfo | null = null;
+  let bandIntroduction: string | null = null;
   if (eventType?.behavior === "music_act") {
     const { data: bandRow } = await supabase
       .from("band_booking_requests")
-      .select("social_links, video_urls, video_descriptions")
+      .select("social_links, video_urls, video_descriptions, music_acts(introduction)")
       .eq("event_id", row.id)
       .eq("status", "booked")
       .order("created_at", { ascending: true })
@@ -97,6 +98,11 @@ export default async function WhatsOnEventPage({
         },
         videos: urls.map((url, i) => ({ url, description: (descs[i] ?? "").trim() })),
       };
+
+      const act = Array.isArray(bandRow.music_acts)
+        ? bandRow.music_acts[0]
+        : bandRow.music_acts;
+      bandIntroduction = (act?.introduction as string | null)?.trim() || null;
     }
   }
 
@@ -148,6 +154,8 @@ export default async function WhatsOnEventPage({
   const venueName = (info?.name as string) || "Don Fenticas";
   const address = info?.address as string | undefined;
   const phone = info?.phone as string | undefined;
+
+  const eventInfoText = event.tagline?.trim() || bandIntroduction;
 
   const openingHours = (info?.opening_hours ?? {}) as OpeningHours;
   const eventDayKey = format(dateObj, "EEEE").toLowerCase();
@@ -338,62 +346,29 @@ export default async function WhatsOnEventPage({
               <ShareLinks url={shareUrl} title={shareTitle} />
             </div>
 
-            <section className="mt-8">
-              <h2 className="font-black text-xl tracking-tight text-ink">
-                Event Information
-              </h2>
-              <dl className="mt-4 space-y-2">
-                <div className="flex items-baseline gap-2">
-                  <dt className="font-bold text-sm text-ink">Start Time:</dt>
-                  <dd className="font-black text-sm text-gold tabular-nums">
-                    {event.startTimeLabel ?? "TBC"}
-                  </dd>
-                </div>
-                {event.endTimeLabel && (
-                  <div className="flex items-baseline gap-2">
-                    <dt className="font-bold text-sm text-ink">Last Orders:</dt>
-                    <dd className="font-black text-sm text-gold tabular-nums">
-                      {event.endTimeLabel}
-                    </dd>
+            {eventInfoText && (
+              <section className="mt-8">
+                <h2 className="font-black text-xl tracking-tight text-ink">
+                  Event Information
+                </h2>
+
+                <p className="mt-4 text-sm leading-relaxed font-medium text-ink-2">
+                  {eventInfoText}
+                </p>
+
+                {phone && (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <a
+                      href={`tel:${phone.replace(/\s/g, "")}`}
+                      className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-white/5 px-4 font-black text-[10px] tracking-widest text-ink uppercase transition-colors hover:bg-white/10"
+                    >
+                      <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      {phone}
+                    </a>
                   </div>
                 )}
-                <div className="flex items-baseline gap-2">
-                  <dt className="font-bold text-sm text-ink">Entry:</dt>
-                  <dd className="font-black text-sm text-gold">{entryText(event)}</dd>
-                </div>
-              </dl>
-
-              {event.tagline && (
-                <p className="mt-5 text-sm leading-relaxed font-medium text-ink-2">
-                  {event.tagline}
-                </p>
-              )}
-
-              <div className="mt-5 flex flex-wrap gap-2">
-                {address && (
-                  <a
-                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                      `${venueName} ${address}`
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-white/5 px-4 font-black text-[10px] tracking-widest text-ink uppercase transition-colors hover:bg-white/10"
-                  >
-                    <MapPin className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    Get directions
-                  </a>
-                )}
-                {phone && (
-                  <a
-                    href={`tel:${phone.replace(/\s/g, "")}`}
-                    className="inline-flex h-11 items-center gap-2 rounded-full border border-hairline bg-white/5 px-4 font-black text-[10px] tracking-widest text-ink uppercase transition-colors hover:bg-white/10"
-                  >
-                    <Phone className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    {phone}
-                  </a>
-                )}
-              </div>
-            </section>
+              </section>
+            )}
 
             {event.behavior === "music_act" && event.band && (
               <section className="mt-8">
