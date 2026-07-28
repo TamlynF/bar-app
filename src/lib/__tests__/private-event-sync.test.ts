@@ -32,4 +32,16 @@ describe("planPrivateEventSync", () => {
         .toEqual({ action: "none" });
     });
   });
+
+  describe("reopening", () => {
+    it("takes the linked event off the schedule when moved back to pending", () => {
+      expect(planPrivateEventSync({ status: "pending", selectedDate: "2026-07-01", eventId: 42 }))
+        .toEqual({ action: "deactivate", eventId: 42 });
+    });
+
+    it("does nothing when moved back to pending with no linked event", () => {
+      expect(planPrivateEventSync({ status: "pending", selectedDate: "2026-07-01", eventId: null }))
+        .toEqual({ action: "none" });
+    });
+  });
 });

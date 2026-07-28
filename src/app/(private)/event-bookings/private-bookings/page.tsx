@@ -10,7 +10,7 @@ export default async function PrivateBookingsPage() {
 
   const { data: requests, error } = await supabase
     .from("private_hire_requests")
-    .select("*, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id ), updated_by_employee:employees!private_hire_requests_updated_by_fkey ( full_name )")
+    .select("*, event_subtypes:event_subtypes_id ( id, name, default_event_title, event_types_id ), updated_by_employee:employees!private_hire_requests_updated_by_fkey ( full_name ), linked_event:events!private_hire_requests_event_id_fkey ( is_active, date, start_time, end_time )")
     .order("created_at", { ascending: false });
 
   if (error) console.error("Private hire fetch error:", error);

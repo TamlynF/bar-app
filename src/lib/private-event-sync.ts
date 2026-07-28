@@ -1,4 +1,4 @@
-export type PrivateStatus = "confirmed" | "cancelled";
+export type PrivateStatus = "pending" | "confirmed" | "cancelled";
 
 export type PrivateEventPlan =
   | { action: "none" }

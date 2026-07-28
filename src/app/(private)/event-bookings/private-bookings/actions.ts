@@ -138,7 +138,7 @@ export async function updatePrivateHireFields(
 
 export async function updatePrivateHireStatus(
   id: string,
-  status: "confirmed" | "cancelled",
+  status: "pending" | "confirmed" | "cancelled",
   adminNotes?: string
 ) {
   const supabase = await createClient();
@@ -214,7 +214,9 @@ export async function updatePrivateHireStatus(
     await supabase.from("events").update({ is_active: false }).eq("id", plan.eventId);
   }
 
-  await sendOutcomeEmail(record.full_name, record.email, status, adminNotes);
+  if (status !== "pending") {
+    await sendOutcomeEmail(record.full_name, record.email, status, adminNotes);
+  }
 
   revalidatePath("/event-bookings/private-bookings");
   revalidatePath("/event-bookings/general/[type]/[subtype]", "page");

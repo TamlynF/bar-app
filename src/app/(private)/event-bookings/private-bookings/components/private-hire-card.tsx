@@ -15,6 +15,7 @@ import {
   BellRing,
   CalendarDays,
   CheckCircle,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Clock,
@@ -50,6 +51,13 @@ const NOTE_PREVIEW_LEN = 50;
 
 const DECLINE_PREVIEW_LEN = 28;
 
+interface LinkedEvent {
+  is_active: boolean;
+  date: string | null;
+  start_time: string | null;
+  end_time: string | null;
+}
+
 export interface PrivateHireRequest {
   id: string;
   full_name: string;
@@ -74,13 +82,14 @@ export interface PrivateHireRequest {
   updated_at: string | null;
   updated_by: number | null;
   updated_by_employee?: { full_name: string | null } | null;
+  linked_event?: LinkedEvent | LinkedEvent[] | null;
 }
 
 type PrivateHireSubtypeJoin = Pick<PrivateHireSubtype, "id" | "name" | "default_event_title"> & { event_types_id: number };
 
 type PrivateStage = "pending" | "confirmed" | "cancelled";
 
-type PrivateAction = Exclude<PrivateStage, "pending">;
+type PrivateAction = PrivateStage;
 
 const STATUS_THEME: Record<
   string,
@@ -117,10 +126,11 @@ const PIPELINE: PrivateStage[] = ["pending", "confirmed"];
 const TRANSITIONS: Record<PrivateStage, PrivateStage[]> = {
   pending: ["confirmed", "cancelled"],
   confirmed: ["cancelled"],
-  cancelled: [],
+  cancelled: ["pending"],
 };
 
 const STATUS_TOAST: Record<PrivateAction, string> = {
+  pending: "Enquiry reopened",
   confirmed: "Booking confirmed",
   cancelled: "Request rejected",
 };
@@ -587,8 +597,11 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   const eventHref = request.event_id
     ? `/event-setups/events?open=${request.event_id}&back=${encodeURIComponent(`${LIST_HREF}?open=${request.id}`)}`
     : null;
+  const linkedEvent = Array.isArray(request.linked_event) ? request.linked_event[0] : request.linked_event;
+  const eventIsActive = linkedEvent?.is_active === true;
 
   const isWorkingStage = status === "pending";
+  const showEventBadge = !!eventHref || !isWorkingStage;
   const needsDate = isWorkingStage && !selectedDate;
   const needsTime = isWorkingStage && (!selectedStartTime || !selectedEndTime);
   const slotWarning =
@@ -748,16 +761,18 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
 
   async function confirmEmail(newStatus: PrivateAction): Promise<{ ok: boolean; note: string }> {
     const to = request.email;
-    const dialogs: Record<
-      PrivateAction,
-      {
-        title: string;
-        description: string;
-        confirmLabel: string;
-        label: string;
-        placeholder: string;
-        destructive?: boolean;
-      }
+    const dialogs: Partial<
+      Record<
+        PrivateAction,
+        {
+          title: string;
+          description: string;
+          confirmLabel: string;
+          label: string;
+          placeholder: string;
+          destructive?: boolean;
+        }
+      >
     > = {
       confirmed: {
         title: "Confirm & email enquirer?",
@@ -777,6 +792,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
     };
 
     const d = dialogs[newStatus];
+    if (!d) return { ok: true, note: adminNotes };
+
     const initial = newStatus === "cancelled" ? adminNotes : "";
     noteDraft.current = initial;
     const ok = await confirm({
@@ -791,7 +808,11 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
             noteDraft.current = v;
           }}
           build={(note) =>
-            buildPrivateHireOutcomeEmail({ name: request.full_name, outcome: newStatus, notes: note })
+            buildPrivateHireOutcomeEmail({
+              name: request.full_name,
+              outcome: newStatus === "confirmed" ? "confirmed" : "cancelled",
+              notes: note,
+            })
           }
           to={to}
           label={d.label}
@@ -803,7 +824,6 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
   }
 
   function handleAction(next: PrivateStage) {
-    if (next === "pending") return;
     setError(null);
     setClashes([]);
     void (async () => {
@@ -830,7 +850,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
         }
         await updatePrivateHireStatus(request.id, newStatus, note || undefined);
         setAdminNotes(note);
-        toast.success(`${STATUS_TOAST[newStatus]} — enquirer emailed`);
+        const label = STATUS_TOAST[newStatus];
+        toast.success(newStatus === "pending" ? label : `${label} — enquirer emailed`);
       } catch {
         setError("Failed to update. Please try again.");
       } finally {
@@ -1078,7 +1099,53 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 pt-3 pb-6 sm:px-6">
             <div className="animate-in grid-cols-[minmax(0,1fr)_380px] items-start gap-8 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid">
               <div className="min-w-0 space-y-4 sm:space-y-5">
-                <Section title="Event Details">
+                <Section
+                  title="Event Details"
+                  headerRight={
+                    showEventBadge ? (
+                      eventHref ? (
+                        <Link
+                          href={eventHref}
+                          onClick={(e) => e.stopPropagation()}
+                          title={
+                            eventIsActive
+                              ? `View linked event #${request.event_id} — on the schedule`
+                              : `View linked event #${request.event_id} — off the schedule`
+                          }
+                          className={cn(
+                            "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] tracking-wider uppercase transition-colors",
+                            eventIsActive
+                              ? "border-green-200 bg-green-50 hover:bg-green-100"
+                              : "border-red-200 bg-red-50 hover:bg-red-100"
+                          )}
+                        >
+                          <span>
+                            Linked Event:{" "}
+                            <span className="underline underline-offset-2">#{request.event_id}</span>
+                          </span>
+                          {eventIsActive ? (
+                            <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
+                          ) : (
+                            <XCircle className="h-3.5 w-3.5 shrink-0 text-red-600" />
+                          )}
+                        </Link>
+                      ) : status === "confirmed" ? (
+                        <span
+                          title="This enquiry is confirmed but has no linked event"
+                          className="inline-flex items-center gap-1.5 font-black text-[10px] tracking-wider text-red-700 uppercase"
+                        >
+                          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                          Missing Linked Event
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 font-black text-[10px] tracking-wider text-blue-700 uppercase">
+                          <CalendarDays className="h-3.5 w-3.5 shrink-0" />
+                          No Linked Event
+                        </span>
+                      )
+                    ) : undefined
+                  }
+                >
                   <SheetRow label="Name" value={request.full_name} />
 
                   <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
