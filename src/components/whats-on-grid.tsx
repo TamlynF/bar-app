@@ -54,17 +54,14 @@ function matchesQuery(e: SerializedEvent, q: string): boolean {
 
 export function WhatsOnGrid({
   upcoming,
-  past,
   tabs,
 }: {
   upcoming: SerializedEvent[];
-  past: SerializedEvent[];
   tabs: FilterTab[];
 }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<string>(ALL);
   const [showSoldOut, setShowSoldOut] = useState(false);
-  const [showPast, setShowPast] = useState(false);
   const [visible, setVisible] = useState(PAGE_SIZE);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [stuck, setStuck] = useState(false);
@@ -103,11 +100,6 @@ export function WhatsOnGrid({
     [upcoming, active, q, showSoldOut]
   );
 
-  const filteredPast = useMemo(
-    () => past.filter((e) => (active === ALL || e.subType === active) && matchesQuery(e, q)),
-    [past, active, q]
-  );
-
   const allTabs: FilterTab[] = useMemo(() => {
     const pool = upcoming.filter(
       (e) => matchesQuery(e, q) && (showSoldOut || !e.isFullyBooked)
@@ -124,7 +116,6 @@ export function WhatsOnGrid({
 
   const shown = filteredUpcoming.slice(0, visible);
   const remaining = filteredUpcoming.length - shown.length;
-  const pastOpen = showPast || q.length > 0;
   const filtersActive = active !== ALL || showSoldOut;
 
   function toggleSoldOut() {
@@ -252,35 +243,6 @@ export function WhatsOnGrid({
         </div>
       )}
 
-      {past.length > 0 && (
-        <div className="mt-12">
-          <button
-            type="button"
-            onClick={() => setShowPast((v) => !v)}
-            aria-expanded={pastOpen}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-hairline bg-white/4 py-3.5 transition-all hover:border-white/20 hover:bg-white/7"
-          >
-            <span className="font-black text-[11px] tracking-[0.2em] text-ink-2 uppercase">
-              {pastOpen ? "Hide past shows" : `Past shows (${filteredPast.length})`}
-            </span>
-            <ChevronDown
-              className={`h-4 w-4 text-ink-2 transition-transform ${pastOpen ? "rotate-180" : ""}`}
-              aria-hidden="true"
-            />
-          </button>
-
-          {pastOpen &&
-            (filteredPast.length > 0 ? (
-              <ul className="mt-5 grid grid-cols-1 gap-5 opacity-60 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {filteredPast.map((ev) => (
-                  <EventGridCard key={ev.id} event={ev} isPast />
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-4 text-center text-xs text-ink-2/70">No past shows match.</p>
-            ))}
-        </div>
-      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { format, startOfMonth, endOfMonth, addMonths } from "date-fns";
+import { format, endOfMonth, addMonths } from "date-fns";
 import { Calendar } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
@@ -26,8 +26,6 @@ export default async function WhatsOnPage() {
   const today = new Date();
   const todayStr = today.toISOString().split("T")[0];
 
-  const monthStart = startOfMonth(today);
-  const monthStartStr = format(monthStart, "yyyy-MM-dd");
   const nextMonthEnd = endOfMonth(addMonths(today, 1));
   const nextMonthEndStr = format(nextMonthEnd, "yyyy-MM-dd");
 
@@ -35,16 +33,14 @@ export default async function WhatsOnPage() {
     .from("events")
     .select(PUBLIC_EVENT_SELECT)
     .eq(BOOKED_BAND_FILTER, "booked")
-    .gte("date", monthStartStr)
+    .gte("date", todayStr)
     .lte("date", nextMonthEndStr)
     .order("date", { ascending: true })
     .order("start_time", { ascending: true })
     .limit(100);
 
   const events = ((rawEvents ?? []) as EventRow[]).filter(
-    (e) =>
-      getEventType(e)?.behavior !== "private" &&
-      (e.date < todayStr || e.is_active)
+    (e) => getEventType(e)?.behavior !== "private" && e.is_active
   );
 
   const musicActIds = events
@@ -85,12 +81,7 @@ export default async function WhatsOnPage() {
   const toSerialized = (e: EventRow) =>
     serializeEvent(e, bandByEvent.get(e.id) ?? null);
 
-  const serialized = events.map(toSerialized);
-
-  const upcoming = serialized.filter((e) => e.date >= todayStr);
-  const past = serialized
-    .filter((e) => e.date < todayStr)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  const upcoming = events.map(toSerialized);
 
   const tabSeen = new Map<string, string>();
   for (const e of upcoming) {
@@ -115,9 +106,7 @@ export default async function WhatsOnPage() {
       <div className="relative z-10 mx-auto w-full max-w-400 px-4 py-6 sm:px-6 sm:py-10 lg:px-10">
         <SectionHeading eyebrow="The schedule" title="What's On" />
 
-        {serialized.length > 0 && (
-          <WhatsOnGrid upcoming={upcoming} past={past} tabs={tabs} />
-        )}
+        {upcoming.length > 0 && <WhatsOnGrid upcoming={upcoming} tabs={tabs} />}
 
         {events.length === 0 && (
           <div className="rounded-2xl border border-hairline bg-white/3 py-16 text-center">
