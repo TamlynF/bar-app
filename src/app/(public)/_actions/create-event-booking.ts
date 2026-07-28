@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { SquareError } from "square";
 import { randomUUID } from "crypto";
+import { format } from "date-fns";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import {
   allocateOnCreate,
@@ -200,9 +201,13 @@ export async function createEventBooking(formData: FormData) {
       }
     }
 
+    const groupNameRow = groupNameField.visible && groupName.trim()
+      ? { label: groupNameField.label, value: groupName.trim() }
+      : null;
+
     if (isFree) {
       await sendEventBookingEmail(
-        newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, 0, 0
+        newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, 0, 0, groupNameRow
       );
       await updateFullyBookedStatus(supabase, eventId);
       revalidatePath("/dashboard");
@@ -266,7 +271,7 @@ export async function createEventBooking(formData: FormData) {
       .eq("id", newBooking.id);
 
     await sendEventBookingEmail(
-      newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, totalPence / 100, 0
+      newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, totalPence / 100, 0, groupNameRow
     );
 
     await updateFullyBookedStatus(supabase, eventId);
@@ -290,7 +295,8 @@ async function sendEventBookingEmail(
   groupSize: number,
   status: "confirmed" | "waitlisted",
   totalAmount: number | string,
-  paidAmount: number | string
+  paidAmount: number | string,
+  groupNameRow: { label: string; value: string } | null
 ) {
   const manageUrl = `${appUrl}/manage-booking/${bookingId}`;
 
@@ -301,6 +307,29 @@ async function sendEventBookingEmail(
   const content = status === "confirmed"
     ? `Your spot for <strong>${eventTitle}</strong> is officially secured for ${groupSize} ${groupSize === 1 ? "person" : "people"}.`
     : `We're currently fully booked for this date, so you've been added to our waitlist. We'll notify you immediately if a spot opens up!`;
+
+  const detailRows = [
+    { label: "📅 Date", value: format(new Date(`${bookingDate}T00:00:00`), "EEE, d MMM yyyy") },
+    ...(groupNameRow ? [{ label: `🏷️ ${groupNameRow.label}`, value: groupNameRow.value }] : []),
+    { label: "👥 Tickets", value: `${groupSize} ${groupSize === 1 ? "Person" : "People"}` },
+    ...(Number(totalAmount) > 0
+      ? [
+          { label: "💷 Total", value: `£${Number(totalAmount).toFixed(2)}` },
+          { label: "💳 Paid", value: `£${Number(paidAmount).toFixed(2)}` },
+        ]
+      : []),
+  ];
+
+  const detailRowsHtml = detailRows
+    .map((row, index) => {
+      const spacing = index === detailRows.length - 1 ? "" : "padding-bottom: 16px; ";
+      return `
+              <tr>
+                <td style="${spacing}color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">${row.label}</td>
+                <td style="${spacing}text-align: right; font-weight: 900; color: #1F1F1A;">${row.value}</td>
+              </tr>`;
+    })
+    .join("");
 
   const html = `
     <div style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F7F4EA; margin: 0; padding: 40px 20px;">
@@ -313,31 +342,7 @@ async function sendEventBookingEmail(
           <h2 style="margin-top: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;">Hey ${name}!</h2>
           <p style="font-size: 16px; line-height: 1.6; color: #5F624F; font-weight: 500;">${content}</p>
           <div style="background-color: #F7F4EA; border: 2px solid #E6DFC8; border-radius: 16px; padding: 24px; margin: 32px 0;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 15px;">
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">📅 Date</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${bookingDate}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">🏷️ Name</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${name}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">👥 Tickets</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">${groupSize} ${groupSize === 1 ? "Person" : "People"}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">ℹ️ Status</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A; text-transform: capitalize;">${status}</td>
-              </tr>
-              <tr>
-                <td style="padding-bottom: 16px; color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">💷 Total</td>
-                <td style="padding-bottom: 16px; text-align: right; font-weight: 900; color: #1F1F1A;">£${Number(totalAmount).toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td style="color: #5F624F; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 900;">💳 Paid</td>
-                <td style="text-align: right; font-weight: 900; color: #1F1F1A;">£${Number(paidAmount).toFixed(2)}</td>
-              </tr>
+            <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 15px;">${detailRowsHtml}
             </table>
           </div>
           <div style="text-align: center; margin: 40px 0 20px 0;">
