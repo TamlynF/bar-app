@@ -65,8 +65,7 @@ export function BookingButton({ event }: { event: SerializedEvent }) {
         "pointer-events-none cursor-default gap-2 border border-dashed border-gold/30 bg-gold/5 text-[11px] tracking-widest text-gold/80"
       )}
     >
-      <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-gold" aria-hidden="true" />
-      Free entry · Just walk in
+      Just walk in
     </span>
   );
 }

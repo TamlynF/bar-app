@@ -1,4 +1,3 @@
-import { Fragment } from "react";
 import Image from "next/image";
 import { format } from "date-fns";
 import { BookingButton } from "@/components/editorial/booking-button";
@@ -68,9 +67,8 @@ function LiveEqualiser() {
 }
 
 function cardWidthClass(count: number) {
-  if (count === 1) return "w-full min-w-64 max-w-160 sm:w-fit";
-  if (count === 2) return "w-[86%] min-w-64 max-w-160 shrink-0 sm:w-[calc(50%-0.5rem)]";
-  return "w-[86%] min-w-64 max-w-160 shrink-0 sm:w-[calc(33.333%-0.667rem)]";
+  if (count === 1) return "w-full min-w-64 max-w-160 sm:w-104";
+  return "w-[86%] min-w-64 max-w-160 shrink-0 sm:w-104";
 }
 
 function TonightRail({
@@ -87,7 +85,7 @@ function TonightRail({
 
   return (
     <div className="animate-reveal relative z-10 mt-7 w-full text-left [animation-delay:240ms]">
-      <div className={cn("mb-3 flex items-center gap-2", single && "justify-center")}>
+      <div className={cn("mb-3 flex items-center gap-2 sm:justify-center", single && "justify-center")}>
         <span className="inline-flex items-center gap-2.5 rounded-full bg-neon px-4 py-2 text-[#1a0d05] shadow-[0_0_44px_-4px_rgba(255,107,53,0.95)] ring-4 ring-neon/25">
           <span className="ad-blink h-2.5 w-2.5 rounded-full bg-[#1a0d05]" aria-hidden="true" />
           <span className="font-black text-xs tracking-[0.25em] uppercase">
@@ -96,7 +94,7 @@ function TonightRail({
           {isTonight && <LiveEqualiser />}
         </span>
         {events.length > 1 && (
-          <span className="font-black text-[10px] tracking-[0.2em] text-stone-500 uppercase tabular-nums">
+          <span className="inline-flex items-center rounded-full border border-white/15 bg-black/45 px-3 py-1.5 font-black text-[10px] tracking-[0.2em] text-stone-100 uppercase tabular-nums backdrop-blur-sm">
             {events.length} events
           </span>
         )}
@@ -104,7 +102,7 @@ function TonightRail({
 
       <ul
         className={cn(
-          "flex items-center gap-4",
+          "flex items-stretch gap-4 sm:flex-wrap sm:justify-center sm:overflow-x-visible",
           single
             ? "justify-center"
             : "rail-scrollbar snap-x snap-mandatory overflow-x-auto pb-3"
@@ -135,16 +133,13 @@ function TonightCard({
   const priceLabel =
     event.price != null && event.price > 0
       ? `£${event.price}`
-      : event.isBookable && event.price === 0
-        ? "Free entry"
+      : event.price === 0 || !event.isBookable
+        ? "Free"
         : null;
 
-  const meta = [
-    isTonight ? null : format(dateObj, "EEE d MMM"),
-    timeLabel,
-    event.subType ? titleCase(event.subType) : null,
-    priceLabel,
-  ].filter((item): item is string => Boolean(item));
+  const dateLabel = isTonight ? null : format(dateObj, "EEE d MMM");
+  const subTypeLabel = event.subType ? titleCase(event.subType) : null;
+  const hasMeta = Boolean(timeLabel || subTypeLabel || priceLabel);
 
   return (
     <article
@@ -179,19 +174,18 @@ function TonightCard({
           {event.title}
         </p>
 
-        {meta.length > 0 && (
-          <p className="flex w-full flex-wrap items-center justify-between gap-x-2 gap-y-1 text-xs font-medium text-stone-400 tabular-nums">
-            {meta.map((item, index) => (
-              <Fragment key={item}>
-                {index > 0 && (
-                  <span className="text-stone-600" aria-hidden="true">
-                    ·
-                  </span>
-                )}
-                <span>{item}</span>
-              </Fragment>
-            ))}
+        {dateLabel && (
+          <p className="text-center font-black text-[10px] tracking-[0.2em] text-stone-400 uppercase sm:text-left">
+            {dateLabel}
           </p>
+        )}
+
+        {hasMeta && (
+          <div className="grid w-full grid-cols-4 items-center gap-x-2 text-xs font-medium text-stone-400 tabular-nums">
+            <span className="col-span-2 truncate text-left">{timeLabel}</span>
+            <span className="truncate text-center">{subTypeLabel}</span>
+            <span className="truncate text-right">{priceLabel}</span>
+          </div>
         )}
 
         <div className="mt-1 w-full sm:mx-auto sm:max-w-44">
