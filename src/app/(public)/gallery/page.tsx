@@ -2,7 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { Camera } from "lucide-react";
 import { PublicNav } from "@/components/public-nav";
 import { SectionHeading } from "@/components/editorial/section-heading";
-import GalleryGrid from "./gallery-grid";
+import GalleryGrid, { type GalleryItem } from "./gallery-grid";
+import { format } from "date-fns";
 
 export const metadata = {
   title: "Gallery | Don Fenticas",
@@ -18,14 +19,19 @@ export default async function GalleryPage() {
     .eq("is_active", true)
     .order("display_order", { ascending: true });
 
-  const galleryItems = (images ?? []) as {
-    id: number;
-    title: string;
-    description: string | null;
-    image_url: string;
-    media_type: string;
-    created_at: string;
-  }[];
+  const galleryItems: GalleryItem[] = (
+    (images ?? []) as {
+      id: number;
+      title: string;
+      description: string | null;
+      image_url: string;
+      media_type: string;
+      created_at: string;
+    }[]
+  ).map(({ created_at, ...item }) => ({
+    ...item,
+    created_label: format(new Date(created_at), "d MMM yyyy"),
+  }));
 
   return (
     <main className="flex min-h-dvh w-full flex-col bg-[#1a2008] text-stone-300 antialiased selection:bg-[#FDCC4B] selection:text-[#1a2008]">
