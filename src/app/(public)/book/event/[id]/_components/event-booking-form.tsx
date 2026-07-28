@@ -104,12 +104,10 @@ export default function EventBookingForm({ event, config }: Props) {
     return () => clearTimeout(timer);
   }, [formData.groupName, groupNameVisible, groupNameLabel, event.id]);
 
-  const seatingRequired = event.seating_required;
-
   useEffect(() => {
     const validateSeating = async () => {
       const size = parseInt(formData.groupSize, 10);
-      if (!seatingRequired || !size || size < 1) {
+      if (!size || size < 1) {
         setSeatingError("");
         setIsCheckingSeating(false);
         return;
@@ -128,7 +126,7 @@ export default function EventBookingForm({ event, config }: Props) {
 
     const timer = setTimeout(validateSeating, 400);
     return () => clearTimeout(timer);
-  }, [formData.groupSize, seatingRequired, event.id]);
+  }, [formData.groupSize, event.id]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

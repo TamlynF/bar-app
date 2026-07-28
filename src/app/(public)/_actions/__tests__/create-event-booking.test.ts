@@ -18,7 +18,10 @@ vi.mock("@/lib/square", () => ({
 }));
 vi.mock("resend", () => ({ Resend: vi.fn(() => ({ emails: { send: h.send } })) }));
 vi.mock("next/cache", () => ({ revalidatePath: h.revalidatePath }));
-vi.mock("@/lib/update-fully-booked", () => ({ updateFullyBookedStatus: h.updateFullyBookedStatus }));
+vi.mock("@/lib/update-fully-booked", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/update-fully-booked")>();
+  return { ...actual, updateFullyBookedStatus: h.updateFullyBookedStatus };
+});
 
 type Result = { data: unknown; error?: unknown };
 
@@ -218,6 +221,36 @@ describe("createEventBooking — guards", () => {
     expect(calls.inserts.find((i) => i.table === "bookings")?.payload).toMatchObject([
       { group_name: "The Quizzards" },
     ]);
+  });
+
+  it("refuses a non-seated booking that would push the event past venue capacity", async () => {
+    const { client, calls } = makeSupabase({
+      events: [{ data: { ...bookableEvent, payment_amount: 15 } }],
+      company_information: [{ data: { max_capacity: 50 } }],
+      bookings: [{ data: [{ group_size: 48 }] }],
+    });
+    h.client = client;
+
+    const result = await createEventBooking(formData());
+
+    expect(result.error).toMatch(/enough space/i);
+    expect(calls.inserts).toHaveLength(0);
+    expect(h.squareCreate).not.toHaveBeenCalled();
+  });
+
+  it("allows a non-seated booking that still fits the venue", async () => {
+    const { client, calls } = makeSupabase({
+      events: [{ data: { ...bookableEvent, payment_amount: 0 } }],
+      company_information: [{ data: { max_capacity: 50 } }],
+      bookings: [{ data: [{ group_size: 40 }] }, { data: { id: 45 } }],
+      contacts: [{ data: { id: 100 } }],
+    });
+    h.client = client;
+
+    const result = await createEventBooking(formData());
+
+    expect(result).toEqual({ success: true });
+    expect(calls.inserts.find((i) => i.table === "bookings")).toBeTruthy();
   });
 
   it("refuses a fully booked event", async () => {

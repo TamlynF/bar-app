@@ -16,14 +16,17 @@ import {
   Save,
   AlertCircle,
   MessageSquareQuote,
+  Tag,
   X,
 } from "lucide-react";
 import { cancelBooking } from "@/app/(public)/_actions/cancel-booking";
 import { checkSeatingAvailability } from "@/app/(public)/_actions/check-seating";
+import { checkEventGroupName } from "@/app/(public)/_actions/create-event-booking";
 import { updateBooking } from "@/app/(public)/_actions/update-booking";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { cn } from "@/lib/utils";
-import type { GroupSizeFieldConfig } from "@/lib/booking-config";
+import { normalizeGroupName } from "@/lib/group-name";
+import type { FieldConfig, GroupSizeFieldConfig } from "@/lib/booking-config";
 
 export interface ManageEventBooking {
   id: string | number;
@@ -59,10 +62,12 @@ export default function ManageBookingView({
   booking,
   isCancelled: initialCancelled,
   groupSizeField,
+  groupNameField,
 }: {
   booking: ManageEventBooking;
   isCancelled: boolean;
   groupSizeField: GroupSizeFieldConfig;
+  groupNameField: FieldConfig;
 }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isCancelling, setIsCancelling] = useState(false);
@@ -73,9 +78,12 @@ export default function ManageBookingView({
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const [groupSize, setGroupSize] = useState(String(booking.group_size ?? ""));
+  const [groupName, setGroupName] = useState(booking.group_name ?? "");
   const [specialRequests, setSpecialRequests] = useState(booking.special_requests ?? "");
   const [isCheckingSeating, setIsCheckingSeating] = useState(false);
   const [seatingError, setSeatingError] = useState("");
+  const [isCheckingName, setIsCheckingName] = useState(false);
+  const [nameError, setNameError] = useState("");
 
   const eventDateStr = booking.events?.event_date;
   const eventDate = eventDateStr ? new Date(eventDateStr + "T00:00:00") : null;
@@ -83,7 +91,6 @@ export default function ManageBookingView({
   const isPending = !isCancelled && status === "pending";
   const isUnpaid = booking.payment_status === "unpaid";
 
-  const seatingRequired = booking.events?.seating_required === true;
   const eventId = booking.event_id;
   const bookingId = booking.id;
 
@@ -97,7 +104,7 @@ export default function ManageBookingView({
   useEffect(() => {
     const validateSeating = async () => {
       const size = parseInt(groupSize, 10);
-      if (!isEditing || !seatingRequired || !eventId || !size || size < 1) {
+      if (!isEditing || !eventId || !size || size < 1) {
         setSeatingError("");
         setIsCheckingSeating(false);
         return;
@@ -116,7 +123,35 @@ export default function ManageBookingView({
 
     const timer = setTimeout(validateSeating, 400);
     return () => clearTimeout(timer);
-  }, [groupSize, isEditing, seatingRequired, eventId, bookingId]);
+  }, [groupSize, isEditing, eventId, bookingId]);
+
+  const groupNameVisible = groupNameField.visible;
+  const groupNameLabel = groupNameField.label;
+  const savedGroupName = booking.group_name ?? "";
+
+  useEffect(() => {
+    const validateGroupName = async () => {
+      const unchanged = normalizeGroupName(groupName) === normalizeGroupName(savedGroupName);
+      if (!isEditing || !groupNameVisible || !eventId || unchanged || normalizeGroupName(groupName).length < 2) {
+        setNameError("");
+        setIsCheckingName(false);
+        return;
+      }
+
+      setIsCheckingName(true);
+      try {
+        const { isAvailable } = await checkEventGroupName(groupName, eventId, bookingId);
+        setNameError(isAvailable ? "" : `This ${groupNameLabel.toLowerCase()} is already taken for this event.`);
+      } catch (err) {
+        console.error("Validation error:", err);
+      } finally {
+        setIsCheckingName(false);
+      }
+    };
+
+    const timer = setTimeout(validateGroupName, 500);
+    return () => clearTimeout(timer);
+  }, [groupName, savedGroupName, isEditing, groupNameVisible, groupNameLabel, eventId, bookingId]);
 
   const handleCancel = async () => {
     const ok = await confirm({
@@ -140,7 +175,7 @@ export default function ManageBookingView({
   };
 
   const handleSave = async () => {
-    if (seatingError) return;
+    if (seatingError || nameError) return;
 
     setIsSaving(true);
     setError("");
@@ -149,6 +184,7 @@ export default function ManageBookingView({
     const response = await updateBooking(booking.id, {
       group_size: parseInt(groupSize, 10),
       special_requests: specialRequests,
+      ...(groupNameVisible && groupName.trim() ? { group_name: groupName.trim() } : {}),
     });
 
     if (response.success) {
@@ -163,8 +199,10 @@ export default function ManageBookingView({
   const discardChanges = () => {
     setIsEditing(false);
     setGroupSize(String(booking.group_size ?? ""));
+    setGroupName(savedGroupName);
     setSpecialRequests(booking.special_requests ?? "");
     setSeatingError("");
+    setNameError("");
     setError("");
   };
 
@@ -173,9 +211,12 @@ export default function ManageBookingView({
   const saveDisabled =
     isSaving ||
     isCheckingSeating ||
+    isCheckingName ||
     !!seatingError ||
+    !!nameError ||
     !!error ||
-    !parseInt(groupSize, 10);
+    !parseInt(groupSize, 10) ||
+    (groupNameVisible && groupNameField.required && !groupName.trim());
 
   return (
     <div className="w-full">
@@ -236,6 +277,38 @@ export default function ManageBookingView({
 
       {isEditing ? (
         <div className="animate-in space-y-6 duration-300 fade-in slide-in-from-bottom-4">
+          {groupNameVisible && (
+            <div className="space-y-1.5">
+              <label htmlFor="groupName" className={labelClasses}>
+                {groupNameLabel} {groupNameField.required && <span className="text-red-500">*</span>}
+              </label>
+              <div className="relative">
+                <div className={iconContainerClasses}>
+                  <Tag className={iconClasses} />
+                </div>
+                <input
+                  id="groupName"
+                  type="text"
+                  value={groupName}
+                  onChange={(e) => {
+                    setError("");
+                    setGroupName(e.target.value);
+                  }}
+                  className={cn(inputBaseClasses, nameError && "border-red-500/50")}
+                  placeholder="e.g. The Thirsty Trivia Titans"
+                />
+                {isCheckingName && (
+                  <div className="absolute top-1/2 right-4 -translate-y-1/2">
+                    <Loader2 className="h-4 w-4 animate-spin text-[#fdcc4b]" />
+                  </div>
+                )}
+              </div>
+              {nameError && (
+                <p className="mt-1.5 ml-1 font-black text-[9px] text-red-500 uppercase">{nameError}</p>
+              )}
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <label htmlFor="groupSize" className={labelClasses}>
               {groupSizeField.label} <span className="text-red-500">*</span>
@@ -329,6 +402,9 @@ export default function ManageBookingView({
               label="Date"
               value={eventDate ? format(eventDate, "do MMMM yyyy") : "TBD"}
             />
+            {groupNameVisible && savedGroupName && (
+              <DetailRow icon={<Tag />} label={groupNameLabel} value={savedGroupName} />
+            )}
             <DetailRow icon={<Users />} label="Party Size" value={`${booking.group_size ?? 0} People`} />
             <DetailRow icon={<User />} label="Lead Booker" value={booking.contacts?.full_name || "N/A"} />
             {booking.total_amount != null && booking.total_amount > 0 && (

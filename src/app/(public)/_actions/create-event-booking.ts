@@ -5,7 +5,7 @@ import { squareClient } from "@/lib/square";
 import { SquareError } from "square";
 import { randomUUID } from "crypto";
 import { format } from "date-fns";
-import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { hasVenueSpaceFor, updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import {
   allocateOnCreate,
   commitMapping,
@@ -118,6 +118,10 @@ export async function createEventBooking(formData: FormData) {
           error: `This ${groupNameField.label.toLowerCase()} is already taken for this event. Please choose another.`,
         };
       }
+    }
+
+    if (!seatingApplies(event) && !(await hasVenueSpaceFor(supabase, eventId, groupSize))) {
+      return { error: "There isn't enough space left for this booking. Please try a smaller group or another date." };
     }
 
     const paymentAmountPence = Math.round((event.payment_amount || 0) * 100);

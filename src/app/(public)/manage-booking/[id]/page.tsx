@@ -68,7 +68,7 @@ export default async function ManageBookingPage({
     contacts: Array.isArray(contactsRel) ? contactsRel[0] ?? null : contactsRel,
   };
 
-  const groupSizeField = normalizeBookingConfig(ev?.booking_config).fields.group_size;
+  const bookingFields = normalizeBookingConfig(ev?.booking_config).fields;
 
   const isCancelled = (booking.status || "").toLowerCase() === "cancelled";
 
@@ -96,7 +96,8 @@ export default async function ManageBookingPage({
             <ManageBookingView
               booking={normalised}
               isCancelled={isCancelled}
-              groupSizeField={groupSizeField}
+              groupSizeField={bookingFields.group_size}
+              groupNameField={bookingFields.group_name}
             />
           </div>
         </div>

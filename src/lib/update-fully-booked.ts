@@ -14,7 +14,7 @@ async function hasNoFreeTables(supabase: SupabaseClient, eventId: number): Promi
   return (totalTables ?? 0) > 0 && freeTables.length === 0;
 }
 
-async function getVenueMaxCapacity(supabase: SupabaseClient): Promise<number | null> {
+export async function getVenueMaxCapacity(supabase: SupabaseClient): Promise<number | null> {
   const { data } = await supabase
     .from("company_information")
     .select("max_capacity")
@@ -24,6 +24,30 @@ async function getVenueMaxCapacity(supabase: SupabaseClient): Promise<number | n
 
   const maxCapacity = data?.max_capacity as number | null | undefined;
   return typeof maxCapacity === "number" && maxCapacity > 0 ? maxCapacity : null;
+}
+
+export async function hasVenueSpaceFor(
+  supabase: SupabaseClient,
+  eventId: number | string,
+  groupSize: number,
+  excludeBookingId?: string | number
+): Promise<boolean> {
+  const maxCapacity = await getVenueMaxCapacity(supabase);
+  if (maxCapacity === null) return true;
+
+  let query = supabase
+    .from("bookings")
+    .select("id, group_size")
+    .eq("event_id", eventId)
+    .eq("status", "confirmed");
+
+  if (excludeBookingId) {
+    query = query.neq("id", excludeBookingId);
+  }
+
+  const { data } = await query;
+
+  return sumConfirmedGroupSizes((data ?? []) as { group_size: number | null }[]) + groupSize <= maxCapacity;
 }
 
 async function hasReachedVenueCapacity(

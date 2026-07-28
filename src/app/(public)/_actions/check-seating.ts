@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getFreeTablesForEvent, seatingApplies, type SeatingEvent } from "@/lib/table-allocation";
+import { hasVenueSpaceFor } from "@/lib/update-fully-booked";
 
 export async function checkSeatingAvailability(
   eventId: number | string,
@@ -20,8 +21,15 @@ export async function checkSeatingAvailability(
     .eq("id", eventId)
     .maybeSingle();
 
-  if (!event || !seatingApplies(event as SeatingEvent)) {
+  if (!event) {
     return { seatingRequired: false, hasSpace: true };
+  }
+
+  if (!seatingApplies(event as SeatingEvent)) {
+    return {
+      seatingRequired: false,
+      hasSpace: await hasVenueSpaceFor(supabase, eventId, groupSize, excludeBookingId),
+    };
   }
 
   const freeTables = await getFreeTablesForEvent(supabase, Number(eventId), {

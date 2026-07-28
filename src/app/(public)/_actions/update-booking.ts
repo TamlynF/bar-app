@@ -2,7 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
-import { checkTeamName } from "./create-booking";
+import { checkEventGroupName } from "./create-event-booking";
+import { checkSeatingAvailability } from "./check-seating";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import {
   seatingApplies,
@@ -43,13 +44,12 @@ export async function updateBooking(
     type EventRel = { date: string; seating_required: boolean; is_bookable: boolean };
     const eventData = currentBooking.events as EventRel | EventRel[] | null;
     const ev = Array.isArray(eventData) ? eventData[0] : eventData;
-    const eventDate = ev?.date;
     const eventId = currentBooking.event_id as number;
 
-    if (updates.group_name && eventDate) {
-      const { isAvailable } = await checkTeamName(updates.group_name, eventDate, bookingId);
+    if (updates.group_name) {
+      const { isAvailable } = await checkEventGroupName(updates.group_name, eventId, bookingId);
       if (!isAvailable) {
-        return { success: false, error: "This team name is already taken for this event." };
+        return { success: false, error: "This name is already taken for this event." };
       }
     }
 
@@ -65,6 +65,17 @@ export async function updateBooking(
           is_bookable: ev.is_bookable,
         })
       : false;
+
+    if (!seated && sizeChanged) {
+      const { hasSpace } = await checkSeatingAvailability(eventId, newSize, bookingId);
+      if (!hasSpace) {
+        return {
+          success: false,
+          blocked: true,
+          error: "There's no available space for that group size. Please contact the bar.",
+        };
+      }
+    }
 
     if (seated) {
       const { data: mapping } = await supabase
