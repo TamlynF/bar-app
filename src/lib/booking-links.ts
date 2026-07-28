@@ -41,15 +41,8 @@ export function adminBookingsHref(opts: AdminBookingsHrefOptions): string {
   return "/event-bookings";
 }
 
-export function manageBookingPath(
-  behavior: EventBehavior | null | undefined,
-  bookingId: number | string
-): string {
-  switch (behavior) {
-    case "quiz": return `/book/quiz/manage-booking/${bookingId}`;
-    case "bingo": return `/book/bingo/manage-booking/${bookingId}`;
-    default: return `/manage-booking/${bookingId}`;
-  }
+export function manageBookingPath(bookingId: number | string): string {
+  return `/manage-booking/${bookingId}`;
 }
 
 export function checkoutReturnPath(opts: {

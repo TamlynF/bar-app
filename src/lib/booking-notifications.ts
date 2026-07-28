@@ -134,7 +134,7 @@ async function send(to: string, email: BookingEmail): Promise<void> {
 function urls(loaded: LoadedBooking) {
   console.log("LoadedBooking: ", JSON.stringify(loaded, null, 2));
   return {
-    manageUrl: `${appUrl}${manageBookingPath(loaded.behavior, loaded.snapshot.bookingId)}`,
+    manageUrl: `${appUrl}${manageBookingPath(loaded.snapshot.bookingId)}`,
     adminUrl: `${appUrl}${adminBookingsHref({
       behavior: loaded.behavior ?? "standard",
       bookingGrouping: loaded.bookingGrouping,
