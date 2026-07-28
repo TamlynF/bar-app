@@ -63,7 +63,7 @@ const REQUEST_PATHS = [
     "/event-bookings/private-bookings",
 ]
 
-const WIDE_PATHS = ["/event-bookings/music-bookings"]
+const WIDE_PATHS = ["/event-bookings/music-bookings", "/event-bookings/private-bookings"]
 
 function isQuizPath(path: string): boolean {
     return QUIZ_PATHS.some((q) => path === q || path.startsWith(`${q}/`))

@@ -18,7 +18,7 @@ export default async function PrivateBookingsPage() {
   const items = (requests ?? []) as PrivateHireRequest[];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-4 sm:py-0 md:px-8">
+    <div className="mx-auto max-w-4xl space-y-6 px-3 py-4 sm:py-0 md:px-4 xl:max-w-none">
       <PrivateHireListClient initialRequests={items} />
     </div>
   );
