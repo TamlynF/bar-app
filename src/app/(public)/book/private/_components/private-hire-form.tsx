@@ -5,14 +5,29 @@ import { createPrivateHire } from "@/app/(public)/_actions/create-private-hire";
 import { privateHireSubtypeLabel, type PrivateHireSubtype } from "@/lib/private-hire-subtype";
 import {
   CheckCircle2, ArrowLeft, ChevronRight, Calendar, Clock, Users,
-  User, Mail, Phone, MessageSquareQuote, Tag,
+  User, Mail, Phone, MessageSquareQuote, Tag, Info,
 } from "lucide-react";
 
-const inputClass =
-  "w-full bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4 text-white placeholder-stone-700 focus:outline-none focus:border-[#fdcc4b] focus:ring-1 focus:ring-[#fdcc4b] transition-all duration-300 text-sm font-bold";
+const inputBaseClass =
+  "w-full bg-black/40 border rounded-2xl pl-11 pr-4 py-4 text-white placeholder-stone-700 focus:outline-none focus:ring-1 transition-all duration-300 text-sm font-bold";
 const labelClass = "block text-[10px] font-black text-stone-500 mb-2 uppercase tracking-[0.15em] ml-1";
 const iconContainerClass = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
 const iconClass = "w-4 h-4 text-stone-600 transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
+const helperClass =
+  "mt-2 flex items-start gap-2 rounded-xl border border-[#FDCC4B]/25 bg-[#FDCC4B]/10 px-3 py-2.5 text-[11px] font-bold leading-relaxed text-[#FDCC4B]";
+
+function inputClass(hasError: boolean) {
+  return `${inputBaseClass} ${
+    hasError
+      ? "border-red-500/60 focus:border-red-500 focus:ring-red-500"
+      : "border-white/10 focus:border-[#fdcc4b] focus:ring-[#fdcc4b]"
+  }`;
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="mt-2 ml-1 text-[10px] font-bold leading-relaxed text-red-400">{message}</p>;
+}
 
 const STEPS = [
   { number: 1, title: "Your Details",  subtitle: "Who should we contact?" },
@@ -20,17 +35,62 @@ const STEPS = [
   { number: 3, title: "Final Details", subtitle: "Anything else we should know?" },
 ];
 
-export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSubtype[] }) {
+const DEFAULT_MIN_GUESTS = 30;
+const OVERNIGHT_CUTOFF_MINUTES = 8 * 60;
+const DEFAULT_DURATION_MINUTES = 4 * 60;
+
+type FieldKey =
+  | "fullName"
+  | "email"
+  | "guestCount"
+  | "preferredDate"
+  | "preferredStartTime"
+  | "preferredEndTime"
+  | "eventSubtypeId";
+
+type FieldErrors = Partial<Record<FieldKey, string>>;
+
+function toMinutes(time: string) {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}
+
+function toTimeString(totalMinutes: number) {
+  const wrapped = ((totalMinutes % 1440) + 1440) % 1440;
+  const hours = String(Math.floor(wrapped / 60)).padStart(2, "0");
+  const minutes = String(wrapped % 60).padStart(2, "0");
+  return `${hours}:${minutes}`;
+}
+
+function todayIso() {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+export default function PrivateHireForm({
+  subtypes,
+  minCapacity,
+  maxCapacity,
+}: {
+  subtypes: PrivateHireSubtype[];
+  minCapacity: number | null;
+  maxCapacity: number | null;
+}) {
+  const minGuests = minCapacity ?? DEFAULT_MIN_GUESTS;
+
   const [isPending, startTransition] = useTransition();
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [step, setStep] = useState(1);
-  const [stepError, setStepError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [today] = useState(todayIso);
 
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [guestCount, setGuestCount] = useState("");
+  const [guestCount, setGuestCount] = useState(String(minGuests));
   const [preferredDate, setPreferredDate] = useState("");
   const [preferredStartTime, setPreferredStartTime] = useState("");
   const [preferredEndTime, setPreferredEndTime] = useState("");
@@ -39,38 +99,120 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
 
   const selectedSubtype = subtypes.find((s) => String(s.id) === eventSubtypeId);
 
-  const guestCountNum = parseInt(guestCount, 10);
-  const step1Valid = fullName.trim() !== "" && email.trim() !== "" && email.includes("@");
-  const step2Valid =
-    !isNaN(guestCountNum) && guestCountNum >= 1 &&
-    preferredDate !== "" &&
-    preferredStartTime !== "" &&
-    preferredEndTime !== "" &&
-    eventSubtypeId !== "";
-  const canProceed = step === 1 ? step1Valid : step === 2 ? step2Valid : true;
+  function clearFieldError(key: FieldKey) {
+    setFieldErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+  }
+
+  function validateStep1(): FieldErrors {
+    const errors: FieldErrors = {};
+    if (!fullName.trim()) errors.fullName = "Please enter your full name.";
+    if (!email.trim()) errors.email = "Please enter your email address.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      errors.email = "Please enter a valid email address.";
+    }
+    return errors;
+  }
+
+  function validateGuestCount(): string | undefined {
+    const count = parseInt(guestCount, 10);
+    if (guestCount.trim() === "" || isNaN(count)) {
+      return "Please enter the number of guests attending.";
+    }
+    if (count < minGuests) {
+      return `Private hire requires a minimum of ${minGuests} guests.`;
+    }
+    if (maxCapacity !== null && count > maxCapacity) {
+      return `Our venue can accommodate a maximum of ${maxCapacity} guests.`;
+    }
+    return undefined;
+  }
+
+  function validateStep2(): FieldErrors {
+    const errors: FieldErrors = {};
+
+    const guestCountError = validateGuestCount();
+    if (guestCountError) errors.guestCount = guestCountError;
+
+    if (!preferredDate) errors.preferredDate = "Please select a date for your event.";
+    else if (preferredDate < today) errors.preferredDate = "Please select a date in the future.";
+
+    if (!preferredStartTime) errors.preferredStartTime = "Please select a start time.";
+    if (!preferredEndTime) errors.preferredEndTime = "Please select an end time.";
+
+    if (preferredStartTime && preferredEndTime) {
+      const start = toMinutes(preferredStartTime);
+      const end = toMinutes(preferredEndTime);
+      if (end === start) {
+        errors.preferredEndTime = "End time must be later than the start time.";
+      } else if (end < start && end >= OVERNIGHT_CUTOFF_MINUTES) {
+        errors.preferredEndTime = "End time must be later than the start time, unless the event runs into the early hours.";
+      }
+    }
+
+    if (!eventSubtypeId) errors.eventSubtypeId = "Please select a reason for hire.";
+
+    return errors;
+  }
+
+  function handleGuestCountBlur() {
+    const message = validateGuestCount();
+    setFieldErrors((prev) => {
+      if (prev.guestCount === message) return prev;
+      const next = { ...prev };
+      if (message) next.guestCount = message;
+      else delete next.guestCount;
+      return next;
+    });
+  }
+
+  function handleStartTimeChange(value: string) {
+    setPreferredStartTime(value);
+    clearFieldError("preferredStartTime");
+    if (value) {
+      setPreferredEndTime(toTimeString(toMinutes(value) + DEFAULT_DURATION_MINUTES));
+      clearFieldError("preferredEndTime");
+    }
+  }
 
   function handleNext() {
-    setStepError(null);
-    if (step === 1) {
-      if (!fullName.trim()) { setStepError("Please enter your full name."); return; }
-      if (!email.trim() || !email.includes("@")) { setStepError("Please enter a valid email address."); return; }
+    const errors = step === 1 ? validateStep1() : validateStep2();
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      return;
     }
-    if (step === 2) {
-      const count = parseInt(guestCount, 10);
-      if (isNaN(count) || count < 1) { setStepError("Please enter a valid number of guests."); return; }
-      if (!eventSubtypeId) { setStepError("Please select a reason for hire."); return; }
-    }
+    setFieldErrors({});
     setStep((s) => s + 1);
   }
 
   function handleBack() {
-    setStepError(null);
+    setFieldErrors({});
     setStep((s) => s - 1);
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const step1Errors = validateStep1();
+    if (Object.keys(step1Errors).length > 0) {
+      setFieldErrors(step1Errors);
+      setStep(1);
+      return;
+    }
+
+    const step2Errors = validateStep2();
+    if (Object.keys(step2Errors).length > 0) {
+      setFieldErrors(step2Errors);
+      setStep(2);
+      return;
+    }
+
+    setFieldErrors({});
     const count = parseInt(guestCount, 10);
     startTransition(async () => {
       try {
@@ -108,7 +250,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
   const currentStep = STEPS[step - 1];
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-0 overflow-hidden">
+    <form onSubmit={handleSubmit} noValidate className="space-y-0 overflow-hidden">
 
       <div className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -142,47 +284,54 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
         {step === 1 && (
           <>
             <div className="space-y-1">
-              <label className={labelClass}>Full Name <span className="text-red-500">*</span></label>
+              <label htmlFor="ph-full-name" className={labelClass}>Full Name <span className="text-red-500">*</span></label>
               <div className="group relative">
                 <div className={iconContainerClass}>
                   <User className={iconClass} />
                 </div>
                 <input
+                  id="ph-full-name"
                   value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
+                  onChange={(e) => { setFullName(e.target.value); clearFieldError("fullName"); }}
                   placeholder="Your full name"
-                  className={inputClass}
+                  aria-invalid={!!fieldErrors.fullName}
+                  className={inputClass(!!fieldErrors.fullName)}
                 />
               </div>
+              <FieldError message={fieldErrors.fullName} />
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
               <div className="space-y-1">
-                <label className={labelClass}>Email <span className="text-red-500">*</span></label>
+                <label htmlFor="ph-email" className={labelClass}>Email <span className="text-red-500">*</span></label>
                 <div className="group relative">
                   <div className={iconContainerClass}>
                     <Mail className={iconClass} />
                   </div>
                   <input
+                    id="ph-email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => { setEmail(e.target.value); clearFieldError("email"); }}
                     placeholder="your@email.com"
-                    className={inputClass}
+                    aria-invalid={!!fieldErrors.email}
+                    className={inputClass(!!fieldErrors.email)}
                   />
                 </div>
+                <FieldError message={fieldErrors.email} />
               </div>
               <div className="space-y-1">
-                <label className={labelClass}>Phone</label>
+                <label htmlFor="ph-phone" className={labelClass}>Phone</label>
                 <div className="group relative">
                   <div className={iconContainerClass}>
                     <Phone className={iconClass} />
                   </div>
                   <input
+                    id="ph-phone"
                     type="tel"
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
                     placeholder="+44 7700 000000"
-                    className={inputClass}
+                    className={inputClass(false)}
                   />
                 </div>
               </div>
@@ -193,83 +342,106 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
         {step === 2 && (
           <>
             <div className="space-y-1">
-              <label className={labelClass}>Number of Guests <span className="text-red-500">*</span></label>
+              <label htmlFor="ph-guest-count" className={labelClass}>Number of Guests <span className="text-red-500">*</span></label>
               <div className="group relative">
                 <div className={iconContainerClass}>
                   <Users className={iconClass} />
                 </div>
                 <input
+                  id="ph-guest-count"
                   type="number"
-                  min="1"
-                  max="200"
+                  inputMode="numeric"
+                  min={minGuests}
+                  max={maxCapacity ?? undefined}
                   value={guestCount}
-                  onChange={(e) => setGuestCount(e.target.value)}
-                  placeholder="e.g. 50"
-                  className={inputClass}
+                  onChange={(e) => { setGuestCount(e.target.value); clearFieldError("guestCount"); }}
+                  onBlur={handleGuestCountBlur}
+                  placeholder={`e.g. ${minGuests}`}
+                  aria-invalid={!!fieldErrors.guestCount}
+                  className={inputClass(!!fieldErrors.guestCount)}
                 />
               </div>
+              <FieldError message={fieldErrors.guestCount} />
+              <p className={helperClass}>
+                <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+                <span>Please try and be as accurate as you can, so that we can plan staffing accordingly!</span>
+              </p>
             </div>
 
             <div className="space-y-1">
-              <label className={labelClass}>Date <span className="text-red-500">*</span></label>
+              <label htmlFor="ph-date" className={labelClass}>Date <span className="text-red-500">*</span></label>
               <div className="group relative">
                 <div className={iconContainerClass}>
                   <Calendar className={iconClass} />
                 </div>
                 <input
+                  id="ph-date"
                   title="Select a date"
                   type="date"
+                  min={today}
                   value={preferredDate}
-                  onChange={(e) => setPreferredDate(e.target.value)}
-                  className={`${inputClass} input-scheme-dark min-w-0`}
+                  onChange={(e) => { setPreferredDate(e.target.value); clearFieldError("preferredDate"); }}
+                  aria-invalid={!!fieldErrors.preferredDate}
+                  className={`${inputClass(!!fieldErrors.preferredDate)} input-scheme-dark min-w-0`}
                 />
               </div>
+              <FieldError message={fieldErrors.preferredDate} />
             </div>
 
             <div className="grid grid-cols-2 gap-3 overflow-hidden sm:gap-6">
               <div className="min-w-0 space-y-1">
-                <label className={labelClass}>Start Time <span className="text-red-500">*</span></label>
+                <label htmlFor="ph-start-time" className={labelClass}>Start Time <span className="text-red-500">*</span></label>
                 <div className="group relative">
                   <div className={iconContainerClass}>
                     <Clock className={iconClass} />
                   </div>
                   <input
+                    id="ph-start-time"
                     title="Start time"
                     type="time"
+                    step={900}
                     value={preferredStartTime}
-                    onChange={(e) => setPreferredStartTime(e.target.value)}
-                    className={`${inputClass} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
+                    onChange={(e) => handleStartTimeChange(e.target.value)}
+                    aria-invalid={!!fieldErrors.preferredStartTime}
+                    className={`${inputClass(!!fieldErrors.preferredStartTime)} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
                   />
                 </div>
+                <FieldError message={fieldErrors.preferredStartTime} />
               </div>
               <div className="min-w-0 space-y-1">
-                <label className={labelClass}>End Time <span className="text-red-500">*</span></label>
+                <label htmlFor="ph-end-time" className={labelClass}>End Time <span className="text-red-500">*</span></label>
                 <div className="group relative">
                   <div className={iconContainerClass}>
                     <Clock className={iconClass} />
                   </div>
                   <input
+                    id="ph-end-time"
                     title="End time"
                     type="time"
+                    step={900}
                     value={preferredEndTime}
-                    onChange={(e) => setPreferredEndTime(e.target.value)}
-                    className={`${inputClass} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
+                    onChange={(e) => { setPreferredEndTime(e.target.value); clearFieldError("preferredEndTime"); }}
+                    aria-invalid={!!fieldErrors.preferredEndTime}
+                    className={`${inputClass(!!fieldErrors.preferredEndTime)} input-scheme-dark min-w-0 pl-9 sm:pl-11`}
                   />
                 </div>
+                <FieldError message={fieldErrors.preferredEndTime} />
               </div>
             </div>
 
             <div className="space-y-1">
-              <label className={labelClass}>Reason for Hire <span className="text-red-500">*</span></label>
+              <label htmlFor="ph-reason" className={labelClass}>Reason for Hire <span className="text-red-500">*</span></label>
               <div className="group relative">
                 <div className={iconContainerClass}>
                   <Tag className={iconClass} />
                 </div>
                 <select
+                  id="ph-reason"
                   title="Reason for Hire"
                   value={eventSubtypeId}
-                  onChange={(e) => setEventSubtypeId(e.target.value)}
-                  className={`${inputClass} cursor-pointer appearance-none pr-10`}
+                  onChange={(e) => { setEventSubtypeId(e.target.value); clearFieldError("eventSubtypeId"); }}
+                  aria-invalid={!!fieldErrors.eventSubtypeId}
+                  className={`${inputClass(!!fieldErrors.eventSubtypeId)} cursor-pointer appearance-none pr-10`}
                 >
                   <option value="">Select a reason</option>
                   {subtypes.map((s) => (
@@ -280,6 +452,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
                 </select>
                 <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
               </div>
+              <FieldError message={fieldErrors.eventSubtypeId} />
             </div>
           </>
         )}
@@ -287,18 +460,19 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
         {step === 3 && (
           <>
             <div className="space-y-1">
-              <label className={labelClass}>Additional Requests</label>
+              <label htmlFor="ph-additional" className={labelClass}>Additional Requests</label>
               <div className="group relative">
                 <div className={iconContainerClass}>
                   <MessageSquareQuote className={iconClass} />
                 </div>
                 <textarea
+                  id="ph-additional"
                   title="Additional requests or special requirements"
                   value={additionalReqs}
                   onChange={(e) => setAdditionalReqs(e.target.value)}
-                  placeholder=""
+                  placeholder="Type your requests here..."
                   rows={4}
-                  className={`${inputClass} min-h-25 resize-none py-3`}
+                  className={`${inputClass(false)} min-h-25 resize-none py-3`}
                 />
               </div>
             </div>
@@ -307,12 +481,6 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
         )}
 
       </div>
-
-      {stepError && (
-        <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
-          {stepError}
-        </p>
-      )}
 
       {error && step === 3 && (
         <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-xs font-medium text-red-400">
@@ -336,8 +504,7 @@ export default function PrivateHireForm({ subtypes }: { subtypes: PrivateHireSub
             key="next"
             type="button"
             onClick={handleNext}
-            disabled={!canProceed}
-            className="flex h-16 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-[#fdcc4b] disabled:active:scale-100"
+            className="flex h-16 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95"
           >
             Next
             <ChevronRight className="h-4 w-4" />
