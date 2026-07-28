@@ -7,6 +7,12 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
+const appUrl = process.env.NEXT_PUBLIC_SITE_URL
+  ? process.env.NEXT_PUBLIC_SITE_URL
+  : process.env.VERCEL_URL
+  ? `https://${process.env.VERCEL_URL}`
+  : "http://localhost:3000";
+
 const ADMIN_EMAIL = "admin@bookingsdonfenticas.co.uk";
 const FROM = "Don Fenticas <admin@bookingsdonfenticas.co.uk>";
 
@@ -140,6 +146,7 @@ async function sendAdminEmail(data: BandBookingData, id: string) {
     })
     .join("");
   const dates = data.preferred_dates.filter(Boolean).join(", ") || "Not specified";
+  const requestUrl = `${appUrl}/event-bookings/music-bookings?open=${id}`;
 
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1f2937;">
@@ -159,6 +166,13 @@ async function sendAdminEmail(data: BandBookingData, id: string) {
           ${videos ? `<p><strong>Video Links:</strong></p><ul>${videos}</ul>` : ""}
           ${data.notes ? `<p><strong>Notes:</strong> ${data.notes}</p>` : ""}
         </div>
+        <div style="text-align:center;margin:32px 0 20px 0;">
+          <a href="${requestUrl}" style="background-color:#FDCC4B;color:#26300D;padding:16px 32px;text-decoration:none;border-radius:12px;font-weight:900;display:inline-block;text-transform:uppercase;letter-spacing:1.5px;">View Request</a>
+        </div>
+        <p style="font-size:12px;color:#6b7280;text-align:center;">
+          Button not working? Copy and paste this link:<br>
+          <a href="${requestUrl}" style="color:#26300D;text-decoration:underline;margin-top:8px;display:inline-block;">${requestUrl}</a>
+        </p>
         <p style="font-size:12px;color:#6b7280;">Application ID: ${id}</p>
       </div>
     </div>`;

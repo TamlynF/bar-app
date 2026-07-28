@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useTransition, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { updatePrivateHireStatus, updatePrivateHireFields, getPrivateEventOptions } from "../actions";
 import { ChevronRight, ChevronDown, CheckCircle, XCircle, Clock, Users, Loader2, MessageSquareQuote, Mail, Phone, CalendarDays, Save } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -224,8 +225,17 @@ function Section({
   );
 }
 
+const LIST_HREF = "/event-bookings/private-bookings";
+
 export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
-  const [open, setOpen] = useState(false);
+  const searchParams = useSearchParams();
+  const isDeepLinked = searchParams.get("open") === request.id;
+  const [open, setOpen] = useState(isDeepLinked);
+
+  useEffect(() => {
+    if (isDeepLinked) window.history.replaceState(null, "", LIST_HREF);
+  }, [isDeepLinked]);
+
   const [adminNotes, setAdminNotes] = useState(request.admin_notes || "");
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
