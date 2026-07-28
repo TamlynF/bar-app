@@ -46,13 +46,9 @@ export function manageBookingPath(bookingId: number | string): string {
 }
 
 export function checkoutReturnPath(opts: {
-  behavior: EventBehavior | null | undefined;
   eventId: number | string;
   bookingId: number | string;
 }): string {
-  if (opts.behavior === "bingo") {
-    return `/book/bingo/success?bookingId=${opts.bookingId}`;
-  }
   return `/book/event/${opts.eventId}/success?bookingId=${opts.bookingId}`;
 }
 

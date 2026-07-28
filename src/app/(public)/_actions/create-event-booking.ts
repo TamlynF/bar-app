@@ -20,7 +20,6 @@ import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
 import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
 import { isBookingGrouping } from "@/lib/booking-grouping";
-import { isEventBehavior, type EventBehavior } from "@/lib/event-behavior";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { normalizeGroupName } from "@/lib/group-name";
 
@@ -127,7 +126,6 @@ export async function createEventBooking(formData: FormData) {
 
     const eventType = unwrap(event.event_types as unknown as TypeRel | TypeRel[] | null);
     const eventSubtype = unwrap(event.event_subtypes as unknown as SubtypeRel | SubtypeRel[] | null);
-    const behavior = isEventBehavior(eventSubtype?.behavior) ? eventSubtype.behavior : null;
     const rawGrouping = eventType?.booking_grouping;
 
     const bookingConfig = resolveOwningBookingConfig({
@@ -263,7 +261,7 @@ export async function createEventBooking(formData: FormData) {
           buyerPhone,
         }),
         checkoutOptions: {
-          redirectUrl: `${appUrl}${checkoutReturnPath({ behavior, eventId, bookingId: newBooking.id })}`,
+          redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: newBooking.id })}`,
           merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
         },
         prePopulatedData: buildPrePopulatedData({ email, fullName, buyerPhone }),
@@ -303,7 +301,6 @@ export async function createEventBooking(formData: FormData) {
     await sendPaymentPendingEmail({
       bookingId: newBooking.id,
       eventId,
-      behavior,
       email,
       name: fullName,
       eventTitle: event.title || "Event",
@@ -326,7 +323,6 @@ export async function createEventBooking(formData: FormData) {
 async function sendPaymentPendingEmail(args: {
   bookingId: number;
   eventId: number;
-  behavior: EventBehavior | null;
   email: string;
   name: string;
   eventTitle: string;
@@ -341,7 +337,6 @@ async function sendPaymentPendingEmail(args: {
     groupSize: args.groupSize,
     amountDue: args.amountDue,
     payUrl: `${appUrl}${checkoutReturnPath({
-      behavior: args.behavior,
       eventId: args.eventId,
       bookingId: args.bookingId,
     })}`,

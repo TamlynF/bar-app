@@ -194,6 +194,7 @@ export async function createBingoBooking(formData: FormData) {
 
     await sendPaymentPendingEmail({
       bookingId: newBooking.id,
+      eventId,
       email,
       name: fullName,
       eventDate,
@@ -219,6 +220,7 @@ export async function createBingoBooking(formData: FormData) {
 
 async function sendPaymentPendingEmail(args: {
   bookingId: number;
+  eventId: number;
   email: string;
   name: string;
   eventDate: string;
@@ -232,8 +234,7 @@ async function sendPaymentPendingEmail(args: {
     groupSize: args.groupSize,
     amountDue: args.amountDue,
     payUrl: `${appUrl}${checkoutReturnPath({
-      behavior: "bingo",
-      eventId: 0,
+      eventId: args.eventId,
       bookingId: args.bookingId,
     })}`,
   });

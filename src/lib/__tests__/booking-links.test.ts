@@ -145,22 +145,8 @@ describe("publicBookingUrl", () => {
 });
 
 describe("checkoutReturnPath", () => {
-  it("sends bingo bookings back to the shared bingo success page", () => {
-    expect(checkoutReturnPath({ behavior: "bingo", eventId: 7, bookingId: 42 })).toBe(
-      "/book/bingo/success?bookingId=42"
-    );
-  });
-
-  it("sends every other behavior back to the per-event success page", () => {
-    for (const behavior of ["standard", "quiz", "karaoke", "music_act", "private"] as const) {
-      expect(checkoutReturnPath({ behavior, eventId: 7, bookingId: 42 })).toBe(
-        "/book/event/7/success?bookingId=42"
-      );
-    }
-  });
-
-  it("falls back to the per-event page when the behavior is unknown", () => {
-    expect(checkoutReturnPath({ behavior: null, eventId: 7, bookingId: 42 })).toBe(
+  it("sends every booking back to the per-event success page", () => {
+    expect(checkoutReturnPath({ eventId: 7, bookingId: 42 })).toBe(
       "/book/event/7/success?bookingId=42"
     );
   });

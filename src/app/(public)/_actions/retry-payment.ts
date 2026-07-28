@@ -128,7 +128,7 @@ export async function retryBookingPayment(bookingId: string | number): Promise<R
         buyerPhone,
       }),
       checkoutOptions: {
-        redirectUrl: `${appUrl}${checkoutReturnPath({ behavior, eventId, bookingId: booking.id })}`,
+        redirectUrl: `${appUrl}${checkoutReturnPath({ eventId, bookingId: booking.id })}`,
         merchantSupportEmail: "admin@bookingsdonfenticas.co.uk",
       },
       prePopulatedData: buildPrePopulatedData({
