@@ -13,6 +13,7 @@ import {
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
+import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
@@ -127,6 +128,7 @@ export async function createBingoBooking(formData: FormData) {
       await sendBookingEmail(
         newBooking.id, email, fullName, eventDate, groupSize, status, 0, 0
       );
+      await notifyAdminBookingCreated(newBooking.id);
       await updateFullyBookedStatus(supabase, eventId);
       revalidatePath("/dashboard");
       revalidatePath(`/book/bingo/manage-booking/${newBooking.id}`);

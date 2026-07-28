@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { loadBookingSnapshot, notifyBookingChanged } from "@/lib/booking-notifications";
 import {
   clearMappingOnStatusChange,
   planConfirmSeating,
@@ -29,6 +30,7 @@ export async function updateBookingStatusAction(bookingId: number, status: strin
     const eventId = bookingRow?.event_id as number | null;
     const groupSize = (bookingRow?.group_size as number) ?? 0;
     const wantConfirmed = status.toLowerCase() === "confirmed";
+    const before = await loadBookingSnapshot(bookingId);
 
     let tableToAssign = null;
     if (wantConfirmed && eventId != null) {
@@ -56,6 +58,10 @@ export async function updateBookingStatusAction(bookingId: number, status: strin
       await clearMappingOnStatusChange(supabase, bookingId);
     }
     if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
+
+    if (before) {
+      await notifyBookingChanged(bookingId, before.snapshot, { changedByAdmin: true });
+    }
 
     revalidatePath("/event-bookings");
     revalidatePath("/dashboard");

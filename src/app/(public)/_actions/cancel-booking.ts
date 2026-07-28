@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import { clearMappingOnStatusChange } from "@/lib/table-allocation";
+import { notifyBookingCancelled } from "@/lib/booking-notifications";
 
 export async function cancelBooking(bookingId: string | number) {
   try {
@@ -34,6 +35,8 @@ export async function cancelBooking(bookingId: string | number) {
     if (booking?.event_id) {
       await updateFullyBookedStatus(supabase, booking.event_id);
     }
+
+    await notifyBookingCancelled(bookingId);
 
     revalidatePath(`/manage-booking/${bookingId}`);
     revalidatePath("/dashboard");

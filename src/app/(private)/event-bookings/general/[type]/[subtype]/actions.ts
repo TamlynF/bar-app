@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { loadBookingSnapshot, notifyBookingChanged } from "@/lib/booking-notifications";
 import {
   getFreeTablesForEvent,
   reconcileSeatedBookingTable,
@@ -159,6 +160,8 @@ export async function updateGeneralBookingDetails(
     ? Number(updates.event_id)
     : (prev?.event_id as number) ?? null;
 
+  const before = await loadBookingSnapshot(id);
+
   const { table_id, ...bookingUpdates } = updates;
   const { error: bookingError } = await supabase
     .from("bookings")
@@ -193,6 +196,8 @@ export async function updateGeneralBookingDetails(
   if (eventId != null) {
     await updateFullyBookedStatus(supabase, eventId);
   }
+
+  if (before) await notifyBookingChanged(id, before.snapshot, { changedByAdmin: true });
 
   revalidatePath("/dashboard");
   revalidatePath(GENERAL_PATH, "page");

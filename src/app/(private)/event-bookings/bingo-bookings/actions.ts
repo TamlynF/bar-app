@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { squareClient } from "@/lib/square";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { loadBookingSnapshot, notifyBookingChanged } from "@/lib/booking-notifications";
 import {
   clearMappingOnStatusChange,
   reconcileSeatedBookingTable,
@@ -113,6 +114,7 @@ export async function updateBingoBookingStatus(id: string, status: string) {
     .single();
   const eventId = bookingRow?.event_id as number | null;
   const wantConfirmed = status.toLowerCase() === "confirmed";
+  const before = await loadBookingSnapshot(id);
 
   let tableToAssign = null;
   if (wantConfirmed && eventId != null) {
@@ -145,6 +147,8 @@ export async function updateBingoBookingStatus(id: string, status: string) {
   }
   if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
 
+  if (before) await notifyBookingChanged(id, before.snapshot, { changedByAdmin: true });
+
   revalidatePath("/event-bookings/bingo-bookings");
   revalidatePath("/dashboard");
 }
@@ -172,6 +176,8 @@ export async function updateBingoBookingDetails(
     ? Number(updates.event_id)
     : (prev?.event_id as number) ?? null;
 
+  const before = await loadBookingSnapshot(id);
+
   const { table_id, ...bookingUpdates } = updates;
   const { error } = await supabase
     .from("bookings")
@@ -195,6 +201,8 @@ export async function updateBingoBookingDetails(
   }
 
   if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
+
+  if (before) await notifyBookingChanged(id, before.snapshot, { changedByAdmin: true });
 
   revalidatePath("/dashboard");
   revalidatePath("/event-bookings/bingo-bookings");

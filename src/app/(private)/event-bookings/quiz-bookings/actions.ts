@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { revalidatePath } from "next/cache"
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked"
+import { loadBookingSnapshot, notifyBookingChanged } from "@/lib/booking-notifications"
 import {
   getFreeTablesForEvent,
   clearMappingOnStatusChange,
@@ -224,6 +225,7 @@ export async function updateBookingDetails(
     .single();
   const oldSize = (prev?.group_size as number) ?? 0;
   const eventId = (prev?.event_id as number) ?? null;
+  const before = await loadBookingSnapshot(id);
 
   const { table_id, ...bookingUpdates } = updates;
   const { error: bookingError } = await supabase
@@ -258,6 +260,8 @@ export async function updateBookingDetails(
 
   if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
 
+  if (before) await notifyBookingChanged(id, before.snapshot, { changedByAdmin: true });
+
   revalidatePath("/dashboard")
   revalidatePath("/event-bookings/quiz-bookings")
 }
@@ -279,6 +283,7 @@ export async function updateBookingStatus(id: string, status: string) {
     .single();
   const eventId = bookingRow?.event_id as number | null;
   const wantConfirmed = status.toLowerCase() === "confirmed";
+  const before = await loadBookingSnapshot(id);
 
   let tableToAssign = null;
   if (wantConfirmed && eventId != null) {
@@ -319,6 +324,8 @@ export async function updateBookingStatus(id: string, status: string) {
     await clearMappingOnStatusChange(supabase, id);
   }
   if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
+
+  if (before) await notifyBookingChanged(id, before.snapshot, { changedByAdmin: true });
 
   revalidatePath("/dashboard")
   revalidatePath("/event-bookings/quiz-bookings")

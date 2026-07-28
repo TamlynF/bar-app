@@ -5,6 +5,11 @@ const h = vi.hoisted(() => ({
   allocateOnCreate: vi.fn(),
   commitMapping: vi.fn(),
   updateFullyBookedStatus: vi.fn(),
+  notifyAdminBookingCreated: vi.fn(),
+}));
+
+vi.mock("@/lib/booking-notifications", () => ({
+  notifyAdminBookingCreated: h.notifyAdminBookingCreated,
 }));
 
 vi.mock("@/lib/table-allocation", async () => {
@@ -55,6 +60,7 @@ beforeEach(() => {
   h.allocateOnCreate.mockReset();
   h.commitMapping.mockReset();
   h.updateFullyBookedStatus.mockReset().mockResolvedValue(undefined);
+  h.notifyAdminBookingCreated.mockReset().mockResolvedValue(undefined);
 });
 
 describe("settlePaidBooking — non-seated event", () => {
@@ -80,6 +86,17 @@ describe("settlePaidBooking — non-seated event", () => {
     expect(h.allocateOnCreate).not.toHaveBeenCalled();
     expect(h.commitMapping).not.toHaveBeenCalled();
     expect(h.updateFullyBookedStatus).toHaveBeenCalledWith(client, 7);
+    expect(h.notifyAdminBookingCreated).toHaveBeenCalledWith(42);
+  });
+
+  it("does not notify admin when the booking was already settled", async () => {
+    const { client } = makeSupabase({
+      bookings: [{ data: { ...pendingBooking, payment_status: "paid" } }],
+    });
+
+    await settlePaidBooking(client, { bookingId: 42, paidAmount: 45 });
+
+    expect(h.notifyAdminBookingCreated).not.toHaveBeenCalled();
   });
 });
 

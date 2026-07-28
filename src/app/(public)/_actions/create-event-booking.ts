@@ -16,6 +16,7 @@ import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { buildBuyerPhone, buildEventOrder, buildPrePopulatedData } from "@/lib/square-order";
 import { buildPaymentPendingEmail } from "@/lib/payment-pending-email";
+import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import { checkoutReturnPath } from "@/lib/booking-links";
 import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import { normalizeGroupName } from "@/lib/group-name";
@@ -213,6 +214,7 @@ export async function createEventBooking(formData: FormData) {
       await sendEventBookingEmail(
         newBooking.id, email, fullName, event.title || "Event", event.date, groupSize, status, 0, 0, groupNameRow
       );
+      await notifyAdminBookingCreated(newBooking.id);
       await updateFullyBookedStatus(supabase, eventId);
       revalidatePath("/dashboard");
       return { success: true };

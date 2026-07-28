@@ -10,6 +10,11 @@ const h = vi.hoisted(() => ({
   send: vi.fn(),
   revalidatePath: vi.fn(),
   updateFullyBookedStatus: vi.fn(),
+  notifyAdminBookingCreated: vi.fn(),
+}));
+
+vi.mock("@/lib/booking-notifications", () => ({
+  notifyAdminBookingCreated: h.notifyAdminBookingCreated,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn(async () => h.client) }));
@@ -89,6 +94,7 @@ beforeEach(() => {
   h.send.mockReset().mockResolvedValue({ error: null });
   h.revalidatePath.mockReset();
   h.updateFullyBookedStatus.mockReset().mockResolvedValue(undefined);
+  h.notifyAdminBookingCreated.mockReset().mockResolvedValue(undefined);
 });
 
 describe("createEventBooking — paid path", () => {
@@ -124,6 +130,9 @@ describe("createEventBooking — paid path", () => {
     expect(h.send).toHaveBeenCalledTimes(1);
     expect(h.send.mock.calls[0][0].subject).toMatch(/finish your booking/i);
     expect(h.send.mock.calls[0][0].html).toContain("/book/event/7/success?bookingId=42");
+
+    // admin is told at settlement, not while the booking is still unpaid
+    expect(h.notifyAdminBookingCreated).not.toHaveBeenCalled();
   });
 
   it("rolls back the booking when Square returns no checkout url", async () => {
@@ -159,6 +168,7 @@ describe("createEventBooking — free path", () => {
     expect(result).toEqual({ success: true });
     expect(h.squareCreate).not.toHaveBeenCalled();
     expect(h.send).toHaveBeenCalledTimes(1); // confirmation email still sent
+    expect(h.notifyAdminBookingCreated).toHaveBeenCalledWith(43); // admin told about the new booking
     expect(calls.inserts.find((i) => i.table === "bookings")?.payload).toMatchObject([
       { status: "confirmed", payment_status: "paid" },
     ]);

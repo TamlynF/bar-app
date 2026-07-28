@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { checkEventGroupName } from "./create-event-booking";
 import { checkSeatingAvailability } from "./check-seating";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { loadBookingSnapshot, notifyBookingChanged } from "@/lib/booking-notifications";
 import {
   seatingApplies,
   allocateOnCreate,
@@ -129,6 +130,8 @@ export async function updateBooking(
       }
     }
 
+    const before = await loadBookingSnapshot(bookingId);
+
     const { error: updateError } = await supabase
       .from("bookings")
       .update({
@@ -145,6 +148,10 @@ export async function updateBooking(
     }
 
     await updateFullyBookedStatus(supabase, eventId);
+
+    if (before) {
+      await notifyBookingChanged(bookingId, before.snapshot);
+    }
 
     revalidatePath(`/manage-booking/${bookingId}`);
     revalidatePath("/dashboard");

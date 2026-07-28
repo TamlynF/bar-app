@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { adminBookingsHref, checkoutReturnPath, publicBookingUrl } from "@/lib/booking-links";
+import { adminBookingsHref, checkoutReturnPath, manageBookingPath, publicBookingUrl } from "@/lib/booking-links";
 
 describe("adminBookingsHref", () => {
   it("routes each specialised behavior to its dedicated admin screen", () => {
@@ -97,5 +97,19 @@ describe("checkoutReturnPath", () => {
     expect(checkoutReturnPath({ behavior: null, eventId: 7, bookingId: 42 })).toBe(
       "/book/event/7/success?bookingId=42"
     );
+  });
+});
+
+describe("manageBookingPath", () => {
+  it("routes quiz and bingo to their own manage pages", () => {
+    expect(manageBookingPath("quiz", 42)).toBe("/book/quiz/manage-booking/42");
+    expect(manageBookingPath("bingo", 42)).toBe("/book/bingo/manage-booking/42");
+  });
+
+  it("routes everything else to the generic manage page", () => {
+    for (const behavior of ["standard", "karaoke", "music_act", "private"] as const) {
+      expect(manageBookingPath(behavior, 42)).toBe("/manage-booking/42");
+    }
+    expect(manageBookingPath(null, 42)).toBe("/manage-booking/42");
   });
 });

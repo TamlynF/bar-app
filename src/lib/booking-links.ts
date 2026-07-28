@@ -2,6 +2,7 @@ import type { EventBehavior } from "@/lib/event-behavior";
 import type { BookingGrouping } from "@/lib/booking-grouping";
 
 export function adminBookingsHref(behavior: EventBehavior, eventId?: number): string {
+  console.log("adminBookingsHref", behavior, eventId);
   switch (behavior) {
     case "bingo": return "/event-bookings/bingo-bookings";
     case "quiz": return "/event-bookings/quiz-bookings";
@@ -10,6 +11,17 @@ export function adminBookingsHref(behavior: EventBehavior, eventId?: number): st
   }
   if (eventId) return `/event-bookings/event/${eventId}`;
   return "/event-bookings";
+}
+
+export function manageBookingPath(
+  behavior: EventBehavior | null | undefined,
+  bookingId: number | string
+): string {
+  switch (behavior) {
+    case "quiz": return `/book/quiz/manage-booking/${bookingId}`;
+    case "bingo": return `/book/bingo/manage-booking/${bookingId}`;
+    default: return `/manage-booking/${bookingId}`;
+  }
 }
 
 export function checkoutReturnPath(opts: {

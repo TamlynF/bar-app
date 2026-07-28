@@ -7,6 +7,7 @@ import {
   type SeatingEvent,
 } from "@/lib/table-allocation";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 
 export type SettleResult =
   | { outcome: "settled"; status: string }
@@ -81,6 +82,8 @@ export async function settlePaidBooking(
   }
 
   if (eventId != null) await updateFullyBookedStatus(supabase, eventId);
+
+  await notifyAdminBookingCreated(args.bookingId);
 
   return { outcome: "settled", status: nextStatus };
 }

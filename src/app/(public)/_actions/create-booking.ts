@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { Resend } from "resend";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { notifyAdminBookingCreated } from "@/lib/booking-notifications";
 import {
   allocateOnCreate,
   commitMapping,
@@ -172,6 +173,8 @@ export async function createBooking(formData: BookingFormData) {
     } catch (emailError) {
       console.error("Booking saved but confirmation email failed:", emailError);
     }
+
+    await notifyAdminBookingCreated(newBooking.id);
 
     await updateFullyBookedStatus(supabase, eventId);
 
