@@ -54,7 +54,7 @@ export async function checkEventGroupName(
     .from("bookings")
     .select("id, group_name")
     .eq("event_id", eventId)
-    .not("status", "eq", "cancelled");
+    .eq("status", "confirmed");
 
   if (excludeBookingId) {
     query = query.neq("id", excludeBookingId);

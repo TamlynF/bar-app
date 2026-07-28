@@ -177,7 +177,7 @@ describe("createEventBooking — guards", () => {
     expect(h.squareCreate).not.toHaveBeenCalled();
   });
 
-  it("refuses a duplicate group name ignoring case and spacing", async () => {
+  it("refuses a group name held by a confirmed booking, ignoring case and spacing", async () => {
     const { client, calls } = makeSupabase({
       events: [{
         data: {
