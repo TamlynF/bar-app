@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
+import { clearMappingOnStatusChange } from "@/lib/table-allocation";
 
 export async function cancelBooking(bookingId: string | number) {
   try {
@@ -9,7 +11,7 @@ export async function cancelBooking(bookingId: string | number) {
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("contact_id")
+      .select("contact_id, event_id")
       .eq("id", bookingId)
       .single();
 
@@ -27,8 +29,15 @@ export async function cancelBooking(bookingId: string | number) {
       return { success: false, error: "Failed to cancel booking. Please try again or contact us." };
     }
 
+    await clearMappingOnStatusChange(supabase, bookingId);
+
+    if (booking?.event_id) {
+      await updateFullyBookedStatus(supabase, booking.event_id);
+    }
+
     revalidatePath(`/manage-booking/${bookingId}`);
-    
+    revalidatePath("/dashboard");
+
     return { success: true };
   } catch (err) {
     console.error("Action error:", err);
