@@ -14,6 +14,7 @@ import {
 import { Resend } from "resend";
 import { revalidatePath } from "next/cache";
 import { buildBuyerPhone, buildEventOrder, buildPrePopulatedData } from "@/lib/square-order";
+import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 
 const appUrl = process.env.NEXT_PUBLIC_SITE_URL
   ? process.env.NEXT_PUBLIC_SITE_URL
@@ -36,6 +37,32 @@ function isSquareAuthError(err: unknown): err is SquareError {
     (err.statusCode === 401 ||
       err.errors?.some((e) => e.category === "AUTHENTICATION_ERROR"))
   );
+}
+
+export async function checkEventGroupName(
+  groupName: string,
+  eventId: number | string,
+  excludeBookingId?: string | number
+) {
+  const trimmed = (groupName || "").trim();
+  if (!trimmed || !eventId) return { isAvailable: true };
+
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("bookings")
+    .select("id")
+    .eq("event_id", eventId)
+    .ilike("group_name", trimmed)
+    .not("status", "eq", "cancelled");
+
+  if (excludeBookingId) {
+    query = query.neq("id", excludeBookingId);
+  }
+
+  const { data: duplicate } = await query.limit(1).maybeSingle();
+
+  return { isAvailable: !duplicate };
 }
 
 export async function createEventBooking(formData: FormData) {
@@ -66,7 +93,7 @@ export async function createEventBooking(formData: FormData) {
   try {
     const { data: event } = await supabase
       .from("events")
-      .select("id, date, title, payment_amount, seating_required, is_fully_booked, is_active, is_bookable")
+      .select("id, date, title, payment_amount, seating_required, is_fully_booked, is_active, is_bookable, booking_config")
       .eq("id", eventId)
       .single();
 
@@ -76,6 +103,16 @@ export async function createEventBooking(formData: FormData) {
 
     if (event.is_fully_booked) {
       return { error: "This event is fully booked." };
+    }
+
+    const groupNameField = normalizeBookingConfig(event.booking_config as BookingConfig).fields.group_name;
+    if (groupNameField.visible) {
+      const { isAvailable } = await checkEventGroupName(groupName, eventId);
+      if (!isAvailable) {
+        return {
+          error: `This ${groupNameField.label.toLowerCase()} is already taken for this event. Please choose another.`,
+        };
+      }
     }
 
     const paymentAmountPence = Math.round((event.payment_amount || 0) * 100);

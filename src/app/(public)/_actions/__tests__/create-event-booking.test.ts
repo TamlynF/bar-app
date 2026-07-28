@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
 
 process.env.NEXT_PUBLIC_SITE_URL = "http://localhost:3000";
+process.env.SQUARE_ACCESS_TOKEN = "sq-test-token";
+process.env.SQUARE_LOCATION_ID = "LOC_TEST";
 
 const h = vi.hoisted(() => ({
   client: null as unknown,
@@ -30,8 +32,9 @@ function makeSupabase(queues: Record<string, Result[]>) {
   const from = (table: string) => {
     const builder: Record<string, unknown> = {};
     const chain = () => builder;
-    for (const m of ["select", "eq", "gte", "order"]) builder[m] = chain;
+    for (const m of ["select", "eq", "neq", "gte", "order", "ilike", "not", "limit"]) builder[m] = chain;
     builder.insert = (payload: unknown) => { calls.inserts.push({ table, payload }); return builder; };
+    builder.upsert = (payload: unknown) => { calls.inserts.push({ table, payload }); return builder; };
     builder.update = (payload: unknown) => { calls.updates.push({ table, payload }); return builder; };
     builder.delete = () => { calls.deletes.push({ table }); return builder; };
     const next = () => {
@@ -172,6 +175,48 @@ describe("createEventBooking — guards", () => {
     expect(result.error).toMatch(/not available/i);
     expect(calls.inserts).toHaveLength(0);
     expect(h.squareCreate).not.toHaveBeenCalled();
+  });
+
+  it("refuses a duplicate group name when the group name field is collected", async () => {
+    const { client, calls } = makeSupabase({
+      events: [{
+        data: {
+          ...bookableEvent,
+          payment_amount: 15,
+          booking_config: { fields: { group_name: { visible: true, label: "Team Name", required: true } } },
+        },
+      }],
+      bookings: [{ data: { id: 99 } }],
+    });
+    h.client = client;
+
+    const result = await createEventBooking(formData({ group_name: "The Quizzards" }));
+
+    expect(result.error).toMatch(/team name is already taken/i);
+    expect(calls.inserts).toHaveLength(0);
+    expect(h.squareCreate).not.toHaveBeenCalled();
+  });
+
+  it("allows a group name that is free for the event", async () => {
+    const { client, calls } = makeSupabase({
+      events: [{
+        data: {
+          ...bookableEvent,
+          payment_amount: 0,
+          booking_config: { fields: { group_name: { visible: true, label: "Team Name", required: true } } },
+        },
+      }],
+      bookings: [{ data: null }, { data: { id: 44 } }],
+      contacts: [{ data: { id: 100 } }],
+    });
+    h.client = client;
+
+    const result = await createEventBooking(formData({ group_name: "The Quizzards" }));
+
+    expect(result).toEqual({ success: true });
+    expect(calls.inserts.find((i) => i.table === "bookings")?.payload).toMatchObject([
+      { group_name: "The Quizzards" },
+    ]);
   });
 
   it("refuses a fully booked event", async () => {

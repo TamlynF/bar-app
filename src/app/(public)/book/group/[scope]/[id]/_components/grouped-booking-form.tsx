@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { createEventBooking } from "@/app/(public)/_actions/create-event-booking";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { checkEventGroupName, createEventBooking } from "@/app/(public)/_actions/create-event-booking";
 import {
   CheckCircle,
   ChevronRight,
@@ -61,6 +61,8 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [booked, setBooked] = useState(false);
+  const [isCheckingGroupName, setIsCheckingGroupName] = useState(false);
+  const [groupNameError, setGroupNameError] = useState("");
 
   const [eventId, setEventId] = useState(
     events.some((e) => String(e.id) === defaultEventId)
@@ -93,6 +95,33 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
   const pricePerPerson = hasPricing ? selectedEvent!.payment_amount! : 0;
   const total = pricePerPerson * parseInt(formData.groupSize || "1");
 
+  const groupNameVisible = f.group_name.visible;
+  const groupNameLabel = f.group_name.label;
+
+  useEffect(() => {
+    const validateGroupName = async () => {
+      if (!groupNameVisible || formData.groupName.trim().length < 2 || !eventId) {
+        setGroupNameError("");
+        return;
+      }
+
+      setIsCheckingGroupName(true);
+      try {
+        const { isAvailable } = await checkEventGroupName(formData.groupName, eventId);
+        setGroupNameError(
+          isAvailable ? "" : `This ${groupNameLabel.toLowerCase()} is already taken for the selected date.`
+        );
+      } catch (err) {
+        console.error("Validation error:", err);
+      } finally {
+        setIsCheckingGroupName(false);
+      }
+    };
+
+    const timer = setTimeout(validateGroupName, 500);
+    return () => clearTimeout(timer);
+  }, [formData.groupName, groupNameVisible, groupNameLabel, eventId]);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
@@ -102,6 +131,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (groupNameError) return;
     setError(null);
     const fd = new FormData(e.currentTarget);    
     startTransition(async () => {
@@ -339,10 +369,18 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
               required={f.group_name.required}
               value={formData.groupName}
               onChange={handleInputChange}
-              className={inputBaseClasses}
+              className={cn(inputBaseClasses, groupNameError && "border-red-500/50")}
               placeholder="e.g. The Thirsty Trivia Titans"
             />
+            {isCheckingGroupName && (
+              <div className="absolute top-1/2 right-4 -translate-y-1/2">
+                <Loader2 className="h-3 w-3 animate-spin text-[#fdcc4b]" />
+              </div>
+            )}
           </div>
+          {groupNameError && (
+            <p className="mt-1.5 ml-1 font-black text-[9px] text-red-500 uppercase">{groupNameError}</p>
+          )}
         </div>
       )}
 
@@ -390,7 +428,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
       <div className="pt-2">
         <button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || !!groupNameError || isCheckingGroupName}
           className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
         >
           {isPending ? (
