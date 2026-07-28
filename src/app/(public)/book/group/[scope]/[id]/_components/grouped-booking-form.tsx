@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { checkEventGroupName, createEventBooking } from "@/app/(public)/_actions/create-event-booking";
+import { checkSeatingAvailability } from "@/app/(public)/_actions/check-seating";
 import {
   CheckCircle,
   ChevronRight,
@@ -14,6 +15,7 @@ import {
   Loader2,
   MessageSquareQuote,
   AlertCircle,
+  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -48,6 +50,8 @@ function formatEventDate(dateStr: string) {
   });
 }
 
+const NO_SEATING_SPACE_ERROR = "Not enough space for this group size on the selected date.";
+
 const emptyForm = {
   fullName: "",
   email: "",
@@ -64,6 +68,8 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
   const [booked, setBooked] = useState(false);
   const [isCheckingGroupName, setIsCheckingGroupName] = useState(false);
   const [groupNameError, setGroupNameError] = useState("");
+  const [isCheckingSeating, setIsCheckingSeating] = useState(false);
+  const [seatingError, setSeatingError] = useState("");
 
   const [eventId, setEventId] = useState(
     events.some((e) => String(e.id) === defaultEventId)
@@ -123,16 +129,43 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
     return () => clearTimeout(timer);
   }, [formData.groupName, groupNameVisible, groupNameLabel, eventId]);
 
+  const seatingRequired = selectedEvent?.seating_required ?? false;
+
+  useEffect(() => {
+    const validateSeating = async () => {
+      const size = parseInt(formData.groupSize, 10);
+      if (!seatingRequired || !eventId || !size || size < 1) {
+        setSeatingError("");
+        setIsCheckingSeating(false);
+        return;
+      }
+
+      setIsCheckingSeating(true);
+      try {
+        const { hasSpace } = await checkSeatingAvailability(eventId, size);
+        setSeatingError(hasSpace ? "" : NO_SEATING_SPACE_ERROR);
+      } catch (err) {
+        console.error("Seating validation error:", err);
+      } finally {
+        setIsCheckingSeating(false);
+      }
+    };
+
+    const timer = setTimeout(validateSeating, 400);
+    return () => clearTimeout(timer);
+  }, [formData.groupSize, seatingRequired, eventId]);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
+    setError(null);
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (groupNameError) return;
+    if (groupNameError || seatingError) return;
     setError(null);
     const fd = new FormData(e.currentTarget);    
     startTransition(async () => {
@@ -152,6 +185,24 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
   const labelClasses = "block text-[10px] font-black text-(--ev-fg,#78716c) mb-2 uppercase tracking-[0.15em] ml-1";
   const iconContainerClasses = "absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none";
   const iconClasses = "w-4 h-4 text-(--ev-fg,#57534e) transition-colors duration-200 group-focus-within:text-[#fdcc4b]";
+
+  const requiredFieldsComplete =
+    eventId !== "" &&
+    formData.fullName.trim() !== "" &&
+    formData.email.trim() !== "" &&
+    (!f.phone.visible || !f.phone.required || formData.phoneNo.trim() !== "") &&
+    (!f.group_name.visible || !f.group_name.required || formData.groupName.trim() !== "") &&
+    (!f.group_size.visible || !f.group_size.required || formData.groupSize !== "") &&
+    (!f.special_requests.visible || !f.special_requests.required || formData.specialRequests.trim() !== "");
+
+  const submitDisabled =
+    isPending ||
+    isCheckingGroupName ||
+    isCheckingSeating ||
+    !!groupNameError ||
+    !!seatingError ||
+    !!error ||
+    !requiredFieldsComplete;
 
   if (booked) {
     return (
@@ -244,7 +295,10 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
             <select
               title="Event Date"
               value={eventId}
-              onChange={(e) => setEventId(e.target.value)}
+              onChange={(e) => {
+                setError(null);
+                setEventId(e.target.value);
+              }}
               required
               className={cn(inputBaseClasses, "cursor-pointer appearance-none pr-10")}
             >
@@ -273,7 +327,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
                 required={f.group_size.required}
                 value={formData.groupSize}
                 onChange={handleInputChange}
-                className={cn(inputBaseClasses, "cursor-pointer appearance-none pr-10")}
+                className={cn(inputBaseClasses, "cursor-pointer appearance-none pr-10", seatingError && "border-red-500/50")}
               >
                 {groupSizeOptions.map((n) => (
                   <option key={n} value={n}>
@@ -281,8 +335,15 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
                   </option>
                 ))}
               </select>
-              <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
+              {isCheckingSeating ? (
+                <Loader2 className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin text-[#fdcc4b]" />
+              ) : (
+                <ChevronRight className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 rotate-90 text-stone-600" />
+              )}
             </div>
+            {seatingError && (
+              <p className="mt-1.5 ml-1 font-black text-[9px] text-red-500 uppercase">{seatingError}</p>
+            )}
           </div>
         )}
       </div>
@@ -422,14 +483,22 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
       {error && (
         <div className="flex items-start gap-3 rounded-2xl border border-red-500/20 bg-red-500/10 p-4">
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-          <p className="text-sm leading-snug font-bold text-red-400">{error}</p>
+          <p className="flex-1 text-sm leading-snug font-bold text-red-400">{error}</p>
+          <button
+            type="button"
+            onClick={() => setError(null)}
+            aria-label="Dismiss error"
+            className="-m-3 flex h-11 w-11 shrink-0 items-center justify-center text-red-400/70 transition-colors hover:text-red-400"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
       )}
 
       <div className="pt-2">
         <button
           type="submit"
-          disabled={isPending || !!groupNameError || isCheckingGroupName}
+          disabled={submitDisabled}
           className="flex h-16 w-full items-center justify-center rounded-2xl bg-[#fdcc4b] font-black text-lg tracking-widest text-[#26300D] uppercase shadow-[0_15px_30px_-5px_rgba(253,204,75,0.3)] transition-all hover:bg-[#e5b843] active:scale-95 disabled:opacity-50"
         >
           {isPending ? (

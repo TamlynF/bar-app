@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
+import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
 import ManageBookingView, { type ManageEventBooking } from "./_components/manage-booking-view";
 
 export const metadata = {
@@ -18,6 +19,7 @@ export default async function ManageBookingPage({
     .from("bookings")
     .select(`
       id,
+      event_id,
       group_name,
       group_size,
       status,
@@ -25,7 +27,7 @@ export default async function ManageBookingPage({
       total_amount,
       paid_amount,
       special_requests,
-      events!bookings_event_id_fkey (event_title: title, event_date: date),
+      events!bookings_event_id_fkey (event_title: title, event_date: date, seating_required, booking_config),
       contacts!bookings_contact_id_fkey (full_name, email)
     `)
     .eq("id", id)
@@ -35,13 +37,38 @@ export default async function ManageBookingPage({
     notFound();
   }
 
-  const eventsRel = booking.events as ManageEventBooking["events"] | ManageEventBooking["events"][] | null;
+  type EventRel = {
+    event_title: string | null;
+    event_date: string | null;
+    seating_required: boolean | null;
+    booking_config: BookingConfig | null;
+  };
+
+  const eventsRel = booking.events as EventRel | EventRel[] | null;
   const contactsRel = booking.contacts as ManageEventBooking["contacts"] | ManageEventBooking["contacts"][] | null;
+  const ev = Array.isArray(eventsRel) ? eventsRel[0] ?? null : eventsRel;
+
   const normalised: ManageEventBooking = {
-    ...booking,
-    events: Array.isArray(eventsRel) ? eventsRel[0] ?? null : eventsRel,
+    id: booking.id,
+    event_id: (booking.event_id as number | null) ?? null,
+    group_name: booking.group_name,
+    group_size: booking.group_size,
+    status: booking.status,
+    payment_status: booking.payment_status,
+    total_amount: booking.total_amount,
+    paid_amount: booking.paid_amount,
+    special_requests: booking.special_requests,
+    events: ev
+      ? {
+          event_title: ev.event_title,
+          event_date: ev.event_date,
+          seating_required: ev.seating_required,
+        }
+      : null,
     contacts: Array.isArray(contactsRel) ? contactsRel[0] ?? null : contactsRel,
   };
+
+  const groupSizeField = normalizeBookingConfig(ev?.booking_config).fields.group_size;
 
   const isCancelled = (booking.status || "").toLowerCase() === "cancelled";
 
@@ -66,7 +93,11 @@ export default async function ManageBookingPage({
         <div className="relative overflow-hidden rounded-2xl border border-[#fdcc4b]/20 bg-linear-to-b from-[#1e260a] to-[#151a07] p-4 shadow-2xl sm:rounded-3xl sm:p-10">
           <div className={`pointer-events-none absolute top-0 left-1/2 h-24 w-full max-w-md -translate-x-1/2 rounded-full blur-3xl ${isCancelled ? "bg-red-500/5" : "bg-[#fdcc4b]/5"}`} />
           <div className="relative z-10">
-            <ManageBookingView booking={normalised} isCancelled={isCancelled} />
+            <ManageBookingView
+              booking={normalised}
+              isCancelled={isCancelled}
+              groupSizeField={groupSizeField}
+            />
           </div>
         </div>
 

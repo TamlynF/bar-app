@@ -53,19 +53,44 @@ export async function saveTableAction(formData: FormData) {
     chair_layout,
   };
 
+  let currentEmployeeId: number | null = null;
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.email) {
+    const { data: emp } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("email", user.email)
+      .maybeSingle();
+    if (emp) currentEmployeeId = emp.id;
+  }
+
+  const now = new Date().toISOString();
+
   try {
     if (id) {
       const { error } = await supabase
         .from("tables")
-        .update(payload)
+        .update({
+          ...payload,
+          updated_at: now,
+          updated_by: currentEmployeeId,
+        })
         .eq("id", id);
-        
+
       if (error) throw error;
     } else {
       const { error } = await supabase
         .from("tables")
-        .insert(payload);
-        
+        .insert({
+          ...payload,
+          created_at: now,
+          created_by: currentEmployeeId,
+          updated_at: now,
+          updated_by: currentEmployeeId,
+        });
+
       if (error) throw error;
     }
 
