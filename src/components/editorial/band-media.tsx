@@ -14,11 +14,19 @@ const SOCIAL_META: {
   className: SOCIAL_BRANDS[key].solid,
 }));
 
-export function BandMedia({ band, title }: { band: BandInfo; title: string }) {
+export function BandMedia({
+  band,
+  title,
+  showVideos = true,
+}: {
+  band: BandInfo;
+  title: string;
+  showVideos?: boolean;
+}) {
   const socials = SOCIAL_META.map((s) => ({ ...s, url: band.socialLinks[s.key] })).filter(
     (s) => s.url
   );
-  const videos = band.videos.filter((v) => v.url);
+  const videos = showVideos ? band.videos.filter((v) => v.url) : [];
 
   if (socials.length === 0 && videos.length === 0) return null;
 

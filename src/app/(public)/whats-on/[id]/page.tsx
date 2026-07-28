@@ -156,6 +156,7 @@ export default async function WhatsOnEventPage({
   const phone = info?.phone as string | undefined;
 
   const eventInfoText = event.tagline?.trim() || bandIntroduction;
+  const hasBandSocials = Object.values(event.band?.socialLinks ?? {}).some(Boolean);
 
   const openingHours = (info?.opening_hours ?? {}) as OpeningHours;
   const eventDayKey = format(dateObj, "EEEE").toLowerCase();
@@ -370,12 +371,12 @@ export default async function WhatsOnEventPage({
               </section>
             )}
 
-            {event.behavior === "music_act" && event.band && (
+            {event.behavior === "music_act" && event.band && hasBandSocials && (
               <section className="mt-8">
                 <h2 className="mb-4 font-black text-xl tracking-tight text-ink">
                   Listen &amp; follow
                 </h2>
-                <BandMedia band={event.band} title={event.title} />
+                <BandMedia band={event.band} title={event.title} showVideos={false} />
               </section>
             )}
           </div>
