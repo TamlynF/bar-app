@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Search, ChevronDown, CalendarX2 } from "lucide-react";
+import { Search, ChevronDown, CalendarX2, SlidersHorizontal } from "lucide-react";
 import { FilterTabs, type FilterTab } from "@/components/editorial/filter-tabs";
 import { EventGridCard } from "@/components/editorial/event-grid-card";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,39 @@ import type { SerializedEvent } from "@/lib/events-display";
 
 const ALL = "all";
 const PAGE_SIZE = 12;
+
+function SoldOutToggle({
+  active,
+  onToggle,
+  className,
+}: {
+  active: boolean;
+  onToggle: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={active}
+      aria-label="Show sold out shows"
+      onClick={onToggle}
+      className={cn(
+        "inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-3.5 font-black text-[11px] tracking-wide whitespace-nowrap uppercase transition-colors sm:h-9",
+        active
+          ? "border-gold/40 bg-gold/15 text-gold"
+          : "border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink",
+        className
+      )}
+    >
+      <span
+        className={cn("h-2 w-2 shrink-0 rounded-full", active ? "bg-gold" : "bg-stone-600")}
+        aria-hidden="true"
+      />
+      Sold out
+    </button>
+  );
+}
 
 function matchesQuery(e: SerializedEvent, q: string): boolean {
   return (
@@ -33,6 +66,7 @@ export function WhatsOnGrid({
   const [showSoldOut, setShowSoldOut] = useState(false);
   const [showPast, setShowPast] = useState(false);
   const [visible, setVisible] = useState(PAGE_SIZE);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   const q = query.trim().toLowerCase();
 
@@ -69,70 +103,95 @@ export function WhatsOnGrid({
   const shown = filteredUpcoming.slice(0, visible);
   const remaining = filteredUpcoming.length - shown.length;
   const pastOpen = showPast || q.length > 0;
+  const filtersActive = active !== ALL || showSoldOut;
+
+  function toggleSoldOut() {
+    setShowSoldOut((v) => !v);
+    setVisible(PAGE_SIZE);
+  }
 
   return (
     <div className="mt-6">
-      <div className="sticky top-14 z-30 -mx-4 mb-6 border-b border-hairline bg-canvas/90 px-4 pt-3 pb-3 backdrop-blur-xl sm:top-16 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
-        <div className="relative">
-          <label htmlFor="whatson-search" className="sr-only">
-            Search events
-          </label>
-          <Search
-            className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-ink-2"
-            aria-hidden="true"
-          />
-          <input
-            id="whatson-search"
-            type="search"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setVisible(PAGE_SIZE);
-            }}
-            placeholder="Search what's on…"
-            className="h-12 w-full rounded-full border border-hairline bg-canvas-2 pr-4 pl-11 text-sm font-medium text-ink transition-colors outline-none placeholder:text-ink-2/60 focus:border-white/25"
-          />
-        </div>
-
-        <div className="mt-3 flex items-center gap-3">
-          {tabs.length > 0 && (
-            <div className="min-w-0 flex-1">
-              <FilterTabs
-                tabs={allTabs}
-                active={active}
-                onChange={(key) => {
-                  setActive(key);
+      <div className="sticky top-14 z-30 -mx-4 mb-6 bg-canvas/90 px-4 pt-3 pb-3 backdrop-blur-xl sm:top-16 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10">
+        <div className="rounded-3xl border border-hairline bg-white/3 p-3 sm:p-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="relative min-w-0 flex-1">
+              <label htmlFor="whatson-search" className="sr-only">
+                Search events
+              </label>
+              <Search
+                className="pointer-events-none absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-ink-2"
+                aria-hidden="true"
+              />
+              <input
+                id="whatson-search"
+                type="search"
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
                   setVisible(PAGE_SIZE);
                 }}
+                placeholder="Search what's on…"
+                className="h-12 w-full rounded-full border border-hairline bg-canvas-2 pr-4 pl-11 text-sm font-medium text-ink transition-colors outline-none placeholder:text-ink-2/60 focus:border-white/25"
               />
             </div>
-          )}
 
-          <button
-            type="button"
-            role="switch"
-            aria-checked={showSoldOut}
-            aria-label="Show sold out shows"
-            onClick={() => {
-              setShowSoldOut((v) => !v);
-              setVisible(PAGE_SIZE);
-            }}
-            className={cn(
-              "ml-auto inline-flex h-11 shrink-0 items-center gap-2 rounded-full border px-3.5 font-black text-[11px] tracking-wide uppercase transition-colors sm:h-9",
-              showSoldOut
-                ? "border-gold/40 bg-gold/15 text-gold"
-                : "border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink"
-            )}
-          >
-            <span
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((v) => !v)}
+              aria-expanded={filtersOpen}
+              aria-controls="whatson-filters"
               className={cn(
-                "h-2 w-2 shrink-0 rounded-full",
-                showSoldOut ? "bg-gold" : "bg-stone-600"
+                "inline-flex h-12 shrink-0 items-center gap-2 rounded-full border px-4 font-black text-[11px] tracking-wide whitespace-nowrap uppercase transition-colors",
+                filtersOpen || filtersActive
+                  ? "border-gold/40 bg-gold/15 text-gold"
+                  : "border-hairline bg-canvas-2 text-ink-2 hover:bg-white/10 hover:text-ink"
               )}
-              aria-hidden="true"
-            />
-            Sold out
-          </button>
+            >
+              <SlidersHorizontal className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span className="hidden sm:inline">Filters</span>
+              <ChevronDown
+                className={cn("h-4 w-4 shrink-0 transition-transform", filtersOpen && "rotate-180")}
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+
+          {filtersOpen && (
+            <div
+              id="whatson-filters"
+              className="animate-in mt-3 flex items-center gap-3 duration-200 fade-in"
+            >
+              {tabs.length > 0 ? (
+                <>
+                  <div className="min-w-0 flex-1">
+                    <FilterTabs
+                      tabs={allTabs}
+                      active={active}
+                      onChange={(key) => {
+                        setActive(key);
+                        setVisible(PAGE_SIZE);
+                      }}
+                      trailing={
+                        <SoldOutToggle
+                          active={showSoldOut}
+                          onToggle={toggleSoldOut}
+                          className="sm:hidden"
+                        />
+                      }
+                    />
+                  </div>
+                  <SoldOutToggle
+                    active={showSoldOut}
+                    onToggle={toggleSoldOut}
+                    className="ml-auto hidden sm:inline-flex"
+                  />
+                </>
+              ) : (
+                <SoldOutToggle active={showSoldOut} onToggle={toggleSoldOut} className="ml-auto" />
+              )}
+            </div>
+          )}
         </div>
       </div>
 

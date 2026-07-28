@@ -12,10 +12,12 @@ export function FilterTabs({
   tabs,
   active,
   onChange,
+  trailing,
 }: {
   tabs: FilterTab[];
   active: string;
   onChange: (key: string) => void;
+  trailing?: React.ReactNode;
 }) {
   return (
     <div className="no-scrollbar overflow-x-auto">
@@ -55,6 +57,7 @@ export function FilterTabs({
             </button>
           );
         })}
+        {trailing}
       </div>
     </div>
   );
