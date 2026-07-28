@@ -912,6 +912,19 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
     selectedStartTime === preferredStart &&
     selectedEndTime === preferredEnd;
 
+  const subtypeBadge = toTitleCase(currentSub?.name) || toTitleCase(request.reason_for_hire);
+
+  const selectedTimeLabel = [toHHMM(request.selected_start_time), toHHMM(request.selected_end_time)]
+    .filter(Boolean)
+    .join("–");
+  const hasSelectedSlot = !!request.selected_date || !!selectedTimeLabel;
+  const preferredSlotLabel = [
+    preferredDate ? format(new Date(preferredDate + "T00:00:00"), "EEE, d MMM") : "",
+    [preferredStart, preferredEnd].filter(Boolean).join("–"),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const pillClass = (isSelected: boolean, interactive: boolean) =>
     cn(
       "shrink-0 rounded-lg border px-2 py-1 text-[11px] font-bold whitespace-nowrap transition-all",
@@ -927,43 +940,82 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
         type="button"
         onClick={() => setSheetOpen(true)}
         className={cn(
-          "w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
-          "flex items-center gap-3 px-3 py-3.5 text-left",
-          "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]"
+          "relative w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
+          "text-left shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]"
         )}
       >
-        <div
-          className={cn(
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border",
-            theme.bg,
-            theme.text,
-            theme.border
-          )}
-        >
-          {theme.icon}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-1.5">
-            <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
-              {request.full_name}
-            </p>
-            {request.admin_notes && (
-              <span className="shrink-0 rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 font-black text-[10px] text-purple-700 uppercase">
-                ADMIN
+        {subtypeBadge && (
+          <span className="pointer-events-none absolute top-0 left-0 z-10 flex w-full items-stretch text-[9px] tracking-widest uppercase">
+            <span className="flex max-w-[65%] min-w-0 items-stretch overflow-hidden rounded-tl-xl rounded-br-lg">
+              <span className={cn("truncate px-2 py-0.5 font-black text-white", theme.dot)}>
+                {subtypeBadge}
               </span>
+            </span>
+          </span>
+        )}
+
+        <div className={cn("flex items-center gap-3 px-3 pb-3", subtypeBadge ? "pt-5" : "pt-3")}>
+          <div
+            className={cn(
+              "flex h-11 w-11 shrink-0 items-center justify-center rounded-full border",
+              theme.bg,
+              theme.text,
+              theme.border
+            )}
+          >
+            {request.selected_date ? (
+              <div className="flex flex-col items-center justify-center leading-none">
+                <span className="font-black text-[8px] tracking-tighter uppercase opacity-70">
+                  {format(new Date(request.selected_date + "T00:00:00"), "EEE")}
+                </span>
+                <span className="my-px font-black text-sm tracking-tighter">
+                  {format(new Date(request.selected_date + "T00:00:00"), "dd")}
+                </span>
+                <span className="font-black text-[8px] tracking-tighter uppercase opacity-70">
+                  {format(new Date(request.selected_date + "T00:00:00"), "MMM")}
+                </span>
+              </div>
+            ) : (
+              theme.icon
             )}
           </div>
-          <div className="mt-0.5 flex items-center gap-2 text-[#5F624F]">
-            <p className="truncate text-xs font-semibold">{request.email}</p>
-            <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold opacity-60">
-              <Users className="h-3 w-3" />
-              {request.guest_count}
-            </span>
-          </div>
-        </div>
 
-        <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+          <div className="min-w-0 flex-1">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
+                {request.full_name}
+              </p>
+              {request.admin_notes && (
+                <span className="shrink-0 rounded border border-purple-200 bg-purple-50 px-1.5 py-0.5 font-black text-[10px] text-purple-700 uppercase">
+                  ADMIN
+                </span>
+              )}
+            </div>
+            <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5F624F]">
+              <span className="min-w-0 truncate">
+                {hasSelectedSlot
+                  ? selectedTimeLabel && (
+                      <span className="inline-flex items-center gap-1">
+                        <Clock className="h-3 w-3 shrink-0" />
+                        {selectedTimeLabel}
+                      </span>
+                    )
+                  : preferredSlotLabel && (
+                      <span className="inline-flex min-w-0 items-center gap-1">
+                        <CalendarDays className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{preferredSlotLabel}</span>
+                      </span>
+                    )}
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-1 text-[10px] font-bold opacity-60">
+                <Users className="h-3 w-3" />
+                {request.guest_count}
+              </span>
+            </div>
+          </div>
+
+          <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+        </div>
       </button>
 
       <Sheet open={open} onOpenChange={(next) => (next ? setSheetOpen(true) : requestClose())}>
