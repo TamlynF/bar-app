@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getCurrentEmployeeId } from "@/lib/current-employee";
 
 export type QuizCategoryConfig = {
   id?: number;
@@ -58,11 +59,14 @@ export async function saveQuizCategoryAction(formData: FormData) {
     is_higher_lower,
   };
 
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+  const now = new Date().toISOString();
+
   try {
     if (id) {
       const { error } = await supabase
         .from("quiz_category_configs")
-        .update(payload)
+        .update({ ...payload, updated_at: now, updated_by: currentEmployeeId })
         .eq("id", id);
       if (error) throw error;
     } else {
@@ -74,9 +78,13 @@ export async function saveQuizCategoryAction(formData: FormData) {
         .maybeSingle();
       payload.order_no = (maxRow?.order_no ?? 0) + 1;
 
-      const { error } = await supabase
-        .from("quiz_category_configs")
-        .insert(payload);
+      const { error } = await supabase.from("quiz_category_configs").insert({
+        ...payload,
+        created_at: now,
+        updated_at: now,
+        created_by: currentEmployeeId,
+        updated_by: currentEmployeeId,
+      });
       if (error) throw error;
     }
 

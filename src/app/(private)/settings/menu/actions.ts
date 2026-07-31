@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getCurrentEmployeeId } from "@/lib/current-employee";
 
 
 export async function saveCategoryAction(formData: FormData) {
@@ -17,15 +18,24 @@ export async function saveCategoryAction(formData: FormData) {
 
   if (!payload.name) return { error: "Category name is required." };
 
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+  const now = new Date().toISOString();
+
   try {
     if (id) {
       const { error } = await supabase
         .from("menu_categories")
-        .update({ ...payload, updated_at: new Date().toISOString() })
+        .update({ ...payload, updated_at: now, updated_by: currentEmployeeId })
         .eq("id", id);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from("menu_categories").insert(payload);
+      const { error } = await supabase.from("menu_categories").insert({
+        ...payload,
+        created_at: now,
+        updated_at: now,
+        created_by: currentEmployeeId,
+        updated_by: currentEmployeeId,
+      });
       if (error) throw error;
     }
     revalidatePath("/settings/menu");
@@ -67,15 +77,24 @@ export async function saveItemAction(formData: FormData) {
   if (!payload.name || !payload.price) return { error: "Name and price are required." };
   if (!payload.category_id) return { error: "Category is required." };
 
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+  const now = new Date().toISOString();
+
   try {
     if (id) {
       const { error } = await supabase
         .from("menu_items")
-        .update({ ...payload, updated_at: new Date().toISOString() })
+        .update({ ...payload, updated_at: now, updated_by: currentEmployeeId })
         .eq("id", id);
       if (error) throw error;
     } else {
-      const { error } = await supabase.from("menu_items").insert(payload);
+      const { error } = await supabase.from("menu_items").insert({
+        ...payload,
+        created_at: now,
+        updated_at: now,
+        created_by: currentEmployeeId,
+        updated_by: currentEmployeeId,
+      });
       if (error) throw error;
     }
     revalidatePath("/settings/menu");

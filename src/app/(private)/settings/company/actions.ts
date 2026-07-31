@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getCurrentEmployeeId } from "@/lib/current-employee";
 
 export async function getCompanyInfo() {
   const supabase = await createClient();
@@ -24,6 +25,8 @@ export async function updateCompanyInfo(formData: FormData) {
   const id = formData.get("id")?.toString();
   if (!id) return { error: "Missing record ID." };
 
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+
   const payload = {
     name: formData.get("name")?.toString() || null,
     logo_url: formData.get("logo_url")?.toString() || null,
@@ -42,6 +45,7 @@ export async function updateCompanyInfo(formData: FormData) {
     max_capacity: parseInt(formData.get("max_capacity")?.toString() || "0", 10) || null,
     private_hire_min_capacity: parseInt(formData.get("private_hire_min_capacity")?.toString() || "0", 10) || null,
     updated_at: new Date().toISOString(),
+    updated_by: currentEmployeeId,
   };
 
   try {

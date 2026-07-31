@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { getCurrentEmployeeId } from "@/lib/current-employee";
 import type { VenueGeometry } from "@/lib/floor-plan/types";
 
 export async function saveVenueLayoutAction(
@@ -18,6 +19,8 @@ export async function saveVenueLayoutAction(
     return { error: "The room outline needs at least 3 points." };
   }
 
+  const currentEmployeeId = await getCurrentEmployeeId(supabase);
+
   try {
     const { error } = await supabase
       .from("company_information")
@@ -26,6 +29,8 @@ export async function saveVenueLayoutAction(
         obstacles: geometry.obstacles ?? [],
         fixtures: geometry.fixtures ?? [],
         features: geometry.features ?? [],
+        updated_at: new Date().toISOString(),
+        updated_by: currentEmployeeId,
       })
       .eq("id", companyId);
 
