@@ -6,6 +6,8 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
 import {
   Plus,
   Loader2,
@@ -38,6 +40,7 @@ import {
   Info,
   ExternalLink,
   CopyPlus,
+  Undo2,
 } from "lucide-react";
 import QRCode from "qrcode";
 import { createBrowserClient } from "@supabase/ssr";
@@ -307,6 +310,7 @@ export default function EventsClient({
   const [formSubtypeId, setFormSubtypeId] = useState<string>("");
   const [formTitle, setFormTitle] = useState<string>("");
   const [formDate, setFormDate] = useState<string>("");
+  const [formDateOpen, setFormDateOpen] = useState(false);
   const [formStartTime, setFormStartTime] = useState<string>("");
   const [formEndTime, setFormEndTime] = useState<string>("");
   const [formHostId, setFormHostId] = useState<string>("");
@@ -333,7 +337,6 @@ export default function EventsClient({
   const [quizOpen, setQuizOpen] = useState(true);
   const [bookingsOpen, setBookingsOpen] = useState(true);
   const [bookingSettingsOpen, setBookingSettingsOpen] = useState(false);
-  const [bookingPageOpen, setBookingPageOpen] = useState(false);
 
   const typeById = new Map(eventTypes.map((t) => [t.id, t]));
   const subtypeById = new Map(eventSubtypes.map((s) => [s.id, s]));
@@ -966,6 +969,12 @@ export default function EventsClient({
   const showForm = isAdding || isEditing;
   const formDefault = isEditing ? selected : null;
   const selectedSubtype = subtypeById.get(Number(formSubtypeId));
+  const sheetSubtypeLabel = toTitleCase(
+    (isEditing ? selectedSubtype : selected ? subtypeById.get(selected.event_subtypes_id) : undefined)?.name
+  );
+  const sheetTitle = isAdding
+    ? copySourceId ? "Copy Event" : "New Event"
+    : `${isEditing ? "Edit" : "View"} ${sheetSubtypeLabel ? `${sheetSubtypeLabel} ` : ""}Event`;
   const selectedTypeForForm = typeById.get(Number(formTypeId));
   const formSubtypeOptions = subtypesByType.get(Number(formTypeId)) ?? [];
 
@@ -1293,15 +1302,16 @@ export default function EventsClient({
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2
             sm:rounded-4xl sm:border-2 lg:max-h-[90vh] lg:w-6xl xl:w-7xl"
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 px-4 pt-2.5 pb-2 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase">
-                  {isAdding ? (copySourceId ? "Copy Event" : "New Event") : isEditing ? "Edit Event" : (() => {
-                    const sub = selected ? subtypeById.get(selected.event_subtypes_id) : null;
-                    const subType = toTitleCase(sub?.name);
-                    return subType ? `${subType} Event` : "View Event";
-                  })()}
+                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tighter text-[#1F1F1A] uppercase">
+                  {sheetTitle}
+                  {selected && (
+                    <span className="ml-1.5 text-[13px] font-semibold tracking-wide text-[#5F624F] normal-case italic tabular-nums">
+                      (#ID : {selected.id})
+                    </span>
+                  )}
                 </SheetTitle>
                 <SheetDescription className="sr-only">
                   {isAdding
@@ -1314,43 +1324,19 @@ export default function EventsClient({
                     <span className="font-black text-xs tracking-wide text-[#5F624F] uppercase tabular-nums">Copied from #{copySourceId}</span>
                   </div>
                 )}
-                {selected && (
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <Hash className="h-3 w-3 text-[#5F624F]" />
-                    <span className="font-black text-xs tracking-wide text-[#5F624F] uppercase tabular-nums">ID: {selected.id}</span>
-                  </div>
-                )}
               </div>
               {selected && !isAdding && (
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <span className={cn(
-                    "shrink-0 rounded-full border px-3 py-1.5 font-black text-[10px]",
-                    selected.is_active !== false ? "border-green-300 bg-green-100 text-green-700" : "border-red-300 bg-red-100 text-red-600"
-                  )}>
-                    {selected.is_active !== false ? "Active" : "Inactive"}
-                  </span>
-
-                  {canCopy(selected) && (
-                    <button
-                      type="button"
-                      onClick={() => openCopy(selected)}
-                      aria-label="Copy this event"
-                      title="Copy this event"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033] sm:h-9 sm:w-9"
-                    >
-                      <CopyPlus className="h-4 w-4" />
-                    </button>
-                  )}
-
+                <div className="flex shrink-0 items-center gap-2">
                   <Popover open={sysInfoOpen} onOpenChange={setSysInfoOpen}>
                     <PopoverTrigger asChild>
                       <button
                         type="button"
                         aria-label="System information"
                         title="System information"
-                        className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033] sm:h-9 sm:w-9"
+                        className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-2.5 text-blue-700 transition-colors hover:bg-blue-50 hover:text-blue-800 lg:px-3"
                       >
-                        <Info className="h-4 w-4" />
+                        <Info className="h-4.5 w-4.5 shrink-0" />
+                        <span className="hidden font-black text-[11px] tracking-widest uppercase lg:inline">System Info</span>
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
@@ -1385,9 +1371,34 @@ export default function EventsClient({
                       <SheetRow label="Modified By" value={selected.updated_by ? (employeeById.get(selected.updated_by) ?? "—") : "—"} />
                     </PopoverContent>
                   </Popover>
+
+                  {canCopy(selected) && (
+                    <button
+                      type="button"
+                      onClick={() => openCopy(selected)}
+                      aria-label="Copy this event"
+                      title="Copy this event"
+                      className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-2.5 text-white shadow-sm transition-colors hover:bg-[#1B4332]/85 lg:px-3"
+                    >
+                      <CopyPlus className="h-4.5 w-4.5 shrink-0" />
+                      <span className="hidden font-black text-[11px] tracking-widest uppercase lg:inline">Copy</span>
+                    </button>
+                  )}
                 </div>
               )}
             </div>
+
+            {selected && !isAdding && (
+              <div className="mt-1.5 flex items-center gap-3">
+                <span className={cn(
+                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border-2 px-3 font-black text-[10px] tracking-widest uppercase",
+                  selected.is_active !== false ? "border-green-300 bg-green-100 text-green-700" : "border-red-300 bg-red-100 text-red-600"
+                )}>
+                  <span className={cn("h-2 w-2 shrink-0 rounded-full", selected.is_active !== false ? "bg-green-500" : "bg-red-500")} />
+                  {selected.is_active !== false ? "Active" : "Inactive"}
+                </span>
+              </div>
+            )}
           </div>
 
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
@@ -1419,95 +1430,111 @@ export default function EventsClient({
                 subtypeDefaultUrl: sub?.default_image_url,
               });
               const posterNote = imageSourceLabel(poster.source, sub?.name);
+              const eventEndStamp = `${selected.date}T${(selected.end_time ?? selected.start_time ?? "23:59").slice(0, 5)}`;
+              const eventHasPassed = new Date(eventEndStamp).getTime() < Date.now();
+              const showWinningTeam = type?.name === "games" && (selected.booking_id != null || eventHasPassed);
+              const bookingUrl = selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`);
               return (
                 <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
-                    <button type="button" onClick={() => setDetailsOpen(o => !o)} className="flex w-full items-center justify-between bg-[#E6DFC8] px-4 py-3 text-left transition-colors hover:bg-[#DDD4B8] sm:px-5">
-                      <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Event Details</span>
-                      <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", detailsOpen && "rotate-180")} />
-                    </button>
-                    {detailsOpen && (
-                      <>
-                        {poster.url && (
-                          <div className="flex items-start gap-2 border-b border-[#E6DFC8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
-                            <span className="shrink-0 pt-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">Poster</span>
-                            <div className="flex min-w-0 flex-1 flex-col items-end gap-1">
-                              <a
-                                href={poster.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                title="Open the full-size poster"
-                                className="block shrink-0 overflow-hidden rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] transition-colors hover:border-[#5C4033]"
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="h-16 w-28 object-contain" />
-                              </a>
-                              {posterNote && (
-                                <span className="text-right text-[10px] leading-snug font-bold text-[#5F624F]">{posterNote}</span>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
-                        <DetailCell label="Date" value={formatDate(selected.date)} />
-                        <DetailCell label="Time" value={selected.start_time || selected.end_time ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}` : "—"} />
-                        {(sub?.host_required || selected.host_employee_id != null) && <DetailCell label="Host" value={host?.full_name ?? "—"} />}
-                        {(sub?.payment_required || hasPricing) && (
-                          <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
-                        )}
-                        {(sub?.seating_required || selected.seating_required) && <DetailCell label="Seating" toggle={!!selected.seating_required} />}
-                        {selected.tagline && <DetailCell label="Tagline" value={selected.tagline} />}
-                        {selected.external_link && <DetailCell label="External Link" value={selected.external_link} />}
-                        {sub?.behavior === "karaoke" && selected.karaoke_request_url && <DetailCell label="Karaoke Request URL" value={selected.karaoke_request_url} />}
-                      </>
+                  <ViewSection title="Event Details" className="lg:col-start-1 lg:row-start-1" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)}>
+                    {poster.url && (
+                      <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Poster</span>
+                        <div className="flex min-w-0 flex-col items-end gap-1">
+                          <a
+                            href={poster.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Open the full-size poster"
+                            className="block shrink-0 overflow-hidden rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] transition-colors hover:border-[#5C4033]"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="h-16 w-28 object-contain" />
+                          </a>
+                          {posterNote && (
+                            <span className="text-right text-[10px] leading-snug font-bold text-[#5F624F]">{posterNote}</span>
+                          )}
+                        </div>
+                      </div>
                     )}
-                  </div>
+                    <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
+                    <DetailCell
+                      label="Type / Subtype"
+                      value={
+                        <>
+                          {toTitleCase(type?.name) || "—"}
+                          <span className="mx-1.5 font-normal text-[#5F624F]/50">/</span>
+                          {toTitleCase(sub?.name) || "—"}
+                        </>
+                      }
+                    />
+                    <DetailCell label="Date" value={formatDate(selected.date)} />
+                    <DetailCell label="Time" value={selected.start_time || selected.end_time ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}` : "—"} />
+                    {(sub?.host_required || selected.host_employee_id != null) && <DetailCell label="Host" value={host?.full_name ?? "—"} />}
+                    {(sub?.payment_required || hasPricing) && (
+                      <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
+                    )}
+                    {(sub?.seating_required || selected.seating_required) && <DetailCell label="Seating" toggle={!!selected.seating_required} />}
+                    {selected.tagline && <DetailCell label="Tagline" value={selected.tagline} />}
+                    {selected.external_link && <DetailCell label="External Link" value={selected.external_link} />}
+                    {sub?.behavior === "karaoke" && <DetailCell label="Singa Link" value={selected.karaoke_request_url} />}
+                  </ViewSection>
 
                   {isQuiz && (() => {
                     const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
                     return (
-                      <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
-                        <button type="button" onClick={() => setQuizOpen(o => !o)} className="flex w-full items-center justify-between bg-[#E6DFC8] px-4 py-3 text-left transition-colors hover:bg-[#DDD4B8] sm:px-5">
-                          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Quiz Questions</span>
-                          <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", quizOpen && "rotate-180")} />
-                        </button>
-                        {quizOpen && (
-                          <>
-                            <div className="space-y-2 px-4 py-2.5 sm:px-5">
-                              {categoryCounts.map(cat => (
-                                <div key={cat.id} className="flex items-center justify-between gap-2">
-                                  <span className="text-xs font-bold text-[#1F1F1A] sm:text-sm">{cat.category_name}</span>
-                                  <div className="flex items-center gap-1.5">
-                                    {cat.count >= cat.question_count ? <CheckCircle2 className="h-3.5 w-3.5 text-green-600" /> : cat.count > 0 ? <AlertTriangle className="h-3.5 w-3.5 text-amber-500" /> : <AlertCircle className="h-3.5 w-3.5 text-red-400" />}
-                                    <span className="font-black text-xs text-[#5F624F] tabular-nums sm:text-sm">{cat.count} / {cat.question_count}</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            <div className="border-t border-[#E6DFC8] px-4 py-2.5 sm:px-5">
-                              <Link href={`/event-setups/events/${selected.id}`} className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-[#5C4033] text-white transition-colors hover:bg-[#5C4033]/85" title="Manage Quiz">
-                                <Brain className="h-3.5 w-3.5" />
-                                <span className="font-black text-[9px] tracking-wide uppercase">Manage Quiz</span>
-                              </Link>
-                            </div>
-                          </>
-                        )}
-                      </div>
+                      <ViewSection
+                        title="Quiz Questions"
+                        className="lg:col-start-1 lg:row-start-2"
+                        open={quizOpen}
+                        onToggle={() => setQuizOpen(o => !o)}
+                        headerRight={
+                          <Link
+                            href={`/event-setups/events/${selected.id}`}
+                            title="Manage Quiz"
+                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#5C4033] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#5C4033]/85"
+                          >
+                            <Brain className="h-3.5 w-3.5 shrink-0" />
+                            Manage Quiz
+                          </Link>
+                        }
+                      >
+                        {categoryCounts.map(cat => (
+                          <div key={cat.id} className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+                            <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{cat.category_name}</span>
+                            <span className="flex items-center gap-1.5 text-right text-[13px] font-semibold text-[#1F1F1A]">
+                              {cat.count >= cat.question_count ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" /> : cat.count > 0 ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />}
+                              <span className="tabular-nums">{cat.count} / {cat.question_count}</span>
+                            </span>
+                          </div>
+                        ))}
+                      </ViewSection>
                     );
                   })()}
 
-                  {selected.is_bookable && <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
-                    <button type="button" onClick={() => setBookingsOpen(o => !o)} className="flex w-full items-center justify-between bg-[#E6DFC8] px-4 py-3 text-left transition-colors hover:bg-[#DDD4B8] sm:px-5">
-                      <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Bookings</span>
-                      <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", bookingsOpen && "rotate-180")} />
-                    </button>
-                    {bookingsOpen && (
-                      <>
+                  <div className={cn("space-y-4 sm:space-y-5", isQuiz ? "lg:contents lg:space-y-0" : "lg:col-start-2 lg:row-start-1")}>
+                    {selected.is_bookable && (
+                      <ViewSection
+                        title="Bookings"
+                        className="lg:col-start-2 lg:row-start-1"
+                        open={bookingsOpen}
+                        onToggle={() => setBookingsOpen(o => !o)}
+                        headerRight={
+                          <Link
+                            href={viewAllHref}
+                            title="View all bookings"
+                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#5C4033] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#5C4033]/85"
+                          >
+                            <Users className="h-3.5 w-3.5 shrink-0" />
+                            View All
+                          </Link>
+                        }
+                      >
                         <DetailCell label="Fully Booked" toggle={!!selected.is_fully_booked} />
-                        {type?.name === "games" && (
+                        {showWinningTeam && (
                           <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "—"} />
                         )}
-                        <div className="grid grid-cols-3 divide-x divide-[#E6DFC8]/50">
+                        <div className="grid grid-cols-3 divide-x divide-[#E6DFC8]/50 border-b border-[#E6DFC8] last:border-0">
                           <div className="px-2 py-2 text-center sm:px-3">
                             <p className="font-black text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
                             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase sm:text-[9px]">Confirmed</p>
@@ -1521,101 +1548,91 @@ export default function EventsClient({
                             <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase sm:text-[9px]">Cancelled</p>
                           </div>
                         </div>
-                        <div className="border-t border-[#E6DFC8] px-4 py-2.5 sm:px-5">
-                          <Link href={viewAllHref} className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl bg-[#5C4033] text-white transition-colors hover:bg-[#5C4033]/85">
-                            <Users className="h-3.5 w-3.5" />
-                            <span className="font-black text-[9px] tracking-wide uppercase">View All</span>
-                          </Link>
-                        </div>
                         {selected.seating_required && (
-                          <div className="border-t border-[#E6DFC8] px-4 py-2.5 sm:px-5">
-                            <Link href={`/settings/floor-plan/${selected.id}`} className="flex h-9 w-full items-center justify-center gap-1.5 rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] transition-colors hover:bg-[#F7F4EA]">
-                              <Grid2X2 className="h-3.5 w-3.5" />
-                              <span className="font-black text-[9px] tracking-wide uppercase">Floor plan layout calculator</span>
+                          <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+                            <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Floor Plan</span>
+                            <Link
+                              href={`/settings/floor-plan/${selected.id}`}
+                              title="Floor plan layout calculator"
+                              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 font-black text-[10px] tracking-wider text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033] hover:text-white"
+                            >
+                              <Grid2X2 className="h-3.5 w-3.5 shrink-0" />
+                              Layout Calculator
                             </Link>
                           </div>
                         )}
-                      </>
+                      </ViewSection>
                     )}
-                  </div>}
 
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
-                    <button type="button" onClick={() => setBookingSettingsOpen(o => !o)} className="flex w-full items-center justify-between bg-[#E6DFC8] px-4 py-3 text-left transition-colors hover:bg-[#DDD4B8] sm:px-5">
-                      <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Public Booking Settings</span>
-                      <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", bookingSettingsOpen && "rotate-180")} />
-                    </button>
-                    {bookingSettingsOpen && (
-                      <>
-                        <DetailCell label="Public Booking" toggle={!!selected.is_bookable} />
+                    <ViewSection title="Public Booking Settings" className="lg:col-start-2 lg:row-start-2" open={bookingSettingsOpen} onToggle={() => setBookingSettingsOpen(o => !o)}>
+                      <DetailCell label="Public Booking" toggle={!!selected.is_bookable} />
 
-                        {selected.is_bookable && (
-                          <div className="border-t border-[#E6DFC8] px-4 py-3 sm:px-5">
-                            <div className="mb-2 flex items-center gap-1.5">
-                              <Link2 className="h-3.5 w-3.5 text-[#5F624F]" />
-                              <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Shareable Booking Link</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <code className="flex-1 truncate rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[11px] font-bold text-[#26300D]">
-                                {selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`)}
-                              </code>
-                              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => {
-                                const url = selected.booking_page_url ?? `${window.location.origin}/book/event/${selected.id}`;
-                                navigator.clipboard.writeText(url);
-                                setLinkCopied(true);
-                                setTimeout(() => setLinkCopied(false), 2000);
-                              }}>
-                                {linkCopied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4 text-[#5F624F]" />}
-                              </Button>
-                            </div>
-
-                            <div className="mt-3 border-t border-[#E6DFC8] pt-3">
-                              <div className="mb-2 flex items-center gap-1.5">
-                                <QrCode className="h-3.5 w-3.5 text-[#5F624F]" />
-                                <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Booking QR Code</span>
-                              </div>
-                              {selected.booking_qr_url ? (
-                                <div className="flex items-start gap-3">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img src={selected.booking_qr_url} alt="Booking link QR code" className="h-28 w-28 shrink-0 rounded-lg border border-[#E6DFC8] bg-white p-1.5" />
-                                  <div className="flex flex-col gap-2">
-                                    <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:bg-[#F0EDE0]">
-                                      {qrCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-                                      {qrCopied ? "Copied" : "Copy QR"}
-                                    </button>
-                                    <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:bg-[#F0EDE0] disabled:opacity-50">
-                                      {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
-                                      Regenerate
+                      {selected.is_bookable && (
+                        <div className="bg-[#F7F4EA]/40 p-3 sm:p-4">
+                          <BookingConfigEditor
+                            value={selected.booking_config ?? {}}
+                            readOnly
+                            bookingPageExtra={
+                              <>
+                                <div className="flex items-center justify-between gap-3 border-t border-[#E6DFC8] px-4 py-2">
+                                  <span className="flex shrink-0 items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                                    <Link2 className="h-3.5 w-3.5" />
+                                    Booking Link
+                                  </span>
+                                  <div className="flex min-w-0 items-center gap-2">
+                                    <span className="truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{bookingUrl}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText(bookingUrl);
+                                        setLinkCopied(true);
+                                        setTimeout(() => setLinkCopied(false), 2000);
+                                      }}
+                                      aria-label="Copy the booking link"
+                                      title="Copy the booking link"
+                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
+                                    >
+                                      {linkCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
                                     </button>
                                   </div>
                                 </div>
-                              ) : (
-                                <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-[#1B4332] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85 disabled:opacity-50">
-                                  {qrBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <QrCode className="h-4 w-4" />}
-                                  Generate QR Code
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        )}
 
-                        {selected.is_bookable && (
-                          <div className="border-t border-[#E6DFC8]">
-                            <button type="button" onClick={() => setBookingPageOpen(o => !o)} className="flex w-full items-center justify-between bg-[#E6DFC8]/60 px-4 py-3 text-left transition-colors hover:bg-[#E6DFC8]/80 sm:px-5">
-                              <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Booking Page</span>
-                              <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", bookingPageOpen && "rotate-180")} />
-                            </button>
-                            {bookingPageOpen && (
-                              <div className="bg-[#F7F4EA]/40 p-3 sm:p-4">
-                                <BookingConfigEditor value={selected.booking_config ?? {}} readOnly />
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </>
-                    )}
+                                <div className="flex items-start justify-between gap-4 border-t border-[#E6DFC8] px-4 py-2">
+                                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                                    <QrCode className="h-3.5 w-3.5" />
+                                    Booking QR
+                                  </span>
+                                  {selected.booking_qr_url ? (
+                                    <div className="flex items-start gap-2">
+                                      <div className="flex flex-col items-end gap-1.5">
+                                        <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 font-black text-[10px] tracking-wider text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033] hover:text-white">
+                                          {qrCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                          {qrCopied ? "Copied" : "Copy QR"}
+                                        </button>
+                                        <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 font-black text-[10px] tracking-wider text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033] hover:text-white disabled:opacity-50">
+                                          {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
+                                          Regenerate
+                                        </button>
+                                      </div>
+                                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                                      <img src={selected.booking_qr_url} alt="Booking link QR code" className="h-20 w-20 shrink-0 rounded-lg border border-[#E6DFC8] bg-white p-1" />
+                                    </div>
+                                  ) : (
+                                    <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#1B4332] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#1B4332]/85 disabled:opacity-50">
+                                      {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
+                                      Generate QR
+                                    </button>
+                                  )}
+                                </div>
+                              </>
+                            }
+                          />
+                        </div>
+                      )}
+                    </ViewSection>
                   </div>
 
-                  {formError && <div className="lg:col-span-2"><ErrorBox message={formError} /></div>}
+                  {formError && <div className="lg:col-span-2 lg:row-start-3"><ErrorBox message={formError} /></div>}
                 </div>
               );
             })()}
@@ -1630,100 +1647,14 @@ export default function EventsClient({
                 <input type="hidden" name="is_fully_booked" value={formFullyBooked ? "on" : ""} />
                 <input type="hidden" name="is_bookable" value={formIsBookable ? "on" : ""} />
 
-                <FormSection title="Details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
-                  <FormRow label="Event Type" required error={fieldErrors.event_types_id}>
-                    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                      <select
-                        title="Event Type"
-                        name="event_types_id"
-                        value={formTypeId}
-                        onChange={(e) => onSelectType(e.target.value)}
-                        className="min-w-0 cursor-pointer appearance-none bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none [text-align-last:right] sm:text-sm"
-                      >
-                        {eventTypes.map((t) => (
-                          <option key={t.id} value={t.id}>{toTitleCase(t.name)}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
-                    </div>
-                  </FormRow>
-
-                  <FormRow label="Sub-Type" required error={fieldErrors.event_subtypes_id}>
-                    <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                      <select
-                        title="Sub-Type"
-                        name="event_subtypes_id"
-                        value={formSubtypeId}
-                        onChange={(e) => onSelectSubtype(e.target.value)}
-                        className="min-w-0 cursor-pointer appearance-none bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none [text-align-last:right] sm:text-sm"
-                      >
-                        <option value="" disabled>Select a sub-type...</option>
-                        {formSubtypeOptions.map((s) => (
-                          <option key={s.id} value={s.id}>{toTitleCase(s.name)}</option>
-                        ))}
-                      </select>
-                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
-                    </div>
-                  </FormRow>
-
-                  <FormRow label="Title" required error={fieldErrors.title}>
-                    <input
-                      name="title"
-                      placeholder="e.g. Music Bingo"
-                      value={formTitle}
-                      onChange={(e) => setFormTitle(e.target.value)}
-                      className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Date" required error={fieldErrors.date}>
-                    <div className="flex flex-1 items-center justify-end">
-                      <input title="Date" name="date" type="date" value={formDate} onChange={(e) => setFormDate(e.target.value)} className="bg-transparent font-black text-xs text-[#1F1F1A] outline-none sm:text-sm" />
-                    </div>
-                  </FormRow>
-
-                  <FormRow label="Time" required error={fieldErrors.time}>
-                    <div className="flex flex-1 items-center justify-end gap-2">
-                      <input title="Start time" name="start_time" type="time" value={formStartTime} onChange={(e) => { const v = e.target.value; setFormStartTime(v); if (v && !formEndTime) { const end = addHoursToTime(v, 2); if (end) setFormEndTime(end); } }} className="w-22 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none sm:text-sm" />
-                      <span className="text-xs text-[#5F624F]/50">-</span>
-                      <input title="End time" name="end_time" type="time" value={formEndTime} onChange={(e) => setFormEndTime(e.target.value)} className="w-22 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none sm:text-sm" />
-                    </div>
-                  </FormRow>
-
-                  {selectedSubtype?.host_required && (
-                    <FormRow label="Host" warning={fieldWarnings.host_employee_id}>
-                      <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                        <select title="Host" name="host_employee_id" value={formHostId} onChange={(e) => setFormHostId(e.target.value)} className="min-w-0 cursor-pointer appearance-none bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none [text-align-last:right] sm:text-sm">
-                          <option value="">No host</option>
-                          {employees.map((e) => (
-                            <option key={e.id} value={e.id}>{e.full_name}</option>
-                          ))}
-                        </select>
-                        <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
-                      </div>
-                    </FormRow>
-                  )}
-
-                  <FormRow label="Payment (£)" warning={fieldWarnings.payment_amount}>
-                    <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
-                  </FormRow>
-
-                  <div className="px-4 py-2.5 sm:px-5 sm:py-4">
-                    <div className="mb-2 flex items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
-                      <span className="font-black text-[10px] tracking-wide uppercase">Tagline</span>
-                    </div>
-                    <textarea name="tagline" placeholder="Brief tagline for the event..." rows={2} value={formTagline} onChange={(e) => setFormTagline(e.target.value)} className="w-full resize-none bg-transparent font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
-                  </div>
-
-                  <div className="px-4 py-2.5 sm:px-5 sm:py-4">
-                    <div className="mb-2 flex items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
-                      <span className="font-black text-[10px] tracking-wide uppercase">Poster Image</span>
-                    </div>
+                <FormSection title="Event Details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
+                  <div className="border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+                    <span className="mb-2 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Poster Image</span>
                     <input type="hidden" name="image_url" value={formImageUrl} />
                     {formImageUrl ? (
                       <div className="relative overflow-hidden rounded-xl border border-[#E6DFC8]">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={formImageUrl} alt="Event poster" className="max-h-50 w-full bg-[#F7F4EA] object-cover" />
+                        <img src={formImageUrl} alt="Event poster" className="max-h-32 w-full bg-[#F7F4EA] object-contain" />
                         <button
                           type="button"
                           onClick={() => setFormImageUrl("")}
@@ -1738,7 +1669,7 @@ export default function EventsClient({
                       <div className="space-y-2">
                         <div className="relative overflow-hidden rounded-xl border border-dashed border-[#E6DFC8]">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={inheritedForForm.url} alt="Inherited poster" className="max-h-50 w-full bg-[#F7F4EA] object-cover opacity-75" />
+                          <img src={inheritedForForm.url} alt="Inherited poster" className="max-h-32 w-full bg-[#F7F4EA] object-contain opacity-75" />
                         </div>
                         <p className="text-[10px] text-[#5F624F]">
                           {imageSourceLabel(inheritedForForm.source, selectedSubtype?.name)}. It updates automatically when that image changes.
@@ -1759,13 +1690,110 @@ export default function EventsClient({
                     )}
                   </div>
 
+                  <FormRow label="Title" required error={fieldErrors.title}>
+                    <input
+                      name="title"
+                      placeholder="e.g. Music Bingo"
+                      value={formTitle}
+                      onChange={(e) => setFormTitle(e.target.value)}
+                      className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+                    />
+                  </FormRow>
+
+                  <FormRow label="Type / Sub-Type" required error={fieldErrors.event_types_id ?? fieldErrors.event_subtypes_id}>
+                    <div className="flex min-w-0 items-center justify-end gap-1.5">
+                      <select
+                        title="Event Type"
+                        name="event_types_id"
+                        value={formTypeId}
+                        onChange={(e) => onSelectType(e.target.value)}
+                        className="field-sizing-content min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
+                      >
+                        {eventTypes.map((t) => (
+                          <option key={t.id} value={t.id}>{toTitleCase(t.name)}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
+                      <span className="shrink-0 text-[#5F624F]/50">/</span>
+                      <select
+                        title="Sub-Type"
+                        name="event_subtypes_id"
+                        value={formSubtypeId}
+                        onChange={(e) => onSelectSubtype(e.target.value)}
+                        className="field-sizing-content min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
+                      >
+                        <option value="" disabled>Select a sub-type...</option>
+                        {formSubtypeOptions.map((s) => (
+                          <option key={s.id} value={s.id}>{toTitleCase(s.name)}</option>
+                        ))}
+                      </select>
+                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
+                    </div>
+                  </FormRow>
+
+                  <FormRow label="Date" required error={fieldErrors.date}>
+                    <input type="hidden" name="date" value={formDate} />
+                    <Popover open={formDateOpen} onOpenChange={setFormDateOpen}>
+                      <PopoverTrigger asChild>
+                        <button
+                          type="button"
+                          className="flex cursor-pointer items-center gap-2 bg-transparent text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:text-[#5C4033]"
+                        >
+                          {formDate ? format(new Date(formDate + "T00:00:00"), "EEE, d MMM yyyy") : "Pick a date"}
+                          <CalendarDays className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-auto rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
+                        <Calendar
+                          mode="single"
+                          selected={formDate ? new Date(formDate + "T00:00:00") : undefined}
+                          onSelect={(d) => {
+                            if (d) setFormDate(format(d, "yyyy-MM-dd"));
+                            setFormDateOpen(false);
+                          }}
+                          autoFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </FormRow>
+
+                  <FormRow label="Time" required error={fieldErrors.time}>
+                    <div className="flex flex-1 items-center justify-end gap-2">
+                      <input title="Start time" name="start_time" type="time" value={formStartTime} onChange={(e) => { const v = e.target.value; setFormStartTime(v); if (v && !formEndTime) { const end = addHoursToTime(v, 2); if (end) setFormEndTime(end); } }} className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none" />
+                      <span className="text-xs text-[#5F624F]/50">-</span>
+                      <input title="End time" name="end_time" type="time" value={formEndTime} onChange={(e) => setFormEndTime(e.target.value)} className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none" />
+                    </div>
+                  </FormRow>
+
+                  {selectedSubtype?.host_required && (
+                    <FormRow label="Host" warning={fieldWarnings.host_employee_id}>
+                      <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+                        <select title="Host" name="host_employee_id" value={formHostId} onChange={(e) => setFormHostId(e.target.value)} className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]">
+                          <option value="">No host</option>
+                          {employees.map((e) => (
+                            <option key={e.id} value={e.id}>{e.full_name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
+                      </div>
+                    </FormRow>
+                  )}
+
+                  <FormRow label="Payment (£)" warning={fieldWarnings.payment_amount}>
+                    <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                  </FormRow>
+
+                  <FormRow label="Tagline">
+                    <textarea name="tagline" placeholder="Brief tagline for the event..." rows={1} value={formTagline} onChange={(e) => setFormTagline(e.target.value)} className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-right text-[13px] leading-relaxed font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                  </FormRow>
+
                   <FormRow label="External Link">
-                    <input name="external_link" type="url" placeholder="https://instagram.com/..." value={formExternalLink} onChange={(e) => setFormExternalLink(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
+                    <input name="external_link" type="url" placeholder="https://instagram.com/..." value={formExternalLink} onChange={(e) => setFormExternalLink(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                   </FormRow>
 
                   {selectedSubtype?.behavior === "karaoke" && (
                     <FormRow label="Singa Link" warning={fieldWarnings.karaoke_request_url}>
-                      <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." value={formKaraokeUrl} onChange={(e) => setFormKaraokeUrl(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
+                      <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." value={formKaraokeUrl} onChange={(e) => setFormKaraokeUrl(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                     </FormRow>
                   )}
 
@@ -1774,30 +1802,26 @@ export default function EventsClient({
                 <div className="space-y-4 sm:space-y-5">
                 <FormSection title="Settings" open={formSettingsOpen} onToggle={() => setFormSettingsOpen((o) => !o)}>
                   <FormRow label="Seating">
-                    <span className="flex-1" />
                     <FormToggle label="Seating" on={formSeating} onToggle={() => setFormSeating((o) => !o)} />
                   </FormRow>
                   <FormRow label="Active">
-                    <span className="flex-1" />
                     <FormToggle label="Active" on={formActive} onToggle={() => setFormActive((o) => !o)} />
                   </FormRow>
                 </FormSection>
 
                 <FormSection title="Public Booking Settings" open={formBookingSettingsOpen} onToggle={() => setFormBookingSettingsOpen((o) => !o)}>
                   <FormRow label="Public Booking">
-                    <span className="flex-1" />
                     <FormToggle label="Public booking" on={formIsBookable} onToggle={toggleBookable} />
                   </FormRow>
 
                   {formIsBookable && (
                     <>
                       <FormRow label="Fully Booked">
-                        <span className="flex-1" />
                         <FormToggle label="Fully booked" on={formFullyBooked} onToggle={() => setFormFullyBooked((o) => !o)} danger />
                       </FormRow>
 
                       <FormRow label="Booking URL" required error={fieldErrors.booking_page_url}>
-                        <input name="booking_page_url" type="url" placeholder="https://..." value={formBookingPageUrl} onChange={(e) => { setFormBookingPageUrl(e.target.value); setBookingUrlManual(true); }} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
+                        <input name="booking_page_url" type="url" placeholder="https://..." value={formBookingPageUrl} onChange={(e) => { setFormBookingPageUrl(e.target.value); setBookingUrlManual(true); }} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                       </FormRow>
 
                       {selectedTypeForForm?.name === "games" && (() => {
@@ -1820,7 +1844,7 @@ export default function EventsClient({
                                       setFormGroupName("");
                                     }
                                   }}
-                                  className="min-w-0 cursor-pointer appearance-none bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none [text-align-last:right] sm:text-sm"
+                                  className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
                                 >
                                   <option value="">No booking</option>
                                   {eventBookings.map(b => (
@@ -1832,42 +1856,37 @@ export default function EventsClient({
                             </FormRow>
                             <FormRow label="Group Name">
                               <input type="hidden" name="group_name" value={formGroupName} />
-                              <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
+                              <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                             </FormRow>
                           </>
                         );
                       })()}
+
+                      <div className="bg-[#F7F4EA]/40 p-3 sm:p-4">
+                        <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
+                        <BookingConfigEditor value={formBookingConfig} onChange={setFormBookingConfig} />
+                      </div>
                     </>
                   )}
                 </FormSection>
                 </div>
 
-                {formIsBookable && (
-                  <div className="lg:col-span-2">
-                    <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
-                    <BookingConfigEditor value={formBookingConfig} onChange={setFormBookingConfig} />
-                  </div>
-                )}
-
                 {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
-                  <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white lg:col-span-2">
-                    <div className="bg-[#E6DFC8]/60 px-4 py-2.5 sm:px-5 sm:py-3">
-                      <span className="font-black text-[11px] tracking-wide text-[#26300D] uppercase">Booking Card</span>
+                  <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white lg:col-span-2">
+                    <div className="flex min-h-14 w-full items-center gap-3 border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-3 sm:px-5">
+                      <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Booking Card</span>
                     </div>
-                    <div className="px-4 pt-2.5 sm:px-5">
+                    <div className="border-b border-[#E6DFC8] px-4 py-2 sm:px-5">
                       <p className="text-[10px] leading-relaxed text-[#5F624F]">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
                     </div>
                     <FormRow label="Card Title">
-                      <input name="booking_card_title" placeholder="e.g. Music Bingo" value={formCardTitle} onChange={(e) => setFormCardTitle(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
+                      <input name="booking_card_title" placeholder="e.g. Music Bingo" value={formCardTitle} onChange={(e) => setFormCardTitle(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                     </FormRow>
-                    <div className="px-4 py-2.5 sm:px-5 sm:py-4">
-                      <div className="mb-2 flex items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
-                        <span className="font-black text-[10px] tracking-wide uppercase">Card Tagline</span>
-                      </div>
-                      <textarea name="booking_card_tagline" placeholder="Short line shown under the title..." rows={2} value={formCardTagline} onChange={(e) => setFormCardTagline(e.target.value)} className="w-full resize-none bg-transparent font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
-                    </div>
+                    <FormRow label="Card Tagline">
+                      <textarea name="booking_card_tagline" placeholder="Short line shown under the title..." rows={1} value={formCardTagline} onChange={(e) => setFormCardTagline(e.target.value)} className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-right text-[13px] leading-relaxed font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                    </FormRow>
                     <FormRow label="Card Note">
-                      <input name="booking_card_badge" placeholder="e.g. Thursdays, Members only" value={formCardBadge} onChange={(e) => setFormCardBadge(e.target.value)} className="flex-1 bg-transparent text-right font-black text-xs text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm" />
+                      <input name="booking_card_badge" placeholder="e.g. Thursdays, Members only" value={formCardBadge} onChange={(e) => setFormCardBadge(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
                     </FormRow>
                     <input type="hidden" name="booking_card_icon" value={formCardIcon ?? ""} />
                     <IconPicker label="Card Icon" value={formCardIcon} onChange={setFormCardIcon} />
@@ -1896,7 +1915,8 @@ export default function EventsClient({
 
             {showForm && (
               <div className="grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-12 rounded-xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-widest text-[#5F624F] uppercase">
+                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-12 rounded-xl border-2 border-[#5C4033]/30 bg-white font-black text-[10px] tracking-widest text-[#5C4033] uppercase shadow-sm hover:bg-[#F7F4EA] hover:text-[#5C4033]">
+                  <Undo2 className="mr-2 h-4 w-4" />
                   Cancel
                 </Button>
                 <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-12 rounded-xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50">
@@ -1916,9 +1936,9 @@ function FormRow({ label, required, error, warning, children }: { label: string;
   const message = error ?? warning;
   const isWarning = !error && !!warning;
   return (
-    <div className="px-4 py-2.5 sm:px-5 sm:py-4">
-      <div className="flex items-center gap-2 sm:gap-3">
-        <div className={cn("flex shrink-0 items-center gap-1.5 sm:gap-2", error ? "text-red-600 opacity-100" : warning ? "text-amber-600 opacity-100" : "text-[#5F624F] opacity-60")}>
+    <div className="border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className={cn("flex shrink-0 items-center gap-1", error ? "text-red-600" : warning ? "text-amber-600" : "text-[#5F624F]")}>
           <span className="font-black text-[10px] tracking-wide whitespace-nowrap uppercase">{label}</span>
           {required && <span className="font-black text-[10px] text-red-500">*</span>}
         </div>
@@ -1934,19 +1954,43 @@ function FormRow({ label, required, error, warning, children }: { label: string;
   );
 }
 
-function DetailCell({ label, value, icon, toggle, accent }: { label: string; value?: string; icon?: React.ReactNode; toggle?: boolean; accent?: string }) {
+function ViewSection({ title, open, onToggle, headerRight, className, children }: { title: string; open: boolean; onToggle: () => void; headerRight?: React.ReactNode; className?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 border-b border-[#E6DFC8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
-        {icon}
-        <span className="font-black text-[10px] tracking-wide whitespace-nowrap uppercase">{label}</span>
+    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
+      <div className={cn("flex min-h-14 w-full items-center gap-3 bg-[#E6DFC8] px-4 py-3 sm:px-5", open && "border-b border-[#E6DFC8]")}>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex flex-1 items-center text-left transition-all hover:brightness-95"
+        >
+          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+        </button>
+        {headerRight}
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+          className="shrink-0 transition-all hover:brightness-95"
+        >
+          <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+        </button>
       </div>
+      <div className={cn(!open && "hidden")}>{children}</div>
+    </div>
+  );
+}
+
+function DetailCell({ label, value, icon, toggle, accent }: { label: string; value?: React.ReactNode; icon?: React.ReactNode; toggle?: boolean; accent?: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide whitespace-nowrap text-[#5F624F] uppercase">
+        {icon}
+        {label}
+      </span>
       {toggle !== undefined ? (
-        <span className="flex flex-1 justify-end">
-          <ToggleSlider on={toggle} />
-        </span>
+        <ToggleSlider on={toggle} />
       ) : (
-        <span className={cn("flex-1 text-right font-black text-xs leading-snug sm:text-sm", accent ?? "text-[#1F1F1A]")}>{value}</span>
+        <span className={cn("text-right text-[13px] font-semibold", accent ?? "text-[#1F1F1A]")}>{value || "—"}</span>
       )}
     </div>
   );
@@ -1979,11 +2023,24 @@ function ErrorBox({ message }: { message: string }) {
 function FormSection({ title, open, onToggle, children, className }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode; className?: string }) {
   return (
     <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
-      <button type="button" onClick={onToggle} className="flex w-full items-center justify-between bg-[#E6DFC8] px-4 py-3 text-left transition-colors hover:bg-[#DDD4B8] sm:px-5">
-        <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
-        <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
-      </button>
-      <div className={cn("divide-y divide-[#E6DFC8]/50", !open && "hidden")}>{children}</div>
+      <div className={cn("flex min-h-14 w-full items-center gap-3 bg-[#E6DFC8] px-4 py-3 sm:px-5", open && "border-b border-[#E6DFC8]")}>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="flex flex-1 items-center text-left transition-all hover:brightness-95"
+        >
+          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+        </button>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
+          className="shrink-0 transition-all hover:brightness-95"
+        >
+          <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+        </button>
+      </div>
+      <div className={cn(!open && "hidden")}>{children}</div>
     </div>
   );
 }

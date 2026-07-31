@@ -13,8 +13,8 @@ export function IconPicker({
   label?: string;
 }) {
   return (
-    <div className="space-y-3 px-4 py-3 sm:px-5 sm:py-4">
-      <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">{label}</span>
+    <div className="space-y-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
       <div className="grid grid-cols-5 gap-2 sm:grid-cols-7">
         {BOOKING_CARD_ICON_NAMES.map((name) => {
           const Icon = BOOKING_CARD_ICONS[name];

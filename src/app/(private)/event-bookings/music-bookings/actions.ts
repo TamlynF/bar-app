@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planBandEventSync, type BandStatus as BandStatusType } from "@/lib/band-event-sync";
 import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
+import { eventSlotIsComplete } from "@/lib/event-active";
 import { buildRescheduleEmail, buildOfferEmail, buildOutcomeEmail } from "@/lib/band-emails";
 import {
   upsertContactByEmail,
@@ -326,7 +327,11 @@ export async function updateBandStatus(
       event_types_id: eventTypeId,
       event_subtypes_id: eventSubtypeId,
       payment_amount: 0,
-      is_active: true,
+      is_active: eventSlotIsComplete({
+        date: record.selected_date,
+        startTime: record.selected_start_time,
+        endTime: record.selected_end_time,
+      }),
       is_bookable: et?.is_bookable ?? false,
       booking_config: et?.booking_config ?? {},
       booking_card_title: et?.booking_card_title ?? null,

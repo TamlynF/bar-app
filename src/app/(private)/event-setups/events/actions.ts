@@ -7,6 +7,7 @@ import { publicBookingUrl } from "@/lib/booking-links";
 import { isBookingGrouping } from "@/lib/booking-grouping";
 import { validateEventForm, type EventClashCandidate } from "@/lib/event-form-validation";
 import { isEventCreationMethod } from "@/lib/event-creation";
+import { resolveEventIsActive } from "@/lib/event-active";
 
 export async function saveEventAction(formData: FormData) {
   const supabase = await createClient();
@@ -18,19 +19,21 @@ export async function saveEventAction(formData: FormData) {
   const eventSubtypesId = parseInt(formData.get("event_subtypes_id")?.toString() || "0", 10);
   const manualUrl = formData.get("booking_page_url")?.toString() || null;
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "";
+  const startTime = formData.get("start_time")?.toString() || null;
+  const endTime = formData.get("end_time")?.toString() || null;
 
   const payload = {
     title: formData.get("title")?.toString() || "",
     tagline: formData.get("tagline")?.toString() || "",
     date,
-    start_time: formData.get("start_time")?.toString() || null,
-    end_time: formData.get("end_time")?.toString() || null,
+    start_time: startTime,
+    end_time: endTime,
     payment_amount: parseFloat(formData.get("payment_amount")?.toString() || "0"),
     event_types_id: eventTypesId,
     event_subtypes_id: eventSubtypesId,
     host_employee_id: formData.get("host_employee_id") ? parseInt(formData.get("host_employee_id") as string, 10) : null,
     seating_required: formData.get("seating_required") === "on",
-    is_active: formData.get("is_active") === "on",
+    is_active: resolveEventIsActive(formData.get("is_active") === "on", { date, startTime, endTime }),
     is_fully_booked: formData.get("is_fully_booked") === "on",
     group_name: formData.get("group_name")?.toString() || null,
     booking_id: formData.get("booking_id") ? parseInt(formData.get("booking_id") as string, 10) : null,

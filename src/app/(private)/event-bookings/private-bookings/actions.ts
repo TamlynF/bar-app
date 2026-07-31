@@ -7,6 +7,7 @@ import { resolveEventSubtype } from "@/lib/resolve-event-subtype";
 import { planPrivateEventSync } from "@/lib/private-event-sync";
 import { privateHireSubtypeLabel, unwrapSubtype } from "@/lib/private-hire-subtype";
 import { findEventClashes, type ClashEvent, type ClashEventInput } from "@/lib/event-clash";
+import { eventSlotIsComplete } from "@/lib/event-active";
 import { buildPrivateHireOutcomeEmail } from "@/lib/private-hire-emails";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -121,6 +122,13 @@ export async function updatePrivateHireFields(
       payment_amount: 0,
       updated_by: empId,
       updated_at: new Date().toISOString(),
+      ...(eventSlotIsComplete({
+        date: record.selected_date,
+        startTime: record.selected_start_time,
+        endTime: record.selected_end_time,
+      })
+        ? {}
+        : { is_active: false }),
     };
     if (sub) {
       eventUpdate.event_types_id = sub.event_types_id;
@@ -189,7 +197,11 @@ export async function updatePrivateHireStatus(
       event_types_id: eventTypeId,
       event_subtypes_id: eventSubtypeId,
       payment_amount: 0,
-      is_active: true,
+      is_active: eventSlotIsComplete({
+        date: record.selected_date,
+        startTime: record.selected_start_time,
+        endTime: record.selected_end_time,
+      }),
       ...(await eventTypeBookingFields(eventTypeId)),
       updated_by: empId,
       updated_at: now,
