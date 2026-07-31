@@ -40,15 +40,15 @@ export function HighlightedEvents({
         <ul
           className="
             no-scrollbar -mx-4 flex snap-x snap-mandatory
-            scroll-px-4 items-stretch gap-3.5 overflow-x-auto
+            scroll-px-4 items-center gap-3.5 overflow-x-auto
             px-4 pb-3
 
-            sm:mx-0 sm:grid sm:snap-none sm:grid-cols-2
-            sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0
+            sm:mx-0 sm:snap-none sm:flex-wrap sm:items-stretch
+            sm:justify-center sm:gap-4 sm:overflow-visible sm:px-0 sm:pb-0
 
-            lg:grid-cols-3 lg:gap-5
+            lg:gap-5
 
-            xl:grid-cols-4 xl:gap-6
+            xl:gap-6
           "
         >
           {visibleEvents.map((event, index) => (
@@ -103,6 +103,11 @@ function ScheduleCard({
         bg-canvas-2
 
         sm:w-auto sm:min-w-0 sm:shrink sm:snap-none
+        sm:basis-[calc(50%-0.5rem)]
+
+        lg:basis-[calc(33.333%-0.834rem)]
+
+        xl:basis-[calc(25%-1.125rem)]
       "
       style={
         {
