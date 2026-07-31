@@ -5,12 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import {
   Plus, Loader2, ChevronDown, Save, Pencil, Trash2,
-  Hash, AlertCircle, ImageIcon, Upload,
+  Hash, AlertCircle, AlertTriangle, ImageIcon, Upload,
 } from "lucide-react";
 import { saveGalleryImageAction, deleteGalleryImageAction } from "./actions";
 import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { createBrowserClient } from "@supabase/ssr";
+import {
+  gradeGalleryMedia,
+  LIGHTBOX_IDEAL_EDGE,
+  LIGHTBOX_MIN_EDGE,
+  QUALITY_BADGE,
+  QUALITY_SUMMARY,
+  type MediaKind,
+  type QualityLevel,
+} from "@/lib/gallery-media-quality";
 
 const supabase = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -31,6 +40,34 @@ export type GalleryImage = {
   updated_by?: number | null;
 };
 
+type MeasuredMedia = { width: number; height: number; level: QualityLevel };
+
+function measureMedia(file: File, kind: MediaKind): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(file);
+
+    const finish = (width: number, height: number) => {
+      URL.revokeObjectURL(url);
+      resolve({ width, height });
+    };
+
+    if (kind === "video") {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.muted = true;
+      video.onloadedmetadata = () => finish(video.videoWidth, video.videoHeight);
+      video.onerror = () => finish(0, 0);
+      video.src = url;
+      return;
+    }
+
+    const img = document.createElement("img");
+    img.onload = () => finish(img.naturalWidth, img.naturalHeight);
+    img.onerror = () => finish(0, 0);
+    img.src = url;
+  });
+}
+
 export default function GalleryClient({ initialImages = [] }: { initialImages: GalleryImage[] }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [selected, setSelected] = useState<GalleryImage | null>(null);
@@ -41,7 +78,21 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [imageUrl, setImageUrl] = useState("");
-  const [mediaType, setMediaType] = useState<"image" | "video">("image");
+  const [mediaType, setMediaType] = useState<MediaKind>("image");
+  const [mediaWarning, setMediaWarning] = useState<string | null>(null);
+  const [mediaSizes, setMediaSizes] = useState<Record<number, MeasuredMedia>>({});
+
+  const recordMediaSize = (id: number, width: number, height: number, kind: MediaKind) => {
+    if (!width || !height) return;
+    setMediaSizes((prev) => {
+      const known = prev[id];
+      if (known && known.width === width && known.height === height) return prev;
+      return {
+        ...prev,
+        [id]: { width, height, level: gradeGalleryMedia({ width, height, kind }).level },
+      };
+    });
+  };
 
   const isSheetOpen = !!selected || isAdding;
   const showForm = isAdding || isEditing;
@@ -56,6 +107,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
 
   const openAdd = () => {
     setFormError(null);
+    setMediaWarning(null);
     setIsEditing(false);
     setSelected(null);
     setImageUrl("");
@@ -68,15 +120,31 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
     setIsAdding(false);
     setIsEditing(false);
     setFormError(null);
+    setMediaWarning(null);
     setImageUrl("");
   };
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.target;
+    const file = input.files?.[0];
     if (!file) return;
 
     setUploadingImage(true);
     setFormError(null);
+    setMediaWarning(null);
+
+    const kind: MediaKind = file.type.startsWith("video/") ? "video" : "image";
+    const { width, height } = await measureMedia(file, kind);
+    const quality = gradeGalleryMedia({ width, height, kind });
+
+    if (quality.level === "reject") {
+      setFormError(quality.message);
+      setUploadingImage(false);
+      input.value = "";
+      return;
+    }
+
+    if (quality.level === "warn") setMediaWarning(quality.message);
 
     const ext = file.name.split(".").pop();
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
@@ -87,14 +155,17 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
 
     if (error) {
       setFormError(`Upload failed: ${error.message}`);
+      setMediaWarning(null);
       setUploadingImage(false);
+      input.value = "";
       return;
     }
 
     const publicUrl = supabase.storage.from("gallery").getPublicUrl(data.path).data.publicUrl;
     setImageUrl(publicUrl);
-    setMediaType(file.type.startsWith("video/") ? "video" : "image");
+    setMediaType(kind);
     setUploadingImage(false);
+    input.value = "";
   };
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -165,14 +236,26 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                   className="group relative aspect-square overflow-hidden rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] transition-all hover:border-[#5C4033]"
                 >
                   {img.media_type === "video" ? (
-                    <video src={img.image_url} className="h-full w-full object-cover" muted preload="metadata" />
+                    <video
+                      src={img.image_url}
+                      className="h-full w-full object-cover"
+                      muted
+                      preload="metadata"
+                      onLoadedMetadata={(e) => recordMediaSize(img.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight, "video")}
+                    />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={img.image_url} alt={img.title} className="h-full w-full object-cover" />
+                    <img
+                      src={img.image_url}
+                      alt={img.title}
+                      className="h-full w-full object-cover"
+                      onLoad={(e) => recordMediaSize(img.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight, "image")}
+                    />
                   )}
                   <div className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/70 to-transparent p-2 pt-6">
                     <p className="truncate font-black text-[10px] tracking-tight text-white uppercase">{img.title}</p>
                   </div>
+                  <QualityBadge measured={mediaSizes[img.id]} />
                   {!img.is_active && (
                     <div className="absolute top-1.5 right-1.5 rounded bg-red-500/80 px-1.5 py-0.5 font-black text-[8px] text-white uppercase">Hidden</div>
                   )}
@@ -215,17 +298,40 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
               <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 <div className="overflow-hidden rounded-2xl border-2 border-[#E6DFC8]">
                   {selected.media_type === "video" ? (
-                    <video src={selected.image_url} className="max-h-75 w-full object-cover" controls muted />
+                    <video
+                      src={selected.image_url}
+                      className="max-h-75 w-full object-cover"
+                      controls
+                      muted
+                      onLoadedMetadata={(e) => recordMediaSize(selected.id, e.currentTarget.videoWidth, e.currentTarget.videoHeight, "video")}
+                    />
                   ) : (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={selected.image_url} alt={selected.title} className="max-h-75 w-full object-cover" />
+                    <img
+                      src={selected.image_url}
+                      alt={selected.title}
+                      className="max-h-75 w-full object-cover"
+                      onLoad={(e) => recordMediaSize(selected.id, e.currentTarget.naturalWidth, e.currentTarget.naturalHeight, "image")}
+                    />
                   )}
                 </div>
+
+                {mediaSizes[selected.id]?.level === "reject" && (
+                  <WarningBox
+                    message={`Only ${mediaSizes[selected.id].width} x ${mediaSizes[selected.id].height} — this looks blurry when opened fullscreen on the public gallery. Replace it with a file of at least ${LIGHTBOX_MIN_EDGE[selected.media_type === "video" ? "video" : "image"]}px on the longest side.`}
+                  />
+                )}
                 <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                   <DetailCell label="Title" value={selected.title} />
                   <DetailCell label="Description" value={selected.description || "—"} />
                   <DetailCell label="Status" value={selected.is_active ? "Active" : "Hidden"} />
                   <DetailCell label="Order" value={String(selected.display_order)} />
+                  {mediaSizes[selected.id] && (
+                    <DetailCell
+                      label="Size"
+                      value={`${mediaSizes[selected.id].width} x ${mediaSizes[selected.id].height} — ${QUALITY_SUMMARY[mediaSizes[selected.id].level]}`}
+                    />
+                  )}
                   {selected.created_at && (
                     <DetailCell label="Created" value={new Date(selected.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} />
                   )}
@@ -251,7 +357,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                       )}
                       <button
                         type="button"
-                        onClick={() => setImageUrl("")}
+                        onClick={() => { setImageUrl(""); setMediaWarning(null); }}
                         className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
                         title="Delete image"
                       >
@@ -269,9 +375,14 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                         {uploadingImage ? "Uploading..." : "Click to upload"}
                       </span>
                       <span className="mt-1 text-[9px] text-[#5F624F] opacity-60">Images or videos up to 50MB</span>
+                      <span className="mt-1 text-[9px] text-[#5F624F] opacity-60">
+                        Longest side {LIGHTBOX_MIN_EDGE.image}px minimum, {LIGHTBOX_IDEAL_EDGE}px ideal — the gallery opens fullscreen
+                      </span>
                       <input type="file" accept="image/*,video/*" className="hidden" onChange={handleUpload} disabled={uploadingImage} />
                     </label>
                   )}
+
+                  {mediaWarning && <WarningBox message={mediaWarning} />}
                 </div>
 
                 <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
@@ -384,6 +495,31 @@ function DetailCell({ label, value }: { label: string; value: string }) {
         <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">{label}</span>
       </div>
       <span className="flex-1 text-right font-black text-base leading-snug break-all text-[#1F1F1A] sm:text-sm">{value}</span>
+    </div>
+  );
+}
+
+function QualityBadge({ measured }: { measured?: MeasuredMedia }) {
+  if (!measured || measured.level === "good") return null;
+
+  return (
+    <div
+      title={`${measured.width} x ${measured.height} — ${QUALITY_SUMMARY[measured.level]}`}
+      className={cn(
+        "absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 font-black text-[8px] text-white uppercase",
+        measured.level === "reject" ? "bg-red-500/85" : "bg-[#B45309]/85"
+      )}
+    >
+      {QUALITY_BADGE[measured.level]}
+    </div>
+  );
+}
+
+function WarningBox({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-[#B45309]" />
+      <p className="text-[11px] leading-snug font-bold text-[#B45309]">{message}</p>
     </div>
   );
 }

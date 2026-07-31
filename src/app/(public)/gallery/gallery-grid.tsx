@@ -108,10 +108,37 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
           role="dialog"
           aria-modal="true"
           aria-label={selected.title}
-          className="fixed inset-0 z-50 flex animate-in flex-col bg-black/90 backdrop-blur-xl duration-200 fade-in"
+          className="fixed inset-0 z-50 animate-in bg-black/95 backdrop-blur-xl duration-200 fade-in"
           onClick={close}
         >
-          <div className="flex shrink-0 items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="absolute inset-0 flex items-center justify-center p-2 pt-16 pb-32 sm:p-4 sm:pt-20 sm:pb-36">
+            <div
+              key={selected.id}
+              className="relative h-full w-full animate-in duration-200 zoom-in-95"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {selected.media_type === "video" ? (
+                <video
+                  src={selected.image_url}
+                  className="absolute inset-0 h-full w-full rounded-2xl object-contain"
+                  controls
+                  autoPlay
+                  playsInline
+                />
+              ) : (
+                <Image
+                  src={selected.image_url}
+                  alt={selected.title}
+                  fill
+                  className="rounded-2xl object-contain"
+                  sizes="100vw"
+                  priority
+                />
+              )}
+            </div>
+          </div>
+
+          <div className="absolute inset-x-0 top-0 flex items-center justify-between gap-3 bg-linear-to-b from-black/80 to-transparent px-4 py-3 sm:px-6">
             <span className="font-bold text-[10px] tracking-widest text-stone-400 tabular-nums uppercase">
               {openIndex! + 1} / {items.length}
             </span>
@@ -120,67 +147,47 @@ export default function GalleryGrid({ items }: { items: GalleryItem[] }) {
               title="Close"
               aria-label="Close"
               onClick={close}
-              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
+              className="flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-white/20"
             >
               <X className="h-5 w-5" />
             </button>
           </div>
 
-          <div
-            className="flex min-h-0 flex-1 items-center justify-center gap-2 px-2 sm:gap-4 sm:px-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {items.length > 1 && (
+          {items.length > 1 && (
+            <>
               <button
                 type="button"
                 title="Previous"
                 aria-label="Previous"
-                onClick={() => step(-1)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  step(-1);
+                }}
+                className="absolute top-1/2 left-2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-white/20 sm:left-4"
               >
                 <ChevronLeft className="h-5 w-5" />
               </button>
-            )}
 
-            <div className="flex min-h-0 min-w-0 flex-1 animate-in items-center justify-center duration-200 zoom-in-95">
-              {selected.media_type === "video" ? (
-                <video
-                  key={selected.id}
-                  src={selected.image_url}
-                  className="max-h-full max-w-full rounded-2xl object-contain"
-                  controls
-                  autoPlay
-                  playsInline
-                />
-              ) : (
-                <Image
-                  key={selected.id}
-                  src={selected.image_url}
-                  alt={selected.title}
-                  width={1600}
-                  height={1200}
-                  className="max-h-full w-auto max-w-full rounded-2xl object-contain"
-                  sizes="95vw"
-                  priority
-                />
-              )}
-            </div>
-
-            {items.length > 1 && (
               <button
                 type="button"
                 title="Next"
                 aria-label="Next"
-                onClick={() => step(1)}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10 text-white transition-colors hover:bg-white/20"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  step(1);
+                }}
+                className="absolute top-1/2 right-2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-white/20 sm:right-4"
               >
                 <ChevronRight className="h-5 w-5" />
               </button>
-            )}
-          </div>
+            </>
+          )}
 
-          <div className="shrink-0 px-4 pt-3 pb-6 sm:px-6" onClick={(e) => e.stopPropagation()}>
-            <div className="mx-auto max-w-3xl border-t border-white/10 pt-3">
+          <div
+            className="absolute inset-x-0 bottom-0 bg-linear-to-t from-black/95 via-black/75 to-transparent px-4 pt-12 pb-6 sm:px-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto max-w-3xl">
               <h3 className="font-black text-base leading-tight tracking-tight text-white uppercase sm:text-lg">
                 {selected.title}
               </h3>

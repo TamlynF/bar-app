@@ -2,6 +2,8 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { gradeGalleryMedia } from "@/lib/gallery-media-quality";
+import { readRemoteImageDimensions } from "@/lib/gallery-image-dimensions";
 
 export async function saveGalleryImageAction(formData: FormData) {
   const supabase = await createClient();
@@ -19,6 +21,24 @@ export async function saveGalleryImageAction(formData: FormData) {
 
   if (!payload.title) return { error: "Title is required." };
   if (!payload.image_url) return { error: "Image is required." };
+
+  let previousImageUrl: string | null = null;
+  if (id) {
+    const { data: existing } = await supabase
+      .from("gallery_images")
+      .select("image_url")
+      .eq("id", id)
+      .maybeSingle();
+    previousImageUrl = existing?.image_url ?? null;
+  }
+
+  if (payload.media_type !== "video" && payload.image_url !== previousImageUrl) {
+    const dimensions = await readRemoteImageDimensions(payload.image_url);
+    if (dimensions) {
+      const quality = gradeGalleryMedia({ ...dimensions, kind: "image" });
+      if (quality.level === "reject") return { error: quality.message };
+    }
+  }
 
   let currentEmployeeId: number | null = null;
   const { data: { user } } = await supabase.auth.getUser();
