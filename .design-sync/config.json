@@ -4,5 +4,9 @@
   "projectId": "ba6ad8ad-ac14-4122-84b4-6611748705ed",
   "shape": "package",
   "cssEntry": "styles.css",
-  "readmeHeader": ".design-sync/conventions.md"
+  "readmeHeader": ".design-sync/conventions.md",
+  "dtsPropsFor": {
+    "Button": "/** Visual style. `default` = espresso admin button; override colour on the public surface. */\n  variant?: \"default\" | \"destructive\" | \"outline\" | \"secondary\" | \"ghost\" | \"link\";\n  /** Control height / icon sizing. */\n  size?: \"default\" | \"xs\" | \"sm\" | \"lg\" | \"icon\" | \"icon-xs\" | \"icon-sm\" | \"icon-lg\";\n  /** Render as the single child element (Radix Slot) instead of a <button>. */\n  asChild?: boolean;\n  type?: \"button\" | \"submit\" | \"reset\";\n  disabled?: boolean;\n  onClick?: React.MouseEventHandler<HTMLButtonElement>;\n  name?: string;\n  value?: string | number;\n  form?: string;\n  title?: string;\n  \"aria-label\"?: string;\n  tabIndex?: number;\n  className?: string;\n  id?: string;\n  style?: React.CSSProperties;\n  children?: React.ReactNode;",
+    "Input": "/** Native input type. */\n  type?: \"text\" | \"email\" | \"password\" | \"number\" | \"search\" | \"tel\" | \"url\" | \"date\" | \"time\" | \"datetime-local\" | \"file\" | \"checkbox\" | \"radio\" | \"hidden\";\n  placeholder?: string;\n  value?: string | number;\n  defaultValue?: string | number;\n  onChange?: React.ChangeEventHandler<HTMLInputElement>;\n  onBlur?: React.FocusEventHandler<HTMLInputElement>;\n  onFocus?: React.FocusEventHandler<HTMLInputElement>;\n  disabled?: boolean;\n  readOnly?: boolean;\n  required?: boolean;\n  name?: string;\n  autoComplete?: string;\n  min?: number | string;\n  max?: number | string;\n  step?: number | string;\n  maxLength?: number;\n  pattern?: string;\n  inputMode?: \"none\" | \"text\" | \"tel\" | \"url\" | \"email\" | \"numeric\" | \"decimal\" | \"search\";\n  \"aria-label\"?: string;\n  className?: string;\n  id?: string;\n  style?: React.CSSProperties;"
+  }
 }

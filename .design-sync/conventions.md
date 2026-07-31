@@ -42,10 +42,18 @@ Never mix the two palettes on one surface.
 
 - **`Button`** — `variant`: `default | destructive | outline | secondary | ghost |
   link`; `size`: `default | xs | sm | lg | icon | icon-xs | icon-sm | icon-lg`;
-  `asChild`; plus all native `<button>` attributes. Both axes now render fully
-  (sizing **and** colour).
-- **`Input`** — all native `<input>` attributes; a bordered, rounded field with a
-  focus ring. Safe to use as-is on either surface.
+  `asChild`; plus the native `<button>` attributes declared in `Button.d.ts`
+  (`type`, `disabled`, `onClick`, `name`, `value`, `form`, `title`, `aria-label`,
+  `tabIndex`). Both axes render fully (sizing **and** colour).
+- **`Input`** — the native `<input>` attributes declared in `Input.d.ts`: `type`,
+  `placeholder`, `value`/`defaultValue`, `onChange`/`onBlur`/`onFocus`, `disabled`,
+  `readOnly`, `required`, `name`, `autoComplete`, `min`/`max`/`step`, `maxLength`,
+  `pattern`, `inputMode`, `aria-label`. A bordered, rounded field with a focus
+  ring. Safe to use as-is on either surface.
+
+Both spread any further props straight onto the underlying DOM element, so an
+attribute missing from the `.d.ts` still works at runtime — but prefer the
+declared ones; they are the contract.
 
 ## Build snippets
 
