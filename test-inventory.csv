@@ -1,0 +1,360 @@
+﻿Layer,File,Suite,Test,Line
+"Unit (Vitest)","admin-booking-groups.test.ts","buildAdminBookingGroups behaviour + grouping","captures the sub-type behaviour and resolved grouping on each entry",26
+"Unit (Vitest)","admin-booking-groups.test.ts","isRequestEnquiryGroup","flags per_type music_act and private groups",44
+"Unit (Vitest)","admin-booking-groups.test.ts","isRequestEnquiryGroup","does not flag per_type groups with other behaviours",51
+"Unit (Vitest)","admin-booking-groups.test.ts","isRequestEnquiryGroup","does not flag music_act / private that are not per_type",56
+"Unit (Vitest)","admin-booking-groups.test.ts","partitionBookingGroups","splits per_type music_act/private into requests and everything else into guest",63
+"Unit (Vitest)","band-availability.test.ts","slotsWithinOpeningHours","keeps both slots when the venue is open past 11pm",17
+"Unit (Vitest)","band-availability.test.ts","slotsWithinOpeningHours","drops the 9pm slot when the venue closes at 10:30pm",21
+"Unit (Vitest)","band-availability.test.ts","slotsWithinOpeningHours","returns nothing on a closed day",25
+"Unit (Vitest)","band-availability.test.ts","slotsWithinOpeningHours","returns nothing without opening hours",29
+"Unit (Vitest)","band-availability.test.ts","computeAvailableBandDates","only offers Fridays and Saturdays in an ordinary month",37
+"Unit (Vitest)","band-availability.test.ts","computeAvailableBandDates","adds the August bank holiday Monday and the Sunday before it",54
+"Unit (Vitest)","band-availability.test.ts","computeAvailableBandDates","drops a date when active events block both slots",60
+"Unit (Vitest)","band-availability.test.ts","computeAvailableBandDates","keeps a date when one slot is still free",74
+"Unit (Vitest)","band-availability.test.ts","computeAvailableBandDates","ignores inactive events and events on other days",88
+"Unit (Vitest)","band-availability.test.ts","computeAvailableBandDates","returns nothing without opening hours",110
+"Unit (Vitest)","band-emails.test.ts","buildRescheduleEmail","greets the booker and includes the group name in the body",5
+"Unit (Vitest)","band-emails.test.ts","buildRescheduleEmail","formats the new date and 12h time window",18
+"Unit (Vitest)","band-emails.test.ts","buildRescheduleEmail","leaves date/time labels empty when not set",31
+"Unit (Vitest)","band-emails.test.ts","buildOfferEmail","names the act in the subject and body, and greets the booker",47
+"Unit (Vitest)","band-emails.test.ts","buildOfferEmail","builds a slot label from the date and 12h time window",54
+"Unit (Vitest)","band-emails.test.ts","buildOfferEmail","says the slot is to be arranged when there is no date",60
+"Unit (Vitest)","band-emails.test.ts","buildOfferEmail","omits the fee and note labels when there is no fee or note",66
+"Unit (Vitest)","band-emails.test.ts","buildOfferEmail","carries a note to the applicant through, trimmed",72
+"Unit (Vitest)","band-emails.test.ts","buildOfferEmail","falls back to 'you' when the act has no group name",78
+"Unit (Vitest)","band-emails.test.ts","buildOutcomeEmail","confirms with the slot and an upbeat subject",94
+"Unit (Vitest)","band-emails.test.ts","buildOutcomeEmail","drops the slot when declining, even if a date was pencilled in",103
+"Unit (Vitest)","band-emails.test.ts","buildOutcomeEmail","carries a note through on either outcome",111
+"Unit (Vitest)","band-event-sync.test.ts","planBandEventSync › booking","inserts a new event when booked with a date and no linked event",6
+"Unit (Vitest)","band-event-sync.test.ts","planBandEventSync › booking","updates the existing event when booked with a date and a linked event (no duplicate)",11
+"Unit (Vitest)","band-event-sync.test.ts","planBandEventSync › booking","does nothing when booked without a selected date",16
+"Unit (Vitest)","band-event-sync.test.ts","planBandEventSync › non-booked statuses deactivate the linked event","new  [parameterised]",25
+"Unit (Vitest)","band-event-sync.test.ts","planBandEventSync › non-booked statuses deactivate the linked event","new  [parameterised]",33
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › only booked requests with a linked event earn a badge","new  [parameterised]",26
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › only booked requests with a linked event earn a badge","tolerates casing and padding on the status",30
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › only booked requests with a linked event earn a badge","returns null when no event was ever placed",34
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › only booked requests with a linked event earn a badge","returns null when the linked event has no date",38
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › overnight slots land on the right side of midnight","is upcoming at midday on the day of the gig",44
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › overnight slots land on the right side of midnight","shows nothing mid-performance",48
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › overnight slots land on the right side of midnight","is completed once the slot's end has passed, after midnight",52
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › overnight slots land on the right side of midnight","is not yet completed at the very moment the slot ends",56
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › overnight slots land on the right side of midnight","is completed for a gig on a past date",60
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › times are only compared against the clock once the date arrives","stays upcoming when viewed later in the evening than the gig's start time",66
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › upcoming requires a live event, but has no horizon","returns null for a future gig whose event is off the schedule",72
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › upcoming requires a live event, but has no horizon","is upcoming for a gig months out when it's the only one booked",76
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › upcoming requires a live event, but has no horizon","is upcoming for a gig years out when it's the only one booked",80
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › a past event still reads completed once deactivated","is completed even when the linked event is inactive",86
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › missing times degrade sensibly","treats a slot with no end as a point in time",92
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › missing times degrade sensibly","treats a date with no times at all as spanning the whole day",98
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › missing times degrade sensibly","handles a same-day daytime slot",105
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › exactly one request is upcoming — the next night on the schedule","tags only the soonest of several future gigs",116
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › exactly one request is upcoming — the next night on the schedule","does not depend on the order the board hands them over",130
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › exactly one request is upcoming — the next night on the schedule","separates two gigs on the same night by their start time",137
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › exactly one request is upcoming — the next night on the schedule","skips a nearer gig whose event is off the schedule, in favour of the next live one",149
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › exactly one request is upcoming — the next night on the schedule","passes over a gig that's already underway",158
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › exactly one request is upcoming — the next night on the schedule","still marks every finished gig completed, however many there are",170
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › exactly one request is upcoming — the next night on the schedule","tags nothing upcoming when every booked gig is behind us",180
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › exactly one request is upcoming — the next night on the schedule","returns an empty map for an empty board",185
+"Unit (Vitest)","band-lifecycle.test.ts","bandLifecycleStages › exactly one request is upcoming — the next night on the schedule","gives a dead heat to a single request",189
+"Unit (Vitest)","booking-config.test.ts","normalizeBookingConfig","returns the full defaults for an empty/null config",5
+"Unit (Vitest)","booking-config.test.ts","normalizeBookingConfig","forces name and email to always visible + required, but keeps custom labels",11
+"Unit (Vitest)","booking-config.test.ts","normalizeBookingConfig","reads the new nested shape, including group_size min/max",22
+"Unit (Vitest)","booking-config.test.ts","normalizeBookingConfig","maps the legacy flat shape for back-compat",35
+"Unit (Vitest)","booking-config.test.ts","normalizeBookingConfig","prefers new nested keys over legacy ones",55
+"Unit (Vitest)","booking-emails.test.ts","describeBookingChanges","reports nothing when nothing the customer sees changed",26
+"Unit (Vitest)","booking-emails.test.ts","describeBookingChanges","reports a party size change with readable values",30
+"Unit (Vitest)","booking-emails.test.ts","describeBookingChanges","uses the configured group name label",35
+"Unit (Vitest)","booking-emails.test.ts","describeBookingChanges","treats null, empty and whitespace-only as the same value",41
+"Unit (Vitest)","booking-emails.test.ts","describeBookingChanges","reports a special request being added and removed",47
+"Unit (Vitest)","booking-emails.test.ts","describeBookingChanges","ignores a status change that is only a difference in casing",56
+"Unit (Vitest)","booking-emails.test.ts","describeBookingChanges","reports a date move using formatted dates",61
+"Unit (Vitest)","booking-emails.test.ts","describeBookingChanges","collects several changes at once",66
+"Unit (Vitest)","booking-emails.test.ts","customer change email","shows the before and after of each change and links to the manage page",78
+"Unit (Vitest)","booking-emails.test.ts","customer change email","uses venue-initiated wording when an admin made the change",92
+"Unit (Vitest)","booking-emails.test.ts","admin emails","puts the event, date and party size in the new-booking subject",112
+"Unit (Vitest)","booking-emails.test.ts","admin emails","includes the customer's contact details for follow-up",120
+"Unit (Vitest)","booking-emails.test.ts","admin emails","references the booking id in the change subject",129
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — grouping-driven routing","per_event deep-links to the single-event page with the booking selected",13
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — grouping-driven routing","per_subtype deep-links to the sub-type list scoped to the event",19
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — grouping-driven routing","per_type deep-links to the all-subtypes list scoped to the event",25
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — grouping-driven routing","falls back to all-subtypes when per_subtype has no sub-type name",31
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — grouping-driven routing","omits the bookingId when there is none",37
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — grouping-driven routing","encodes names that contain url-unsafe characters",46
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — grouping-driven routing","routes on grouping regardless of behavior",57
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — fallbacks when grouping is unknown","falls back to the per-event page when an id is known",68
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — fallbacks when grouping is unknown","falls back to the hub with no id",75
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — fallbacks when grouping is unknown","needs an event id before grouping can be applied",80
+"Unit (Vitest)","booking-links.test.ts","adminBookingsHref — fallbacks when grouping is unknown","falls back to the per-event page when per_type has no type name",86
+"Unit (Vitest)","booking-links.test.ts","publicBookingUrl","returns null when the event is not bookable",101
+"Unit (Vitest)","booking-links.test.ts","publicBookingUrl","returns null when not bookable even if a manual url is set",107
+"Unit (Vitest)","booking-links.test.ts","publicBookingUrl","lets a manual override win over the computed url when bookable",113
+"Unit (Vitest)","booking-links.test.ts","publicBookingUrl","builds the per_type grouped page keyed to the event id",119
+"Unit (Vitest)","booking-links.test.ts","publicBookingUrl","builds the per_subtype grouped page keyed to the event id",125
+"Unit (Vitest)","booking-links.test.ts","publicBookingUrl","falls back to the per-event page for per_subtype with no subtype",131
+"Unit (Vitest)","booking-links.test.ts","publicBookingUrl","builds the per-event page for per_event and for an unknown/null grouping",137
+"Unit (Vitest)","booking-links.test.ts","checkoutReturnPath","sends every booking back to the per-event success page",148
+"Unit (Vitest)","booking-links.test.ts","manageBookingPath","routes every booking to the generic manage page",156
+"Unit (Vitest)","booking-row-ids.test.ts","withStringBookingIds","turns the bigint ids PostgREST returns as numbers into strings",5
+"Unit (Vitest)","booking-row-ids.test.ts","withStringBookingIds","leaves ids that are already strings untouched",17
+"Unit (Vitest)","booking-row-ids.test.ts","withStringBookingIds","keeps a missing event_id as null rather than the string 'null'",29
+"Unit (Vitest)","booking-row-ids.test.ts","withStringBookingIds","survives bookings with no table mapping",34
+"Unit (Vitest)","booking-row-ids.test.ts","withStringBookingIds","leaves a mapping row whose table is missing alone",39
+"Unit (Vitest)","booking-row-ids.test.ts","withStringBookingIds","preserves every other field on the row",47
+"Unit (Vitest)","booking-row-ids.test.ts","withStringBookingIds","keeps the id comparable to a url search param",58
+"Unit (Vitest)","event-active.test.ts","eventSlotIsComplete","is true only when the date and both times are set",5
+"Unit (Vitest)","event-active.test.ts","eventSlotIsComplete","is false when any part of the slot is missing",9
+"Unit (Vitest)","event-active.test.ts","eventSlotIsComplete","treats blank strings as missing",16
+"Unit (Vitest)","event-active.test.ts","resolveEventIsActive","keeps an event inactive when it was not requested active",22
+"Unit (Vitest)","event-active.test.ts","resolveEventIsActive","forces an event inactive when the slot is incomplete",26
+"Unit (Vitest)","event-active.test.ts","resolveEventIsActive","stays active when requested and the slot is complete",30
+"Unit (Vitest)","event-behavior.test.ts","EVENT_BEHAVIORS","is the exact, ordered set of discriminator values",11
+"Unit (Vitest)","event-behavior.test.ts","EVENT_BEHAVIORS","has no duplicates",22
+"Unit (Vitest)","event-behavior.test.ts","BEHAVIOR_LABELS","has a human label for every behavior",28
+"Unit (Vitest)","event-behavior.test.ts","BEHAVIOR_LABELS","maps the underscored value to a spaced title",35
+"Unit (Vitest)","event-behavior.test.ts","BEHAVIOR_OPTIONS","mirrors EVENT_BEHAVIORS in order, pairing value with its label",43
+"Unit (Vitest)","event-behavior.test.ts","isEventBehavior","accepts every canonical value",51
+"Unit (Vitest)","event-behavior.test.ts","isEventBehavior","rejects legacy names, casing variants and non-strings",57
+"Unit (Vitest)","event-behavior.test.ts","isEventBehavior","narrows the type so a checked value is usable as EventBehavior",70
+"Unit (Vitest)","event-clash.test.ts","parseTimeToMinutes","parses HH:MM, HH:MM:SS and timetz forms",12
+"Unit (Vitest)","event-clash.test.ts","parseTimeToMinutes","returns null for empty/invalid",18
+"Unit (Vitest)","event-clash.test.ts","toHHMM","normalises to HH:MM and drops seconds/timezone",27
+"Unit (Vitest)","event-clash.test.ts","addHoursToTime","adds hours and wraps past midnight",35
+"Unit (Vitest)","event-clash.test.ts","addHoursToTime","returns '' for invalid input",41
+"Unit (Vitest)","event-clash.test.ts","rangesOverlap","is half-open (touching edges do not overlap)",47
+"Unit (Vitest)","event-clash.test.ts","findEventClashes","flags an overlapping event (band 22:00–00:00 vs gig 19:30–23:00)",60
+"Unit (Vitest)","event-clash.test.ts","findEventClashes","does not flag non-overlapping events",66
+"Unit (Vitest)","event-clash.test.ts","findEventClashes","returns nothing when there is no target start",71
+"Unit (Vitest)","event-clash.test.ts","findEventClashes","handles an overnight target window",75
+"Unit (Vitest)","event-form-validation.test.ts","eventRequiredFieldsMissing","passes when all required fields are set",20
+"Unit (Vitest)","event-form-validation.test.ts","eventRequiredFieldsMissing","eventTypesId  [parameterised]",24
+"Unit (Vitest)","event-form-validation.test.ts","findActiveEventClashes","flags an overlapping active event on the same date",44
+"Unit (Vitest)","event-form-validation.test.ts","findActiveEventClashes","ignores events on other dates",50
+"Unit (Vitest)","event-form-validation.test.ts","findActiveEventClashes","ignores inactive events",55
+"Unit (Vitest)","event-form-validation.test.ts","findActiveEventClashes","ignores non-overlapping times",60
+"Unit (Vitest)","event-form-validation.test.ts","findActiveEventClashes","allows back-to-back times (touching edges do not clash)",65
+"Unit (Vitest)","event-form-validation.test.ts","findActiveEventClashes","excludes the event being edited (self)",70
+"Unit (Vitest)","event-form-validation.test.ts","findActiveEventClashes","matches self id regardless of string/number type",75
+"Unit (Vitest)","event-form-validation.test.ts","findActiveEventClashes","treats null is_active as active",80
+"Unit (Vitest)","event-form-validation.test.ts","validateEventForm","returns ok for valid, clash-free input",92
+"Unit (Vitest)","event-form-validation.test.ts","validateEventForm","returns missing_fields before checking anything else",96
+"Unit (Vitest)","event-form-validation.test.ts","validateEventForm","returns end_before_start when end equals start",101
+"Unit (Vitest)","event-form-validation.test.ts","validateEventForm","returns end_before_start when end is before start",106
+"Unit (Vitest)","event-form-validation.test.ts","validateEventForm","allows an overnight end between midnight and 6am",111
+"Unit (Vitest)","event-form-validation.test.ts","validateEventForm","allows an end at exactly 6am (overnight boundary)",116
+"Unit (Vitest)","event-form-validation.test.ts","validateEventForm","still rejects an end after 6am that is before the start",121
+"Unit (Vitest)","event-form-validation.test.ts","validateEventForm","returns a clash with the offending event",126
+"Unit (Vitest)","event-form-validation.test.ts","validateEventForm","does not clash with itself when editing",134
+"Unit (Vitest)","event-image.test.ts","resolveEventImage","prefers the event's own image over everything else",9
+"Unit (Vitest)","event-image.test.ts","resolveEventImage","falls back to the act cover when the event has none",19
+"Unit (Vitest)","event-image.test.ts","resolveEventImage","falls back to the subtype default when event and act have none",29
+"Unit (Vitest)","event-image.test.ts","resolveEventImage","reports none when nothing resolves",39
+"Unit (Vitest)","event-image.test.ts","resolveEventImage","treats an empty string as absent and keeps falling through",43
+"Unit (Vitest)","event-image.test.ts","resolveEventImage","treats a whitespace-only string as absent",49
+"Unit (Vitest)","event-image.test.ts","resolveEventImage","trims a surrounding-whitespace url rather than rejecting it",55
+"Unit (Vitest)","event-image.test.ts","resolveEventImage","handles undefined the same as null",62
+"Unit (Vitest)","event-image.test.ts","resolveEventImage","returns none when every tier is blank rather than absent",72
+"Unit (Vitest)","event-type-colors.test.ts","event-type-colors","maps a known colour key to its badge classes",5
+"Unit (Vitest)","event-type-colors.test.ts","event-type-colors","falls back for unknown / null colours",10
+"Unit (Vitest)","event-type-colors.test.ts","event-type-colors","resolves hex + swatch class for known colours",16
+"Unit (Vitest)","events-display.test.ts","formatTime","formats afternoon/evening times as pm",29
+"Unit (Vitest)","events-display.test.ts","formatTime","formats morning times as am, with midnight as 12am",34
+"Unit (Vitest)","events-display.test.ts","formatTime","preserves half-hours and returns null for no time",39
+"Unit (Vitest)","events-display.test.ts","getEventType","handles the join returned as an object",46
+"Unit (Vitest)","events-display.test.ts","getEventType","handles the join returned as an array (Supabase gotcha)",56
+"Unit (Vitest)","events-display.test.ts","getEventType","falls back to 'standard' when behavior is null or unrecognised",66
+"Unit (Vitest)","events-display.test.ts","serializeEvent","maps a row into the shared serialized shape with formatted times",82
+"Unit (Vitest)","events-display.test.ts","serializeEvent image fallback","uses the event's own image when set",115
+"Unit (Vitest)","events-display.test.ts","serializeEvent image fallback","falls back to the booked act's cover when the event has none",122
+"Unit (Vitest)","events-display.test.ts","serializeEvent image fallback","falls back to the subtype default when event and act have none",127
+"Unit (Vitest)","events-display.test.ts","serializeEvent image fallback","is null when nothing resolves",132
+"Unit (Vitest)","events-display.test.ts","serializeEvent image fallback","treats an empty event image as absent and inherits",136
+"Unit (Vitest)","events-display.test.ts","serializeEvent image fallback","skips band requests that have no linked act",141
+"Unit (Vitest)","events-display.test.ts","serializeEvent image fallback","handles the act embed arriving as an array",153
+"Unit (Vitest)","gallery-image-dimensions.test.ts","readRemoteImageDimensions","reads dimensions from the header bytes",28
+"Unit (Vitest)","gallery-image-dimensions.test.ts","readRemoteImageDimensions","returns null when the file cannot be fetched",44
+"Unit (Vitest)","gallery-image-dimensions.test.ts","readRemoteImageDimensions","returns null when the bytes are not a recognisable image",50
+"Unit (Vitest)","gallery-image-dimensions.test.ts","readRemoteImageDimensions","returns null when the request throws",59
+"Unit (Vitest)","gallery-media-quality.test.ts","gradeGalleryMedia","rejects an image below the minimum long edge",9
+"Unit (Vitest)","gallery-media-quality.test.ts","gradeGalleryMedia","rejects a portrait image whose long edge is still too small",17
+"Unit (Vitest)","gallery-media-quality.test.ts","gradeGalleryMedia","accepts a portrait image on its long edge",21
+"Unit (Vitest)","gallery-media-quality.test.ts","gradeGalleryMedia","warns between the minimum and the ideal",28
+"Unit (Vitest)","gallery-media-quality.test.ts","gradeGalleryMedia","treats the ideal edge as good",38
+"Unit (Vitest)","gallery-media-quality.test.ts","gradeGalleryMedia","holds video to the higher 720p minimum",44
+"Unit (Vitest)","gallery-media-quality.test.ts","gradeGalleryMedia","warns rather than rejects when dimensions are unreadable",50
+"Unit (Vitest)","group-name.test.ts","normalizeGroupName","strips every space and lowercases",5
+"Unit (Vitest)","group-name.test.ts","normalizeGroupName","treats tabs and newlines as spacing",11
+"Unit (Vitest)","group-name.test.ts","normalizeGroupName","returns an empty string for blank input",15
+"Unit (Vitest)","group-name.test.ts","normalizeGroupName","keeps distinct names distinct",21
+"Unit (Vitest)","merchandise-order.test.ts","planSave — creating","appends a new active item after the last active one",22
+"Unit (Vitest)","merchandise-order.test.ts","planSave — creating","appends to an empty list at position 1",28
+"Unit (Vitest)","merchandise-order.test.ts","planSave — creating","gives a new inactive item position 0",34
+"Unit (Vitest)","merchandise-order.test.ts","planSave — creating","ignores a requested position on create and still appends",40
+"Unit (Vitest)","merchandise-order.test.ts","planSave — deactivating","moves the row to 0 and closes the gap above it",48
+"Unit (Vitest)","merchandise-order.test.ts","planSave — deactivating","leaves rows below the deactivated one untouched",54
+"Unit (Vitest)","merchandise-order.test.ts","planSave — reactivating","appends a previously inactive row to the end",62
+"Unit (Vitest)","merchandise-order.test.ts","planSave — moving","shifts rather than swaps when moving down",71
+"Unit (Vitest)","merchandise-order.test.ts","planSave — moving","shifts rather than swaps when moving up",80
+"Unit (Vitest)","merchandise-order.test.ts","planSave — moving","handles the adjacent move from the brief",89
+"Unit (Vitest)","merchandise-order.test.ts","planSave — moving","reports no changes when the position is unchanged",95
+"Unit (Vitest)","merchandise-order.test.ts","planSave — moving","clamps a position above the active count",101
+"Unit (Vitest)","merchandise-order.test.ts","planSave — moving","clamps a position below 1",106
+"Unit (Vitest)","merchandise-order.test.ts","planSave — moving","falls back to appending when the position is not a number",111
+"Unit (Vitest)","merchandise-order.test.ts","planSave — self-healing","renumbers gappy positions into a contiguous run",118
+"Unit (Vitest)","merchandise-order.test.ts","planSave — self-healing","pulls a stray non-zero inactive row back to 0",128
+"Unit (Vitest)","merchandise-order.test.ts","planSave — self-healing","is idempotent — a second identical save changes nothing",134
+"Unit (Vitest)","merchandise-order.test.ts","planSave — self-healing","returns nothing to do when every row is inactive",147
+"Unit (Vitest)","merchandise-order.test.ts","planDelete","closes the gap left by a deleted row",156
+"Unit (Vitest)","merchandise-order.test.ts","planDelete","changes nothing when the last row is deleted",163
+"Unit (Vitest)","merchandise-order.test.ts","planDelete","changes nothing when an inactive row is deleted",167
+"Unit (Vitest)","merchandise-order.test.ts","describeChanges","maps changes back to names and old positions, ordered by new position",174
+"Unit (Vitest)","merchandise-order.test.ts","describeChanges","skips changes with no matching row",182
+"Unit (Vitest)","merchandise-order.test.ts","nextPosition","counts only active rows",188
+"Unit (Vitest)","merchandise-order.test.ts","nextPosition","starts at 1 for an empty list",193
+"Unit (Vitest)","opening-hours.test.ts","formatClock","drops :00 and uses lowercase meridiem",18
+"Unit (Vitest)","opening-hours.test.ts","describeOpenState","reports open during a same-day session",29
+"Unit (Vitest)","opening-hours.test.ts","describeOpenState","reports open before midnight on an overnight session",36
+"Unit (Vitest)","opening-hours.test.ts","describeOpenState","stays open after midnight on the previous day's overnight session",43
+"Unit (Vitest)","opening-hours.test.ts","describeOpenState","closes once the overnight session ends",50
+"Unit (Vitest)","opening-hours.test.ts","describeOpenState","announces today's opening time when not open yet",56
+"Unit (Vitest)","opening-hours.test.ts","describeOpenState","rolls to the next open day when today is done",63
+"Unit (Vitest)","opening-hours.test.ts","describeOpenState","skips closed days when looking ahead",70
+"Unit (Vitest)","opening-hours.test.ts","describeOpenState","uses venue time, not UTC, across BST",77
+"Unit (Vitest)","opening-hours.test.ts","describeOpenState","returns null when there are no usable hours",84
+"Unit (Vitest)","opening-hours.test.ts","shortLocation","strips the postcode and keeps the last two segments",94
+"Unit (Vitest)","opening-hours.test.ts","shortLocation","handles a single-segment address",100
+"Unit (Vitest)","opening-hours.test.ts","shortLocation","handles an address with no postcode",104
+"Unit (Vitest)","opening-hours.test.ts","shortLocation","returns null for empty input",108
+"Unit (Vitest)","payment-pending-email.test.ts","buildPaymentPendingEmail","does not read as a confirmation",14
+"Unit (Vitest)","payment-pending-email.test.ts","buildPaymentPendingEmail","links to the page that can resume checkout",23
+"Unit (Vitest)","payment-pending-email.test.ts","buildPaymentPendingEmail","shows the amount owed and the date without a timezone shift",30
+"Unit (Vitest)","payment-pending-email.test.ts","buildPaymentPendingEmail","uses singular wording for a party of one",38
+"Unit (Vitest)","price.test.ts","parseGbp","parses a plain pound value",5
+"Unit (Vitest)","price.test.ts","parseGbp","parses a bare number",9
+"Unit (Vitest)","price.test.ts","parseGbp","takes the base price and ignores a parenthesised surcharge",13
+"Unit (Vitest)","price.test.ts","parseGbp","tolerates thousands separators",17
+"Unit (Vitest)","price.test.ts","parseGbp","parses an integer pound value",21
+"Unit (Vitest)","price.test.ts","parseGbp","returns null for junk with no digits",25
+"Unit (Vitest)","price.test.ts","parseGbp","returns null for null/empty input",29
+"Unit (Vitest)","price.test.ts","formatGbp","formats to two decimals with a pound sign",37
+"Unit (Vitest)","price.test.ts","formatGbp","renders an em dash for null/invalid",42
+"Unit (Vitest)","private-event-sync.test.ts","planPrivateEventSync › confirming","inserts a new event when confirmed with a date and no linked event",6
+"Unit (Vitest)","private-event-sync.test.ts","planPrivateEventSync › confirming","updates the existing event when confirmed with a date and a linked event (no duplicate)",11
+"Unit (Vitest)","private-event-sync.test.ts","planPrivateEventSync › confirming","does nothing when confirmed without a selected date",16
+"Unit (Vitest)","private-event-sync.test.ts","planPrivateEventSync › cancelling","deactivates the linked event when cancelled",25
+"Unit (Vitest)","private-event-sync.test.ts","planPrivateEventSync › cancelling","does nothing when cancelled with no linked event",30
+"Unit (Vitest)","private-event-sync.test.ts","planPrivateEventSync › reopening","takes the linked event off the schedule when moved back to pending",37
+"Unit (Vitest)","private-event-sync.test.ts","planPrivateEventSync › reopening","does nothing when moved back to pending with no linked event",42
+"Unit (Vitest)","private-hire-subtype.test.ts","privateHireSubtypeLabel","prefers default_event_title when set",5
+"Unit (Vitest)","private-hire-subtype.test.ts","privateHireSubtypeLabel","falls back to the title-cased name when default_event_title is blank/null",10
+"Unit (Vitest)","private-hire-subtype.test.ts","privateHireSubtypeLabel","uses the fallback when there is no subtype",15
+"Unit (Vitest)","private-hire-subtype.test.ts","privateHireSubtypeLabel","uses the fallback when both title and name are empty",20
+"Unit (Vitest)","private-hire-subtype.test.ts","unwrapSubtype","returns the object as-is",26
+"Unit (Vitest)","private-hire-subtype.test.ts","unwrapSubtype","unwraps a single-element array",31
+"Unit (Vitest)","private-hire-subtype.test.ts","unwrapSubtype","returns null for null/undefined/empty array",36
+"Unit (Vitest)","release-stale-bookings.test.ts","staleCutoff","subtracts the window from the given moment",41
+"Unit (Vitest)","release-stale-bookings.test.ts","releaseStaleUnpaidBookings","only looks at pending, unpaid bookings older than the cutoff",47
+"Unit (Vitest)","release-stale-bookings.test.ts","releaseStaleUnpaidBookings","cancels a stale booking that Square shows no payment for",59
+"Unit (Vitest)","release-stale-bookings.test.ts","releaseStaleUnpaidBookings","settles instead of cancelling when Square shows the payment landed",70
+"Unit (Vitest)","release-stale-bookings.test.ts","releaseStaleUnpaidBookings","leaves the booking alone when Square is unreachable",87
+"Unit (Vitest)","release-stale-bookings.test.ts","releaseStaleUnpaidBookings","cancels a stale booking that never got a Square order",98
+"Unit (Vitest)","release-stale-bookings.test.ts","releaseStaleUnpaidBookings","reports nothing when the lookup fails",108
+"Unit (Vitest)","resolve-booking-config.test.ts","resolveOwningBookingConfig","reads the level that owns the public booking page",11
+"Unit (Vitest)","resolve-booking-config.test.ts","resolveOwningBookingConfig","falls back to the event config when the grouping is unknown",17
+"Unit (Vitest)","resolve-booking-config.test.ts","resolveOwningBookingConfig","returns an empty config rather than the wrong level when the owner has none",22
+"Unit (Vitest)","resolve-booking-config.test.ts","resolveOwningBookingConfig","never leaks a per-event config into a grouped booking page",27
+"Unit (Vitest)","resolve-event-subtype.test.ts","resolveEventSubtype","returns existing ids without inserting when both rows exist",24
+"Unit (Vitest)","resolve-event-subtype.test.ts","resolveEventSubtype","creates the type and subtype when missing, stamping the given behavior",34
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — non-seated event","confirms the booking and records the payment",67
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — non-seated event","does not notify admin when the booking was already settled",92
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — seated event","allocates a table and writes the mapping only after payment",104
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — seated event","waitlists the booking when no table is free at settlement time",125
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — seated event","falls back to waitlisted when the table is claimed by a racing booking",140
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — seated event","skips allocation for an event that is no longer bookable",155
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — idempotency","does nothing when the booking is already paid",169
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — idempotency","skips the table mapping when another settlement won the race",181
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — idempotency","reports a missing booking",196
+"Unit (Vitest)","settle-paid-booking.test.ts","settlePaidBooking — non-pending booking","keeps an existing status instead of promoting it",206
+"Unit (Vitest)","square-order.test.ts","poundsToPence","converts pounds to integer pence",13
+"Unit (Vitest)","square-order.test.ts","poundsToPence","rounds to the nearest penny, absorbing float fuzz",19
+"Unit (Vitest)","square-order.test.ts","poundsToPence","treats null/undefined as zero",25
+"Unit (Vitest)","square-order.test.ts","splitName","returns undefined last name for a single word",32
+"Unit (Vitest)","square-order.test.ts","splitName","splits first token from the rest",36
+"Unit (Vitest)","square-order.test.ts","splitName","collapses surrounding and repeated whitespace",41
+"Unit (Vitest)","square-order.test.ts","buildBuyerPhone","concatenates country code and local number",47
+"Unit (Vitest)","square-order.test.ts","buildBuyerPhone","returns undefined when no number is given",51
+"Unit (Vitest)","square-order.test.ts","buildBuyerPhone","tolerates a missing country code",57
+"Unit (Vitest)","square-order.test.ts","formatTicketLineName","pluralises tickets and omits ids",63
+"Unit (Vitest)","square-order.test.ts","buildEventOrder","links the booking via referenceId and metadata, not the line name",82
+"Unit (Vitest)","square-order.test.ts","buildEventOrder","prices per ticket with quantity = group size (Square multiplies)",90
+"Unit (Vitest)","square-order.test.ts","buildEventOrder","sets a PICKUP fulfillment recipient to the real booker",99
+"Unit (Vitest)","square-order.test.ts","buildEventOrder","omits the recipient phone when the booker gave no number",108
+"Unit (Vitest)","square-order.test.ts","buildEventOrder","defaults the currency to GBP but honours an override",115
+"Unit (Vitest)","square-order.test.ts","buildPrePopulatedData","prefills email, phone and split name",124
+"Unit (Vitest)","square-order.test.ts","buildPrePopulatedData","omits the phone when absent and leaves a single-word last name undefined",135
+"Unit (Vitest)","table-allocation.test.ts","seatingApplies","requires both seating_required and is_bookable",24
+"Unit (Vitest)","table-allocation.test.ts","computeAddSeat","is the overflow beyond capacity, never negative",33
+"Unit (Vitest)","table-allocation.test.ts","pickSmallestFittingTable","picks the smallest table that still seats the group",42
+"Unit (Vitest)","table-allocation.test.ts","pickSmallestFittingTable","returns null when nothing fits",49
+"Unit (Vitest)","table-allocation.test.ts","pickSmallestFittingTable","breaks capacity ties deterministically by lowest id",54
+"Unit (Vitest)","table-allocation.test.ts","pickSmallestFittingTable","does not assume input ordering",59
+"Unit (Vitest)","table-allocation.test.ts","pickTighterFreeTable","finds the tightest free table smaller than current that still fits",66
+"Unit (Vitest)","table-allocation.test.ts","pickTighterFreeTable","requires the table to be strictly smaller than current capacity",71
+"Unit (Vitest)","table-allocation.test.ts","pickTighterFreeTable","requires the table to still seat the group",76
+"Unit (Vitest)","table-allocation.test.ts","pickTighterFreeTable","steps up to the next higher free capacity when the lowest isn't available, capped below current",81
+"Unit (Vitest)","table-allocation.test.ts","pickTighterFreeTable","never picks a table larger than the current one",86
+"Unit (Vitest)","table-allocation.test.ts","pickTighterFreeTable","returns null when no tighter fitting table exists",91
+"Unit (Vitest)","table-allocation.test.ts","findUpsizeSwap (3a.2)","swaps with a smaller group sitting on a bigger, fitting table",97
+"Unit (Vitest)","table-allocation.test.ts","findUpsizeSwap (3a.2)","requires the other booking to still fit current's table",107
+"Unit (Vitest)","table-allocation.test.ts","findUpsizeSwap (3a.2)","requires the swapped table to be bigger than current and fit newSize",113
+"Unit (Vitest)","table-allocation.test.ts","findUpsizeSwap (3a.2)","picks the smallest qualifying table deterministically",119
+"Unit (Vitest)","table-allocation.test.ts","findUpsizeSwap (3a.2)","returns null when no neighbour qualifies",129
+"Unit (Vitest)","table-allocation.test.ts","findDownsizeSwap (3b.2)","hands the big table to a larger group on a tighter table",136
+"Unit (Vitest)","table-allocation.test.ts","findDownsizeSwap (3b.2)","requires B to be a larger group than the new size",143
+"Unit (Vitest)","table-allocation.test.ts","findDownsizeSwap (3b.2)","requires B's table to be tighter than current and still fit newSize",149
+"Unit (Vitest)","table-allocation.test.ts","findDownsizeSwap (3b.2)","picks the table closest to newSize deterministically",158
+"Unit (Vitest)","table-allocation.test.ts","decideCreate","confirms onto the tightest fitting table",170
+"Unit (Vitest)","table-allocation.test.ts","decideCreate","waitlists when no table fits",175
+"Unit (Vitest)","table-allocation.test.ts","decideSizeChange — increase (3a)","keeps the table when the new size still fits",184
+"Unit (Vitest)","table-allocation.test.ts","decideSizeChange — increase (3a)","reassigns to a free bigger table when it overflows",189
+"Unit (Vitest)","table-allocation.test.ts","decideSizeChange — increase (3a)","swaps when no free table fits but a neighbour's does",194
+"Unit (Vitest)","table-allocation.test.ts","decideSizeChange — increase (3a)","returns no_space when neither a free table nor a swap exists",206
+"Unit (Vitest)","table-allocation.test.ts","decideSizeChange — decrease (3b)","relocates to a tighter free table (worked example)",216
+"Unit (Vitest)","table-allocation.test.ts","decideSizeChange — decrease (3b)","tightens via swap when no free tighter table exists",221
+"Unit (Vitest)","table-allocation.test.ts","decideSizeChange — decrease (3b)","keeps the current table when nothing tighter is free or swappable",233
+"Unit (Vitest)","table-allocation.test.ts","decideSizeChange — unchanged size","keeps the table and recomputes add_seat",241
+"Unit (Vitest)","to-camel-case.test.ts","toCamelCase","lowercases a single word",5
+"Unit (Vitest)","to-camel-case.test.ts","toCamelCase","uppercases interior words, joins them",9
+"Unit (Vitest)","to-camel-case.test.ts","toCamelCase","splits on non-alphanumeric runs (slashes, extra spaces)",13
+"Unit (Vitest)","to-camel-case.test.ts","toCamelCase","normalizes fully-uppercase words",17
+"Unit (Vitest)","to-camel-case.test.ts","toCamelCase","keeps digits and folds them into the preceding word",21
+"Unit (Vitest)","to-camel-case.test.ts","toCamelCase","trims and collapses leading/trailing separators",25
+"Unit (Vitest)","to-camel-case.test.ts","toCamelCase","returns empty string for a separator-only input",29
+"Unit (Vitest)","uk-holidays.test.ts","ukBankHolidays","matches the published England & Wales dates for 2026",5
+"Unit (Vitest)","uk-holidays.test.ts","ukBankHolidays","substitutes Christmas and Boxing Day when both fall on a weekend",18
+"Unit (Vitest)","uk-holidays.test.ts","ukBankHolidays","moves Christmas Day past Boxing Day when Christmas falls on a Sunday",25
+"Unit (Vitest)","uk-holidays.test.ts","ukBankHolidays","substitutes New Year's Day when it falls on a weekend",31
+"Unit (Vitest)","uk-holidays.test.ts","ukBankHolidaysBetween","spans years and clips to the range",37
+"Unit (Vitest)","update-fully-booked.test.ts","sumConfirmedGroupSizes","adds up group sizes and treats a null size as zero",47
+"Unit (Vitest)","update-fully-booked.test.ts","updateFullyBookedStatus — seated events","marks the event full when no table is free",55
+"Unit (Vitest)","update-fully-booked.test.ts","updateFullyBookedStatus — seated events","clears the flag while a table is still free",67
+"Unit (Vitest)","update-fully-booked.test.ts","updateFullyBookedStatus — seated events","never marks full when the venue has no available tables at all",79
+"Unit (Vitest)","update-fully-booked.test.ts","updateFullyBookedStatus — non-seated events","marks the event full when confirmed group sizes reach venue capacity",93
+"Unit (Vitest)","update-fully-booked.test.ts","updateFullyBookedStatus — non-seated events","marks the event full when confirmed group sizes exceed venue capacity",106
+"Unit (Vitest)","update-fully-booked.test.ts","updateFullyBookedStatus — non-seated events","clears the flag while the venue still has headroom",118
+"Unit (Vitest)","update-fully-booked.test.ts","updateFullyBookedStatus — non-seated events","leaves the flag untouched when no venue capacity is configured",130
+"Unit (Vitest)","update-fully-booked.test.ts","updateFullyBookedStatus — missing event","does nothing when the event cannot be loaded",143
+"E2E (Playwright)","admin-event-types-booking-config.spec.ts","event category editor — booking config gated by grouping","category Bookable + booking config appear only for Per Category grouping",16
+"E2E (Playwright)","admin-event-types-booking-config.spec.ts","sub-type editor — Bookable gated by category grouping","sub-type Bookable toggle shows for per_subtype category, hidden for per_event",87
+"E2E (Playwright)","admin-events-validation.spec.ts","event create validation","blocks save when required date / time fields are missing",19
+"E2E (Playwright)","admin-events-validation.spec.ts","event create validation","blocks save when end time is not after start time",31
+"E2E (Playwright)","admin-events-validation.spec.ts","event create validation","blocks save when the time window clashes with an active event on the same date",44
+"E2E (Playwright)","admin-events-validation.spec.ts","public booking settings section","booking fields appear only when Public Booking is on",61
+"E2E (Playwright)","admin-events.spec.ts","event create form (subtype prefill + conditional fields)","selecting a subtype prefills defaults and shows/hides the right fields",7
+"E2E (Playwright)","band-bookings.spec.ts","band booking — selected date/time editing","preferred date defaults start to 10pm and end to start + 2h",7
+"E2E (Playwright)","general-bookings.spec.ts","general bookings — sheet edit & delete","edit updates the booking and persists",54
+"E2E (Playwright)","general-bookings.spec.ts","general bookings — sheet edit & delete","delete removes the booking",81
+"E2E (Playwright)","public-booking.spec.ts","public quiz booking — happy path","books a table and shows the confirmation screen",4
+"E2E (Playwright)","public-grouped-booking.spec.ts","public grouped booking — shared config source","per_type scope renders the category's shared booking config",85
+"E2E (Playwright)","public-grouped-booking.spec.ts","public grouped booking — shared config source","per_subtype scope renders the sub-type's shared booking config",96
+"E2E (Playwright)","public-quiz.spec.ts","public quiz booking page","renders the booking form for a seeded upcoming quiz",4
