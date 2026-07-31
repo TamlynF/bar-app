@@ -111,19 +111,29 @@ export function PosterChip({ event }: { event: SerializedEvent }) {
   );
 }
 
-export function PriceChip({ event }: { event: SerializedEvent }) {
-  if (event.price == null) return null;
-  const paid = event.price > 0;
+export function PriceChip({
+  event,
+  treatUnpricedAsFree = false,
+  className = "absolute top-3 right-3",
+}: {
+  event: SerializedEvent;
+  treatUnpricedAsFree?: boolean;
+  className?: string;
+}) {
+  if (event.price == null && !treatUnpricedAsFree) return null;
+  const price = event.price ?? 0;
+  const paid = price > 0;
   return (
     <span
       className={cn(
-        "absolute top-3 right-3 rounded-full px-2.5 py-1 font-black text-[10px] tracking-widest uppercase",
+        "rounded-full px-2.5 py-1 font-black text-[10px] tracking-widest uppercase",
         paid
           ? "bg-gold text-on-gold shadow-lg shadow-black/40"
-          : "border border-gold/40 bg-canvas/80 text-gold backdrop-blur-sm"
+          : "border border-gold/40 bg-canvas/80 text-gold backdrop-blur-sm",
+        className
       )}
     >
-      {paid ? formatGBP(event.price) : "Free"}
+      {paid ? formatGBP(price) : "Free"}
     </span>
   );
 }

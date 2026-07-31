@@ -1,16 +1,9 @@
 import Image from "next/image";
 import { format } from "date-fns";
 import { BookingButton } from "@/components/editorial/booking-button";
-import { PosterTint } from "@/components/editorial/event-poster";
+import { PosterChip, PosterTint, PriceChip } from "@/components/editorial/event-poster";
 import { cn } from "@/lib/utils";
 import { parseDate, type SerializedEvent } from "@/lib/events-display";
-
-function titleCase(value: string) {
-  return value
-    .split(/\s+/)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
-}
 
 function OutlinedWord({ text, word }: { text: string; word?: string }) {
   const start = word ? text.toLowerCase().indexOf(word.toLowerCase()) : -1;
@@ -130,21 +123,12 @@ function TonightCard({
     ? `${event.startTimeLabel}${event.endTimeLabel ? ` - ${event.endTimeLabel}` : ""}`
     : null;
 
-  const priceLabel =
-    event.price != null && event.price > 0
-      ? `£${event.price}`
-      : event.price === 0 || !event.isBookable
-        ? "Free"
-        : null;
-
   const dateLabel = isTonight ? null : format(dateObj, "EEE d MMM");
-  const subTypeLabel = event.subType ? titleCase(event.subType) : null;
-  const hasMeta = Boolean(timeLabel || subTypeLabel || priceLabel);
 
   return (
     <article
       className="
-        flex h-full flex-col overflow-hidden rounded-3xl
+        relative flex h-full flex-col overflow-hidden rounded-3xl
         border border-[#FDCC4B]/30 bg-canvas-2/85
         shadow-[0_0_60px_-18px_rgba(253,204,75,0.55)]
         backdrop-blur-md
@@ -166,30 +150,39 @@ function TonightCard({
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-2 p-4 sm:p-5">
-        <p
-          className="ev-text line-clamp-2 text-center font-black text-xl leading-[0.95] tracking-tight uppercase sm:text-left sm:text-2xl"
-          style={{ "--ev-c": event.color } as React.CSSProperties}
-        >
-          {event.title}
-        </p>
+      <PosterChip event={event} />
 
-        {dateLabel && (
-          <p className="text-center font-black text-[10px] tracking-[0.2em] text-stone-400 uppercase sm:text-left">
-            {dateLabel}
+      <div className="grid min-w-0 flex-1 grid-rows-6 p-4 sm:p-5">
+        <div className="flex items-center justify-end">
+          <PriceChip
+            event={event}
+            treatUnpricedAsFree={!event.isBookable}
+            className="shrink-0"
+          />
+        </div>
+
+        <div className="row-span-2 flex items-center justify-center">
+          <p
+            className="ev-text line-clamp-2 text-center font-black text-xl leading-[0.95] tracking-tight uppercase sm:text-2xl"
+            style={{ "--ev-c": event.color } as React.CSSProperties}
+          >
+            {event.title}
           </p>
-        )}
+        </div>
 
-        {hasMeta && (
-          <div className="grid w-full grid-cols-4 items-center gap-x-2 text-xs font-medium text-stone-400 tabular-nums">
-            <span className="col-span-2 truncate text-left">{timeLabel}</span>
-            <span className="truncate text-center">{subTypeLabel}</span>
-            <span className="truncate text-right">{priceLabel}</span>
+        <div className="flex items-center justify-center gap-2 text-center text-xs font-medium text-stone-400 tabular-nums">
+          <span className="truncate">{timeLabel}</span>
+          {dateLabel && (
+            <span className="shrink-0 font-black text-[10px] tracking-[0.2em] uppercase">
+              {dateLabel}
+            </span>
+          )}
+        </div>
+
+        <div className="row-span-2 flex items-center justify-center">
+          <div className="w-full sm:max-w-44">
+            <BookingButton event={event} />
           </div>
-        )}
-
-        <div className="mt-1 w-full sm:mx-auto sm:max-w-44">
-          <BookingButton event={event} />
         </div>
       </div>
     </article>
