@@ -6,6 +6,7 @@
 @source "../app/(private)/**/*.{ts,tsx}";
 @source "../app/login/**/*.{ts,tsx}";
 @source "../components/**/*.{ts,tsx}";
+@source "../lib/**/*.{ts,tsx}";
 
 /* ════════════════════════════════════════════════════════════════
    shadcn/ui design tokens.

@@ -285,6 +285,9 @@ export default function EventsClient({
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() };
   });
+  const [selectedCalendarDate, setSelectedCalendarDate] = useState(() =>
+    format(new Date(), "yyyy-MM-dd")
+  );
   const [quickFilters, setQuickFilters] = useState<Set<string>>(
     () => new Set((initialQuick ?? "").split(",").map((s) => s.trim()).filter(Boolean))
   );
@@ -449,7 +452,7 @@ export default function EventsClient({
     window.history.replaceState(null, "", `/event-setups/events?open=${event.id}`);
   };
 
-  const openAdd = (subtypeId?: number) => {
+  const openAdd = (subtypeId?: number, date?: string) => {
     setFormError(null);
     setIsEditing(false);
     setSelected(null);
@@ -458,7 +461,7 @@ export default function EventsClient({
     const ownerType = sub ? typeById.get(sub.event_types_id) : (eventTypes[0] ? typeById.get(eventTypes[0].id) : undefined);
     setFormTypeId(sub ? String(sub.event_types_id) : (eventTypes[0]?.id ? String(eventTypes[0].id) : ""));
     setFormSubtypeId(sub ? String(sub.id) : "");
-    setFormDate("");
+    setFormDate(date ?? "");
     setFormStartTime("");
     setFormEndTime("");
     setFormHostId("");
@@ -806,15 +809,22 @@ export default function EventsClient({
     calendarCells.push(`${calendarMonth.year}-${mm}-${String(d).padStart(2, "0")}`);
   }
   while (calendarCells.length % 7 !== 0) calendarCells.push(null);
-  const shiftMonth = (delta: number) =>
-    setCalendarMonth(({ year, month }) => {
-      const d = new Date(year, month + delta, 1);
-      return { year: d.getFullYear(), month: d.getMonth() };
-    });
+  const shiftMonth = (delta: number) => {
+    const d = new Date(calendarMonth.year, calendarMonth.month + delta, 1);
+    setCalendarMonth({ year: d.getFullYear(), month: d.getMonth() });
+    setSelectedCalendarDate(format(d, "yyyy-MM-dd"));
+  };
   const goToday = () => {
     const n = new Date();
     setCalendarMonth({ year: n.getFullYear(), month: n.getMonth() });
+    setSelectedCalendarDate(format(n, "yyyy-MM-dd"));
   };
+  const selectedCalendarEvents = eventsByDate.get(selectedCalendarDate) ?? [];
+  const selectedCalendarLabel = parseDate(selectedCalendarDate).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
 
   const renderEventRow = (event: EventRecord) => {
     const sub = subtypeById.get(event.event_subtypes_id);
@@ -835,7 +845,7 @@ export default function EventsClient({
         key={event.id}
         style={{ "--spine": accentHex } as React.CSSProperties}
         className={cn(
-          "relative flex w-full items-center gap-3 rounded-2xl border bg-white py-3 pr-3 pl-4 text-left transition hover:shadow-md active:scale-[0.99] sm:gap-4 sm:py-4 sm:pr-4 sm:pl-5",
+          "group relative flex w-full items-center gap-3 rounded-2xl border bg-white py-3 pr-3 pl-4 text-left transition hover:-translate-y-px hover:border-[#D8CEAF] hover:shadow-md active:translate-y-0 active:scale-[0.995] sm:gap-4 sm:px-4 sm:py-3.5",
           isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#D8D5C8]",
           inactive && "opacity-60"
         )}
@@ -855,21 +865,7 @@ export default function EventsClient({
           </span>
         )}
 
-        {canCopy(event) && (
-          <button
-            type="button"
-            onClick={() => openCopy(event)}
-            title="Copy this event"
-            aria-label={`Copy ${event.title || "Untitled Event"}`}
-            className="absolute -top-3 right-1 z-2 flex h-11 w-11 items-center justify-center sm:h-9 sm:w-9"
-          >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#D8D5C8] bg-white text-[#34451F] shadow-sm transition-colors hover:bg-[#EFE8D4]">
-              <CopyPlus className="h-3.5 w-3.5" />
-            </span>
-          </button>
-        )}
-
-        <div className={cn("pointer-events-none relative flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border sm:h-12 sm:w-12", badgeClass)}>
+        <div className={cn("pointer-events-none relative flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border sm:hidden", badgeClass)}>
           <span className="font-black text-[9px] leading-none tracking-tighter uppercase">{monthAbbrOf(event.date)}</span>
           <span className="font-black text-base leading-none sm:text-lg">{dayNumOf(event.date)}</span>
         </div>
@@ -887,10 +883,10 @@ export default function EventsClient({
               </span>
             )}
           </div>
-          <p className={cn("truncate font-black text-sm leading-tight sm:text-base lg:text-lg", inactive ? "text-[#5E6654]" : "text-[#20231A]")}>
+          <p className={cn("truncate font-black text-sm leading-tight sm:text-[15px]", inactive ? "text-[#5E6654]" : "text-[#20231A]")}>
             {event.title || "Untitled Event"}
           </p>
-          <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[11px] font-semibold text-[#5E6654] sm:text-[13px] lg:text-sm">
+          <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[11px] font-semibold text-[#5E6654] sm:text-xs">
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               {formatTime(event.start_time)}{event.end_time ? `–${formatTime(event.end_time)}` : ""}
@@ -906,40 +902,32 @@ export default function EventsClient({
           </div>
         </div>
 
-        <div className={cn("pointer-events-none relative flex shrink-0 flex-col items-end gap-1.5", canCopy(event) && "pt-6 sm:pt-5")}>
-          {(event.is_bookable || bStats.confirmedPeople > 0) && (
-            <span className="inline-flex items-center gap-1 font-black text-xs text-[#5E6654] tabular-nums sm:text-sm">
-              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />{bStats.confirmedPeople}
-            </span>
+        <div className="relative z-2 flex shrink-0 items-center gap-1 sm:gap-2">
+          <div className="pointer-events-none flex flex-col items-end gap-1.5 sm:flex-row sm:items-center">
+            {(event.is_bookable || bStats.confirmedPeople > 0) && (
+              <span className="inline-flex items-center gap-1 rounded-lg bg-[#F4F1E8] px-2 py-1 font-black text-xs text-[#5E6654] tabular-nums">
+                <Users className="h-3.5 w-3.5" />{bStats.confirmedPeople}
+                <span className="hidden font-bold sm:inline">booked</span>
+              </span>
+            )}
+            {hasPricing && <span className="font-black text-[11px] text-green-700 sm:rounded-lg sm:bg-green-50 sm:px-2 sm:py-1 sm:text-xs">£{event.payment_amount!.toFixed(2)}</span>}
+            {event.is_fully_booked && <span className="rounded bg-red-50 px-1.5 py-0.5 font-black text-[9px] tracking-wide text-red-600 uppercase">Full</span>}
+          </div>
+          {canCopy(event) && (
+            <button
+              type="button"
+              onClick={() => openCopy(event)}
+              title="Copy this event"
+              aria-label={`Copy ${event.title || "Untitled Event"}`}
+              className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white text-[#34451F] transition-colors hover:bg-[#EFE8D4]"
+            >
+              <CopyPlus className="h-3.5 w-3.5" />
+            </button>
           )}
-          {hasPricing && <span className="font-black text-[11px] text-green-700 sm:text-xs lg:text-sm">£{event.payment_amount!.toFixed(2)}</span>}
-          {event.is_fully_booked && <span className="rounded bg-red-50 px-1.5 py-0.5 font-black text-[9px] tracking-wide text-red-600 uppercase">Full</span>}
-          <ChevronRight className="h-4 w-4 text-[#5E6654] opacity-40" />
+          <ChevronRight className="pointer-events-none h-4 w-4 text-[#5E6654] opacity-40 transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>
     );
-  };
-
-  const TL_START_MIN = 8 * 60;
-  const TL_END_MIN = 26 * 60;
-  const TL_MIN_GAP = 26; // % - keep stacked pills from overlapping (fits 2-line phone pills)
-  const TL_MAX_TOP = 78; // % - keep the last pill inside the cell
-  const timeTopPct = (startTime: string | null) => {
-    const m = startTime ? parseTimeToMinutes(startTime.slice(0, 5)) : null;
-    if (m == null) return 0;
-    const mins = m < 6 * 60 ? m + 24 * 60 : m; // small hours read as after midnight
-    const f = (mins - TL_START_MIN) / (TL_END_MIN - TL_START_MIN);
-    return Math.min(1, Math.max(0, f)) * 100;
-  };
-  const layoutDayByTime = (events: EventRecord[]) => {
-    const sorted = [...events].sort((a, b) => timeTopPct(a.start_time) - timeTopPct(b.start_time));
-    let last = -Infinity;
-    return sorted.map((event) => {
-      let top = Math.min(timeTopPct(event.start_time), TL_MAX_TOP);
-      if (top < last + TL_MIN_GAP) top = Math.min(last + TL_MIN_GAP, TL_MAX_TOP);
-      last = top;
-      return { event, top };
-    });
   };
 
   const renderCalendarChip = (event: EventRecord) => {
@@ -953,15 +941,15 @@ export default function EventsClient({
         onClick={() => openView(event)}
         title={`${event.title || "Untitled Event"}${event.start_time ? ` · ${formatTime(event.start_time)}` : ""}`}
         className={cn(
-          "flex w-full min-w-0 flex-col gap-0 overflow-hidden rounded-md border px-1 py-0.5 text-left transition hover:brightness-95 sm:flex-row sm:items-center sm:gap-1 lg:gap-1.5 lg:px-1.5",
+          "flex w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md border px-1.5 py-1 text-left transition hover:brightness-95",
           badgeClass,
           inactive && "line-through opacity-50",
         )}
       >
         {event.start_time && (
-          <span className="shrink-0 font-black text-[8px] leading-tight tabular-nums sm:text-[10px] lg:text-[11px]">{formatTime(event.start_time)}</span>
+          <span className="shrink-0 font-black text-[10px] leading-tight tabular-nums lg:text-[11px]">{formatTime(event.start_time)}</span>
         )}
-        <span className="min-w-0 truncate text-[9px] leading-tight font-bold sm:text-[10px] lg:text-[11px]">{event.title || "Untitled"}</span>
+        <span className="min-w-0 truncate text-[10px] leading-tight font-bold lg:text-[11px]">{event.title || "Untitled"}</span>
       </button>
     );
   };
@@ -1037,7 +1025,7 @@ export default function EventsClient({
       "mx-auto space-y-3 bg-[#F4F1E8] px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
       viewMode === "calendar"
         ? "sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-368 2xl:max-w-432"
-        : "sm:max-w-2xl md:max-w-3xl lg:max-w-5xl"
+        : "sm:max-w-2xl md:max-w-4xl lg:max-w-6xl"
     )}>
 
       {filter === "quiz-incomplete" && (
@@ -1051,7 +1039,8 @@ export default function EventsClient({
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2">
+      <div className="rounded-2xl border border-[#D8D5C8] bg-white/60 p-2.5 shadow-sm sm:p-3">
+      <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex items-center rounded-xl border border-[#D8D5C8] bg-white p-0.5">
           <button
             type="button"
@@ -1083,14 +1072,13 @@ export default function EventsClient({
           type="button"
           onClick={() => openAdd()}
           title="New Event"
-          className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3 text-white transition-colors hover:bg-[#283719]"
+          className="order-2 ml-auto inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3 text-white shadow-sm transition-colors hover:bg-[#283719] lg:order-3 lg:ml-0"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
-          <span className="font-black text-[10px] tracking-widest uppercase">New</span>
+          <span className="font-black text-[10px] tracking-widest uppercase">New <span className="hidden sm:inline">event</span></span>
         </button>
-      </div>
 
-      <div className="flex items-center gap-2">
+      <div className="order-3 flex w-full items-center gap-2 lg:order-2 lg:min-w-0 lg:flex-1">
         <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#D8D5C8] bg-white px-3 transition-colors focus-within:border-[#34451F]">
           <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
           <input
@@ -1131,7 +1119,7 @@ export default function EventsClient({
       </div>
 
       {showFilters && (
-      <div className="space-y-2 pt-1 pb-1">
+      <div className="order-4 w-full space-y-2 border-t border-[#D8D5C8] pt-3 pb-0.5">
         <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
@@ -1189,6 +1177,8 @@ export default function EventsClient({
         </div>
       </div>
       )}
+      </div>
+      </div>
 
       {viewMode === "list" && anyFilterActive && (
         <div className="flex items-center gap-1.5 px-1 text-xs font-semibold text-[#5E6654]">
@@ -1205,60 +1195,105 @@ export default function EventsClient({
 
       {viewMode === "calendar" ? (
         <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <button type="button" onClick={() => shiftMonth(-1)} title="Previous month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
+          <div className="flex items-center gap-2 rounded-2xl border border-[#D8D5C8] bg-white px-3 py-2.5 shadow-sm">
+            <button type="button" onClick={() => shiftMonth(-1)} title="Previous month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <button type="button" onClick={() => shiftMonth(1)} title="Next month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
+            <h3 className="min-w-0 flex-1 text-center font-black text-sm tracking-tight text-[#20231A] uppercase sm:text-base">{calMonthLabel}</h3>
+            <button type="button" onClick={() => shiftMonth(1)} title="Next month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
               <ChevronRight className="h-4 w-4" />
             </button>
-            <h3 className="font-black text-sm tracking-tight text-[#20231A] uppercase sm:text-base">{calMonthLabel}</h3>
-            <button type="button" onClick={goToday} className="ml-auto h-9 rounded-xl border border-[#D8D5C8] bg-[#EFE8D4] px-3 font-black text-[10px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#D8D5C8]">
+            <button type="button" onClick={goToday} className="h-9 rounded-xl border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#D8D5C8] sm:px-3 sm:text-[10px]">
               Today
             </button>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 sm:gap-1.5 lg:gap-2">
-            {WEEKDAYS.map((w) => (
-              <div key={w} className="py-1 text-center font-black text-[9px] tracking-wide text-[#5E6654] uppercase sm:text-[11px] lg:text-xs">{w}</div>
-            ))}
-          </div>
+          <div className="rounded-2xl border border-[#D8D5C8] bg-white p-2 shadow-sm sm:p-3">
+            <div className="grid grid-cols-7 gap-1">
+              {WEEKDAYS.map((w) => (
+                <div key={w} className="py-1.5 text-center font-black text-[9px] tracking-wide text-[#5E6654] uppercase sm:text-[11px] lg:text-xs">{w}</div>
+              ))}
+            </div>
 
-          <div className="grid grid-cols-7 gap-1 sm:gap-1.5 lg:gap-2">
-            {calendarCells.map((dateStr, i) => {
-              if (!dateStr) return <div key={`blank-${i}`} className="h-32 rounded-xl border border-transparent bg-[#F0EDE0]/50 sm:h-36 lg:h-44" />;
-              const dayEvents = eventsByDate.get(dateStr) ?? [];
-              const isToday = dateStr === todayStr;
-              const MAX = 4;
-              const laid = layoutDayByTime(dayEvents);
-              const shown = laid.slice(0, MAX);
-              const extra = laid.length - shown.length;
-              return (
-                <div key={dateStr} className={cn("relative h-32 overflow-hidden rounded-xl border bg-white sm:h-36 lg:h-44", isToday ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#D8D5C8]")}>
-                  <div className="flex items-center justify-between px-1 pt-1">
-                    <span className={cn("font-black text-[10px] tabular-nums sm:text-xs lg:text-sm", isToday ? "text-[#FF6B35]" : "text-[#5E6654]")}>{Number(dateStr.slice(-2))}</span>
-                    {dayEvents.length > 0 && <span className="font-black text-[8px] text-[#5E6654]/60 tabular-nums sm:text-[9px]">{dayEvents.length}</span>}
-                  </div>
-                  <div className="absolute inset-x-0 top-5 bottom-1 lg:top-6">
-                    {shown.map(({ event, top }) => (
-                      <div
-                        key={event.id}
-                        style={{ "--top": `${top}%` } as React.CSSProperties}
-                        className="absolute inset-x-1 top-(--top)"
-                      >
-                        {renderCalendarChip(event)}
-                      </div>
-                    ))}
+            <div className="grid grid-cols-7 gap-1 sm:hidden">
+              {calendarCells.map((dateStr, i) => {
+                if (!dateStr) return <div key={`mobile-blank-${i}`} className="aspect-square" />;
+                const dayEvents = eventsByDate.get(dateStr) ?? [];
+                const isToday = dateStr === todayStr;
+                const isSelected = dateStr === selectedCalendarDate;
+                return (
+                  <button
+                    key={dateStr}
+                    type="button"
+                    onClick={() => setSelectedCalendarDate(dateStr)}
+                    aria-label={`${formatDate(dateStr)}, ${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}`}
+                    aria-pressed={isSelected}
+                    className={cn(
+                      "relative flex aspect-square min-h-10 flex-col items-center justify-center rounded-xl border text-xs font-black tabular-nums transition-colors",
+                      isSelected
+                        ? "border-[#34451F] bg-[#34451F] text-white"
+                        : isToday
+                          ? "border-[#FF6B35] bg-[#FFF4EF] text-[#FF6B35]"
+                          : "border-transparent text-[#20231A] hover:bg-[#F4F1E8]"
+                    )}
+                  >
+                    {Number(dateStr.slice(-2))}
+                    {dayEvents.length > 0 && (
+                      <span className={cn("absolute bottom-1.5 h-1 w-1 rounded-full", isSelected ? "bg-white" : "bg-[#34451F]")} />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="hidden grid-cols-7 gap-1.5 sm:grid lg:gap-2">
+              {calendarCells.map((dateStr, i) => {
+                if (!dateStr) return <div key={`blank-${i}`} className="min-h-36 rounded-xl bg-[#F4F1E8]/70 lg:min-h-44" />;
+                const dayEvents = eventsByDate.get(dateStr) ?? [];
+                const isToday = dateStr === todayStr;
+                const isWeekend = [0, 6].includes(parseDate(dateStr).getDay());
+                const MAX = 4;
+                const shown = dayEvents.slice(0, MAX);
+                const extra = dayEvents.length - shown.length;
+                return (
+                  <div key={dateStr} className={cn("flex min-h-36 min-w-0 flex-col overflow-hidden rounded-xl border p-1.5 lg:min-h-44 lg:p-2", isToday ? "border-[#FF6B35] bg-[#FFF9F6] ring-1 ring-[#FF6B35]/30" : isWeekend ? "border-[#D8D5C8] bg-[#FCFAF4]" : "border-[#D8D5C8] bg-white")}>
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className={cn("inline-grid h-6 min-w-6 place-items-center rounded-full px-1 font-black text-xs tabular-nums lg:text-sm", isToday ? "bg-[#FF6B35] text-white" : "text-[#5E6654]")}>{Number(dateStr.slice(-2))}</span>
+                      {dayEvents.length > 0 && <span className="font-black text-[9px] text-[#5E6654]/60 tabular-nums">{dayEvents.length}</span>}
+                    </div>
+                    <div className="space-y-1">
+                      {shown.map((event) => <div key={event.id}>{renderCalendarChip(event)}</div>)}
+                    </div>
                     {extra > 0 && (
-                      <button type="button" onClick={() => openView(laid[MAX].event)} className="absolute right-1 bottom-0 rounded bg-[#F4F1E8] px-1 font-black text-[8px] tracking-wide text-[#34451F] uppercase sm:text-[9px] lg:text-[10px]">
+                      <button type="button" onClick={() => openView(dayEvents[MAX])} className="mt-auto self-end rounded-md px-1.5 py-1 font-black text-[9px] tracking-wide text-[#34451F] uppercase hover:bg-[#EFE8D4] lg:text-[10px]">
                         +{extra} more
                       </button>
                     )}
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
+
+          <section className="space-y-2 sm:hidden">
+            <div className="flex items-center gap-2 px-1 py-1">
+              <div className="min-w-0 flex-1">
+                <p className="font-black text-sm text-[#20231A]">{selectedCalendarLabel}</p>
+                <p className="text-[11px] font-semibold text-[#5E6654]">{selectedCalendarEvents.length} event{selectedCalendarEvents.length === 1 ? "" : "s"}</p>
+              </div>
+              <button type="button" onClick={() => openAdd(undefined, selectedCalendarDate)} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
+                <Plus className="h-3.5 w-3.5" /> Add
+              </button>
+            </div>
+            {selectedCalendarEvents.length > 0 ? (
+              selectedCalendarEvents.map((event) => renderEventRow(event))
+            ) : (
+              <div className="rounded-2xl border border-dashed border-[#D8D5C8] bg-white/40 px-4 py-8 text-center">
+                <CalendarDays className="mx-auto mb-2 h-6 w-6 text-[#5E6654]/35" />
+                <p className="text-xs font-bold text-[#5E6654]">No events scheduled for this day</p>
+              </div>
+            )}
+          </section>
         </div>
       ) : visibleEvents.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
