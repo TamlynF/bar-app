@@ -644,7 +644,9 @@ function FactChips({ sub }: { sub: Subtype }) {
 /* ---------------------------------------------------------------- sheets */
 
 const SHEET_CLASS =
-  "flex h-[92vh] flex-col gap-0 rounded-t-[20px] border-t border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:h-auto sm:max-h-[88vh] sm:w-[620px] sm:-translate-x-1/2 sm:rounded-[20px] sm:border";
+  "flex h-dvh max-h-dvh w-full max-w-none flex-col gap-0 border-0 bg-[#F7F4EA] p-0 shadow-2xl outline-none " +
+  "sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:h-auto sm:max-h-[90dvh] sm:w-[680px] " +
+  "sm:max-w-[calc(100vw-2rem)] sm:-translate-x-1/2 sm:rounded-[20px] sm:border sm:border-[#E6DFC8]";
 
 function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
   form: CatForm; setForm: (f: CatForm) => void; onClose: () => void; onSave: () => void; pending: boolean; error: string | null;
@@ -658,7 +660,11 @@ function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
     <Sheet open onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={SHEET_CLASS}>
         <SheetGrab />
-        <SheetHead eyebrow="Category" title={form.isNew ? "New category" : toTitleCase(form.name) || "Category"} onClose={onClose} />
+        <SheetHead
+          eyebrow={form.isNew ? "New category" : "Edit category"}
+          title={form.isNew ? "Category details" : toTitleCase(form.name) || "Category"}
+          onClose={onClose}
+        />
         <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto p-4">
           <SheetSection title="Name" blurb="A group name for your own lists.">
             <Field label="Category name" required help={HELP.catName} hint="Customers never see this." error={nameErr ? "Give it a short name so your team can find it." : undefined}>
@@ -749,12 +755,34 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
       <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={SHEET_CLASS}>
         <SheetGrab />
         <SheetHead
-          eyebrow={`Sub-category in ${toTitleCase(parent?.name)}`}
-          title={form.isNew ? "New sub-category" : toTitleCase(form.name) || "Sub-category"}
+          eyebrow={form.isNew ? "New sub-category" : "Edit sub-category"}
+          title={form.isNew ? `In ${toTitleCase(parent?.name)}` : toTitleCase(form.name) || "Sub-category"}
           onClose={onClose}
         />
 
-        <div className="flex flex-wrap gap-1 bg-[#FFFDF7] px-3 pb-2.5" role="tablist" aria-label="Sub-category settings">
+        <div className="shrink-0 border-b border-[#E6DFC8] bg-[#FFFDF7] px-4 py-3 sm:hidden">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-bold text-[12px] text-[#5F624F]">
+              Step {idx + 1} of {tabs.length}
+            </p>
+            <p className="truncate font-bold text-[12px] text-[#5C4033]">{tabs[idx].label}</p>
+          </div>
+          <div
+            className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#EFEADB]"
+            role="progressbar"
+            aria-label="Sub-category setup progress"
+            aria-valuemin={1}
+            aria-valuemax={tabs.length}
+            aria-valuenow={idx + 1}
+          >
+            <div
+              style={{ "--progress": `${((idx + 1) / tabs.length) * 100}%` } as React.CSSProperties}
+              className="h-full w-(--progress) rounded-full bg-[#1B4332] transition-[width] duration-200"
+            />
+          </div>
+        </div>
+
+        <div className="hidden flex-wrap gap-1 bg-[#FFFDF7] px-3 pb-2.5 sm:flex" role="tablist" aria-label="Sub-category settings">
           {tabs.map((t, k) => (
             <button
               key={t.id}
@@ -886,10 +914,11 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
         </div>
 
         <SheetFoot
-          onCancel={onClose}
+          onCancel={idx === 0 ? onClose : () => setActiveTab(tabs[idx - 1].id)}
+          cancelLabel={idx === 0 ? "Close" : "Back"}
           onSave={last ? onSave : undefined}
           onNext={last ? undefined : () => setActiveTab(tabs[idx + 1].id)}
-          nextLabel={last ? undefined : `Next: ${tabs[idx + 1].label}`}
+          nextLabel={last ? undefined : "Next"}
           pending={pending}
           disableSave={disableSave}
           disableNext={nameErr}
@@ -1465,8 +1494,9 @@ function SheetSection({ title, blurb, children }: { title: string; blurb: string
   );
 }
 
-function SheetFoot({ onCancel, onSave, onNext, nextLabel, pending, disableSave, disableNext, saveLabel }: {
+function SheetFoot({ onCancel, cancelLabel = "Cancel", onSave, onNext, nextLabel, pending, disableSave, disableNext, saveLabel }: {
   onCancel: () => void;
+  cancelLabel?: string;
   onSave?: () => void;
   onNext?: () => void;
   nextLabel?: string;
@@ -1483,7 +1513,7 @@ function SheetFoot({ onCancel, onSave, onNext, nextLabel, pending, disableSave, 
         disabled={pending}
         className="h-12 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] font-black text-[12px] text-[#5F624F] uppercase tracking-widest transition-colors hover:border-[#5C4033] hover:text-[#5C4033] disabled:opacity-50 sm:min-w-35"
       >
-        Cancel
+        {cancelLabel}
       </button>
       {onNext ? (
         <button
