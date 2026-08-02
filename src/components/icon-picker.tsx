@@ -13,8 +13,8 @@ export function IconPicker({
   label?: string;
 }) {
   return (
-    <div className="space-y-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
+    <div className="space-y-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</span>
       <div className="grid grid-cols-5 gap-2 sm:grid-cols-7">
         {BOOKING_CARD_ICON_NAMES.map((name) => {
           const Icon = BOOKING_CARD_ICONS[name];
@@ -30,8 +30,8 @@ export function IconPicker({
               className={cn(
                 "flex aspect-square items-center justify-center rounded-xl border transition-all duration-200 active:scale-95",
                 selected
-                  ? "scale-105 border-[#5C4033] bg-[#5C4033] text-white shadow-md ring-2 ring-[#5C4033]/20"
-                  : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]/30 hover:bg-[#F7F4EA]"
+                  ? "scale-105 border-[#34451F] bg-[#34451F] text-white shadow-md ring-2 ring-[#34451F]/20"
+                  : "border-[#D8D5C8] bg-white text-[#5E6654] hover:border-[#34451F]/30 hover:bg-[#F4F1E8]"
               )}
             >
               <Icon className="h-5 w-5 sm:h-4 sm:w-4" />

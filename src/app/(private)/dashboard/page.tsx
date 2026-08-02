@@ -475,7 +475,7 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-6xl space-y-5 px-4 py-4 sm:py-0 md:px-6">
 
         <header className="flex justify-center">
-          <p className="text-sm font-bold tracking-wide text-[#5F624F] uppercase">
+          <p className="text-sm font-bold tracking-wide text-[#5E6654] uppercase">
             {format(new Date(), "EEEE, do MMMM yyyy")}
           </p>
         </header>
@@ -556,10 +556,10 @@ export default async function DashboardPage() {
               {comingUp.length > 0 ? (
                 <EventRowListClient items={comingUp} />
               ) : (
-                <div className="rounded-2xl border border-[#E6DFC8] bg-white p-10 text-center">
-                  <CalendarDays className="mx-auto mb-3 h-10 w-10 text-[#5F624F] opacity-20" />
-                  <p className="font-black text-sm text-[#1F1F1A]">No Upcoming Events</p>
-                  <p className="mt-1 text-[11px] font-medium text-[#5F624F]">
+                <div className="rounded-2xl border border-[#D8D5C8] bg-white p-10 text-center">
+                  <CalendarDays className="mx-auto mb-3 h-10 w-10 text-[#5E6654] opacity-20" />
+                  <p className="font-black text-sm text-[#20231A]">No Upcoming Events</p>
+                  <p className="mt-1 text-[11px] font-medium text-[#5E6654]">
                     Schedule an event in Settings to see it here.
                   </p>
                 </div>
@@ -610,12 +610,12 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-[#E6DFC8] bg-white p-4 transition-colors hover:bg-[#F7F4EA]"
+      className="group flex flex-col items-center justify-center gap-2 rounded-2xl border border-[#D8D5C8] bg-white p-4 transition-colors hover:bg-[#F4F1E8]"
     >
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F7F4EA] shadow-sm transition-colors group-hover:bg-white">
-        <Icon className="h-5 w-5 text-[#5C4033]" />
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F4F1E8] shadow-sm transition-colors group-hover:bg-white">
+        <Icon className="h-5 w-5 text-[#34451F]" />
       </div>
-      <span className="font-black text-[10px] tracking-wide text-[#1F1F1A] uppercase">
+      <span className="font-black text-[10px] tracking-wide text-[#20231A] uppercase">
         {label}
       </span>
     </Link>

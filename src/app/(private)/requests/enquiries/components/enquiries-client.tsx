@@ -45,7 +45,7 @@ type StatusTheme = {
 };
 
 const statusTheme: Record<string, StatusTheme> = {
-  all: { text: "text-[#1F1F1A]", border: "border-[#E6DFC8]", dot: "bg-[#5F624F]", ring: "ring-slate-500/40", bg: "bg-[#F7F4EA]", icon: null },
+  all: { text: "text-[#20231A]", border: "border-[#D8D5C8]", dot: "bg-[#5E6654]", ring: "ring-slate-500/40", bg: "bg-[#F4F1E8]", icon: null },
   pending: { text: "text-amber-700", border: "border-amber-200", dot: "bg-amber-500", ring: "ring-amber-500/40", bg: "bg-amber-50", icon: <Clock className="h-4 w-4" /> },
   responded: { text: "text-green-700", border: "border-green-200", dot: "bg-green-500", ring: "ring-green-500/40", bg: "bg-green-50", icon: <CheckCircle className="h-4 w-4" /> },
   closed: { text: "text-stone-600", border: "border-stone-200", dot: "bg-stone-400", ring: "ring-stone-400/40", bg: "bg-stone-100", icon: <Archive className="h-4 w-4" /> },
@@ -79,7 +79,7 @@ function StatusCircle({
           {count}
         </span>
       </button>
-      <span className={cn("font-black text-[10px] tracking-tight uppercase sm:text-[11px]", isActive ? theme.text : "text-[#5F624F]")}>
+      <span className={cn("font-black text-[10px] tracking-tight uppercase sm:text-[11px]", isActive ? theme.text : "text-[#5E6654]")}>
         {label}
       </span>
     </div>
@@ -132,9 +132,9 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
+          "w-full overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white",
           "flex items-center gap-3 px-3 py-3.5 text-left",
-          "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]"
+          "shadow-sm transition-all hover:bg-[#F4F1E8]/60 active:scale-[0.98]"
         )}
       >
         <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full border", theme.bg, theme.text, theme.border)}>
@@ -143,30 +143,30 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
-            <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
+            <p className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">
               {enquiry.full_name}
             </p>
             {enquiry.subject && (
-              <span className="max-w-32 shrink-0 truncate rounded border border-[#5C4033]/15 bg-[#5C4033]/5 px-1.5 py-0.5 font-black text-[10px] text-[#5C4033] uppercase">
+              <span className="max-w-32 shrink-0 truncate rounded border border-[#34451F]/15 bg-[#34451F]/5 px-1.5 py-0.5 font-black text-[10px] text-[#34451F] uppercase">
                 {enquiry.subject}
               </span>
             )}
           </div>
-          <p className="mt-0.5 truncate text-xs font-semibold text-[#5F624F]">
+          <p className="mt-0.5 truncate text-xs font-semibold text-[#5E6654]">
             {enquiry.message}
           </p>
         </div>
 
-        <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+        <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent
           side="bottom"
-          className="right-auto bottom-6 flex h-auto max-h-[85vh] w-140 -translate-x-1/2 flex-col rounded-4xl rounded-t-4xl border-[#E6DFC8] bg-[#F7F4EA] p-0 sm:left-1/2"
+          className="right-auto bottom-6 flex h-auto max-h-[85vh] w-140 -translate-x-1/2 flex-col rounded-4xl rounded-t-4xl border-[#D8D5C8] bg-[#F4F1E8] p-0 sm:left-1/2"
         >
-          <div className="shrink-0 border-b-2 border-[#E6DFC8] px-6 pt-6 pb-4">
-            <SheetTitle className="flex items-center gap-2 font-black text-sm tracking-widest text-[#1F1F1A] uppercase">
+          <div className="shrink-0 border-b-2 border-[#D8D5C8] px-6 pt-6 pb-4">
+            <SheetTitle className="flex items-center gap-2 font-black text-sm tracking-widest text-[#20231A] uppercase">
               Enquiry
               <span className={cn("rounded-full border px-2 py-0.5 font-black text-[10px] uppercase", theme.bg, theme.text, theme.border)}>
                 {status}
@@ -176,33 +176,33 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
 
           <div className="min-h-0 flex-1 touch-pan-y space-y-5 overflow-y-auto px-6 py-5">
             <div className="space-y-2">
-              <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Contact</p>
-              <div className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white px-4">
-                <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3">
-                  <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Name</span>
-                  <span className="text-right text-sm font-bold text-[#1F1F1A]">{enquiry.full_name}</span>
+              <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Contact</p>
+              <div className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white px-4">
+                <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] py-3">
+                  <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Name</span>
+                  <span className="text-right text-sm font-bold text-[#20231A]">{enquiry.full_name}</span>
                 </div>
-                <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3">
-                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] py-3">
+                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                     <Mail className="h-3 w-3" /> Email
                   </span>
-                  <a href={`mailto:${enquiry.email}`} className="text-right text-sm font-bold break-all text-[#5C4033] underline underline-offset-2">
+                  <a href={`mailto:${enquiry.email}`} className="text-right text-sm font-bold break-all text-[#34451F] underline underline-offset-2">
                     {enquiry.email}
                   </a>
                 </div>
                 {enquiry.phone_no && (
-                  <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] py-3">
-                    <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                  <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] py-3">
+                    <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                       <Phone className="h-3 w-3" /> Phone
                     </span>
-                    <a href={`tel:${enquiry.phone_no}`} className="text-sm font-bold text-[#5C4033] underline underline-offset-2">
+                    <a href={`tel:${enquiry.phone_no}`} className="text-sm font-bold text-[#34451F] underline underline-offset-2">
                       {enquiry.phone_no}
                     </a>
                   </div>
                 )}
                 <div className="flex items-start justify-between gap-4 py-3">
-                  <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Received</span>
-                  <span className="text-sm font-bold text-[#1F1F1A]">
+                  <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Received</span>
+                  <span className="text-sm font-bold text-[#20231A]">
                     {new Date(enquiry.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}
                   </span>
                 </div>
@@ -210,21 +210,21 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
             </div>
 
             <div className="space-y-2">
-              <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+              <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                 {enquiry.subject ? `Message - ${enquiry.subject}` : "Message"}
               </p>
-              <div className="rounded-2xl border border-[#E6DFC8] bg-white px-4 py-3">
-                <p className="text-sm leading-relaxed whitespace-pre-wrap text-[#1F1F1A]">{enquiry.message}</p>
+              <div className="rounded-2xl border border-[#D8D5C8] bg-white px-4 py-3">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-[#20231A]">{enquiry.message}</p>
               </div>
             </div>
 
             {enquiry.reply_message && (
-              <div className="rounded-3xl border-2 border-[#5C4033]/15 bg-[#5C4033]/5 p-5">
+              <div className="rounded-3xl border-2 border-[#34451F]/15 bg-[#34451F]/5 p-5">
                 <div className="mb-2 flex items-center gap-2">
-                  <MessageSquareQuote className="h-4 w-4 text-[#5C4033] opacity-40" />
-                  <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Our Reply</span>
+                  <MessageSquareQuote className="h-4 w-4 text-[#34451F] opacity-40" />
+                  <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">Our Reply</span>
                 </div>
-                <p className="text-sm leading-relaxed whitespace-pre-wrap text-[#1F1F1A] italic">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-[#20231A] italic">
                   &quot;{enquiry.reply_message}&quot;
                 </p>
               </div>
@@ -234,11 +234,11 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
           </div>
 
           {status !== "closed" && (
-            <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:pb-5">
+            <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:pb-5">
               <div className="space-y-3">
                 {status === "pending" && (
                   <div>
-                    <label htmlFor={`reply-${enquiry.id}`} className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                    <label htmlFor={`reply-${enquiry.id}`} className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                       Reply (emailed to {enquiry.full_name})
                     </label>
                     <textarea
@@ -247,7 +247,7 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
                       onChange={(e) => setReplyText(e.target.value)}
                       placeholder="Write your reply..."
                       rows={3}
-                      className="w-full resize-none rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] px-4 py-3 text-sm text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                      className="w-full resize-none rounded-2xl border border-[#D8D5C8] bg-[#F4F1E8] px-4 py-3 text-sm text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
                     />
                   </div>
                 )}
@@ -331,7 +331,7 @@ export default function EnquiriesClient({ initialEnquiries, initialStatus }: { i
 
   return (
     <div className="animate-in space-y-3 duration-500 fade-in">
-      <div className="rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
+      <div className="rounded-2xl border border-[#D8D5C8] bg-white shadow-sm">
         <div className="flex flex-col items-center sm:flex-row">
           <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:flex-1">
             <div className="flex w-full min-w-max items-stretch gap-3 px-2 py-3 sm:justify-evenly">
@@ -342,19 +342,19 @@ export default function EnquiriesClient({ initialEnquiries, initialStatus }: { i
             </div>
           </div>
 
-          <div className="mx-3 border-t border-[#E6DFC8] sm:hidden" />
-          <div className="my-2 hidden w-px self-stretch bg-[#E6DFC8] sm:block" />
+          <div className="mx-3 border-t border-[#D8D5C8] sm:hidden" />
+          <div className="my-2 hidden w-px self-stretch bg-[#D8D5C8] sm:block" />
 
           <div className="mb-3 flex shrink-0 justify-center px-4 py-2 sm:mb-0">
-            <div className="flex h-10 w-full max-w-sm items-center gap-3 rounded-xl border border-[#E6DFC8] px-4 transition-colors focus-within:border-[#5C4033] sm:w-56">
+            <div className="flex h-10 w-full max-w-sm items-center gap-3 rounded-xl border border-[#D8D5C8] px-4 transition-colors focus-within:border-[#34451F] sm:w-56">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+                <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
                 <input
                   type="text"
                   placeholder="Search names, messages..."
                   value={searchQuery}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-[#5F624F]/40 placeholder:normal-case"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-[#20231A] outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-[#5E6654]/40 placeholder:normal-case"
                 />
               </div>
               {(activeStatusFilters.size > 0 || searchQuery.length > 0) && (
@@ -365,9 +365,9 @@ export default function EnquiriesClient({ initialEnquiries, initialStatus }: { i
                     setActiveStatusFilters(new Set());
                     setSearchQuery("");
                   }}
-                  className="shrink-0 rounded-lg p-1 transition-colors hover:bg-[#E6DFC8]"
+                  className="shrink-0 rounded-lg p-1 transition-colors hover:bg-[#D8D5C8]"
                 >
-                  <X className="h-3.5 w-3.5 text-[#5F624F]/50" />
+                  <X className="h-3.5 w-3.5 text-[#5E6654]/50" />
                 </button>
               )}
             </div>
@@ -377,9 +377,9 @@ export default function EnquiriesClient({ initialEnquiries, initialStatus }: { i
 
       <div className="space-y-2 pb-2">
         {filtered.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">
-            <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5F624F]/50" />
-            <p className="text-sm font-medium text-[#5F624F]">No enquiries found</p>
+          <div className="rounded-2xl border border-dashed border-[#D8D5C8] bg-white py-16 text-center">
+            <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5E6654]/50" />
+            <p className="text-sm font-medium text-[#5E6654]">No enquiries found</p>
           </div>
         ) : (
           filtered.map((e) => <EnquiryCard key={e.id} enquiry={e} />)

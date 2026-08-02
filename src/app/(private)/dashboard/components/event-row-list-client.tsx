@@ -44,7 +44,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
     if (items.length === 0) return null;
 
     return (
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
             {items.map((item) => {
                 const parsed = parseISO(item.date);
                 const today = isToday(parsed);
@@ -57,29 +57,29 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                         key={item.key}
                         href={`/event-setups/events?open=${item.eventId}`}
                         title="Open event"
-                        className="group flex items-center gap-3 border-b border-[#E6DFC8] px-3 py-2.5 transition-colors last:border-0 hover:bg-amber-50"
+                        className="group flex items-center gap-3 border-b border-[#D8D5C8] px-3 py-2.5 transition-colors last:border-0 hover:bg-amber-50"
                     >
                         <div className={cn(
                             "w-11 shrink-0 rounded-lg py-0.5 text-center sm:w-12 sm:py-1",
-                            today ? "bg-[#FF6B35]" : "bg-[#F7F4EA]"
+                            today ? "bg-[#FF6B35]" : "bg-[#F4F1E8]"
                         )}>
-                            <p className={cn("text-[9px] font-bold tracking-wide uppercase", today ? "text-white" : "text-[#5F624F]")}>
+                            <p className={cn("text-[9px] font-bold tracking-wide uppercase", today ? "text-white" : "text-[#5E6654]")}>
                                 {format(parsed, "EEE")}
                             </p>
-                            <p className={cn("font-black text-base leading-tight sm:text-lg", today ? "text-white" : "text-[#1F1F1A]")}>
+                            <p className={cn("font-black text-base leading-tight sm:text-lg", today ? "text-white" : "text-[#20231A]")}>
                                 {format(parsed, "d")}
                             </p>
-                            <p className={cn("text-[9px] font-bold tracking-wide uppercase", today ? "text-white" : "text-[#5F624F]")}>
+                            <p className={cn("text-[9px] font-bold tracking-wide uppercase", today ? "text-white" : "text-[#5E6654]")}>
                                 {format(parsed, "MMM")}
                             </p>
                         </div>
 
                         <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 items-center gap-1.5">
-                                <p className="truncate font-black text-sm text-[#1F1F1A]">{item.title}</p>
+                                <p className="truncate font-black text-sm text-[#20231A]">{item.title}</p>
                                 {today && <TonightBadge />}
                             </div>
-                            <div className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-[#5F624F]">
+                            <div className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-[#5E6654]">
                                 <Clock className="h-3 w-3 shrink-0 opacity-50" />
                                 {startEndTime}
                             </div>
@@ -94,7 +94,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             </span>
                         )}
 
-                        <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/40 transition-colors group-hover:text-[#5C4033]" />
+                        <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654]/40 transition-colors group-hover:text-[#34451F]" />
                     </Link>
                 );
             })}

@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import React, { useState, useTransition } from "react"
 import Link from "next/link"
@@ -287,7 +287,7 @@ export default function PrivateLayoutClient({
     const { title, subtitle, backHref } = getPageInfo()
 
     return (
-        <div className="pt-safe-top flex h-screen min-h-screen bg-[#F7F4EA] sm:overflow-hidden">
+        <div className="pt-safe-top flex h-screen min-h-screen bg-[#F4F1E8] sm:overflow-hidden">
             <aside className={cn(
                 "sticky top-0 z-50 hidden h-screen shrink-0 flex-col border-r border-nav-line bg-nav-bg transition-[width] duration-300 sm:flex",
                 collapsed ? "w-16" : "w-72"
@@ -387,7 +387,7 @@ export default function PrivateLayoutClient({
                                                 {isRequests && pendingRequestsCount > 0 && (
                                                     <span className={cn(
                                                         "flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full px-1 font-black text-[9px] tabular-nums",
-                                                        isActive ? "bg-amber-400 text-[#1F1F1A]" : "bg-amber-500 text-white"
+                                                        isActive ? "bg-amber-400 text-[#20231A]" : "bg-amber-500 text-white"
                                                     )}>
                                                         {badgeText}
                                                     </span>
@@ -595,7 +595,7 @@ export default function PrivateLayoutClient({
             </aside>
 
             <div className="flex h-screen min-w-0 flex-1 flex-col sm:overflow-y-auto">
-                <header className="sticky top-0 z-40 w-full border-b border-[#E6DFC8] bg-white px-4 py-3 sm:px-8">
+                <header className="sticky top-0 z-40 w-full border-b border-[#D8D5C8] bg-white px-4 py-3 sm:px-8">
                     <div className="relative mx-auto flex min-h-10 max-w-7xl items-center">
 
                         {backHref && (
@@ -605,17 +605,17 @@ export default function PrivateLayoutClient({
                                 onClick={() => router.push(backHref)}
                                 className="absolute left-0 rounded-full p-2 transition-colors hover:bg-slate-100 active:scale-95"
                             >
-                                <ArrowLeft className="h-5 w-5 text-[#1F1F1A]" />
+                                <ArrowLeft className="h-5 w-5 text-[#20231A]" />
                             </button>
                         )}
 
                         <div className="flex w-full flex-col items-center justify-center">
-                            <h1 className="flex flex-wrap items-center justify-center gap-1 px-8 text-center font-black text-sm tracking-widest text-[#1F1F1A] uppercase sm:gap-2 sm:text-base">
+                            <h1 className="flex flex-wrap items-center justify-center gap-1 px-8 text-center font-black text-sm tracking-widest text-[#20231A] uppercase sm:gap-2 sm:text-base">
                                 <span className={cn(subtitle && backHref ? "hidden sm:inline" : "")}>{title}</span>
                                 {subtitle && (
                                     <>
                                         <span className="hidden opacity-30 sm:inline">/</span>
-                                        <span className={cn(subtitle && backHref ? "" : "text-[#5F624F] opacity-70 sm:opacity-100")}>{subtitle}</span>
+                                        <span className={cn(subtitle && backHref ? "" : "text-[#5E6654] opacity-70 sm:opacity-100")}>{subtitle}</span>
                                     </>
                                 )}
                             </h1>

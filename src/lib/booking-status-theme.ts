@@ -20,12 +20,12 @@ export const statusTheme: Record<
   }
 > = {
   all: {
-    bg: "bg-[#F7F4EA]",
-    text: "text-[#1F1F1A]",
-    border: "border-[#E6DFC8]",
-    dot: "bg-[#5F624F]",
+    bg: "bg-[#F4F1E8]",
+    text: "text-[#20231A]",
+    border: "border-[#D8D5C8]",
+    dot: "bg-[#5E6654]",
     ring: "ring-slate-500/40",
-    cardBorder: "border-[#E6DFC8]",
+    cardBorder: "border-[#D8D5C8]",
     icon: TableIcon,
   },
   confirmed: {

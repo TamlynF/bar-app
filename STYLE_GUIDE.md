@@ -161,20 +161,26 @@ Sections are separated by `py-10 sm:py-16` (generous breathing room).
 
 Routes: `/dashboard`, `/event-bookings/*`, `/event-setups/*`, `/settings/*`
 
-The vibe is **a coffee-shop notebook**. Warm cream paper, espresso ink, soft borders. Information-dense, but never noisy.
+The vibe is **a working notebook**. Cream paper, dark olive ink and accents, soft borders. Information-dense, but never noisy.
 
 ### Palette
 
-```
---admin-bg          #F7F4EA    /* cream canvas */
---admin-card        #FFFDF7    /* card surface */
---admin-ink         #1F1F1A    /* primary text */
---admin-ink-muted   #5F624F    /* secondary text / labels */
---admin-border      #E6DFC8    /* soft border, divider */
---admin-primary     #5C4033    /* espresso - buttons */
---admin-accent      #C8956D    /* warm tan - highlights, "today" markers */
---admin-gold        #FDCC4B    /* used sparingly to tie to brand */
-```
+| Role | Colour | Utility | Usage |
+|---|---|---|---|
+| App background | `#F4F1E8` | `bg-admin-bg` | Main page canvas |
+| Card / sheet | `#FFFEFA` | `bg-admin-card` | Cards, dialogs, forms |
+| Subtle surface | `#ECE9DE` | `bg-admin-surface` | Table headers, grouped sections, hover states |
+| Border | `#D8D5C8` | `border-admin-line` | Dividers and input borders |
+| Main text | `#20231A` | `text-admin-ink` | Headings and body text |
+| Muted text | `#5E6654` | `text-admin-muted` | Labels, descriptions, metadata |
+| Primary olive | `#34451F` | `bg-admin-primary` | Buttons, selected navigation, toggles |
+| Primary hover | `#283719` | `bg-admin-primary-hover` | Button hover / pressed state |
+| Primary soft | `#E5EBD8` | `bg-admin-primary-soft` | Selected rows, light badges |
+| Brand gold | `#D7A928` | `bg-admin-gold` | Focus rings, active indicator, occasional highlights |
+
+All of these are real Tailwind colours defined in `globals.css` and re-exported through `@theme inline`. **Prefer the utility over the hex in new code** (`bg-admin-card`, not `bg-[#FFFEFA]`); opacity modifiers work as normal. Existing code still carries raw hex from the migration off the old espresso/cream palette - both resolve to the same value, so convert opportunistically rather than in a sweep.
+
+The old espresso palette (`#5C4033` primary, `#F7F4EA` canvas, `#E6DFC8` border, `#1F1F1A` ink, `#5F624F` muted) is **retired on admin surfaces**. Those hexes still appear on public pages, where they are unrelated - don't "fix" them there.
 
 #### Admin navigation chrome - dark olive
 
@@ -192,41 +198,63 @@ The sidebar and mobile bottom nav are **deliberately not** on the cream palette.
 These are real Tailwind colours, defined in `globals.css` and re-exported through `@theme inline`. **Use the utility, not the hex**: `bg-nav-bg`, `text-nav-ink`, `text-nav-muted`, `bg-nav-selected`, `border-nav-indicator`, `border-nav-line`. Opacity modifiers work as normal (`text-nav-muted/70`).
 
 Rules:
-- **Scope is navigation chrome only.** Never put `nav-*` on a card, sheet, form or any content surface - admin content stays cream/espresso. Conversely, don't use `#5C4033` espresso for nav state.
+- **Scope is navigation chrome only.** Never put `nav-*` on a card, sheet, form or any content surface - admin content stays on the cream/olive content palette above. Note `--nav-selected` and `--admin-primary` are the same olive (`#34451F`) by design: it's one primary, used as a fill in nav and as the solid button colour in content.
 - **Selected item = fill + indicator, never gold fill.** A selected item gets `bg-nav-selected` plus a thin `border-l-2 border-nav-indicator`. Filling the whole item with gold makes it visually dominant and fights the working area for attention.
 - **Give inactive items `border-l-2 border-transparent`** so the indicator doesn't shift the row by 2px when it becomes active.
 - **Icons are muted when idle, ink when active** - `text-nav-muted` → `text-nav-ink`.
 - On the mobile bottom nav there's no left edge to mark, so the active item gets the `bg-nav-selected` pill plus the gold dot underneath (`bg-nav-indicator`).
 - The top header bar stays white/cream - it belongs to the working area, not the nav.
 
-Status colours: use semantic Tailwind shades:
-- Confirmed → `green-50/700`
-- Pending / waitlisted → `amber-50/700`
-- Cancelled / urgent → `red-50/700`
-- Info / private hire → `blue-50/700`
+#### Semantic colours
+
+Reserved for **meaning**, never decoration:
+
+| Meaning | Strong (text, icon, dot) | Background |
+|---|---|---|
+| Success / confirmed | `#22613F` `text-admin-success` | `#E7F3EC` `bg-admin-success-bg` |
+| Warning / pending | `#9A5B00` `text-admin-warning` | `#FFF4D6` `bg-admin-warning-bg` |
+| Error / cancelled | `#B33A32` `text-admin-error` | `#FDECEA` `bg-admin-error-bg` |
+| Information | `#28608F` `text-admin-info` | `#EAF2F8` `bg-admin-info-bg` |
+
+**Don't give ordinary categories their own blue / purple / orange / red backgrounds.** A colour on an admin surface should mean "this needs attention" or "this succeeded" - not "this is a different kind of thing". Ordinary groupings use the neutral surface (`bg-admin-surface`) or the primary-soft tint (`bg-admin-primary-soft`). The only exception is the user-selected event-type identity swatches in `src/lib/event-type-colors.ts`, which staff choose deliberately per category.
+
+#### Main content
+
+- Cream canvas (`bg-admin-bg`) behind the page.
+- White cards (`bg-admin-card`) with a **single-pixel** border (`border border-admin-line`).
+- Shadows stay very restrained - `shadow-sm` at most. No `shadow-lg` on ordinary cards.
+- Table headings, grouped sections and hover states use the soft neutral surface (`bg-admin-surface`).
 
 ### Typography on admin
 
 - Headings: `font-black uppercase tracking-tighter`
-- Labels: `text-[10px] font-black uppercase tracking-wide text-[#5F624F]`
+- Labels: `text-[10px] font-black uppercase tracking-wide text-admin-muted`
 - Body: `text-sm font-medium` or `text-xs`
 - Data: `tabular-nums` for numerals
 
 ### Cards & sheets
 
-- Cards: `bg-white border border-[#E6DFC8] rounded-2xl shadow-sm`
-- Hover: `hover:border-[#5C4033] hover:shadow-md transition-all active:scale-[0.98]`
+- Cards: `bg-admin-card border border-admin-line rounded-2xl shadow-sm` - one-pixel border, restrained shadow
+- Hover: `hover:border-admin-primary hover:bg-admin-surface transition-all active:scale-[0.98]`
 - Sheets: bottom sheet on mobile (`h-[85vh]`), centered on desktop (`sm:rounded-[2rem] sm:bottom-6 sm:w-[560px]`)
 - Sticky sheet headers and footers with `bg-white/80 backdrop-blur-md`
 
-### Action buttons - Edit, Save, Add/Create (admin)
+### Action buttons (admin)
 
-The primary record-mutation actions have a **fixed colour identity** across the admin portal so they read the same on every booking/detail/settings surface. When you add one of these buttons, its `className` MUST contain the exact utilities below (compose layout/sizing - `h-12 rounded-xl …`, or a small `h-7` header variant - around them):
+One accent carries weight: **solid olive means "this writes a record"**. Everything else steps back. Compose layout/sizing (`h-12 rounded-xl …`, or a small `h-7` header variant) around these.
 
-- **Edit** (amber): `bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest`
-- **Save / Add / Create / New** (green): `bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest`
+| Action | Treatment |
+|---|---|
+| **Save / Create / Add / New / Upload** | Solid olive: `bg-[#34451F] hover:bg-[#283719] text-white font-black uppercase tracking-widest` |
+| **Edit** | Olive outline: `border border-[#34451F] text-[#34451F] hover:bg-[#E5EBD8] font-black uppercase tracking-widest` |
+| **Cancel / dismiss** | Neutral outline: `border border-[#D8D5C8] text-[#5E6654] hover:bg-[#ECE9DE]` |
+| **Delete** | Red (`#B33A32`), and **only behind a confirmation** - never a bare one-tap destructive control |
 
-`#B45309` is the Edit colour; `#1B4332` is the **green for any record-creating or record-saving action** - Save, plus "Add X" / "Create X" / "New X" / "Upload X" buttons. Don't substitute espresso (`#5C4033`) for an Edit/Save/Add/Create action, and don't use these two hexes for unrelated controls.
+Rules:
+- **One solid olive button per view.** If two things are both solid olive, neither reads as primary. The secondary one becomes an outline.
+- **Gold (`#D7A928`) is not a button colour.** It's for focus rings, selection and small brand details only. A gold-filled button competes with the content for attention.
+- Don't reintroduce the old amber Edit (`#B45309`) or green Create (`#1B4332`) - both are now olive, distinguished by solid vs outline.
+- Destructive confirmation dialogs are the place for red; a red button sitting in a toolbar is not.
 
 ---
 
@@ -234,7 +262,7 @@ The primary record-mutation actions have a **fixed colour identity** across the 
 
 ### Tailwind class form - canonical over arbitrary
 - Use the canonical scale token when a value is on the spacing/size scale: `min-w-50` not `min-w-[200px]`, `gap-2` not `gap-[8px]`, `text-sm` not `text-[14px]`. (`px ÷ 4` = the token.) This is what the IntelliSense `suggestCanonicalClasses` hint flags.
-- Bracket values like `text-[10px]`, `tracking-[0.2em]`, and `h-[85vh]` used in this guide are **intentional exceptions** - they have no canonical token (off-grid px, or non-spacing units). Leave them as-is; don't "correct" them. Reserve `[...]` for: no-canonical values, non-spacing units (`vh`/`%`), custom palette hex (`border-[#E6DFC8]`), and dynamic CSS vars.
+- Bracket values like `text-[10px]`, `tracking-[0.2em]`, and `h-[85vh]` used in this guide are **intentional exceptions** - they have no canonical token (off-grid px, or non-spacing units). Leave them as-is; don't "correct" them. Reserve `[...]` for: no-canonical values, non-spacing units (`vh`/`%`), custom palette hex (`border-[#D8D5C8]`), and dynamic CSS vars.
 
 ### Touch targets
 - Minimum 44×44px on mobile (`h-11` / `h-12`). `h-9`/`h-10` fine on desktop only.

@@ -343,7 +343,7 @@ export default function BingoBookingListClient({
 
   return (
     <div className="animate-in space-y-3 duration-500 fade-in">
-      <div className="rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
+      <div className="rounded-2xl border border-[#D8D5C8] bg-white shadow-sm">
         <div className="flex flex-col sm:flex-row sm:items-center">
 
           <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:flex-1 sm:pt-0">
@@ -391,19 +391,19 @@ export default function BingoBookingListClient({
             </div>
           </div>
 
-          <div className="mx-3 border-t border-[#E6DFC8] sm:hidden" />
-          <div className="hidden w-px bg-[#E6DFC8] sm:my-2 sm:block sm:self-stretch" />
+          <div className="mx-3 border-t border-[#D8D5C8] sm:hidden" />
+          <div className="hidden w-px bg-[#D8D5C8] sm:my-2 sm:block sm:self-stretch" />
 
           <div className="mb-3 flex justify-center px-4 sm:mb-0 sm:shrink-0 sm:px-3 sm:py-2">
-            <div className="flex h-10 w-full max-w-sm items-center gap-3 rounded-xl border border-[#E6DFC8] px-4 transition-colors focus-within:border-[#5C4033] sm:w-56">
+            <div className="flex h-10 w-full max-w-sm items-center gap-3 rounded-xl border border-[#D8D5C8] px-4 transition-colors focus-within:border-[#34451F] sm:w-56">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+                <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
                 <input
                   type="text"
                   placeholder="Search group names or guests..."
                   value={searchQuery}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-                  className="min-w-0 flex-1 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-[#5F624F]/50 placeholder:normal-case"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-[#20231A] outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-[#5E6654]/50 placeholder:normal-case"
                 />
               </div>
               {(activeStatusFilters.size > 0 || searchQuery.length > 0) && (
@@ -411,9 +411,9 @@ export default function BingoBookingListClient({
                   type="button"
                   title="Cancel"
                   onClick={() => { setActiveStatusFilters(new Set()); setSearchQuery(""); }}
-                  className="shrink-0 rounded-lg p-1 transition-colors hover:bg-[#E6DFC8]"
+                  className="shrink-0 rounded-lg p-1 transition-colors hover:bg-[#D8D5C8]"
                 >
-                  <X className="h-3.5 w-3.5 text-[#5F624F]/50" />
+                  <X className="h-3.5 w-3.5 text-[#5E6654]/50" />
                 </button>
               )}
             </div>
@@ -424,9 +424,9 @@ export default function BingoBookingListClient({
 
       <div className="space-y-2 pb-2">
         {filteredBookings.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">
-            <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5F624F]/50" />
-            <p className="text-sm font-medium text-[#5F624F]">No bookings found</p>
+          <div className="rounded-2xl border border-dashed border-[#D8D5C8] bg-white py-16 text-center">
+            <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5E6654]/50" />
+            <p className="text-sm font-medium text-[#5E6654]">No bookings found</p>
           </div>
         ) : (
           filteredBookings.map((b) => (
@@ -452,20 +452,20 @@ export default function BingoBookingListClient({
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none"
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none"
         >
           {selectedBooking && (
             <>
               <span ref={topFocusRef} tabIndex={-1} className="sr-only" />
 
-              <div className="sticky top-0 z-30 flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#E6DFC8] bg-white/80 p-2 pb-2 backdrop-blur-md">
+              <div className="sticky top-0 z-30 flex shrink-0 flex-row items-start justify-between gap-2 border-b border-[#D8D5C8] bg-white/80 p-2 pb-2 backdrop-blur-md">
                 <div className="min-w-0 flex-1 text-left">
-                  <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase sm:text-2xl">
+                  <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#20231A] uppercase sm:text-2xl">
                     {isEditing ? "Modify Record" : (selectedBooking.group_name || "Guest Group")}
                   </SheetTitle>
                   <div className="mt-1 flex items-center gap-1.5">
-                    <Hash className="h-3 w-3 text-[#5F624F]" />
-                    <span className="font-black text-xs tracking-wide text-[#5F624F] uppercase tabular-nums">
+                    <Hash className="h-3 w-3 text-[#5E6654]" />
+                    <span className="font-black text-xs tracking-wide text-[#5E6654] uppercase tabular-nums">
                       Ref: {selectedBooking.id}
                     </span>
                   </div>
@@ -500,13 +500,13 @@ export default function BingoBookingListClient({
                   <div className="animate-in space-y-6 duration-300 fade-in slide-in-from-bottom-2">
 
                     <div className="space-y-2">
-                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Event Date & Session</Label>
+                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Event Date & Session</Label>
                       <div className="group relative">
                         <select
                           title="Select Event"
                           value={editForm.event_id}
                           onChange={(e) => handleEventChange(e.target.value)}
-                          className="h-14 w-full appearance-none rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold transition-all outline-none focus:border-[#5C4033]"
+                          className="h-14 w-full appearance-none rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 text-sm font-bold transition-all outline-none focus:border-[#34451F]"
                         >
                           {availableEvents.map((e) => (
                             <option key={e.id} value={e.id}>
@@ -514,7 +514,7 @@ export default function BingoBookingListClient({
                             </option>
                           ))}
                         </select>
-                        <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 text-[#5F624F] opacity-40" />
+                        <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 text-[#5E6654] opacity-40" />
                       </div>
                       {showEventMoveHint && (
                         <div className="flex animate-in items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 p-3 fade-in slide-in-from-top-1">
@@ -525,18 +525,18 @@ export default function BingoBookingListClient({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Group Name</Label>
+                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Group Name</Label>
                       <Input
                         value={editForm.group_name}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setEditForm((prev) => ({ ...prev, group_name: e.target.value }))
                         }
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-base font-bold focus:border-[#5C4033] focus:ring-2 focus:ring-[#5C4033]/10"
+                        className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 text-base font-bold focus:border-[#34451F] focus:ring-2 focus:ring-[#34451F]/10"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Group Size</Label>
+                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Group Size</Label>
                       <Input
                         type="number"
                         min={1}
@@ -544,12 +544,12 @@ export default function BingoBookingListClient({
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           handleGroupSizeChange(parseInt(e.target.value) || 0)
                         }
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-base font-bold focus:border-[#5C4033] focus:ring-2 focus:ring-[#5C4033]/10"
+                        className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 text-base font-bold focus:border-[#34451F] focus:ring-2 focus:ring-[#34451F]/10"
                       />
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Table Assignment</Label>
+                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Table Assignment</Label>
                       <div className="group relative">
                         <select
                           title="Select Table"
@@ -558,8 +558,8 @@ export default function BingoBookingListClient({
                           className={cn(
                             "h-14 w-full appearance-none rounded-2xl border-2 px-4 text-sm font-bold transition-all outline-none",
                             editForm.table_id
-                              ? "border-[#E6DFC8] bg-white focus:border-[#5C4033]"
-                              : "border-dashed border-[#E6DFC8] bg-[#F7F4EA]"
+                              ? "border-[#D8D5C8] bg-white focus:border-[#34451F]"
+                              : "border-dashed border-[#D8D5C8] bg-[#F4F1E8]"
                           )}
                         >
                           <option value="">Unassigned / No Table</option>
@@ -569,7 +569,7 @@ export default function BingoBookingListClient({
                             </option>
                           ))}
                         </select>
-                        <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 text-[#5F624F] opacity-40" />
+                        <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-5 w-5 -translate-y-1/2 text-[#5E6654] opacity-40" />
                       </div>
                       {showTableConfirmedHint && (
                         <div className="flex animate-in items-center gap-2 rounded-xl border border-green-200 bg-green-50 p-3 fade-in slide-in-from-top-1">
@@ -585,12 +585,12 @@ export default function BingoBookingListClient({
                       )}
                     </div>
 
-                    <div className="border-t border-[#E6DFC8] pt-6">
-                      <Label className="mb-3 ml-1 block text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Status</Label>
+                    <div className="border-t border-[#D8D5C8] pt-6">
+                      <Label className="mb-3 ml-1 block text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Status</Label>
                       <div
                         className={cn(
                           "flex h-14 items-center overflow-hidden rounded-2xl border-2 transition-all",
-                          statusTheme[editForm.status]?.border || "border-[#E6DFC8]",
+                          statusTheme[editForm.status]?.border || "border-[#D8D5C8]",
                           statusTheme[editForm.status]?.bg || "bg-white",
                         )}
                       >
@@ -601,13 +601,13 @@ export default function BingoBookingListClient({
                           onChange={(e) => handleStatusChangeInEdit(e.target.value)}
                           className={cn(
                             "h-full flex-1 cursor-pointer appearance-none bg-transparent px-3 font-black text-sm tracking-wide uppercase outline-none",
-                            statusTheme[editForm.status]?.text || "text-[#1F1F1A]",
+                            statusTheme[editForm.status]?.text || "text-[#20231A]",
                           )}
                         >
                           {Object.keys(statusTheme)
                             .filter((s) => s !== "all")
                             .map((s) => (
-                              <option key={s} value={s} className="bg-white font-bold text-[#1F1F1A] normal-case">
+                              <option key={s} value={s} className="bg-white font-bold text-[#20231A] normal-case">
                                 {s.charAt(0).toUpperCase() + s.slice(1)}
                               </option>
                             ))}
@@ -625,14 +625,14 @@ export default function BingoBookingListClient({
                     </div>
 
                     <div className="space-y-2">
-                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Special Requests</Label>
+                      <Label className="ml-1 text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Special Requests</Label>
                       <Textarea
                         value={editForm.special_requests}
                         onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                           setEditForm((prev) => ({ ...prev, special_requests: e.target.value }))
                         }
                         placeholder="Dietary requirements, seating preference..."
-                        className="min-h-35 resize-none rounded-2xl border-2 border-[#E6DFC8] bg-white p-4 text-sm font-medium focus:border-[#5C4033] focus:ring-2 focus:ring-[#5C4033]/10"
+                        className="min-h-35 resize-none rounded-2xl border-2 border-[#D8D5C8] bg-white p-4 text-sm font-medium focus:border-[#34451F] focus:ring-2 focus:ring-[#34451F]/10"
                       />
                     </div>
                   </div>
@@ -646,14 +646,14 @@ export default function BingoBookingListClient({
                           selectedBooking.payment_status === "paid"
                             ? "border-green-200 bg-green-50 text-green-700"
                             : selectedBooking.payment_status === "refunded"
-                            ? "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F]"
+                            ? "border-[#D8D5C8] bg-[#F4F1E8] text-[#5E6654]"
                             : "border-amber-200 bg-amber-50 text-amber-700"
                         )}>
                           <CreditCard className="h-3 w-3" />
                           {selectedBooking.payment_status}
                         </span>
                         {(selectedBooking.paid_amount != null || selectedBooking.total_amount != null) && (
-                          <span className="font-black text-[11px] text-[#5F624F]">
+                          <span className="font-black text-[11px] text-[#5E6654]">
                             £{(selectedBooking.paid_amount ?? selectedBooking.total_amount ?? 0).toFixed(2)}
                             {selectedBooking.total_amount != null && selectedBooking.paid_amount !== selectedBooking.total_amount && (
                               <span className="opacity-50"> / £{selectedBooking.total_amount.toFixed(2)}</span>
@@ -663,7 +663,7 @@ export default function BingoBookingListClient({
                       </div>
                     )}
 
-                    <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white shadow-sm">
+                    <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white shadow-sm">
                       <InfoRow
                         icon={<Calendar className="h-4 w-4" />}
                         label="Event Date"
@@ -692,28 +692,28 @@ export default function BingoBookingListClient({
                     </div>
 
                     <div className="space-y-3">
-                      <h3 className="px-1 font-black text-[10px] tracking-[0.2em] text-[#5F624F] uppercase opacity-40">Primary Contact</h3>
-                      <div className="group/contact flex items-center gap-4 rounded-3xl border-2 border-[#E6DFC8] bg-white p-5 shadow-sm transition-all hover:border-[#5C4033]/30">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] font-black text-xl text-[#5C4033]">
+                      <h3 className="px-1 font-black text-[10px] tracking-[0.2em] text-[#5E6654] uppercase opacity-40">Primary Contact</h3>
+                      <div className="group/contact flex items-center gap-4 rounded-3xl border-2 border-[#D8D5C8] bg-white p-5 shadow-sm transition-all hover:border-[#34451F]/30">
+                        <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#D8D5C8] bg-[#F4F1E8] font-black text-xl text-[#34451F]">
                           {selectedBooking.contacts?.full_name?.charAt(0) || "U"}
                         </div>
                         <div className="min-w-0 flex-1 text-left">
-                          <p className="truncate font-black text-base tracking-tight text-[#1F1F1A] uppercase">{selectedBooking.contacts?.full_name}</p>
-                          <p className="mt-0.5 text-xs font-bold break-all text-[#5F624F] opacity-60">{selectedBooking.contacts?.email}</p>
+                          <p className="truncate font-black text-base tracking-tight text-[#20231A] uppercase">{selectedBooking.contacts?.full_name}</p>
+                          <p className="mt-0.5 text-xs font-bold break-all text-[#5E6654] opacity-60">{selectedBooking.contacts?.email}</p>
                         </div>
-                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="rounded-2xl bg-[#5C4033]/5 p-4 text-[#5C4033] shadow-xs transition-all hover:bg-[#5C4033] hover:text-white active:scale-95">
+                        <Link href={`mailto:${selectedBooking.contacts?.email}`} className="rounded-2xl bg-[#34451F]/5 p-4 text-[#34451F] shadow-xs transition-all hover:bg-[#34451F] hover:text-white active:scale-95">
                           <ExternalLink className="h-5 w-5" />
                         </Link>
                       </div>
                     </div>
 
                     {selectedBooking.special_requests && (
-                      <div className="relative overflow-hidden rounded-3xl border-2 border-[#5C4033]/15 bg-[#5C4033]/5 p-6 shadow-sm">
+                      <div className="relative overflow-hidden rounded-3xl border-2 border-[#34451F]/15 bg-[#34451F]/5 p-6 shadow-sm">
                         <div className="relative z-10 mb-4 flex items-center gap-2">
-                          <MessageSquareQuote className="h-5 w-5 text-[#5C4033] opacity-40" />
-                          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Special Requests</span>
+                          <MessageSquareQuote className="h-5 w-5 text-[#34451F] opacity-40" />
+                          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">Special Requests</span>
                         </div>
-                        <p className="relative z-10 text-left text-[15px] leading-relaxed font-bold text-[#1F1F1A] italic">
+                        <p className="relative z-10 text-left text-[15px] leading-relaxed font-bold text-[#20231A] italic">
                           &quot;{selectedBooking.special_requests}&quot;
                         </p>
                       </div>
@@ -723,20 +723,20 @@ export default function BingoBookingListClient({
                 <div className="h-32" />
               </div>
 
-              <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 p-6 pt-4 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.05)] backdrop-blur-md">
+              <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 p-6 pt-4 pb-12 shadow-[0_-15px_40px_rgba(0,0,0,0.05)] backdrop-blur-md">
                 {isEditing ? (
                   <div className="grid grid-cols-2 gap-3">
                     <Button
                       onClick={handleSaveDetails}
                       disabled={isPending}
-                      className="h-14 rounded-2xl bg-[#1B4332] font-black text-xs tracking-widest text-white uppercase shadow-lg transition-transform hover:bg-[#1B4332]/85 active:scale-95"
+                      className="h-14 rounded-2xl bg-[#34451F] font-black text-xs tracking-widest text-white uppercase shadow-lg transition-transform hover:bg-[#283719] active:scale-95"
                     >
                       {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save</>}
                     </Button>
                     <Button
                       variant="outline"
                       onClick={() => setIsEditing(false)}
-                      className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase shadow-sm"
+                      className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase shadow-sm"
                     >
                       Discard
                     </Button>
@@ -746,7 +746,7 @@ export default function BingoBookingListClient({
                     <div className="grid grid-cols-2 gap-3">
                       <Button
                         variant="ghost"
-                        className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-widest text-[#5C4033] uppercase"
+                        className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-widest text-[#34451F] uppercase"
                         onClick={async (e) => {
                           e.stopPropagation();
                           const ok = await confirm({
@@ -765,7 +765,7 @@ export default function BingoBookingListClient({
                         variant="outline"
                         title="Edit Details"
                         onClick={handleEnterEditMode}
-                        className="h-14 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95"
+                        className="h-14 rounded-2xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95"
                       >
                         <Pencil className="mr-2 h-4 w-4" />Edit
                       </Button>
@@ -784,7 +784,7 @@ export default function BingoBookingListClient({
                           if (ok) handleRefund(selectedBooking.id);
                         }}
                         disabled={isPending}
-                        className="h-12 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase hover:bg-[#F7F4EA]"
+                        className="h-12 w-full rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase hover:bg-[#F4F1E8]"
                       >
                         {isPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
                         Refund via Square
@@ -799,7 +799,7 @@ export default function BingoBookingListClient({
       </Sheet>
 
       {isPending && (
-        <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#5C4033] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#34451F] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
           <Loader2 className="h-4 w-4 animate-spin" /> Syncing with DB...
         </div>
       )}
@@ -825,7 +825,7 @@ function BingoBookingCard({
     <div
       onClick={onClick}
       className={cn(
-        "group flex cursor-pointer items-center justify-between gap-3 rounded-2xl border-2 border-[#E6DFC8] bg-white p-3 shadow-sm transition-all active:scale-[0.98] active:bg-[#F7F4EA]"
+        "group flex cursor-pointer items-center justify-between gap-3 rounded-2xl border-2 border-[#D8D5C8] bg-white p-3 shadow-sm transition-all active:scale-[0.98] active:bg-[#F4F1E8]"
       )}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2 text-left">
@@ -847,7 +847,7 @@ function BingoBookingCard({
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-1.5">
-              <h4 className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
+              <h4 className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">
                 {booking.group_name || booking.contacts?.full_name || "Guest Group"}
               </h4>
               {booking.special_requests && (
@@ -858,7 +858,7 @@ function BingoBookingCard({
               T: {tableName}
             </span>
           </div>
-          <div className="mt-1 flex items-center justify-between gap-2 text-[#5F624F]">
+          <div className="mt-1 flex items-center justify-between gap-2 text-[#5E6654]">
             <p className="min-w-0 truncate text-xs font-semibold">{booking.contacts?.full_name}</p>
             <div className="flex shrink-0 items-center gap-1.5">
               {booking.payment_status && (
@@ -867,7 +867,7 @@ function BingoBookingCard({
                   booking.payment_status === "paid"
                     ? "border-green-200 bg-green-50 text-green-700"
                     : booking.payment_status === "refunded"
-                    ? "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F]"
+                    ? "border-[#D8D5C8] bg-[#F4F1E8] text-[#5E6654]"
                     : normStatus(booking.status) === "confirmed"
                     ? "border-red-200 bg-red-50 text-red-700"
                     : "border-amber-200 bg-amber-50 text-amber-700"
@@ -875,27 +875,27 @@ function BingoBookingCard({
                   {booking.payment_status}
                 </span>
               )}
-              <div className="flex items-center gap-1 text-[#1F1F1A]">
-                <Users className="h-3.5 w-3.5 text-[#5F624F]/50" />
+              <div className="flex items-center gap-1 text-[#20231A]">
+                <Users className="h-3.5 w-3.5 text-[#5E6654]/50" />
                 <span className="font-black text-sm">{booking.group_size}</span>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+      <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
     </div>
   );
 }
 
 function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 border-b border-[#E6DFC8] px-5 py-4 last:border-0">
-      <div className="flex shrink-0 items-center gap-2 text-[#5F624F] opacity-60">
+    <div className="flex items-center gap-3 border-b border-[#D8D5C8] px-5 py-4 last:border-0">
+      <div className="flex shrink-0 items-center gap-2 text-[#5E6654] opacity-60">
         {icon}
         <span className="font-black text-[10px] tracking-wide whitespace-nowrap uppercase">{label}</span>
       </div>
-      <span className={cn("flex-1 text-right font-black text-sm leading-snug", label === "Booked On" ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
+      <span className={cn("flex-1 text-right font-black text-sm leading-snug", label === "Booked On" ? "text-[#5E6654]" : "text-[#20231A]")}>
         {value}
       </span>
     </div>

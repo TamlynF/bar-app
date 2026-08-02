@@ -83,20 +83,20 @@ export default function BandNotesPopover({
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent
         align="end"
-        className="flex max-h-104 w-80 flex-col rounded-2xl border-2 border-[#E6DFC8] bg-white p-0"
+        className="flex max-h-104 w-80 flex-col rounded-2xl border-2 border-[#D8D5C8] bg-white p-0"
       >
-        <div className="flex items-center justify-between gap-2 border-b border-[#E6DFC8] px-4 py-3">
-          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+        <div className="flex items-center justify-between gap-2 border-b border-[#D8D5C8] px-4 py-3">
+          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">
             Band Notes
           </span>
-          <span className="font-black text-[10px] text-[#5F624F]/70 tabular-nums">
+          <span className="font-black text-[10px] text-[#5E6654]/70 tabular-nums">
             {notes.length}
           </span>
         </div>
 
         <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
           {notes.length === 0 ? (
-            <p className="py-4 text-center text-xs font-semibold text-[#5F624F]/60">
+            <p className="py-4 text-center text-xs font-semibold text-[#5E6654]/60">
               No notes yet
             </p>
           ) : (
@@ -107,7 +107,7 @@ export default function BandNotesPopover({
               return (
                 <div
                   key={note.id}
-                  className="rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2"
+                  className="rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2"
                 >
                   {editable ? (
                     <textarea
@@ -117,14 +117,14 @@ export default function BandNotesPopover({
                       onChange={(e) =>
                         setEdits((prev) => ({ ...prev, [note.id]: e.target.value }))
                       }
-                      className="w-full resize-none bg-transparent text-[13px] leading-relaxed text-[#1F1F1A] outline-none"
+                      className="w-full resize-none bg-transparent text-[13px] leading-relaxed text-[#20231A] outline-none"
                     />
                   ) : (
-                    <p className="text-[13px] leading-relaxed text-[#1F1F1A]">{note.body}</p>
+                    <p className="text-[13px] leading-relaxed text-[#20231A]">{note.body}</p>
                   )}
 
                   <div className="mt-1 flex items-center justify-between gap-2">
-                    <span className="truncate text-[10px] font-semibold text-[#5F624F]/70">
+                    <span className="truncate text-[10px] font-semibold text-[#5E6654]/70">
                       {authorName(note)} · {format(new Date(note.created_at), "d MMM yyyy")}
                     </span>
 
@@ -135,7 +135,7 @@ export default function BandNotesPopover({
                             type="button"
                             disabled={isPending}
                             onClick={() => handleSaveEdit(note.id)}
-                            className="rounded-md bg-[#1B4332] px-2 py-1 font-black text-[9px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85 disabled:opacity-50"
+                            className="rounded-md bg-[#34451F] px-2 py-1 font-black text-[9px] tracking-widest text-white uppercase transition-colors hover:bg-[#283719] disabled:opacity-50"
                           >
                             Save
                           </button>
@@ -153,7 +153,7 @@ export default function BandNotesPopover({
                             <button
                               type="button"
                               onClick={() => setConfirmingId(null)}
-                              className="rounded-md px-2 py-1 font-black text-[9px] tracking-widest text-[#5F624F] uppercase hover:bg-[#E6DFC8]"
+                              className="rounded-md px-2 py-1 font-black text-[9px] tracking-widest text-[#5E6654] uppercase hover:bg-[#D8D5C8]"
                             >
                               Cancel
                             </button>
@@ -165,7 +165,7 @@ export default function BandNotesPopover({
                             aria-label="Delete note"
                             disabled={isPending}
                             onClick={() => setConfirmingId(note.id)}
-                            className="rounded-md p-1 text-[#5F624F]/60 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            className="rounded-md p-1 text-[#5E6654]/60 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                           </button>
@@ -180,7 +180,7 @@ export default function BandNotesPopover({
         </div>
 
         {editable && (
-          <div className="space-y-2 border-t border-[#E6DFC8] px-4 py-3">
+          <div className="space-y-2 border-t border-[#D8D5C8] px-4 py-3">
             <label className="block">
               <span className="sr-only">New note</span>
               <textarea
@@ -188,11 +188,11 @@ export default function BandNotesPopover({
                 rows={2}
                 placeholder="Add a note about the band..."
                 onChange={(e) => setDraft(e.target.value)}
-                className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
               />
             </label>
             <div className="flex items-center justify-between gap-2">
-              <p className="text-[10px] leading-snug text-[#5F624F]/70">
+              <p className="text-[10px] leading-snug text-[#5E6654]/70">
                 Internal only - never shared with the band.
               </p>
               <button
@@ -200,7 +200,7 @@ export default function BandNotesPopover({
                 disabled={!draft.trim() || isPending}
                 onClick={handleAdd}
                 className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-lg bg-[#1B4332] px-3 py-2 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85",
+                  "flex shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-3 py-2 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#283719]",
                   "disabled:cursor-not-allowed disabled:opacity-40"
                 )}
               >

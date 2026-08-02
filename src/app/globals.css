@@ -22,25 +22,70 @@
    override a single token in a subtree (e.g. style={{ "--popover": … }}).
    ════════════════════════════════════════════════════════════════ */
 :root {
-  --background: #f7f4ea; /* admin-bg - cream canvas */
-  --foreground: #1f1f1a; /* admin-ink */
-  --card: #fffdf7; /* admin-card */
-  --card-foreground: #1f1f1a;
-  --popover: #fffdf7;
-  --popover-foreground: #1f1f1a;
-  --primary: #5c4033; /* admin-primary - espresso */
-  --primary-foreground: #f7f4ea;
-  --secondary: #e6dfc8; /* admin-border tone as a soft surface */
-  --secondary-foreground: #1f1f1a;
-  --muted: #e6dfc8;
-  --muted-foreground: #5f624f; /* admin-ink-muted */
-  --accent: #f7f4ea; /* cream hover highlight (admin convention) */
-  --accent-foreground: #1f1f1a;
-  --destructive: #dc2626; /* status red-600 */
+  --background: #f4f1e8; /* admin-bg - cream canvas */
+  --foreground: #20231a; /* admin-ink */
+  --card: #fffefa; /* admin-card */
+  --card-foreground: #20231a;
+  --popover: #fffefa;
+  --popover-foreground: #20231a;
+  --primary: #34451f; /* admin-primary - olive */
+  --primary-foreground: #fffefa;
+  --secondary: #ece9de; /* subtle neutral surface */
+  --secondary-foreground: #20231a;
+  --muted: #ece9de;
+  --muted-foreground: #5e6654; /* admin-ink-muted */
+  --accent: #e5ebd8; /* primary-soft selection tint */
+  --accent-foreground: #20231a;
+  --destructive: #b33a32; /* error / cancelled */
   --destructive-foreground: #ffffff;
-  --border: #e6dfc8; /* admin-border */
-  --input: #e6dfc8;
-  --ring: #5c4033; /* espresso focus ring */
+  --border: #d8d5c8; /* admin-border */
+  --input: #d8d5c8;
+  --ring: #d7a928; /* gold focus ring */
+}
+
+/* Named admin tokens - prefer these in new code over raw hex.
+   Emitted as bg-admin-bg, text-admin-ink, border-admin-line, etc. */
+:root {
+  --admin-bg: #f4f1e8; /* main page canvas                  */
+  --admin-card: #fffefa; /* cards, dialogs, forms             */
+  --admin-surface: #ece9de; /* table headers, groups, hover      */
+  --admin-line: #d8d5c8; /* dividers and input borders        */
+  --admin-ink: #20231a; /* headings and body text            */
+  --admin-muted: #5e6654; /* labels, descriptions, metadata    */
+  --admin-primary: #34451f; /* buttons, selected nav, toggles    */
+  --admin-primary-hover: #283719; /* button hover / pressed            */
+  --admin-primary-soft: #e5ebd8; /* selected rows, light badges       */
+  --admin-gold: #d7a928; /* focus, selection, brand details   */
+
+  --admin-success: #22613f;
+  --admin-success-bg: #e7f3ec;
+  --admin-warning: #9a5b00;
+  --admin-warning-bg: #fff4d6;
+  --admin-error: #b33a32;
+  --admin-error-bg: #fdecea;
+  --admin-info: #28608f;
+  --admin-info-bg: #eaf2f8;
+}
+
+@theme inline {
+  --color-admin-bg: var(--admin-bg);
+  --color-admin-card: var(--admin-card);
+  --color-admin-surface: var(--admin-surface);
+  --color-admin-line: var(--admin-line);
+  --color-admin-ink: var(--admin-ink);
+  --color-admin-muted: var(--admin-muted);
+  --color-admin-primary: var(--admin-primary);
+  --color-admin-primary-hover: var(--admin-primary-hover);
+  --color-admin-primary-soft: var(--admin-primary-soft);
+  --color-admin-gold: var(--admin-gold);
+  --color-admin-success: var(--admin-success);
+  --color-admin-success-bg: var(--admin-success-bg);
+  --color-admin-warning: var(--admin-warning);
+  --color-admin-warning-bg: var(--admin-warning-bg);
+  --color-admin-error: var(--admin-error);
+  --color-admin-error-bg: var(--admin-error-bg);
+  --color-admin-info: var(--admin-info);
+  --color-admin-info-bg: var(--admin-info-bg);
 }
 
 @theme inline {

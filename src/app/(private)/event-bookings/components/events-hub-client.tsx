@@ -180,14 +180,14 @@ export default function EventsHubClient({
               </div>
             ) : (
               liveMusic.map(band => (
-                <div key={band.id} className="flex items-center justify-between rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm">
+                <div key={band.id} className="flex items-center justify-between rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm">
                    <div className="flex items-center gap-3">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100 text-purple-700">
                         <Music className="h-5 w-5" />
                       </div>
                       <div className="text-left">
-                        <p className="text-sm font-bold text-[#1F1F1A]">{band.title}</p>
-                        <p className="text-[10px] font-bold text-[#5F624F] uppercase opacity-60">{new Date(band.date).toLocaleDateString()}</p>
+                        <p className="text-sm font-bold text-[#20231A]">{band.title}</p>
+                        <p className="text-[10px] font-bold text-[#5E6654] uppercase opacity-60">{new Date(band.date).toLocaleDateString()}</p>
                       </div>
                    </div>
                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
@@ -206,15 +206,15 @@ export default function EventsHubClient({
           onToggle={() => toggleSection('private')}
         >
           <div className="pt-2">
-            <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-[#E6DFC8] bg-white p-6 text-center sm:p-10">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F7F4EA] text-[#5F624F]/50">
+            <div className="flex flex-col items-center gap-4 rounded-2xl border-2 border-dashed border-[#D8D5C8] bg-white p-6 text-center sm:p-10">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F4F1E8] text-[#5E6654]/50">
                 <Lock className="h-7 w-7" />
               </div>
               <div>
-                <p className="font-black tracking-tight text-[#1F1F1A] uppercase">Hire Pipeline</p>
-                <p className="mt-1 max-w-64 text-xs leading-relaxed font-medium text-[#5F624F] opacity-70">Review wedding, party, and corporate hire enquiries for the season.</p>
+                <p className="font-black tracking-tight text-[#20231A] uppercase">Hire Pipeline</p>
+                <p className="mt-1 max-w-64 text-xs leading-relaxed font-medium text-[#5E6654] opacity-70">Review wedding, party, and corporate hire enquiries for the season.</p>
               </div>
-              <Button size="sm" variant="outline" className="h-10 rounded-full border-[#5C4033] px-8 font-black tracking-wide text-[#5C4033] uppercase transition-all hover:bg-[#5C4033] hover:text-white">
+              <Button size="sm" variant="outline" className="h-10 rounded-full border-[#34451F] px-8 font-black tracking-wide text-[#34451F] uppercase transition-all hover:bg-[#34451F] hover:text-white">
                 View {privateHire.length} Requests
               </Button>
             </div>
@@ -249,14 +249,14 @@ function QuizEventCard({
     <Link 
       href={`/dashboard?date=${event.date}`} 
       className={cn(
-        "group block rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm transition-all active:scale-[0.99] sm:p-5",
-        isHistoric ? "hover:border-[#E6DFC8]" : "hover:border-[#5C4033] hover:shadow-md"
+        "group block rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm transition-all active:scale-[0.99] sm:p-5",
+        isHistoric ? "hover:border-[#D8D5C8]" : "hover:border-[#34451F] hover:shadow-md"
       )}
     >
       <div className="mb-4 flex items-start justify-between">
         <div className="min-w-0 pr-2">
           <div className="mb-1 flex items-center gap-2">
-             <h4 className="truncate font-black text-base leading-tight tracking-tight text-[#1F1F1A] uppercase sm:text-lg">{event.title}</h4>
+             <h4 className="truncate font-black text-base leading-tight tracking-tight text-[#20231A] uppercase sm:text-lg">{event.title}</h4>
              {specialRequestsCount > 0 && !isHistoric && (
                <div className="flex items-center justify-center rounded-full bg-amber-500 px-1.5 py-0.5 shadow-sm">
                   <MessageSquare className="mr-1 h-3 w-3 text-white" />
@@ -264,21 +264,21 @@ function QuizEventCard({
                </div>
              )}
           </div>
-          <p className="text-[10px] font-bold text-[#5F624F] uppercase opacity-60">
+          <p className="text-[10px] font-bold text-[#5E6654] uppercase opacity-60">
             {new Date(event.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short', year: isHistoric ? 'numeric' : undefined })}
           </p>
         </div>
         <div className="flex flex-col items-end gap-1">
           <StatusBadge occupancy={occupancy} isHistoric={isHistoric} />
-          {isHistoric && <span className="text-[10px] font-bold tracking-wide text-[#5F624F]/50 uppercase">Completed</span>}
+          {isHistoric && <span className="text-[10px] font-bold tracking-wide text-[#5E6654]/50 uppercase">Completed</span>}
         </div>
       </div>
 
       {!isHistoric && (
-        <div className="mb-4 rounded-xl border border-[#E6DFC8]/50 bg-[#F7F4EA]/50 p-3">
-          <div className="mb-2 flex justify-between px-1 font-black text-[9px] text-[#5F624F] uppercase">
+        <div className="mb-4 rounded-xl border border-[#D8D5C8]/50 bg-[#F4F1E8]/50 p-3">
+          <div className="mb-2 flex justify-between px-1 font-black text-[9px] text-[#5E6654] uppercase">
             <span>Floor Utilization</span>
-            <span className={cn(occupancy > 90 ? "text-red-600" : "text-[#5C4033]")}>
+            <span className={cn(occupancy > 90 ? "text-red-600" : "text-[#34451F]")}>
               {tablesReserved} / {eventTotalTables} Tables
             </span>
           </div>
@@ -300,8 +300,8 @@ function QuizEventCard({
           )}
         </div>
         <div className={cn(
-          "flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F4EA] transition-colors",
-          !isHistoric && "group-hover:bg-[#5C4033] group-hover:text-white"
+          "flex h-8 w-8 items-center justify-center rounded-full bg-[#F4F1E8] transition-colors",
+          !isHistoric && "group-hover:bg-[#34451F] group-hover:text-white"
         )}>
           <ChevronRight className="h-4 w-4" />
         </div>
@@ -330,23 +330,23 @@ function CollapsibleSection({
       <button
         type="button"
         onClick={onToggle}
-        className="group flex w-full items-center justify-between rounded-xl px-1 outline-none focus-visible:ring-2 focus-visible:ring-[#5C4033]"
+        className="group flex w-full items-center justify-between rounded-xl px-1 outline-none focus-visible:ring-2 focus-visible:ring-[#34451F]"
       >
         <div className="flex items-center gap-3">
-          <div className="rounded-xl bg-[#5C4033] p-2 shadow-sm transition-transform group-active:scale-95">
+          <div className="rounded-xl bg-[#34451F] p-2 shadow-sm transition-transform group-active:scale-95">
             <Icon className="h-4 w-4 text-white" />
           </div>
           <div className="flex items-center gap-2">
-            <h3 className="font-black text-xs tracking-[0.15em] text-[#1F1F1A] uppercase sm:text-sm">{title}</h3>
+            <h3 className="font-black text-xs tracking-[0.15em] text-[#20231A] uppercase sm:text-sm">{title}</h3>
             {badge && (
-              <span className="rounded-full border border-[#5C4033]/10 bg-[#C8956D] px-2 py-0.5 font-black text-[10px] text-[#5C4033] uppercase shadow-sm">
+              <span className="rounded-full border border-[#34451F]/10 bg-[#C8956D] px-2 py-0.5 font-black text-[10px] text-[#34451F] uppercase shadow-sm">
                 {badge}
               </span>
             )}
           </div>
         </div>
         <div className={cn("transition-transform duration-300", isOpen ? "rotate-0" : "rotate-180")}>
-          <ChevronDown className="h-5 w-5 text-[#5F624F] opacity-40 group-hover:opacity-100" />
+          <ChevronDown className="h-5 w-5 text-[#5E6654] opacity-40 group-hover:opacity-100" />
         </div>
       </button>
       
@@ -364,18 +364,18 @@ function CollapsibleSection({
 
 function KPICard({ label, value, icon: Icon, color = "default" }: { label: string; value: string | number; icon: LucideIcon; color?: string }) {
   return (
-    <div className="space-y-2 rounded-2xl border border-[#E6DFC8] bg-white p-3 shadow-sm sm:p-4">
+    <div className="space-y-2 rounded-2xl border border-[#D8D5C8] bg-white p-3 shadow-sm sm:p-4">
       <div className={cn(
         "flex h-8 w-8 items-center justify-center rounded-lg",
         color === "amber" ? "bg-amber-100 text-amber-700" : 
         color === "green" ? "bg-green-100 text-green-700" :
-        "bg-[#F7F4EA] text-[#5C4033]"
+        "bg-[#F4F1E8] text-[#34451F]"
       )}>
         <Icon className="h-4 w-4" />
       </div>
       <div>
-        <p className="truncate font-black text-[9px] tracking-wider text-[#5F624F] uppercase">{label}</p>
-        <p className="font-black text-lg tracking-tighter text-[#1F1F1A] sm:text-xl">{value}</p>
+        <p className="truncate font-black text-[9px] tracking-wider text-[#5E6654] uppercase">{label}</p>
+        <p className="font-black text-lg tracking-tighter text-[#20231A] sm:text-xl">{value}</p>
       </div>
     </div>
   )
@@ -384,10 +384,10 @@ function KPICard({ label, value, icon: Icon, color = "default" }: { label: strin
 function StatMini({ icon: Icon, value, label, color = "default" }: { icon: LucideIcon, value: number, label: string, color?: string }) {
   return (
     <div className="flex items-center gap-1">
-      <Icon className={cn("h-3 w-3", color === 'green' ? 'text-green-600' : color === 'amber' ? 'text-amber-600' : 'text-[#5F624F]/50')} />
+      <Icon className={cn("h-3 w-3", color === 'green' ? 'text-green-600' : color === 'amber' ? 'text-amber-600' : 'text-[#5E6654]/50')} />
       <div className="flex items-baseline gap-1">
-        <span className="font-black text-xs text-[#1F1F1A]">{value}</span>
-        <span className="text-[10px] font-bold tracking-tighter text-[#5F624F] uppercase opacity-60">{label}</span>
+        <span className="font-black text-xs text-[#20231A]">{value}</span>
+        <span className="text-[10px] font-bold tracking-tighter text-[#5E6654] uppercase opacity-60">{label}</span>
       </div>
     </div>
   )
@@ -396,7 +396,7 @@ function StatMini({ icon: Icon, value, label, color = "default" }: { icon: Lucid
 function StatusBadge({ occupancy, isHistoric }: { occupancy: number, isHistoric: boolean }) {
   if (isHistoric) {
     return (
-      <div className="shrink-0 rounded-full border border-[#E6DFC8] bg-[#F7F4EA] px-2 py-1 font-black text-[10px] tracking-wide text-[#5F624F]/50 uppercase sm:px-3 sm:text-[9px]">
+      <div className="shrink-0 rounded-full border border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1 font-black text-[10px] tracking-wide text-[#5E6654]/50 uppercase sm:px-3 sm:text-[9px]">
         Closed
       </div>
     )
@@ -415,9 +415,9 @@ function StatusBadge({ occupancy, isHistoric }: { occupancy: number, isHistoric:
 
 function EmptyState({ message, icon: Icon }: { message: string, icon: LucideIcon }) {
   return (
-    <div className="rounded-2xl border-2 border-dashed border-[#E6DFC8] bg-white/40 py-8 text-center">
-      <Icon className="mx-auto mb-2 h-6 w-6 text-[#E6DFC8]" />
-      <p className="font-black text-[9px] tracking-wide text-[#5F624F] uppercase opacity-40">{message}</p>
+    <div className="rounded-2xl border-2 border-dashed border-[#D8D5C8] bg-white/40 py-8 text-center">
+      <Icon className="mx-auto mb-2 h-6 w-6 text-[#D8D5C8]" />
+      <p className="font-black text-[9px] tracking-wide text-[#5E6654] uppercase opacity-40">{message}</p>
     </div>
   )
 }

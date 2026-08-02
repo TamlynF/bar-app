@@ -62,7 +62,7 @@ const FIXTURE_META: Record<
   { label: string; w: number; l: number; facing: number | null; fill: string; stroke: string }
 > = {
   stage: { label: "Stage", w: 4, l: 1.5, facing: 180, fill: "#4338CA", stroke: "#3730A3" },
-  bar: { label: "Bar", w: 4, l: 0.8, facing: null, fill: "#5C4033", stroke: "#42301F" },
+  bar: { label: "Bar", w: 4, l: 0.8, facing: null, fill: "#34451F", stroke: "#42301F" },
   dj_booth: { label: "DJ Booth", w: 1.5, l: 1, facing: 180, fill: "#7C3AED", stroke: "#6D28D9" },
   projector: { label: "Projector", w: 0.5, l: 0.3, facing: 180, fill: "#0EA5E9", stroke: "#0284C7" },
   tv: { label: "TV", w: 1.2, l: 0.15, facing: 180, fill: "#0D9488", stroke: "#0F766E" },
@@ -75,7 +75,7 @@ const FEATURE_META: Record<
 > = {
   door: { label: "Door", w: 0.9, l: 0.15, facing: 180, fill: "#C8956D", stroke: "#A9744F" },
   window: { label: "Window", w: 1.2, l: 0.1, facing: null, fill: "#7DD3FC", stroke: "#0EA5E9" },
-  bench: { label: "Bench", w: 1.6, l: 0.45, facing: 0, seats: 3, fill: "#8B6F47", stroke: "#5C4033" },
+  bench: { label: "Bench", w: 1.6, l: 0.45, facing: 0, seats: 3, fill: "#8B6F47", stroke: "#34451F" },
 };
 
 let idCounter = 0;
@@ -479,8 +479,8 @@ export default function VenueEditorClient({
     <div className="max-w-5xl space-y-4 px-2 py-2 sm:px-4 sm:py-0">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">Venue Layout</h2>
-          <p className="mt-0.5 text-[11px] font-bold text-[#5F624F]">
+          <h2 className="font-black text-base tracking-tight text-[#20231A] uppercase">Venue Layout</h2>
+          <p className="mt-0.5 text-[11px] font-bold text-[#5E6654]">
             {companyName ? `${companyName} - ` : ""}draw the room, drop obstacles, place fixtures, doors &amp; seating.
             Reused by every event&apos;s floor-plan calculator.
           </p>
@@ -503,22 +503,22 @@ export default function VenueEditorClient({
         <ModeButton active={mode === "features"} onClick={() => { setMode("features"); setSelection(null); setDrawingPoly(null); }} icon={<DoorOpen className="h-4 w-4" />} label="Doors & Seating" />
       </div>
 
-      <div className="rounded-2xl border border-[#E6DFC8] bg-white p-3">
+      <div className="rounded-2xl border border-[#D8D5C8] bg-white p-3">
         {mode === "outline" && (
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3 sm:max-w-sm">
               <DimInput id="room-w" label="Room width (m)" value={roomW} onChange={(v) => { setRoomW(v); markDirty(); }} />
               <DimInput id="room-l" label="Room length (m)" value={roomL} onChange={(v) => { setRoomL(v); markDirty(); }} />
             </div>
-            <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5F624F]">
+            <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5E6654]">
               <Info className="h-3 w-3 shrink-0" />
               Tap the canvas to add corner points (clockwise). Drag a point to move it.
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={resetRectangle} className="h-9 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5C4033] uppercase hover:bg-[#F7F4EA]">
+              <Button type="button" onClick={resetRectangle} className="h-9 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-[#34451F] uppercase hover:bg-[#F4F1E8]">
                 <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Reset to rectangle
               </Button>
-              <Button type="button" onClick={clearOutline} disabled={points.length === 0} className="h-9 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase hover:bg-[#F7F4EA] disabled:opacity-40">
+              <Button type="button" onClick={clearOutline} disabled={points.length === 0} className="h-9 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase hover:bg-[#F4F1E8] disabled:opacity-40">
                 <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Clear
               </Button>
             </div>
@@ -529,25 +529,25 @@ export default function VenueEditorClient({
           <div className="space-y-3">
             {drawingPoly ? (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">
+                <span className="font-black text-[11px] tracking-wide text-[#34451F] uppercase">
                   Drawing polygon - tap to add points ({drawingPoly.length})
                 </span>
-                <Button type="button" onClick={finishPolygonObstacle} disabled={drawingPoly.length < 3} className="h-9 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85 disabled:opacity-40">
+                <Button type="button" onClick={finishPolygonObstacle} disabled={drawingPoly.length < 3} className="h-9 rounded-xl bg-[#34451F] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719] disabled:opacity-40">
                   <Check className="mr-1.5 h-3.5 w-3.5" /> Finish
                 </Button>
-                <Button type="button" onClick={cancelPolygonObstacle} className="h-9 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                <Button type="button" onClick={cancelPolygonObstacle} className="h-9 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                   <X className="mr-1.5 h-3.5 w-3.5" /> Cancel
                 </Button>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
-                <Button type="button" onClick={() => addRectObstacle("rect")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                <Button type="button" onClick={() => addRectObstacle("rect")} className="h-10 rounded-xl bg-[#34451F] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]">
                   <SquareIcon className="mr-1 h-3.5 w-3.5" /> Rectangle
                 </Button>
-                <Button type="button" onClick={() => addRectObstacle("circle")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                <Button type="button" onClick={() => addRectObstacle("circle")} className="h-10 rounded-xl bg-[#34451F] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]">
                   <CircleIcon className="mr-1 h-3.5 w-3.5" /> Circle
                 </Button>
-                <Button type="button" onClick={startPolygonObstacle} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                <Button type="button" onClick={startPolygonObstacle} className="h-10 rounded-xl bg-[#34451F] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]">
                   <Spline className="mr-1 h-3.5 w-3.5" /> Polygon
                 </Button>
               </div>
@@ -562,7 +562,7 @@ export default function VenueEditorClient({
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
               {FIXTURE_ORDER.map((t) => (
-                <Button key={t} type="button" onClick={() => addFixture(t)} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+                <Button key={t} type="button" onClick={() => addFixture(t)} className="h-10 rounded-xl bg-[#34451F] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]">
                   <Plus className="mr-1 h-3.5 w-3.5" /> {FIXTURE_META[t].label}
                 </Button>
               ))}
@@ -581,17 +581,17 @@ export default function VenueEditorClient({
         {mode === "features" && (
           <div className="space-y-3">
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={() => addFeature("door")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+              <Button type="button" onClick={() => addFeature("door")} className="h-10 rounded-xl bg-[#34451F] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]">
                 <DoorOpen className="mr-1 h-3.5 w-3.5" /> Door
               </Button>
-              <Button type="button" onClick={() => addFeature("window")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+              <Button type="button" onClick={() => addFeature("window")} className="h-10 rounded-xl bg-[#34451F] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]">
                 <RectangleHorizontal className="mr-1 h-3.5 w-3.5" /> Window
               </Button>
-              <Button type="button" onClick={() => addFeature("bench")} className="h-10 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+              <Button type="button" onClick={() => addFeature("bench")} className="h-10 rounded-xl bg-[#34451F] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]">
                 <Armchair className="mr-1 h-3.5 w-3.5" /> Bench
               </Button>
             </div>
-            <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5F624F]">
+            <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5E6654]">
               <Info className="h-3 w-3 shrink-0" />
               Doors get a keep-clear zone (their facing direction). Benches add {benchSeatTotal} seat{benchSeatTotal !== 1 ? "s" : ""} to the venue.
             </p>
@@ -603,7 +603,7 @@ export default function VenueEditorClient({
       </div>
 
       <div
-        className="aspect-(--venue-ar) w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-[#FFFDF7]"
+        className="aspect-(--venue-ar) w-full overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-[#FFFEFA]"
         style={{ "--venue-ar": `${view.width} / ${view.length}` } as React.CSSProperties}
       >
         <svg
@@ -615,7 +615,7 @@ export default function VenueEditorClient({
           onPointerUp={onSvgPointerUp}
           onPointerCancel={onSvgPointerUp}
         >
-          <g stroke="#E6DFC8" strokeWidth={1} vectorEffect="non-scaling-stroke" opacity={0.6}>
+          <g stroke="#D8D5C8" strokeWidth={1} vectorEffect="non-scaling-stroke" opacity={0.6}>
             {gridLines.xs.map((x) => (
               <line key={`gx${x}`} x1={x} y1={0} x2={x} y2={view.length} />
             ))}
@@ -627,9 +627,9 @@ export default function VenueEditorClient({
           {points.length >= 2 && (
             <polygon
               points={outlinePath}
-              fill={points.length >= 3 ? "#5C4033" : "none"}
+              fill={points.length >= 3 ? "#34451F" : "none"}
               fillOpacity={0.05}
-              stroke="#5C4033"
+              stroke="#34451F"
               strokeWidth={2}
               strokeLinejoin="round"
               vectorEffect="non-scaling-stroke"
@@ -638,7 +638,7 @@ export default function VenueEditorClient({
 
           {obstacles.map((o) => {
             const isSel = selection?.kind === "obstacle" && selection.id === o.id;
-            const stroke = isSel ? "#B45309" : "#DC2626";
+            const stroke = isSel ? "#9A5B00" : "#DC2626";
             const common = { fill: "#DC2626", fillOpacity: 0.18, stroke, strokeWidth: isSel ? 3 : 2, strokeDasharray: "4 2", vectorEffect: "non-scaling-stroke" as const };
             const draggable = mode === "obstacles" && !drawingPoly;
             const cx = o.x + o.width / 2;
@@ -664,14 +664,14 @@ export default function VenueEditorClient({
 
           {mode === "obstacles" && !drawingPoly && selectedObstacle?.shape === "polygon" && selectedObstacle.points &&
             selectedObstacle.points.map((p, i) => (
-              <circle key={`ov${i}`} cx={p.x} cy={p.y} r={handleR} fill={selection?.kind === "obstacleVertex" && selection.index === i ? "#B45309" : "#FFFFFF"} stroke="#DC2626" strokeWidth={2} vectorEffect="non-scaling-stroke" className="cursor-move" onPointerDown={(e) => beginDrag(e, { kind: "obstacleVertex", id: selectedObstacle.id, index: i }, { kind: "obstacleVertex", id: selectedObstacle.id, index: i })} />
+              <circle key={`ov${i}`} cx={p.x} cy={p.y} r={handleR} fill={selection?.kind === "obstacleVertex" && selection.index === i ? "#9A5B00" : "#FFFFFF"} stroke="#DC2626" strokeWidth={2} vectorEffect="non-scaling-stroke" className="cursor-move" onPointerDown={(e) => beginDrag(e, { kind: "obstacleVertex", id: selectedObstacle.id, index: i }, { kind: "obstacleVertex", id: selectedObstacle.id, index: i })} />
             ))}
 
           {drawingPoly && drawingPoly.length > 0 && (
             <g>
-              <polyline points={drawingPoly.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#B45309" strokeWidth={2} strokeDasharray="4 2" vectorEffect="non-scaling-stroke" />
+              <polyline points={drawingPoly.map((p) => `${p.x},${p.y}`).join(" ")} fill="none" stroke="#9A5B00" strokeWidth={2} strokeDasharray="4 2" vectorEffect="non-scaling-stroke" />
               {drawingPoly.map((p, i) => (
-                <circle key={`dp${i}`} cx={p.x} cy={p.y} r={handleR} fill="#FDCC4B" stroke="#B45309" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+                <circle key={`dp${i}`} cx={p.x} cy={p.y} r={handleR} fill="#FDCC4B" stroke="#9A5B00" strokeWidth={2} vectorEffect="non-scaling-stroke" />
               ))}
             </g>
           )}
@@ -686,7 +686,7 @@ export default function VenueEditorClient({
             const arrow = f.facing != null ? facingToVector(f.facing) : null;
             const arrowLen = Math.min(f.width, f.length) * 0.7 + 0.3;
             const draggable = mode === "fixtures";
-            const common = { fill: meta.fill, fillOpacity: 0.85, stroke: isSel ? "#B45309" : meta.stroke, strokeWidth: isSel ? 3 : 1.5, vectorEffect: "non-scaling-stroke" as const };
+            const common = { fill: meta.fill, fillOpacity: 0.85, stroke: isSel ? "#9A5B00" : meta.stroke, strokeWidth: isSel ? 3 : 1.5, vectorEffect: "non-scaling-stroke" as const };
             return (
               <g key={f.id} onPointerDown={(e) => draggable && beginDrag(e, { kind: "fixture", id: f.id, grabDX: eventToWorld(e).x - f.x, grabDY: eventToWorld(e).y - f.y }, { kind: "fixture", id: f.id })} className={draggable ? "cursor-move" : ""}>
                 <g transform={transform}>
@@ -709,7 +709,7 @@ export default function VenueEditorClient({
 
           {mode === "fixtures" && selectedFixture && shapeOf(selectedFixture.shape) === "polygon" && selectedFixture.points &&
             selectedFixture.points.map((p, i) => (
-              <circle key={`fv${i}`} cx={p.x} cy={p.y} r={handleR} fill={selection?.kind === "fixtureVertex" && selection.index === i ? "#B45309" : "#FFFFFF"} stroke={FIXTURE_META[selectedFixture.type].stroke} strokeWidth={2} vectorEffect="non-scaling-stroke" className="cursor-move" onPointerDown={(e) => beginDrag(e, { kind: "fixtureVertex", id: selectedFixture.id, index: i }, { kind: "fixtureVertex", id: selectedFixture.id, index: i })} />
+              <circle key={`fv${i}`} cx={p.x} cy={p.y} r={handleR} fill={selection?.kind === "fixtureVertex" && selection.index === i ? "#9A5B00" : "#FFFFFF"} stroke={FIXTURE_META[selectedFixture.type].stroke} strokeWidth={2} vectorEffect="non-scaling-stroke" className="cursor-move" onPointerDown={(e) => beginDrag(e, { kind: "fixtureVertex", id: selectedFixture.id, index: i }, { kind: "fixtureVertex", id: selectedFixture.id, index: i })} />
             ))}
 
           {features.map((f) => {
@@ -728,15 +728,15 @@ export default function VenueEditorClient({
               <g key={f.id} onPointerDown={(e) => draggable && beginDrag(e, { kind: "feature", id: f.id, grabDX: eventToWorld(e).x - f.x, grabDY: eventToWorld(e).y - f.y }, { kind: "feature", id: f.id })} className={draggable ? "cursor-move" : ""}>
                 {clearance && <polygon points={clearance.map((p) => `${p.x},${p.y}`).join(" ")} fill={meta.fill} fillOpacity={0.12} stroke={meta.stroke} strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />}
                 <g transform={transform}>
-                  <rect x={f.x} y={f.y} width={f.width} height={f.length} fill={meta.fill} fillOpacity={f.kind === "window" ? 0.6 : 0.9} stroke={isSel ? "#B45309" : meta.stroke} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" rx={0.03} />
+                  <rect x={f.x} y={f.y} width={f.width} height={f.length} fill={meta.fill} fillOpacity={f.kind === "window" ? 0.6 : 0.9} stroke={isSel ? "#9A5B00" : meta.stroke} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" rx={0.03} />
                   {seatPts.map((p, i) => (
-                    <circle key={`bs${i}`} cx={p.x} cy={p.y} r={handleR * 0.8} fill="#FFFDF7" stroke={meta.stroke} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
+                    <circle key={`bs${i}`} cx={p.x} cy={p.y} r={handleR * 0.8} fill="#FFFEFA" stroke={meta.stroke} strokeWidth={1.5} vectorEffect="non-scaling-stroke" />
                   ))}
-                  <text x={cx} y={f.y - fontSize * 0.3} fontSize={fontSize * 0.85} fontWeight={800} fill="#5C4033" textAnchor="middle">
+                  <text x={cx} y={f.y - fontSize * 0.3} fontSize={fontSize * 0.85} fontWeight={800} fill="#34451F" textAnchor="middle">
                     {f.kind === "bench" ? `${f.label} (${f.seats ?? 0})` : f.label}
                   </text>
                 </g>
-                {arrow && <line x1={cx} y1={cy} x2={cx + arrow.x * arrowLen} y2={cy + arrow.y * arrowLen} stroke="#1F1F1A" strokeWidth={2} strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
+                {arrow && <line x1={cx} y1={cy} x2={cx + arrow.x * arrowLen} y2={cy + arrow.y * arrowLen} stroke="#20231A" strokeWidth={2} strokeLinecap="round" vectorEffect="non-scaling-stroke" />}
               </g>
             );
           })}
@@ -745,13 +745,13 @@ export default function VenueEditorClient({
             points.map((p, i) => {
               const isSel = selection?.kind === "vertex" && selection.index === i;
               return (
-                <circle key={`v${i}`} cx={p.x} cy={p.y} r={handleR} fill={isSel ? "#B45309" : "#FFFFFF"} stroke="#5C4033" strokeWidth={2} vectorEffect="non-scaling-stroke" className="cursor-move" onPointerDown={(e) => beginDrag(e, { kind: "vertex", index: i }, { kind: "vertex", index: i })} />
+                <circle key={`v${i}`} cx={p.x} cy={p.y} r={handleR} fill={isSel ? "#9A5B00" : "#FFFFFF"} stroke="#34451F" strokeWidth={2} vectorEffect="non-scaling-stroke" className="cursor-move" onPointerDown={(e) => beginDrag(e, { kind: "vertex", index: i }, { kind: "vertex", index: i })} />
               );
             })}
         </svg>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-bold text-[#5F624F]">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] font-bold text-[#5E6654]">
         <span className="tabular-nums">{points.length} outline point{points.length !== 1 ? "s" : ""}</span>
         <span className="tabular-nums">Area {round(roomArea, 1)} m²</span>
         <span className="tabular-nums">{obstacles.length} obstacle{obstacles.length !== 1 ? "s" : ""}</span>
@@ -762,10 +762,10 @@ export default function VenueEditorClient({
       </div>
 
       {mode === "outline" && selection?.kind === "vertex" && points[selection.index] && (
-        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-[#E6DFC8] bg-white p-3">
+        <div className="flex flex-wrap items-end gap-3 rounded-2xl border border-[#D8D5C8] bg-white p-3">
           <DimInput id="vx" label="Point X (m)" value={points[selection.index].x} onChange={(v) => setPoints((prev) => prev.map((p, i) => (i === selection.index ? { ...p, x: v } : p)))} />
           <DimInput id="vy" label="Point Y (m)" value={points[selection.index].y} onChange={(v) => setPoints((prev) => prev.map((p, i) => (i === selection.index ? { ...p, y: v } : p)))} />
-          <Button type="button" onClick={() => deleteVertex(selection.index)} disabled={points.length <= 3} className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-red-600 uppercase disabled:opacity-40">
+          <Button type="button" onClick={() => deleteVertex(selection.index)} disabled={points.length <= 3} className="h-11 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-red-600 uppercase disabled:opacity-40">
             <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete point
           </Button>
         </div>
@@ -779,7 +779,7 @@ export default function VenueEditorClient({
       )}
 
       <div className="flex justify-end">
-        <Button type="button" onClick={handleSave} disabled={isPending || !companyId} className="h-12 rounded-xl bg-[#1B4332] px-6 font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:opacity-50">
+        <Button type="button" onClick={handleSave} disabled={isPending || !companyId} className="h-12 rounded-xl bg-[#34451F] px-6 font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95 disabled:opacity-50">
           {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save layout</>}
         </Button>
       </div>
@@ -795,7 +795,7 @@ function ModeButton({ active, onClick, icon, label }: { active: boolean; onClick
       onClick={onClick}
       className={cn(
         "flex h-10 items-center gap-2 rounded-xl border-2 px-4 font-black text-[10px] tracking-wide uppercase transition-all",
-        active ? "border-[#5C4033] bg-[#5C4033] text-white shadow-sm" : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]/40"
+        active ? "border-[#34451F] bg-[#34451F] text-white shadow-sm" : "border-[#D8D5C8] bg-white text-[#5E6654] hover:border-[#34451F]/40"
       )}
     >
       {icon}
@@ -807,7 +807,7 @@ function ModeButton({ active, onClick, icon, label }: { active: boolean; onClick
 function DimInput({ id, label, value, onChange }: { id: string; label: string; value: number; onChange: (v: number) => void }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+      <Label htmlFor={id} className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
         {label}
       </Label>
       <Input
@@ -820,7 +820,7 @@ function DimInput({ id, label, value, onChange }: { id: string; label: string; v
           const n = parseFloat(e.target.value);
           onChange(Number.isFinite(n) ? round(Math.max(0, n)) : 0);
         }}
-        className="h-11 w-28 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold tabular-nums focus:border-[#5C4033]"
+        className="h-11 w-28 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold tabular-nums focus:border-[#34451F]"
       />
     </div>
   );
@@ -834,7 +834,7 @@ function ShapeToggle({ value, onChange }: { value: Shape; onChange: (s: Shape) =
   ];
   return (
     <div className="space-y-1.5">
-      <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Shape</Label>
+      <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Shape</Label>
       <div className="flex gap-1.5">
         {opts.map((o) => (
           <button
@@ -845,7 +845,7 @@ function ShapeToggle({ value, onChange }: { value: Shape; onChange: (s: Shape) =
             aria-pressed={value === o.s}
             className={cn(
               "flex h-11 items-center gap-1 rounded-xl border-2 px-2.5 font-black text-[10px] tracking-wide uppercase transition-all",
-              value === o.s ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]/40"
+              value === o.s ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-white text-[#5E6654] hover:border-[#34451F]/40"
             )}
           >
             {o.icon}
@@ -861,11 +861,11 @@ function RotationField({ value, onChange }: { value: number; onChange: (v: numbe
   const set = (v: number) => onChange(Math.round(((v % 360) + 360) % 360));
   return (
     <div className="space-y-1.5">
-      <Label htmlFor="rot-input" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+      <Label htmlFor="rot-input" className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
         Rotation (°)
       </Label>
       <div className="flex items-center gap-1">
-        <button type="button" onClick={() => set(value - 15)} aria-label="Rotate 15 degrees left" title="Rotate left" className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] hover:bg-[#F7F4EA]">
+        <button type="button" onClick={() => set(value - 15)} aria-label="Rotate 15 degrees left" title="Rotate left" className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#D8D5C8] bg-white text-[#34451F] hover:bg-[#F4F1E8]">
           <RotateCcw className="h-4 w-4" />
         </button>
         <Input
@@ -879,9 +879,9 @@ function RotationField({ value, onChange }: { value: number; onChange: (v: numbe
             const n = parseFloat(e.target.value);
             set(Number.isFinite(n) ? n : 0);
           }}
-          className="h-11 w-full rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold tabular-nums focus:border-[#5C4033]"
+          className="h-11 w-full rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold tabular-nums focus:border-[#34451F]"
         />
-        <button type="button" onClick={() => set(value + 15)} aria-label="Rotate 15 degrees right" title="Rotate right" className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] hover:bg-[#F7F4EA]">
+        <button type="button" onClick={() => set(value + 15)} aria-label="Rotate 15 degrees right" title="Rotate right" className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl border-2 border-[#D8D5C8] bg-white text-[#34451F] hover:bg-[#F4F1E8]">
           <RotateCw className="h-4 w-4" />
         </button>
       </div>
@@ -893,16 +893,16 @@ function ObstacleInspector({ obstacle, onChange, onDelete }: { obstacle: Obstacl
   const isCircle = obstacle.shape === "circle";
   const isPolygon = obstacle.shape === "polygon";
   return (
-    <div className="space-y-3 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
+    <div className="space-y-3 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 space-y-1.5">
-          <Label htmlFor="ob-label" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Label</Label>
-          <Input id="ob-label" value={obstacle.label} onChange={(e) => onChange({ label: e.target.value })} className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#5C4033]" />
+          <Label htmlFor="ob-label" className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Label</Label>
+          <Input id="ob-label" value={obstacle.label} onChange={(e) => onChange({ label: e.target.value })} className="h-11 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold focus:border-[#34451F]" />
         </div>
-        <span className="mb-2.5 self-end rounded-lg border border-[#E6DFC8] bg-white px-2 py-1 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">{obstacle.shape}</span>
+        <span className="mb-2.5 self-end rounded-lg border border-[#D8D5C8] bg-white px-2 py-1 font-black text-[10px] tracking-widest text-[#5E6654] uppercase">{obstacle.shape}</span>
       </div>
       {isPolygon ? (
-        <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5F624F]">
+        <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5E6654]">
           <Info className="h-3 w-3 shrink-0" />
           Drag the red points on the canvas to reshape. Bounds {round(obstacle.width, 1)} × {round(obstacle.length, 1)} m.
         </p>
@@ -936,10 +936,10 @@ function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: F
   const showFacing = fixture.facing != null;
   const shape = shapeOf(fixture.shape);
   return (
-    <div className="space-y-3 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
+    <div className="space-y-3 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-3">
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="fx-type" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Type</Label>
+          <Label htmlFor="fx-type" className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Type</Label>
           <select
             id="fx-type"
             title="Fixture type"
@@ -950,7 +950,7 @@ function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: F
               const facing = FIXTURE_META[type].facing;
               onChange({ type, facing: facing == null ? null : fixture.facing ?? facing });
             }}
-            className="h-11 w-full rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold text-[#1F1F1A] outline-none focus:border-[#5C4033]"
+            className="h-11 w-full rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold text-[#20231A] outline-none focus:border-[#34451F]"
           >
             {FIXTURE_ORDER.map((t) => (
               <option key={t} value={t}>{FIXTURE_META[t].label}</option>
@@ -958,13 +958,13 @@ function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: F
           </select>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="fx-label" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Label</Label>
-          <Input id="fx-label" value={fixture.label} onChange={(e) => onChange({ label: e.target.value })} className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#5C4033]" />
+          <Label htmlFor="fx-label" className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Label</Label>
+          <Input id="fx-label" value={fixture.label} onChange={(e) => onChange({ label: e.target.value })} className="h-11 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold focus:border-[#34451F]" />
         </div>
       </div>
       <ShapeToggle value={shape} onChange={onShape} />
       {shape === "polygon" ? (
-        <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5F624F]">
+        <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5E6654]">
           <Info className="h-3 w-3 shrink-0" />
           Drag the points on the canvas to reshape. Bounds {round(fixture.width, 1)} × {round(fixture.length, 1)} m.
         </p>
@@ -986,7 +986,7 @@ function FixtureInspector({ fixture, onChange, onShape, onDelete }: { fixture: F
         {shape !== "polygon" && <RotationField value={rotOf(fixture.rotation)} onChange={(v) => onChange({ rotation: v })} />}
         {showFacing && <NumField id="fx-facing" label="Facing (°)" value={fixture.facing ?? 0} min={0} max={359} step={5} onChange={(v) => onChange({ facing: Math.round(((v % 360) + 360) % 360) })} />}
       </div>
-      {showFacing && <p className="text-[10px] font-bold text-[#5F624F]">Facing: 0° up · 90° right · 180° down · 270° left (sightline direction)</p>}
+      {showFacing && <p className="text-[10px] font-bold text-[#5E6654]">Facing: 0° up · 90° right · 180° down · 270° left (sightline direction)</p>}
       <Button type="button" onClick={onDelete} className="h-10 rounded-xl border-2 border-red-200 bg-white px-3 font-black text-[10px] tracking-wide text-red-600 uppercase hover:bg-red-50">
         <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete fixture
       </Button>
@@ -998,13 +998,13 @@ function FeatureInspector({ feature, onChange, onDelete }: { feature: Feature; o
   const showFacing = feature.kind !== "window";
   const isBench = feature.kind === "bench";
   return (
-    <div className="space-y-3 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
+    <div className="space-y-3 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-3">
       <div className="flex items-center justify-between gap-2">
         <div className="flex-1 space-y-1.5">
-          <Label htmlFor="ft-label" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Label</Label>
-          <Input id="ft-label" value={feature.label} onChange={(e) => onChange({ label: e.target.value })} className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold focus:border-[#5C4033]" />
+          <Label htmlFor="ft-label" className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Label</Label>
+          <Input id="ft-label" value={feature.label} onChange={(e) => onChange({ label: e.target.value })} className="h-11 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold focus:border-[#34451F]" />
         </div>
-        <span className="mb-2.5 self-end rounded-lg border border-[#E6DFC8] bg-white px-2 py-1 font-black text-[10px] tracking-widest text-[#5F624F] uppercase">{feature.kind}</span>
+        <span className="mb-2.5 self-end rounded-lg border border-[#D8D5C8] bg-white px-2 py-1 font-black text-[10px] tracking-widest text-[#5E6654] uppercase">{feature.kind}</span>
       </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <NumField id="ft-x" label="X (m)" value={feature.x} onChange={(v) => onChange({ x: v })} />
@@ -1017,7 +1017,7 @@ function FeatureInspector({ feature, onChange, onDelete }: { feature: Feature; o
         {showFacing && <NumField id="ft-facing" label="Facing (°)" value={feature.facing ?? 0} min={0} max={359} step={5} onChange={(v) => onChange({ facing: Math.round(((v % 360) + 360) % 360) })} />}
         {isBench && <NumField id="ft-seats" label="Seats" value={feature.seats ?? 0} min={0} step={1} onChange={(v) => onChange({ seats: Math.round(v) })} />}
       </div>
-      {showFacing && <p className="text-[10px] font-bold text-[#5F624F]">Facing: 0° up · 90° right · 180° down · 270° left</p>}
+      {showFacing && <p className="text-[10px] font-bold text-[#5E6654]">Facing: 0° up · 90° right · 180° down · 270° left</p>}
       <Button type="button" onClick={onDelete} className="h-10 rounded-xl border-2 border-red-200 bg-white px-3 font-black text-[10px] tracking-wide text-red-600 uppercase hover:bg-red-50">
         <Trash2 className="mr-1.5 h-3.5 w-3.5" /> Delete {feature.kind}
       </Button>
@@ -1028,7 +1028,7 @@ function FeatureInspector({ feature, onChange, onDelete }: { feature: Feature; o
 function NumField({ id, label, value, min = 0, max, step = 0.1, onChange }: { id: string; label: string; value: number; min?: number; max?: number; step?: number; onChange: (v: number) => void }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</Label>
+      <Label htmlFor={id} className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</Label>
       <Input
         id={id}
         type="number"
@@ -1043,7 +1043,7 @@ function NumField({ id, label, value, min = 0, max, step = 0.1, onChange }: { id
           if (max != null) clamped = Math.min(max, clamped);
           onChange(round(clamped));
         }}
-        className="h-11 w-full rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold tabular-nums focus:border-[#5C4033]"
+        className="h-11 w-full rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold tabular-nums focus:border-[#34451F]"
       />
     </div>
   );

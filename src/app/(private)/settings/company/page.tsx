@@ -20,7 +20,7 @@ export default async function CompanyInfoPage() {
     <div className="space-y-4">
       <CompanyInfoClient initialData={data} />
 
-      <div className="mx-2 border-t border-[#E6DFC8] sm:mx-4" />
+      <div className="mx-2 border-t border-[#D8D5C8] sm:mx-4" />
 
       <VenueEditorClient
         companyId={data?.id ?? null}

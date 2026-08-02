@@ -22,7 +22,7 @@ const PAD_BOT = 18;
 const DAY = 86_400_000;
 
 const SERIES_COLORS = [
-  "#5C4033", "#B45309", "#1B4332", "#2563EB",
+  "#34451F", "#9A5B00", "#34451F", "#2563EB",
   "#7C3AED", "#DB2777", "#0891B2", "#CA8A04",
   "#4B5563", "#9D174D",
 ];
@@ -234,9 +234,9 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
   return (
     <section className="space-y-2">
       <div className="flex items-center gap-2 px-1">
-        <TrendingUp className="h-4 w-4 text-[#5F624F]" />
-        <h2 className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">Bookings</h2>
-        <div className="ml-auto flex gap-1 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-1 shadow-sm">
+        <TrendingUp className="h-4 w-4 text-[#5E6654]" />
+        <h2 className="font-black text-[11px] tracking-wide text-[#5E6654] uppercase">Bookings</h2>
+        <div className="ml-auto flex gap-1 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-1 shadow-sm">
           {(["week", "month", "year"] as Range[]).map((r) => (
             <button
               key={r}
@@ -244,7 +244,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               onClick={() => setRange(r)}
               className={cn(
                 "rounded-lg px-3 py-1.5 font-black text-[10px] tracking-wide uppercase transition-colors",
-                range === r ? "bg-[#5C4033] text-white shadow-sm" : "text-[#5F624F] hover:bg-white",
+                range === r ? "bg-[#34451F] text-white shadow-sm" : "text-[#5E6654] hover:bg-white",
               )}
             >
               {r}
@@ -253,25 +253,25 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm">
+      <div className="rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center gap-2">
-          <Filter className="h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
+          <Filter className="h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
           <div ref={ref} className="relative min-w-0 flex-1">
             <button
               type="button"
               onClick={() => setOpen((o) => !o)}
               className={cn(
-                "flex w-full items-center gap-2 rounded-lg border bg-[#F7F4EA] px-3 py-2 text-[11px] font-bold text-[#1F1F1A] transition-colors",
-                open ? "border-[#5C4033] ring-2 ring-[#5C4033]/15" : "border-[#E6DFC8] hover:border-[#d3cbb0]",
+                "flex w-full items-center gap-2 rounded-lg border bg-[#F4F1E8] px-3 py-2 text-[11px] font-bold text-[#20231A] transition-colors",
+                open ? "border-[#34451F] ring-2 ring-[#34451F]/15" : "border-[#D8D5C8] hover:border-[#d3cbb0]",
               )}
             >
               <span className="flex-1 truncate text-left">{labelFor(applied)}</span>
-              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-[#5F624F] transition-transform", open && "rotate-180")} />
+              <ChevronDown className={cn("h-3.5 w-3.5 shrink-0 text-[#5E6654] transition-transform", open && "rotate-180")} />
             </button>
             {open && (
-              <div className="absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-xl border border-[#E6DFC8] bg-white shadow-[0_18px_40px_-12px_rgba(31,31,26,0.30)]">
+              <div className="absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-xl border border-[#D8D5C8] bg-white shadow-[0_18px_40px_-12px_rgba(31,31,26,0.30)]">
                 <div className="grid grid-cols-2">
-                  <div className="max-h-60 overflow-y-auto border-r border-[#E6DFC8] p-1.5">
+                  <div className="max-h-60 overflow-y-auto border-r border-[#D8D5C8] p-1.5">
                     <p className="px-2 pt-1.5 pb-1 font-black text-[8px] tracking-[0.09em] text-[#a7a288] uppercase">Event type</p>
                     <FilterOpt
                       label="All bookable events"
@@ -320,7 +320,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               </div>
             )}
           </div>
-          <div className="flex shrink-0 gap-0.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] p-0.5">
+          <div className="flex shrink-0 gap-0.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] p-0.5">
             {(["summary", "detail"] as View[]).map((vw) => (
               <button
                 key={vw}
@@ -328,7 +328,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                 onClick={() => setView(vw)}
                 className={cn(
                   "rounded-md px-2.5 py-1.5 font-black text-[9px] tracking-wide uppercase transition-colors",
-                  view === vw ? "bg-[#5C4033] text-white shadow-sm" : "text-[#5F624F] hover:bg-white",
+                  view === vw ? "bg-[#34451F] text-white shadow-sm" : "text-[#5E6654] hover:bg-white",
                 )}
               >
                 {vw}
@@ -344,7 +344,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
             ) : (
               <>
                 {detail.map((s) => (
-                  <span key={s.id} className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5F624F] uppercase">
+                  <span key={s.id} className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5E6654] uppercase">
                     <i
                       className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-(--c)"
                       style={{ "--c": s.color } as React.CSSProperties}
@@ -359,10 +359,10 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
           </div>
         ) : (
           <div className="mb-2.5 flex items-center gap-4 px-0.5">
-            <span className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5F624F] uppercase">
-              <i className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-[#5C4033]" /> {period.curLbl}
+            <span className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5E6654] uppercase">
+              <i className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-[#34451F]" /> {period.curLbl}
             </span>
-            <span className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5F624F] uppercase">
+            <span className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5E6654] uppercase">
               <i className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-dashed border-[#bdb49a]" /> {period.prevLbl}
             </span>
             <span className={cn("ml-auto font-black text-[9px] tracking-wide uppercase", up ? "text-green-700" : "text-red-600")}>
@@ -387,8 +387,8 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
           <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" className={cn("w-full", isDetail ? "h-44 sm:h-52" : "h-28 sm:h-32")}>
             <defs>
               <linearGradient id="trend-area" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0" stopColor="#5C403322" />
-                <stop offset="1" stopColor="#5C403300" />
+                <stop offset="0" stopColor="#34451F22" />
+                <stop offset="1" stopColor="#34451F00" />
               </linearGradient>
             </defs>
             {ticks.map((t) => (
@@ -398,7 +398,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                 x2={W}
                 y1={yFor(t, niceMax)}
                 y2={yFor(t, niceMax)}
-                stroke="#E6DFC8"
+                stroke="#D8D5C8"
                 strokeWidth="1"
                 vectorEffect="non-scaling-stroke"
               />
@@ -436,15 +436,15 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               <>
                 <path d={areaPath.d} fill="url(#trend-area)" />
                 <path d={prevPath.d} fill="none" stroke="#bdb49a" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                <path d={curPath.d} fill="none" stroke="#5C4033" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
-                <circle cx={curPath.last[0]} cy={curPath.last[1]} r="4" fill="#5C4033" vectorEffect="non-scaling-stroke" />
+                <path d={curPath.d} fill="none" stroke="#34451F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                <circle cx={curPath.last[0]} cy={curPath.last[1]} r="4" fill="#34451F" vectorEffect="non-scaling-stroke" />
               </>
             )}
           </svg>
 
           <div className="mt-1.5 flex justify-between px-0.5">
             {period.labels.map((l) => (
-              <span key={l} className="text-[9px] font-bold tracking-wide text-[#5F624F] uppercase">
+              <span key={l} className="text-[9px] font-bold tracking-wide text-[#5E6654] uppercase">
                 {l}
               </span>
             ))}
@@ -474,7 +474,7 @@ function FilterOpt({
       onClick={onClick}
       className={cn(
         "flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-left text-[11px] font-bold transition-colors",
-        active ? "bg-[#5C4033] text-white" : selected ? "bg-[#efe9d8] text-[#5C4033]" : "text-[#1F1F1A] hover:bg-[#F7F4EA]",
+        active ? "bg-[#34451F] text-white" : selected ? "bg-[#efe9d8] text-[#34451F]" : "text-[#20231A] hover:bg-[#F4F1E8]",
       )}
     >
       <span className="min-w-0 flex-1 truncate">{label}</span>

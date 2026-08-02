@@ -411,25 +411,25 @@ async function sendRescheduleEmail(
   const e = buildRescheduleEmail({ name, groupName, date, startTime, endTime });
 
   const html = `
-    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F4EA;border-radius:16px;overflow:hidden;">
-      <div style="background:#5C4033;padding:32px 24px;text-align:center;">
+    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F4F1E8;border-radius:16px;overflow:hidden;">
+      <div style="background:#34451F;padding:32px 24px;text-align:center;">
         <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
           ${e.heading}
         </h1>
-        ${groupName ? `<p style="margin:8px 0 0;color:#E6DFC8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
+        ${groupName ? `<p style="margin:8px 0 0;color:#D8D5C8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
       </div>
       <div style="padding:32px 24px;">
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.greeting}</p>
-        ${e.body.map((p) => `<p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
+        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.greeting}</p>
+        ${e.body.map((p) => `<p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
         ${e.dateLabel ? `
-        <div style="background:#fff;border:2px solid #E6DFC8;border-radius:12px;padding:20px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">New Performance Slot</p>
-          <p style="margin:0;font-size:18px;font-weight:900;color:#1F1F1A;">${e.dateLabel}</p>
-          ${e.timeLabel ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5F624F;">${e.timeLabel}</p>` : ""}
+        <div style="background:#fff;border:2px solid #D8D5C8;border-radius:12px;padding:20px;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">New Performance Slot</p>
+          <p style="margin:0;font-size:18px;font-weight:900;color:#20231A;">${e.dateLabel}</p>
+          ${e.timeLabel ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5E6654;">${e.timeLabel}</p>` : ""}
         </div>` : ""}
       </div>
-      <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
-        <p style="margin:0;font-size:11px;color:#5F624F;">
+      <div style="padding:16px 24px;border-top:1px solid #D8D5C8;text-align:center;">
+        <p style="margin:0;font-size:11px;color:#5E6654;">
           Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
         </p>
       </div>
@@ -465,31 +465,31 @@ async function sendOutcomeEmail(
   });
 
   const html = `
-    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F4EA;border-radius:16px;overflow:hidden;">
-      <div style="background:#5C4033;padding:32px 24px;text-align:center;">
+    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F4F1E8;border-radius:16px;overflow:hidden;">
+      <div style="background:#34451F;padding:32px 24px;text-align:center;">
         <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
           ${e.heading}
         </h1>
-        ${groupName ? `<p style="margin:8px 0 0;color:#E6DFC8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
+        ${groupName ? `<p style="margin:8px 0 0;color:#D8D5C8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
       </div>
       <div style="padding:32px 24px;">
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.greeting}</p>
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.body[0]}</p>
+        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.greeting}</p>
+        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.body[0]}</p>
         ${e.dateLabel ? `
-        <div style="background:#fff;border:2px solid #E6DFC8;border-radius:12px;padding:20px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Performance Date</p>
-          <p style="margin:0;font-size:18px;font-weight:900;color:#1F1F1A;">${e.dateLabel}</p>
-          ${e.timeLabel ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5F624F;">${e.timeLabel}</p>` : ""}
+        <div style="background:#fff;border:2px solid #D8D5C8;border-radius:12px;padding:20px;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">Performance Date</p>
+          <p style="margin:0;font-size:18px;font-weight:900;color:#20231A;">${e.dateLabel}</p>
+          ${e.timeLabel ? `<p style="margin:4px 0 0;font-size:14px;font-weight:700;color:#5E6654;">${e.timeLabel}</p>` : ""}
         </div>` : ""}
-        ${e.body.slice(1).map((p) => `<p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
+        ${e.body.slice(1).map((p) => `<p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
         ${e.noteLabel ? `
-        <div style="background:#fff;border-left:4px solid #5C4033;border-radius:8px;padding:16px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Note from our team</p>
-          <p style="margin:0;font-size:14px;color:#1F1F1A;line-height:1.5;">${e.noteLabel}</p>
+        <div style="background:#fff;border-left:4px solid #34451F;border-radius:8px;padding:16px;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">Note from our team</p>
+          <p style="margin:0;font-size:14px;color:#20231A;line-height:1.5;">${e.noteLabel}</p>
         </div>` : ""}
       </div>
-      <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
-        <p style="margin:0;font-size:11px;color:#5F624F;">
+      <div style="padding:16px 24px;border-top:1px solid #D8D5C8;text-align:center;">
+        <p style="margin:0;font-size:11px;color:#5E6654;">
           Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
         </p>
       </div>
@@ -525,30 +525,30 @@ async function sendOfferEmail(
   });
 
   const html = `
-    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F7F4EA;border-radius:16px;overflow:hidden;">
-      <div style="background:#5C4033;padding:32px 24px;text-align:center;">
+    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;max-width:600px;margin:0 auto;background:#F4F1E8;border-radius:16px;overflow:hidden;">
+      <div style="background:#34451F;padding:32px 24px;text-align:center;">
         <h1 style="margin:0;color:#FDCC4B;font-size:22px;font-weight:900;text-transform:uppercase;letter-spacing:0.05em;">
           ${e.heading}
         </h1>
-        ${groupName ? `<p style="margin:8px 0 0;color:#E6DFC8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
+        ${groupName ? `<p style="margin:8px 0 0;color:#D8D5C8;font-size:14px;font-weight:700;">${groupName}</p>` : ""}
       </div>
       <div style="padding:32px 24px;">
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.greeting}</p>
-        <p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${e.body[0]}</p>
-        <div style="background:#fff;border:2px solid #E6DFC8;border-radius:12px;padding:20px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Proposed Slot</p>
-          <p style="margin:0;font-size:18px;font-weight:900;color:#1F1F1A;">${e.slotLabel}</p>
-          ${e.feeLabel ? `<p style="margin:8px 0 0;font-size:14px;font-weight:700;color:#5F624F;">${e.feeLabel}</p>` : ""}
+        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.greeting}</p>
+        <p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${e.body[0]}</p>
+        <div style="background:#fff;border:2px solid #D8D5C8;border-radius:12px;padding:20px;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">Proposed Slot</p>
+          <p style="margin:0;font-size:18px;font-weight:900;color:#20231A;">${e.slotLabel}</p>
+          ${e.feeLabel ? `<p style="margin:8px 0 0;font-size:14px;font-weight:700;color:#5E6654;">${e.feeLabel}</p>` : ""}
         </div>
         ${e.noteLabel ? `
-        <div style="background:#fff;border-left:4px solid #5C4033;border-radius:8px;padding:16px;margin:20px 0;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5F624F;">Note from our team</p>
-          <p style="margin:0;font-size:14px;color:#1F1F1A;line-height:1.5;">${e.noteLabel}</p>
+        <div style="background:#fff;border-left:4px solid #34451F;border-radius:8px;padding:16px;margin:20px 0;">
+          <p style="margin:0 0 4px;font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:0.1em;color:#5E6654;">Note from our team</p>
+          <p style="margin:0;font-size:14px;color:#20231A;line-height:1.5;">${e.noteLabel}</p>
         </div>` : ""}
-        ${e.body.slice(1).map((p) => `<p style="margin:0 0 16px;color:#1F1F1A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
+        ${e.body.slice(1).map((p) => `<p style="margin:0 0 16px;color:#20231A;font-size:15px;line-height:1.6;">${p}</p>`).join("")}
       </div>
-      <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
-        <p style="margin:0;font-size:11px;color:#5F624F;">
+      <div style="padding:16px 24px;border-top:1px solid #D8D5C8;text-align:center;">
+        <p style="margin:0;font-size:11px;color:#5E6654;">
           Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
         </p>
       </div>

@@ -8,12 +8,12 @@ import type { MarketingTrend, TrendEffort, TrendKind, TrendState } from "../lib/
 const KIND: Record<TrendKind, { emoji: string; label: string; text: string; tile: string }> = {
   advertising: { emoji: "🔥", label: "Ad / Social", text: "text-[#7C3AED]", tile: "bg-[#F3EBFE] border-[#E2D4FB]" },
   event_idea: { emoji: "🎪", label: "Event idea", text: "text-[#1D4ED8]", tile: "bg-[#EAF1FE] border-[#D3E1FC]" },
-  price: { emoji: "💷", label: "Price play", text: "text-[#B45309]", tile: "bg-[#FDF1E3] border-[#F5DFC0]" },
+  price: { emoji: "💷", label: "Price play", text: "text-[#34451F]", tile: "bg-[#FDF1E3] border-[#F5DFC0]" },
 };
 
 const EFFORT: Record<TrendEffort, { bolts: string; note: string; text: string }> = {
   Easy: { bolts: "⚡", note: "one evening", text: "text-green-700" },
-  Medium: { bolts: "⚡⚡", note: "a weekend", text: "text-[#B45309]" },
+  Medium: { bolts: "⚡⚡", note: "a weekend", text: "text-[#34451F]" },
   Big: { bolts: "⚡⚡⚡", note: "a project", text: "text-red-600" },
 };
 
@@ -36,7 +36,7 @@ export function TrendCard({
     <article
       className={cn(
         "overflow-hidden rounded-2xl border bg-white transition-colors",
-        open ? "border-[#5C4033] shadow-[0_8px_24px_rgba(92,64,51,0.14)]" : "border-[#E6DFC8]",
+        open ? "border-[#34451F] shadow-[0_8px_24px_rgba(92,64,51,0.14)]" : "border-[#D8D5C8]",
       )}
     >
       <button
@@ -49,7 +49,7 @@ export function TrendCard({
           <span aria-hidden="true">{k.emoji}</span>
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="line-clamp-2 font-black text-[13.5px] leading-snug text-[#1F1F1A]">{trend.title}</span>
+          <span className="line-clamp-2 font-black text-[13.5px] leading-snug text-[#20231A]">{trend.title}</span>
           <span className="flex items-center gap-2 font-black text-[8.5px] tracking-widest uppercase">
             <span className={k.text}>{k.label}</span>
             {e && (
@@ -62,29 +62,29 @@ export function TrendCard({
             )}
           </span>
         </span>
-        <ChevronDown className={cn("h-4 w-4 shrink-0 text-[#5F624F] transition-transform", open && "rotate-180")} />
+        <ChevronDown className={cn("h-4 w-4 shrink-0 text-[#5E6654] transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (
         <div className="flex flex-col gap-2.5 px-3 pb-3">
-          {trend.summary && <p className="text-[12.5px] leading-relaxed text-[#5F624F]">{trend.summary}</p>}
+          {trend.summary && <p className="text-[12.5px] leading-relaxed text-[#5E6654]">{trend.summary}</p>}
 
           {trend.relevance && (
-            <div className="rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2">
-              <p className="mb-0.5 font-black text-[8.5px] tracking-widest text-[#5C4033] uppercase">Why you</p>
-              <p className="text-[12px] leading-snug text-[#1F1F1A]">{trend.relevance}</p>
+            <div className="rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2">
+              <p className="mb-0.5 font-black text-[8.5px] tracking-widest text-[#34451F] uppercase">Why you</p>
+              <p className="text-[12px] leading-snug text-[#20231A]">{trend.relevance}</p>
             </div>
           )}
 
           {trend.action && (
-            <div className="rounded-xl border border-[#1B4332]/20 bg-[#1B4332]/[0.06] px-3 py-2">
-              <p className="mb-0.5 font-black text-[8.5px] tracking-widest text-[#1B4332] uppercase">Do this week</p>
-              <p className="text-[12px] leading-snug text-[#1F1F1A]">{trend.action}</p>
+            <div className="rounded-xl border border-[#34451F]/20 bg-[#34451F]/[0.06] px-3 py-2">
+              <p className="mb-0.5 font-black text-[8.5px] tracking-widest text-[#34451F] uppercase">Do this week</p>
+              <p className="text-[12px] leading-snug text-[#20231A]">{trend.action}</p>
             </div>
           )}
 
           {e && (
-            <p className="text-[10.5px] font-semibold text-[#5F624F] opacity-80">
+            <p className="text-[10.5px] font-semibold text-[#5E6654] opacity-80">
               Effort: {e.bolts} {trend.effort} - roughly {e.note}.
             </p>
           )}
@@ -92,7 +92,7 @@ export function TrendCard({
           {trend.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
               {trend.tags.map((tag) => (
-                <span key={tag} className="text-[10px] font-medium text-[#5F624F]/70">
+                <span key={tag} className="text-[10px] font-medium text-[#5E6654]/70">
                   #{tag}
                 </span>
               ))}
@@ -105,23 +105,23 @@ export function TrendCard({
                 href={trend.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-bold text-[#5C4033] hover:underline"
+                className="inline-flex min-w-0 items-center gap-1.5 text-[11px] font-bold text-[#34451F] hover:underline"
               >
                 <ExternalLink className="h-3.5 w-3.5 shrink-0" />
                 <span className="truncate">{trend.source_name || "View source"}</span>
               </a>
             ) : (
-              <span className="text-[11px] text-[#5F624F]/50">No source link</span>
+              <span className="text-[11px] text-[#5E6654]/50">No source link</span>
             )}
 
             <div className="flex shrink-0 items-center gap-1.5">
               {pending ? (
-                <Loader2 className="h-4 w-4 animate-spin text-[#5F624F]" />
+                <Loader2 className="h-4 w-4 animate-spin text-[#5E6654]" />
               ) : ignored ? (
                 <button
                   type="button"
                   onClick={() => onSetState(trend.id, "new")}
-                  className="flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-white px-3 font-black text-[9.5px] tracking-widest text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] active:scale-95"
+                  className="flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-white px-3 font-black text-[9.5px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] active:scale-95"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
                   Restore
@@ -135,7 +135,7 @@ export function TrendCard({
                       "flex h-8 items-center gap-1.5 rounded-lg border px-3 font-black text-[9.5px] tracking-widest uppercase transition-colors active:scale-95",
                       saved
                         ? "border-green-200 bg-green-50 text-green-700 hover:bg-green-100"
-                        : "border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]",
+                        : "border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#F4F1E8]",
                     )}
                   >
                     {saved ? <BookmarkCheck className="h-3.5 w-3.5" /> : <Bookmark className="h-3.5 w-3.5" />}
@@ -144,7 +144,7 @@ export function TrendCard({
                   <button
                     type="button"
                     onClick={() => onSetState(trend.id, "ignored")}
-                    className="flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-white px-3 font-black text-[9.5px] tracking-widest text-[#5F624F] uppercase transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 active:scale-95"
+                    className="flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-white px-3 font-black text-[9.5px] tracking-widest text-[#5E6654] uppercase transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-500 active:scale-95"
                   >
                     <EyeOff className="h-3.5 w-3.5" />
                     Ignore

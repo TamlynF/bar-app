@@ -83,7 +83,7 @@ export default function ScoreEntry({
         type="button"
         onClick={openSheet}
         disabled={events.length === 0}
-        className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl bg-[#B45309] px-4 font-black text-[11px] tracking-widest text-white uppercase transition-colors hover:bg-[#B45309]/85 disabled:pointer-events-none disabled:opacity-40"
+        className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-[#34451F] px-4 font-black text-[11px] tracking-widest text-[#34451F] uppercase transition-colors hover:bg-[#E5EBD8] disabled:pointer-events-none disabled:opacity-40"
       >
         <ClipboardList className="h-4 w-4" /> Edit Scores
       </button>
@@ -92,22 +92,22 @@ export default function ScoreEntry({
         <SheetContent
           side="bottom"
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[88vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none"
+          className="flex h-[88vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none"
         >
-          <div className="shrink-0 space-y-3 border-b border-[#E6DFC8] bg-white/90 px-5 pt-5 pb-4 backdrop-blur-md sm:px-6">
+          <div className="shrink-0 space-y-3 border-b border-[#D8D5C8] bg-white/90 px-5 pt-5 pb-4 backdrop-blur-md sm:px-6">
             <div>
-              <p className="font-black text-[10px] tracking-[0.18em] text-[#5F624F] uppercase">Edit Scores</p>
-              <SheetTitle className="mt-0.5 font-black text-xl leading-tight tracking-tight text-[#1F1F1A] uppercase sm:text-2xl">
+              <p className="font-black text-[10px] tracking-[0.18em] text-[#5E6654] uppercase">Edit Scores</p>
+              <SheetTitle className="mt-0.5 font-black text-xl leading-tight tracking-tight text-[#20231A] uppercase sm:text-2xl">
                 Select an event
               </SheetTitle>
             </div>
             <div className="relative w-full">
-              <CalendarDays className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-[#5C4033]" />
+              <CalendarDays className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-[#34451F]" />
               <select
                 aria-label="Select quiz event"
                 value={eventId}
                 onChange={(e) => onSelectEvent(e.target.value)}
-                className="h-11 w-full appearance-none rounded-xl border border-[#E6DFC8] bg-white pr-9 pl-10 text-sm font-bold text-[#1F1F1A] transition-colors outline-none focus:border-[#5C4033]"
+                className="h-11 w-full appearance-none rounded-xl border border-[#D8D5C8] bg-white pr-9 pl-10 text-sm font-bold text-[#20231A] transition-colors outline-none focus:border-[#34451F]"
               >
                 {events.map((e) => (
                   <option key={e.id} value={e.id}>
@@ -115,24 +115,24 @@ export default function ScoreEntry({
                   </option>
                 ))}
               </select>
-              <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5F624F]" />
+              <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5E6654]" />
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-[#F7F4EA] px-5 py-4 sm:px-6">
+          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto bg-[#F4F1E8] px-5 py-4 sm:px-6">
             {isLoadingTeams ? (
-              <div className="flex items-center justify-center gap-2 py-10 text-[#5F624F]">
+              <div className="flex items-center justify-center gap-2 py-10 text-[#5E6654]">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span className="text-sm font-bold">Loading teams…</span>
               </div>
             ) : rows.length === 0 ? (
-              <p className="py-10 text-center text-sm text-[#5F624F]">No teams booked on this event.</p>
+              <p className="py-10 text-center text-sm text-[#5E6654]">No teams booked on this event.</p>
             ) : (
               rows.map((r) => (
-                <div key={r.bookingId} className="flex items-center gap-3 rounded-2xl border border-[#E6DFC8] bg-white p-3">
+                <div key={r.bookingId} className="flex items-center gap-3 rounded-2xl border border-[#D8D5C8] bg-white p-3">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">{r.groupName}</p>
-                    <div className="mt-0.5 flex items-center gap-2 text-[#5F624F]">
+                    <p className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">{r.groupName}</p>
+                    <div className="mt-0.5 flex items-center gap-2 text-[#5E6654]">
                       {r.contactName && <span className="truncate text-xs font-semibold">{r.contactName}</span>}
                       {r.groupSize != null && (
                         <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-bold">
@@ -153,7 +153,7 @@ export default function ScoreEntry({
                       "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border transition-colors",
                       r.isWinner
                         ? "border-[#D4AF37]/50 bg-[#FBF1CD] text-[#8A6D00]"
-                        : "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F]/50 hover:text-[#8A6D00]",
+                        : "border-[#D8D5C8] bg-[#F4F1E8] text-[#5E6654]/50 hover:text-[#8A6D00]",
                     )}
                   >
                     <Trophy className={cn("h-4 w-4", r.isWinner && "fill-current")} />
@@ -169,7 +169,7 @@ export default function ScoreEntry({
                       value={r.scoreInput}
                       onChange={(e) => setScore(r.bookingId, e.target.value)}
                       placeholder="-"
-                      className="h-11 w-full rounded-xl border border-[#E6DFC8] bg-white px-3 text-center font-black text-base text-[#1F1F1A] tabular-nums transition-colors outline-none placeholder:text-[#5F624F]/30 focus:border-[#5C4033]"
+                      className="h-11 w-full rounded-xl border border-[#D8D5C8] bg-white px-3 text-center font-black text-base text-[#20231A] tabular-nums transition-colors outline-none placeholder:text-[#5E6654]/30 focus:border-[#34451F]"
                     />
                   </div>
                 </div>
@@ -177,7 +177,7 @@ export default function ScoreEntry({
             )}
           </div>
 
-          <div className="grid shrink-0 grid-cols-[auto_1fr] gap-3 border-t border-[#E6DFC8] bg-white/90 px-5 py-4 backdrop-blur-md sm:px-6">
+          <div className="grid shrink-0 grid-cols-[auto_1fr] gap-3 border-t border-[#D8D5C8] bg-white/90 px-5 py-4 backdrop-blur-md sm:px-6">
             <Button
               variant="secondary"
               onClick={() => setOpen(false)}
@@ -188,7 +188,7 @@ export default function ScoreEntry({
             <Button
               onClick={handleSave}
               disabled={isPending || isLoadingTeams || rows.length === 0}
-              className="h-12 rounded-xl bg-[#1B4332] font-black text-xs tracking-widest text-white uppercase hover:bg-[#1B4332]/85"
+              className="h-12 rounded-xl bg-[#34451F] font-black text-xs tracking-widest text-white uppercase hover:bg-[#283719]"
             >
               {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : (<><Save className="mr-2 h-4 w-4" /> Save Scores</>)}
             </Button>

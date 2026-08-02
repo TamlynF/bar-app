@@ -75,7 +75,7 @@ export type AvailableTable = {
 const RATING_FILL: Record<SightRating, string> = { good: "#16A34A", acceptable: "#D97706", poor: "#DC2626" };
 const FIXTURE_FILL: Record<string, string> = {
   stage: "#4338CA",
-  bar: "#5C4033",
+  bar: "#34451F",
   dj_booth: "#7C3AED",
   projector: "#0EA5E9",
   tv: "#0D9488",
@@ -494,15 +494,15 @@ export default function FloorPlanClient({
           <Link
             href="/event-setups/events"
             aria-label="Back to events"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5C4033] hover:bg-[#F7F4EA]"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#34451F] hover:bg-[#F4F1E8]"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div>
-            <h2 className="font-black text-base leading-tight tracking-tight text-[#1F1F1A] uppercase">
+            <h2 className="font-black text-base leading-tight tracking-tight text-[#20231A] uppercase">
               Floor Plan - {event.title}
             </h2>
-            <p className="text-[11px] font-bold text-[#5F624F] tabular-nums">{eventDate}</p>
+            <p className="text-[11px] font-bold text-[#5E6654] tabular-nums">{eventDate}</p>
           </div>
         </div>
         {dirty ? (
@@ -510,31 +510,31 @@ export default function FloorPlanClient({
             <AlertCircle className="h-3 w-3" /> Unsaved
           </span>
         ) : saved?.savedAt ? (
-          <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 py-1 font-black text-[10px] tracking-widest text-[#5F624F] uppercase tabular-nums">
+          <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 py-1 font-black text-[10px] tracking-widest text-[#5E6654] uppercase tabular-nums">
             Saved {new Date(saved.savedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}
           </span>
         ) : null}
       </div>
 
       {!hasRoom ? (
-        <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-14 text-center">
-          <Info className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
-          <p className="font-black text-sm text-[#1F1F1A] uppercase">No venue layout yet</p>
-          <p className="mt-1 text-[11px] text-[#5F624F]">Set up the room shape and fixtures first.</p>
+        <div className="rounded-2xl border border-dashed border-[#D8D5C8] bg-white py-14 text-center">
+          <Info className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
+          <p className="font-black text-sm text-[#20231A] uppercase">No venue layout yet</p>
+          <p className="mt-1 text-[11px] text-[#5E6654]">Set up the room shape and fixtures first.</p>
           <Link
             href="/settings/venue"
-            className="mt-4 inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#5C4033] px-4 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#5C4033]/85"
+            className="mt-4 inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#34451F] px-4 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]"
           >
             Open Venue Layout
           </Link>
         </div>
       ) : (
         <>
-          <div className="space-y-4 rounded-2xl border border-[#E6DFC8] bg-white p-3">
+          <div className="space-y-4 rounded-2xl border border-[#D8D5C8] bg-white p-3">
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <NumField id="chair-zone" label="Chair zone (m)" value={chairZone} min={0} step={0.1} onChange={(v) => { setChairZone(v); markDirty(); }} />
               <div className="space-y-1.5">
-                <Label htmlFor="aisle" className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                <Label htmlFor="aisle" className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                   Aisle width (m)
                 </Label>
                 <Input
@@ -549,8 +549,8 @@ export default function FloorPlanClient({
                     markDirty();
                   }}
                   className={cn(
-                    "h-11 w-full rounded-xl border-2 bg-white px-3 text-sm font-bold tabular-nums focus:border-[#5C4033]",
-                    aisleWidth < MIN_AISLE ? "border-amber-400" : "border-[#E6DFC8]"
+                    "h-11 w-full rounded-xl border-2 bg-white px-3 text-sm font-bold tabular-nums focus:border-[#34451F]",
+                    aisleWidth < MIN_AISLE ? "border-amber-400" : "border-[#D8D5C8]"
                   )}
                 />
                 {aisleWidth < MIN_AISLE && (
@@ -560,11 +560,11 @@ export default function FloorPlanClient({
             </div>
 
             <div className="space-y-2">
-              <p className="flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+              <p className="flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                 <Eye className="h-3.5 w-3.5" /> Must be visible from every seat
               </p>
               {focals.length === 0 ? (
-                <p className="text-[11px] font-bold text-[#5F624F]/70">No focal points (stage / screens / booth) in the venue layout.</p>
+                <p className="text-[11px] font-bold text-[#5E6654]/70">No focal points (stage / screens / booth) in the venue layout.</p>
               ) : (
                 <div className="flex flex-wrap gap-2">
                   {focals.map((f) => {
@@ -575,10 +575,10 @@ export default function FloorPlanClient({
                         htmlFor={`ms-${f.id}`}
                         className={cn(
                           "flex h-10 cursor-pointer items-center gap-2 rounded-xl border-2 px-3 font-black text-[10px] tracking-wide uppercase transition-all",
-                          on ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]/40"
+                          on ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-white text-[#5E6654] hover:border-[#34451F]/40"
                         )}
                       >
-                        <input id={`ms-${f.id}`} type="checkbox" checked={on} onChange={() => toggleMustSee(f.id)} className="h-4 w-4 rounded accent-[#5C4033]" />
+                        <input id={`ms-${f.id}`} type="checkbox" checked={on} onChange={() => toggleMustSee(f.id)} className="h-4 w-4 rounded accent-[#34451F]" />
                         {f.label}
                       </label>
                     );
@@ -587,19 +587,19 @@ export default function FloorPlanClient({
               )}
             </div>
 
-            <div className="rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
+            <div className="rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-3">
               {selectedTable ? (
                 <div className="space-y-3">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <p className="font-black text-sm text-[#1F1F1A]">{selectedTable.name}</p>
-                      <p className="text-[11px] font-bold text-[#5F624F] tabular-nums">
+                      <p className="font-black text-sm text-[#20231A]">{selectedTable.name}</p>
+                      <p className="text-[11px] font-bold text-[#5E6654] tabular-nums">
                         {selectedTable.baseSeats} base + {tableChairs[selectedTable.mappingId] ?? 0} extra ={" "}
                         {selectedTable.baseSeats + (tableChairs[selectedTable.mappingId] ?? 0)} seats
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => adjustChairs(selectedTable.mappingId, -1)} aria-label="Remove a chair" className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] hover:bg-[#F0EDE0]">
+                      <button type="button" onClick={() => adjustChairs(selectedTable.mappingId, -1)} aria-label="Remove a chair" className="flex h-10 w-10 items-center justify-center rounded-xl border-2 border-[#D8D5C8] bg-white text-[#34451F] hover:bg-[#F0EDE0]">
                         <Minus className="h-4 w-4" />
                       </button>
                       <Input
@@ -608,36 +608,36 @@ export default function FloorPlanClient({
                         aria-label="Extra chairs"
                         value={tableChairs[selectedTable.mappingId] ?? 0}
                         onChange={(e) => setChairs(selectedTable.mappingId, parseFloat(e.target.value) || 0)}
-                        className="h-10 w-16 rounded-xl border-2 border-[#E6DFC8] bg-white px-2 text-center font-black text-sm tabular-nums focus:border-[#5C4033]"
+                        className="h-10 w-16 rounded-xl border-2 border-[#D8D5C8] bg-white px-2 text-center font-black text-sm tabular-nums focus:border-[#34451F]"
                       />
-                      <button type="button" onClick={() => adjustChairs(selectedTable.mappingId, 1)} aria-label="Add a chair" className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#1B4332] text-white hover:bg-[#1B4332]/85">
+                      <button type="button" onClick={() => adjustChairs(selectedTable.mappingId, 1)} aria-label="Add a chair" className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#34451F] text-white hover:bg-[#283719]">
                         <Plus className="h-4 w-4" />
                       </button>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2 border-t border-[#E6DFC8] pt-3">
-                    <span className="flex items-center gap-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase"><Move className="h-3 w-3" /> Drag to move</span>
+                  <div className="flex flex-wrap items-center gap-2 border-t border-[#D8D5C8] pt-3">
+                    <span className="flex items-center gap-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase"><Move className="h-3 w-3" /> Drag to move</span>
                     {selectedTable.shape === "rect" && (
                       <>
-                        <button type="button" onClick={() => rotateSelected(-15)} aria-label="Rotate table left" title="Rotate left" className="flex h-9 w-9 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] hover:bg-[#F0EDE0]">
+                        <button type="button" onClick={() => rotateSelected(-15)} aria-label="Rotate table left" title="Rotate left" className="flex h-9 w-9 items-center justify-center rounded-xl border-2 border-[#D8D5C8] bg-white text-[#34451F] hover:bg-[#F0EDE0]">
                           <RotateCcw className="h-4 w-4" />
                         </button>
-                        <button type="button" onClick={() => rotateSelected(15)} aria-label="Rotate table right" title="Rotate right" className="flex h-9 w-9 items-center justify-center rounded-xl border-2 border-[#E6DFC8] bg-white text-[#5C4033] hover:bg-[#F0EDE0]">
+                        <button type="button" onClick={() => rotateSelected(15)} aria-label="Rotate table right" title="Rotate right" className="flex h-9 w-9 items-center justify-center rounded-xl border-2 border-[#D8D5C8] bg-white text-[#34451F] hover:bg-[#F0EDE0]">
                           <RotateCw className="h-4 w-4" />
                         </button>
                       </>
                     )}
                     {overrides[selectedTable.mappingId] && (
-                      <button type="button" onClick={resetSelected} className="h-9 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase hover:bg-[#F0EDE0]">
+                      <button type="button" onClick={resetSelected} className="h-9 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase hover:bg-[#F0EDE0]">
                         Reset position
                       </button>
                     )}
                     {groupOf(selectedTable.mappingId) ? (
-                      <button type="button" onClick={detachSelected} className="h-9 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase hover:bg-[#F0EDE0]">
+                      <button type="button" onClick={detachSelected} className="h-9 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase hover:bg-[#F0EDE0]">
                         Detach
                       </button>
                     ) : (
-                      <button type="button" onClick={attachSelected} className="flex h-9 items-center gap-1.5 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5C4033] uppercase hover:bg-[#F0EDE0]">
+                      <button type="button" onClick={attachSelected} className="flex h-9 items-center gap-1.5 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-[#34451F] uppercase hover:bg-[#F0EDE0]">
                         <LinkIcon className="h-3.5 w-3.5" /> Attach
                       </button>
                     )}
@@ -649,18 +649,18 @@ export default function FloorPlanClient({
                   </div>
                 </div>
               ) : (
-                <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5F624F]">
+                <p className="flex items-center gap-1.5 text-[11px] font-bold text-[#5E6654]">
                   <Armchair className="h-3.5 w-3.5 shrink-0" /> Tap a table to add chairs; drag it to nudge its position.
                 </p>
               )}
             </div>
 
-            <div className="space-y-3 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] p-3">
+            <div className="space-y-3 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <button
                   type="button"
                   onClick={() => setShowPool((s) => !s)}
-                  className="flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase"
+                  className="flex items-center gap-1.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase"
                 >
                   <LayoutGrid className="h-3.5 w-3.5" /> Available tables ({addableTables.length})
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showPool && "rotate-180")} />
@@ -669,14 +669,14 @@ export default function FloorPlanClient({
                   type="button"
                   onClick={fillEmptySpace}
                   disabled={isMutating || emptyCells <= 0 || addableTables.length === 0}
-                  className="h-9 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85 disabled:opacity-40"
+                  className="h-9 rounded-xl bg-[#34451F] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719] disabled:opacity-40"
                 >
                   {isMutating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <><Plus className="mr-1 h-3.5 w-3.5" /> Fill empty space ({emptyCells})</>}
                 </Button>
               </div>
               {showPool && (
                 addableTables.length === 0 ? (
-                  <p className="text-[11px] font-bold text-[#5F624F]/70">Every available table is already on this event.</p>
+                  <p className="text-[11px] font-bold text-[#5E6654]/70">Every available table is already on this event.</p>
                 ) : (
                   <div className="flex flex-wrap gap-2">
                     {addableTables.map((t) => (
@@ -685,10 +685,10 @@ export default function FloorPlanClient({
                         type="button"
                         onClick={() => addTable(t.tableId)}
                         disabled={isMutating}
-                        className="inline-flex h-9 items-center gap-1.5 rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-[11px] font-bold text-[#5C4033] hover:border-[#1B4332] disabled:opacity-50"
+                        className="inline-flex h-9 items-center gap-1.5 rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-[11px] font-bold text-[#34451F] hover:border-[#34451F] disabled:opacity-50"
                       >
                         <Plus className="h-3.5 w-3.5" /> {t.name}
-                        <span className="text-[#5F624F] tabular-nums">· {t.baseSeats}</span>
+                        <span className="text-[#5E6654] tabular-nums">· {t.baseSeats}</span>
                       </button>
                     ))}
                   </div>
@@ -697,10 +697,10 @@ export default function FloorPlanClient({
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={regenerate} className="h-11 rounded-xl border-2 border-[#E6DFC8] bg-white px-4 font-black text-[10px] tracking-widest text-[#5C4033] uppercase hover:bg-[#F7F4EA]">
+              <Button type="button" onClick={regenerate} className="h-11 rounded-xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#F4F1E8]">
                 <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Regenerate
               </Button>
-              <Button type="button" onClick={handleSave} disabled={isPending} className="h-11 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:opacity-50">
+              <Button type="button" onClick={handleSave} disabled={isPending} className="h-11 rounded-xl bg-[#34451F] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95 disabled:opacity-50">
                 {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save layout</>}
               </Button>
             </div>
@@ -745,7 +745,7 @@ export default function FloorPlanClient({
           )}
 
           <div
-            className="aspect-(--fp-ar) w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-[#FFFDF7]"
+            className="aspect-(--fp-ar) w-full overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-[#FFFEFA]"
             style={{ "--fp-ar": `${view.width} / ${view.length}` } as React.CSSProperties}
           >
             <svg
@@ -758,9 +758,9 @@ export default function FloorPlanClient({
             >
               <polygon
                 points={room!.points.map((p) => `${p.x},${p.y}`).join(" ")}
-                fill="#5C4033"
+                fill="#34451F"
                 fillOpacity={0.04}
-                stroke="#5C4033"
+                stroke="#34451F"
                 strokeWidth={2}
                 strokeLinejoin="round"
                 vectorEffect="non-scaling-stroke"
@@ -788,7 +788,7 @@ export default function FloorPlanClient({
                 const cx = f.x + f.width / 2;
                 const cy = f.y + f.length / 2;
                 const t = f.rotation && f.shape !== "polygon" ? `rotate(${f.rotation} ${cx} ${cy})` : undefined;
-                const fill = FIXTURE_FILL[f.type] ?? "#5C4033";
+                const fill = FIXTURE_FILL[f.type] ?? "#34451F";
                 const arrow = f.facing != null ? facingToVector(f.facing) : null;
                 const aLen = Math.min(f.width, f.length) * 0.6 + 0.25;
                 return (
@@ -822,9 +822,9 @@ export default function FloorPlanClient({
                   <g key={f.id}>
                     {clearance && <polygon points={clearance.map((p) => `${p.x},${p.y}`).join(" ")} fill="#C8956D" fillOpacity={0.1} stroke="#A9744F" strokeWidth={1} strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />}
                     <g transform={t}>
-                      <rect x={f.x} y={f.y} width={f.width} height={f.length} rx={0.03} fill={fill} fillOpacity={f.kind === "window" ? 0.6 : 0.9} stroke={docked ? "#1B4332" : fill} strokeWidth={docked ? 2.5 : 1} vectorEffect="non-scaling-stroke" />
+                      <rect x={f.x} y={f.y} width={f.width} height={f.length} rx={0.03} fill={fill} fillOpacity={f.kind === "window" ? 0.6 : 0.9} stroke={docked ? "#34451F" : fill} strokeWidth={docked ? 2.5 : 1} vectorEffect="non-scaling-stroke" />
                       {seatPts.map((p, i) => (
-                        <circle key={i} cx={p.x} cy={p.y} r={0.12} fill="#FFFDF7" stroke="#5C4033" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                        <circle key={i} cx={p.x} cy={p.y} r={0.12} fill="#FFFEFA" stroke="#34451F" strokeWidth={1} vectorEffect="non-scaling-stroke" />
                       ))}
                     </g>
                   </g>
@@ -852,9 +852,9 @@ export default function FloorPlanClient({
                     width={b.width + pad * 2}
                     height={b.length + pad * 2}
                     rx={0.2}
-                    fill="#1B4332"
+                    fill="#34451F"
                     fillOpacity={0.06}
-                    stroke="#1B4332"
+                    stroke="#34451F"
                     strokeWidth={1.5}
                     strokeDasharray="5 3"
                     vectorEffect="non-scaling-stroke"
@@ -863,7 +863,7 @@ export default function FloorPlanClient({
               })}
 
               {result.placements.map((p) => {
-                const fill = p.worstRating ? RATING_FILL[p.worstRating] : "#5C4033";
+                const fill = p.worstRating ? RATING_FILL[p.worstRating] : "#34451F";
                 const isSel = selectedId === p.mappingId;
                 const transform = p.rotation ? `rotate(${p.rotation} ${p.x} ${p.y})` : undefined;
                 const w = p.shape === "round" ? p.diameter : p.width;
@@ -876,15 +876,15 @@ export default function FloorPlanClient({
                   <g key={p.mappingId} className="cursor-move" onPointerDown={(e) => startDrag(e, p.mappingId)}>
                     <g transform={transform}>
                       {benches.map((b, i) => (
-                        <rect key={`b${i}`} x={b.x} y={b.y} width={b.width} height={b.length} rx={0.06} fill="#8B6F47" fillOpacity={0.9} stroke="#5C4033" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                        <rect key={`b${i}`} x={b.x} y={b.y} width={b.width} height={b.length} rx={0.06} fill="#8B6F47" fillOpacity={0.9} stroke="#34451F" strokeWidth={1} vectorEffect="non-scaling-stroke" />
                       ))}
                       {chairs.map((c, i) => (
-                        <circle key={`c${i}`} cx={c.x} cy={c.y} r={0.13} fill={c.extra ? "#FDCC4B" : "#5C4033"} stroke="#FFFDF7" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                        <circle key={`c${i}`} cx={c.x} cy={c.y} r={0.13} fill={c.extra ? "#FDCC4B" : "#34451F"} stroke="#FFFEFA" strokeWidth={1} vectorEffect="non-scaling-stroke" />
                       ))}
                       {p.shape === "rect" ? (
-                        <rect x={p.x - w / 2} y={p.y - l / 2} width={w} height={l} rx={0.06} fill={fill} fillOpacity={0.9} stroke={isSel ? "#1F1F1A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
+                        <rect x={p.x - w / 2} y={p.y - l / 2} width={w} height={l} rx={0.06} fill={fill} fillOpacity={0.9} stroke={isSel ? "#20231A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
                       ) : (
-                        <circle cx={p.x} cy={p.y} r={p.diameter / 2} fill={fill} fillOpacity={0.9} stroke={isSel ? "#1F1F1A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
+                        <circle cx={p.x} cy={p.y} r={p.diameter / 2} fill={fill} fillOpacity={0.9} stroke={isSel ? "#20231A" : fill} strokeWidth={isSel ? 3 : 1.5} vectorEffect="non-scaling-stroke" />
                       )}
                       <text x={p.x} y={p.y} fontSize={fontSize * 0.95} fontWeight={800} fill="#FFFFFF" textAnchor="middle" dominantBaseline="middle">
                         {p.baseSeats + p.extraChairs}
@@ -899,14 +899,14 @@ export default function FloorPlanClient({
             </svg>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-[#5F624F]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] font-bold text-[#5E6654]">
             <span className="flex items-center gap-1.5"><Dot color="#16A34A" /> Good view</span>
             <span className="flex items-center gap-1.5"><Dot color="#D97706" /> Acceptable</span>
             <span className="flex items-center gap-1.5"><Dot color="#DC2626" /> Poor</span>
-            <span className="flex items-center gap-1.5"><Dot color="#5C4033" /> No focal</span>
+            <span className="flex items-center gap-1.5"><Dot color="#34451F" /> No focal</span>
             <span className="flex items-center gap-1.5"><Dot color="#FDCC4B" /> Extra chair</span>
             <span className="flex items-center gap-1.5 text-red-600">⊘ Must-see violation</span>
-            <span className="flex items-center gap-1.5"><Dot color="#1B4332" /> Attached / docked bench</span>
+            <span className="flex items-center gap-1.5"><Dot color="#34451F" /> Attached / docked bench</span>
           </div>
 
           {result.unplaced.length > 0 && (
@@ -926,14 +926,14 @@ function StatBadge({ label, value, sub, tone = "neutral" }: { label: string; val
     <div
       className={cn(
         "rounded-xl border bg-white p-3",
-        tone === "good" ? "border-green-200 bg-green-50" : tone === "bad" ? "border-red-200 bg-red-50" : "border-[#E6DFC8]"
+        tone === "good" ? "border-green-200 bg-green-50" : tone === "bad" ? "border-red-200 bg-red-50" : "border-[#D8D5C8]"
       )}
     >
-      <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</p>
-      <p className={cn("font-black text-lg leading-tight tabular-nums", tone === "good" ? "text-green-700" : tone === "bad" ? "text-red-600" : "text-[#1F1F1A]")}>
+      <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</p>
+      <p className={cn("font-black text-lg leading-tight tabular-nums", tone === "good" ? "text-green-700" : tone === "bad" ? "text-red-600" : "text-[#20231A]")}>
         {value}
       </p>
-      {sub && <p className="text-[10px] font-bold text-[#5F624F]/70 tabular-nums">{sub}</p>}
+      {sub && <p className="text-[10px] font-bold text-[#5E6654]/70 tabular-nums">{sub}</p>}
     </div>
   );
 }
@@ -945,7 +945,7 @@ function Dot({ color }: { color: string }) {
 function NumField({ id, label, value, min = 0, max, step = 0.1, onChange }: { id: string; label: string; value: number; min?: number; max?: number; step?: number; onChange: (v: number) => void }) {
   return (
     <div className="space-y-1.5">
-      <Label htmlFor={id} className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</Label>
+      <Label htmlFor={id} className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</Label>
       <Input
         id={id}
         type="number"
@@ -960,7 +960,7 @@ function NumField({ id, label, value, min = 0, max, step = 0.1, onChange }: { id
           if (max != null) c = Math.min(max, c);
           onChange(round(c));
         }}
-        className="h-11 w-full rounded-xl border-2 border-[#E6DFC8] bg-white px-3 text-sm font-bold tabular-nums focus:border-[#5C4033]"
+        className="h-11 w-full rounded-xl border-2 border-[#D8D5C8] bg-white px-3 text-sm font-bold tabular-nums focus:border-[#34451F]"
       />
     </div>
   );

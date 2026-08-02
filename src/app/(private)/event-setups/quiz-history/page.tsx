@@ -35,7 +35,7 @@ const CATEGORY_THEMES = [
   { bg: "bg-orange-50/50", border: "border-orange-200", iconBg: "bg-orange-600", text: "text-orange-900" },
   { bg: "bg-red-50/50", border: "border-red-200", iconBg: "bg-red-600", text: "text-red-900" },
   { bg: "bg-purple-50", border: "border-purple-200", iconBg: "bg-purple-600", text: "text-purple-900" },
-  { bg: "bg-[#F7F4EA]", border: "border-[#E6DFC8]", iconBg: "bg-[#5F624F]", text: "text-[#1F1F1A]" },
+  { bg: "bg-[#F4F1E8]", border: "border-[#D8D5C8]", iconBg: "bg-[#5E6654]", text: "text-[#20231A]" },
 ];
 
 export const dynamic = 'force-dynamic'
@@ -70,10 +70,10 @@ export default async function QuizArchivePage({
       </div>
 
       {(!history || history.length === 0) ? (
-        <div className="flex flex-col items-center rounded-[3.5rem] border-4 border-dashed border-[#E6DFC8] bg-white/40 py-32 text-center">
-          <BookOpen className="mb-6 h-16 w-16 text-[#E6DFC8]" />
-          <h2 className="font-black text-xl tracking-tight text-[#1F1F1A] uppercase">Archive Is Empty</h2>
-          <p className="mt-3 max-w-xs text-xs leading-relaxed font-bold tracking-wide text-[#5F624F] uppercase opacity-60">
+        <div className="flex flex-col items-center rounded-[3.5rem] border-4 border-dashed border-[#D8D5C8] bg-white/40 py-32 text-center">
+          <BookOpen className="mb-6 h-16 w-16 text-[#D8D5C8]" />
+          <h2 className="font-black text-xl tracking-tight text-[#20231A] uppercase">Archive Is Empty</h2>
+          <p className="mt-3 max-w-xs text-xs leading-relaxed font-bold tracking-wide text-[#5E6654] uppercase opacity-60">
             There are no approved questions for this specific filter.
           </p>
         </div>
@@ -101,10 +101,10 @@ export default async function QuizArchivePage({
                     </div>
                     <div>
                       <h3 className={cn("text-base font-bold tracking-tight uppercase", theme.text)}>{category}</h3>
-                      <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">{questions.length} Items Logged</p>
+                      <p className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase opacity-60">{questions.length} Items Logged</p>
                     </div>
                   </div>
-                  <div className="h-5 w-5 text-[#5F624F] opacity-40 transition-transform group-open:rotate-180">
+                  <div className="h-5 w-5 text-[#5E6654] opacity-40 transition-transform group-open:rotate-180">
                     <ChevronDown className="h-5 w-5" />
                   </div>
                 </summary>
@@ -122,17 +122,17 @@ export default async function QuizArchivePage({
                             <img src={record.image_url} alt={record.answer_text} className="h-44 w-full rounded-xl object-cover" />
                           ) : record.question_text ? (
                             <div className="flex items-start gap-3">
-                              <div className="mt-1 rounded-lg bg-[#F7F4EA] p-1">
-                                <MessageSquareQuote className="h-4 w-4 text-[#5C4033] opacity-40" />
+                              <div className="mt-1 rounded-lg bg-[#F4F1E8] p-1">
+                                <MessageSquareQuote className="h-4 w-4 text-[#34451F] opacity-40" />
                               </div>
-                              <p className="text-sm leading-snug font-bold tracking-tight text-[#1F1F1A]">
+                              <p className="text-sm leading-snug font-bold tracking-tight text-[#20231A]">
                                 {record.question_text}
                               </p>
                             </div>
                           ) : null}
 
-                          <div className="group/answer relative mt-auto overflow-hidden rounded-xl bg-[#5C4033] p-4 text-center shadow-inner">
-                            <div className="pointer-events-none absolute top-0 left-0 h-full w-full bg-[#5C4033]/5" />
+                          <div className="group/answer relative mt-auto overflow-hidden rounded-xl bg-[#34451F] p-4 text-center shadow-inner">
+                            <div className="pointer-events-none absolute top-0 left-0 h-full w-full bg-[#34451F]/5" />
                             <div className="mb-1.5 flex items-center justify-center gap-1.5 opacity-60">
                                 <Target className="h-3 w-3 text-white" />
                                 <span className="font-black text-[9px] tracking-[0.2em] text-white uppercase">Correct Answer</span>

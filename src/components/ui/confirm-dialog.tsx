@@ -54,14 +54,14 @@ export function useConfirm() {
         onEscapeKeyDown={(e) => {
           if (locked) e.preventDefault();
         }}
-        className="max-w-96 gap-0 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl"
+        className="max-w-96 gap-0 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl"
       >
         <div className="flex flex-col gap-1.5 px-6 pt-6 pb-4">
-          <DialogTitle className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">
+          <DialogTitle className="font-black text-base tracking-tight text-[#20231A] uppercase">
             {options.title}
           </DialogTitle>
           {options.description ? (
-            <DialogDescription className="text-xs leading-relaxed font-medium text-[#5F624F]">
+            <DialogDescription className="text-xs leading-relaxed font-medium text-[#5E6654]">
               {options.description}
             </DialogDescription>
           ) : (
@@ -74,7 +74,7 @@ export function useConfirm() {
             <button
               type="button"
               onClick={() => settle(false)}
-              className="h-11 flex-1 rounded-xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-widest text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA]"
+              className="h-11 flex-1 rounded-xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8]"
             >
               {options.cancelLabel ?? "Cancel"}
             </button>
@@ -85,7 +85,7 @@ export function useConfirm() {
             className={
               isDestructive
                 ? "h-11 flex-1 rounded-xl bg-red-600 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-red-700"
-                : "h-11 flex-1 rounded-xl bg-[#5C4033] font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#5C4033]/90"
+                : "h-11 flex-1 rounded-xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#34451F]/90"
             }
           >
             {options.confirmLabel ?? "Confirm"}

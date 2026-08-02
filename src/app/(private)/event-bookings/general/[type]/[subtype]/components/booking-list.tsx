@@ -364,11 +364,11 @@ export default function BookingList({
       if (placement !== "inline") return null;
       return (
         <div className="flex h-full flex-col items-center justify-center bg-[#ECE4CE] px-10 text-center">
-          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#F7F4EA] text-[#5F624F]">
+          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#F4F1E8] text-[#5E6654]">
             <List className="h-7 w-7" />
           </div>
-          <p className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">No booking selected</p>
-          <p className="mt-1.5 max-w-60 text-sm text-[#5F624F]">
+          <p className="font-black text-base tracking-tight text-[#20231A] uppercase">No booking selected</p>
+          <p className="mt-1.5 max-w-60 text-sm text-[#5E6654]">
             Pick a team from the list to see and edit its details here.
           </p>
         </div>
@@ -386,17 +386,17 @@ export default function BookingList({
     const header = (
       <div className="shrink-0">
         <div className={cn("h-1.5 w-full", theme.dot)} />
-        <div className="flex items-start justify-between gap-3 border-b border-[#E6DFC8] bg-white/90 px-5 pt-4 pb-3.5 backdrop-blur-md sm:px-6">
+        <div className="flex items-start justify-between gap-3 border-b border-[#D8D5C8] bg-white/90 px-5 pt-4 pb-3.5 backdrop-blur-md sm:px-6">
           <div className="min-w-0">
-            <p className="font-black text-[10px] tracking-[0.18em] text-[#5F624F] uppercase">
+            <p className="font-black text-[10px] tracking-[0.18em] text-[#5E6654] uppercase">
               {isEditing ? "Editing" : "Booking"} · Ref {selectedBooking.id}
             </p>
             {isOverlay ? (
-              <SheetTitle className="mt-0.5 truncate font-black text-xl leading-tight tracking-tight text-[#1F1F1A] uppercase sm:text-2xl">
+              <SheetTitle className="mt-0.5 truncate font-black text-xl leading-tight tracking-tight text-[#20231A] uppercase sm:text-2xl">
                 {selectedBooking.group_name || "Guest Team"}
               </SheetTitle>
             ) : (
-              <h2 className="mt-0.5 truncate font-black text-xl leading-tight tracking-tight text-[#1F1F1A] uppercase sm:text-2xl">
+              <h2 className="mt-0.5 truncate font-black text-xl leading-tight tracking-tight text-[#20231A] uppercase sm:text-2xl">
                 {selectedBooking.group_name || "Guest Team"}
               </h2>
             )}
@@ -419,7 +419,7 @@ export default function BookingList({
               type="button"
               onClick={() => guardedClose(closeSheet)}
               aria-label="Close panel"
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F7F4EA] text-[#5F624F] transition-colors hover:bg-[#E6DFC8]"
+              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F4F1E8] text-[#5E6654] transition-colors hover:bg-[#D8D5C8]"
             >
               <X className="h-4 w-4" />
             </button>
@@ -445,16 +445,16 @@ export default function BookingList({
         </div>
 
         {hasPayment && (
-          <div className="flex items-center justify-between rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] p-4">
+          <div className="flex items-center justify-between rounded-2xl border border-[#D8D5C8] bg-[#F4F1E8] p-4">
             <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#5C4033]">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#34451F]">
                 <Coins className="h-4 w-4" />
               </span>
               <div>
-                <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Payment</p>
-                <p className="font-black text-sm text-[#1F1F1A] tabular-nums">
+                <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Payment</p>
+                <p className="font-black text-sm text-[#20231A] tabular-nums">
                   £{(selectedBooking.paid_amount ?? 0).toFixed(2)}{" "}
-                  <span className="text-[#5F624F]">/ £{(selectedBooking.total_amount ?? 0).toFixed(2)}</span>
+                  <span className="text-[#5E6654]">/ £{(selectedBooking.total_amount ?? 0).toFixed(2)}</span>
                 </p>
               </div>
             </div>
@@ -465,14 +465,14 @@ export default function BookingList({
         {selectedBooking.contacts && (
           <section>
             <SectionLabel>Primary contact</SectionLabel>
-            <div className="flex items-center gap-3.5 rounded-2xl border border-[#E6DFC8] bg-white p-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#E6DFC8] bg-[#F7F4EA] font-black text-base text-[#5C4033]">
+            <div className="flex items-center gap-3.5 rounded-2xl border border-[#D8D5C8] bg-white p-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#D8D5C8] bg-[#F4F1E8] font-black text-base text-[#34451F]">
                 {initials(selectedBooking.contacts.full_name)}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">{selectedBooking.contacts.full_name}</p>
+                <p className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">{selectedBooking.contacts.full_name}</p>
                 {selectedBooking.contacts.email && (
-                  <p className="truncate text-xs font-semibold text-[#5F624F]">{selectedBooking.contacts.email}</p>
+                  <p className="truncate text-xs font-semibold text-[#5E6654]">{selectedBooking.contacts.email}</p>
                 )}
               </div>
               <div className="flex shrink-0 gap-2">
@@ -481,7 +481,7 @@ export default function BookingList({
                     href={`mailto:${selectedBooking.contacts.email}`}
                     aria-label="Email contact"
                     title="Email"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5C4033]/7 text-[#5C4033] transition-all hover:bg-[#5C4033] hover:text-white active:scale-95"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#34451F]/7 text-[#34451F] transition-all hover:bg-[#34451F] hover:text-white active:scale-95"
                   >
                     <Mail className="h-4 w-4" />
                   </Link>
@@ -491,7 +491,7 @@ export default function BookingList({
                     href={`tel:${selectedBooking.contacts.country_code ?? ""}${selectedBooking.contacts.phone_no}`}
                     aria-label="Call contact"
                     title="Call"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#5C4033]/7 text-[#5C4033] transition-all hover:bg-[#5C4033] hover:text-white active:scale-95"
+                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#34451F]/7 text-[#34451F] transition-all hover:bg-[#34451F] hover:text-white active:scale-95"
                   >
                     <Phone className="h-4 w-4" />
                   </Link>
@@ -502,25 +502,25 @@ export default function BookingList({
         )}
 
         {selectedBooking.special_requests && (
-          <div className="rounded-2xl border border-[#5C4033]/15 bg-[#5C4033]/5 p-4">
+          <div className="rounded-2xl border border-[#34451F]/15 bg-[#34451F]/5 p-4">
             <div className="mb-2 flex items-center gap-2">
-              <MessageSquareQuote className="h-4 w-4 text-[#5C4033]" />
-              <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Staff instructions</span>
+              <MessageSquareQuote className="h-4 w-4 text-[#34451F]" />
+              <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">Staff instructions</span>
             </div>
-            <p className="text-sm leading-relaxed font-bold text-[#1F1F1A] italic">&ldquo;{selectedBooking.special_requests}&rdquo;</p>
+            <p className="text-sm leading-relaxed font-bold text-[#20231A] italic">&ldquo;{selectedBooking.special_requests}&rdquo;</p>
           </div>
         )}
 
         {selectedBooking.event_id && (
           <Link
             href={`/event-bookings/event/${selectedBooking.event_id}`}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-[#E6DFC8] bg-white px-4 py-3.5 transition-colors hover:bg-[#F7F4EA]"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-[#D8D5C8] bg-white px-4 py-3.5 transition-colors hover:bg-[#F4F1E8]"
           >
             <span className="flex items-center gap-2.5">
-              <CalendarDays className="h-4 w-4 text-[#5C4033]" />
-              <span className="font-black text-xs tracking-wide text-[#5C4033] uppercase">Manage event</span>
+              <CalendarDays className="h-4 w-4 text-[#34451F]" />
+              <span className="font-black text-xs tracking-wide text-[#34451F] uppercase">Manage event</span>
             </span>
-            <ExternalLink className="h-3.5 w-3.5 text-[#5F624F]" />
+            <ExternalLink className="h-3.5 w-3.5 text-[#5E6654]" />
           </Link>
         )}
       </div>
@@ -529,13 +529,13 @@ export default function BookingList({
     const editBody = (
       <div className="animate-in space-y-5 duration-300 fade-in slide-in-from-bottom-2">
         <div className="space-y-2">
-          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Event Date &amp; Session</Label>
+          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Event Date &amp; Session</Label>
           <div className="relative">
             <select
               title="Select Event"
               value={editForm.event_id}
               onChange={e => handleEventChange(e.target.value)}
-              className="h-12 w-full appearance-none rounded-xl border-[1.5px] border-[#E6DFC8] bg-white px-3.5 text-sm font-bold transition-colors outline-none focus:border-[#5C4033]"
+              className="h-12 w-full appearance-none rounded-xl border-[1.5px] border-[#D8D5C8] bg-white px-3.5 text-sm font-bold transition-colors outline-none focus:border-[#34451F]"
             >
               {availableEvents.map(e => (
                 <option key={e.id} value={e.id}>
@@ -543,7 +543,7 @@ export default function BookingList({
                 </option>
               ))}
             </select>
-            <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5F624F]" />
+            <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5E6654]" />
           </div>
           {showEventMoveHint && (
             <Hint tone="blue" icon={<CalendarDays className="h-3.5 w-3.5" />}>Moving event. Table assignment has been reset.</Hint>
@@ -551,30 +551,30 @@ export default function BookingList({
         </div>
 
         <div className="space-y-2">
-          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Group Name</Label>
+          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Group Name</Label>
           <Input
             aria-label="Group Name"
             value={editForm.group_name}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm(prev => ({ ...prev, group_name: e.target.value }))}
-            className="h-12 rounded-xl border-[1.5px] border-[#E6DFC8] bg-white px-3.5 text-base font-bold focus:border-[#5C4033]"
+            className="h-12 rounded-xl border-[1.5px] border-[#D8D5C8] bg-white px-3.5 text-base font-bold focus:border-[#34451F]"
           />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-2">
-            <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Group Size</Label>
+            <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Group Size</Label>
             <Input
               aria-label="Group Size"
               type="number"
               min={1}
               value={editForm.group_size || ""}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleGroupSizeChange(Number(e.target.value) || 0)}
-              className="h-12 rounded-xl border-[1.5px] border-[#E6DFC8] bg-white px-3.5 text-base font-bold focus:border-[#5C4033]"
+              className="h-12 rounded-xl border-[1.5px] border-[#D8D5C8] bg-white px-3.5 text-base font-bold focus:border-[#34451F]"
             />
           </div>
           {seatingRequired && (
             <div className="space-y-2">
-              <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Table</Label>
+              <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Table</Label>
               <div className="relative">
                 <select
                   title="Select Table"
@@ -582,7 +582,7 @@ export default function BookingList({
                   onChange={e => handleTableChange(e.target.value)}
                   className={cn(
                     "h-12 w-full appearance-none rounded-xl px-3.5 pr-9 text-sm font-bold transition-colors outline-none",
-                    editForm.table_id ? "border-[1.5px] border-[#E6DFC8] bg-white focus:border-[#5C4033]" : "border-[1.5px] border-dashed border-[#E6DFC8] bg-[#F7F4EA]",
+                    editForm.table_id ? "border-[1.5px] border-[#D8D5C8] bg-white focus:border-[#34451F]" : "border-[1.5px] border-dashed border-[#D8D5C8] bg-[#F4F1E8]",
                   )}
                 >
                   <option value="">Unassigned</option>
@@ -592,7 +592,7 @@ export default function BookingList({
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5F624F]" />
+                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5E6654]" />
               </div>
             </div>
           )}
@@ -605,7 +605,7 @@ export default function BookingList({
         )}
 
         <div>
-          <Label className="mb-2 ml-1 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Status</Label>
+          <Label className="mb-2 ml-1 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Status</Label>
           <div className="grid grid-cols-2 gap-2">
             {["confirmed", "waitlisted", "pending", "cancelled"].map(s => {
               const st = statusTheme[s];
@@ -617,7 +617,7 @@ export default function BookingList({
                   onClick={() => handleStatusChangeInEdit(s)}
                   className={cn(
                     "flex h-12 items-center gap-2 rounded-xl border-2 px-3 font-black text-[11px] tracking-wide uppercase transition-all",
-                    active ? cn(st.bg, st.text, st.cardBorder) : "border-[#E6DFC8] bg-white text-[#5F624F]",
+                    active ? cn(st.bg, st.text, st.cardBorder) : "border-[#D8D5C8] bg-white text-[#5E6654]",
                   )}
                 >
                   <span className={cn("h-2.5 w-2.5 rounded-full", st.dot)} />
@@ -634,20 +634,20 @@ export default function BookingList({
         </div>
 
         <div className="space-y-2">
-          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Special Requests</Label>
+          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Special Requests</Label>
           <Textarea
             aria-label="Special Requests"
             value={editForm.special_requests}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({ ...prev, special_requests: e.target.value }))}
             placeholder="Dietary needs, table preference, occasion…"
-            className="min-h-28 resize-none rounded-xl border-[1.5px] border-[#E6DFC8] bg-white p-3.5 text-sm font-medium focus:border-[#5C4033]"
+            className="min-h-28 resize-none rounded-xl border-[1.5px] border-[#D8D5C8] bg-white p-3.5 text-sm font-medium focus:border-[#34451F]"
           />
         </div>
       </div>
     );
 
     const footer = isEditing ? null : (
-      <div className="shrink-0 border-t border-[#E6DFC8] bg-white/90 px-5 py-4 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md sm:px-6">
+      <div className="shrink-0 border-t border-[#D8D5C8] bg-white/90 px-5 py-4 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md sm:px-6">
         <div className="grid grid-cols-[auto_1fr] gap-3">
           <Button
             variant="secondary"
@@ -661,14 +661,14 @@ export default function BookingList({
               });
               if (ok) handleDeleteBooking(selectedBooking.id);
             }}
-            className="h-12 rounded-xl px-5 font-black text-[11px] tracking-wide text-[#5C4033] uppercase hover:bg-red-50! hover:text-red-600!"
+            className="h-12 rounded-xl px-5 font-black text-[11px] tracking-wide text-[#34451F] uppercase hover:bg-red-50! hover:text-red-600!"
           >
             <Trash2 className="mr-1.5 h-4 w-4" />
             Delete
           </Button>
           <Button
             onClick={handleEnterEditMode}
-            className="h-12 rounded-xl bg-[#B45309] font-black text-xs tracking-widest text-white uppercase hover:bg-[#B45309]/85"
+            className="h-12 rounded-xl border border-[#34451F] font-black text-xs tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8]"
           >
             <Pencil className="mr-2 h-4 w-4" /> Edit
           </Button>
@@ -715,7 +715,7 @@ export default function BookingList({
             {listItems}
           </div>
           <aside
-            className="h-full min-h-0 self-stretch overflow-hidden rounded-3xl border-2 border-[#5C4033]/15 shadow-xl"
+            className="h-full min-h-0 self-stretch overflow-hidden rounded-3xl border-2 border-[#34451F]/15 shadow-xl"
           >
             {renderPanel("inline")}
           </aside>
@@ -727,7 +727,7 @@ export default function BookingList({
             <SheetContent
               side="bottom"
               onOpenAutoFocus={e => e.preventDefault()}
-              className="flex h-[88vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none"
+              className="flex h-[88vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none"
             >
               {renderPanel("bottom")}
             </SheetContent>
@@ -736,7 +736,7 @@ export default function BookingList({
       )}
 
       {isPending && (
-        <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#5C4033] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
+        <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#34451F] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
           <Loader2 className="h-4 w-4 animate-spin" /> Syncing with DB...
         </div>
       )}
@@ -772,8 +772,8 @@ function RefinedCard({
       className={cn(
         "flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all active:scale-[0.99]",
         selected
-          ? "border-2 border-[#B45309] bg-[#B45309]/4 shadow-lg ring-2 ring-[#B45309]/20"
-          : "border border-[#E6DFC8] bg-white shadow-sm",
+          ? "border-2 border-[#34451F] bg-[#9A5B00]/4 shadow-lg ring-2 ring-[#9A5B00]/20"
+          : "border border-[#D8D5C8] bg-white shadow-sm",
       )}
     >
       <div className={cn("w-1 shrink-0 self-stretch rounded-full", theme.dot)} />
@@ -790,15 +790,15 @@ function RefinedCard({
       <div className="min-w-0 flex-1">
         {showDate && (
           <div className="mb-1 hidden min-w-0 items-center gap-1.5 sm:flex">
-            <CalendarDays className="h-3 w-3 shrink-0 text-[#5F624F]/55" />
-            <span className="truncate font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+            <CalendarDays className="h-3 w-3 shrink-0 text-[#5E6654]/55" />
+            <span className="truncate font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
               {booking.events?.event_title || "Untitled Event"}
               {eventTime ? ` · ${eventTime}` : ""}
             </span>
           </div>
         )}
         <div className="flex min-w-0 items-center gap-1.5">
-          <h4 className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">{booking.group_name || "Guest Team"}</h4>
+          <h4 className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">{booking.group_name || "Guest Team"}</h4>
           {booking.special_requests && (
             <span title="Has staff instructions" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-amber-50 text-amber-700">
               <Star className="h-3 w-3 fill-current" />
@@ -806,18 +806,18 @@ function RefinedCard({
           )}
         </div>
         <div className="mt-1.5 flex items-center justify-between gap-2">
-          <span className="truncate text-xs font-semibold text-[#5F624F]">{booking.contacts?.full_name}</span>
+          <span className="truncate text-xs font-semibold text-[#5E6654]">{booking.contacts?.full_name}</span>
           <div className="flex shrink-0 items-center gap-2">
             {seatingRequired && <TableChip name={table?.tables_name} />}
-            <span className="inline-flex items-center gap-1 font-black text-sm text-[#1F1F1A] tabular-nums">
-              <Users className="h-3.5 w-3.5 text-[#5F624F]/55" />
+            <span className="inline-flex items-center gap-1 font-black text-sm text-[#20231A] tabular-nums">
+              <Users className="h-3.5 w-3.5 text-[#5E6654]/55" />
               {booking.group_size}
-              {seatingRequired && capacity ? <span className="text-[#5F624F]/70">/{capacity}</span> : null}
+              {seatingRequired && capacity ? <span className="text-[#5E6654]/70">/{capacity}</span> : null}
             </span>
           </div>
         </div>
       </div>
-      <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+      <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
     </button>
   );
 }
@@ -825,13 +825,13 @@ function RefinedCard({
 function TableChip({ name }: { name?: string | null }) {
   if (!name) {
     return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-dashed border-[#E6DFC8] bg-[#F7F4EA] px-2 py-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+      <span className="inline-flex items-center gap-1 rounded-md border border-dashed border-[#D8D5C8] bg-[#F4F1E8] px-2 py-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
         <TableIcon className="h-3 w-3" /> No table
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-[#5C4033]/7 px-2 py-0.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+    <span className="inline-flex items-center gap-1 rounded-md bg-[#34451F]/7 px-2 py-0.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
       <TableIcon className="h-3 w-3" /> {name.replace("Table ", "T")}
     </span>
   );
@@ -839,28 +839,28 @@ function TableChip({ name }: { name?: string | null }) {
 
 function EmptyList() {
   return (
-    <div className="rounded-2xl border border-[#E6DFC8] bg-white p-10 text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F7F4EA] text-[#5F624F]">
+    <div className="rounded-2xl border border-[#D8D5C8] bg-white p-10 text-center">
+      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F4F1E8] text-[#5E6654]">
         <CalendarDays className="h-5 w-5" />
       </div>
-      <p className="font-black text-sm tracking-tight text-[#1F1F1A] uppercase">No bookings match</p>
-      <p className="mt-1 text-xs text-[#5F624F]">Try clearing a filter or the search.</p>
+      <p className="font-black text-sm tracking-tight text-[#20231A] uppercase">No bookings match</p>
+      <p className="mt-1 text-xs text-[#5E6654]">Try clearing a filter or the search.</p>
     </div>
   );
 }
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="mb-2 font-black text-[10px] tracking-[0.2em] text-[#5F624F]/70 uppercase">{children}</p>;
+  return <p className="mb-2 font-black text-[10px] tracking-[0.2em] text-[#5E6654]/70 uppercase">{children}</p>;
 }
 
 function Fact({ icon, label, value, small, accent }: { icon: React.ReactNode; label: string; value: string; small?: boolean; accent?: boolean }) {
   return (
-    <div className="rounded-2xl border border-[#E6DFC8] bg-white p-3.5">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[#5F624F]">
+    <div className="rounded-2xl border border-[#D8D5C8] bg-white p-3.5">
+      <div className="mb-1.5 flex items-center gap-1.5 text-[#5E6654]">
         <span className="opacity-70">{icon}</span>
         <span className="font-black text-[9.5px] tracking-wide uppercase">{label}</span>
       </div>
-      <p className={cn("font-black leading-tight", small ? "text-xs" : "text-sm", accent ? "text-[#C8956D]" : "text-[#1F1F1A]")}>{value}</p>
+      <p className={cn("font-black leading-tight", small ? "text-xs" : "text-sm", accent ? "text-[#C8956D]" : "text-[#20231A]")}>{value}</p>
     </div>
   );
 }
@@ -869,10 +869,10 @@ function PayBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
     Paid: "bg-green-50 text-green-700",
     "Part-paid": "bg-amber-50 text-amber-700",
-    Unpaid: "bg-[#F7F4EA] text-[#5F624F]",
+    Unpaid: "bg-[#F4F1E8] text-[#5E6654]",
     Refunded: "bg-red-50 text-red-700",
   };
-  const cls = map[status] || "bg-[#F7F4EA] text-[#5F624F]";
+  const cls = map[status] || "bg-[#F4F1E8] text-[#5E6654]";
   return <span className={cn("rounded-full px-3 py-1.5 font-black text-[10px] tracking-wide uppercase", cls)}>{status}</span>;
 }
 

@@ -14,9 +14,9 @@ export default function SectionLabel({
   return (
     <div className="flex items-center gap-2 px-1">
       <Icon
-        className={cn("h-4 w-4", highlight ? "text-red-600" : "text-[#5F624F]")}
+        className={cn("h-4 w-4", highlight ? "text-red-600" : "text-[#5E6654]")}
       />
-      <h2 className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
+      <h2 className="font-black text-[11px] tracking-wide text-[#5E6654] uppercase">
         {label}
       </h2>
       {badge && (

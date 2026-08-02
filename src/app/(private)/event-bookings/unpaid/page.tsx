@@ -167,52 +167,52 @@ export default async function UnpaidBookingsPage() {
 
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="font-black text-xl tracking-tight text-[#1F1F1A] uppercase">Unpaid Bookings</h2>
-            <p className="mt-0.5 text-xs text-[#5F624F]">
+            <h2 className="font-black text-xl tracking-tight text-[#20231A] uppercase">Unpaid Bookings</h2>
+            <p className="mt-0.5 text-xs text-[#5E6654]">
               Confirmed bookings with an outstanding balance on active events, grouped by event.
             </p>
           </div>
         </div>
 
-        <div className="flex items-stretch gap-3 rounded-2xl border border-[#E6DFC8] bg-white p-3 shadow-sm">
+        <div className="flex items-stretch gap-3 rounded-2xl border border-[#D8D5C8] bg-white p-3 shadow-sm">
           <div className="flex flex-1 flex-col items-center justify-center gap-0.5">
-            <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">Outstanding</span>
-            <span className={cn("font-black text-lg tabular-nums", totalOutstanding > 0 ? "text-[#b45309]" : "text-[#5F624F]")}>
+            <span className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase opacity-60">Outstanding</span>
+            <span className={cn("font-black text-lg tabular-nums", totalOutstanding > 0 ? "text-[#9A5B00]" : "text-[#5E6654]")}>
               £{totalOutstanding.toFixed(2)}
             </span>
           </div>
-          <div className="w-px self-stretch bg-[#E6DFC8]" />
+          <div className="w-px self-stretch bg-[#D8D5C8]" />
           <div className="flex flex-1 flex-col items-center justify-center gap-0.5">
-            <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">Bookings</span>
-            <span className="font-black text-lg text-[#1F1F1A] tabular-nums">{totalBookings}</span>
+            <span className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase opacity-60">Bookings</span>
+            <span className="font-black text-lg text-[#20231A] tabular-nums">{totalBookings}</span>
           </div>
-          <div className="w-px self-stretch bg-[#E6DFC8]" />
+          <div className="w-px self-stretch bg-[#D8D5C8]" />
           <div className="flex flex-1 flex-col items-center justify-center gap-0.5">
-            <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase opacity-60">Events</span>
-            <span className="font-black text-lg text-[#1F1F1A] tabular-nums">{groups.length}</span>
+            <span className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase opacity-60">Events</span>
+            <span className="font-black text-lg text-[#20231A] tabular-nums">{groups.length}</span>
           </div>
         </div>
 
         {groups.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#E6DFC8] bg-white p-10 text-center">
-            <div className="rounded-2xl bg-[#F7F4EA] p-3">
-              <Wallet className="h-6 w-6 text-[#5C4033] opacity-30" />
+          <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-[#D8D5C8] bg-white p-10 text-center">
+            <div className="rounded-2xl bg-[#F4F1E8] p-3">
+              <Wallet className="h-6 w-6 text-[#34451F] opacity-30" />
             </div>
-            <p className="font-black text-sm text-[#1F1F1A]">Nothing outstanding</p>
-            <p className="max-w-64 text-[11px] leading-relaxed text-[#5F624F]">
+            <p className="font-black text-sm text-[#20231A]">Nothing outstanding</p>
+            <p className="max-w-64 text-[11px] leading-relaxed text-[#5E6654]">
               Every confirmed booking on an active event is fully paid.
             </p>
           </div>
         ) : (
           <div className="space-y-4">
             {groups.map((g) => (
-              <section key={g.eventId} className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
+              <section key={g.eventId} className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white shadow-sm">
                 <Link
                   href={g.href}
-                  className="flex items-center gap-3 border-b border-[#E6DFC8] px-4 py-3 transition-colors hover:bg-[#F7F4EA]"
+                  className="flex items-center gap-3 border-b border-[#D8D5C8] px-4 py-3 transition-colors hover:bg-[#F4F1E8]"
                 >
-                  <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-[#F7F4EA]">
-                    <CalendarDays className="h-4 w-4 text-[#5C4033] opacity-60" />
+                  <div className="flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl bg-[#F4F1E8]">
+                    <CalendarDays className="h-4 w-4 text-[#34451F] opacity-60" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
@@ -222,8 +222,8 @@ export default async function UnpaidBookingsPage() {
                         </span>
                       )}
                     </div>
-                    <p className="truncate font-black text-sm leading-tight text-[#1F1F1A]">{g.title}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[11px] font-semibold text-[#5F624F]">
+                    <p className="truncate font-black text-sm leading-tight text-[#20231A]">{g.title}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[11px] font-semibold text-[#5E6654]">
                       <span className="inline-flex items-center gap-1">
                         <CalendarDays className="h-3 w-3" />{formatDate(g.date)}
                       </span>
@@ -235,18 +235,18 @@ export default async function UnpaidBookingsPage() {
                     </div>
                   </div>
                   <div className="flex shrink-0 flex-col items-end gap-0.5">
-                    <span className="font-black text-sm text-[#b45309] tabular-nums">£{g.outstanding.toFixed(2)}</span>
-                    <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">owed</span>
+                    <span className="font-black text-sm text-[#9A5B00] tabular-nums">£{g.outstanding.toFixed(2)}</span>
+                    <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase opacity-60">owed</span>
                   </div>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F] opacity-40" />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654] opacity-40" />
                 </Link>
 
-                <ul className="divide-y divide-[#E6DFC8]/60">
+                <ul className="divide-y divide-[#D8D5C8]/60">
                   {g.bookings.map((bk) => (
                     <li key={bk.id} className="flex items-center gap-3 px-4 py-2.5">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-[13px] font-bold text-[#1F1F1A]">{bk.groupName}</p>
-                        <div className="mt-0.5 flex items-center gap-2.5 text-[11px] font-semibold text-[#5F624F]">
+                        <p className="truncate text-[13px] font-bold text-[#20231A]">{bk.groupName}</p>
+                        <div className="mt-0.5 flex items-center gap-2.5 text-[11px] font-semibold text-[#5E6654]">
                           <span className="inline-flex items-center gap-1">
                             <Users className="h-3 w-3" />{bk.guests}
                           </span>
@@ -255,7 +255,7 @@ export default async function UnpaidBookingsPage() {
                           </span>
                         </div>
                       </div>
-                      <span className="shrink-0 font-black text-[13px] text-[#b45309] tabular-nums">
+                      <span className="shrink-0 font-black text-[13px] text-[#9A5B00] tabular-nums">
                         £{bk.outstanding.toFixed(2)}
                       </span>
                     </li>

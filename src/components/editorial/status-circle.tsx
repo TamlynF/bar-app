@@ -43,10 +43,10 @@ export default function StatusCircle({
         </div>
       </button>
       <div className="flex flex-col items-center leading-none">
-        <span className={cn("font-black text-[10px] tracking-tight uppercase sm:text-[11px]", isActive ? theme.text : "text-[#5F624F]")}>
+        <span className={cn("font-black text-[10px] tracking-tight uppercase sm:text-[11px]", isActive ? theme.text : "text-[#5E6654]")}>
           {label}
         </span>
-        <span className="mt-0.5 text-[9px] font-bold text-[#5F624F] uppercase sm:text-[10px]">
+        <span className="mt-0.5 text-[9px] font-bold text-[#5E6654] uppercase sm:text-[10px]">
           {guestCount} Guests
         </span>
       </div>

@@ -158,12 +158,12 @@ export const statusTheme: Record<
   }
 > = {
   all: {
-    bg: "bg-[#F7F4EA]",
-    text: "text-[#1F1F1A]",
-    border: "border-[#E6DFC8]",
-    dot: "bg-[#5F624F]",
+    bg: "bg-[#F4F1E8]",
+    text: "text-[#20231A]",
+    border: "border-[#D8D5C8]",
+    dot: "bg-[#5E6654]",
     ring: "ring-slate-500/40",
-    cardBorder: "border-[#E6DFC8]",
+    cardBorder: "border-[#D8D5C8]",
     icon: <Music2 className="h-5 w-5" />,
     label: "All",
   },
@@ -234,14 +234,14 @@ export const BAND_TRANSITIONS: Record<
   ],
   offered: [
     { label: "Mark Booked", next: "booked", primary: true, className: "bg-green-600 hover:bg-green-700 text-white" },
-    { label: "Back to Review", next: "reviewing", className: "bg-white hover:bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]" },
+    { label: "Back to Review", next: "reviewing", className: "bg-white hover:bg-[#F4F1E8] text-[#5E6654] border border-[#D8D5C8]" },
     { label: "Decline", next: "declined", className: "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200" },
   ],
   booked: [
     { label: "Decline", next: "declined", className: "bg-red-50 hover:bg-red-100 text-red-700 border border-red-200" },
   ],
   declined: [
-    { label: "Reopen", next: "reviewing", className: "bg-white hover:bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]" },
+    { label: "Reopen", next: "reviewing", className: "bg-white hover:bg-[#F4F1E8] text-[#5E6654] border border-[#D8D5C8]" },
   ],
 };
 
@@ -280,7 +280,7 @@ const SOCIAL_META: Record<string, { icon: React.ElementType; className: string; 
   },
 };
 
-const MARKER_OFF = "text-[#5F624F]/25";
+const MARKER_OFF = "text-[#5E6654]/25";
 
 const SOCIAL_ORDER: (keyof SocialLinks)[] = ["instagram", "facebook", "youtube", "tiktok"];
 
@@ -331,12 +331,12 @@ function StageChip({
       className={cn(
         "flex h-12 shrink-0 items-center gap-2 rounded-full border-2 px-3.5 transition-all sm:h-10",
         tone === "current" && cn(t.bg, t.text, t.border),
-        tone === "past" && "border-[#E6DFC8] bg-white text-[#5F624F]",
-        tone === "future" && "border-transparent text-[#5F624F]/45",
+        tone === "past" && "border-[#D8D5C8] bg-white text-[#5E6654]",
+        tone === "future" && "border-transparent text-[#5E6654]/45",
         interactive
           ? cn(
               "cursor-pointer hover:brightness-95",
-              tone === "future" && "border-dashed border-[#5C4033]/30 text-[#5C4033]"
+              tone === "future" && "border-dashed border-[#34451F]/30 text-[#34451F]"
             )
           : nudges
             ? "cursor-pointer border-dashed border-amber-300 text-amber-600/70 hover:bg-amber-50 hover:text-amber-700"
@@ -348,7 +348,7 @@ function StageChip({
       ) : tone === "past" ? (
         <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" />
       ) : (
-        <span className={cn("h-2 w-2 shrink-0 rounded-full", tone === "current" ? t.dot : "bg-[#E6DFC8]")} />
+        <span className={cn("h-2 w-2 shrink-0 rounded-full", tone === "current" ? t.dot : "bg-[#D8D5C8]")} />
       )}
       <span className="font-black text-[10px] tracking-widest uppercase">{t.label}</span>
     </button>
@@ -428,8 +428,8 @@ function StageStepper({
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-80 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white p-0 sm:w-96">
-            <span className="flex items-center gap-1.5 border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+          <PopoverContent align="start" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0 sm:w-96">
+            <span className="flex items-center gap-1.5 border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
               <MessageSquareQuote className="h-3.5 w-3.5" />
               Decline Reason for Applicant
             </span>
@@ -440,9 +440,9 @@ function StageStepper({
                 onChange={(e) => onDeclineReasonChange(e.target.value)}
                 rows={4}
                 placeholder="The reason given to the band when this was declined..."
-                className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
               />
-              <p className="mt-1.5 text-[10px] leading-snug text-[#5F624F]/70">
+              <p className="mt-1.5 text-[10px] leading-snug text-[#5E6654]/70">
                 Saved when you hit Save Changes.
               </p>
             </div>
@@ -450,7 +450,7 @@ function StageStepper({
         </Popover>
         {exits.map((tr) => (
           <React.Fragment key={tr.next}>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#5F624F]/30" aria-hidden="true" />
+            <ArrowRight className="h-4 w-4 shrink-0 text-[#5E6654]/30" aria-hidden="true" />
             {chip(tr.next, "future")}
           </React.Fragment>
         ))}
@@ -467,7 +467,7 @@ function StageStepper({
         <React.Fragment key={s}>
           {i > 0 && (
             <ArrowRight
-              className={cn("h-4 w-4 shrink-0", i <= idx ? "text-[#5C4033]" : "text-[#5F624F]/30")}
+              className={cn("h-4 w-4 shrink-0", i <= idx ? "text-[#34451F]" : "text-[#5E6654]/30")}
               aria-hidden="true"
             />
           )}
@@ -497,27 +497,27 @@ function StageStepper({
 
 function EmailPreview({ email, to, slotLabel = "Slot" }: { email: BandEmail; to: string; slotLabel?: string }) {
   return (
-    <div className="space-y-1.5 rounded-xl border border-[#E6DFC8] bg-white p-3 text-left">
-      <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">To: {to}</p>
-      <p className="font-black text-xs text-[#1F1F1A]">{email.subject}</p>
-      <p className="text-xs text-[#5F624F]">{email.greeting}</p>
+    <div className="space-y-1.5 rounded-xl border border-[#D8D5C8] bg-white p-3 text-left">
+      <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">To: {to}</p>
+      <p className="font-black text-xs text-[#20231A]">{email.subject}</p>
+      <p className="text-xs text-[#5E6654]">{email.greeting}</p>
       {email.body.map((p, i) => (
-        <p key={i} className="text-xs leading-relaxed text-[#5F624F]">{p}</p>
+        <p key={i} className="text-xs leading-relaxed text-[#5E6654]">{p}</p>
       ))}
       {(email.dateLabel || email.slotLabel) && (
-        <div className="mt-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2">
-          <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{slotLabel}</p>
-          <p className="font-black text-sm text-[#1F1F1A]">{email.slotLabel || email.dateLabel}</p>
+        <div className="mt-1 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2">
+          <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{slotLabel}</p>
+          <p className="font-black text-sm text-[#20231A]">{email.slotLabel || email.dateLabel}</p>
           {!email.slotLabel && email.timeLabel && (
-            <p className="text-xs font-bold text-[#5F624F]">{email.timeLabel}</p>
+            <p className="text-xs font-bold text-[#5E6654]">{email.timeLabel}</p>
           )}
-          {email.feeLabel && <p className="mt-1 text-xs font-bold text-[#5F624F]">{email.feeLabel}</p>}
+          {email.feeLabel && <p className="mt-1 text-xs font-bold text-[#5E6654]">{email.feeLabel}</p>}
         </div>
       )}
       {email.noteLabel && (
-        <div className="mt-1 rounded-lg border-l-4 border-[#5C4033] bg-[#F7F4EA] px-3 py-2">
-          <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Note from our team</p>
-          <p className="text-xs leading-relaxed text-[#1F1F1A]">{email.noteLabel}</p>
+        <div className="mt-1 rounded-lg border-l-4 border-[#34451F] bg-[#F4F1E8] px-3 py-2">
+          <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Note from our team</p>
+          <p className="text-xs leading-relaxed text-[#20231A]">{email.noteLabel}</p>
         </div>
       )}
     </div>
@@ -545,7 +545,7 @@ function EmailWithNote({
   return (
     <div className="space-y-2 text-left">
       <label className="block">
-        <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+        <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
           {label}
         </span>
         <textarea
@@ -556,7 +556,7 @@ function EmailWithNote({
             setNote(e.target.value);
             onNoteChange(e.target.value);
           }}
-          className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-white px-3 py-2 text-xs text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+          className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-white px-3 py-2 text-xs text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
         />
       </label>
       <EmailPreview email={build(note)} to={to} slotLabel={slotLabel} />
@@ -566,11 +566,11 @@ function EmailWithNote({
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+    <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
         {label}
       </span>
-      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "-"}</span>
+      <span className="text-right text-[13px] font-semibold text-[#20231A]">{value || "-"}</span>
     </div>
   );
 }
@@ -597,16 +597,16 @@ function EditRow({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</span>
       {!editable ? (
-        <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{readOnlyValue ?? (value || "-")}</span>
+        <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#20231A]">{readOnlyValue ?? (value || "-")}</span>
       ) : options ? (
         <select
           aria-label={label}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="flex-1 cursor-pointer bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
+          className="flex-1 cursor-pointer bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>{o.label}</option>
@@ -619,7 +619,7 @@ function EditRow({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+          className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
         />
       )}
       {trailing}
@@ -642,11 +642,11 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
+    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
       <div
         className={cn(
-          "flex w-full items-center gap-3 bg-[#E6DFC8] px-4 py-3 sm:px-5",
-          open && "border-b border-[#E6DFC8]"
+          "flex w-full items-center gap-3 bg-[#D8D5C8] px-4 py-3 sm:px-5",
+          open && "border-b border-[#D8D5C8]"
         )}
       >
         <button
@@ -654,7 +654,7 @@ function Section({
           onClick={() => setOpen((o) => !o)}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">{title}</span>
         </button>
         {headerRight}
         <button
@@ -663,7 +663,7 @@ function Section({
           aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
           className="shrink-0 transition-all hover:brightness-95"
         >
-          <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+          <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform duration-200", open && "rotate-180")} />
         </button>
       </div>
       <div className={cn(!open && "hidden")}>{children}</div>
@@ -1340,15 +1340,15 @@ export function BandBookingCard({
     <>
       <div
         className={cn(
-          "relative w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
-          "shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]",
+          "relative w-full overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white",
+          "shadow-sm transition-all hover:bg-[#F4F1E8]/60 active:scale-[0.98]",
           wide && "@container"
         )}
       >
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
-          className="absolute inset-0 z-0 cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#5C4033]/40 focus-visible:ring-inset"
+          className="absolute inset-0 z-0 cursor-pointer rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#34451F]/40 focus-visible:ring-inset"
         >
           <span className="sr-only">Open {request.group_name || request.booker_name}</span>
         </button>
@@ -1414,7 +1414,7 @@ export function BandBookingCard({
           <div className={cn("min-w-0 flex-1", wide && "@2xl:contents")}>
             <p
               className={cn(
-                "truncate pr-11 font-black text-sm tracking-tight text-[#1F1F1A] uppercase",
+                "truncate pr-11 font-black text-sm tracking-tight text-[#20231A] uppercase",
                 wide && "@2xl:min-w-0 @2xl:flex-1 @2xl:pr-0"
               )}
             >
@@ -1423,7 +1423,7 @@ export function BandBookingCard({
 
             <div
               className={cn(
-                "mt-1 flex min-w-0 items-center gap-1.5 text-[#5F624F]",
+                "mt-1 flex min-w-0 items-center gap-1.5 text-[#5E6654]",
                 wide && "@2xl:mt-0 @2xl:w-32 @2xl:shrink-0"
               )}
             >
@@ -1444,7 +1444,7 @@ export function BandBookingCard({
 
             <div
               className={cn(
-                "mt-1 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5F624F]",
+                "mt-1 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5E6654]",
                 wide && "@2xl:contents"
               )}
             >
@@ -1484,12 +1484,12 @@ export function BandBookingCard({
                         "h-4 w-4 transition-colors",
                         bandNoteList.length > 0
                           ? "fill-blue-600 text-blue-600"
-                          : "text-[#5F624F]/30"
+                          : "text-[#5E6654]/30"
                       )}
                       aria-hidden="true"
                     />
                     {bandNoteList.length > 0 && (
-                      <span className="absolute -top-1.5 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#B45309] px-1 font-black text-[8px] text-white tabular-nums ring-2 ring-white">
+                      <span className="absolute -top-1.5 -right-2 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-[#9A5B00] px-1 font-black text-[8px] text-white tabular-nums ring-2 ring-white">
                         {bandNoteList.length}
                       </span>
                     )}
@@ -1504,7 +1504,7 @@ export function BandBookingCard({
             <span
               className={cn(
                 "hidden shrink-0 items-center justify-center gap-1 @2xl:flex @2xl:w-12",
-                videos.length > 0 ? "text-[#5F624F]" : MARKER_OFF
+                videos.length > 0 ? "text-[#5E6654]" : MARKER_OFF
               )}
               title={`${videos.length} video${videos.length === 1 ? "" : "s"} attached`}
             >
@@ -1545,7 +1545,7 @@ export function BandBookingCard({
             <Heart
               className={cn(
                 "h-4 w-4 transition-colors",
-                isFavorite ? "fill-rose-500 text-rose-500" : "text-[#5F624F]/30"
+                isFavorite ? "fill-rose-500 text-rose-500" : "text-[#5E6654]/30"
               )}
               aria-hidden="true"
             />
@@ -1567,14 +1567,14 @@ export function BandBookingCard({
           onEscapeKeyDown={(e) => {
             if (confirmOpen.current) e.preventDefault();
           }}
-          className="left-1/2 flex h-auto max-h-[90vh] w-full max-w-6xl -translate-x-1/2 flex-col rounded-[2.5rem] rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 lg:max-h-[94vh]"
+          className="left-1/2 flex h-auto max-h-[90vh] w-full max-w-6xl -translate-x-1/2 flex-col rounded-[2.5rem] rounded-t-[2.5rem] border-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:bottom-6 lg:max-h-[94vh]"
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#1F1F1A] uppercase">
+                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#20231A] uppercase">
                   {request.group_name || request.booker_name}
-                  <span className="ml-1.5 text-sm font-semibold tracking-wide text-[#5F624F] normal-case italic">
+                  <span className="ml-1.5 text-sm font-semibold tracking-wide text-[#5E6654] normal-case italic">
                     (#Ref: {shortRef})
                   </span>
                 </SheetTitle>
@@ -1590,12 +1590,12 @@ export function BandBookingCard({
                   aria-pressed={isFavorite}
                   aria-label={isFavorite ? "Remove from favourites" : "Mark as favourite"}
                   title={isFavorite ? "Remove from favourites" : "Mark as favourite"}
-                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white transition-colors hover:bg-[#F7F4EA] sm:h-9 sm:w-9"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9"
                 >
                   <Heart
                     className={cn(
                       "h-4 w-4 transition-colors",
-                      isFavorite ? "fill-rose-500 text-rose-500" : "text-[#5F624F]"
+                      isFavorite ? "fill-rose-500 text-rose-500" : "text-[#5E6654]"
                     )}
                   />
                 </button>
@@ -1605,16 +1605,16 @@ export function BandBookingCard({
                     type="button"
                     aria-label={`Band notes (internal): ${bandNoteList.length}`}
                     title="Band notes (internal)"
-                    className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white transition-colors hover:bg-[#F7F4EA] sm:h-9 sm:w-9"
+                    className="relative flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9"
                   >
                     <NotebookPen
                       className={cn(
                         "h-4 w-4 transition-colors",
-                        bandNoteList.length > 0 ? "fill-blue-600 text-blue-600" : "text-[#5F624F]"
+                        bandNoteList.length > 0 ? "fill-blue-600 text-blue-600" : "text-[#5E6654]"
                       )}
                     />
                     {bandNoteList.length > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#B45309] px-1 font-black text-[9px] text-white tabular-nums ring-2 ring-white">
+                      <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#9A5B00] px-1 font-black text-[9px] text-white tabular-nums ring-2 ring-white">
                         {bandNoteList.length}
                       </span>
                     )}
@@ -1627,13 +1627,13 @@ export function BandBookingCard({
                       type="button"
                       aria-label="System information"
                       title="System information"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033] sm:h-9 sm:w-9"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F] sm:h-9 sm:w-9"
                     >
                       <Info className="h-4 w-4" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
-                    <span className="block border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+                  <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
+                    <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
                       System Information
                     </span>
                     <SheetRow
@@ -1644,7 +1644,7 @@ export function BandBookingCard({
                           onClick={handleCopyRef}
                           title={request.id}
                           aria-label={`Copy reference ${request.id}`}
-                          className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] tabular-nums transition-colors hover:text-[#1F1F1A]"
+                          className="group inline-flex items-center gap-1.5 font-bold text-[#34451F] tabular-nums transition-colors hover:text-[#20231A]"
                         >
                           <Hash className="h-3 w-3 shrink-0" />
                           <span>{shortRef}</span>
@@ -1658,7 +1658,7 @@ export function BandBookingCard({
                         eventHref ? (
                           <Link
                             href={eventHref}
-                            className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] hover:underline"
+                            className="group inline-flex items-center gap-1.5 font-bold text-[#34451F] hover:underline"
                           >
                             <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                             <span className="tabular-nums">#{request.event_id}</span>
@@ -1668,8 +1668,8 @@ export function BandBookingCard({
                       }
                     />
                     {(isDeclined || !!declineReason) && (
-                      <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                      <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                           Decline Reason
                         </span>
                         {declineReasonOpen ? (
@@ -1680,23 +1680,23 @@ export function BandBookingCard({
                             autoFocus
                             placeholder="Why was this declined?"
                             onChange={(e) => setAdminNotes(e.target.value)}
-                            className="min-w-0 flex-1 resize-none rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 py-1.5 text-[13px] text-[#1F1F1A] transition-all outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30"
+                            className="min-w-0 flex-1 resize-none rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 py-1.5 text-[13px] text-[#20231A] transition-all outline-none placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30"
                           />
                         ) : (
                           <button
                             type="button"
                             onClick={() => setDeclineReasonOpen(true)}
                             title={declineReason || "Add a reason"}
-                            className="min-w-0 text-right text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:text-[#5C4033]"
+                            className="min-w-0 text-right text-[13px] font-semibold text-[#20231A] transition-colors hover:text-[#34451F]"
                           >
                             {declineReason ? (
                               <span className="italic">
                                 &quot;{declineIsLong ? declineHead : declineReason}
-                                {declineIsLong && <span className="font-black text-[#5C4033] not-italic">…</span>}
+                                {declineIsLong && <span className="font-black text-[#34451F] not-italic">…</span>}
                                 &quot;
                               </span>
                             ) : (
-                              <span className="text-[#5F624F]/50">Add a reason…</span>
+                              <span className="text-[#5E6654]/50">Add a reason…</span>
                             )}
                           </button>
                         )}
@@ -1709,7 +1709,7 @@ export function BandBookingCard({
                 </Popover>
               </div>
             </div>
-            <div className="mt-3 border-t border-[#E6DFC8]" />
+            <div className="mt-3 border-t border-[#D8D5C8]" />
             <StageStepper
               status={status}
               onSelect={handleAction}
@@ -1772,12 +1772,12 @@ export function BandBookingCard({
                 }
               >
                 <EditRow label="Act Name" value={actName} onChange={setActName} editable={editable} placeholder="Act name" />
-                <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                  <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Type / Genre</span>
+                <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                  <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Type / Genre</span>
                   {!editable ? (
-                    <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">
+                    <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#20231A]">
                       {toTitleCase(request.type) || "-"}
-                      <span className="mx-1.5 font-normal text-[#5F624F]/50">/</span>
+                      <span className="mx-1.5 font-normal text-[#5E6654]/50">/</span>
                       {toTitleCase(request.genre) || "-"}
                     </span>
                   ) : (
@@ -1786,20 +1786,20 @@ export function BandBookingCard({
                         aria-label="Type"
                         value={reqType}
                         onChange={(e) => setReqType(e.target.value)}
-                        className="shrink-0 cursor-pointer bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
+                        className="shrink-0 cursor-pointer bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]"
                       >
                         <option value="band">Band</option>
                         <option value="singer">Singer</option>
                         <option value="dj">DJ</option>
                       </select>
-                      <span className="shrink-0 text-[#5F624F]/50">/</span>
+                      <span className="shrink-0 text-[#5E6654]/50">/</span>
                       <input
                         aria-label="Genre"
                         type="text"
                         value={genre}
                         placeholder="Genre"
                         onChange={(e) => setGenre(e.target.value)}
-                        className="field-sizing-content max-w-full min-w-12 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+                        className="field-sizing-content max-w-full min-w-12 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
                       />
                     </div>
                   )}
@@ -1828,11 +1828,11 @@ export function BandBookingCard({
                           "shrink-0 rounded-lg border px-2 py-1 text-[11px] font-bold whitespace-nowrap transition-all",
                           locked
                             ? isSelected
-                              ? "border-[#1B4332]/30 bg-[#1B4332]/10 text-[#1B4332]/80"
-                              : "border-[#E6DFC8] bg-[#E6DFC8]/40 text-[#5F624F]/60"
+                              ? "border-[#34451F]/30 bg-[#34451F]/10 text-[#34451F]/80"
+                              : "border-[#D8D5C8] bg-[#D8D5C8]/40 text-[#5E6654]/60"
                             : isSelected
-                              ? "border-[#1B4332] bg-[#1B4332] text-white"
-                              : "border-[#5C4033]/25 bg-[#5C4033]/10 text-[#5C4033]",
+                              ? "border-[#34451F] bg-[#34451F] text-white"
+                              : "border-[#34451F]/25 bg-[#34451F]/10 text-[#34451F]",
                           interactive ? "hover:brightness-95" : "cursor-not-allowed"
                         )}
                       >
@@ -1841,13 +1841,13 @@ export function BandBookingCard({
                     );
                   });
                   const toggleClass =
-                    "flex shrink-0 items-center gap-1 rounded-lg border border-[#5C4033]/15 bg-[#5C4033]/8 px-2 py-1 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033]/15 hover:text-[#1F1F1A]";
+                    "flex shrink-0 items-center gap-1 rounded-lg border border-[#34451F]/15 bg-[#34451F]/8 px-2 py-1 font-black text-[10px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#34451F]/15 hover:text-[#20231A]";
                   return (
-                    <div className="border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+                    <div className="border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
                       {canExpand && showAllDates ? (
                         <>
                           <div className="flex items-center justify-between gap-3">
-                            <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                            <span className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                               Preferred Dates
                             </span>
                             <button type="button" onClick={() => setShowAllDates(false)} className={toggleClass}>
@@ -1859,7 +1859,7 @@ export function BandBookingCard({
                         </>
                       ) : (
                         <div className="flex items-center gap-3">
-                          <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                          <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                             Preferred Dates
                           </span>
                           <div className="no-scrollbar ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto">
@@ -1879,11 +1879,11 @@ export function BandBookingCard({
 
 
                 {bookingNote && (
-                  <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                    <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                  <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                    <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                       Notes from Booking
                     </span>
-                    <p className="min-w-0 text-right text-[13px] leading-relaxed font-semibold text-[#1F1F1A] italic">
+                    <p className="min-w-0 text-right text-[13px] leading-relaxed font-semibold text-[#20231A] italic">
                       &quot;{noteExpanded ? bookingNote : noteHead}{noteIsLong && !noteExpanded && (
                         <button
                           type="button"
@@ -1891,7 +1891,7 @@ export function BandBookingCard({
                           title="Show the full note"
                           aria-label="Show the full note"
                           aria-expanded={false}
-                          className="px-0.5 font-black text-[#5C4033] not-italic hover:underline"
+                          className="px-0.5 font-black text-[#34451F] not-italic hover:underline"
                         >
                           …
                         </button>
@@ -1901,7 +1901,7 @@ export function BandBookingCard({
                           type="button"
                           onClick={() => setNoteExpanded(false)}
                           aria-expanded={true}
-                          className="ml-1.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase not-italic hover:underline"
+                          className="ml-1.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase not-italic hover:underline"
                         >
                           Less
                         </button>
@@ -1942,8 +1942,8 @@ export function BandBookingCard({
                             title={editable ? `Add ${meta.label} link` : `No ${meta.label} link`}
                             className={cn(
                               pillClass,
-                              "border-dashed border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F]/50",
-                              editable ? "hover:border-[#5C4033]/40 hover:text-[#5C4033]" : "cursor-not-allowed"
+                              "border-dashed border-[#D8D5C8] bg-[#F4F1E8] text-[#5E6654]/50",
+                              editable ? "hover:border-[#34451F]/40 hover:text-[#34451F]" : "cursor-not-allowed"
                             )}
                           >
                             <Icon className="h-3 w-3 shrink-0" />
@@ -1975,8 +1975,8 @@ export function BandBookingCard({
                             title={editable ? "Add Spotify link" : "No Spotify link"}
                             className={cn(
                               pillClass,
-                              "border-dashed border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F]/50",
-                              editable ? "hover:border-[#5C4033]/40 hover:text-[#5C4033]" : "cursor-not-allowed"
+                              "border-dashed border-[#D8D5C8] bg-[#F4F1E8] text-[#5E6654]/50",
+                              editable ? "hover:border-[#34451F]/40 hover:text-[#34451F]" : "cursor-not-allowed"
                             )}
                           >
                             <SiSpotify className="h-3 w-3 shrink-0" />
@@ -1992,13 +1992,13 @@ export function BandBookingCard({
                               type="button"
                               aria-label="Edit social links"
                               title="Edit social links"
-                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
                             >
                               <Pencil className="h-3 w-3" />
                             </button>
                           </PopoverTrigger>
-                          <PopoverContent align="end" className="w-72 rounded-2xl border-2 border-[#E6DFC8] bg-white p-3">
-                            <span className="mb-2 block font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+                          <PopoverContent align="end" className="w-72 rounded-2xl border-2 border-[#D8D5C8] bg-white p-3">
+                            <span className="mb-2 block font-black text-[10px] tracking-wide text-[#34451F] uppercase">
                               Social Links
                             </span>
                             <div className="space-y-2">
@@ -2023,7 +2023,7 @@ export function BandBookingCard({
                                         setSocialLinks((s) => ({ ...s, [key]: e.target.value }))
                                       }
                                       placeholder={`${meta.label} URL`}
-                                      className="min-w-0 flex-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 py-1.5 text-xs text-[#1F1F1A] transition-all outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30"
+                                      className="min-w-0 flex-1 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 py-1.5 text-xs text-[#20231A] transition-all outline-none placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30"
                                     />
                                   </label>
                                 );
@@ -2038,11 +2038,11 @@ export function BandBookingCard({
                                   value={spotifyUrl}
                                   onChange={(e) => setSpotifyUrl(e.target.value)}
                                   placeholder="Spotify URL"
-                                  className="min-w-0 flex-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 py-1.5 text-xs text-[#1F1F1A] transition-all outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30"
+                                  className="min-w-0 flex-1 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 py-1.5 text-xs text-[#20231A] transition-all outline-none placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30"
                                 />
                               </label>
                             </div>
-                            <p className="mt-2 text-[10px] leading-snug text-[#5F624F]/70">
+                            <p className="mt-2 text-[10px] leading-snug text-[#5E6654]/70">
                               Applied when you hit Save Changes.
                             </p>
                           </PopoverContent>
@@ -2052,7 +2052,7 @@ export function BandBookingCard({
                   )}
 
                   {(sheetVideos.length > 0 || editable) && (
-                    <div className={cn(showSocials && "border-t border-[#E6DFC8]")}>
+                    <div className={cn(showSocials && "border-t border-[#D8D5C8]")}>
                       {(sheetVideos.length > 0 || (editable && sheetVideos.length < MAX_VIDEOS)) && (
                         <div
                           className={cn(
@@ -2065,7 +2065,7 @@ export function BandBookingCard({
                               {v.url ? (
                                 <VideoFacade url={v.url} title={`Video ${i + 1}`} />
                               ) : (
-                                <div className="relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#1F1F1A]">
+                                <div className="relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#20231A]">
                                   {v.previewUrl && (
                                     <video
                                       src={`${v.previewUrl}#t=0.1`}
@@ -2102,14 +2102,14 @@ export function BandBookingCard({
                                     value={v.description}
                                     onChange={(e) => updateSheetVideo(v.id, { description: e.target.value })}
                                     placeholder="Add a description…"
-                                    className="min-w-0 flex-1 rounded-lg border border-[#E6DFC8] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#1F1F1A] transition-all outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30"
+                                    className="min-w-0 flex-1 rounded-lg border border-[#D8D5C8] bg-white px-2.5 py-1.5 text-[11px] font-medium text-[#20231A] transition-all outline-none placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30"
                                   />
                                   <button
                                     type="button"
                                     onClick={() => removeSheetVideo(v.id)}
                                     aria-label={`Remove video ${i + 1}`}
                                     title="Remove video"
-                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-white text-[#5F624F]/60 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
+                                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white text-[#5E6654]/60 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-600"
                                   >
                                     <X className="h-3.5 w-3.5" />
                                   </button>
@@ -2117,7 +2117,7 @@ export function BandBookingCard({
                               ) : (
                                 <p
                                   title={v.description || undefined}
-                                  className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5F624F]"
+                                  className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5E6654]"
                                 >
                                   {v.description || `Video ${i + 1}`}
                                 </p>
@@ -2141,7 +2141,7 @@ export function BandBookingCard({
                                 onClick={() => videoInputRef.current?.click()}
                                 title={sheetVideos.length === 0 ? "Upload videos" : "Add another video"}
                                 aria-label={sheetVideos.length === 0 ? "Upload videos" : "Add another video"}
-                                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                                className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
                               >
                                 <Upload className="h-4 w-4" />
                               </button>
@@ -2151,7 +2151,7 @@ export function BandBookingCard({
                       )}
 
                       {editable && sheetVideos.length < MAX_VIDEOS && (
-                        <p className="px-4 pt-2 pb-3 text-[10px] leading-snug text-[#5F624F]/70 sm:px-5">
+                        <p className="px-4 pt-2 pb-3 text-[10px] leading-snug text-[#5E6654]/70 sm:px-5">
                           MP4, WebM or MOV - max 250 MB each. Applied when you hit Save Changes.{" "}
                           {sheetVideos.length}/{MAX_VIDEOS}
                         </p>
@@ -2182,7 +2182,7 @@ export function BandBookingCard({
                             href={`mailto:${email.trim()}`}
                             title={`Email ${email.trim()}`}
                             aria-label={`Email ${email.trim()}`}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
                           >
                             <Mail className="h-3.5 w-3.5" />
                           </a>
@@ -2202,7 +2202,7 @@ export function BandBookingCard({
                             href={`tel:${phone.replace(/\s+/g, "")}`}
                             title={`Call ${phone.trim()}`}
                             aria-label={`Call ${phone.trim()}`}
-                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
                           >
                             <Phone className="h-3.5 w-3.5" />
                           </a>
@@ -2215,7 +2215,7 @@ export function BandBookingCard({
                   type="button"
                   onClick={() => setShowContactDetails((v) => !v)}
                   aria-expanded={showContactDetails}
-                  className="flex w-full items-center justify-center gap-1 border-t border-[#E6DFC8] bg-[#F7F4EA] px-4 py-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#1F1F1A] sm:px-5"
+                  className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F4F1E8] px-4 py-1.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#20231A] sm:px-5"
                 >
                   {showContactDetails ? "View less" : "View more"}
                   <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showContactDetails && "rotate-180")} />
@@ -2234,11 +2234,11 @@ export function BandBookingCard({
                     ) : undefined
                   }
                 >
-                  <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Amount</span>
+                  <div className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Amount</span>
                     {editable ? (
                       <div className="flex flex-1 items-center justify-end gap-1">
-                        <span className="text-[13px] font-semibold text-[#5F624F]">£</span>
+                        <span className="text-[13px] font-semibold text-[#5E6654]">£</span>
                         <input
                           aria-label="Amount"
                           type="number"
@@ -2247,12 +2247,12 @@ export function BandBookingCard({
                           placeholder="0.00"
                           value={paymentAmount}
                           onChange={(e) => setPaymentAmount(e.target.value)}
-                          className="w-24 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+                          className="w-24 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
                         />
                       </div>
                     ) : (
-                      <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#1F1F1A]">
-                        <CreditCard className="h-3.5 w-3.5 text-[#5F624F] opacity-50" />
+                      <span className="flex items-center gap-1.5 text-[13px] font-semibold text-[#20231A]">
+                        <CreditCard className="h-3.5 w-3.5 text-[#5E6654] opacity-50" />
                         £{(request.payment_amount ?? 0).toFixed(2)}
                       </span>
                     )}
@@ -2261,11 +2261,11 @@ export function BandBookingCard({
                     <>
                       {showBankDetails && (
                         <>
-                          <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                            <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Paid</span>
+                          <div className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                            <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Paid</span>
                             {editable ? (
                               <div className="flex flex-1 items-center justify-end gap-1">
-                                <span className="text-[13px] font-semibold text-[#5F624F]">£</span>
+                                <span className="text-[13px] font-semibold text-[#5E6654]">£</span>
                                 <input
                                   aria-label="Paid"
                                   type="number"
@@ -2274,11 +2274,11 @@ export function BandBookingCard({
                                   placeholder="0.00"
                                   value={paidAmount}
                                   onChange={(e) => setPaidAmount(e.target.value)}
-                                  className="w-24 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+                                  className="w-24 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
                                 />
                               </div>
                             ) : (
-                              <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">£{(request.paid_amount ?? 0).toFixed(2)}</span>
+                              <span className="text-right text-[13px] font-semibold text-[#20231A]">£{(request.paid_amount ?? 0).toFixed(2)}</span>
                             )}
                           </div>
                           <EditRow label="Account Name" value={bankAccountName} onChange={setBankAccountName} editable={editable} placeholder="-" />
@@ -2291,7 +2291,7 @@ export function BandBookingCard({
                         type="button"
                         onClick={() => setShowBankDetails((v) => !v)}
                         aria-expanded={showBankDetails}
-                        className="flex w-full items-center justify-center gap-1 border-t border-[#E6DFC8] bg-[#F7F4EA] px-4 py-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#1F1F1A] sm:px-5"
+                        className="flex w-full items-center justify-center gap-1 border-t border-[#D8D5C8] bg-[#F4F1E8] px-4 py-1.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors last:border-0 hover:bg-[#EFEADD] hover:text-[#20231A] sm:px-5"
                       >
                         {showBankDetails ? "View less" : "View more"}
                         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", showBankDetails && "rotate-180")} />
@@ -2310,9 +2310,9 @@ export function BandBookingCard({
                       onChange={(e) => setAdminNotes(e.target.value)}
                       rows={4}
                       placeholder="The reason given to the band when this was declined..."
-                      className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                      className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
                     />
-                    <p className="mt-1.5 text-[10px] leading-snug text-[#5F624F]/70">
+                    <p className="mt-1.5 text-[10px] leading-snug text-[#5E6654]/70">
                       Saved when you hit Save Changes.
                     </p>
                   </div>
@@ -2324,7 +2324,7 @@ export function BandBookingCard({
             <div className="h-4" />
           </div>
 
-          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#5C4033]/15 bg-[#E6DFC8] px-4 py-3 pb-6 sm:px-6">
+          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
             <div className="space-y-2">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
                   <div
@@ -2336,8 +2336,8 @@ export function BandBookingCard({
                         : slotWarning
                           ? "border-l-4 border-amber-300 border-l-amber-400 bg-amber-50"
                           : slotIsSet
-                            ? "border-[#1B4332]/30 bg-[#F7F4EA] shadow-[#1B4332]/25"
-                            : "border-[#5C4033]/25 bg-[#F7F4EA]",
+                            ? "border-[#34451F]/30 bg-[#F4F1E8] shadow-[#34451F]/25"
+                            : "border-[#34451F]/25 bg-[#F4F1E8]",
                       slotFlash && "ring-2 ring-amber-400/70"
                     )}
                   >
@@ -2345,7 +2345,7 @@ export function BandBookingCard({
                     <span
                       className={cn(
                         "flex shrink-0 flex-wrap items-center gap-2 font-black text-[11px] tracking-wide uppercase",
-                        slotIsSet ? "text-[#1B4332]" : "text-[#5C4033]"
+                        slotIsSet ? "text-[#34451F]" : "text-[#34451F]"
                       )}
                     >
                       Selected Date &amp; Time
@@ -2356,21 +2356,21 @@ export function BandBookingCard({
                           <button
                             type="button"
                             className={cn(
-                              "flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:border-[#5C4033]/30",
+                              "flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#20231A] transition-colors hover:border-[#34451F]/30",
                               !selectedDate && slotWarning
                                 ? "border-amber-300"
                                 : slotIsSet
-                                  ? "border-[#1B4332]"
-                                  : "border-[#E6DFC8]"
+                                  ? "border-[#34451F]"
+                                  : "border-[#D8D5C8]"
                             )}
                           >
                             {selectedDate
                               ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
                               : "Pick a date"}
-                            <CalendarDays className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
+                            <CalendarDays className="h-4 w-4 shrink-0 text-[#5E6654]/60" />
                           </button>
                         </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
+                        <PopoverContent align="start" className="w-auto rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
                           <Calendar
                             mode="single"
                             selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
@@ -2387,7 +2387,7 @@ export function BandBookingCard({
                                 applyDate("");
                                 setDatePickerOpen(false);
                               }}
-                              className="flex w-full items-center justify-center gap-1.5 border-t border-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                              className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
                             >
                               <X className="h-3.5 w-3.5" />
                               Clear date
@@ -2401,8 +2401,8 @@ export function BandBookingCard({
                           (!selectedStartTime || !selectedEndTime) && slotWarning
                             ? "border-amber-300"
                             : slotIsSet
-                              ? "border-[#1B4332]"
-                              : "border-[#E6DFC8]"
+                              ? "border-[#34451F]"
+                              : "border-[#D8D5C8]"
                         )}
                       >
                         <input
@@ -2411,9 +2411,9 @@ export function BandBookingCard({
                           aria-label="Performance start time"
                           value={selectedStartTime}
                           onChange={(e) => applyStart(e.target.value)}
-                          className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none"
+                          className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
                         />
-                        <span className="text-xs text-[#5F624F]/50">-</span>
+                        <span className="text-xs text-[#5E6654]/50">-</span>
                         <input
                           type="time"
                           aria-label="Performance end time"
@@ -2422,7 +2422,7 @@ export function BandBookingCard({
                             setSelectedEndTime(e.target.value);
                             setClashes([]);
                           }}
-                          className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none"
+                          className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
                         />
                         {(selectedStartTime || selectedEndTime) && (
                           <button
@@ -2430,7 +2430,7 @@ export function BandBookingCard({
                             onClick={() => applyStart("")}
                             aria-label="Clear performance times"
                             title="Clear times"
-                            className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5F624F]/50 transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                            className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5E6654]/50 transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -2448,7 +2448,7 @@ export function BandBookingCard({
                         type="button"
                         onClick={handleCancel}
                         disabled={isPending}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial sm:px-6"
+                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#D8D5C8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex-initial sm:px-6"
                       >
                         <X className="h-3.5 w-3.5 shrink-0" />
                         Close
@@ -2460,7 +2460,7 @@ export function BandBookingCard({
                           onClick={handleCancel}
                           disabled={isPending}
                           title="Discard changes"
-                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial sm:px-6"
+                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#D8D5C8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex-initial sm:px-6"
                         >
                           <Undo2 className="h-3.5 w-3.5 shrink-0" />
                           Cancel
@@ -2476,7 +2476,7 @@ export function BandBookingCard({
                                 ? "Wait for videos to finish uploading."
                                 : undefined
                           }
-                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-6"
+                          className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#34451F] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#283719] active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-6"
                         >
                           {isPending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Save className="h-3.5 w-3.5 shrink-0" />}
                           Save

@@ -46,7 +46,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
     <>
       {videos.length > 0 && (
         <div>
-          <p className="mb-2 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+          <p className="mb-2 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
             Performance Videos
           </p>
           <div className="flex flex-row flex-wrap gap-2">
@@ -58,9 +58,9 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
                   key={i}
                   type="button"
                   onClick={() => setActiveVideo(url)}
-                  className="group relative flex h-20 w-28 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl bg-[#5C4033] transition-transform active:scale-95"
+                  className="group relative flex h-20 w-28 shrink-0 flex-col items-center justify-center gap-1 overflow-hidden rounded-xl bg-[#34451F] transition-transform active:scale-95"
                 >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#C8956D]/40 bg-[#5C4033]/15 transition-colors group-hover:bg-[#C8956D]/30">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full border border-[#C8956D]/40 bg-[#34451F]/15 transition-colors group-hover:bg-[#C8956D]/30">
                     <Play className="h-3.5 w-3.5 translate-x-px fill-white text-white" />
                   </div>
                   <span className="font-black text-[9px] tracking-wide text-white/70 uppercase">
@@ -73,7 +73,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-20 w-28 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA]"
+                  className="flex h-20 w-28 shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8]"
                 >
                   <Link2 className="h-4 w-4" />
                   <span className="font-black text-[9px] tracking-wide uppercase">
@@ -87,9 +87,9 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
       )}
 
       {request.status !== "declined" && (
-        <div className="space-y-3 border-t border-[#E6DFC8] pt-4">
+        <div className="space-y-3 border-t border-[#D8D5C8] pt-4">
           <div>
-            <label className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+            <label className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
               Note to Applicant (optional)
             </label>
             <textarea
@@ -97,7 +97,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
               onChange={(e) => setAdminNotes(e.target.value)}
               placeholder="Add a message to include in the offer / outcome email…"
               rows={3}
-              className="w-full resize-none rounded-2xl border border-[#E6DFC8] bg-white px-4 py-3 text-sm text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+              className="w-full resize-none rounded-2xl border border-[#D8D5C8] bg-white px-4 py-3 text-sm text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
             />
           </div>
 

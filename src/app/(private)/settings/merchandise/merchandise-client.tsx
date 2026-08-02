@@ -225,32 +225,32 @@ export default function MerchandiseClient({
   return (
     <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {initialMerchandise.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
-          <ShoppingBag className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
-          <p className="font-black text-sm text-[#1F1F1A]">No merchandise yet</p>
-          <p className="mt-1 text-[11px] text-[#5F624F]">
+        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
+          <ShoppingBag className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
+          <p className="font-black text-sm text-[#20231A]">No merchandise yet</p>
+          <p className="mt-1 text-[11px] text-[#5E6654]">
             Add your first item to display on the homepage
           </p>
           <button
             type="button"
             onClick={openAdd}
-            className="mt-4 h-8 rounded-lg bg-[#1B4332] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85"
+            className="mt-4 h-8 rounded-lg bg-[#34451F] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#283719]"
           >
             <Plus className="mr-1 inline h-3.5 w-3.5" />
             Create Item
           </button>
         </div>
       ) : (
-        <section className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
-          <div className="flex items-center gap-2 bg-[#F7F4EA] px-4 py-3 sm:px-5">
+        <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
+          <div className="flex items-center gap-2 bg-[#F4F1E8] px-4 py-3 sm:px-5">
             <button
               type="button"
               onClick={() => setIsCollapsed(!isCollapsed)}
               className="min-w-0 flex-1 text-left"
             >
-              <p className="truncate text-[11px] font-bold tracking-wide text-[#5C4033] uppercase">
+              <p className="truncate text-[11px] font-bold tracking-wide text-[#34451F] uppercase">
                 Merchandise{" "}
-                <span className="text-[#5F624F]">
+                <span className="text-[#5E6654]">
                   ({initialMerchandise.length})
                 </span>
               </p>
@@ -258,7 +258,7 @@ export default function MerchandiseClient({
             <button
               type="button"
               onClick={openAdd}
-              className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1B4332] text-white transition-colors hover:bg-[#1B4332]/85 sm:h-7 sm:w-auto sm:px-2.5"
+              className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#34451F] text-white transition-colors hover:bg-[#283719] sm:h-7 sm:w-auto sm:px-2.5"
               title="Add merchandise item"
             >
               <Plus className="h-3.5 w-3.5 shrink-0" />
@@ -274,7 +274,7 @@ export default function MerchandiseClient({
             >
               <ChevronDown
                 className={cn(
-                  "h-4 w-4 text-[#5F624F] transition-transform duration-200",
+                  "h-4 w-4 text-[#5E6654] transition-transform duration-200",
                   !isCollapsed && "rotate-180"
                 )}
               />
@@ -282,18 +282,18 @@ export default function MerchandiseClient({
           </div>
 
           {!isCollapsed && (
-            <div className="divide-y divide-[#E6DFC8]/50">
+            <div className="divide-y divide-[#D8D5C8]/50">
               {initialMerchandise.map((item) => (
                 <div
                   key={item.id}
                   onClick={() => openView(item)}
-                  className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[#F7F4EA]/50 active:scale-[0.99] sm:px-4"
+                  className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-[#F4F1E8]/50 active:scale-[0.99] sm:px-4"
                 >
-                  <span className="w-6 shrink-0 text-center font-black text-xs text-[#5F624F] tabular-nums opacity-60">
+                  <span className="w-6 shrink-0 text-center font-black text-xs text-[#5E6654] tabular-nums opacity-60">
                     {item.display_order}
                   </span>
 
-                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-[#E6DFC8] bg-[#F7F4EA]">
+                  <div className="h-11 w-11 shrink-0 overflow-hidden rounded-xl border border-[#D8D5C8] bg-[#F4F1E8]">
                     {item.image_url ? (
                       /* eslint-disable-next-line @next/next/no-img-element */
                       <img
@@ -303,7 +303,7 @@ export default function MerchandiseClient({
                       />
                     ) : (
                       <div className="flex h-full items-center justify-center">
-                        <ShoppingBag className="h-4 w-4 text-[#5F624F] opacity-30" />
+                        <ShoppingBag className="h-4 w-4 text-[#5E6654] opacity-30" />
                       </div>
                     )}
                   </div>
@@ -313,7 +313,7 @@ export default function MerchandiseClient({
                       <p
                         className={cn(
                           "min-w-0 flex-1 truncate font-black text-sm leading-snug",
-                          item.is_active ? "text-[#1F1F1A]" : "text-[#5F624F]"
+                          item.is_active ? "text-[#20231A]" : "text-[#5E6654]"
                         )}
                       >
                         {item.name}
@@ -329,12 +329,12 @@ export default function MerchandiseClient({
                         {item.is_active ? "Active" : "Inactive"}
                       </span>
                     </div>
-                    <p className="mt-0.5 truncate text-[10px] font-medium text-[#5F624F] tabular-nums">
+                    <p className="mt-0.5 truncate text-[10px] font-medium text-[#5E6654] tabular-nums">
                       {priceLabel(item.price)}
                     </p>
                   </div>
 
-                  <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F] opacity-40" />
+                  <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654] opacity-40" />
                 </div>
               ))}
             </div>
@@ -352,16 +352,16 @@ export default function MerchandiseClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8]
-            bg-[#F7F4EA] p-0 shadow-2xl outline-none
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8]
+            bg-[#F4F1E8] p-0 shadow-2xl outline-none
             sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
-            sm:border-2 sm:border-[#E6DFC8]"
+            sm:border-2 sm:border-[#D8D5C8]"
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase">
+                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#20231A] uppercase">
                   {isAdding
                     ? "New Item"
                     : isEditing
@@ -370,8 +370,8 @@ export default function MerchandiseClient({
                 </SheetTitle>
                 {selected && (
                   <div className="mt-1 flex items-center gap-1.5">
-                    <Hash className="h-3 w-3 text-[#5F624F]" />
-                    <span className="text-xs font-bold tracking-wide text-[#5F624F] uppercase tabular-nums">
+                    <Hash className="h-3 w-3 text-[#5E6654]" />
+                    <span className="text-xs font-bold tracking-wide text-[#5E6654] uppercase tabular-nums">
                       ID: {selected.id}
                     </span>
                   </div>
@@ -383,11 +383,11 @@ export default function MerchandiseClient({
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
             {!showForm && selected && (
               <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
+                <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
                   <DetailCell label="Name" value={selected.name} />
                   {selected.description ? (
-                    <div className="border-b border-[#E6DFC8] px-4 py-3 sm:px-5">
-                      <p className="mb-1.5 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">
+                    <div className="border-b border-[#D8D5C8] px-4 py-3 sm:px-5">
+                      <p className="mb-1.5 text-[10px] font-bold tracking-wide text-[#5E6654] uppercase opacity-60">
                         Description
                       </p>
                       <RichTextContent
@@ -414,10 +414,10 @@ export default function MerchandiseClient({
                 </div>
 
                 {selected.image_url && (
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white p-3">
+                  <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white p-3">
                     <div className="mb-2 flex items-center gap-1.5">
-                      <ImageIcon className="h-3 w-3 text-[#5F624F]" />
-                      <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">
+                      <ImageIcon className="h-3 w-3 text-[#5E6654]" />
+                      <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">
                         Preview
                       </span>
                     </div>
@@ -445,10 +445,10 @@ export default function MerchandiseClient({
                 )}
                 <input type="hidden" name="image_url" value={imageUrl} />
 
-                <div className="space-y-3 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
+                <div className="space-y-3 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white p-4">
                   <div className="flex items-center gap-1.5">
-                    <ImageIcon className="h-3 w-3 text-[#5F624F]" />
-                    <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">
+                    <ImageIcon className="h-3 w-3 text-[#5E6654]" />
+                    <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">
                       Image
                     </span>
                   </div>
@@ -471,16 +471,16 @@ export default function MerchandiseClient({
                       </button>
                     </div>
                   ) : (
-                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E6DFC8] py-8 transition-colors hover:border-[#5C4033] hover:bg-[#F7F4EA]">
+                    <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#D8D5C8] py-8 transition-colors hover:border-[#34451F] hover:bg-[#F4F1E8]">
                       {uploadingImage ? (
-                        <Loader2 className="mb-2 h-8 w-8 animate-spin text-[#5F624F]" />
+                        <Loader2 className="mb-2 h-8 w-8 animate-spin text-[#5E6654]" />
                       ) : (
-                        <Upload className="mb-2 h-8 w-8 text-[#5F624F] opacity-40" />
+                        <Upload className="mb-2 h-8 w-8 text-[#5E6654] opacity-40" />
                       )}
-                      <span className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
+                      <span className="font-black text-[11px] tracking-wide text-[#5E6654] uppercase">
                         {uploadingImage ? "Uploading..." : "Click to upload"}
                       </span>
-                      <span className="mt-1 text-[9px] text-[#5F624F] opacity-60">
+                      <span className="mt-1 text-[9px] text-[#5E6654] opacity-60">
                         JPG, PNG up to 10MB
                       </span>
                       <input
@@ -495,7 +495,7 @@ export default function MerchandiseClient({
                   )}
                 </div>
 
-                <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
+                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
                   <FormRow label="Name" required>
                     <input
                       name="name"
@@ -503,12 +503,12 @@ export default function MerchandiseClient({
                       aria-label="Name"
                       placeholder="e.g. Bar Tee"
                       defaultValue={formDefault?.name ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
                     />
                   </FormRow>
 
                   <div className="px-4 py-3 sm:px-5">
-                    <p className="mb-2 text-[10px] font-bold tracking-wide text-[#5F624F] uppercase opacity-60">
+                    <p className="mb-2 text-[10px] font-bold tracking-wide text-[#5E6654] uppercase opacity-60">
                       Description
                     </p>
                     <RichTextEditor
@@ -527,7 +527,7 @@ export default function MerchandiseClient({
                       aria-label="Price in pounds"
                       placeholder="e.g. 25.00"
                       defaultValue={formDefault?.price ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
                     />
                   </FormRow>
 
@@ -537,7 +537,7 @@ export default function MerchandiseClient({
                       aria-label="Status"
                       value={isActive ? "true" : "false"}
                       onChange={(e) => setIsActive(e.target.value === "true")}
-                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
+                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#20231A] outline-none sm:text-sm"
                     >
                       <option value="true" className="dir-ltr">
                         Active
@@ -559,7 +559,7 @@ export default function MerchandiseClient({
                         aria-label="Position on the homepage"
                         value={position}
                         onChange={(e) => setPosition(Number(e.target.value))}
-                        className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none tabular-nums sm:text-sm"
+                        className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none tabular-nums sm:text-sm"
                       />
                     ) : (
                       <input
@@ -568,13 +568,13 @@ export default function MerchandiseClient({
                         readOnly
                         aria-label="Position on the homepage"
                         value={plan.position}
-                        className="flex-1 cursor-not-allowed bg-transparent text-right font-black text-base text-[#5F624F] outline-none tabular-nums opacity-60 sm:text-sm"
+                        className="flex-1 cursor-not-allowed bg-transparent text-right font-black text-base text-[#5E6654] outline-none tabular-nums opacity-60 sm:text-sm"
                       />
                     )}
                   </FormRow>
 
                   <div className="px-4 pt-0 pb-3 sm:px-5">
-                    <p className="text-[10px] font-medium text-[#5F624F] opacity-60">
+                    <p className="text-[10px] font-medium text-[#5E6654] opacity-60">
                       {isActive
                         ? canChoosePosition
                           ? `Positions run 1 to ${activeCount}. Changing this reorders the others.`
@@ -591,14 +591,14 @@ export default function MerchandiseClient({
             <div className="h-4" />
           </div>
 
-          <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
+          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
+                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
                 >
                   {isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -609,7 +609,7 @@ export default function MerchandiseClient({
                 </Button>
                 <Button
                   onClick={openEdit}
-                  className="h-14 flex-1 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95"
+                  className="h-14 flex-1 rounded-2xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95"
                 >
                   <Pencil className="mr-2 h-4 w-4" />
                   Edit
@@ -628,7 +628,7 @@ export default function MerchandiseClient({
                     else setIsEditing(false);
                   }}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
+                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase"
                 >
                   Cancel
                 </Button>
@@ -641,7 +641,7 @@ export default function MerchandiseClient({
                     ) as HTMLFormElement | null;
                     if (form) form.requestSubmit();
                   }}
-                  className="h-14 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95"
+                  className="h-14 rounded-2xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95"
                 >
                   {isPending ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
@@ -664,16 +664,16 @@ export default function MerchandiseClient({
 
 function ChangeList({ changes }: { changes: ChangeDescription[] }) {
   return (
-    <ul className="divide-y divide-[#E6DFC8] overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
+    <ul className="divide-y divide-[#D8D5C8] overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
       {changes.map((change) => (
         <li
           key={change.id}
           className="flex items-center justify-between gap-3 px-3 py-2"
         >
-          <span className="min-w-0 flex-1 truncate font-black text-xs text-[#1F1F1A]">
+          <span className="min-w-0 flex-1 truncate font-black text-xs text-[#20231A]">
             {change.name}
           </span>
-          <span className="shrink-0 font-black text-[11px] text-[#5F624F] tabular-nums">
+          <span className="shrink-0 font-black text-[11px] text-[#5E6654] tabular-nums">
             {change.from} → {change.to}
           </span>
         </li>
@@ -700,7 +700,7 @@ function FormRow({
         align === "start" ? "items-start" : "items-center"
       )}
     >
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
         <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
           {label}
         </span>
@@ -725,18 +725,18 @@ function DetailCell({
   return (
     <div
       className={cn(
-        "flex gap-2 border-b border-[#E6DFC8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4",
+        "flex gap-2 border-b border-[#D8D5C8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4",
         multiline ? "items-start" : "items-center"
       )}
     >
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
         <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
           {label}
         </span>
       </div>
       <span
         className={cn(
-          "flex-1 text-right font-black text-base leading-snug wrap-break-word text-[#1F1F1A] sm:text-sm",
+          "flex-1 text-right font-black text-base leading-snug wrap-break-word text-[#20231A] sm:text-sm",
           multiline && "text-left whitespace-pre-line"
         )}
       >

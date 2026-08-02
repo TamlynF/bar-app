@@ -6,18 +6,18 @@ import StatCard from "./stat-card";
 import type { VenueSalesData } from "../lib/venue-sales";
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Drinks: "#5C4033",
-  Food: "#B45309",
-  Tickets: "#1B4332",
+  Drinks: "#34451F",
+  Food: "#9A5B00",
+  Tickets: "#34451F",
   Other: "#8A8266",
 };
 
 export function VenueSalesSection({ data }: { data: VenueSalesData }) {
   if (!data.connected) {
     return (
-      <div className="rounded-2xl border border-[#E6DFC8] bg-white p-8 text-center">
-        <p className="font-black text-sm text-[#1F1F1A]">No Square sales yet</p>
-        <p className="mt-1 text-[11px] leading-relaxed font-medium text-[#5F624F]">
+      <div className="rounded-2xl border border-[#D8D5C8] bg-white p-8 text-center">
+        <p className="font-black text-sm text-[#20231A]">No Square sales yet</p>
+        <p className="mt-1 text-[11px] leading-relaxed font-medium text-[#5E6654]">
           Takings appear here once the hourly Square sync has run against live
           sales data. Bar, food and POS sales are shown separately from
           pre-booked booking revenue.
@@ -59,8 +59,8 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
-          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+        <div className="rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm sm:p-5">
+          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
             Takings · last 30 days
           </p>
           <div className="h-44">
@@ -68,41 +68,41 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
               <AreaChart data={daily} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="venue-takings" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#1B4332" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#1B4332" stopOpacity={0} />
+                    <stop offset="0%" stopColor="#34451F" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#34451F" stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <XAxis
                   dataKey="label"
-                  tick={{ fontSize: 9, fill: "#5F624F" }}
+                  tick={{ fontSize: 9, fill: "#5E6654" }}
                   tickLine={false}
                   axisLine={false}
                   interval="preserveStartEnd"
                   minTickGap={24}
                 />
                 <YAxis
-                  tick={{ fontSize: 10, fill: "#5F624F" }}
+                  tick={{ fontSize: 10, fill: "#5E6654" }}
                   tickLine={false}
                   axisLine={false}
                   tickFormatter={(v) => `£${v}`}
                 />
                 <Tooltip
-                  contentStyle={{ borderRadius: 12, border: "1px solid #E6DFC8", fontSize: 12, fontWeight: 700 }}
+                  contentStyle={{ borderRadius: 12, border: "1px solid #D8D5C8", fontSize: 12, fontWeight: 700 }}
                   formatter={(value) => [`£${Number(value ?? 0).toFixed(2)}`, "Takings"]}
                 />
-                <Area type="monotone" dataKey="takings" stroke="#1B4332" strokeWidth={2} fill="url(#venue-takings)" />
+                <Area type="monotone" dataKey="takings" stroke="#34451F" strokeWidth={2} fill="url(#venue-takings)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
-        <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
-          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+        <div className="rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm sm:p-5">
+          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
             Sales by category · this month
           </p>
           {categories.length === 0 ? (
             <div className="flex h-44 items-center justify-center">
-              <p className="font-black text-[9px] tracking-wide text-[#5F624F] uppercase opacity-40">
+              <p className="font-black text-[9px] tracking-wide text-[#5E6654] uppercase opacity-40">
                 No categorised sales yet
               </p>
             </div>
@@ -115,14 +115,14 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
                     type="category"
                     dataKey="category"
                     width={70}
-                    tick={{ fontSize: 10, fill: "#5F624F", fontWeight: 700 }}
+                    tick={{ fontSize: 10, fill: "#5E6654", fontWeight: 700 }}
                     tickLine={false}
                     axisLine={false}
                   />
                   <Tooltip
-                    contentStyle={{ borderRadius: 12, border: "1px solid #E6DFC8", fontSize: 12, fontWeight: 700 }}
+                    contentStyle={{ borderRadius: 12, border: "1px solid #D8D5C8", fontSize: 12, fontWeight: 700 }}
                     formatter={(value) => [`£${Number(value ?? 0).toFixed(2)}`, "Takings"]}
-                    cursor={{ fill: "#F7F4EA" }}
+                    cursor={{ fill: "#F4F1E8" }}
                   />
                   <Bar dataKey="revenue" radius={[0, 8, 8, 0]} barSize={18}>
                     {categories.map((c) => (
@@ -137,16 +137,16 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
       </div>
 
       {byEvent.length > 0 && (
-        <div className="rounded-2xl border border-[#E6DFC8] bg-white p-4 shadow-sm sm:p-5">
-          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+        <div className="rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm sm:p-5">
+          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
             Takings by event night · this month
           </p>
-          <ul className="divide-y divide-[#E6DFC8]">
+          <ul className="divide-y divide-[#D8D5C8]">
             {byEvent.map((e) => (
               <li key={`${e.date}-${e.title}`} className="flex items-center justify-between gap-3 py-2">
                 <div className="min-w-0">
-                  <p className="truncate font-black text-xs text-[#1F1F1A]">{e.title}</p>
-                  <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">
+                  <p className="truncate font-black text-xs text-[#20231A]">{e.title}</p>
+                  <p className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">
                     {new Date(e.date + "T00:00:00").toLocaleDateString("en-GB", {
                       weekday: "short",
                       day: "numeric",
@@ -155,9 +155,9 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-black text-sm text-[#1B4332] tabular-nums">£{e.takings.toFixed(2)}</p>
+                  <p className="font-black text-sm text-[#34451F] tabular-nums">£{e.takings.toFixed(2)}</p>
                   {e.tips > 0 && (
-                    <p className="text-[10px] font-bold text-[#5F624F] tabular-nums">£{e.tips.toFixed(2)} tips</p>
+                    <p className="text-[10px] font-bold text-[#5E6654] tabular-nums">£{e.tips.toFixed(2)} tips</p>
                   )}
                 </div>
               </li>

@@ -314,45 +314,45 @@ export default function MusicActsClient({
   return (
     <div className="max-w-3xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {initialActs.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
-          <Music2 className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
-          <p className="font-black text-sm text-[#1F1F1A]">No music acts yet</p>
-          <p className="mt-1 text-[11px] text-[#5F624F]">Acts appear here automatically from band applications, or add one manually.</p>
-          <button type="button" onClick={openAdd} className="mt-4 h-8 rounded-lg bg-[#1B4332] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#1B4332]/85">
+        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
+          <Music2 className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
+          <p className="font-black text-sm text-[#20231A]">No music acts yet</p>
+          <p className="mt-1 text-[11px] text-[#5E6654]">Acts appear here automatically from band applications, or add one manually.</p>
+          <button type="button" onClick={openAdd} className="mt-4 h-8 rounded-lg bg-[#34451F] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#283719]">
             <Plus className="mr-1 inline h-3.5 w-3.5" /> New Act
           </button>
         </div>
       ) : (
-        <section className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
-          <div className="flex items-center gap-2 bg-[#F7F4EA] px-4 py-3 sm:px-5">
-            <p className="min-w-0 flex-1 truncate text-[11px] font-bold tracking-wide text-[#5C4033] uppercase">
-              Music Acts <span className="text-[#5F624F]">({initialActs.length})</span>
+        <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
+          <div className="flex items-center gap-2 bg-[#F4F1E8] px-4 py-3 sm:px-5">
+            <p className="min-w-0 flex-1 truncate text-[11px] font-bold tracking-wide text-[#34451F] uppercase">
+              Music Acts <span className="text-[#5E6654]">({initialActs.length})</span>
             </p>
-            <button type="button" onClick={openAdd} className="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1B4332] px-2.5 text-white transition-colors hover:bg-[#1B4332]/85" title="Add music act">
+            <button type="button" onClick={openAdd} className="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 text-white transition-colors hover:bg-[#283719]" title="Add music act">
               <Plus className="h-3.5 w-3.5 shrink-0" />
               <span className="font-black text-[10px] tracking-widest uppercase">New</span>
             </button>
           </div>
 
-          <div className="divide-y divide-[#E6DFC8]/60">
+          <div className="divide-y divide-[#D8D5C8]/60">
             {initialActs.map((a) => {
               const c = counts[a.id] ?? { bookings: 0, completed: 0, upcoming: 0 };
               return (
-                <button key={a.id} type="button" onClick={() => openView(a)} className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-[#F7F4EA] sm:px-5">
-                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-[#E6DFC8] bg-[#F7F4EA]">
+                <button key={a.id} type="button" onClick={() => openView(a)} className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-[#F4F1E8] sm:px-5">
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-[#D8D5C8] bg-[#F4F1E8]">
                     {a.cover_image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={a.cover_image_url} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <span className="flex h-full w-full items-center justify-center"><Music2 className="h-5 w-5 text-[#5F624F]/40" /></span>
+                      <span className="flex h-full w-full items-center justify-center"><Music2 className="h-5 w-5 text-[#5E6654]/40" /></span>
                     )}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1.5">
                       {a.is_favorite && <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />}
-                      <span className="truncate font-black text-sm text-[#1F1F1A]">{a.group_name}</span>
+                      <span className="truncate font-black text-sm text-[#20231A]">{a.group_name}</span>
                     </div>
-                    <p className="truncate text-[11px] font-medium text-[#5F624F]">
+                    <p className="truncate text-[11px] font-medium text-[#5E6654]">
                       {[a.type, a.genre].filter(Boolean).join(" · ") || "-"}
                     </p>
                     <div className="mt-1 flex items-center gap-1.5">
@@ -383,16 +383,16 @@ export default function MusicActsClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 sm:border-[#E6DFC8]"
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 sm:border-[#D8D5C8]"
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+            <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#20231A] uppercase">
               {isAdding ? "New Music Act" : isEditing ? "Edit Music Act" : selected?.group_name}
             </SheetTitle>
             {selected && !showForm && (
               <div className="mt-1 flex items-center gap-1.5">
-                <Hash className="h-3 w-3 text-[#5F624F]" />
-                <span className="text-xs font-bold tracking-wide text-[#5F624F] uppercase tabular-nums">ID: {selected.id.slice(0, 8)}</span>
+                <Hash className="h-3 w-3 text-[#5E6654]" />
+                <span className="text-xs font-bold tracking-wide text-[#5E6654] uppercase tabular-nums">ID: {selected.id.slice(0, 8)}</span>
               </div>
             )}
           </div>
@@ -421,23 +421,23 @@ export default function MusicActsClient({
             <div className="h-4" />
           </div>
 
-          <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
+          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50">
+                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />} Delete
                 </Button>
-                <Button onClick={() => openEdit(selected)} className="h-14 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95">
+                <Button onClick={() => openEdit(selected)} className="h-14 rounded-2xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95">
                   <Pencil className="mr-2 h-4 w-4" /> Edit
                 </Button>
               </div>
             )}
             {showForm && (
               <div className="grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else { setIsEditing(false); } }} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else { setIsEditing(false); } }} disabled={isPending} className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                   Cancel
                 </Button>
-                <Button type="button" onClick={handleSave} disabled={isPending || uploadingCover || uploadingImages || uploadingAnyVideo} className="h-14 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95">
+                <Button type="button" onClick={handleSave} disabled={isPending || uploadingCover || uploadingImages || uploadingAnyVideo} className="h-14 rounded-2xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" />Save</>}
                 </Button>
               </div>
@@ -452,8 +452,8 @@ export default function MusicActsClient({
 
 function CountChip({ label, value }: { label: string; value: number }) {
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-[#E6DFC8] bg-[#F7F4EA] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-[#5C4033] uppercase tabular-nums">
-      <span className="text-[#1F1F1A]">{value}</span> {label}
+    <span className="inline-flex items-center gap-1 rounded-md border border-[#D8D5C8] bg-[#F4F1E8] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-[#34451F] uppercase tabular-nums">
+      <span className="text-[#20231A]">{value}</span> {label}
     </span>
   );
 }
@@ -465,7 +465,7 @@ function ViewMode({ act, counts }: { act: MusicActWithContact; counts?: ActCount
   return (
     <div className="animate-in space-y-4 duration-200 fade-in">
       {act.cover_image_url && (
-        <div className="overflow-hidden rounded-2xl border-2 border-[#E6DFC8]">
+        <div className="overflow-hidden rounded-2xl border-2 border-[#D8D5C8]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={act.cover_image_url} alt={act.group_name} className="max-h-60 w-full object-cover" />
         </div>
@@ -475,7 +475,7 @@ function ViewMode({ act, counts }: { act: MusicActWithContact; counts?: ActCount
         <CountChip label="Completed" value={c.completed} />
         <CountChip label="Upcoming" value={c.upcoming} />
       </div>
-      <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
+      <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
         <DetailCell label="Type" value={act.type || "-"} />
         <DetailCell label="Genre" value={act.genre || "-"} />
         <DetailCell label="Introduction" value={act.introduction || "-"} />
@@ -504,7 +504,7 @@ function ViewMode({ act, counts }: { act: MusicActWithContact; counts?: ActCount
             <a href={act.spotify_url} target="_blank" rel="noopener noreferrer" title="Spotify" className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-[#1DB954] text-white"><SiSpotify className="h-4 w-4" /></a>
           )}
           {act.web_url && (
-            <a href={act.web_url} target="_blank" rel="noopener noreferrer" title="Website" className="inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-[#E6DFC8] bg-white px-3 font-black text-[10px] tracking-wide text-[#5C4033] uppercase"><Link2 className="h-3.5 w-3.5" /> Website</a>
+            <a href={act.web_url} target="_blank" rel="noopener noreferrer" title="Website" className="inline-flex h-9 items-center gap-1.5 rounded-full border-2 border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-[#34451F] uppercase"><Link2 className="h-3.5 w-3.5" /> Website</a>
           )}
         </div>
       )}
@@ -513,7 +513,7 @@ function ViewMode({ act, counts }: { act: MusicActWithContact; counts?: ActCount
         <div className="grid grid-cols-3 gap-2">
           {act.image_urls.map((url) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={url} src={url} alt="" className="aspect-square w-full rounded-xl border border-[#E6DFC8] object-cover" />
+            <img key={url} src={url} alt="" className="aspect-square w-full rounded-xl border border-[#D8D5C8] object-cover" />
           ))}
         </div>
       )}
@@ -523,7 +523,7 @@ function ViewMode({ act, counts }: { act: MusicActWithContact; counts?: ActCount
           {videos.map((v, i) => (
             <div key={i} className="min-w-0">
               <VideoFacade url={v.url} title={v.description || `Video ${i + 1}`} />
-              {v.description && <p className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5F624F]">{v.description}</p>}
+              {v.description && <p className="mt-1.5 line-clamp-2 text-[11px] font-medium text-[#5E6654]">{v.description}</p>}
             </div>
           ))}
         </div>
@@ -554,8 +554,8 @@ function FormMode({
 }) {
   return (
     <div className="animate-in space-y-4 duration-200 fade-in">
-      <div className="space-y-3 rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
-        <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Profile picture</p>
+      <div className="space-y-3 rounded-3xl border-2 border-[#D8D5C8] bg-white p-4">
+        <p className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Profile picture</p>
         {form.cover_image_url ? (
           <div className="relative overflow-hidden rounded-xl">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -563,15 +563,15 @@ function FormMode({
             <button type="button" onClick={() => set("cover_image_url", "")} title="Remove cover" className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white hover:bg-black/80"><Trash2 className="h-3.5 w-3.5" /></button>
           </div>
         ) : (
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#E6DFC8] py-8 transition-colors hover:border-[#5C4033] hover:bg-[#F7F4EA]">
-            {uploadingCover ? <Loader2 className="mb-2 h-7 w-7 animate-spin text-[#5F624F]" /> : <Upload className="mb-2 h-7 w-7 text-[#5F624F] opacity-40" />}
-            <span className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">{uploadingCover ? "Uploading..." : "Upload cover"}</span>
+          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#D8D5C8] py-8 transition-colors hover:border-[#34451F] hover:bg-[#F4F1E8]">
+            {uploadingCover ? <Loader2 className="mb-2 h-7 w-7 animate-spin text-[#5E6654]" /> : <Upload className="mb-2 h-7 w-7 text-[#5E6654] opacity-40" />}
+            <span className="font-black text-[11px] tracking-wide text-[#5E6654] uppercase">{uploadingCover ? "Uploading..." : "Upload cover"}</span>
             <input type="file" accept="image/*" className="hidden" onChange={onCoverUpload} disabled={uploadingCover} />
           </label>
         )}
       </div>
 
-      <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
+      <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
         <TextRow label="Group name" required value={form.group_name} onChange={(v) => set("group_name", v)} placeholder="e.g. The Rolling Stones" />
         <TextRow label="Type" value={form.type} onChange={(v) => set("type", v)} placeholder="Band / Singer / DJ" list="music-act-types" />
         <datalist id="music-act-types">{typeOptions.map((t) => <option key={t} value={t} />)}</datalist>
@@ -580,7 +580,7 @@ function FormMode({
 
       <TextAreaCard label="Introduction" value={form.introduction} onChange={(v) => set("introduction", v)} placeholder="A short bio / description of the act…" />
 
-      <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
+      <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
         <TextRow label="Spotify" value={form.spotify_url} onChange={(v) => set("spotify_url", v)} placeholder="https://open.spotify.com/artist/…" type="url" />
         <TextRow label="Website" value={form.web_url} onChange={(v) => set("web_url", v)} placeholder="https://…" type="url" />
         {SOCIAL_META.map(({ key, label }) => (
@@ -588,13 +588,13 @@ function FormMode({
         ))}
       </div>
 
-      <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
+      <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
         <TextRow label="Contact name" value={form.contact_name} onChange={(v) => set("contact_name", v)} placeholder="Booker name" />
         <TextRow label="Email" value={form.contact_email} onChange={(v) => set("contact_email", v)} placeholder="email@example.com" type="email" />
         <TextRow label="Phone" value={form.contact_phone} onChange={(v) => set("contact_phone", v)} placeholder="Phone number" type="tel" />
       </div>
 
-      <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
+      <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
         <TextRow label="Bank name" value={form.bank_account_name} onChange={(v) => set("bank_account_name", v)} placeholder="Account holder" />
         <TextRow label="Account no" value={form.bank_account_no} onChange={(v) => set("bank_account_no", v)} placeholder="12345678" />
         <TextRow label="Sort code" value={form.bank_sort_code} onChange={(v) => set("bank_sort_code", v)} placeholder="12-34-56" />
@@ -603,15 +603,15 @@ function FormMode({
 
       <TextAreaCard label="Internal notes" value={form.internal_notes} onChange={(v) => set("internal_notes", v)} placeholder="Private notes about this act…" />
 
-      <button type="button" onClick={() => set("is_favorite", !form.is_favorite)} className={cn("flex w-full items-center justify-between rounded-3xl border-2 bg-white px-4 py-3.5 transition-colors", form.is_favorite ? "border-amber-300" : "border-[#E6DFC8]")}>
-        <span className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Favourite</span>
-        <Star className={cn("h-5 w-5", form.is_favorite ? "fill-amber-400 text-amber-400" : "text-[#5F624F]/30")} />
+      <button type="button" onClick={() => set("is_favorite", !form.is_favorite)} className={cn("flex w-full items-center justify-between rounded-3xl border-2 bg-white px-4 py-3.5 transition-colors", form.is_favorite ? "border-amber-300" : "border-[#D8D5C8]")}>
+        <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Favourite</span>
+        <Star className={cn("h-5 w-5", form.is_favorite ? "fill-amber-400 text-amber-400" : "text-[#5E6654]/30")} />
       </button>
 
-      <div className="space-y-3 rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
+      <div className="space-y-3 rounded-3xl border-2 border-[#D8D5C8] bg-white p-4">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Photos</p>
-          <label className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#1B4332] px-2.5 py-1.5 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+          <p className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Photos</p>
+          <label className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 py-1.5 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]">
             {uploadingImages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />} Add
             <input type="file" accept="image/*" multiple className="hidden" onChange={onImagesUpload} disabled={uploadingImages} />
           </label>
@@ -619,7 +619,7 @@ function FormMode({
         {form.image_urls.length > 0 && (
           <div className="grid grid-cols-3 gap-2">
             {form.image_urls.map((url) => (
-              <div key={url} className="relative aspect-square overflow-hidden rounded-xl border border-[#E6DFC8]">
+              <div key={url} className="relative aspect-square overflow-hidden rounded-xl border border-[#D8D5C8]">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={url} alt="" className="h-full w-full object-cover" />
                 <button type="button" onClick={() => onRemoveImage(url)} title="Remove photo" className="absolute top-1 right-1 rounded-md bg-black/60 p-1 text-white hover:bg-black/80"><X className="h-3 w-3" /></button>
@@ -629,11 +629,11 @@ function FormMode({
         )}
       </div>
 
-      <div className="space-y-3 rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
+      <div className="space-y-3 rounded-3xl border-2 border-[#D8D5C8] bg-white p-4">
         <div className="flex items-center justify-between">
-          <p className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">Videos <span className="opacity-60">{videos.length}/{MAX_VIDEOS}</span></p>
+          <p className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Videos <span className="opacity-60">{videos.length}/{MAX_VIDEOS}</span></p>
           {videos.length < MAX_VIDEOS && (
-            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#1B4332] px-2.5 py-1.5 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85">
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 py-1.5 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719]">
               <Upload className="h-3.5 w-3.5" /> Add
               <input ref={videoInputRef} type="file" accept="video/mp4,video/webm,video/quicktime" multiple className="hidden" onChange={onVideoSelect} />
             </label>
@@ -646,7 +646,7 @@ function FormMode({
                 {v.url ? (
                   <VideoFacade url={v.url} title={v.description || `Video ${i + 1}`} />
                 ) : (
-                  <div className="relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#1F1F1A]">
+                  <div className="relative grid aspect-video w-full place-items-center overflow-hidden rounded-2xl border border-black/10 bg-[#20231A]">
                     {v.previewUrl && <video src={`${v.previewUrl}#t=0.1`} muted playsInline preload="metadata" aria-hidden className="pointer-events-none absolute inset-0 h-full w-full object-cover" />}
                     <span className="absolute inset-0 bg-black/50" />
                     {v.error ? (
@@ -657,8 +657,8 @@ function FormMode({
                   </div>
                 )}
                 <div className="mt-1.5 flex items-center gap-1">
-                  <input type="text" aria-label={`Description for video ${i + 1}`} maxLength={120} value={v.description} onChange={(e) => onVideoDescription(v.id, e.target.value)} placeholder="Description…" className="min-w-0 flex-1 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2 py-1 text-[11px] text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30" />
-                  <button type="button" onClick={() => onRemoveVideo(v.id)} title="Remove video" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-white text-[#5F624F]/60 hover:border-red-200 hover:bg-red-50 hover:text-red-600"><X className="h-3 w-3" /></button>
+                  <input type="text" aria-label={`Description for video ${i + 1}`} maxLength={120} value={v.description} onChange={(e) => onVideoDescription(v.id, e.target.value)} placeholder="Description…" className="min-w-0 flex-1 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1 text-[11px] text-[#20231A] outline-none placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30" />
+                  <button type="button" onClick={() => onRemoveVideo(v.id)} title="Remove video" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white text-[#5E6654]/60 hover:border-red-200 hover:bg-red-50 hover:text-red-600"><X className="h-3 w-3" /></button>
                 </div>
               </div>
             ))}
@@ -676,7 +676,7 @@ function TextRow({
 }) {
   return (
     <div className="flex items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-3.5">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60">
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60">
         <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">{label}</span>
         {required && <span className="text-[10px] font-bold text-red-500">*</span>}
       </div>
@@ -687,7 +687,7 @@ function TextRow({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         aria-label={label}
-        className="min-w-0 flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
+        className="min-w-0 flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
       />
     </div>
   );
@@ -695,14 +695,14 @@ function TextRow({
 
 function TextAreaCard({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
-    <div className="space-y-2 rounded-3xl border-2 border-[#E6DFC8] bg-white p-4">
-      <label className="text-[10px] font-bold tracking-wide text-[#5F624F] uppercase">{label}</label>
+    <div className="space-y-2 rounded-3xl border-2 border-[#D8D5C8] bg-white p-4">
+      <label className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">{label}</label>
       <textarea
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full resize-y rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 focus:border-[#5C4033]/30"
+        className="w-full resize-y rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-sm text-[#20231A] outline-none placeholder:text-[#5E6654]/40 focus:border-[#34451F]/30"
       />
     </div>
   );
@@ -710,11 +710,11 @@ function TextAreaCard({ label, value, onChange, placeholder }: { label: string; 
 
 function DetailCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start gap-2 border-b border-[#E6DFC8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-3.5">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60">
+    <div className="flex items-start gap-2 border-b border-[#D8D5C8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-3.5">
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60">
         <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">{label}</span>
       </div>
-      <span className="flex-1 text-right font-black text-base leading-snug wrap-break-word text-[#1F1F1A] sm:text-sm">{value}</span>
+      <span className="flex-1 text-right font-black text-base leading-snug wrap-break-word text-[#20231A] sm:text-sm">{value}</span>
     </div>
   );
 }

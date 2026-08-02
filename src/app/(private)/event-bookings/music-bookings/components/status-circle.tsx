@@ -30,7 +30,7 @@ export default function StatusCircle({
           {count}
         </span>
       </button>
-      <span className={cn("font-black text-[10px] tracking-tight uppercase sm:text-[11px]", isActive ? theme.text : "text-[#5F624F]")}>
+      <span className={cn("font-black text-[10px] tracking-tight uppercase sm:text-[11px]", isActive ? theme.text : "text-[#5E6654]")}>
         {label}
       </span>
     </div>

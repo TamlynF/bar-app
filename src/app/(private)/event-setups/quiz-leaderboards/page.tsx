@@ -21,12 +21,12 @@ const fmtScore = (n: number) => (Number.isInteger(n) ? String(n) : n.toFixed(1))
 
 function EmptyState({ title, hint }: { title: string; hint: string }) {
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-dashed border-[#E6DFC8] bg-white/40 py-16 text-center">
-      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F7F4EA]">
-        <Trophy className="h-6 w-6 text-[#5F624F] opacity-40" />
+    <div className="flex flex-col items-center rounded-2xl border border-dashed border-[#D8D5C8] bg-white/40 py-16 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-[#F4F1E8]">
+        <Trophy className="h-6 w-6 text-[#5E6654] opacity-40" />
       </div>
-      <p className="font-black text-sm tracking-tight text-[#1F1F1A] uppercase">{title}</p>
-      <p className="mt-1.5 max-w-xs text-xs leading-relaxed text-[#5F624F]">{hint}</p>
+      <p className="font-black text-sm tracking-tight text-[#20231A] uppercase">{title}</p>
+      <p className="mt-1.5 max-w-xs text-xs leading-relaxed text-[#5E6654]">{hint}</p>
     </div>
   );
 }
@@ -37,28 +37,28 @@ function StandingCard({ row, rank }: { row: TeamRow; rank: number }) {
     <div
       className={cn(
         "flex items-center gap-3 rounded-2xl bg-white p-3 shadow-sm",
-        podium ? cn("border-2", podium.ring) : "border border-[#E6DFC8]",
+        podium ? cn("border-2", podium.ring) : "border border-[#D8D5C8]",
       )}
     >
-      <div className={cn("w-1 shrink-0 self-stretch rounded-full", podium ? podium.bar : "bg-[#E6DFC8]")} />
+      <div className={cn("w-1 shrink-0 self-stretch rounded-full", podium ? podium.bar : "bg-[#D8D5C8]")} />
       <div
         className={cn(
           "flex h-10 w-10 shrink-0 items-center justify-center rounded-xl font-black tabular-nums",
-          podium ? podium.chip : "bg-[#F7F4EA] text-[#5F624F]",
+          podium ? podium.chip : "bg-[#F4F1E8] text-[#5E6654]",
         )}
       >
         {podium ? <podium.Icon className="h-5 w-5" /> : rank}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex min-w-0 items-center gap-1.5">
-          <h3 className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">{row.groupName}</h3>
+          <h3 className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">{row.groupName}</h3>
           {row.isWinner && (
             <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-[#FBF1CD] px-1.5 py-0.5 font-black text-[9px] tracking-wide text-[#8A6D00] uppercase">
               <Trophy className="h-3 w-3" /> Winner
             </span>
           )}
         </div>
-        <div className="mt-1 flex items-center gap-2 text-[#5F624F]">
+        <div className="mt-1 flex items-center gap-2 text-[#5E6654]">
           {row.contactName && <span className="truncate text-xs font-semibold">{row.contactName}</span>}
           {row.groupSize != null && (
             <span className="inline-flex shrink-0 items-center gap-1 text-[11px] font-bold">
@@ -69,8 +69,8 @@ function StandingCard({ row, rank }: { row: TeamRow; rank: number }) {
         </div>
       </div>
       <div className="shrink-0 text-right">
-        <p className="font-black text-lg leading-none text-[#1F1F1A] tabular-nums">{fmtScore(row.score ?? 0)}</p>
-        <p className="mt-1 font-black text-[9px] tracking-widest text-[#5F624F]/70 uppercase">pts</p>
+        <p className="font-black text-lg leading-none text-[#20231A] tabular-nums">{fmtScore(row.score ?? 0)}</p>
+        <p className="mt-1 font-black text-[9px] tracking-widest text-[#5E6654]/70 uppercase">pts</p>
       </div>
     </div>
   );
@@ -78,13 +78,13 @@ function StandingCard({ row, rank }: { row: TeamRow; rank: number }) {
 
 function UnscoredRow({ row }: { row: TeamRow }) {
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-[#E6DFC8] bg-white/60 p-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F7F4EA] font-black text-[#5F624F]/40">–</div>
+    <div className="flex items-center gap-3 rounded-2xl border border-dashed border-[#D8D5C8] bg-white/60 p-3">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#F4F1E8] font-black text-[#5E6654]/40">–</div>
       <div className="min-w-0 flex-1">
-        <h3 className="truncate font-black text-sm tracking-tight text-[#1F1F1A]/70 uppercase">{row.groupName}</h3>
-        {row.contactName && <p className="truncate text-xs font-semibold text-[#5F624F]/70">{row.contactName}</p>}
+        <h3 className="truncate font-black text-sm tracking-tight text-[#20231A]/70 uppercase">{row.groupName}</h3>
+        {row.contactName && <p className="truncate text-xs font-semibold text-[#5E6654]/70">{row.contactName}</p>}
       </div>
-      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F]/50 uppercase">Not scored</span>
+      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654]/50 uppercase">Not scored</span>
     </div>
   );
 }
@@ -130,8 +130,8 @@ export default async function QuizLeaderboardsPage({
     <div className="mx-auto max-w-4xl space-y-4 px-2 py-2 sm:px-4 sm:py-0 md:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="font-black text-[10px] tracking-[0.2em] text-[#5F624F] uppercase">Leaderboard</p>
-          <h2 className="mt-1 font-black text-xl leading-none tracking-tighter text-[#1F1F1A] uppercase">{eventLabel}</h2>
+          <p className="font-black text-[10px] tracking-[0.2em] text-[#5E6654] uppercase">Leaderboard</p>
+          <h2 className="mt-1 font-black text-xl leading-none tracking-tighter text-[#20231A] uppercase">{eventLabel}</h2>
         </div>
         <div className="flex items-center gap-2">
           <LeaderboardEventFilter events={events} selectedEventId={selectedEventId} />
@@ -140,11 +140,11 @@ export default async function QuizLeaderboardsPage({
       </div>
 
       <div className="flex items-center gap-2">
-        <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-white px-3 font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
+        <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-white px-3 font-black text-[11px] tracking-wide text-[#5E6654] uppercase">
           <ListOrdered className="h-3.5 w-3.5" /> {teams.length} teams
         </span>
         {totalGuests > 0 && (
-          <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-white px-3 font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
+          <span className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-white px-3 font-black text-[11px] tracking-wide text-[#5E6654] uppercase">
             <Users className="h-3.5 w-3.5" /> {totalGuests} guests
           </span>
         )}
@@ -164,7 +164,7 @@ export default async function QuizLeaderboardsPage({
 
       {scored.length > 0 && unscored.length > 0 && (
         <div className="space-y-2.5">
-          <p className="px-0.5 pt-2 font-black text-[10px] tracking-[0.2em] text-[#5F624F]/70 uppercase">
+          <p className="px-0.5 pt-2 font-black text-[10px] tracking-[0.2em] text-[#5E6654]/70 uppercase">
             Not yet scored ({unscored.length})
           </p>
           {unscored.map((row) => (
@@ -176,7 +176,7 @@ export default async function QuizLeaderboardsPage({
       <section className="space-y-2.5 pt-2">
         <div className="flex items-center gap-2 px-0.5">
           <Crown className="h-4 w-4 text-[#D4AF37]" />
-          <p className="font-black text-[10px] tracking-[0.2em] text-[#5F624F] uppercase">All-Time Standings</p>
+          <p className="font-black text-[10px] tracking-[0.2em] text-[#5E6654] uppercase">All-Time Standings</p>
         </div>
         <AllTimeLeaderboard entries={allTimeTeams} />
       </section>

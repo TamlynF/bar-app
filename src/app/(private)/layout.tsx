@@ -5,7 +5,7 @@ import { getPendingRequestCounts } from "@/lib/request-counts";
 import PrivateLayoutClient from "./private-layout-client";
 
 export const viewport: Viewport = {
-    themeColor: "#F7F4EA",
+    themeColor: "#F4F1E8",
 };
 
 export default async function PrivateLayout({ children }: { children: React.ReactNode }) {

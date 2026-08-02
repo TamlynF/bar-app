@@ -17,8 +17,8 @@ function RequestsShell({ title, subtitle, children }: { title: string; subtitle:
     <div className="min-h-screen flex-1 bg-background">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-4 sm:py-0 md:px-8">
         <div>
-          <h2 className="font-black text-xl tracking-tight text-[#1F1F1A] uppercase">{title}</h2>
-          <p className="mt-0.5 text-xs text-[#5F624F]">{subtitle}</p>
+          <h2 className="font-black text-xl tracking-tight text-[#20231A] uppercase">{title}</h2>
+          <p className="mt-0.5 text-xs text-[#5E6654]">{subtitle}</p>
         </div>
         {children}
       </div>
@@ -181,7 +181,7 @@ export default async function GeneralEventBookingsPage({
           initialStatuses={initialStatuses}
           initialSelectedId={bookingId ?? null}
           eventFilter={
-            <div className="w-full rounded-2xl border border-[#E6DFC8] bg-white p-1.5 shadow-sm sm:rounded-xl sm:p-1">
+            <div className="w-full rounded-2xl border border-[#D8D5C8] bg-white p-1.5 shadow-sm sm:rounded-xl sm:p-1">
               <EventTypeFilter
                 events={events}
                 selectedEventId={selectedEventId}

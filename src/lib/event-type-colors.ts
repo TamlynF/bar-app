@@ -56,13 +56,13 @@ const COLOR_HEX: Record<string, ColorHex> = {
   stone:   { bg: "#f5f5f4", text: "#44403c", border: "#e7e5e4", solid: "#a8a29e" },
 };
 
-export const FALLBACK_COLOR_HEX: ColorHex = { bg: "#F7F4EA", text: "#5F624F", border: "#E6DFC8", solid: "#E6DFC8" };
+export const FALLBACK_COLOR_HEX: ColorHex = { bg: "#F4F1E8", text: "#5E6654", border: "#D8D5C8", solid: "#D8D5C8" };
 
 export function colorHexFromKey(color: string | null | undefined): ColorHex {
   return (color && COLOR_HEX[color]) || FALLBACK_COLOR_HEX;
 }
 
-export const FALLBACK_BADGE = "bg-[#F7F4EA] text-[#5F624F] border border-[#E6DFC8]";
+export const FALLBACK_BADGE = "bg-[#F4F1E8] text-[#5E6654] border border-[#D8D5C8]";
 
 export function badgeClassFromColor(color: string | null | undefined): string {
   const found = EVENT_TYPE_COLORS.find(c => c.key === color);
@@ -75,5 +75,5 @@ export function swatchHexFromColor(color: string | null | undefined): string | u
 
 export function swatchClassFromColor(color: string | null | undefined): string {
   const found = EVENT_TYPE_COLORS.find(c => c.key === color);
-  return found ? found.swatchClass : "bg-[#F7F4EA]";
+  return found ? found.swatchClass : "bg-[#F4F1E8]";
 }

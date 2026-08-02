@@ -385,14 +385,14 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
   if (types.length === 0) {
     return (
-      <div className="mx-auto w-full max-w-295 px-6 py-16 text-center text-[#5F624F]">
+      <div className="mx-auto w-full max-w-295 px-6 py-16 text-center text-[#5E6654]">
         <Layers className="mx-auto mb-3 h-8 w-8 opacity-40" />
-        <p className="font-black text-[#1F1F1A] text-sm">No event categories yet</p>
+        <p className="font-black text-[#20231A] text-sm">No event categories yet</p>
         <p className="mt-1 text-xs">Add your first category to get started.</p>
         <button
           type="button"
           onClick={openNewCat}
-          className="mt-5 inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#1B4332] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#34451F] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719]"
         >
           <Plus className="h-4 w-4 stroke-[2.5]" /> New category
         </button>
@@ -407,10 +407,10 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   return (
     <>
       {narrow && drilled && selCat && (
-        <div className="sticky top-0 z-40 flex items-center gap-2 border-b border-[#E6DFC8] bg-[#FFFDF7]/95 px-3 py-2 backdrop-blur">
+        <div className="sticky top-0 z-40 flex items-center gap-2 border-b border-[#D8D5C8] bg-[#FFFEFA]/95 px-3 py-2 backdrop-blur">
           <IconBtn label="Back to categories" onClick={() => setDrilled(false)}><ArrowLeft className="h-4.5 w-4.5" /></IconBtn>
           <span style={{ "--dot": colorHexFromKey(selCat.color).solid } as React.CSSProperties} className="h-2.5 w-2.5 shrink-0 rounded-full bg-(--dot)" />
-          <h2 className="min-w-0 flex-1 truncate font-black text-[16px] text-[#1F1F1A]">{toTitleCase(selCat.name)}</h2>
+          <h2 className="min-w-0 flex-1 truncate font-black text-[16px] text-[#20231A]">{toTitleCase(selCat.name)}</h2>
           <IconBtn label={`Add a sub-category to ${toTitleCase(selCat.name)}`} create onClick={() => openNewSub(selCat)}><Plus className="h-4.5 w-4.5 stroke-[2.5]" /></IconBtn>
           <IconBtn label={`Edit ${toTitleCase(selCat.name)}`} edit onClick={() => openEditCat(selCat)}><Pencil className="h-4 w-4" /></IconBtn>
           <IconBtn label={`Delete ${toTitleCase(selCat.name)}`} danger onClick={() => removeCat(selCat)}><Trash2 className="h-4 w-4" /></IconBtn>
@@ -423,7 +423,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             <button
               type="button"
               onClick={openNewCat}
-              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#1B4332] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
+              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#34451F] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719]"
             >
               <Plus className="h-4 w-4 stroke-[2.5]" /> Category
             </button>
@@ -432,8 +432,8 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
         <div className={cn("grid items-start gap-4.5", narrow ? "grid-cols-1" : "grid-cols-[clamp(230px,25%,290px)_1fr]")}>
           {showList && (
-            <div className={cn("rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] p-2", !narrow && "sticky top-18")}>
-              {!narrow && <p className="px-1.5 pt-2 pb-1.5 font-black text-[10.5px] text-[#5F624F] uppercase tracking-[0.16em]">Categories</p>}
+            <div className={cn("rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA] p-2", !narrow && "sticky top-18")}>
+              {!narrow && <p className="px-1.5 pt-2 pb-1.5 font-black text-[10.5px] text-[#5E6654] uppercase tracking-[0.16em]">Categories</p>}
               <div className="flex flex-col gap-0.5">
                 {types.map((t) => (
                   <CategoryRow
@@ -448,7 +448,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 <button
                   type="button"
                   onClick={openNewCat}
-                  className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#1B4332] font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
+                  className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#34451F] font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719]"
                 >
                   <Plus className="h-4 w-4 stroke-[2.5]" /> Category
                 </button>
@@ -458,30 +458,30 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
 
           {showDetail && selCat && (
             <div className="flex min-w-0 flex-col gap-3.5">
-              <div className="flex flex-col gap-3 rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] p-3.5">
+              <div className="flex flex-col gap-3 rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA] p-3.5">
                 {!narrow && (
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span style={{ "--dot": colorHexFromKey(selCat.color).solid } as React.CSSProperties} className="h-3 w-3 shrink-0 rounded-full bg-(--dot)" />
-                    <h2 className="min-w-0 flex-1 font-black text-[18px] text-[#1F1F1A]">{toTitleCase(selCat.name)}</h2>
+                    <h2 className="min-w-0 flex-1 font-black text-[18px] text-[#20231A]">{toTitleCase(selCat.name)}</h2>
                     <IconBtn label={`Edit ${toTitleCase(selCat.name)}`} edit onClick={() => openEditCat(selCat)}><Pencil className="h-3.5 w-3.5" /></IconBtn>
                     <IconBtn label={`Delete ${toTitleCase(selCat.name)}`} danger onClick={() => removeCat(selCat)}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
                   </div>
                 )}
-                <p className="text-[13px] text-[#5F624F] leading-relaxed">
-                  <b className="font-bold text-[#1F1F1A]">On the website:</b> {groupingBlurb(selCat.booking_grouping)}
+                <p className="text-[13px] text-[#5E6654] leading-relaxed">
+                  <b className="font-bold text-[#20231A]">On the website:</b> {groupingBlurb(selCat.booking_grouping)}
                 </p>
                 <div className="flex flex-wrap gap-2.5">
-                  <div className="flex h-11 min-w-0 flex-[1_1_200px] items-center gap-2.5 rounded-xl border border-[#E6DFC8] bg-[#FFFDF7] px-3">
-                    <Search className="h-4 w-4 shrink-0 text-[#5F624F]" />
+                  <div className="flex h-11 min-w-0 flex-[1_1_200px] items-center gap-2.5 rounded-xl border border-[#D8D5C8] bg-[#FFFEFA] px-3">
+                    <Search className="h-4 w-4 shrink-0 text-[#5E6654]" />
                     <input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
                       placeholder={`Search in ${toTitleCase(selCat.name)}`}
                       aria-label={`Search in ${toTitleCase(selCat.name)}`}
-                      className="min-w-0 flex-1 bg-transparent text-[14.5px] text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/60"
+                      className="min-w-0 flex-1 bg-transparent text-[14.5px] text-[#20231A] outline-none placeholder:text-[#5E6654]/60"
                     />
                     {query && (
-                      <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="grid h-6 w-6 place-items-center rounded-[7px] text-[#5F624F] hover:bg-[#F7F4EA]">
+                      <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="grid h-6 w-6 place-items-center rounded-[7px] text-[#5E6654] hover:bg-[#F4F1E8]">
                         <X className="h-3.5 w-3.5" />
                       </button>
                     )}
@@ -490,7 +490,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     <button
                       type="button"
                       onClick={() => openNewSub(selCat)}
-                      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#1B4332] px-4 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
+                      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#34451F] px-4 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719]"
                     >
                       <Plus className="h-4 w-4 stroke-[2.5]" /> Sub-category
                     </button>
@@ -499,9 +499,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               </div>
 
               {subs.length === 0 ? (
-                <div className="rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] px-5 py-11 text-center text-[#5F624F]">
+                <div className="rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA] px-5 py-11 text-center text-[#5E6654]">
                   <Layers className="mx-auto h-5.5 w-5.5 opacity-50" />
-                  <p className="mt-2 font-black text-[14px] text-[#1F1F1A]">{query ? "No matches" : "Nothing in here yet"}</p>
+                  <p className="mt-2 font-black text-[14px] text-[#20231A]">{query ? "No matches" : "Nothing in here yet"}</p>
                   <p className="mt-0.5 text-[12.5px]">{query ? "Try a different search." : "Add a sub-category to get started."}</p>
                 </div>
               ) : (
@@ -548,15 +548,15 @@ function CategoryRow({ cat, active, onClick }: { cat: EventTypeRecord; active: b
       style={{ "--dot": colorHexFromKey(cat.color).solid } as React.CSSProperties}
       className={cn(
         "flex w-full items-center gap-2.75 rounded-xl border px-3 py-3 text-left transition-colors",
-        active ? "border-[#5C4033] bg-[#F1E9E2]" : "border-transparent hover:bg-[#F7F4EA]",
+        active ? "border-[#34451F] bg-[#E5EBD8]" : "border-transparent hover:bg-[#F4F1E8]",
       )}
     >
       <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-(--dot)" />
       <span className="min-w-0 flex-1">
-        <span className="block font-black text-[14px] text-[#1F1F1A]">{toTitleCase(cat.name)}</span>
-        <span className="mt-px block text-[12px] text-[#5F624F]">{count} sub-{count === 1 ? "category" : "categories"}</span>
+        <span className="block font-black text-[14px] text-[#20231A]">{toTitleCase(cat.name)}</span>
+        <span className="mt-px block text-[12px] text-[#5E6654]">{count} sub-{count === 1 ? "category" : "categories"}</span>
       </span>
-      <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-[#5F624F]" />
+      <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-[#5E6654]" />
     </button>
   );
 }
@@ -566,7 +566,7 @@ function SubCard({ sub, onEdit, onDelete }: { sub: Subtype; onEdit: () => void; 
   const b = behaviourOf(sub.behavior);
   const badges = sub.event_subtype_badges ?? [];
   return (
-    <div className="flex flex-col gap-2.75 rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] p-3.5">
+    <div className="flex flex-col gap-2.75 rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA] p-3.5">
       <div className="flex items-start gap-2.75">
         <span
           style={{ "--tile-bg": c.bg, "--tile-text": c.text } as React.CSSProperties}
@@ -575,9 +575,9 @@ function SubCard({ sub, onEdit, onDelete }: { sub: Subtype; onEdit: () => void; 
           <b.Icon className="h-4.5 w-4.5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-black text-[15.5px] text-[#1F1F1A]">{toTitleCase(sub.name)}</p>
-          <p className="mt-0.5 text-[12.5px] text-[#5F624F] leading-snug">
-            {sub.title ? <>Website name <b className="font-bold text-[#1F1F1A]">{sub.title}</b></> : "No website name set"}
+          <p className="font-black text-[15.5px] text-[#20231A]">{toTitleCase(sub.name)}</p>
+          <p className="mt-0.5 text-[12.5px] text-[#5E6654] leading-snug">
+            {sub.title ? <>Website name <b className="font-bold text-[#20231A]">{sub.title}</b></> : "No website name set"}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-0.5">
@@ -589,15 +589,15 @@ function SubCard({ sub, onEdit, onDelete }: { sub: Subtype; onEdit: () => void; 
       <FactChips sub={sub} />
 
       {badges.length > 0 && (
-        <div className="flex flex-col gap-1.75 rounded-[11px] border border-[#C3D8CC] bg-[#EAF1EC] px-2.5 py-2">
-          <p className="flex items-center gap-1.5 font-black text-[10.5px] text-[#1B4332] uppercase tracking-[0.14em]">
+        <div className="flex flex-col gap-1.75 rounded-[11px] border border-[#D8D5C8] bg-[#E5EBD8] px-2.5 py-2">
+          <p className="flex items-center gap-1.5 font-black text-[10.5px] text-[#34451F] uppercase tracking-[0.14em]">
             <Globe className="h-3 w-3" /> Shown on the booking page
           </p>
           <div className="flex flex-wrap gap-1.5">
             {badges.map((bg) => (
-              <span key={bg.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[#C3D8CC] bg-[#FFFDF7] px-2 py-1 text-[11.5px] font-semibold text-[#5F624F]">
+              <span key={bg.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#FFFEFA] px-2 py-1 text-[11.5px] font-semibold text-[#5E6654]">
                 {renderBadgeIcon(bg.icon, "h-3.25 w-3.25")}
-                <b className="font-bold text-[#1F1F1A]">{bg.title}</b>
+                <b className="font-bold text-[#20231A]">{bg.title}</b>
                 {bg.description && <span>· {bg.description}</span>}
               </span>
             ))}
@@ -630,7 +630,7 @@ function FactChips({ sub }: { sub: Subtype }) {
           key={key}
           className={cn(
             "inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11.5px] font-semibold",
-            on ? "border-[#C3D8CC] bg-[#EAF1EC] text-[#1B4332]" : "border-[#EFEADB] bg-[#FBF8F0] text-[#5F624F]",
+            on ? "border-[#D8D5C8] bg-[#E5EBD8] text-[#34451F]" : "border-[#ECE9DE] bg-[#ECE9DE] text-[#5E6654]",
           )}
         >
           <Icon className="h-3.25 w-3.25 shrink-0" />
@@ -644,9 +644,9 @@ function FactChips({ sub }: { sub: Subtype }) {
 /* ---------------------------------------------------------------- sheets */
 
 const SHEET_CLASS =
-  "flex h-dvh max-h-dvh w-full max-w-none flex-col gap-0 border-0 bg-[#F7F4EA] p-0 shadow-2xl outline-none " +
+  "flex h-dvh max-h-dvh w-full max-w-none flex-col gap-0 border-0 bg-[#F4F1E8] p-0 shadow-2xl outline-none " +
   "sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:h-auto sm:max-h-[90dvh] sm:w-[680px] " +
-  "sm:max-w-[calc(100vw-2rem)] sm:-translate-x-1/2 sm:rounded-[20px] sm:border sm:border-[#E6DFC8]";
+  "sm:max-w-[calc(100vw-2rem)] sm:-translate-x-1/2 sm:rounded-[20px] sm:border sm:border-[#D8D5C8]";
 
 function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
   form: CatForm; setForm: (f: CatForm) => void; onClose: () => void; onSave: () => void; pending: boolean; error: string | null;
@@ -686,7 +686,7 @@ function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
               <Field label="Booking page name" required help={HELP.title} hint={HINT.title} error={titleErr ? "Give the booking page a name customers will recognise." : undefined}>
                 <TextIn value={form.title} placeholder="e.g. Hire the function room" onChange={(v) => set({ title: v })} />
               </Field>
-              <div className="border-t border-[#E6DFC8] pt-3.5">
+              <div className="border-t border-[#D8D5C8] pt-3.5">
                 <BigToggle
                   label="Can customers book it online?"
                   help={HELP.bookable}
@@ -697,7 +697,7 @@ function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
                 />
               </div>
               {form.is_bookable && (
-                <div className="border-t border-[#E6DFC8] pt-3.5">
+                <div className="border-t border-[#D8D5C8] pt-3.5">
                   <BookingFormEditor
                     card={form}
                     onCard={(patch) => set(patch)}
@@ -760,15 +760,15 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
           onClose={onClose}
         />
 
-        <div className="shrink-0 border-b border-[#E6DFC8] bg-[#FFFDF7] px-4 py-3 sm:hidden">
+        <div className="shrink-0 border-b border-[#D8D5C8] bg-[#FFFEFA] px-4 py-3 sm:hidden">
           <div className="flex items-center justify-between gap-3">
-            <p className="font-bold text-[12px] text-[#5F624F]">
+            <p className="font-bold text-[12px] text-[#5E6654]">
               Step {idx + 1} of {tabs.length}
             </p>
-            <p className="truncate font-bold text-[12px] text-[#5C4033]">{tabs[idx].label}</p>
+            <p className="truncate font-bold text-[12px] text-[#34451F]">{tabs[idx].label}</p>
           </div>
           <div
-            className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#EFEADB]"
+            className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#ECE9DE]"
             role="progressbar"
             aria-label="Sub-category setup progress"
             aria-valuemin={1}
@@ -777,12 +777,12 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
           >
             <div
               style={{ "--progress": `${((idx + 1) / tabs.length) * 100}%` } as React.CSSProperties}
-              className="h-full w-(--progress) rounded-full bg-[#1B4332] transition-[width] duration-200"
+              className="h-full w-(--progress) rounded-full bg-[#34451F] transition-[width] duration-200"
             />
           </div>
         </div>
 
-        <div className="hidden flex-wrap gap-1 bg-[#FFFDF7] px-3 pb-2.5 sm:flex" role="tablist" aria-label="Sub-category settings">
+        <div className="hidden flex-wrap gap-1 bg-[#FFFEFA] px-3 pb-2.5 sm:flex" role="tablist" aria-label="Sub-category settings">
           {tabs.map((t, k) => (
             <button
               key={t.id}
@@ -792,7 +792,7 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
               onClick={() => setActiveTab(t.id)}
               className={cn(
                 "rounded-[9px] px-2.75 py-2 font-bold text-[12.5px] transition-colors",
-                cur === t.id ? "bg-[#F1E9E2] text-[#5C4033]" : "text-[#5F624F] hover:text-[#5C4033]",
+                cur === t.id ? "bg-[#E5EBD8] text-[#34451F]" : "text-[#5E6654] hover:text-[#34451F]",
               )}
             >
               <span className="mr-1 opacity-55">{k + 1}</span>{t.label}
@@ -882,16 +882,16 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
                 </Field>
               </SheetSection>
 
-              <div className="flex flex-col gap-2 rounded-xl border border-[#E6DFC8] bg-[#FBF8F0] p-3">
-                <p className="font-black text-[10.5px] text-[#5F624F] uppercase tracking-[0.16em]">How it will look</p>
-                <p className="font-black text-[16px] text-[#1F1F1A]">{form.title || form.name || "Your night"}</p>
-                {form.tagline && <p className="text-[13px] text-[#5F624F]">{form.tagline}</p>}
+              <div className="flex flex-col gap-2 rounded-xl border border-[#D8D5C8] bg-[#ECE9DE] p-3">
+                <p className="font-black text-[10.5px] text-[#5E6654] uppercase tracking-[0.16em]">How it will look</p>
+                <p className="font-black text-[16px] text-[#20231A]">{form.title || form.name || "Your night"}</p>
+                {form.tagline && <p className="text-[13px] text-[#5E6654]">{form.tagline}</p>}
                 {form.badges.filter((b) => b.title.trim()).length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {form.badges.filter((b) => b.title.trim()).map((b, i) => (
-                      <span key={i} className="inline-flex items-center gap-1.5 rounded-lg border border-[#EFEADB] bg-[#FBF8F0] px-2 py-1 text-[11.5px] font-semibold text-[#5F624F]">
+                      <span key={i} className="inline-flex items-center gap-1.5 rounded-lg border border-[#ECE9DE] bg-[#ECE9DE] px-2 py-1 text-[11.5px] font-semibold text-[#5E6654]">
                         {renderBadgeIcon(b.icon, "h-3.25 w-3.25")}
-                        <b className="font-bold text-[#1F1F1A]">{b.title}</b>
+                        <b className="font-bold text-[#20231A]">{b.title}</b>
                       </span>
                     ))}
                   </div>
@@ -953,7 +953,7 @@ function BookingFormEditor({ card, onCard, config, onConfig, fallbackTitle }: {
   return (
     <div className="flex flex-col gap-3.5">
       <BookingBlock title="Booking card" blurb="The tile customers tap on the booking page.">
-        <p className="text-[12px] text-[#5F624F] leading-relaxed">Leave a box blank and it falls back to the website name, a calendar icon and the automatic label.</p>
+        <p className="text-[12px] text-[#5E6654] leading-relaxed">Leave a box blank and it falls back to the website name, a calendar icon and the automatic label.</p>
         <Field label="Card title" help={HELP.cardTitle} hint={HINT.cardTitle}>
           <TextIn value={card.booking_card_title} placeholder={fallbackTitle || "e.g. Quiz Night"} onChange={(v) => onCard({ booking_card_title: v })} />
         </Field>
@@ -985,28 +985,28 @@ function BookingFormEditor({ card, onCard, config, onConfig, fallbackTitle }: {
       </BookingBlock>
 
       <BookingBlock title="Form fields" blurb="The questions the customer answers when booking.">
-        <p className="text-[12px] text-[#5F624F] leading-relaxed">
-          <b className="font-bold text-[#1F1F1A]">Shown</b> puts the question on the form. <b className="font-bold text-[#1F1F1A]">Required</b> means they cannot book without answering it.
+        <p className="text-[12px] text-[#5E6654] leading-relaxed">
+          <b className="font-bold text-[#20231A]">Shown</b> puts the question on the form. <b className="font-bold text-[#20231A]">Required</b> means they cannot book without answering it.
         </p>
         {BOOK_FIELDS.map((fd) => {
           const v = config.fields[fd.key];
           const shown = fd.locked ? true : v.visible;
           const required = fd.locked ? true : v.required;
           return (
-            <div key={fd.key} className="overflow-hidden rounded-xl border border-[#E6DFC8] bg-[#FBF8F0]">
+            <div key={fd.key} className="overflow-hidden rounded-xl border border-[#D8D5C8] bg-[#ECE9DE]">
               <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2.5 px-2.75 py-2.5 max-[560px]:grid-cols-2">
-                <b className="min-w-0 text-[13px] text-[#1F1F1A] max-[560px]:col-span-2">{fd.label}</b>
+                <b className="min-w-0 text-[13px] text-[#20231A] max-[560px]:col-span-2">{fd.label}</b>
                 <span className="flex items-center justify-end gap-1.75">
-                  <span className={cn("w-12 text-right font-black text-[10.5px] uppercase tracking-widest", shown ? "text-[#1B4332]" : "text-[#5F624F]")}>Shown</span>
+                  <span className={cn("w-12 text-right font-black text-[10.5px] uppercase tracking-widest", shown ? "text-[#34451F]" : "text-[#5E6654]")}>Shown</span>
                   <MiniSw on={shown} disabled={fd.locked} label={`Show ${fd.label}`} onClick={() => setField(fd.key, { visible: !v.visible })} />
                 </span>
                 <span className={cn("flex items-center justify-end gap-1.75", !shown && "opacity-40")}>
-                  <span className={cn("w-18.5 text-right font-black text-[10.5px] uppercase tracking-widest", required ? "text-[#B45309]" : "text-[#5F624F]")}>{required ? "Required" : "Optional"}</span>
+                  <span className={cn("w-18.5 text-right font-black text-[10.5px] uppercase tracking-widest", required ? "text-[#34451F]" : "text-[#5E6654]")}>{required ? "Required" : "Optional"}</span>
                   <MiniSw on={required} tone="req" disabled={fd.locked || !shown} label={`Make ${fd.label} required`} onClick={() => setField(fd.key, { required: !v.required })} />
                 </span>
               </div>
               {shown && (
-                <div className="flex flex-col gap-2.25 border-t border-[#E6DFC8] bg-white p-2.75">
+                <div className="flex flex-col gap-2.25 border-t border-[#D8D5C8] bg-white p-2.75">
                   <Field label="Wording on the form" help={HELP.wording}>
                     <TextIn value={v.label} ariaLabel={`Wording for ${fd.label}`} onChange={(val) => setField(fd.key, { label: val })} />
                   </Field>
@@ -1036,10 +1036,10 @@ function BookingFormEditor({ card, onCard, config, onConfig, fallbackTitle }: {
 
 function BookingBlock({ title, blurb, children }: { title: string; blurb: string; children: React.ReactNode }) {
   return (
-    <div className="overflow-hidden rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7]">
-      <div className="border-b border-[#EFEADB] bg-[#FBF8F0] px-3.5 py-3">
-        <p className="font-black text-[13px] uppercase tracking-widest text-[#1F1F1A]">{title}</p>
-        <p className="mt-0.5 text-[12px] text-[#5F624F]">{blurb}</p>
+    <div className="overflow-hidden rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA]">
+      <div className="border-b border-[#ECE9DE] bg-[#ECE9DE] px-3.5 py-3">
+        <p className="font-black text-[13px] uppercase tracking-widest text-[#20231A]">{title}</p>
+        <p className="mt-0.5 text-[12px] text-[#5E6654]">{blurb}</p>
       </div>
       <div className="flex flex-col gap-3.5 p-3.5">{children}</div>
     </div>
@@ -1055,7 +1055,7 @@ function BadgeEditor({ badges, onChange }: { badges: BadgeDraft[]; onChange: (b:
   return (
     <div className="flex flex-col gap-2.25">
       {badges.length === 0 && (
-        <p className="text-[12px] text-[#5F624F] leading-relaxed">No badges yet. Most nights look good with two, like “Free entry” and “Thursdays 7pm”.</p>
+        <p className="text-[12px] text-[#5E6654] leading-relaxed">No badges yet. Most nights look good with two, like “Free entry” and “Thursdays 7pm”.</p>
       )}
       {badges.map((b, i) => (
         <BadgeRow key={i} badge={b} onChange={(patch) => update(i, patch)} onDelete={() => remove(i)} />
@@ -1063,7 +1063,7 @@ function BadgeEditor({ badges, onChange }: { badges: BadgeDraft[]; onChange: (b:
       <button
         type="button"
         onClick={add}
-        className="inline-flex h-8.5 w-fit items-center gap-1.5 rounded-[10px] border border-[#E6DFC8] bg-[#FFFDF7] px-3 font-bold text-[12.5px] text-[#1F1F1A] transition-colors hover:border-[#5C4033]"
+        className="inline-flex h-8.5 w-fit items-center gap-1.5 rounded-[10px] border border-[#D8D5C8] bg-[#FFFEFA] px-3 font-bold text-[12.5px] text-[#20231A] transition-colors hover:border-[#34451F]"
       >
         <Plus className="h-3.5 w-3.5" /> Add a badge
       </button>
@@ -1074,16 +1074,16 @@ function BadgeEditor({ badges, onChange }: { badges: BadgeDraft[]; onChange: (b:
 function BadgeRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onChange: (patch: Partial<BadgeDraft>) => void; onDelete: () => void }) {
   const [pickOpen, setPickOpen] = useState(false);
   return (
-    <div className="rounded-xl border border-[#E6DFC8] bg-[#FBF8F0] p-2.5">
+    <div className="rounded-xl border border-[#D8D5C8] bg-[#ECE9DE] p-2.5">
       <div className="flex items-start gap-2.5">
         <button
           type="button"
           aria-label="Change badge icon"
           onClick={() => setPickOpen((o) => !o)}
-          className="relative grid h-8 w-8 shrink-0 place-items-center rounded-[9px] bg-[#F1E9E2] text-[#5C4033]"
+          className="relative grid h-8 w-8 shrink-0 place-items-center rounded-[9px] bg-[#E5EBD8] text-[#34451F]"
         >
           {renderBadgeIcon(badge.icon, "h-4 w-4")}
-          <span className="absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full bg-[#5C4033] text-white">
+          <span className="absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full bg-[#34451F] text-white">
             <ChevronDown className="h-2.5 w-2.5 stroke-3" />
           </span>
         </button>
@@ -1093,22 +1093,22 @@ function BadgeRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onChange: 
             placeholder="Badge title, e.g. Free entry"
             aria-label="Badge title"
             onChange={(e) => onChange({ title: e.target.value })}
-            className="w-full border-b border-transparent bg-transparent py-0.5 font-bold text-[13px] text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/50 focus:border-[#E6DFC8]"
+            className="w-full border-b border-transparent bg-transparent py-0.5 font-bold text-[13px] text-[#20231A] outline-none placeholder:text-[#5E6654]/50 focus:border-[#D8D5C8]"
           />
           <input
             value={badge.description}
             placeholder="Extra detail, e.g. 7pm start"
             aria-label="Badge description"
             onChange={(e) => onChange({ description: e.target.value })}
-            className="w-full border-b border-transparent bg-transparent py-0.5 text-[11.5px] text-[#5F624F] outline-none placeholder:text-[#5F624F]/50 focus:border-[#E6DFC8]"
+            className="w-full border-b border-transparent bg-transparent py-0.5 text-[11.5px] text-[#5E6654] outline-none placeholder:text-[#5E6654]/50 focus:border-[#D8D5C8]"
           />
         </div>
-        <button type="button" aria-label="Remove badge" onClick={onDelete} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[#5F624F] transition-colors hover:bg-[#FBECEA] hover:text-[#DC2626]">
+        <button type="button" aria-label="Remove badge" onClick={onDelete} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[#5E6654] transition-colors hover:bg-[#FBECEA] hover:text-[#DC2626]">
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
       {pickOpen && (
-        <div className="mt-2.5 border-t border-[#E6DFC8] pt-2.5">
+        <div className="mt-2.5 border-t border-[#D8D5C8] pt-2.5">
           <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
             {Object.keys(ICON_OPTIONS).map((name) => (
               <button
@@ -1120,7 +1120,7 @@ function BadgeRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onChange: 
                 onClick={() => { onChange({ icon: name }); setPickOpen(false); }}
                 className={cn(
                   "grid aspect-square place-items-center rounded-lg border transition-colors",
-                  badge.icon === name ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-[#FFFDF7] text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033]",
+                  badge.icon === name ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-[#FFFEFA] text-[#5E6654] hover:border-[#34451F] hover:text-[#34451F]",
                 )}
               >
                 {renderBadgeIcon(name, "h-4 w-4")}
@@ -1154,7 +1154,7 @@ function InfoTip({ text, label }: { text: string; label: string }) {
           onMouseLeave={() => setOpen(false)}
           className={cn(
             "grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors",
-            open ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-[#FBF8F0] text-[#5F624F] hover:border-[#5C4033] hover:bg-[#5C4033] hover:text-white",
+            open ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-[#ECE9DE] text-[#5E6654] hover:border-[#34451F] hover:bg-[#34451F] hover:text-white",
           )}
         >
           <Info className="h-3 w-3" />
@@ -1165,7 +1165,7 @@ function InfoTip({ text, label }: { text: string; label: string }) {
         align="start"
         sideOffset={8}
         onOpenAutoFocus={(e) => e.preventDefault()}
-        className="w-[min(268px,74vw)] rounded-[11px] border-0 bg-[#1F1F1A] p-3 text-[12.5px] leading-relaxed text-[#F7F4EA] shadow-[0_14px_34px_-14px_rgba(31,31,26,0.6)]"
+        className="w-[min(268px,74vw)] rounded-[11px] border-0 bg-[#20231A] p-3 text-[12.5px] leading-relaxed text-[#F4F1E8] shadow-[0_14px_34px_-14px_rgba(31,31,26,0.6)]"
       >
         {text}
       </PopoverContent>
@@ -1179,13 +1179,13 @@ function Field({ label, help, hint, required, error, children }: {
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.75">
-        <span className="font-bold text-[12.5px] text-[#1F1F1A]">
+        <span className="font-bold text-[12.5px] text-[#20231A]">
           {label}{required && <span className="ml-1 font-semibold text-[11px] text-[#B4453C]">required</span>}
         </span>
         {help && <InfoTip text={help} label={label} />}
       </div>
       {children}
-      {hint && !error && <p className="text-[12px] text-[#5F624F] leading-relaxed">{hint}</p>}
+      {hint && !error && <p className="text-[12px] text-[#5E6654] leading-relaxed">{hint}</p>}
       {error && <p className="font-semibold text-[12px] text-[#B4453C]">{error}</p>}
     </div>
   );
@@ -1203,7 +1203,7 @@ function TextIn({ value, onChange, placeholder, type, ariaLabel }: {
       placeholder={placeholder}
       aria-label={ariaLabel ?? placeholder ?? "Value"}
       onChange={(e) => onChange(e.target.value)}
-      className="h-11 w-full rounded-[10px] border border-[#E6DFC8] bg-white px-3 text-[14.5px] text-[#1F1F1A] outline-none transition-colors placeholder:text-[#5F624F]/50 focus-visible:border-[#5C4033] focus-visible:ring-[3px] focus-visible:ring-[#5C4033]/12"
+      className="h-11 w-full rounded-[10px] border border-[#D8D5C8] bg-white px-3 text-[14.5px] text-[#20231A] outline-none transition-colors placeholder:text-[#5E6654]/50 focus-visible:border-[#34451F] focus-visible:ring-[3px] focus-visible:ring-[#34451F]/12"
     />
   );
 }
@@ -1215,7 +1215,7 @@ function AreaIn({ value, onChange, placeholder }: { value: string; onChange: (v:
       placeholder={placeholder}
       aria-label={placeholder ?? "Value"}
       onChange={(e) => onChange(e.target.value)}
-      className="min-h-19.5 w-full resize-y rounded-[10px] border border-[#E6DFC8] bg-white px-3 py-2.5 text-[14.5px] leading-relaxed text-[#1F1F1A] outline-none transition-colors placeholder:text-[#5F624F]/50 focus-visible:border-[#5C4033] focus-visible:ring-[3px] focus-visible:ring-[#5C4033]/12"
+      className="min-h-19.5 w-full resize-y rounded-[10px] border border-[#D8D5C8] bg-white px-3 py-2.5 text-[14.5px] leading-relaxed text-[#20231A] outline-none transition-colors placeholder:text-[#5E6654]/50 focus-visible:border-[#34451F] focus-visible:ring-[3px] focus-visible:ring-[#34451F]/12"
     />
   );
 }
@@ -1227,7 +1227,7 @@ function BigToggle({ label, help, on, onChange, onText, onSub, offText, offSub }
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.75">
-        <span className="font-bold text-[12.5px] text-[#1F1F1A]">{label}</span>
+        <span className="font-bold text-[12.5px] text-[#20231A]">{label}</span>
         <InfoTip text={help} label={label} />
       </div>
       <button
@@ -1238,14 +1238,14 @@ function BigToggle({ label, help, on, onChange, onText, onSub, offText, offSub }
         onClick={() => onChange(!on)}
         className={cn(
           "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors",
-          on ? "border-[#C3D8CC] bg-[#EAF1EC]" : "border-[#E6DFC8] bg-[#FBF8F0]",
+          on ? "border-[#D8D5C8] bg-[#E5EBD8]" : "border-[#D8D5C8] bg-[#ECE9DE]",
         )}
       >
         <span className="min-w-0 flex-1">
-          <span className="block font-bold text-[13.5px] text-[#1F1F1A]">{on ? onText : offText}</span>
-          {(on ? onSub : offSub) && <span className="mt-0.5 block text-[12px] text-[#5F624F] leading-snug">{on ? onSub : offSub}</span>}
+          <span className="block font-bold text-[13.5px] text-[#20231A]">{on ? onText : offText}</span>
+          {(on ? onSub : offSub) && <span className="mt-0.5 block text-[12px] text-[#5E6654] leading-snug">{on ? onSub : offSub}</span>}
         </span>
-        <span className={cn("relative mt-0.5 h-7 w-11.5 shrink-0 rounded-full transition-colors", on ? "bg-[#1B4332]" : "bg-[#DCD5C0]")}>
+        <span className={cn("relative mt-0.5 h-7 w-11.5 shrink-0 rounded-full transition-colors", on ? "bg-[#34451F]" : "bg-[#DCD5C0]")}>
           <span className={cn("absolute top-0.75 left-0.75 h-5.5 w-5.5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition-transform", on && "translate-x-4.5")} />
         </span>
       </button>
@@ -1267,7 +1267,7 @@ function MiniSw({ on, onClick, label, tone, disabled }: {
       className={cn(
         "relative h-6 w-10 shrink-0 rounded-full transition-colors",
         disabled ? "cursor-default opacity-55" : "cursor-pointer",
-        on ? (tone === "req" ? "bg-[#B45309]" : "bg-[#1B4332]") : "bg-[#DCD5C0]",
+        on ? (tone === "req" ? "bg-[#9A5B00]" : "bg-[#34451F]") : "bg-[#DCD5C0]",
       )}
     >
       <span className={cn("absolute top-0.75 left-0.75 h-4.5 w-4.5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition-transform", on && "translate-x-4")} />
@@ -1291,7 +1291,7 @@ function Swatches({ value, onChange }: { value: string | null; onChange: (c: str
             style={{ "--sw": colorHexFromKey(c.key).solid } as React.CSSProperties}
             className={cn(
               "grid h-7.5 w-7.5 place-items-center rounded-full border-2 bg-(--sw) transition-transform hover:scale-110",
-              sel ? "border-[#1F1F1A] ring-2 ring-inset ring-white" : "border-transparent opacity-85 hover:opacity-100",
+              sel ? "border-[#20231A] ring-2 ring-inset ring-white" : "border-transparent opacity-85 hover:opacity-100",
             )}
           >
             {sel && <Check className="h-3.5 w-3.5 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]" />}
@@ -1315,13 +1315,13 @@ function BehaviourPicker({ value, onChange }: { value: EventBehavior; onChange: 
             onClick={() => onChange(b.value)}
             className={cn(
               "flex items-start gap-2.25 rounded-xl border p-2.75 text-left transition-colors",
-              sel ? "border-[#5C4033] bg-[#F1E9E2] shadow-[0_0_0_2px_rgba(92,64,51,0.14)]" : "border-[#E6DFC8] bg-[#FBF8F0] hover:border-[#5C4033]",
+              sel ? "border-[#34451F] bg-[#E5EBD8] shadow-[0_0_0_2px_rgba(92,64,51,0.14)]" : "border-[#D8D5C8] bg-[#ECE9DE] hover:border-[#34451F]",
             )}
           >
-            <b.Icon className="h-4.5 w-4.5 shrink-0 text-[#5C4033]" />
+            <b.Icon className="h-4.5 w-4.5 shrink-0 text-[#34451F]" />
             <span className="min-w-0">
-              <span className="block font-bold text-[13px] text-[#1F1F1A]">{b.label}</span>
-              <span className="mt-0.5 block text-[11.5px] text-[#5F624F] leading-snug">{b.blurb}</span>
+              <span className="block font-bold text-[13px] text-[#20231A]">{b.label}</span>
+              <span className="mt-0.5 block text-[11.5px] text-[#5E6654] leading-snug">{b.blurb}</span>
             </span>
           </button>
         );
@@ -1344,13 +1344,13 @@ function GroupingPicker({ value, onChange }: { value: BookingGrouping; onChange:
             onClick={() => onChange(g.value)}
             className={cn(
               "flex items-start gap-2.25 rounded-xl border p-2.75 text-left transition-colors",
-              sel ? "border-[#5C4033] bg-[#F1E9E2] shadow-[0_0_0_2px_rgba(92,64,51,0.14)]" : "border-[#E6DFC8] bg-[#FBF8F0] hover:border-[#5C4033]",
+              sel ? "border-[#34451F] bg-[#E5EBD8] shadow-[0_0_0_2px_rgba(92,64,51,0.14)]" : "border-[#D8D5C8] bg-[#ECE9DE] hover:border-[#34451F]",
             )}
           >
-            <Icon className="h-4.5 w-4.5 shrink-0 text-[#5C4033]" />
+            <Icon className="h-4.5 w-4.5 shrink-0 text-[#34451F]" />
             <span className="min-w-0">
-              <span className="block font-bold text-[13px] text-[#1F1F1A]">{g.label}</span>
-              <span className="mt-0.5 block text-[11.5px] text-[#5F624F] leading-snug">{g.blurb}</span>
+              <span className="block font-bold text-[13px] text-[#20231A]">{g.label}</span>
+              <span className="mt-0.5 block text-[11.5px] text-[#5E6654] leading-snug">{g.blurb}</span>
             </span>
           </button>
         );
@@ -1375,7 +1375,7 @@ function CardIconGrid({ value, onChange }: { value: string | null; onChange: (na
             onClick={() => onChange(sel ? null : name)}
             className={cn(
               "grid h-12 place-items-center rounded-[11px] border-[1.5px] transition-colors",
-              sel ? "border-[#1B4332] bg-[#EAF1EC] text-[#1B4332]" : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]",
+              sel ? "border-[#34451F] bg-[#E5EBD8] text-[#34451F]" : "border-[#D8D5C8] bg-white text-[#5E6654] hover:border-[#34451F]",
             )}
           >
             <Icon className="h-4.5 w-4.5" />
@@ -1413,9 +1413,9 @@ function Dropzone({ url, subline, ariaLabel, pathPrefix, onUpload, onClear }: {
 
   if (url) {
     return (
-      <div className="relative overflow-hidden rounded-xl border border-[#E6DFC8]">
+      <div className="relative overflow-hidden rounded-xl border border-[#D8D5C8]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={url} alt="" className="max-h-50 w-full bg-[#F7F4EA] object-cover" />
+        <img src={url} alt="" className="max-h-50 w-full bg-[#F4F1E8] object-cover" />
         <button
           type="button"
           onClick={onClear}
@@ -1431,10 +1431,10 @@ function Dropzone({ url, subline, ariaLabel, pathPrefix, onUpload, onClear }: {
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-[#E6DFC8] bg-[#FBF8F0] py-5.5 transition-colors hover:border-[#5C4033]">
-        {uploading ? <Loader2 className="h-5.5 w-5.5 animate-spin text-[#5F624F]" /> : <ImageIcon className="h-5.5 w-5.5 text-[#5F624F]" />}
-        <span className="font-black text-[12.5px] tracking-[0.08em] text-[#5C4033] uppercase">{uploading ? "Uploading…" : "Choose a picture"}</span>
-        <span className="px-4 text-center text-[11.5px] text-[#5F624F]">{subline}</span>
+      <label className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-[#D8D5C8] bg-[#ECE9DE] py-5.5 transition-colors hover:border-[#34451F]">
+        {uploading ? <Loader2 className="h-5.5 w-5.5 animate-spin text-[#5E6654]" /> : <ImageIcon className="h-5.5 w-5.5 text-[#5E6654]" />}
+        <span className="font-black text-[12.5px] tracking-[0.08em] text-[#34451F] uppercase">{uploading ? "Uploading…" : "Choose a picture"}</span>
+        <span className="px-4 text-center text-[11.5px] text-[#5E6654]">{subline}</span>
         <input type="file" accept="image/*" aria-label={ariaLabel} className="hidden" onChange={handle} disabled={uploading} />
       </label>
       {uploadError && <p className="font-semibold text-[11px] text-[#B4453C]">{uploadError}</p>}
@@ -1453,8 +1453,8 @@ function IconBtn({ label, onClick, edit, danger, create, children }: {
       onClick={onClick}
       className={cn(
         "grid h-10 w-10 shrink-0 place-items-center rounded-[10px] transition-colors",
-        create ? "bg-[#1B4332] font-black text-white uppercase tracking-widest hover:bg-[#1B4332]/85"
-          : danger ? "text-[#DC2626] hover:bg-[#FBECEA]" : edit ? "text-[#B45309] hover:bg-[#EFEADB]" : "text-[#5F624F] hover:bg-[#EFEADB] hover:text-[#5C4033]",
+        create ? "bg-[#34451F] font-black text-white uppercase tracking-widest hover:bg-[#283719]"
+          : danger ? "text-[#DC2626] hover:bg-[#FBECEA]" : edit ? "text-[#34451F] hover:bg-[#ECE9DE]" : "text-[#5E6654] hover:bg-[#ECE9DE] hover:text-[#34451F]",
       )}
     >
       {children}
@@ -1465,17 +1465,17 @@ function IconBtn({ label, onClick, edit, danger, create, children }: {
 /* ---------------------------------------------------------------- sheet chrome */
 
 function SheetGrab() {
-  return <div className="mx-auto mt-2 h-1 w-11 shrink-0 rounded-full bg-[#E6DFC8]" />;
+  return <div className="mx-auto mt-2 h-1 w-11 shrink-0 rounded-full bg-[#D8D5C8]" />;
 }
 
 function SheetHead({ eyebrow, title, onClose }: { eyebrow: string; title: string; onClose: () => void }) {
   return (
-    <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#E6DFC8] bg-[#FFFDF7] px-4 pt-3 pb-3.5">
+    <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#D8D5C8] bg-[#FFFEFA] px-4 pt-3 pb-3.5">
       <div className="min-w-0">
-        <SheetDescription className="font-black text-[10.5px] text-[#5F624F] uppercase tracking-[0.13em]">{eyebrow}</SheetDescription>
-        <SheetTitle className="mt-1 font-black text-[18px] text-[#1F1F1A]">{title}</SheetTitle>
+        <SheetDescription className="font-black text-[10.5px] text-[#5E6654] uppercase tracking-[0.13em]">{eyebrow}</SheetDescription>
+        <SheetTitle className="mt-1 font-black text-[18px] text-[#20231A]">{title}</SheetTitle>
       </div>
-      <button type="button" onClick={onClose} aria-label="Close" className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-[#5F624F] transition-colors hover:bg-[#EFEADB] hover:text-[#1F1F1A]">
+      <button type="button" onClick={onClose} aria-label="Close" className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-[#5E6654] transition-colors hover:bg-[#ECE9DE] hover:text-[#20231A]">
         <X className="h-4.5 w-4.5" />
       </button>
     </div>
@@ -1484,10 +1484,10 @@ function SheetHead({ eyebrow, title, onClose }: { eyebrow: string; title: string
 
 function SheetSection({ title, blurb, children }: { title: string; blurb: string; children: React.ReactNode }) {
   return (
-    <section className="overflow-hidden rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7]">
-      <header className="border-b border-[#EFEADB] bg-[#FBF8F0] px-3.5 py-3">
-        <h3 className="font-black text-[13px] uppercase tracking-widest text-[#1F1F1A]">{title}</h3>
-        <p className="mt-0.5 text-[12px] text-[#5F624F]">{blurb}</p>
+    <section className="overflow-hidden rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA]">
+      <header className="border-b border-[#ECE9DE] bg-[#ECE9DE] px-3.5 py-3">
+        <h3 className="font-black text-[13px] uppercase tracking-widest text-[#20231A]">{title}</h3>
+        <p className="mt-0.5 text-[12px] text-[#5E6654]">{blurb}</p>
       </header>
       <div className="flex flex-col gap-3.5 p-3.5">{children}</div>
     </section>
@@ -1506,12 +1506,12 @@ function SheetFoot({ onCancel, cancelLabel = "Cancel", onSave, onNext, nextLabel
   saveLabel: string;
 }) {
   return (
-    <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-[#E6DFC8] bg-[#FFFDF7] px-4 py-3.5 pb-[calc(14px+env(safe-area-inset-bottom))] sm:flex sm:justify-end">
+    <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-[#D8D5C8] bg-[#FFFEFA] px-4 py-3.5 pb-[calc(14px+env(safe-area-inset-bottom))] sm:flex sm:justify-end">
       <button
         type="button"
         onClick={onCancel}
         disabled={pending}
-        className="h-12 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] font-black text-[12px] text-[#5F624F] uppercase tracking-widest transition-colors hover:border-[#5C4033] hover:text-[#5C4033] disabled:opacity-50 sm:min-w-35"
+        className="h-12 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] font-black text-[12px] text-[#5E6654] uppercase tracking-widest transition-colors hover:border-[#34451F] hover:text-[#34451F] disabled:opacity-50 sm:min-w-35"
       >
         {cancelLabel}
       </button>
@@ -1520,7 +1520,7 @@ function SheetFoot({ onCancel, cancelLabel = "Cancel", onSave, onNext, nextLabel
           type="button"
           onClick={onNext}
           disabled={disableNext}
-          className="h-12 rounded-xl bg-[#1B4332] font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85 disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
+          className="h-12 rounded-xl bg-[#34451F] font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
         >
           {nextLabel}
         </button>
@@ -1530,7 +1530,7 @@ function SheetFoot({ onCancel, cancelLabel = "Cancel", onSave, onNext, nextLabel
           onClick={onSave}
           disabled={pending || disableSave}
           title={disableSave ? "Fill in the highlighted fields first" : undefined}
-          className="grid h-12 place-items-center rounded-xl bg-[#1B4332] font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85 disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
+          className="grid h-12 place-items-center rounded-xl bg-[#34451F] font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : saveLabel}
         </button>

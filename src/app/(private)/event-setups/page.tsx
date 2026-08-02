@@ -70,22 +70,22 @@ function EventSetupTile({ item }: { item: EventSetupItem }) {
   return (
     <Link
       href={item.href}
-      className="group flex items-center justify-between rounded-3xl border border-[#E6DFC8] bg-white p-3 shadow-sm transition-all hover:border-[#5C4033] hover:shadow-md active:scale-[0.98]"
+      className="group flex items-center justify-between rounded-3xl border border-[#D8D5C8] bg-white p-3 shadow-sm transition-all hover:border-[#34451F] hover:shadow-md active:scale-[0.98]"
     >
       <div className="flex items-center gap-4">
         <div className={`h-12 w-12 rounded-2xl ${item.color} flex shrink-0 items-center justify-center transition-transform group-hover:scale-110`}>
           <item.icon className="h-6 w-6" />
         </div>
         <div className="flex flex-col">
-          <span className="font-black leading-none tracking-tight text-[#1F1F1A] uppercase">
+          <span className="font-black leading-none tracking-tight text-[#20231A] uppercase">
             {item.title}
           </span>
-          <span className="mt-1.5 text-[11px] font-bold tracking-wider text-[#5F624F] uppercase opacity-60">
+          <span className="mt-1.5 text-[11px] font-bold tracking-wider text-[#5E6654] uppercase opacity-60">
             {item.description}
           </span>
         </div>
       </div>
-      <ChevronRight className="h-5 w-5 text-[#E6DFC8] transition-colors group-hover:text-[#5C4033]" />
+      <ChevronRight className="h-5 w-5 text-[#D8D5C8] transition-colors group-hover:text-[#34451F]" />
     </Link>
   );
 }
@@ -100,7 +100,7 @@ export default function EventSetupsBasePage() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="px-1 font-black text-[11px] tracking-widest text-[#5F624F] uppercase opacity-70">
+        <h2 className="px-1 font-black text-[11px] tracking-widest text-[#5E6654] uppercase opacity-70">
           Quiz
         </h2>
 

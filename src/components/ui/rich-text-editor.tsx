@@ -46,10 +46,10 @@ function ToolbarButton({ onClick, active, title, children }: ToolbarButtonProps)
       }}
       title={title}
       className={cn(
-        "flex h-7 w-7 items-center justify-center rounded-lg text-[#5C4033] transition-colors",
+        "flex h-7 w-7 items-center justify-center rounded-lg text-[#34451F] transition-colors",
         active
-          ? "bg-[#5C4033] text-white"
-          : "hover:bg-[#E6DFC8]"
+          ? "bg-[#34451F] text-white"
+          : "hover:bg-[#D8D5C8]"
       )}
     >
       {children}
@@ -93,7 +93,7 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
     <div className="flex flex-1 flex-col gap-0">
       <input type="hidden" name={name} ref={hiddenRef} defaultValue={defaultValue} />
 
-      <div className="flex flex-wrap items-center gap-0.5 rounded-t-2xl border-b border-[#E6DFC8] bg-[#F7F4EA] px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-0.5 rounded-t-2xl border-b border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1.5">
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive("bold")}
@@ -118,7 +118,7 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
           <UnderlineIcon className="h-3.5 w-3.5" />
         </ToolbarButton>
 
-        <div className="mx-0.5 h-5 w-px bg-[#E6DFC8]" />
+        <div className="mx-0.5 h-5 w-px bg-[#D8D5C8]" />
 
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
@@ -144,7 +144,7 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
           <Pilcrow className="h-3.5 w-3.5" />
         </ToolbarButton>
 
-        <div className="mx-0.5 h-5 w-px bg-[#E6DFC8]" />
+        <div className="mx-0.5 h-5 w-px bg-[#D8D5C8]" />
 
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -162,7 +162,7 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
           <ListOrdered className="h-3.5 w-3.5" />
         </ToolbarButton>
 
-        <div className="mx-0.5 h-5 w-px bg-[#E6DFC8]" />
+        <div className="mx-0.5 h-5 w-px bg-[#D8D5C8]" />
 
         {COLORS.map((c) => (
           <button
@@ -179,9 +179,9 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
             }}
             className={cn(
               "h-5 w-5 rounded-full border-2 transition-transform hover:scale-110",
-              c.value === "" && "bg-[#1F1F1A]",
+              c.value === "" && "bg-[#20231A]",
               editor.isActive("textStyle", { color: c.value }) && c.value
-                ? "scale-110 border-[#5C4033]"
+                ? "scale-110 border-[#34451F]"
                 : "border-transparent"
             )}
             style={c.value ? { "--swatch": c.value } as React.CSSProperties : undefined}
@@ -195,7 +195,7 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
           </button>
         ))}
 
-        <div className="mx-0.5 h-5 w-px bg-[#E6DFC8]" />
+        <div className="mx-0.5 h-5 w-px bg-[#D8D5C8]" />
 
         <ToolbarButton
           onClick={() => editor.chain().focus().undo().run()}
@@ -214,7 +214,7 @@ export function RichTextEditor({ name, defaultValue = "" }: RichTextEditorProps)
 
       <EditorContent
         editor={editor}
-        className="rich-editor min-h-30 overflow-y-auto rounded-b-2xl bg-white px-3 py-2 text-sm leading-snug text-[#1F1F1A] outline-none"
+        className="rich-editor min-h-30 overflow-y-auto rounded-b-2xl bg-white px-3 py-2 text-sm leading-snug text-[#20231A] outline-none"
       />
     </div>
   );

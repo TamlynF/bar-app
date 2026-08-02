@@ -164,11 +164,11 @@ function formatDateTime(iso?: string | null) {
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+    <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
         {label}
       </span>
-      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "-"}</span>
+      <span className="text-right text-[13px] font-semibold text-[#20231A]">{value || "-"}</span>
     </div>
   );
 }
@@ -820,7 +820,7 @@ export default function EventsClient({
     const sub = subtypeById.get(event.event_subtypes_id);
     const type = typeById.get(event.event_types_id);
     const colorKey = sub?.color ?? type?.color ?? null;
-    const accentHex = swatchHexFromColor(colorKey) ?? "#5C4033";
+    const accentHex = swatchHexFromColor(colorKey) ?? "#34451F";
     const badgeClass = badgeClassFromColor(colorKey);
     const host = employees.find((emp) => emp.id === event.host_employee_id);
     const isQuiz = sub?.behavior === "quiz";
@@ -836,7 +836,7 @@ export default function EventsClient({
         style={{ "--spine": accentHex } as React.CSSProperties}
         className={cn(
           "relative flex w-full items-center gap-3 rounded-2xl border bg-white py-3 pr-3 pl-4 text-left transition hover:shadow-md active:scale-[0.99] sm:gap-4 sm:py-4 sm:pr-4 sm:pl-5",
-          isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#E6DFC8]",
+          isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#D8D5C8]",
           inactive && "opacity-60"
         )}
       >
@@ -863,7 +863,7 @@ export default function EventsClient({
             aria-label={`Copy ${event.title || "Untitled Event"}`}
             className="absolute -top-3 right-1 z-2 flex h-11 w-11 items-center justify-center sm:h-9 sm:w-9"
           >
-            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#E6DFC8] bg-white text-[#5C4033] shadow-sm transition-colors hover:bg-[#EFE8D4]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#D8D5C8] bg-white text-[#34451F] shadow-sm transition-colors hover:bg-[#EFE8D4]">
               <CopyPlus className="h-3.5 w-3.5" />
             </span>
           </button>
@@ -880,17 +880,17 @@ export default function EventsClient({
             {inactive && <span className="rounded bg-gray-100 px-1.5 py-0.5 font-black text-[9px] tracking-wide text-gray-500 uppercase">Inactive</span>}
             {quizStat && !quizStat.allComplete && (
               <span className="inline-flex items-center gap-0.5">
-                <span className="font-black text-[9px] text-[#5F624F]">Qz</span>
+                <span className="font-black text-[9px] text-[#5E6654]">Qz</span>
                 {quizStat.someExist
                   ? <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                   : <AlertCircle className="h-3.5 w-3.5 text-red-500" />}
               </span>
             )}
           </div>
-          <p className={cn("truncate font-black text-sm leading-tight sm:text-base lg:text-lg", inactive ? "text-[#5F624F]" : "text-[#1F1F1A]")}>
+          <p className={cn("truncate font-black text-sm leading-tight sm:text-base lg:text-lg", inactive ? "text-[#5E6654]" : "text-[#20231A]")}>
             {event.title || "Untitled Event"}
           </p>
-          <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[11px] font-semibold text-[#5F624F] sm:text-[13px] lg:text-sm">
+          <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[11px] font-semibold text-[#5E6654] sm:text-[13px] lg:text-sm">
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               {formatTime(event.start_time)}{event.end_time ? `–${formatTime(event.end_time)}` : ""}
@@ -908,13 +908,13 @@ export default function EventsClient({
 
         <div className={cn("pointer-events-none relative flex shrink-0 flex-col items-end gap-1.5", canCopy(event) && "pt-6 sm:pt-5")}>
           {(event.is_bookable || bStats.confirmedPeople > 0) && (
-            <span className="inline-flex items-center gap-1 font-black text-xs text-[#5F624F] tabular-nums sm:text-sm">
+            <span className="inline-flex items-center gap-1 font-black text-xs text-[#5E6654] tabular-nums sm:text-sm">
               <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />{bStats.confirmedPeople}
             </span>
           )}
           {hasPricing && <span className="font-black text-[11px] text-green-700 sm:text-xs lg:text-sm">£{event.payment_amount!.toFixed(2)}</span>}
           {event.is_fully_booked && <span className="rounded bg-red-50 px-1.5 py-0.5 font-black text-[9px] tracking-wide text-red-600 uppercase">Full</span>}
-          <ChevronRight className="h-4 w-4 text-[#5F624F] opacity-40" />
+          <ChevronRight className="h-4 w-4 text-[#5E6654] opacity-40" />
         </div>
       </div>
     );
@@ -1034,7 +1034,7 @@ export default function EventsClient({
 
   return (
     <div className={cn(
-      "mx-auto space-y-3 bg-[#F7F4EA] px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
+      "mx-auto space-y-3 bg-[#F4F1E8] px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
       viewMode === "calendar"
         ? "sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-368 2xl:max-w-432"
         : "sm:max-w-2xl md:max-w-3xl lg:max-w-5xl"
@@ -1052,7 +1052,7 @@ export default function EventsClient({
       )}
 
       <div className="flex items-center justify-between gap-2">
-        <div className="inline-flex items-center rounded-xl border border-[#E6DFC8] bg-white p-0.5">
+        <div className="inline-flex items-center rounded-xl border border-[#D8D5C8] bg-white p-0.5">
           <button
             type="button"
             onClick={() => setViewMode("list")}
@@ -1060,7 +1060,7 @@ export default function EventsClient({
             title="List view"
             className={cn(
               "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 font-black text-[10px] tracking-wide uppercase transition-colors sm:px-3",
-              viewMode === "list" ? "bg-[#5C4033] text-white" : "text-[#5F624F] hover:text-[#5C4033]"
+              viewMode === "list" ? "bg-[#34451F] text-white" : "text-[#5E6654] hover:text-[#34451F]"
             )}
           >
             <List className="h-3.5 w-3.5" /> List
@@ -1072,7 +1072,7 @@ export default function EventsClient({
             title="Calendar view"
             className={cn(
               "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 font-black text-[10px] tracking-wide uppercase transition-colors sm:px-3",
-              viewMode === "calendar" ? "bg-[#5C4033] text-white" : "text-[#5F624F] hover:text-[#5C4033]"
+              viewMode === "calendar" ? "bg-[#34451F] text-white" : "text-[#5E6654] hover:text-[#34451F]"
             )}
           >
             <Grid2X2 className="h-3.5 w-3.5" /> Calendar
@@ -1083,7 +1083,7 @@ export default function EventsClient({
           type="button"
           onClick={() => openAdd()}
           title="New Event"
-          className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#1B4332] px-3 text-white transition-colors hover:bg-[#1B4332]/85"
+          className="inline-flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3 text-white transition-colors hover:bg-[#283719]"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
           <span className="font-black text-[10px] tracking-widest uppercase">New</span>
@@ -1091,18 +1091,18 @@ export default function EventsClient({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#E6DFC8] bg-white px-3 transition-colors focus-within:border-[#5C4033]">
-          <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+        <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#D8D5C8] bg-white px-3 transition-colors focus-within:border-[#34451F]">
+          <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
           <input
             type="text"
             placeholder="Search title, date or host..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="min-w-0 flex-1 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+            className="min-w-0 flex-1 bg-transparent text-sm text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
           />
           {isSearching && (
-            <button type="button" onClick={() => setSearchQuery("")} className="-mr-1 shrink-0 rounded-md p-1 transition-colors hover:bg-[#E6DFC8]" title="Clear search">
-              <X className="h-3.5 w-3.5 text-[#5F624F]/50" />
+            <button type="button" onClick={() => setSearchQuery("")} className="-mr-1 shrink-0 rounded-md p-1 transition-colors hover:bg-[#D8D5C8]" title="Clear search">
+              <X className="h-3.5 w-3.5 text-[#5E6654]/50" />
             </button>
           )}
         </div>
@@ -1116,14 +1116,14 @@ export default function EventsClient({
           className={cn(
             "inline-flex h-11 w-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border font-black text-[11px] tracking-widest uppercase transition-colors sm:w-auto sm:px-4",
             showFilters || activeFilterCount > 0
-              ? "border-[#5C4033] bg-[#5C4033] text-white"
-              : "border-[#E6DFC8] bg-white text-[#5F624F] hover:text-[#5C4033]"
+              ? "border-[#34451F] bg-[#34451F] text-white"
+              : "border-[#D8D5C8] bg-white text-[#5E6654] hover:text-[#34451F]"
           )}
         >
           <SlidersHorizontal className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 font-black text-[9px] text-[#5C4033] tabular-nums">
+            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 font-black text-[9px] text-[#34451F] tabular-nums">
               {activeFilterCount}
             </span>
           )}
@@ -1138,7 +1138,7 @@ export default function EventsClient({
             onClick={() => setCatFilter("all")}
             className={cn(
               "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 font-black text-[10px] tracking-wide uppercase transition-colors",
-              catFilter === "all" ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-white text-[#5F624F]"
+              catFilter === "all" ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-white text-[#5E6654]"
             )}
           >
             All <span className="opacity-70">{chipBase.length}</span>
@@ -1152,7 +1152,7 @@ export default function EventsClient({
                 onClick={() => setCatFilter(sel ? "all" : type.id)}
                 className={cn(
                   "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 font-black text-[10px] tracking-wide uppercase transition-colors",
-                  sel ? "border-[#5C4033] bg-[#5C4033] text-white" : cn(badgeClassFromColor(type.color), "rounded-full")
+                  sel ? "border-[#34451F] bg-[#34451F] text-white" : cn(badgeClassFromColor(type.color), "rounded-full")
                 )}
               >
                 {toTitleCase(type.name)} <span className="opacity-70">{count}</span>
@@ -1165,11 +1165,11 @@ export default function EventsClient({
           <button
             type="button"
             onClick={() => setSortSoon((s) => !s)}
-            className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#5C4033] uppercase"
+            className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#34451F] uppercase"
           >
             <ArrowDownUp className="h-3 w-3" /> {sortSoon ? "Soonest" : "Latest"}
           </button>
-          <span className="h-4 w-px shrink-0 bg-[#E6DFC8]" />
+          <span className="h-4 w-px shrink-0 bg-[#D8D5C8]" />
           {QUICK_FILTERS.map((q) => {
             const on = quickFilters.has(q.key);
             return (
@@ -1179,7 +1179,7 @@ export default function EventsClient({
                 onClick={() => toggleQuickFilter(q.key)}
                 className={cn(
                   "h-7 shrink-0 rounded-full border px-3 font-black text-[9px] tracking-wide uppercase transition-colors",
-                  on ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-white text-[#5F624F]"
+                  on ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-white text-[#5E6654]"
                 )}
               >
                 {q.label}
@@ -1191,13 +1191,13 @@ export default function EventsClient({
       )}
 
       {viewMode === "list" && anyFilterActive && (
-        <div className="flex items-center gap-1.5 px-1 text-xs font-semibold text-[#5F624F]">
-          <b className="font-black text-[13px] text-[#1F1F1A]">{visibleEvents.length}</b>
+        <div className="flex items-center gap-1.5 px-1 text-xs font-semibold text-[#5E6654]">
+          <b className="font-black text-[13px] text-[#20231A]">{visibleEvents.length}</b>
           event{visibleEvents.length === 1 ? "" : "s"}
           {catFilter !== "all" && (
-            <> in <span className="font-black text-[#5C4033]">{toTitleCase(typeById.get(catFilter)?.name)}</span></>
+            <> in <span className="font-black text-[#34451F]">{toTitleCase(typeById.get(catFilter)?.name)}</span></>
           )}
-          <button type="button" onClick={clearAllFilters} className="ml-auto font-black text-[10px] tracking-wide text-[#5C4033] uppercase underline">
+          <button type="button" onClick={clearAllFilters} className="ml-auto font-black text-[10px] tracking-wide text-[#34451F] uppercase underline">
             Clear all
           </button>
         </div>
@@ -1206,21 +1206,21 @@ export default function EventsClient({
       {viewMode === "calendar" ? (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <button type="button" onClick={() => shiftMonth(-1)} title="Previous month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5C4033] transition-colors hover:bg-[#EFE8D4]">
+            <button type="button" onClick={() => shiftMonth(-1)} title="Previous month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <button type="button" onClick={() => shiftMonth(1)} title="Next month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5C4033] transition-colors hover:bg-[#EFE8D4]">
+            <button type="button" onClick={() => shiftMonth(1)} title="Next month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
               <ChevronRight className="h-4 w-4" />
             </button>
-            <h3 className="font-black text-sm tracking-tight text-[#1F1F1A] uppercase sm:text-base">{calMonthLabel}</h3>
-            <button type="button" onClick={goToday} className="ml-auto h-9 rounded-xl border border-[#E6DFC8] bg-[#EFE8D4] px-3 font-black text-[10px] tracking-wide text-[#5C4033] uppercase transition-colors hover:bg-[#E6DFC8]">
+            <h3 className="font-black text-sm tracking-tight text-[#20231A] uppercase sm:text-base">{calMonthLabel}</h3>
+            <button type="button" onClick={goToday} className="ml-auto h-9 rounded-xl border border-[#D8D5C8] bg-[#EFE8D4] px-3 font-black text-[10px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#D8D5C8]">
               Today
             </button>
           </div>
 
           <div className="grid grid-cols-7 gap-1 sm:gap-1.5 lg:gap-2">
             {WEEKDAYS.map((w) => (
-              <div key={w} className="py-1 text-center font-black text-[9px] tracking-wide text-[#5F624F] uppercase sm:text-[11px] lg:text-xs">{w}</div>
+              <div key={w} className="py-1 text-center font-black text-[9px] tracking-wide text-[#5E6654] uppercase sm:text-[11px] lg:text-xs">{w}</div>
             ))}
           </div>
 
@@ -1234,10 +1234,10 @@ export default function EventsClient({
               const shown = laid.slice(0, MAX);
               const extra = laid.length - shown.length;
               return (
-                <div key={dateStr} className={cn("relative h-32 overflow-hidden rounded-xl border bg-white sm:h-36 lg:h-44", isToday ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#E6DFC8]")}>
+                <div key={dateStr} className={cn("relative h-32 overflow-hidden rounded-xl border bg-white sm:h-36 lg:h-44", isToday ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#D8D5C8]")}>
                   <div className="flex items-center justify-between px-1 pt-1">
-                    <span className={cn("font-black text-[10px] tabular-nums sm:text-xs lg:text-sm", isToday ? "text-[#FF6B35]" : "text-[#5F624F]")}>{Number(dateStr.slice(-2))}</span>
-                    {dayEvents.length > 0 && <span className="font-black text-[8px] text-[#5F624F]/60 tabular-nums sm:text-[9px]">{dayEvents.length}</span>}
+                    <span className={cn("font-black text-[10px] tabular-nums sm:text-xs lg:text-sm", isToday ? "text-[#FF6B35]" : "text-[#5E6654]")}>{Number(dateStr.slice(-2))}</span>
+                    {dayEvents.length > 0 && <span className="font-black text-[8px] text-[#5E6654]/60 tabular-nums sm:text-[9px]">{dayEvents.length}</span>}
                   </div>
                   <div className="absolute inset-x-0 top-5 bottom-1 lg:top-6">
                     {shown.map(({ event, top }) => (
@@ -1250,7 +1250,7 @@ export default function EventsClient({
                       </div>
                     ))}
                     {extra > 0 && (
-                      <button type="button" onClick={() => openView(laid[MAX].event)} className="absolute right-1 bottom-0 rounded bg-[#F7F4EA] px-1 font-black text-[8px] tracking-wide text-[#5C4033] uppercase sm:text-[9px] lg:text-[10px]">
+                      <button type="button" onClick={() => openView(laid[MAX].event)} className="absolute right-1 bottom-0 rounded bg-[#F4F1E8] px-1 font-black text-[8px] tracking-wide text-[#34451F] uppercase sm:text-[9px] lg:text-[10px]">
                         +{extra} more
                       </button>
                     )}
@@ -1261,18 +1261,18 @@ export default function EventsClient({
           </div>
         </div>
       ) : visibleEvents.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
-          <CalendarDays className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
-          <p className="font-black text-sm text-[#1F1F1A]">
+        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
+          <CalendarDays className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
+          <p className="font-black text-sm text-[#20231A]">
             {filter === "quiz-incomplete" ? "No upcoming quizzes with incomplete questions" : "Nothing matches"}
           </p>
-          <p className="mt-1 text-[11px] text-[#5F624F]">
+          <p className="mt-1 text-[11px] text-[#5E6654]">
             {filter === "quiz-incomplete"
               ? "All quiz questions are complete"
               : anyFilterActive ? "No events with these filters" : "No events for the selected dates"}
           </p>
           {anyFilterActive && filter !== "quiz-incomplete" && (
-            <button type="button" onClick={clearAllFilters} className="mt-3 font-black text-[11px] tracking-wide text-[#5C4033] uppercase underline">
+            <button type="button" onClick={clearAllFilters} className="mt-3 font-black text-[11px] tracking-wide text-[#34451F] uppercase underline">
               Reset filters
             </button>
           )}
@@ -1281,10 +1281,10 @@ export default function EventsClient({
         <div className="space-y-1.5 sm:space-y-2">
           {dayGroups.map((group) => (
             <section key={group.date} className="space-y-1.5 sm:space-y-2">
-              <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#F7F4EA] py-1.5">
-                <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase sm:text-xs lg:text-sm">{relativeDayOf(group.date, todayStr)}</span>
-                <span className="h-px flex-1 bg-[#E6DFC8]" />
-                <span className="text-[10px] font-bold text-[#5F624F] sm:text-[11px] lg:text-xs">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
+              <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#F4F1E8] py-1.5">
+                <span className="font-black text-[11px] tracking-wide text-[#34451F] uppercase sm:text-xs lg:text-sm">{relativeDayOf(group.date, todayStr)}</span>
+                <span className="h-px flex-1 bg-[#D8D5C8]" />
+                <span className="text-[10px] font-bold text-[#5E6654] sm:text-[11px] lg:text-xs">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
               </div>
               {group.events.map((event) => renderEventRow(event))}
             </section>
@@ -1297,18 +1297,18 @@ export default function EventsClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none
             sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2
             sm:rounded-4xl sm:border-2 lg:max-h-[90vh] lg:w-6xl xl:w-7xl"
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 px-4 pt-2.5 pb-2 backdrop-blur-md sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-2.5 pb-2 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tighter text-[#1F1F1A] uppercase">
+                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tighter text-[#20231A] uppercase">
                   {sheetTitle}
                   {selected && (
-                    <span className="ml-1.5 text-[13px] font-semibold tracking-wide text-[#5F624F] normal-case italic tabular-nums">
+                    <span className="ml-1.5 text-[13px] font-semibold tracking-wide text-[#5E6654] normal-case italic tabular-nums">
                       (#ID : {selected.id})
                     </span>
                   )}
@@ -1320,8 +1320,8 @@ export default function EventsClient({
                 </SheetDescription>
                 {isAdding && copySourceId && (
                   <div className="mt-1 flex items-center gap-1.5">
-                    <CopyPlus className="h-3 w-3 text-[#5F624F]" />
-                    <span className="font-black text-xs tracking-wide text-[#5F624F] uppercase tabular-nums">Copied from #{copySourceId}</span>
+                    <CopyPlus className="h-3 w-3 text-[#5E6654]" />
+                    <span className="font-black text-xs tracking-wide text-[#5E6654] uppercase tabular-nums">Copied from #{copySourceId}</span>
                   </div>
                 )}
               </div>
@@ -1339,8 +1339,8 @@ export default function EventsClient({
                         <span className="hidden font-black text-[11px] tracking-widest uppercase lg:inline">System Info</span>
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
-                      <span className="block border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+                    <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
+                      <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
                         System Information
                       </span>
                       <SheetRow label="Creation Method" value={eventCreationMethodLabel(selected.creation_method)} />
@@ -1355,7 +1355,7 @@ export default function EventsClient({
                               <Link
                                 href={href}
                                 title={selected.creation_source_id ?? undefined}
-                                className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] tabular-nums hover:underline"
+                                className="group inline-flex items-center gap-1.5 font-bold text-[#34451F] tabular-nums hover:underline"
                               >
                                 <Hash className="h-3 w-3 shrink-0" />
                                 <span>{label}</span>
@@ -1378,7 +1378,7 @@ export default function EventsClient({
                       onClick={() => openCopy(selected)}
                       aria-label="Copy this event"
                       title="Copy this event"
-                      className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-2.5 text-white shadow-sm transition-colors hover:bg-[#1B4332]/85 lg:px-3"
+                      className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#34451F] px-2.5 text-white shadow-sm transition-colors hover:bg-[#283719] lg:px-3"
                     >
                       <CopyPlus className="h-4.5 w-4.5 shrink-0" />
                       <span className="hidden font-black text-[11px] tracking-widest uppercase lg:inline">Copy</span>
@@ -1438,21 +1438,21 @@ export default function EventsClient({
                 <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
                   <ViewSection title="Event Details" className="lg:col-start-1 lg:row-start-1" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)}>
                     {poster.url && (
-                      <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Poster</span>
+                      <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Poster</span>
                         <div className="flex min-w-0 flex-col items-end gap-1">
                           <a
                             href={poster.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             title="Open the full-size poster"
-                            className="block shrink-0 overflow-hidden rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] transition-colors hover:border-[#5C4033]"
+                            className="block shrink-0 overflow-hidden rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] transition-colors hover:border-[#34451F]"
                           >
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="h-16 w-28 object-contain" />
                           </a>
                           {posterNote && (
-                            <span className="text-right text-[10px] leading-snug font-bold text-[#5F624F]">{posterNote}</span>
+                            <span className="text-right text-[10px] leading-snug font-bold text-[#5E6654]">{posterNote}</span>
                           )}
                         </div>
                       </div>
@@ -1463,7 +1463,7 @@ export default function EventsClient({
                       value={
                         <>
                           {toTitleCase(type?.name) || "-"}
-                          <span className="mx-1.5 font-normal text-[#5F624F]/50">/</span>
+                          <span className="mx-1.5 font-normal text-[#5E6654]/50">/</span>
                           {toTitleCase(sub?.name) || "-"}
                         </>
                       }
@@ -1492,7 +1492,7 @@ export default function EventsClient({
                           <Link
                             href={`/event-setups/events/${selected.id}`}
                             title="Manage Quiz"
-                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#5C4033] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#5C4033]/85"
+                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#283719]"
                           >
                             <Brain className="h-3.5 w-3.5 shrink-0" />
                             Manage Quiz
@@ -1500,9 +1500,9 @@ export default function EventsClient({
                         }
                       >
                         {categoryCounts.map(cat => (
-                          <div key={cat.id} className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                            <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{cat.category_name}</span>
-                            <span className="flex items-center gap-1.5 text-right text-[13px] font-semibold text-[#1F1F1A]">
+                          <div key={cat.id} className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                            <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{cat.category_name}</span>
+                            <span className="flex items-center gap-1.5 text-right text-[13px] font-semibold text-[#20231A]">
                               {cat.count >= cat.question_count ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" /> : cat.count > 0 ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />}
                               <span className="tabular-nums">{cat.count} / {cat.question_count}</span>
                             </span>
@@ -1523,7 +1523,7 @@ export default function EventsClient({
                           <Link
                             href={viewAllHref}
                             title="View all bookings"
-                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#5C4033] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#5C4033]/85"
+                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#283719]"
                           >
                             <Users className="h-3.5 w-3.5 shrink-0" />
                             View All
@@ -1534,27 +1534,27 @@ export default function EventsClient({
                         {showWinningTeam && (
                           <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "-"} />
                         )}
-                        <div className="grid grid-cols-3 divide-x divide-[#E6DFC8]/50 border-b border-[#E6DFC8] last:border-0">
+                        <div className="grid grid-cols-3 divide-x divide-[#D8D5C8]/50 border-b border-[#D8D5C8] last:border-0">
                           <div className="px-2 py-2 text-center sm:px-3">
                             <p className="font-black text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
-                            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase sm:text-[9px]">Confirmed</p>
+                            <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase sm:text-[9px]">Confirmed</p>
                           </div>
                           <div className="px-2 py-2 text-center sm:px-3">
                             <p className="font-black text-base leading-tight text-amber-500 tabular-nums sm:text-lg">{bk.waitlistedPeople}</p>
-                            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase sm:text-[9px]">Waitlisted</p>
+                            <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase sm:text-[9px]">Waitlisted</p>
                           </div>
                           <div className="px-2 py-2 text-center sm:px-3">
                             <p className="font-black text-base leading-tight text-red-500 tabular-nums sm:text-lg">{bk.cancelledPeople}</p>
-                            <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase sm:text-[9px]">Cancelled</p>
+                            <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase sm:text-[9px]">Cancelled</p>
                           </div>
                         </div>
                         {selected.seating_required && (
-                          <div className="flex items-center justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                            <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Floor Plan</span>
+                          <div className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                            <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Floor Plan</span>
                             <Link
                               href={`/settings/floor-plan/${selected.id}`}
                               title="Floor plan layout calculator"
-                              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 font-black text-[10px] tracking-wider text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033] hover:text-white"
+                              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-black text-[10px] tracking-wider text-[#34451F] uppercase transition-colors hover:bg-[#34451F] hover:text-white"
                             >
                               <Grid2X2 className="h-3.5 w-3.5 shrink-0" />
                               Layout Calculator
@@ -1568,19 +1568,19 @@ export default function EventsClient({
                       <DetailCell label="Public Booking" toggle={!!selected.is_bookable} />
 
                       {selected.is_bookable && (
-                        <div className="bg-[#F7F4EA]/40 p-3 sm:p-4">
+                        <div className="bg-[#F4F1E8]/40 p-3 sm:p-4">
                           <BookingConfigEditor
                             value={selected.booking_config ?? {}}
                             readOnly
                             bookingPageExtra={
                               <>
-                                <div className="flex items-center justify-between gap-3 border-t border-[#E6DFC8] px-4 py-2">
-                                  <span className="flex shrink-0 items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                                <div className="flex items-center justify-between gap-3 border-t border-[#D8D5C8] px-4 py-2">
+                                  <span className="flex shrink-0 items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                                     <Link2 className="h-3.5 w-3.5" />
                                     Booking Link
                                   </span>
                                   <div className="flex min-w-0 items-center gap-2">
-                                    <span className="truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{bookingUrl}</span>
+                                    <span className="truncate text-right text-[13px] font-semibold text-[#20231A]">{bookingUrl}</span>
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -1590,35 +1590,35 @@ export default function EventsClient({
                                       }}
                                       aria-label="Copy the booking link"
                                       title="Copy the booking link"
-                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
+                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
                                     >
                                       {linkCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
                                     </button>
                                   </div>
                                 </div>
 
-                                <div className="flex items-start justify-between gap-4 border-t border-[#E6DFC8] px-4 py-2">
-                                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                                <div className="flex items-start justify-between gap-4 border-t border-[#D8D5C8] px-4 py-2">
+                                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                                     <QrCode className="h-3.5 w-3.5" />
                                     Booking QR
                                   </span>
                                   {selected.booking_qr_url ? (
                                     <div className="flex items-start gap-2">
                                       <div className="flex flex-col items-end gap-1.5">
-                                        <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 font-black text-[10px] tracking-wider text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033] hover:text-white">
+                                        <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-black text-[10px] tracking-wider text-[#34451F] uppercase transition-colors hover:bg-[#34451F] hover:text-white">
                                           {qrCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
                                           {qrCopied ? "Copied" : "Copy QR"}
                                         </button>
-                                        <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 font-black text-[10px] tracking-wider text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033] hover:text-white disabled:opacity-50">
+                                        <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-black text-[10px] tracking-wider text-[#34451F] uppercase transition-colors hover:bg-[#34451F] hover:text-white disabled:opacity-50">
                                           {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
                                           Regenerate
                                         </button>
                                       </div>
                                       {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={selected.booking_qr_url} alt="Booking link QR code" className="h-20 w-20 shrink-0 rounded-lg border border-[#E6DFC8] bg-white p-1" />
+                                      <img src={selected.booking_qr_url} alt="Booking link QR code" className="h-20 w-20 shrink-0 rounded-lg border border-[#D8D5C8] bg-white p-1" />
                                     </div>
                                   ) : (
-                                    <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#1B4332] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#1B4332]/85 disabled:opacity-50">
+                                    <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#283719] disabled:opacity-50">
                                       {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
                                       Generate QR
                                     </button>
@@ -1648,13 +1648,13 @@ export default function EventsClient({
                 <input type="hidden" name="is_bookable" value={formIsBookable ? "on" : ""} />
 
                 <FormSection title="Event Details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
-                  <div className="border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                    <span className="mb-2 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Poster Image</span>
+                  <div className="border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                    <span className="mb-2 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Poster Image</span>
                     <input type="hidden" name="image_url" value={formImageUrl} />
                     {formImageUrl ? (
-                      <div className="relative overflow-hidden rounded-xl border border-[#E6DFC8]">
+                      <div className="relative overflow-hidden rounded-xl border border-[#D8D5C8]">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={formImageUrl} alt="Event poster" className="max-h-32 w-full bg-[#F7F4EA] object-contain" />
+                        <img src={formImageUrl} alt="Event poster" className="max-h-32 w-full bg-[#F4F1E8] object-contain" />
                         <button
                           type="button"
                           onClick={() => setFormImageUrl("")}
@@ -1667,24 +1667,24 @@ export default function EventsClient({
                       </div>
                     ) : inheritedForForm.url ? (
                       <div className="space-y-2">
-                        <div className="relative overflow-hidden rounded-xl border border-dashed border-[#E6DFC8]">
+                        <div className="relative overflow-hidden rounded-xl border border-dashed border-[#D8D5C8]">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={inheritedForForm.url} alt="Inherited poster" className="max-h-32 w-full bg-[#F7F4EA] object-contain opacity-75" />
+                          <img src={inheritedForForm.url} alt="Inherited poster" className="max-h-32 w-full bg-[#F4F1E8] object-contain opacity-75" />
                         </div>
-                        <p className="text-[10px] text-[#5F624F]">
+                        <p className="text-[10px] text-[#5E6654]">
                           {imageSourceLabel(inheritedForForm.source, selectedSubtype?.name)}. It updates automatically when that image changes.
                         </p>
-                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] py-3 transition-colors hover:border-[#5C4033]">
-                          {imageUploading ? <Loader2 className="h-4 w-4 animate-spin text-[#5F624F]" /> : <Upload className="h-4 w-4 text-[#5F624F] opacity-50" />}
-                          <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{imageUploading ? "Uploading…" : "Use a different image"}</span>
+                        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#D8D5C8] bg-[#F4F1E8] py-3 transition-colors hover:border-[#34451F]">
+                          {imageUploading ? <Loader2 className="h-4 w-4 animate-spin text-[#5E6654]" /> : <Upload className="h-4 w-4 text-[#5E6654] opacity-50" />}
+                          <span className="font-black text-[11px] tracking-wide text-[#34451F] uppercase">{imageUploading ? "Uploading…" : "Use a different image"}</span>
                           <input type="file" accept="image/*" aria-label="Upload a different poster image" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
                         </label>
                       </div>
                     ) : (
-                      <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] py-7 transition-colors hover:border-[#5C4033]">
-                        {imageUploading ? <Loader2 className="h-7 w-7 animate-spin text-[#5F624F]" /> : <Upload className="h-7 w-7 text-[#5F624F] opacity-50" />}
-                        <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{imageUploading ? "Uploading…" : "Upload"}</span>
-                        <span className="text-[10px] text-[#5F624F]">Shown on the public What&apos;s On card</span>
+                      <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#D8D5C8] bg-[#F4F1E8] py-7 transition-colors hover:border-[#34451F]">
+                        {imageUploading ? <Loader2 className="h-7 w-7 animate-spin text-[#5E6654]" /> : <Upload className="h-7 w-7 text-[#5E6654] opacity-50" />}
+                        <span className="font-black text-[11px] tracking-wide text-[#34451F] uppercase">{imageUploading ? "Uploading…" : "Upload"}</span>
+                        <span className="text-[10px] text-[#5E6654]">Shown on the public What&apos;s On card</span>
                         <input type="file" accept="image/*" aria-label="Upload poster image" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
                       </label>
                     )}
@@ -1696,7 +1696,7 @@ export default function EventsClient({
                       placeholder="e.g. Music Bingo"
                       value={formTitle}
                       onChange={(e) => setFormTitle(e.target.value)}
-                      className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+                      className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
                     />
                   </FormRow>
 
@@ -1707,27 +1707,27 @@ export default function EventsClient({
                         name="event_types_id"
                         value={formTypeId}
                         onChange={(e) => onSelectType(e.target.value)}
-                        className="field-sizing-content min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
+                        className="field-sizing-content min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]"
                       >
                         {eventTypes.map((t) => (
                           <option key={t.id} value={t.id}>{toTitleCase(t.name)}</option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
-                      <span className="shrink-0 text-[#5F624F]/50">/</span>
+                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
+                      <span className="shrink-0 text-[#5E6654]/50">/</span>
                       <select
                         title="Sub-Type"
                         name="event_subtypes_id"
                         value={formSubtypeId}
                         onChange={(e) => onSelectSubtype(e.target.value)}
-                        className="field-sizing-content min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
+                        className="field-sizing-content min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]"
                       >
                         <option value="" disabled>Select a sub-type...</option>
                         {formSubtypeOptions.map((s) => (
                           <option key={s.id} value={s.id}>{toTitleCase(s.name)}</option>
                         ))}
                       </select>
-                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
+                      <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
                     </div>
                   </FormRow>
 
@@ -1737,13 +1737,13 @@ export default function EventsClient({
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="flex cursor-pointer items-center gap-2 bg-transparent text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:text-[#5C4033]"
+                          className="flex cursor-pointer items-center gap-2 bg-transparent text-[13px] font-semibold text-[#20231A] transition-colors hover:text-[#34451F]"
                         >
                           {formDate ? format(new Date(formDate + "T00:00:00"), "EEE, d MMM yyyy") : "Pick a date"}
-                          <CalendarDays className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
+                          <CalendarDays className="h-4 w-4 shrink-0 text-[#5E6654]/60" />
                         </button>
                       </PopoverTrigger>
-                      <PopoverContent align="end" className="w-auto rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
+                      <PopoverContent align="end" className="w-auto rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
                         <Calendar
                           mode="single"
                           selected={formDate ? new Date(formDate + "T00:00:00") : undefined}
@@ -1759,41 +1759,41 @@ export default function EventsClient({
 
                   <FormRow label="Time" required error={fieldErrors.time}>
                     <div className="flex flex-1 items-center justify-end gap-2">
-                      <input title="Start time" name="start_time" type="time" value={formStartTime} onChange={(e) => { const v = e.target.value; setFormStartTime(v); if (v && !formEndTime) { const end = addHoursToTime(v, 2); if (end) setFormEndTime(end); } }} className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none" />
-                      <span className="text-xs text-[#5F624F]/50">-</span>
-                      <input title="End time" name="end_time" type="time" value={formEndTime} onChange={(e) => setFormEndTime(e.target.value)} className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none" />
+                      <input title="Start time" name="start_time" type="time" value={formStartTime} onChange={(e) => { const v = e.target.value; setFormStartTime(v); if (v && !formEndTime) { const end = addHoursToTime(v, 2); if (end) setFormEndTime(end); } }} className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none" />
+                      <span className="text-xs text-[#5E6654]/50">-</span>
+                      <input title="End time" name="end_time" type="time" value={formEndTime} onChange={(e) => setFormEndTime(e.target.value)} className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none" />
                     </div>
                   </FormRow>
 
                   {selectedSubtype?.host_required && (
                     <FormRow label="Host" warning={fieldWarnings.host_employee_id}>
                       <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                        <select title="Host" name="host_employee_id" value={formHostId} onChange={(e) => setFormHostId(e.target.value)} className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]">
+                        <select title="Host" name="host_employee_id" value={formHostId} onChange={(e) => setFormHostId(e.target.value)} className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]">
                           <option value="">No host</option>
                           {employees.map((e) => (
                             <option key={e.id} value={e.id}>{e.full_name}</option>
                           ))}
                         </select>
-                        <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
+                        <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
                       </div>
                     </FormRow>
                   )}
 
                   <FormRow label="Payment (£)" warning={fieldWarnings.payment_amount}>
-                    <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                    <input name="payment_amount" type="number" min="0" step="0.01" placeholder="0.00" value={formPayment} onChange={(e) => setFormPayment(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                   </FormRow>
 
                   <FormRow label="Tagline">
-                    <textarea name="tagline" placeholder="Brief tagline for the event..." rows={1} value={formTagline} onChange={(e) => setFormTagline(e.target.value)} className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-right text-[13px] leading-relaxed font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                    <textarea name="tagline" placeholder="Brief tagline for the event..." rows={1} value={formTagline} onChange={(e) => setFormTagline(e.target.value)} className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-right text-[13px] leading-relaxed font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                   </FormRow>
 
                   <FormRow label="External Link">
-                    <input name="external_link" type="url" placeholder="https://instagram.com/..." value={formExternalLink} onChange={(e) => setFormExternalLink(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                    <input name="external_link" type="url" placeholder="https://instagram.com/..." value={formExternalLink} onChange={(e) => setFormExternalLink(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                   </FormRow>
 
                   {selectedSubtype?.behavior === "karaoke" && (
                     <FormRow label="Singa Link" warning={fieldWarnings.karaoke_request_url}>
-                      <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." value={formKaraokeUrl} onChange={(e) => setFormKaraokeUrl(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                      <input name="karaoke_request_url" type="url" placeholder="https://app.singa.com/..." value={formKaraokeUrl} onChange={(e) => setFormKaraokeUrl(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                     </FormRow>
                   )}
 
@@ -1821,7 +1821,7 @@ export default function EventsClient({
                       </FormRow>
 
                       <FormRow label="Booking URL" required error={fieldErrors.booking_page_url}>
-                        <input name="booking_page_url" type="url" placeholder="https://..." value={formBookingPageUrl} onChange={(e) => { setFormBookingPageUrl(e.target.value); setBookingUrlManual(true); }} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                        <input name="booking_page_url" type="url" placeholder="https://..." value={formBookingPageUrl} onChange={(e) => { setFormBookingPageUrl(e.target.value); setBookingUrlManual(true); }} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                       </FormRow>
 
                       {selectedTypeForForm?.name === "games" && (() => {
@@ -1844,25 +1844,25 @@ export default function EventsClient({
                                       setFormGroupName("");
                                     }
                                   }}
-                                  className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
+                                  className="min-w-0 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]"
                                 >
                                   <option value="">No booking</option>
                                   {eventBookings.map(b => (
                                     <option key={b.id} value={b.id}>#{b.id} - {b.group_name || "Unnamed"}</option>
                                   ))}
                                 </select>
-                                <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
+                                <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
                               </div>
                             </FormRow>
                             <FormRow label="Group Name">
                               <input type="hidden" name="group_name" value={formGroupName} />
-                              <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                              <input value={formGroupName} onChange={(e) => setFormGroupName(e.target.value)} placeholder="e.g. The Brainiacs" className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                             </FormRow>
                           </>
                         );
                       })()}
 
-                      <div className="bg-[#F7F4EA]/40 p-3 sm:p-4">
+                      <div className="bg-[#F4F1E8]/40 p-3 sm:p-4">
                         <input type="hidden" name="booking_config" value={JSON.stringify(formBookingConfig)} />
                         <BookingConfigEditor value={formBookingConfig} onChange={setFormBookingConfig} />
                       </div>
@@ -1872,21 +1872,21 @@ export default function EventsClient({
                 </div>
 
                 {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white lg:col-span-2">
-                    <div className="flex min-h-14 w-full items-center gap-3 border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-3 sm:px-5">
-                      <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">Booking Card</span>
+                  <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white lg:col-span-2">
+                    <div className="flex min-h-14 w-full items-center gap-3 border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-3 sm:px-5">
+                      <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">Booking Card</span>
                     </div>
-                    <div className="border-b border-[#E6DFC8] px-4 py-2 sm:px-5">
-                      <p className="text-[10px] leading-relaxed text-[#5F624F]">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
+                    <div className="border-b border-[#D8D5C8] px-4 py-2 sm:px-5">
+                      <p className="text-[10px] leading-relaxed text-[#5E6654]">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
                     </div>
                     <FormRow label="Card Title">
-                      <input name="booking_card_title" placeholder="e.g. Music Bingo" value={formCardTitle} onChange={(e) => setFormCardTitle(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                      <input name="booking_card_title" placeholder="e.g. Music Bingo" value={formCardTitle} onChange={(e) => setFormCardTitle(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                     </FormRow>
                     <FormRow label="Card Tagline">
-                      <textarea name="booking_card_tagline" placeholder="Short line shown under the title..." rows={1} value={formCardTagline} onChange={(e) => setFormCardTagline(e.target.value)} className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-right text-[13px] leading-relaxed font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                      <textarea name="booking_card_tagline" placeholder="Short line shown under the title..." rows={1} value={formCardTagline} onChange={(e) => setFormCardTagline(e.target.value)} className="field-sizing-content min-w-0 flex-1 resize-none bg-transparent text-right text-[13px] leading-relaxed font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                     </FormRow>
                     <FormRow label="Card Note">
-                      <input name="booking_card_badge" placeholder="e.g. Thursdays, Members only" value={formCardBadge} onChange={(e) => setFormCardBadge(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40" />
+                      <input name="booking_card_badge" placeholder="e.g. Thursdays, Members only" value={formCardBadge} onChange={(e) => setFormCardBadge(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
                     </FormRow>
                     <input type="hidden" name="booking_card_icon" value={formCardIcon ?? ""} />
                     <IconPicker label="Card Icon" value={formCardIcon} onChange={setFormCardIcon} />
@@ -1900,14 +1900,14 @@ export default function EventsClient({
             <div className="h-4" />
           </div>
 
-          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#5C4033]/15 bg-[#E6DFC8] px-4 py-3 pb-6 sm:px-6">
+          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-12 rounded-xl border-2 border-[#E6DFC8] bg-white px-4 font-black text-[10px] tracking-widest text-red-500 uppercase hover:border-red-200 hover:bg-red-50">
+                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-12 rounded-xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-widest text-red-500 uppercase hover:border-red-200 hover:bg-red-50">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   Delete
                 </Button>
-                <Button onClick={openEdit} className="h-12 flex-1 rounded-xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95">
+                <Button onClick={openEdit} className="h-12 flex-1 rounded-xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95">
                   <Pencil className="mr-2 h-4 w-4" />Edit
                 </Button>
               </div>
@@ -1915,11 +1915,11 @@ export default function EventsClient({
 
             {showForm && (
               <div className="grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-12 rounded-xl border-2 border-[#5C4033]/30 bg-white font-black text-[10px] tracking-widest text-[#5C4033] uppercase shadow-sm hover:bg-[#F7F4EA] hover:text-[#5C4033]">
+                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-12 rounded-xl border-2 border-[#34451F]/30 bg-white font-black text-[10px] tracking-widest text-[#34451F] uppercase shadow-sm hover:bg-[#F4F1E8] hover:text-[#34451F]">
                   <Undo2 className="mr-2 h-4 w-4" />
                   Cancel
                 </Button>
-                <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-12 rounded-xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50">
+                <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-12 rounded-xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95 disabled:pointer-events-none disabled:opacity-50">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" />Save</>}
                 </Button>
               </div>
@@ -1936,9 +1936,9 @@ function FormRow({ label, required, error, warning, children }: { label: string;
   const message = error ?? warning;
   const isWarning = !error && !!warning;
   return (
-    <div className="border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
+    <div className="border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
       <div className="flex items-center justify-between gap-3">
-        <div className={cn("flex shrink-0 items-center gap-1", error ? "text-red-600" : warning ? "text-amber-600" : "text-[#5F624F]")}>
+        <div className={cn("flex shrink-0 items-center gap-1", error ? "text-red-600" : warning ? "text-amber-600" : "text-[#5E6654]")}>
           <span className="font-black text-[10px] tracking-wide whitespace-nowrap uppercase">{label}</span>
           {required && <span className="font-black text-[10px] text-red-500">*</span>}
         </div>
@@ -1956,14 +1956,14 @@ function FormRow({ label, required, error, warning, children }: { label: string;
 
 function ViewSection({ title, open, onToggle, headerRight, className, children }: { title: string; open: boolean; onToggle: () => void; headerRight?: React.ReactNode; className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
-      <div className={cn("flex min-h-14 w-full items-center gap-3 bg-[#E6DFC8] px-4 py-3 sm:px-5", open && "border-b border-[#E6DFC8]")}>
+    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
+      <div className={cn("flex min-h-14 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-3 sm:px-5", open && "border-b border-[#D8D5C8]")}>
         <button
           type="button"
           onClick={onToggle}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">{title}</span>
         </button>
         {headerRight}
         <button
@@ -1972,7 +1972,7 @@ function ViewSection({ title, open, onToggle, headerRight, className, children }
           aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
           className="shrink-0 transition-all hover:brightness-95"
         >
-          <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+          <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform duration-200", open && "rotate-180")} />
         </button>
       </div>
       <div className={cn(!open && "hidden")}>{children}</div>
@@ -1982,15 +1982,15 @@ function ViewSection({ title, open, onToggle, headerRight, className, children }
 
 function DetailCell({ label, value, icon, toggle, accent }: { label: string; value?: React.ReactNode; icon?: React.ReactNode; toggle?: boolean; accent?: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide whitespace-nowrap text-[#5F624F] uppercase">
+    <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide whitespace-nowrap text-[#5E6654] uppercase">
         {icon}
         {label}
       </span>
       {toggle !== undefined ? (
         <ToggleSlider on={toggle} />
       ) : (
-        <span className={cn("text-right text-[13px] font-semibold", accent ?? "text-[#1F1F1A]")}>{value || "-"}</span>
+        <span className={cn("text-right text-[13px] font-semibold", accent ?? "text-[#20231A]")}>{value || "-"}</span>
       )}
     </div>
   );
@@ -2003,7 +2003,7 @@ function ToggleSlider({ on, danger }: { on: boolean; danger?: boolean }) {
       aria-label={on ? "On" : "Off"}
       className={cn(
         "relative h-5 w-9 shrink-0 rounded-full transition-colors",
-        on ? (danger ? "bg-red-600" : "bg-green-600") : "bg-[#5F624F]/25"
+        on ? (danger ? "bg-red-600" : "bg-green-600") : "bg-[#5E6654]/25"
       )}
     >
       <span className={cn("absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform", on ? "translate-x-4.5" : "translate-x-0.5")} />
@@ -2022,14 +2022,14 @@ function ErrorBox({ message }: { message: string }) {
 
 function FormSection({ title, open, onToggle, children, className }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
-      <div className={cn("flex min-h-14 w-full items-center gap-3 bg-[#E6DFC8] px-4 py-3 sm:px-5", open && "border-b border-[#E6DFC8]")}>
+    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
+      <div className={cn("flex min-h-14 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-3 sm:px-5", open && "border-b border-[#D8D5C8]")}>
         <button
           type="button"
           onClick={onToggle}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">{title}</span>
         </button>
         <button
           type="button"
@@ -2037,7 +2037,7 @@ function FormSection({ title, open, onToggle, children, className }: { title: st
           aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
           className="shrink-0 transition-all hover:brightness-95"
         >
-          <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+          <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform duration-200", open && "rotate-180")} />
         </button>
       </div>
       <div className={cn(!open && "hidden")}>{children}</div>
@@ -2055,7 +2055,7 @@ function FormToggle({ on, onToggle, danger, label }: { on: boolean; onToggle: ()
       onClick={onToggle}
       className={cn(
         "relative h-6 w-11 shrink-0 rounded-full border transition-colors",
-        on ? (danger ? "border-red-700 bg-red-600" : "border-green-600 bg-green-500") : "border-[#5F624F]/30 bg-[#5F624F]/20"
+        on ? (danger ? "border-red-700 bg-red-600" : "border-green-600 bg-green-500") : "border-[#5E6654]/30 bg-[#5E6654]/20"
       )}
     >
       <span className={cn("absolute top-1/2 left-0 h-5 w-5 -translate-y-1/2 rounded-full bg-white shadow transition-transform", on ? "translate-x-5.25" : "translate-x-0.5")} />

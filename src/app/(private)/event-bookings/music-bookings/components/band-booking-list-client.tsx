@@ -223,7 +223,7 @@ export default function BandBookingListClient({
 
   return (
     <div className="animate-in space-y-3 duration-500 fade-in">
-      <div className="rounded-2xl border border-[#E6DFC8] bg-[#EFE8D4] shadow-md">
+      <div className="rounded-2xl border border-[#D8D5C8] bg-[#EFE8D4] shadow-md">
         <div className="flex flex-col items-center sm:flex-row">
           <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:shrink-0 sm:pt-0">
             <div className="flex w-full min-w-max items-stretch gap-1 px-2 py-3">
@@ -272,13 +272,13 @@ export default function BandBookingListClient({
             </div>
           </div>
 
-          <div className="mx-3 border-t border-[#E6DFC8] sm:hidden" />
-          <div className="my-2 hidden w-px self-stretch bg-[#E6DFC8] sm:block" />
+          <div className="mx-3 border-t border-[#D8D5C8] sm:hidden" />
+          <div className="my-2 hidden w-px self-stretch bg-[#D8D5C8] sm:block" />
 
           <div className="mb-3 flex w-full min-w-0 flex-1 items-center gap-2 px-3 py-2 sm:mb-0 sm:px-4">
-            <div className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#E6DFC8] bg-white px-4 transition-colors focus-within:border-[#5C4033]">
+            <div className="flex h-10 min-w-0 flex-1 items-center gap-3 rounded-xl border border-[#D8D5C8] bg-white px-4 transition-colors focus-within:border-[#34451F]">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <Search className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+                <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
                 <input
                   type="text"
                   placeholder="Search bands, genres..."
@@ -286,7 +286,7 @@ export default function BandBookingListClient({
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setSearchQuery(e.target.value)
                   }
-                  className="min-w-0 flex-1 bg-transparent text-sm text-[#1F1F1A] outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-[#5F624F]/40 placeholder:normal-case"
+                  className="min-w-0 flex-1 bg-transparent text-sm text-[#20231A] outline-none placeholder:font-normal placeholder:tracking-normal placeholder:text-[#5E6654]/40 placeholder:normal-case"
                 />
               </div>
               {searchQuery.length > 0 && (
@@ -294,9 +294,9 @@ export default function BandBookingListClient({
                   type="button"
                   title="Clear search"
                   onClick={() => setSearchQuery("")}
-                  className="shrink-0 rounded-lg p-1 transition-colors hover:bg-[#E6DFC8]"
+                  className="shrink-0 rounded-lg p-1 transition-colors hover:bg-[#D8D5C8]"
                 >
-                  <X className="h-3.5 w-3.5 text-[#5F624F]/50" />
+                  <X className="h-3.5 w-3.5 text-[#5E6654]/50" />
                 </button>
               )}
             </div>
@@ -318,21 +318,21 @@ export default function BandBookingListClient({
               type="button"
               onClick={chip.clear}
               title={`Remove ${chip.label}`}
-              className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#5C4033]/25 bg-[#5C4033]/8 px-2.5 font-black text-[9px] tracking-wide text-[#5C4033] uppercase transition-colors hover:bg-[#5C4033]/15"
+              className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#34451F]/25 bg-[#34451F]/8 px-2.5 font-black text-[9px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#34451F]/15"
             >
               {chip.label}
               <X className="h-3 w-3 shrink-0" />
             </button>
           ))}
           {(filters.sortKey !== "created" || filters.sortAsc) && (
-            <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#E6DFC8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#5C4033] uppercase">
+            <span className="inline-flex h-7 items-center gap-1.5 rounded-full border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#34451F] uppercase">
               {SORT_LABELS[filters.sortKey]} · {filters.sortAsc ? "Oldest" : "Newest"}
             </span>
           )}
           <button
             type="button"
             onClick={() => setFilters(EMPTY_FILTERS)}
-            className="ml-auto font-black text-[10px] tracking-wide text-[#5C4033] uppercase underline"
+            className="ml-auto font-black text-[10px] tracking-wide text-[#34451F] uppercase underline"
           >
             Clear all
           </button>
@@ -340,9 +340,9 @@ export default function BandBookingListClient({
       )}
 
       {totalShown === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white py-16 text-center">
-          <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5F624F]/50" />
-          <p className="text-sm font-medium text-[#5F624F]">
+        <div className="rounded-2xl border border-dashed border-[#D8D5C8] bg-white py-16 text-center">
+          <Inbox className="mx-auto mb-3 h-10 w-10 text-[#5E6654]/50" />
+          <p className="text-sm font-medium text-[#5E6654]">
             No band applications found
           </p>
         </div>
@@ -387,7 +387,7 @@ export default function BandBookingListClient({
                 </div>
 
                 {items.length === 0 ? (
-                  <p className="rounded-2xl border border-dashed border-[#E6DFC8] bg-white/60 py-8 text-center text-xs font-semibold text-[#5F624F]/60">
+                  <p className="rounded-2xl border border-dashed border-[#D8D5C8] bg-white/60 py-8 text-center text-xs font-semibold text-[#5E6654]/60">
                     Nothing here
                   </p>
                 ) : (

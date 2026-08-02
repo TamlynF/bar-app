@@ -152,11 +152,11 @@ const formatTimeRange = (start?: string | null, end?: string | null) =>
 
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+    <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
         {label}
       </span>
-      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "-"}</span>
+      <span className="text-right text-[13px] font-semibold text-[#20231A]">{value || "-"}</span>
     </div>
   );
 }
@@ -186,10 +186,10 @@ function EditRow({
   trailing?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</span>
       {!editable ? (
-        <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{readOnlyValue ?? (value || "-")}</span>
+        <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#20231A]">{readOnlyValue ?? (value || "-")}</span>
       ) : (
         <input
           aria-label={label}
@@ -197,7 +197,7 @@ function EditRow({
           value={value}
           placeholder={placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40"
+          className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
         />
       )}
       {trailing}
@@ -207,17 +207,17 @@ function EditRow({
 
 function ContactRow({ label, value, href, icon: Icon }: { label: string; value: string | null; href: string | null; icon: React.ElementType }) {
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
+    <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{label}</span>
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "-"}</span>
+        <span className="truncate text-right text-[13px] font-semibold text-[#20231A]">{value || "-"}</span>
         {href && (
           <a
             href={href}
             aria-label={`${label}: ${value}`}
             title={`Open ${label.toLowerCase()}`}
             onClick={(e) => e.stopPropagation()}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] text-[#5C4033] transition-colors hover:bg-[#5C4033] hover:text-white"
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
           >
             <Icon className="h-3.5 w-3.5" />
           </a>
@@ -242,11 +242,11 @@ function Section({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white", className)}>
+    <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
       <div
         className={cn(
-          "flex w-full items-center gap-3 bg-[#E6DFC8] px-4 py-3 sm:px-5",
-          open && "border-b border-[#E6DFC8]"
+          "flex w-full items-center gap-3 bg-[#D8D5C8] px-4 py-3 sm:px-5",
+          open && "border-b border-[#D8D5C8]"
         )}
       >
         <button
@@ -254,7 +254,7 @@ function Section({
           onClick={() => setOpen((o) => !o)}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase">{title}</span>
+          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">{title}</span>
         </button>
         {headerRight}
         <button
@@ -263,7 +263,7 @@ function Section({
           aria-label={open ? `Collapse ${title}` : `Expand ${title}`}
           className="shrink-0 transition-all hover:brightness-95"
         >
-          <ChevronDown className={cn("h-4 w-4 text-[#5F624F] transition-transform duration-200", open && "rotate-180")} />
+          <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform duration-200", open && "rotate-180")} />
         </button>
       </div>
       <div className={cn(!open && "hidden")}>{children}</div>
@@ -305,12 +305,12 @@ function StageChip({
       className={cn(
         "flex h-12 shrink-0 items-center gap-2 rounded-full border-2 px-3.5 transition-all sm:h-10",
         tone === "current" && cn(t.bg, t.text, t.border),
-        tone === "past" && "border-[#E6DFC8] bg-white text-[#5F624F]",
-        tone === "future" && "border-transparent text-[#5F624F]/45",
+        tone === "past" && "border-[#D8D5C8] bg-white text-[#5E6654]",
+        tone === "future" && "border-transparent text-[#5E6654]/45",
         interactive
           ? cn(
               "cursor-pointer hover:brightness-95",
-              tone === "future" && "border-dashed border-[#5C4033]/30 text-[#5C4033]"
+              tone === "future" && "border-dashed border-[#34451F]/30 text-[#34451F]"
             )
           : nudges
             ? "cursor-pointer border-dashed border-amber-300 text-amber-600/70 hover:bg-amber-50 hover:text-amber-700"
@@ -322,7 +322,7 @@ function StageChip({
       ) : tone === "past" ? (
         <CheckCircle className="h-3.5 w-3.5 shrink-0 text-green-600" />
       ) : (
-        <span className={cn("h-2 w-2 shrink-0 rounded-full", tone === "current" ? t.dot : "bg-[#E6DFC8]")} />
+        <span className={cn("h-2 w-2 shrink-0 rounded-full", tone === "current" ? t.dot : "bg-[#D8D5C8]")} />
       )}
       <span className="font-black text-[10px] tracking-widest uppercase">{t.label}</span>
     </button>
@@ -402,8 +402,8 @@ function StageStepper({
               )}
             </button>
           </PopoverTrigger>
-          <PopoverContent align="start" className="w-80 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white p-0 sm:w-96">
-            <span className="flex items-center gap-1.5 border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+          <PopoverContent align="start" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0 sm:w-96">
+            <span className="flex items-center gap-1.5 border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
               <MessageSquareQuote className="h-3.5 w-3.5" />
               Cancellation Reason for Applicant
             </span>
@@ -414,9 +414,9 @@ function StageStepper({
                 onChange={(e) => onDeclineReasonChange(e.target.value)}
                 rows={4}
                 placeholder="The reason given to the enquirer when this was rejected..."
-                className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
               />
-              <p className="mt-1.5 text-[10px] leading-snug text-[#5F624F]/70">
+              <p className="mt-1.5 text-[10px] leading-snug text-[#5E6654]/70">
                 Saved when you hit Save.
               </p>
             </div>
@@ -424,7 +424,7 @@ function StageStepper({
         </Popover>
         {exits.map((s) => (
           <React.Fragment key={s}>
-            <ArrowRight className="h-4 w-4 shrink-0 text-[#5F624F]/30" aria-hidden="true" />
+            <ArrowRight className="h-4 w-4 shrink-0 text-[#5E6654]/30" aria-hidden="true" />
             {chip(s, "future")}
           </React.Fragment>
         ))}
@@ -441,7 +441,7 @@ function StageStepper({
         <React.Fragment key={s}>
           {i > 0 && (
             <ArrowRight
-              className={cn("h-4 w-4 shrink-0", i <= idx ? "text-[#5C4033]" : "text-[#5F624F]/30")}
+              className={cn("h-4 w-4 shrink-0", i <= idx ? "text-[#34451F]" : "text-[#5E6654]/30")}
               aria-hidden="true"
             />
           )}
@@ -471,17 +471,17 @@ function StageStepper({
 
 function EmailPreview({ email, to }: { email: PrivateHireEmail; to: string }) {
   return (
-    <div className="space-y-1.5 rounded-xl border border-[#E6DFC8] bg-white p-3 text-left">
-      <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">To: {to}</p>
-      <p className="font-black text-xs text-[#1F1F1A]">{email.subject}</p>
-      <p className="text-xs text-[#5F624F]">{email.greeting}</p>
+    <div className="space-y-1.5 rounded-xl border border-[#D8D5C8] bg-white p-3 text-left">
+      <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">To: {to}</p>
+      <p className="font-black text-xs text-[#20231A]">{email.subject}</p>
+      <p className="text-xs text-[#5E6654]">{email.greeting}</p>
       {email.body.map((p, i) => (
-        <p key={i} className="text-xs leading-relaxed text-[#5F624F]">{p}</p>
+        <p key={i} className="text-xs leading-relaxed text-[#5E6654]">{p}</p>
       ))}
       {email.noteLabel && (
-        <div className="mt-1 rounded-lg border-l-4 border-[#5C4033] bg-[#F7F4EA] px-3 py-2">
-          <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Note from our team</p>
-          <p className="text-xs leading-relaxed text-[#1F1F1A]">{email.noteLabel}</p>
+        <div className="mt-1 rounded-lg border-l-4 border-[#34451F] bg-[#F4F1E8] px-3 py-2">
+          <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Note from our team</p>
+          <p className="text-xs leading-relaxed text-[#20231A]">{email.noteLabel}</p>
         </div>
       )}
     </div>
@@ -507,7 +507,7 @@ function EmailWithNote({
   return (
     <div className="space-y-2 text-left">
       <label className="block">
-        <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+        <span className="mb-1.5 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
           {label}
         </span>
         <textarea
@@ -518,7 +518,7 @@ function EmailWithNote({
             setNote(e.target.value);
             onNoteChange(e.target.value);
           }}
-          className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-white px-3 py-2 text-xs text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+          className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-white px-3 py-2 text-xs text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
         />
       </label>
       <EmailPreview email={build(note)} to={to} />
@@ -929,8 +929,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
     cn(
       "shrink-0 rounded-lg border px-2 py-1 text-[11px] font-bold whitespace-nowrap transition-all",
       isSelected
-        ? "border-[#1B4332] bg-[#1B4332] text-white"
-        : "border-[#5C4033]/25 bg-[#5C4033]/10 text-[#5C4033]",
+        ? "border-[#34451F] bg-[#34451F] text-white"
+        : "border-[#34451F]/25 bg-[#34451F]/10 text-[#34451F]",
       interactive ? "hover:brightness-95" : "cursor-not-allowed"
     );
 
@@ -940,8 +940,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
         type="button"
         onClick={() => setSheetOpen(true)}
         className={cn(
-          "relative w-full overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white",
-          "text-left shadow-sm transition-all hover:bg-[#F7F4EA]/60 active:scale-[0.98]"
+          "relative w-full overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white",
+          "text-left shadow-sm transition-all hover:bg-[#F4F1E8]/60 active:scale-[0.98]"
         )}
       >
         {subtypeBadge && (
@@ -982,7 +982,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
 
           <div className="min-w-0 flex-1">
             <div className="flex min-w-0 items-center gap-1.5">
-              <p className="truncate font-black text-sm tracking-tight text-[#1F1F1A] uppercase">
+              <p className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">
                 {request.full_name}
               </p>
               {request.admin_notes && (
@@ -991,7 +991,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                 </span>
               )}
             </div>
-            <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5F624F]">
+            <div className="mt-0.5 flex items-center justify-between gap-2 text-[11px] font-semibold text-[#5E6654]">
               <span className="min-w-0 truncate">
                 {hasSelectedSlot
                   ? selectedTimeLabel && (
@@ -1014,7 +1014,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
             </div>
           </div>
 
-          <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F]/50" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
         </div>
       </button>
 
@@ -1031,14 +1031,14 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           onEscapeKeyDown={(e) => {
             if (confirmOpen.current) e.preventDefault();
           }}
-          className="left-1/2 flex h-auto max-h-[90vh] w-full max-w-6xl -translate-x-1/2 flex-col rounded-[2.5rem] rounded-t-[2.5rem] border-2 border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:bottom-6 lg:max-h-[94vh]"
+          className="left-1/2 flex h-auto max-h-[90vh] w-full max-w-6xl -translate-x-1/2 flex-col rounded-[2.5rem] rounded-t-[2.5rem] border-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:bottom-6 lg:max-h-[94vh]"
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#1F1F1A] uppercase">
+                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tight text-[#20231A] uppercase">
                   {request.full_name}
-                  <span className="ml-1.5 text-sm font-semibold tracking-wide text-[#5F624F] normal-case italic">
+                  <span className="ml-1.5 text-sm font-semibold tracking-wide text-[#5E6654] normal-case italic">
                     (#Ref: {shortRef})
                   </span>
                 </SheetTitle>
@@ -1054,13 +1054,13 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                       type="button"
                       aria-label="System information"
                       title="System information"
-                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#E6DFC8] bg-white text-[#5F624F] transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033] sm:h-9 sm:w-9"
+                      className="flex h-11 w-11 items-center justify-center rounded-xl border border-[#D8D5C8] bg-white text-[#5E6654] transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F] sm:h-9 sm:w-9"
                     >
                       <Info className="h-4 w-4" />
                     </button>
                   </PopoverTrigger>
-                  <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
-                    <span className="block border-b border-[#E6DFC8] bg-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase">
+                  <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
+                    <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
                       System Information
                     </span>
                     <SheetRow
@@ -1071,7 +1071,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                           onClick={handleCopyRef}
                           title={request.id}
                           aria-label={`Copy reference ${request.id}`}
-                          className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] tabular-nums transition-colors hover:text-[#1F1F1A]"
+                          className="group inline-flex items-center gap-1.5 font-bold text-[#34451F] tabular-nums transition-colors hover:text-[#20231A]"
                         >
                           <Hash className="h-3 w-3 shrink-0" />
                           <span>{shortRef}</span>
@@ -1085,7 +1085,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                         eventHref ? (
                           <Link
                             href={eventHref}
-                            className="group inline-flex items-center gap-1.5 font-bold text-[#5C4033] hover:underline"
+                            className="group inline-flex items-center gap-1.5 font-bold text-[#34451F] hover:underline"
                           >
                             <CalendarDays className="h-3.5 w-3.5 shrink-0" />
                             <span className="tabular-nums">#{request.event_id}</span>
@@ -1095,8 +1095,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                       }
                     />
                     {(isCancelled || !!declineReason) && (
-                      <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                      <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                           Decline Reason
                         </span>
                         {declineReasonOpen ? (
@@ -1107,23 +1107,23 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                             autoFocus
                             placeholder="Why was this rejected?"
                             onChange={(e) => setAdminNotes(e.target.value)}
-                            className="min-w-0 flex-1 resize-none rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2.5 py-1.5 text-[13px] text-[#1F1F1A] transition-all outline-none placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30"
+                            className="min-w-0 flex-1 resize-none rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 py-1.5 text-[13px] text-[#20231A] transition-all outline-none placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30"
                           />
                         ) : (
                           <button
                             type="button"
                             onClick={() => setDeclineReasonOpen(true)}
                             title={declineReason || "Add a reason"}
-                            className="min-w-0 text-right text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:text-[#5C4033]"
+                            className="min-w-0 text-right text-[13px] font-semibold text-[#20231A] transition-colors hover:text-[#34451F]"
                           >
                             {declineReason ? (
                               <span className="italic">
                                 &quot;{declineIsLong ? declineHead : declineReason}
-                                {declineIsLong && <span className="font-black text-[#5C4033] not-italic">…</span>}
+                                {declineIsLong && <span className="font-black text-[#34451F] not-italic">…</span>}
                                 &quot;
                               </span>
                             ) : (
-                              <span className="text-[#5F624F]/50">Add a reason…</span>
+                              <span className="text-[#5E6654]/50">Add a reason…</span>
                             )}
                           </button>
                         )}
@@ -1136,7 +1136,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                 </Popover>
               </div>
             </div>
-            <div className="mt-3 border-t border-[#E6DFC8]" />
+            <div className="mt-3 border-t border-[#D8D5C8]" />
             <StageStepper
               status={status}
               onSelect={handleAction}
@@ -1200,23 +1200,23 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                 >
                   <SheetRow label="Name" value={request.full_name} />
 
-                  <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Type / Subtype</span>
+                  <div className="flex items-center justify-between gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                    <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Type / Subtype</span>
                     {!editable || !options ? (
-                      <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">
+                      <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#20231A]">
                         {typeName || "-"}
-                        <span className="mx-1.5 font-normal text-[#5F624F]/50">/</span>
+                        <span className="mx-1.5 font-normal text-[#5E6654]/50">/</span>
                         {subtypeName || "-"}
                       </span>
                     ) : (
                       <div className="flex min-w-0 items-center justify-end gap-1.5">
-                        <span className="shrink-0 text-[13px] font-semibold text-[#1F1F1A]">{typeName || "-"}</span>
-                        <span className="shrink-0 text-[#5F624F]/50">/</span>
+                        <span className="shrink-0 text-[13px] font-semibold text-[#20231A]">{typeName || "-"}</span>
+                        <span className="shrink-0 text-[#5E6654]/50">/</span>
                         <select
                           aria-label="Subtype"
                           value={subtypeId}
                           onChange={(e) => setSubtypeId(e.target.value)}
-                          className="min-w-0 cursor-pointer bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
+                          className="min-w-0 cursor-pointer bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none [text-align-last:right]"
                         >
                           {!subtypeId && <option value="">-</option>}
                           {subtypeOptions.map((s) => (
@@ -1240,8 +1240,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                   />
 
                   {hasPreferred && (
-                    <div className="flex items-center gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                    <div className="flex items-center gap-3 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                      <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                         Preferred Date &amp; Time
                       </span>
                       <div className="no-scrollbar ml-auto flex min-w-0 items-center gap-1.5 overflow-x-auto">
@@ -1276,11 +1276,11 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                   )}
 
                   {bookingNote && (
-                    <div className="flex items-start justify-between gap-4 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
-                      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+                    <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
                         Notes from Booking
                       </span>
-                      <p className="min-w-0 text-right text-[13px] leading-relaxed font-semibold text-[#1F1F1A] italic">
+                      <p className="min-w-0 text-right text-[13px] leading-relaxed font-semibold text-[#20231A] italic">
                         &quot;{noteExpanded ? bookingNote : noteHead}{noteIsLong && !noteExpanded && (
                           <button
                             type="button"
@@ -1288,7 +1288,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                             title="Show the full note"
                             aria-label="Show the full note"
                             aria-expanded={false}
-                            className="px-0.5 font-black text-[#5C4033] not-italic hover:underline"
+                            className="px-0.5 font-black text-[#34451F] not-italic hover:underline"
                           >
                             …
                           </button>
@@ -1298,7 +1298,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                             type="button"
                             onClick={() => setNoteExpanded(false)}
                             aria-expanded={true}
-                            className="ml-1.5 font-black text-[10px] tracking-wide text-[#5C4033] uppercase not-italic hover:underline"
+                            className="ml-1.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase not-italic hover:underline"
                           >
                             Less
                           </button>
@@ -1317,9 +1317,9 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                         onChange={(e) => setAdminNotes(e.target.value)}
                         rows={4}
                         placeholder="The reason given to the enquirer when this was rejected..."
-                        className="w-full resize-none rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] px-3 py-2 text-[13px] text-[#1F1F1A] transition-all placeholder:text-[#5F624F]/50 focus:border-[#5C4033]/30 focus:outline-none"
+                        className="w-full resize-none rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 text-[13px] text-[#20231A] transition-all placeholder:text-[#5E6654]/50 focus:border-[#34451F]/30 focus:outline-none"
                       />
-                      <p className="mt-1.5 text-[10px] leading-snug text-[#5F624F]/70">
+                      <p className="mt-1.5 text-[10px] leading-snug text-[#5E6654]/70">
                         Saved when you hit Save.
                       </p>
                     </div>
@@ -1337,7 +1337,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
             <div className="h-4" />
           </div>
 
-          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#5C4033]/15 bg-[#E6DFC8] px-4 py-3 pb-6 sm:px-6">
+          <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
             <div className="space-y-2">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
                 <div
@@ -1349,8 +1349,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                       : slotWarning
                         ? "border-l-4 border-amber-300 border-l-amber-400 bg-amber-50"
                         : slotIsSet
-                          ? "border-[#1B4332]/30 bg-[#F7F4EA] shadow-[#1B4332]/25"
-                          : "border-[#5C4033]/25 bg-[#F7F4EA]",
+                          ? "border-[#34451F]/30 bg-[#F4F1E8] shadow-[#34451F]/25"
+                          : "border-[#34451F]/25 bg-[#F4F1E8]",
                     slotFlash && "ring-2 ring-amber-400/70"
                   )}
                 >
@@ -1358,7 +1358,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                     <span
                       className={cn(
                         "flex shrink-0 flex-wrap items-center gap-2 font-black text-[11px] tracking-wide uppercase",
-                        slotIsSet ? "text-[#1B4332]" : "text-[#5C4033]"
+                        slotIsSet ? "text-[#34451F]" : "text-[#34451F]"
                       )}
                     >
                       Selected Date &amp; Time
@@ -1370,21 +1370,21 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                             type="button"
                             disabled={!editable}
                             className={cn(
-                              "flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#1F1F1A] transition-colors hover:border-[#5C4033]/30 disabled:cursor-not-allowed disabled:opacity-60",
+                              "flex min-w-40 flex-1 items-center justify-between gap-2 rounded-xl border bg-white px-3 py-2 text-[13px] font-semibold text-[#20231A] transition-colors hover:border-[#34451F]/30 disabled:cursor-not-allowed disabled:opacity-60",
                               !selectedDate && slotWarning
                                 ? "border-amber-300"
                                 : slotIsSet
-                                  ? "border-[#1B4332]"
-                                  : "border-[#E6DFC8]"
+                                  ? "border-[#34451F]"
+                                  : "border-[#D8D5C8]"
                             )}
                           >
                             {selectedDate
                               ? format(new Date(selectedDate + "T00:00:00"), "EEE, d MMM yyyy")
                               : "Pick a date"}
-                            <CalendarDays className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
+                            <CalendarDays className="h-4 w-4 shrink-0 text-[#5E6654]/60" />
                           </button>
                         </PopoverTrigger>
-                        <PopoverContent align="start" className="w-auto rounded-2xl border-2 border-[#E6DFC8] bg-white p-0">
+                        <PopoverContent align="start" className="w-auto rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
                           <Calendar
                             mode="single"
                             selected={selectedDate ? new Date(selectedDate + "T00:00:00") : undefined}
@@ -1401,7 +1401,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                                 applyDate("");
                                 setDatePickerOpen(false);
                               }}
-                              className="flex w-full items-center justify-center gap-1.5 border-t border-[#E6DFC8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                              className="flex w-full items-center justify-center gap-1.5 border-t border-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
                             >
                               <X className="h-3.5 w-3.5" />
                               Clear date
@@ -1415,8 +1415,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                           (!selectedStartTime || !selectedEndTime) && slotWarning
                             ? "border-amber-300"
                             : slotIsSet
-                              ? "border-[#1B4332]"
-                              : "border-[#E6DFC8]"
+                              ? "border-[#34451F]"
+                              : "border-[#D8D5C8]"
                         )}
                       >
                         <input
@@ -1429,9 +1429,9 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                             setSelectedStartTime(e.target.value);
                             setClashes([]);
                           }}
-                          className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none disabled:opacity-60"
+                          className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none disabled:opacity-60"
                         />
-                        <span className="text-xs text-[#5F624F]/50">-</span>
+                        <span className="text-xs text-[#5E6654]/50">-</span>
                         <input
                           type="time"
                           aria-label="Selected end time"
@@ -1441,7 +1441,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                             setSelectedEndTime(e.target.value);
                             setClashes([]);
                           }}
-                          className="bg-transparent text-[13px] font-semibold text-[#1F1F1A] outline-none disabled:opacity-60"
+                          className="bg-transparent text-[13px] font-semibold text-[#20231A] outline-none disabled:opacity-60"
                         />
                         {editable && (selectedStartTime || selectedEndTime) && (
                           <button
@@ -1449,7 +1449,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                             onClick={() => applyTimes("", "")}
                             aria-label="Clear selected times"
                             title="Clear times"
-                            className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5F624F]/50 transition-colors hover:bg-[#F7F4EA] hover:text-[#5C4033]"
+                            className="ml-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-[#5E6654]/50 transition-colors hover:bg-[#F4F1E8] hover:text-[#34451F]"
                           >
                             <X className="h-3.5 w-3.5" />
                           </button>
@@ -1467,7 +1467,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                       type="button"
                       onClick={handleCancel}
                       disabled={isPending}
-                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial sm:px-6"
+                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#D8D5C8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex-initial sm:px-6"
                     >
                       <X className="h-3.5 w-3.5 shrink-0" />
                       Close
@@ -1479,7 +1479,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                         onClick={handleCancel}
                         disabled={isPending}
                         title="Discard changes"
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#E6DFC8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5F624F] uppercase transition-colors hover:bg-[#F7F4EA] disabled:opacity-50 sm:flex-initial sm:px-6"
+                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-[#D8D5C8] bg-white px-5 font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex-initial sm:px-6"
                       >
                         <Undo2 className="h-3.5 w-3.5 shrink-0" />
                         Cancel
@@ -1489,7 +1489,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                         onClick={handleSave}
                         disabled={isPending || hasClashes}
                         title={hasClashes ? clashWarning : undefined}
-                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#1B4332] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#1B4332]/85 active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-6"
+                        className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#34451F] px-5 font-black text-[10px] tracking-widest text-white uppercase shadow-lg transition-all hover:bg-[#283719] active:scale-95 disabled:pointer-events-none disabled:opacity-50 sm:flex-initial sm:px-6"
                       >
                         {isPending ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" /> : <Save className="h-3.5 w-3.5 shrink-0" />}
                         Save

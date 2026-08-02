@@ -59,16 +59,16 @@ function EventBanner({
   const hasPayments = summary.paymentAmount != null && summary.paymentAmount !== 0;
 
   return (
-    <div className="flex overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white shadow-sm">
-      <div className="w-1.5 shrink-0 bg-[#5C4033]" />
+    <div className="flex overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white shadow-sm">
+      <div className="w-1.5 shrink-0 bg-[#34451F]" />
       <div className="min-w-0 flex-1">
         <div
           className={cn(
             "flex items-center gap-2.5 bg-[#ECE4CE] px-4 py-3",
-            open && "border-b border-[#E6DFC8]",
+            open && "border-b border-[#D8D5C8]",
           )}
         >
-          <h2 className="min-w-0 truncate font-black text-base tracking-tight text-[#1F1F1A] uppercase">
+          <h2 className="min-w-0 truncate font-black text-base tracking-tight text-[#20231A] uppercase">
             {summary.title || "Untitled Event"}
           </h2>
           <span
@@ -91,8 +91,8 @@ function EventBanner({
               className={cn(
                 "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg px-2.5 font-black text-[10px] tracking-wide uppercase transition-colors",
                 tablesOpen
-                  ? "bg-[#5C4033] text-white"
-                  : "border border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F] hover:bg-[#E6DFC8]",
+                  ? "bg-[#34451F] text-white"
+                  : "border border-[#D8D5C8] bg-[#F4F1E8] text-[#5E6654] hover:bg-[#D8D5C8]",
               )}
             >
               <TableIcon className="h-3.5 w-3.5" /> Tables
@@ -103,7 +103,7 @@ function EventBanner({
             onClick={() => setOpen(o => !o)}
             aria-expanded={open}
             aria-label="Toggle event details"
-            className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#5F624F] transition-colors hover:bg-black/5"
+            className="-mr-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-[#5E6654] transition-colors hover:bg-black/5"
           >
             <ChevronDown className={cn("h-4 w-4 transition-transform", open && "rotate-180")} />
           </button>
@@ -117,7 +117,7 @@ function EventBanner({
             {hasPayments && (
               <Meta icon={<Coins className="h-3.5 w-3.5" />}>
                 <span className="text-green-700">£{summary.totalPaid.toFixed(2)}</span>
-                <span className="text-[#5F624F]"> / £{summary.totalExpected.toFixed(2)}</span>
+                <span className="text-[#5E6654]"> / £{summary.totalExpected.toFixed(2)}</span>
               </Meta>
             )}
             {summary.quiz && (
@@ -126,7 +126,7 @@ function EventBanner({
                   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-black text-[10px] tracking-wide uppercase",
                   summary.quiz.status === "Complete" && "bg-green-100 text-green-700",
                   summary.quiz.status === "Incomplete" && "bg-orange-100 text-orange-700",
-                  summary.quiz.status === "Not Started" && "bg-[#F7F4EA] text-[#5F624F]",
+                  summary.quiz.status === "Not Started" && "bg-[#F4F1E8] text-[#5E6654]",
                 )}
               >
                 {summary.quiz.status === "Complete" && <CheckCircle2 className="h-3.5 w-3.5" />}
@@ -149,8 +149,8 @@ function EventBanner({
 
 function Meta({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1F1F1A]">
-      <span className="text-[#5F624F]/70">{icon}</span>
+    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-[#20231A]">
+      <span className="text-[#5E6654]/70">{icon}</span>
       {children}
     </span>
   );
@@ -160,12 +160,12 @@ function TableStats({ buckets }: { buckets: { capacity: number; total: number; a
   const assigned = buckets.reduce((a, b) => a + b.assigned, 0);
   const total = buckets.reduce((a, b) => a + b.total, 0);
   return (
-    <div className="animate-in rounded-2xl border border-[#E6DFC8] bg-white p-3.5 shadow-sm duration-200 fade-in slide-in-from-top-1">
+    <div className="animate-in rounded-2xl border border-[#D8D5C8] bg-white p-3.5 shadow-sm duration-200 fade-in slide-in-from-top-1">
       <div className="mb-2.5 flex items-center justify-between">
-        <span className="inline-flex items-center gap-1.5 font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
+        <span className="inline-flex items-center gap-1.5 font-black text-[11px] tracking-wide text-[#5E6654] uppercase">
           <TableIcon className="h-3.5 w-3.5" /> Table Status
         </span>
-        <span className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase tabular-nums">
+        <span className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase tabular-nums">
           {assigned}/{total} seated
         </span>
       </div>
@@ -176,14 +176,14 @@ function TableStats({ buckets }: { buckets: { capacity: number; total: number; a
             <div
               key={g.capacity}
               className={cn(
-                "flex min-w-15 flex-col items-center justify-center rounded-xl border bg-[#F7F4EA] px-3 py-2",
-                full ? "border-green-500/40" : "border-[#E6DFC8]",
+                "flex min-w-15 flex-col items-center justify-center rounded-xl border bg-[#F4F1E8] px-3 py-2",
+                full ? "border-green-500/40" : "border-[#D8D5C8]",
               )}
             >
-              <span className="font-black text-[9px] tracking-wide text-[#5F624F] uppercase">Cap {g.capacity}</span>
-              <span className={cn("font-black text-base leading-tight tabular-nums", full ? "text-green-700" : "text-[#1F1F1A]")}>
+              <span className="font-black text-[9px] tracking-wide text-[#5E6654] uppercase">Cap {g.capacity}</span>
+              <span className={cn("font-black text-base leading-tight tabular-nums", full ? "text-green-700" : "text-[#20231A]")}>
                 {g.assigned}
-                <span className="text-[#5F624F]/45">/{g.total}</span>
+                <span className="text-[#5E6654]/45">/{g.total}</span>
               </span>
             </div>
           );
@@ -215,7 +215,7 @@ function StatPill({
       onClick={onClick}
       className={cn(
         "group flex h-11 shrink-0 items-center gap-2.5 rounded-xl pr-3.5 pl-2 transition-all active:scale-[0.97]",
-        active ? cn(theme.dot, "shadow-md") : "border border-[#E6DFC8] bg-white",
+        active ? cn(theme.dot, "shadow-md") : "border border-[#D8D5C8] bg-white",
       )}
     >
       <span
@@ -227,10 +227,10 @@ function StatPill({
         {teamCount}
       </span>
       <span className="text-left leading-none">
-        <span className={cn("block font-black text-[11px] tracking-wide uppercase", active ? "text-white" : "text-[#1F1F1A]")}>
+        <span className={cn("block font-black text-[11px] tracking-wide uppercase", active ? "text-white" : "text-[#20231A]")}>
           {label}
         </span>
-        <span className={cn("mt-0.5 block text-[9.5px] font-bold tracking-wide uppercase", active ? "text-white/80" : "text-[#5F624F]")}>
+        <span className={cn("mt-0.5 block text-[9.5px] font-bold tracking-wide uppercase", active ? "text-white/80" : "text-[#5E6654]")}>
           {guestCount} guests
         </span>
       </span>
@@ -315,22 +315,22 @@ export default function BookingsSection({
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           {eventFilter && <div className="sm:w-56 sm:shrink-0 lg:w-72">{eventFilter}</div>}
           <div className="flex items-center gap-2 sm:min-w-0 sm:flex-1">
-          <div className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-[#E6DFC8] bg-white px-3.5 transition-colors focus-within:border-[#5C4033]">
-            <Search className="h-4 w-4 shrink-0 text-[#5F624F]/60" />
+          <div className="flex h-11 min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-[#D8D5C8] bg-white px-3.5 transition-colors focus-within:border-[#34451F]">
+            <Search className="h-4 w-4 shrink-0 text-[#5E6654]/60" />
             <input
               type="text"
               placeholder="Search teams or hosts…"
               aria-label="Search bookings"
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#1F1F1A] outline-none placeholder:font-normal placeholder:text-[#5F624F]/40"
+              className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#20231A] outline-none placeholder:font-normal placeholder:text-[#5E6654]/40"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery("")}
                 aria-label="Clear search"
-                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[#5F624F] transition-colors hover:bg-[#E6DFC8]"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-[#5E6654] transition-colors hover:bg-[#D8D5C8]"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -344,8 +344,8 @@ export default function BookingsSection({
             className={cn(
               "inline-flex h-11 shrink-0 items-center gap-1.5 rounded-xl px-3.5 font-black text-[11px] tracking-wide uppercase transition-colors",
               showFilters || activeCount > 0
-                ? "bg-[#5C4033] text-white"
-                : "border border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]",
+                ? "bg-[#34451F] text-white"
+                : "border border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#F4F1E8]",
             )}
           >
             <SlidersHorizontal className="h-4 w-4" /> Filters
@@ -376,7 +376,7 @@ export default function BookingsSection({
       </div>
 
       <div className="flex items-center justify-between px-0.5">
-        <span className="font-black text-[11px] tracking-wide text-[#5F624F] uppercase">
+        <span className="font-black text-[11px] tracking-wide text-[#5E6654] uppercase">
           Bookings ({filteredBookings.length})
         </span>
         {(activeCount > 0 || searchQuery) && (
@@ -386,7 +386,7 @@ export default function BookingsSection({
               setActiveStatusFilters(new Set());
               setSearchQuery("");
             }}
-            className="font-black text-[10px] tracking-wide text-[#5C4033] uppercase"
+            className="font-black text-[10px] tracking-wide text-[#34451F] uppercase"
           >
             Clear
           </button>

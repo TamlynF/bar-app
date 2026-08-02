@@ -110,25 +110,25 @@ export default async function EventQuizQuestionsPage({
   return (
     <div className="mx-auto animate-in space-y-6 p-2 text-left duration-700 fade-in sm:max-w-2xl sm:p-6 md:max-w-7xl lg:max-w-7xl">
 
-      <div className="flex items-start gap-3 rounded-2xl border border-[#E6DFC8] bg-white px-5 py-4">
+      <div className="flex items-start gap-3 rounded-2xl border border-[#D8D5C8] bg-white px-5 py-4">
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#C8956D]/30 bg-[#C8956D]/30">
-          <Brain className="h-4 w-4 text-[#5C4033]" />
+          <Brain className="h-4 w-4 text-[#34451F]" />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="font-black text-xl leading-tight tracking-tighter text-[#5C4033] uppercase">
+          <h1 className="font-black text-xl leading-tight tracking-tighter text-[#34451F] uppercase">
             {event.title ?? "Untitled Event"}
           </h1>
-          <p className="mt-0.5 text-[11px] font-bold text-[#5F624F]">
+          <p className="mt-0.5 text-[11px] font-bold text-[#5E6654]">
             {formatDate(event.date)}
           </p>
         </div>
         <div className="shrink-0 text-right">
-          <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
+          <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
             Questions
           </p>
-          <p className="font-black text-lg leading-none text-[#5C4033] tabular-nums">
+          <p className="font-black text-lg leading-none text-[#34451F] tabular-nums">
             {totalQuestions}
-            <span className="text-xs font-bold text-[#5F624F]/50"> / {targetQuestions}</span>
+            <span className="text-xs font-bold text-[#5E6654]/50"> / {targetQuestions}</span>
           </p>
         </div>
       </div>
@@ -153,10 +153,10 @@ export default async function EventQuizQuestionsPage({
         ))}
 
         {byCategory.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
-            <BookOpen className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-20" />
-            <p className="font-black text-sm text-[#1F1F1A]">No quiz categories configured</p>
-            <p className="mt-1 text-[11px] text-[#5F624F]">
+          <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
+            <BookOpen className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-20" />
+            <p className="font-black text-sm text-[#20231A]">No quiz categories configured</p>
+            <p className="mt-1 text-[11px] text-[#5E6654]">
               Add categories in{" "}
               <Link href="/event-setups/quiz-categories" className="underline">
                 Quiz Rules

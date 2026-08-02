@@ -163,28 +163,28 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
     <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
 
       {initialEmployees.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#E6DFC8] py-14 text-center">
-          <Users className="mx-auto mb-3 h-8 w-8 text-[#5F624F] opacity-30" />
-          <p className="font-black text-sm text-[#1F1F1A]">No employees yet</p>
-          <p className="mt-1 text-[11px] text-[#5F624F]">Add your first employee to get started</p>
+        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
+          <Users className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
+          <p className="font-black text-sm text-[#20231A]">No employees yet</p>
+          <p className="mt-1 text-[11px] text-[#5E6654]">Add your first employee to get started</p>
         </div>
       ) : (
         <div className="space-y-2">
-          <section className="overflow-hidden rounded-2xl border border-[#E6DFC8] bg-white">
-            <div className="flex items-center gap-2 bg-[#F7F4EA] px-4 py-3 sm:px-5">
+          <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
+            <div className="flex items-center gap-2 bg-[#F4F1E8] px-4 py-3 sm:px-5">
               <button
                 type="button"
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className="min-w-0 flex-1 text-left"
               >
-                <p className="truncate text-[11px] font-bold tracking-wide text-[#5C4033] uppercase">
-                  Employees <span className="text-[#5F624F]">({initialEmployees.length})</span>
+                <p className="truncate text-[11px] font-bold tracking-wide text-[#34451F] uppercase">
+                  Employees <span className="text-[#5E6654]">({initialEmployees.length})</span>
                 </p>
               </button>
               <button
                 type="button"
                 onClick={openAdd}
-                className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#1B4332] text-white transition-colors hover:bg-[#1B4332]/85 sm:h-7 sm:w-auto sm:px-2.5"
+                className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#34451F] text-white transition-colors hover:bg-[#283719] sm:h-7 sm:w-auto sm:px-2.5"
                 title="Add Employee"
               >
                 <Plus className="h-3.5 w-3.5 shrink-0" />
@@ -197,19 +197,19 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                 title="Toggle group"
               >
                 <ChevronDown className={cn(
-                  "h-4 w-4 text-[#5F624F] transition-transform duration-200",
+                  "h-4 w-4 text-[#5E6654] transition-transform duration-200",
                   !isCollapsed && "rotate-180"
                 )} />
               </button>
             </div>
 
-            {!isCollapsed && <div className="divide-y divide-[#E6DFC8]/50">
+            {!isCollapsed && <div className="divide-y divide-[#D8D5C8]/50">
               {initialEmployees.map((employee) => {
                 const empStatus = employee.status?.toLowerCase();
                 const isActive = empStatus === "active";
                 const isLeave = empStatus === "leave";
                 const inactive = !isActive;
-                const muted = "text-[#5F624F]";
+                const muted = "text-[#5E6654]";
                 const initials = employee.full_name
                   .split(" ")
                   .map((n) => n[0])
@@ -220,11 +220,11 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                   <div
                     key={employee.id}
                     onClick={() => openView(employee)}
-                    className="flex cursor-pointer items-center gap-2 px-3 py-3 transition-colors hover:bg-[#F7F4EA]/50 active:scale-[0.99] sm:gap-3 sm:px-4"
+                    className="flex cursor-pointer items-center gap-2 px-3 py-3 transition-colors hover:bg-[#F4F1E8]/50 active:scale-[0.99] sm:gap-3 sm:px-4"
                   >
                     <div className="min-w-0 flex-1 sm:hidden">
                       <div className="flex items-center gap-2">
-                        <p className={cn("min-w-0 flex-1 truncate font-black text-xs leading-snug", inactive ? muted : "text-[#1F1F1A]")}>
+                        <p className={cn("min-w-0 flex-1 truncate font-black text-xs leading-snug", inactive ? muted : "text-[#20231A]")}>
                           {employee.full_name}
                         </p>
                         <span className={cn(
@@ -235,14 +235,14 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                         </span>
                       </div>
                       <div className="mt-0.5 flex items-center gap-1">
-                        <p className={cn("min-w-0 flex-1 truncate text-[10px] font-medium", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
+                        <p className={cn("min-w-0 flex-1 truncate text-[10px] font-medium", inactive ? "text-[#5E6654]/50" : "text-[#5E6654]")}>
                           {toTitleCase(employee.role) || "No role"}
                         </p>
                         <span className={cn("shrink-0 text-[10px] font-bold", muted)}>
                           {toTitleCase(employee.employment_type?.replace("-", " ")) || "-"}
                         </span>
                         <span className="flex w-6 shrink-0 items-center justify-center">
-                          <span className={cn("flex h-6 w-6 items-center justify-center rounded-full border border-[#E6DFC8] bg-[#F7F4EA] text-[10px] font-bold", muted)}>
+                          <span className={cn("flex h-6 w-6 items-center justify-center rounded-full border border-[#D8D5C8] bg-[#F4F1E8] text-[10px] font-bold", muted)}>
                             {initials}
                           </span>
                         </span>
@@ -250,19 +250,19 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     </div>
 
                     <div className="hidden min-w-0 flex-1 sm:block">
-                      <p className={cn("truncate font-black text-sm leading-snug", inactive ? muted : "text-[#1F1F1A]")}>
+                      <p className={cn("truncate font-black text-sm leading-snug", inactive ? muted : "text-[#20231A]")}>
                         {employee.full_name}
                       </p>
-                      <p className={cn("mt-0.5 truncate text-[11px] font-medium", inactive ? "text-[#5F624F]/50" : "text-[#5F624F]")}>
+                      <p className={cn("mt-0.5 truncate text-[11px] font-medium", inactive ? "text-[#5E6654]/50" : "text-[#5E6654]")}>
                         {employee.email}
                       </p>
                     </div>
 
                     <div className="hidden shrink-0 items-center gap-2 sm:flex">
-                      <span className="rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2 py-1 text-[11px] font-bold text-[#5F624F]">
+                      <span className="rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1 text-[11px] font-bold text-[#5E6654]">
                         {toTitleCase(employee.role) || "No role"}
                       </span>
-                      <span className="rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2 py-1 text-[11px] font-bold text-[#5F624F]">
+                      <span className="rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2 py-1 text-[11px] font-bold text-[#5E6654]">
                         {toTitleCase(employee.employment_type?.replace("-", " ")) || "-"}
                       </span>
                       <span className={cn(
@@ -277,7 +277,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                       </span>
                     </div>
 
-                    <ChevronRight className="h-4 w-4 shrink-0 text-[#5F624F] opacity-40" />
+                    <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654] opacity-40" />
                   </div>
                 );
               })}
@@ -291,22 +291,22 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#E6DFC8]
-            bg-[#F7F4EA] p-0 shadow-2xl outline-none
+          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8]
+            bg-[#F4F1E8] p-0 shadow-2xl outline-none
             sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
             sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
-            sm:border-2 sm:border-[#E6DFC8]"
+            sm:border-2 sm:border-[#D8D5C8]"
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#E6DFC8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#1F1F1A] uppercase">
+                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#20231A] uppercase">
                   {isAdding ? "New Employee" : isEditing ? "Edit Employee" : "View Employee"}
                 </SheetTitle>
                 {selected && (
                   <div className="mt-1 flex items-center gap-1.5">
-                    <Hash className="h-3 w-3 text-[#5F624F]" />
-                    <span className="text-xs font-bold tracking-wide text-[#5F624F] uppercase tabular-nums">
+                    <Hash className="h-3 w-3 text-[#5E6654]" />
+                    <span className="text-xs font-bold tracking-wide text-[#5E6654] uppercase tabular-nums">
                       ID: {selected.id}
                     </span>
                   </div>
@@ -333,7 +333,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
               const phone = [selected.country_code, selected.phone_no].filter(Boolean).join(" ");
               return (
                 <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
+                  <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
                     <DetailCell label="Full Name" value={selected.full_name} />
                     <DetailCell label="Role" value={toTitleCase(selected.role) || "-"} />
                     <DetailCell label="Contract" value={toTitleCase(selected.employment_type?.replace("-", " ")) || "-"} />
@@ -344,9 +344,9 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
                   </div>
 
-                  <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
-                    <div className="flex items-center gap-2 border-b border-[#E6DFC8] px-4 py-2 sm:px-5 sm:py-3">
-                      <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-[#5C4033] uppercase">
+                  <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
+                    <div className="flex items-center gap-2 border-b border-[#D8D5C8] px-4 py-2 sm:px-5 sm:py-3">
+                      <span className="flex items-center gap-1.5 text-[10px] font-bold tracking-wide text-[#34451F] uppercase">
                         <Mail className="h-3 w-3" />
                         Account Access
                       </span>
@@ -355,7 +355,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                         type="button"
                         onClick={() => handlePasswordReset(selected.email)}
                         disabled={isPending}
-                        className="flex h-7 items-center justify-center gap-1.5 rounded-xl bg-[#5C4033] px-2.5 text-white transition-colors hover:bg-[#5C4033]/85"
+                        className="flex h-7 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-2.5 text-white transition-colors hover:bg-[#283719]"
                         title="Send password reset email"
                       >
                         <KeyRound className="h-3.5 w-3.5" />
@@ -385,14 +385,14 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
               <form id="employee-form" action={handleSubmit} className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
 
-                <div className="divide-y divide-[#E6DFC8]/50 overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
+                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
                   <FormRow label="Full Name" required>
                     <input
                       name="full_name"
                       required
                       placeholder="e.g. John Smith"
                       defaultValue={formDefault?.full_name ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
                     />
                   </FormRow>
 
@@ -401,7 +401,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                       title="Status"
                       name="status"
                       defaultValue={formDefault?.status ?? "active"}
-                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
+                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#20231A] outline-none sm:text-sm"
                     >
                       {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value} className="dir-ltr">{s.label}</option>)}
                     </select>
@@ -412,7 +412,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                       name="role"
                       placeholder="e.g. Manager"
                       defaultValue={formDefault?.role ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
                     />
                   </FormRow>
 
@@ -421,7 +421,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                       title="Employment Type"
                       name="employment_type"
                       defaultValue={formDefault?.employment_type ?? "full-time"}
-                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
+                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#20231A] outline-none sm:text-sm"
                     >
                       {EMPLOYMENT_TYPES.map(t => <option key={t.value} value={t.value} className="dir-ltr">{t.label}</option>)}
                     </select>
@@ -438,7 +438,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                           ? new Date(formDefault.start_date).toISOString().split("T")[0]
                           : new Date().toISOString().split("T")[0]
                       }
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
                     />
                   </FormRow>
 
@@ -452,7 +452,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                           ? new Date(formDefault.end_date).toISOString().split("T")[0]
                           : ""
                       }
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
                     />
                   </FormRow>
 
@@ -463,7 +463,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                       placeholder="e.g. john@company.com"
                       required
                       defaultValue={formDefault?.email ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
                     />
                   </FormRow>
 
@@ -473,19 +473,19 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                         title="Country Code"
                         name="country_code"
                         defaultValue={formDefault?.country_code ?? "+44"}
-                        className="w-18 cursor-pointer appearance-none bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
+                        className="w-18 cursor-pointer appearance-none bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
                       >
                         {COUNTRY_CODES.map((c) => (
                           <option key={c.iso + c.code} value={c.code}>{c.iso} {c.code}</option>
                         ))}
                       </select>
-                      <span className="text-xs text-[#5F624F]/50">|</span>
+                      <span className="text-xs text-[#5E6654]/50">|</span>
                       <input
                         name="phone_no"
                         type="tel"
                         placeholder="7123 456789"
                         defaultValue={formDefault?.phone_no ?? ""}
-                        className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/40 sm:text-sm"
+                        className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
                       />
                     </div>
                   </FormRow>
@@ -500,7 +500,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                           ? new Date(formDefault.birthday).toISOString().split("T")[0]
                           : ""
                       }
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#1F1F1A] outline-none sm:text-sm"
+                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
                     />
                   </FormRow>
                 </div>
@@ -512,21 +512,21 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
             <div className="h-4" />
           </div>
 
-          <div className="z-40 shrink-0 border-t-2 border-[#E6DFC8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
+          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
                 <Button
                   variant="ghost"
                   onClick={handleDelete}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
+                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
                 >
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   Delete
                 </Button>
                 <Button
                   onClick={() => { setFormError(null); setIsEditing(true); }}
-                  className="h-14 flex-1 rounded-2xl bg-[#B45309] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#B45309]/85 active:scale-95"
+                  className="h-14 flex-1 rounded-2xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95"
                 >
                   <Pencil className="mr-2 h-4 w-4" />Edit
                 </Button>
@@ -544,7 +544,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     else setIsEditing(false);
                   }}
                   disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white font-black text-[10px] tracking-wide text-[#5F624F] uppercase"
+                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase"
                 >
                   Cancel
                 </Button>
@@ -552,7 +552,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                   type="submit"
                   form="employee-form"
                   disabled={isPending}
-                  className="h-14 rounded-2xl bg-[#1B4332] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#1B4332]/85 active:scale-95"
+                  className="h-14 rounded-2xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95"
                 >
                   {isPending
                     ? <Loader2 className="h-4 w-4 animate-spin" />
@@ -579,7 +579,7 @@ function FormRow({
 }) {
   return (
     <div className="flex items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
         <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
           {label}
         </span>
@@ -598,13 +598,13 @@ function DetailCell({
   value: string;
 }) {
   return (
-    <div className="flex items-center gap-2 border-b border-[#E6DFC8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5F624F] opacity-60 sm:gap-2">
+    <div className="flex items-center gap-2 border-b border-[#D8D5C8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
+      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
         <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
           {label}
         </span>
       </div>
-      <span className="flex-1 text-right font-black text-base leading-snug break-all text-[#1F1F1A] sm:text-sm">
+      <span className="flex-1 text-right font-black text-base leading-snug break-all text-[#20231A] sm:text-sm">
         {value}
       </span>
     </div>

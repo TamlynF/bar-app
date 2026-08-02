@@ -17,6 +17,6 @@ describe("event-type-colors", () => {
     expect(swatchHexFromColor("red")).toBe("#F87171");
     expect(swatchHexFromColor(null)).toBeUndefined();
     expect(swatchClassFromColor("teal")).toBe("swatch-teal");
-    expect(swatchClassFromColor("nope")).toBe("bg-[#F7F4EA]");
+    expect(swatchClassFromColor("nope")).toBe("bg-[#F4F1E8]");
   });
 });

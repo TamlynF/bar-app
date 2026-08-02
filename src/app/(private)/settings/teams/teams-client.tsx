@@ -112,7 +112,7 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
                     <div className="flex items-center gap-3">
                       <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
                         index === 0 ? 'bg-amber-100 text-amber-600' : 
-                        index === 1 ? 'bg-[#E6DFC8] text-[#5F624F]' : 
+                        index === 1 ? 'bg-[#D8D5C8] text-[#5E6654]' : 
                         index === 2 ? 'bg-orange-100 text-orange-700' : 
                         'bg-primary/10 text-primary'
                       }`}>

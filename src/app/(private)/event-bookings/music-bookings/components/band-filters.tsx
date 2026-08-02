@@ -51,7 +51,7 @@ export function countActiveFilters(f: BandFilterState): number {
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
-      <span className="block font-black text-[9px] tracking-widest text-[#5C4033] uppercase">
+      <span className="block font-black text-[9px] tracking-widest text-[#34451F] uppercase">
         {label}
       </span>
       {children}
@@ -76,8 +76,8 @@ function Chip({
       className={cn(
         "inline-flex h-7 shrink-0 items-center gap-1 rounded-full border px-2.5 font-black text-[9px] tracking-wide uppercase transition-colors",
         on
-          ? "border-[#5C4033] bg-[#5C4033] text-white"
-          : "border-[#E6DFC8] bg-white text-[#5F624F] hover:bg-[#F7F4EA]"
+          ? "border-[#34451F] bg-[#34451F] text-white"
+          : "border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#F4F1E8]"
       )}
     >
       {children}
@@ -112,14 +112,14 @@ export default function BandFiltersPopover({
           className={cn(
             "inline-flex h-10 w-10 shrink-0 items-center justify-center gap-1.5 rounded-xl border font-black text-[11px] tracking-widest uppercase transition-colors sm:w-auto sm:px-4",
             open || activeCount > 0
-              ? "border-[#5C4033] bg-[#5C4033] text-white"
-              : "border-[#5C4033]/20 bg-[#5C4033]/10 text-[#5C4033] hover:bg-[#5C4033]/20"
+              ? "border-[#34451F] bg-[#34451F] text-white"
+              : "border-[#34451F]/20 bg-[#34451F]/10 text-[#34451F] hover:bg-[#34451F]/20"
           )}
         >
           <SlidersHorizontal className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">Filters</span>
           {activeCount > 0 && (
-            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 font-black text-[9px] text-[#5C4033] tabular-nums">
+            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 font-black text-[9px] text-[#34451F] tabular-nums">
               {activeCount}
             </span>
           )}
@@ -136,7 +136,7 @@ export default function BandFiltersPopover({
           const target = e.target as Element | null;
           if (target?.closest?.("[data-radix-popper-content-wrapper]")) e.preventDefault();
         }}
-        className="max-h-112 w-80 space-y-3 overflow-y-auto rounded-2xl border-2 border-[#E6DFC8] bg-white p-4"
+        className="max-h-112 w-80 space-y-3 overflow-y-auto rounded-2xl border-2 border-[#D8D5C8] bg-white p-4"
       >
         <Group label="Show">
           <div className="flex flex-wrap gap-1.5">
@@ -210,7 +210,7 @@ export default function BandFiltersPopover({
             onChange={(prefRange) => onChange({ prefRange })}
             className="w-full"
           />
-          <p className="text-[10px] leading-snug text-[#5F624F]/70">
+          <p className="text-[10px] leading-snug text-[#5E6654]/70">
             Matches when any preferred date falls in the range.
           </p>
         </Group>
@@ -226,7 +226,7 @@ export default function BandFiltersPopover({
               type="button"
               onClick={() => onChange({ sortAsc: !value.sortAsc })}
               title="Reverse order"
-              className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-[#E6DFC8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#5C4033] uppercase transition-colors hover:brightness-95"
+              className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#34451F] uppercase transition-colors hover:brightness-95"
             >
               <ArrowDownUp className="h-3 w-3" />
               {value.sortAsc ? "Oldest first" : "Newest first"}

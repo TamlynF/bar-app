@@ -105,29 +105,29 @@ export function DatePicker({
           className={cn(
             "inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-colors outline-none",
             active
-              ? "border-[#5C4033] bg-[#5C4033] text-white"
-              : "border-[#E6DFC8] bg-transparent text-[#1F1F1A] hover:border-[#5C4033] focus:border-[#5C4033]",
+              ? "border-[#34451F] bg-[#34451F] text-white"
+              : "border-[#D8D5C8] bg-transparent text-[#20231A] hover:border-[#34451F] focus:border-[#34451F]",
             className
           )}
         >
-          <CalendarIcon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-white/80" : "text-[#5F624F]/60")} />
+          <CalendarIcon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-white/80" : "text-[#5E6654]/60")} />
           {dateRangeLabel(value)}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-72 rounded-2xl border-2 border-[#E6DFC8] bg-white p-3">
+      <PopoverContent align="end" className="w-72 rounded-2xl border-2 border-[#D8D5C8] bg-white p-3">
         <div className="mb-2 flex items-center justify-between">
-          <button type="button" onClick={() => shift(-1)} title="Previous month" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#F7F4EA]">
-            <ChevronLeft className="h-4 w-4 text-[#5C4033]" />
+          <button type="button" onClick={() => shift(-1)} title="Previous month" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#F4F1E8]">
+            <ChevronLeft className="h-4 w-4 text-[#34451F]" />
           </button>
-          <span className="font-black text-sm tracking-wide text-[#1F1F1A] uppercase tabular-nums">{MONTHS[view.m]} {view.y}</span>
-          <button type="button" onClick={() => shift(1)} title="Next month" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#F7F4EA]">
-            <ChevronRight className="h-4 w-4 text-[#5C4033]" />
+          <span className="font-black text-sm tracking-wide text-[#20231A] uppercase tabular-nums">{MONTHS[view.m]} {view.y}</span>
+          <button type="button" onClick={() => shift(1)} title="Next month" className="flex h-8 w-8 items-center justify-center rounded-lg hover:bg-[#F4F1E8]">
+            <ChevronRight className="h-4 w-4 text-[#34451F]" />
           </button>
         </div>
 
         <div className="mb-1 grid grid-cols-7">
           {WD.map((w, i) => (
-            <span key={i} className="py-1 text-center font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{w}</span>
+            <span key={i} className="py-1 text-center font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{w}</span>
           ))}
         </div>
 
@@ -144,9 +144,9 @@ export function DatePicker({
                 onClick={() => tapDay(d)}
                 className={cn(
                   "flex aspect-square items-center justify-center rounded-lg font-black text-xs transition-colors",
-                  r === 2 && "bg-[#5C4033] text-white",
-                  r === 1 && "rounded-none bg-[#5C4033]/15 text-[#5C4033]",
-                  r === 0 && "text-[#1F1F1A] hover:bg-[#F7F4EA]",
+                  r === 2 && "bg-[#34451F] text-white",
+                  r === 1 && "rounded-none bg-[#34451F]/15 text-[#34451F]",
+                  r === 0 && "text-[#20231A] hover:bg-[#F4F1E8]",
                   isToday && r === 0 && "ring-1 ring-[#FF6B35] ring-inset"
                 )}
               >
@@ -156,13 +156,13 @@ export function DatePicker({
           })}
         </div>
 
-        <p className="mt-3 mb-2 text-center font-black text-[11px] text-[#5C4033]">{summary}</p>
+        <p className="mt-3 mb-2 text-center font-black text-[11px] text-[#34451F]">{summary}</p>
 
         <div className="flex gap-2">
-          <button type="button" onClick={clear} className="h-9 flex-1 rounded-lg border border-[#E6DFC8] font-black text-[10px] tracking-wide text-[#5F624F] uppercase hover:bg-[#F7F4EA]">
+          <button type="button" onClick={clear} className="h-9 flex-1 rounded-lg border border-[#D8D5C8] font-black text-[10px] tracking-wide text-[#5E6654] uppercase hover:bg-[#F4F1E8]">
             All dates
           </button>
-          <button type="button" onClick={apply} className="h-9 flex-1 rounded-lg bg-[#5C4033] font-black text-[10px] tracking-wide text-white uppercase hover:bg-[#5C4033]/85">
+          <button type="button" onClick={apply} className="h-9 flex-1 rounded-lg bg-[#34451F] font-black text-[10px] tracking-wide text-white uppercase hover:bg-[#283719]">
             Apply
           </button>
         </div>

@@ -36,10 +36,10 @@ export function PendingReviews({ items }: { items: PendingItem[] }) {
             >
               <Icon className="h-4 w-4 shrink-0 text-amber-600" />
               <div className="min-w-0 flex-1">
-                <p className="truncate font-black text-sm text-[#1F1F1A]">{item.name}</p>
+                <p className="truncate font-black text-sm text-[#20231A]">{item.name}</p>
                 <p className="text-[10px] font-bold tracking-wide text-amber-700 uppercase">{typeLabel}</p>
               </div>
-              <p className="hidden shrink-0 text-[11px] text-[#5F624F] sm:block">
+              <p className="hidden shrink-0 text-[11px] text-[#5E6654] sm:block">
                 {new Date(item.created_at).toLocaleDateString("en-GB")}
               </p>
               <ArrowRight className="h-3.5 w-3.5 shrink-0 text-amber-500 transition-transform group-hover:translate-x-0.5" />
