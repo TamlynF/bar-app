@@ -518,6 +518,7 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
 
   revalidatePath('/event-setups/quiz-generator');
   revalidatePath('/event-setups/quiz-history');
+  if (eventId) revalidatePath(`/event-setups/events/${eventId}`);
   return { success: true };
 }
 
@@ -823,6 +824,7 @@ export async function saveMusicSnippetsAction(
 
   revalidatePath('/event-setups/quiz-generator')
   revalidatePath('/event-setups/quiz-history')
+  revalidatePath(`/event-setups/events/${eventId}`)
 
   const playlist = await syncCategoryPlaylistAction(eventId, categoryConfigId)
   return { success: true, ...playlist }
@@ -1129,6 +1131,7 @@ export async function savePictureRoundAction(
 
   revalidatePath('/event-setups/quiz-generator')
   revalidatePath('/event-setups/quiz-history')
+  revalidatePath(`/event-setups/events/${eventId}`)
 }
 
 export async function getMusicSnippetsForEventAction(

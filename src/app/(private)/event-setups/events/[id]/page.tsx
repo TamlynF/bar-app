@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Brain, BookOpen } from "lucide-react";
+import { ArrowRight, BookOpen, Brain, CheckCircle2 } from "lucide-react";
 import CategorySection from "./category-section";
 
 function formatDate(dateStr: string | null) {
@@ -61,10 +61,10 @@ export default async function EventQuizQuestionsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; completed?: string }>;
 }) {
   const { id } = await params;
-  const { category: focusCategory } = await searchParams;
+  const { category: focusCategory, completed: completedCategory } = await searchParams;
   const supabase = await createClient();
 
   const [
@@ -106,30 +106,81 @@ export default async function EventQuizQuestionsPage({
 
   const totalQuestions = qs.length;
   const targetQuestions = cats.reduce((s, c) => s + c.question_count, 0);
+  const completedRounds = byCategory.filter((cat) => cat.questions.length >= cat.question_count).length;
+  const firstIncompleteCategory = byCategory.find((cat) => cat.questions.length < cat.question_count);
+  const quizIsComplete = byCategory.length > 0 && completedRounds === byCategory.length;
+  const remainingQuestions = byCategory.reduce(
+    (total, cat) => total + Math.max(cat.question_count - cat.questions.length, 0),
+    0
+  );
+  const progress = targetQuestions > 0 ? Math.min(100, Math.round((totalQuestions / targetQuestions) * 100)) : 0;
+  const continueHref = firstIncompleteCategory
+    ? `/event-setups/quiz-generator?event_id=${event.id}&category=${encodeURIComponent(firstIncompleteCategory.category_name)}`
+    : null;
 
   return (
-    <div className="mx-auto animate-in space-y-6 p-2 text-left duration-700 fade-in sm:max-w-2xl sm:p-6 md:max-w-7xl lg:max-w-7xl">
+    <div className="mx-auto animate-in space-y-4 p-2 text-left duration-700 fade-in sm:max-w-2xl sm:p-6 md:max-w-7xl lg:max-w-7xl">
 
-      <div className="flex items-start gap-3 rounded-2xl border border-[#D8D5C8] bg-white px-5 py-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#C8956D]/30 bg-[#C8956D]/30">
-          <Brain className="h-4 w-4 text-[#34451F]" />
+      {completedCategory && (
+        <div className="flex items-start gap-3 rounded-2xl border border-admin-success/25 bg-admin-success-bg px-4 py-3 text-admin-success">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>
+            <p className="text-sm font-bold">{completedCategory} is complete</p>
+            {firstIncompleteCategory ? (
+              <p className="mt-0.5 text-[13px] font-medium">
+                Next, add {firstIncompleteCategory.question_count - firstIncompleteCategory.questions.length} question{firstIncompleteCategory.question_count - firstIncompleteCategory.questions.length === 1 ? "" : "s"} to {firstIncompleteCategory.category_name}.
+              </p>
+            ) : (
+              <p className="mt-0.5 text-[13px] font-medium">Every round now has its required questions.</p>
+            )}
+          </div>
         </div>
-        <div className="min-w-0 flex-1">
-          <h1 className="font-black text-xl leading-tight tracking-tighter text-[#34451F] uppercase">
-            {event.title ?? "Untitled Event"}
-          </h1>
-          <p className="mt-0.5 text-[11px] font-bold text-[#5E6654]">
-            {formatDate(event.date)}
-          </p>
+      )}
+
+      <div className="rounded-2xl border border-admin-line bg-admin-card p-4 shadow-sm sm:p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-admin-primary/20 bg-admin-primary-soft">
+            <Brain className="h-5 w-5 text-admin-primary" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg leading-tight font-bold tracking-tight text-admin-ink sm:text-xl">
+              {event.title ?? "Untitled event"}
+            </h1>
+            <p className="mt-1 text-[13px] font-medium text-admin-muted">
+              {formatDate(event.date)}
+            </p>
+          </div>
+          <div className="shrink-0 text-right">
+            <p className="text-[12px] font-semibold text-admin-muted">Quiz progress</p>
+            <p className="mt-0.5 text-lg leading-none font-bold text-admin-primary tabular-nums">
+              {totalQuestions}
+              <span className="text-[13px] font-semibold text-admin-muted"> / {targetQuestions}</span>
+            </p>
+          </div>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
-            Questions
+
+        <div className="mt-4 h-2 overflow-hidden rounded-full bg-admin-surface">
+          <div
+            className="h-full w-(--quiz-progress) rounded-full bg-admin-primary transition-[width] duration-300"
+            style={{ "--quiz-progress": `${progress}%` } as React.CSSProperties}
+          />
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[13px] font-medium text-admin-muted">
+            {quizIsComplete
+              ? `${completedRounds} of ${byCategory.length} rounds complete. Your quiz is ready to review.`
+              : `${completedRounds} of ${byCategory.length} rounds complete. ${remainingQuestions} question${remainingQuestions === 1 ? "" : "s"} still needed.`}
           </p>
-          <p className="font-black text-lg leading-none text-[#34451F] tabular-nums">
-            {totalQuestions}
-            <span className="text-xs font-bold text-[#5E6654]/50"> / {targetQuestions}</span>
-          </p>
+          {continueHref && (
+            <Link
+              href={continueHref}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+            >
+              {totalQuestions === 0 ? "Start building quiz" : "Continue building quiz"}
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
         </div>
       </div>
 
@@ -153,13 +204,13 @@ export default async function EventQuizQuestionsPage({
         ))}
 
         {byCategory.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
-            <BookOpen className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-20" />
-            <p className="font-black text-sm text-[#20231A]">No quiz categories configured</p>
-            <p className="mt-1 text-[11px] text-[#5E6654]">
+          <div className="rounded-2xl border border-dashed border-admin-line py-14 text-center">
+            <BookOpen className="mx-auto mb-3 h-8 w-8 text-admin-muted opacity-20" />
+            <p className="text-[15px] font-bold text-admin-ink">No quiz categories configured</p>
+            <p className="mt-1 text-[13px] font-normal text-admin-muted">
               Add categories in{" "}
               <Link href="/event-setups/quiz-categories" className="underline">
-                Quiz Rules
+                Quiz rules
               </Link>
             </p>
           </div>

@@ -1581,6 +1581,14 @@ export default function EventsClient({
 
                   {isQuiz && (() => {
                     const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
+                    const savedQuestionCount = categoryCounts.reduce((total, category) => total + category.count, 0);
+                    const targetQuestionCount = categoryCounts.reduce((total, category) => total + category.question_count, 0);
+                    const quizIsComplete = categoryCounts.length > 0 && categoryCounts.every(category => category.count >= category.question_count);
+                    const manageQuizLabel = savedQuestionCount === 0
+                      ? "Start quiz"
+                      : quizIsComplete
+                        ? "Review quiz"
+                        : `Continue quiz · ${savedQuestionCount}/${targetQuestionCount}`;
                     return (
                       <ViewSection
                         title="Quiz Questions"
@@ -1590,11 +1598,11 @@ export default function EventsClient({
                         headerRight={
                           <Link
                             href={`/event-setups/events/${selected.id}`}
-                            title="Manage Quiz"
-                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-semibold text-[12px] tracking-wider text-white transition-colors hover:bg-[#283719]"
+                            title={manageQuizLabel}
+                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#283719]"
                           >
                             <Brain className="h-3.5 w-3.5 shrink-0" />
-                            Manage Quiz
+                            {manageQuizLabel}
                           </Link>
                         }
                       >

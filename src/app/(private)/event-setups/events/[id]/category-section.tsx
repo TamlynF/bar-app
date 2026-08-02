@@ -79,6 +79,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   const count = questions.length;
   const isComplete = count >= question_count;
   const hasAny = count > 0;
+  const remaining = Math.max(question_count - count, 0);
   const isPastEvent = !!eventDate && eventDate < new Date().toISOString().split("T")[0];
   const [open, setOpen] = useState(!!autoOpen);
   const sectionRef = useRef<HTMLElement>(null);
@@ -305,36 +306,56 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   };
 
   return (
-    <section ref={sectionRef} className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
-      <button
-        type="button"
-        onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between border-b border-[#D6CDAE] bg-[#D8D5C8] px-5 py-3.5 text-left transition-colors hover:bg-[#DDD4B8]"
-      >
-        <p className="font-black text-xs tracking-wide text-[#34451F] uppercase">
-          {orderNo != null ? `${orderNo}. ` : ''}{category_name}
-        </p>
-        <div className="flex shrink-0 items-center gap-2">
+    <section ref={sectionRef} className="overflow-hidden rounded-2xl border border-admin-line bg-white">
+      <div className="flex items-center gap-2 border-b border-admin-line bg-admin-surface px-3 py-2.5 sm:px-4">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl px-1 text-left transition-colors hover:bg-admin-card/60"
+        >
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-bold tracking-tight text-admin-primary sm:text-[15px]">
+              {orderNo != null ? `${orderNo}. ` : ''}{category_name}
+            </p>
+            <p className={cn(
+              "mt-0.5 text-[12px] font-medium",
+              isComplete ? "text-admin-success" : hasAny ? "text-admin-warning" : "text-admin-muted"
+            )}>
+              {isComplete ? "Round complete" : hasAny ? `${remaining} question${remaining === 1 ? "" : "s"} still needed` : "Not started"}
+            </p>
+          </div>
           <span
             className={cn(
-              "rounded-lg border px-2.5 py-1 font-black text-[10px] tabular-nums",
+              "shrink-0 rounded-lg border px-2.5 py-1 text-[13px] font-semibold tabular-nums",
               isComplete
-                ? "border-green-200 bg-green-50 text-green-700"
+                ? "border-admin-success/25 bg-admin-success-bg text-admin-success"
                 : hasAny
-                ? "border-amber-200 bg-amber-50 text-amber-700"
-                : "border-[#D8D5C8] bg-[#F4F1E8] text-[#5E6654]"
+                ? "border-admin-warning/25 bg-admin-warning-bg text-admin-warning"
+                : "border-admin-line bg-admin-card text-admin-muted"
             )}
           >
             {count} / {question_count}
           </span>
           <ChevronDown
             className={cn(
-              "h-4 w-4 text-[#5E6654] transition-transform duration-200",
+              "h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200",
               open && "rotate-180"
             )}
           />
-        </div>
-      </button>
+        </button>
+
+        {!isPastEvent && !isComplete && (
+          <Link
+            href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
+            className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary px-3 text-[12px] font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:px-4 sm:text-[13px]"
+          >
+            <Sparkles className="h-4 w-4" />
+            <span className="sm:hidden">{hasAny ? `Add ${remaining}` : "Start"}</span>
+            <span className="hidden sm:inline">{hasAny ? `Add ${remaining} question${remaining === 1 ? "" : "s"}` : "Start round"}</span>
+          </Link>
+        )}
+      </div>
 
       {open && (
         <>
@@ -343,7 +364,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               <a
                 href={`/api/spotify/login?return=${encodeURIComponent(`/event-setups/events/${eventId}`)}`}
                 style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-black text-[10px] tracking-wide text-white uppercase transition-opacity hover:opacity-90"
+                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-semibold text-[12px] tracking-wide text-white transition-opacity hover:opacity-90"
               >
                 <Music className="h-3.5 w-3.5" />
                 Connect Spotify
@@ -360,7 +381,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                       target="_blank"
                       rel="noopener noreferrer"
                       style={{ "--spotify-bg": "#1DB954" } as React.CSSProperties}
-                      className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-black text-[10px] tracking-wide text-white uppercase transition-opacity hover:opacity-90"
+                      className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-(--spotify-bg) font-semibold text-[12px] tracking-wide text-white transition-opacity hover:opacity-90"
                     >
                       <Music className="h-3.5 w-3.5" />
                       Open Spotify Playlist
@@ -372,14 +393,14 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                       onClick={handleSyncPlaylist}
                       disabled={isSyncing}
                       title="Sync playlist with saved songs"
-                      className="h-10 w-10 shrink-0 rounded-xl border-2 border-[#D8D5C8] text-[#34451F] hover:bg-[#F4F1E8]"
+                      className="h-10 w-10 shrink-0 rounded-xl border-2 border-admin-line text-admin-primary hover:bg-admin-bg"
                     >
                       {isSyncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-1.5 rounded-xl border-2 border-[#D8D5C8] bg-[#F4F1E8] p-2.5">
-                    <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                  <div className="space-y-1.5 rounded-xl border-2 border-admin-line bg-admin-bg p-2.5">
+                    <p className="font-bold text-[12px] text-admin-muted">
                       Spotify playlist - copy into a browser or the Spotify app
                     </p>
                     <div className="flex items-center gap-2">
@@ -387,7 +408,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         href={playlistUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="min-w-0 flex-1 truncate text-[11px] font-bold text-[#34451F] underline"
+                        className="min-w-0 flex-1 truncate text-[13px] font-bold text-admin-primary underline"
                       >
                         {playlistUrl}
                       </a>
@@ -396,7 +417,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         variant="outline"
                         onClick={handleCopyPlaylist}
                         title="Copy playlist URL"
-                        className="h-9 w-9 shrink-0 rounded-lg border-2 border-[#D8D5C8] text-[#34451F] hover:bg-white"
+                        className="h-9 w-9 shrink-0 rounded-lg border-2 border-admin-line text-admin-primary hover:bg-white"
                       >
                         {playlistCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
                       </Button>
@@ -409,7 +430,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                   variant="outline"
                   onClick={handleSyncPlaylist}
                   disabled={isSyncing || configId == null}
-                  className="h-10 w-full rounded-xl border-2 border-[#D8D5C8] font-black text-[10px] tracking-wide text-[#34451F] uppercase hover:bg-[#F4F1E8]"
+                  className="h-10 w-full rounded-xl border-2 border-admin-line font-bold text-[12px] text-admin-primary hover:bg-admin-bg"
                 >
                   {isSyncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Music className="mr-2 h-3.5 w-3.5" />}
                   Create Spotify Playlist
@@ -423,7 +444,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                 type="button"
                 variant="outline"
                 onClick={handlePrintPictureSheet}
-                className="h-10 w-full rounded-xl border-2 border-[#D8D5C8] bg-slate-100 font-black text-[10px] tracking-wide text-[#34451F] uppercase hover:bg-[#F4F1E8]"
+                className="h-10 w-full rounded-xl border-2 border-admin-line bg-slate-100 font-semibold text-[12px] tracking-wide text-admin-primary hover:bg-admin-bg"
               >
                 <Printer className="mr-2 h-3.5 w-3.5" />
                 Print Picture Sheet
@@ -433,18 +454,18 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           {isPicture && (() => {
             const firstQ = questions.find((q) => q.question_text);
             return firstQ ? (
-              <div className="border-b border-[#D8D5C8] bg-[#34451F]/5 px-5 py-2.5">
-                <p className="pl-3 font-black text-sm text-[#34451F]">
-                  Question: <span className="font-bold text-[#20231A]">{firstQ.question_text}</span>
+              <div className="border-b border-admin-line bg-admin-primary/5 px-5 py-2.5">
+                <p className="pl-3 font-bold text-sm text-admin-primary">
+                  Question: <span className="font-bold text-admin-ink">{firstQ.question_text}</span>
                 </p>
               </div>
             ) : null;
           })()}
-          <div className="space-y-3 bg-amber-50 p-3">
+          <div className="space-y-3 bg-admin-bg p-3">
             {count === 0 ? (
               <div className="py-8 text-center">
-                <BookOpen className="mx-auto mb-2 h-6 w-6 text-[#5E6654] opacity-20" />
-                <p className="font-black text-xs tracking-wide text-[#5E6654] uppercase opacity-40">
+                <BookOpen className="mx-auto mb-2 h-6 w-6 text-admin-muted opacity-20" />
+                <p className="font-bold text-xs text-admin-muted opacity-40">
                   No questions yet
                 </p>
               </div>
@@ -454,12 +475,12 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                 return (
                   <div key={q.id} className={cn(
                     "relative overflow-hidden rounded-2xl border-2 bg-white p-4 shadow-sm transition-all",
-                    isEditing ? "border-[#34451F] ring-4 ring-[#34451F]/5" : "border-[#D8D5C8]"
+                    isEditing ? "border-admin-primary ring-4 ring-admin-primary/5" : "border-admin-line"
                   )}>
                     {isEditing ? (
                       <div className="animate-in space-y-3 duration-200 zoom-in-95 fade-in">
                         <div className="flex items-center gap-2">
-                          <label className="ml-1 font-black text-xs tracking-wide text-[#5E6654] uppercase">Question No.</label>
+                          <label className="ml-1 font-bold text-xs text-admin-muted">Question No.</label>
                           <input
                             type="number"
                             inputMode="numeric"
@@ -471,19 +492,19 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               const val = e.target.value.replace(/\D/g, '');
                               setEditForm({ ...editForm, questionNo: val === '' ? 0 : parseInt(val) });
                             }}
-                            className="h-10 w-16 rounded-lg border border-[#D8D5C8] bg-white px-3 py-2 text-center font-black text-xs text-[#34451F] tabular-nums outline-none focus:border-[#34451F]"
+                            className="h-10 w-16 rounded-lg border border-admin-line bg-white px-3 py-2 text-center font-semibold text-xs text-admin-primary tabular-nums outline-none focus:border-admin-primary"
                           />
                         </div>
                         {isPicture && q.image_url && (
                           <div className="space-y-1.5">
-                            <label className="ml-1 font-black text-xs tracking-wide text-[#5E6654] uppercase">Image</label>
+                            <label className="ml-1 font-bold text-xs text-admin-muted">Image</label>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={newImagePreview ?? q.image_url}
                               alt={q.answer_text}
                               className="h-40 w-full rounded-xl object-cover"
                             />
-                            <label className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#D8D5C8] font-black text-xs tracking-wide text-[#5E6654] uppercase transition-all hover:border-[#34451F] hover:text-[#34451F]">
+                            <label className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-admin-line font-semibold text-xs tracking-wide text-admin-muted transition-all hover:border-admin-primary hover:text-admin-primary">
                               <Upload className="h-3.5 w-3.5" />
                               {newImageFile ? newImageFile.name : 'Replace image'}
                               <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
@@ -492,29 +513,29 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         )}
                         {!isPicture && !hideQuestionText && (
                           <div className="space-y-1.5">
-                            <label className="ml-1 font-black text-xs tracking-wide text-[#5E6654] uppercase">Question</label>
+                            <label className="ml-1 font-bold text-xs text-admin-muted">Question</label>
                             <textarea
                               title="Edit question"
                               value={editForm.question}
                               onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                              className="min-h-30 w-full resize-none rounded-xl border-2 border-[#D8D5C8] bg-[#F4F1E8]/30 p-3 text-xs leading-relaxed outline-none focus:border-[#34451F]"
+                              className="min-h-30 w-full resize-none rounded-xl border-2 border-admin-line bg-admin-bg/30 p-3 text-xs leading-relaxed outline-none focus:border-admin-primary"
                             />
                           </div>
                         )}
                         <div className="space-y-1.5">
-                          <label className="ml-1 font-black text-xs tracking-wide text-[#5E6654] uppercase">Answer</label>
+                          <label className="ml-1 font-bold text-xs text-admin-muted">Answer</label>
                           <input
                             title="Edit answer"
                             value={editForm.answer}
                             onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })}
-                            className="h-11 w-full rounded-xl border-2 border-[#34451F]/15 bg-[#34451F]/10 px-3 font-black text-xs text-[#34451F] outline-none focus:border-[#34451F]"
+                            className="h-11 w-full rounded-xl border-2 border-admin-primary/15 bg-admin-primary/10 px-3 font-semibold text-xs text-admin-primary outline-none focus:border-admin-primary"
                           />
                         </div>
                         <div className="flex gap-2 pt-1">
                           <Button
                             onClick={() => saveEdit(q.id)}
                             disabled={isPending}
-                            className="h-10 flex-1 rounded-xl bg-[#34451F] font-black text-xs tracking-wide text-white uppercase hover:bg-[#283719]"
+                            className="h-10 flex-1 rounded-xl bg-admin-primary font-semibold text-xs tracking-wide text-white hover:bg-admin-primary-hover"
                           >
                             {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-3.5 w-3.5" /> Save</>}
                           </Button>
@@ -522,7 +543,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                             variant="outline"
                             onClick={cancelEditing}
                             disabled={isPending}
-                            className="h-10 rounded-xl border-2 border-[#D8D5C8] bg-red-500 px-4 text-xs font-bold text-white uppercase"
+                            className="h-10 rounded-xl border-2 border-admin-line bg-red-500 px-4 text-xs font-bold text-white"
                           >
                             <X className="h-3.5 w-3.5" />
                           </Button>
@@ -531,7 +552,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                     ) : (
                       <div className="space-y-2">
                         <div className="-mt-1 flex items-center justify-between gap-2">
-                          <span className="shrink-0 font-black text-sm text-[#34451F]">Question {q.question_no ?? idx + 1}:</span>
+                          <span className="shrink-0 font-bold text-sm text-admin-primary">Question {q.question_no ?? idx + 1}:</span>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -539,7 +560,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 size="icon"
                                 title="Question actions"
                                 aria-label="Question actions"
-                                className="-mr-1 h-7 w-7 shrink-0 rounded-xl text-[#5E6654] hover:bg-[#34451F]/5 hover:text-[#34451F]"
+                                className="-mr-1 h-7 w-7 shrink-0 rounded-xl text-admin-muted hover:bg-admin-primary/5 hover:text-admin-primary"
                               >
                                 <MoreVertical className="h-4 w-4" />
                               </Button>
@@ -563,15 +584,15 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         <div className="space-y-3">
                           {isHigherOrLower && q.hint_year ? (
                             <div className="space-y-2">
-                              <p className="text-sm leading-snug text-[#20231A]">
+                              <p className="text-sm leading-snug text-admin-ink">
                                 <span className="font-bold italic">{q.answer_text_ext ?? q.answer_text}</span> higher or lower than <span className="font-bold text-orange-600">{q.hint_year}</span>?
                               </p>
                               <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#7A1F1F] px-3 py-2 text-white shadow-sm">
                                 <Target className="h-3 w-3 shrink-0 text-white/50" />
-                                <span className="text-center font-black text-xs tracking-tight">
+                                <span className="text-center font-bold text-xs tracking-tight">
                                   {(q.release_year ?? 0) > q.hint_year ? 'Higher' : 'Lower'}
                                 </span>
-                                <span className="shrink-0 font-black text-xs text-white/50 tabular-nums">{q.release_year}</span>
+                                <span className="shrink-0 font-bold text-xs text-white/50 tabular-nums">{q.release_year}</span>
                               </div>
                             </div>
                           ) : (
@@ -585,7 +606,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 />
                               ) : (
                                 (!includeSpotify || !q.spotify_track_id) && (
-                                  <p className="text-sm leading-snug font-bold text-[#20231A]">
+                                  <p className="text-sm leading-snug font-bold text-admin-ink">
                                     {q.question_text}
                                   </p>
                                 )
@@ -593,9 +614,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               {hideQuestionText && q.spotify_track_id && (
                                 <SpotifyPlayer trackId={q.spotify_track_id} title={q.answer_text} compact />
                               )}
-                              <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#34451F] px-3 py-2 text-white shadow-sm sm:w-fit sm:min-w-50">
+                              <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm sm:w-fit sm:min-w-50">
                                 <Target className="h-3 w-3 shrink-0 text-white/50" />
-                                <span className="text-center font-black text-xs tracking-tight">{q.answer_text}</span>
+                                <span className="text-center font-bold text-xs tracking-tight">{q.answer_text}</span>
                               </div>
                             </>
                           )}
@@ -611,22 +632,6 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
             )}
           </div>
 
-          {!isPastEvent && (
-            <div className="border-t border-[#D8D5C8] bg-[#F4F1E8]/50 px-5 py-3.5">
-              <Link
-                href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
-                className={cn(
-                  "flex h-10 w-full items-center justify-center gap-2 rounded-xl font-black text-[11px] tracking-wide uppercase transition-all",
-                  isComplete
-                    ? "border border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#F4F1E8]"
-                    : "bg-[#9A3412] text-white shadow-sm hover:bg-[#9A3412]/50"
-                )}
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                {isComplete ? "Generate Extra" : "Generate Questions"}
-              </Link>
-            </div>
-          )}
         </>
       )}
       {ConfirmDialogUI}
