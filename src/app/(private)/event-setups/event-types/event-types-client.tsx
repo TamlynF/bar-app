@@ -659,7 +659,7 @@ function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
       <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={SHEET_CLASS}>
         <SheetGrab />
         <SheetHead eyebrow="Category" title={form.isNew ? "New category" : toTitleCase(form.name) || "Category"} onClose={onClose} />
-        <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto p-4">
           <SheetSection title="Name" blurb="A group name for your own lists.">
             <Field label="Category name" required help={HELP.catName} hint="Customers never see this." error={nameErr ? "Give it a short name so your team can find it." : undefined}>
               <TextIn value={form.name} placeholder="e.g. Games" onChange={(v) => set({ name: v })} />
@@ -772,7 +772,7 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
           ))}
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto p-4">
           {cur === "basics" && (
             <SheetSection title="Name" blurb="What you call it, and what customers read.">
               <Field label="Short name" required help={HELP.name} hint={HINT.name} error={nameErr ? "Give it a short name so your team can find it." : undefined}>
