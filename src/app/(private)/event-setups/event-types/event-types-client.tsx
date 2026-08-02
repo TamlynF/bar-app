@@ -1,58 +1,108 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
-  Plus, Edit2, Trash2, Layers, Info, Loader2, Ghost,
-  MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
-  Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Beer,
-  ChevronDown, Banknote, Trophy, Wine, Speaker, User,
-  Search, X, SlidersHorizontal, Ticket, Armchair, PoundSterling, Disc3, Mic, Tag, Check,
-  Upload,
+  Plus, Pencil, Trash2, ChevronDown, ArrowLeft, Search, X, Layers, Check, Info,
+  AlertCircle, Loader2, Globe, EyeOff, User, Armchair, Banknote, Image as ImageIcon,
+  Sparkles, Trophy, Disc3, Mic, Music, Users,
+  MapPin, Clock, Calendar, DollarSign, Star, CheckCircle, Utensils, GlassWater,
+  Heart, Smile, Beer, Wine, Speaker, Tag, Ghost,
 } from "lucide-react";
 import { createBrowserClient } from "@supabase/ssr";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Sheet, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { EVENT_TYPE_COLORS, colorHexFromKey } from "@/lib/event-type-colors";
+import { BOOKING_CARD_ICONS, BOOKING_CARD_ICON_NAMES } from "@/lib/booking-card-icons";
+import { normalizeBookingConfig, type BookingConfig, type ResolvedBookingConfig, type FieldKey } from "@/lib/booking-config";
+import type { EventBehavior } from "@/lib/event-behavior";
+import type { BookingGrouping } from "@/lib/booking-grouping";
 import {
   saveTypeAction,
   deleteTypeAction,
   saveSubtypeAction,
   deleteSubtypeAction,
-  saveBadgeAction,
-  deleteBadgeAction,
 } from "./actions";
-import { cn } from "@/lib/utils";
-import { toast } from "sonner";
-import { useConfirm } from "@/components/ui/confirm-dialog";
-import { EVENT_TYPE_COLORS, colorHexFromKey } from "@/lib/event-type-colors";
-import { BookingConfigEditor } from "@/components/booking-config-editor";
-import type { BookingConfig } from "@/lib/booking-config";
-import { BEHAVIOR_OPTIONS, type EventBehavior } from "@/lib/event-behavior";
-import { BOOKING_GROUPING_OPTIONS, type BookingGrouping } from "@/lib/booking-grouping";
-import { IconPicker } from "@/components/icon-picker";
 
 const storageClient = createBrowserClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
 );
 
-const SUBTYPE_IMAGE_BUCKET = "booking-images";
+const IMAGE_BUCKET = "booking-images";
 
-const ICON_OPTIONS = {
-  MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle,
-  Music, Utensils, GlassWater, Heart, Smile, Sparkles, AlertCircle, Info,
-  Beer, Banknote, Trophy, Wine, Speaker, User, Disc3, Mic, Tag, Check, Ghost,
+/* Badge icons persist as these keys — keep them stable so existing badges keep rendering. */
+const ICON_OPTIONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle, Music, Utensils,
+  GlassWater, Heart, Smile, Sparkles, AlertCircle, Info, Beer, Banknote, Trophy,
+  Wine, Speaker, User, Disc3, Mic, Tag, Check, Ghost,
 };
 
-const BEHAVIOR_ICON: Record<EventBehavior, React.ComponentType<{ className?: string }>> = {
-  standard: Sparkles, quiz: Trophy, bingo: Disc3, karaoke: Mic, music_act: Music, private: Users,
+const BEHAVIOURS: { value: EventBehavior; label: string; blurb: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { value: "standard", label: "Standard night", blurb: "No extra tools — just a normal event.", Icon: Sparkles },
+  { value: "quiz", label: "Quiz", blurb: "Adds rounds, teams and scoring.", Icon: Trophy },
+  { value: "bingo", label: "Bingo", blurb: "Adds bingo cards and number calling.", Icon: Disc3 },
+  { value: "karaoke", label: "Karaoke", blurb: "Adds a singer sign-up list.", Icon: Mic },
+  { value: "music_act", label: "Live music", blurb: "Adds act details and set times.", Icon: Music },
+  { value: "private", label: "Private hire", blurb: "For bookings of the room by one group.", Icon: Users },
+];
+const behaviourOf = (v: EventBehavior) => BEHAVIOURS.find((b) => b.value === v) ?? BEHAVIOURS[0];
+
+const GROUPINGS: { value: BookingGrouping; label: string; blurb: string }[] = [
+  { value: "per_event", label: "Each date books separately", blurb: "Every date gets its own page on the website." },
+  { value: "per_subtype", label: "One page per sub-category", blurb: "All dates of e.g. Quiz share one page with a date picker." },
+  { value: "per_type", label: "One page for the whole category", blurb: "All events in this category share a single page." },
+];
+const groupingBlurb = (v: BookingGrouping) => GROUPINGS.find((g) => g.value === v)?.blurb ?? "";
+
+const HELP = {
+  name: "The short name your team sees in lists and on the rota. Keep it to one or two words, like “Quiz”.",
+  catName: "The group this sits in, like “Games” or “Music”. Customers never see this — it just keeps your lists tidy.",
+  title: "The heading customers read on the website when they book. It can be longer and friendlier, e.g. “Thursday Quiz Night”.",
+  defaultTitle: "When you add a new event of this kind, the name is filled in for you. You can still change it for a one-off.",
+  tagline: "One short line under the title on the website that sells the night. Think of what you would shout across the bar.",
+  colour: "Only for you and your team — the colour this shows as in your lists and calendar. It does not appear on the website.",
+  image: "The photo or poster used on the website whenever an event of this kind has no picture of its own.",
+  behaviour: "Tells the system what extra tools to switch on — quiz rounds, bingo numbers, a karaoke sign-up sheet, and so on.",
+  bookable: "On: customers can reserve a place online. Off: they must ring or turn up (you can still add bookings by hand).",
+  host: "Tick if someone has to run this night. You will be asked who is hosting each time you schedule one.",
+  seating: "Tick if guests are given tables. Leave it off for stand-up nights so you are not asked to allocate seats.",
+  payment: "Tick if people pay when booking. You then set the price below.",
+  price: "What one person pays to book. Leave at 0 if the night is free but you still want names.",
+  grouping: "How these events are shown on the website: one page each, one page per sub-category, or one page for the whole category.",
+  badges: "Short facts shown on the booking page, e.g. “Free entry” or “Thursdays 7pm”. Two or three is plenty.",
+  cardTitle: "The heading on the tile customers tap. Leave blank to use the website name.",
+  cardTagline: "A sentence or two on the tile telling people what the night is.",
+  cardNote: "A short word or two in the corner of the tile, like “Thursdays” or “Popular”. Leave blank for none.",
+  cardIcon: "The little picture on the tile. Pick whatever looks closest to the night.",
+  bookingImage: "A logo or poster shown at the top of the booking page — handy for a sponsor.",
+  bookingTagline: "One line under the logo on the booking page.",
+  wording: "What the customer reads next to the box. Plain words work best.",
+  smallest: "The fewest people you will take on one booking.",
+  biggest: "The most people allowed on one booking. Bigger parties must ring you.",
 };
 
-export type Badge = {
-  id: number;
-  icon: string | null;
-  title: string;
-  description: string | null;
+const HINT = {
+  name: "One or two words. Team only.",
+  title: "What customers read when they book.",
+  defaultTitle: "Saves retyping it every week.",
+  tagline: "One line, on the website under the title.",
+  colour: "Team only — never shown to customers.",
+  image: "Optional. Used when an event has no picture.",
+  behaviour: "Decides which extra tools you get.",
+  price: "What one person pays to book.",
+  badges: "Two or three short facts is plenty.",
+  grouping: "Changes how the website lists these events.",
+  cardTitle: "Blank = the website name.",
+  cardTagline: "One or two sentences.",
+  cardNote: "Optional, e.g. “Thursdays”.",
+  bookingImage: "Optional. Shown across the top of the page.",
+  bookingTagline: "Shown under the logo.",
 };
+
+export type Badge = { id: number; icon: string | null; title: string; description: string | null };
 
 export type BookingCardFields = {
   booking_card_title: string | null;
@@ -92,10 +142,7 @@ export type EventTypeRecord = {
   event_subtypes: Subtype[];
 } & BookingCardFields;
 
-const toTitleCase = (str?: string | null) =>
-  !str ? "" : str.trim().split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
-
-type CardForm = {
+type CardDraft = {
   booking_card_title: string;
   booking_card_tagline: string;
   booking_card_icon: string | null;
@@ -104,19 +151,22 @@ type CardForm = {
 
 type BadgeDraft = { id?: number; title: string; description: string; icon: string | null };
 
-type TypeForm = {
+type CatForm = {
   id?: number;
+  isNew: boolean;
   name: string;
   title: string;
   description: string;
   color: string | null;
   booking_grouping: BookingGrouping;
   is_bookable: boolean;
-  booking_config: BookingConfig;
-} & CardForm;
+  booking_config: ResolvedBookingConfig;
+  origBookingConfig: BookingConfig | null;
+} & CardDraft;
 
-type SubtypeForm = {
+type SubForm = {
   id?: number;
+  isNew: boolean;
   event_types_id: number;
   name: string;
   title: string;
@@ -130,229 +180,184 @@ type SubtypeForm = {
   seating_required: boolean;
   payment_required: boolean;
   default_payment_amount: string;
-  booking_config: BookingConfig;
+  booking_config: ResolvedBookingConfig;
+  origBookingConfig: BookingConfig | null;
   badges: BadgeDraft[];
-} & CardForm;
+} & CardDraft;
 
-type BadgeForm = { id?: number; event_subtypes_id: number; subName: string; title: string; description: string; icon: string };
+const toTitleCase = (str?: string | null) =>
+  !str ? "" : str.trim().split(/\s+/).map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(" ");
 
-type Filters = { q: string; category: number | "all"; behavior: EventBehavior | "all"; bookable: boolean; hasBadges: boolean };
-const EMPTY_FILTERS: Filters = { q: "", category: "all", behavior: "all", bookable: false, hasBadges: false };
+const money = (amount: number | null | undefined) => (amount != null ? Number(amount) : 0).toFixed(2);
 
-const EMPTY_CARD: CardForm = {
-  booking_card_title: "",
-  booking_card_tagline: "",
-  booking_card_icon: null,
-  booking_card_badge: "",
-};
-
-const cardFromRecord = (r: BookingCardFields): CardForm => ({
+const cardFromRecord = (r: BookingCardFields): CardDraft => ({
   booking_card_title: r.booking_card_title ?? "",
   booking_card_tagline: r.booking_card_tagline ?? "",
   booking_card_icon: r.booking_card_icon ?? null,
   booking_card_badge: r.booking_card_badge ?? "",
 });
 
-const appendCardFields = (fd: FormData, c: CardForm) => {
+const appendCardFields = (fd: FormData, c: CardDraft) => {
   fd.set("booking_card_title", c.booking_card_title);
   fd.set("booking_card_tagline", c.booking_card_tagline);
   fd.set("booking_card_icon", c.booking_card_icon ?? "");
   fd.set("booking_card_badge", c.booking_card_badge);
 };
 
-const catVars = (color: string | null): React.CSSProperties => {
-  const c = colorHexFromKey(color);
-  return { "--accent": c.solid, "--cat-bg": c.bg, "--cat-text": c.text } as React.CSSProperties;
-};
+const configToJson = (cfg: ResolvedBookingConfig) =>
+  JSON.stringify({
+    booking_image_url: cfg.booking_image_url,
+    tag_line: cfg.tag_line,
+    fields: cfg.fields,
+  });
 
-const subVars = (color: string | null): React.CSSProperties => {
-  const c = colorHexFromKey(color);
-  return { "--accent": c.solid, "--sub-bg": c.bg, "--sub-text": c.text, "--sub-border": c.border } as React.CSSProperties;
-};
-
-function applyFilters(types: EventTypeRecord[], f: Filters): EventTypeRecord[] {
-  const q = f.q.trim().toLowerCase();
-  return types
-    .filter((t) => f.category === "all" || t.id === f.category)
-    .map((t) => {
-      const catMatch = !!q && t.name.toLowerCase().includes(q);
-      const subs = [...(t.event_subtypes ?? [])]
-        .sort((a, b) => a.name.localeCompare(b.name))
-        .filter((s) => {
-          if (f.behavior !== "all" && s.behavior !== f.behavior) return false;
-          if (f.bookable && !s.is_bookable) return false;
-          if (f.hasBadges && !(s.event_subtype_badges?.length)) return false;
-          if (q && !catMatch) {
-            const hay = (
-              s.name + " " + t.name + " " +
-              (s.event_subtype_badges ?? []).map((b) => b.title + " " + (b.description ?? "")).join(" ")
-            ).toLowerCase();
-            if (!hay.includes(q)) return false;
-          }
-          return true;
-        });
-      return { ...t, event_subtypes: subs };
-    })
-    .filter((t) => t.event_subtypes.length > 0 || f.category !== "all");
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false);
+  useEffect(() => {
+    const m = window.matchMedia(query);
+    const on = () => setMatches(m.matches);
+    on();
+    m.addEventListener("change", on);
+    return () => m.removeEventListener("change", on);
+  }, [query]);
+  return matches;
 }
 
 export default function EventTypesClient({ initialEventTypes = [] }: { initialEventTypes: EventTypeRecord[] }) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
-
-  const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
-  const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
-
-  const [typeForm, setTypeForm] = useState<TypeForm | null>(null);
-  const [subtypeForm, setSubtypeForm] = useState<SubtypeForm | null>(null);
-  const [badgeForm, setBadgeForm] = useState<BadgeForm | null>(null);
-
-  const [error, setError] = useState<string | null>(null);
-  const [imageUploading, setImageUploading] = useState(false);
-
-  const handleSubtypeImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !subtypeForm) return;
-    setImageUploading(true);
-    setError(null);
-    const ext = file.name.split(".").pop();
-    const path = `event-subtypes/${crypto.randomUUID()}.${ext}`;
-    const { data, error: uploadError } = await storageClient.storage
-      .from(SUBTYPE_IMAGE_BUCKET)
-      .upload(path, file, { cacheControl: "3600", upsert: false });
-    if (uploadError) {
-      setError(`Upload failed: ${uploadError.message}`);
-      setImageUploading(false);
-      return;
-    }
-    const publicUrl = storageClient.storage
-      .from(SUBTYPE_IMAGE_BUCKET)
-      .getPublicUrl(data.path).data.publicUrl;
-    setSubtypeForm((prev) => (prev ? { ...prev, default_image_url: publicUrl } : prev));
-    setImageUploading(false);
-  };
+  const narrow = useMediaQuery("(max-width: 899px)");
 
   const types = useMemo(
     () => [...initialEventTypes].sort((a, b) => a.name.localeCompare(b.name)),
     [initialEventTypes],
   );
-  const filtered = useMemo(() => applyFilters(types, filters), [types, filters]);
 
-  const toggleCollapse = (id: number) =>
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
+  const [selectedId, setSelectedId] = useState<number | null>(types[0]?.id ?? null);
+  const [drilled, setDrilled] = useState(false);
+  const [query, setQuery] = useState("");
+
+  const [catForm, setCatForm] = useState<CatForm | null>(null);
+  const [subForm, setSubForm] = useState<SubForm | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const selCat = types.find((t) => t.id === selectedId) ?? types[0] ?? null;
+
+  const subs = useMemo(() => {
+    if (!selCat) return [];
+    const q = query.trim().toLowerCase();
+    return [...(selCat.event_subtypes ?? [])]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .filter((s) => !q || s.name.toLowerCase().includes(q));
+  }, [selCat, query]);
+
+  const selectCategory = (id: number) => {
+    setSelectedId(id);
+    setQuery("");
+    if (narrow) setDrilled(true);
+  };
+
+  const openNewCat = () =>
+    setCatForm({
+      isNew: true, name: "", title: "", description: "", color: null,
+      booking_grouping: "per_event", is_bookable: false,
+      booking_config: normalizeBookingConfig(null), origBookingConfig: null,
+      ...cardFromRecord({ booking_card_title: null, booking_card_tagline: null, booking_card_icon: null, booking_card_badge: null }),
     });
 
-  const openNewType = () =>
-    setTypeForm({ name: "", title: "", description: "", color: null, booking_grouping: "per_event", is_bookable: false, booking_config: {}, ...EMPTY_CARD });
-
-  const openEditType = (t: EventTypeRecord) =>
-    setTypeForm({
-      id: t.id, name: toTitleCase(t.name), title: t.title ?? "", description: t.description ?? "", color: t.color ?? null,
-      booking_grouping: t.booking_grouping ?? "per_event",
-      is_bookable: t.is_bookable, booking_config: t.booking_config ?? {},
+  const openEditCat = (t: EventTypeRecord) =>
+    setCatForm({
+      id: t.id, isNew: false, name: toTitleCase(t.name), title: t.title ?? "", description: t.description ?? "",
+      color: t.color ?? null, booking_grouping: t.booking_grouping ?? "per_event", is_bookable: t.is_bookable,
+      booking_config: normalizeBookingConfig(t.booking_config), origBookingConfig: t.booking_config,
       ...cardFromRecord(t),
     });
 
-  const openNewSubtype = (t: EventTypeRecord) =>
-    setSubtypeForm({
-      event_types_id: t.id, name: "", title: "", default_event_title: "", tagline: "", color: null,
-      default_image_url: "",
-      behavior: "standard",
-      is_bookable: false, host_required: false, seating_required: true, payment_required: false,
-      default_payment_amount: "", booking_config: {}, badges: [],
-      ...EMPTY_CARD,
+  const openNewSub = (t: EventTypeRecord) =>
+    setSubForm({
+      isNew: true, event_types_id: t.id, name: "", title: "", default_event_title: "", default_image_url: "",
+      tagline: "", color: null, behavior: "standard", is_bookable: false, host_required: false,
+      seating_required: true, payment_required: false, default_payment_amount: "",
+      booking_config: normalizeBookingConfig(null), origBookingConfig: null, badges: [],
+      ...cardFromRecord({ booking_card_title: null, booking_card_tagline: null, booking_card_icon: null, booking_card_badge: null }),
     });
 
-  const openEditSubtype = (s: Subtype) =>
-    setSubtypeForm({
-      id: s.id, event_types_id: s.event_types_id, name: toTitleCase(s.name), title: s.title ?? "",
-      default_event_title: s.default_event_title ?? "", tagline: s.tagline ?? "", color: s.color ?? null,
-      default_image_url: s.default_image_url ?? "",
-      behavior: s.behavior,
-      is_bookable: s.is_bookable, host_required: s.host_required, seating_required: s.seating_required,
-      payment_required: s.payment_required, default_payment_amount: s.default_payment_amount != null ? String(s.default_payment_amount) : "",
-      booking_config: s.booking_config ?? {},
+  const openEditSub = (s: Subtype) =>
+    setSubForm({
+      id: s.id, isNew: false, event_types_id: s.event_types_id, name: toTitleCase(s.name), title: s.title ?? "",
+      default_event_title: s.default_event_title ?? "", default_image_url: s.default_image_url ?? "",
+      tagline: s.tagline ?? "", color: s.color ?? null, behavior: s.behavior, is_bookable: s.is_bookable,
+      host_required: s.host_required, seating_required: s.seating_required, payment_required: s.payment_required,
+      default_payment_amount: s.default_payment_amount != null ? String(s.default_payment_amount) : "",
+      booking_config: normalizeBookingConfig(s.booking_config), origBookingConfig: s.booking_config,
       badges: (s.event_subtype_badges ?? []).map((b) => ({ id: b.id, title: b.title, description: b.description ?? "", icon: b.icon })),
       ...cardFromRecord(s),
     });
 
-  const submitType = () => {
-    if (!typeForm) return;
-    if (!typeForm.name.trim()) { setError("Category name is required."); return; }
-    if (typeForm.booking_grouping === "per_type" && !typeForm.title.trim()) { setError("Title is required for a per-category booking page."); return; }
+  const closeSheets = () => { setCatForm(null); setSubForm(null); setError(null); };
+
+  const submitCat = () => {
+    if (!catForm) return;
+    if (!catForm.name.trim()) { setError("Give it a short name so your team can find it."); return; }
+    if (catForm.booking_grouping === "per_type" && !catForm.title.trim()) {
+      setError("Give the whole-category booking page a name so customers know what they are booking.");
+      return;
+    }
     const fd = new FormData();
-    if (typeForm.id) fd.set("id", String(typeForm.id));
-    fd.set("name", typeForm.name);
-    fd.set("title", typeForm.title);
-    fd.set("description", typeForm.description);
-    fd.set("color", typeForm.color ?? "");
-    fd.set("booking_grouping", typeForm.booking_grouping);
-    fd.set("is_bookable", typeForm.booking_grouping === "per_type" && typeForm.is_bookable ? "on" : "");
-    fd.set("booking_config", JSON.stringify(typeForm.booking_config));
-    appendCardFields(fd, typeForm);
+    if (catForm.id) fd.set("id", String(catForm.id));
+    fd.set("name", catForm.name);
+    fd.set("title", catForm.title);
+    fd.set("description", catForm.description);
+    fd.set("color", catForm.color ?? "");
+    fd.set("booking_grouping", catForm.booking_grouping);
+    const catBookable = catForm.booking_grouping === "per_type" && catForm.is_bookable;
+    fd.set("is_bookable", catBookable ? "on" : "");
+    fd.set("booking_config", catBookable ? configToJson(catForm.booking_config) : JSON.stringify(catForm.origBookingConfig ?? {}));
+    appendCardFields(fd, catForm);
     setError(null);
     startTransition(async () => {
       const res = await saveTypeAction(fd);
       if (res?.error) setError(res.error);
-      else { toast.success(typeForm.id ? "Category updated" : "Category created"); setTypeForm(null); }
+      else { toast.success(catForm.isNew ? "Category created" : "Category saved"); closeSheets(); }
     });
   };
 
-  const submitSubtype = () => {
-    if (!subtypeForm) return;
-    if (!subtypeForm.name.trim()) { setError("Sub-category name is required."); return; }
-    const parent = types.find((t) => t.id === subtypeForm.event_types_id);
-    if (parent?.booking_grouping === "per_subtype" && !subtypeForm.title.trim()) { setError("Title is required for a per-sub-category booking page."); return; }
+  const submitSub = () => {
+    if (!subForm) return;
+    const parent = types.find((t) => t.id === subForm.event_types_id);
+    const ownsPage = parent?.booking_grouping === "per_subtype";
+    if (!subForm.name.trim()) { setError("Give it a short name so your team can find it."); return; }
+    if (ownsPage && !subForm.title.trim()) { setError("Give it a website name so customers know what they are booking."); return; }
     const fd = new FormData();
-    if (subtypeForm.id) fd.set("id", String(subtypeForm.id));
-    fd.set("event_types_id", String(subtypeForm.event_types_id));
-    fd.set("name", subtypeForm.name);
-    fd.set("title", subtypeForm.title);
-    fd.set("default_event_title", subtypeForm.default_event_title);
-    fd.set("default_image_url", subtypeForm.default_image_url);
-    fd.set("tagline", subtypeForm.tagline);
-    fd.set("color", subtypeForm.color ?? "");
-    fd.set("behavior", subtypeForm.behavior);
-    if (subtypeForm.is_bookable) fd.set("is_bookable", "on");
-    if (subtypeForm.host_required) fd.set("host_required", "on");
-    if (subtypeForm.seating_required) fd.set("seating_required", "on");
-    if (subtypeForm.payment_required) fd.set("payment_required", "on");
-    fd.set("default_payment_amount", subtypeForm.default_payment_amount || "0");
-    fd.set("booking_config", JSON.stringify(subtypeForm.booking_config));
-    fd.set("badges", JSON.stringify(subtypeForm.badges.filter((b) => b.title.trim())));
-    appendCardFields(fd, subtypeForm);
+    if (subForm.id) fd.set("id", String(subForm.id));
+    fd.set("event_types_id", String(subForm.event_types_id));
+    fd.set("name", subForm.name);
+    fd.set("title", subForm.title);
+    fd.set("default_event_title", subForm.default_event_title);
+    fd.set("default_image_url", subForm.default_image_url);
+    fd.set("tagline", subForm.tagline);
+    fd.set("color", subForm.color ?? "");
+    fd.set("behavior", subForm.behavior);
+    if (subForm.is_bookable) fd.set("is_bookable", "on");
+    if (subForm.host_required) fd.set("host_required", "on");
+    if (subForm.seating_required) fd.set("seating_required", "on");
+    if (subForm.payment_required) fd.set("payment_required", "on");
+    fd.set("default_payment_amount", subForm.default_payment_amount || "0");
+    fd.set("booking_config", ownsPage && subForm.is_bookable ? configToJson(subForm.booking_config) : JSON.stringify(subForm.origBookingConfig ?? {}));
+    fd.set("badges", JSON.stringify(subForm.badges.filter((b) => b.title.trim()).map((b) => ({ id: b.id, title: b.title, description: b.description, icon: b.icon }))));
+    appendCardFields(fd, subForm);
     setError(null);
     startTransition(async () => {
       const res = await saveSubtypeAction(fd);
       if (res?.error) setError(res.error);
-      else { toast.success(subtypeForm.id ? "Sub-category updated" : "Sub-category created"); setSubtypeForm(null); }
+      else { toast.success(subForm.isNew ? "Sub-category created" : "Sub-category saved"); closeSheets(); }
     });
   };
 
-  const submitBadge = () => {
-    if (!badgeForm) return;
-    if (!badgeForm.title.trim()) { setError("Badge title is required."); return; }
-    const fd = new FormData();
-    if (badgeForm.id) fd.set("id", String(badgeForm.id));
-    fd.set("event_subtypes_id", String(badgeForm.event_subtypes_id));
-    fd.set("title", badgeForm.title);
-    fd.set("description", badgeForm.description);
-    fd.set("icon", badgeForm.icon);
-    setError(null);
-    startTransition(async () => {
-      const res = await saveBadgeAction(fd);
-      if (res?.error) setError(res.error);
-      else { toast.success(badgeForm.id ? "Badge updated" : "Badge added"); setBadgeForm(null); }
-    });
-  };
-
-  const removeType = async (t: EventTypeRecord) => {
+  const removeCat = async (t: EventTypeRecord) => {
     const ok = await confirm({
-      title: `Delete "${toTitleCase(t.name)}"`,
-      description: "This deletes the category and all its sub-categories and badges.",
+      title: `Delete “${toTitleCase(t.name)}”`,
+      description: "This deletes the category and all the nights inside it, along with their badges.",
       confirmLabel: "Delete", variant: "destructive",
     });
     if (!ok) return;
@@ -362,473 +367,258 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     });
   };
 
-  const removeSubtype = async (s: Subtype) => {
+  const removeSub = async (s: Subtype) => {
     const ok = await confirm({
-      title: `Delete "${toTitleCase(s.name)}"`,
-      description: "This deletes the sub-category and its badges.",
+      title: `Delete “${toTitleCase(s.name)}”`,
+      description: "This deletes the night and its badges.",
       confirmLabel: "Delete", variant: "destructive",
     });
     if (!ok) return;
     startTransition(async () => {
       const res = await deleteSubtypeAction(s.id);
-      if (res?.error) toast.error(res.error); else toast.success("Sub-category deleted");
+      if (res?.error) toast.error(res.error); else toast.success("Night deleted");
     });
   };
 
-  const removeBadge = (id: number) => {
-    startTransition(async () => {
-      const res = await deleteBadgeAction(id);
-      if (res?.error) toast.error(res.error); else toast.success("Badge deleted");
-    });
-  };
+  const showList = !narrow || !drilled;
+  const showDetail = !narrow || drilled;
 
-  const hasAny = types.length > 0;
-
-  const typeErrors: { name?: string; title?: string } = {};
-  if (typeForm) {
-    if (!typeForm.name.trim()) typeErrors.name = "Category name is required.";
-    if (typeForm.booking_grouping === "per_type" && !typeForm.title.trim()) typeErrors.title = "Title is required for a per-category booking page.";
-  }
-  const typeHasErrors = Object.keys(typeErrors).length > 0;
-
-  const subtypeParent = subtypeForm ? types.find((t) => t.id === subtypeForm.event_types_id) : undefined;
-  const subtypeOwnsBookingPage = subtypeParent?.booking_grouping === "per_subtype";
-  const subtypeErrors: { name?: string; title?: string } = {};
-  if (subtypeForm) {
-    if (!subtypeForm.name.trim()) subtypeErrors.name = "Sub-category name is required.";
-    if (subtypeOwnsBookingPage && !subtypeForm.title.trim()) subtypeErrors.title = "Title is required for a per-sub-category booking page.";
-  }
-  const subtypeHasErrors = Object.keys(subtypeErrors).length > 0;
-
-  const badgeErrors: { title?: string } = {};
-  if (badgeForm && !badgeForm.title.trim()) badgeErrors.title = "Badge title is required.";
-  const badgeHasErrors = Object.keys(badgeErrors).length > 0;
-
-  return (
-    <div className="space-y-4 px-2 sm:px-4 md:px-6 py-3 max-w-3xl">
-      <div className="flex justify-between items-center gap-3">
-        <p className="font-medium text-[#5F624F] text-[13px]">Manage your event categories and sub-categories.</p>
+  if (types.length === 0) {
+    return (
+      <div className="mx-auto w-full max-w-295 px-6 py-16 text-center text-[#5F624F]">
+        <Layers className="mx-auto mb-3 h-8 w-8 opacity-40" />
+        <p className="font-black text-[#1F1F1A] text-sm">No event categories yet</p>
+        <p className="mt-1 text-xs">Add your first category to get started.</p>
         <button
           type="button"
-          onClick={openNewType}
-          className="flex items-center gap-1.5 bg-[#1B4332] hover:bg-[#1B4332]/85 px-4 rounded-[10px] h-9 text-white transition-colors shrink-0"
+          onClick={openNewCat}
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#1B4332] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
         >
-          <Plus className="stroke-[2.5] w-3.5 h-3.5" />
-          <span className="font-black text-[11px] uppercase tracking-widest">Category</span>
+          <Plus className="h-4 w-4 stroke-[2.5]" /> New category
         </button>
+        {catForm && (
+          <CategorySheet form={catForm} setForm={setCatForm} onClose={closeSheets} onSave={submitCat} pending={isPending} error={error} />
+        )}
+        {ConfirmDialogUI}
       </div>
+    );
+  }
 
-      {hasAny && <FilterBar filters={filters} setFilters={setFilters} types={types} />}
+  return (
+    <>
+      {narrow && drilled && selCat && (
+        <div className="sticky top-0 z-40 flex items-center gap-2.5 border-b border-[#E6DFC8] bg-[#FFFDF7]/95 px-3 py-2 backdrop-blur">
+          <IconBtn label="Back to categories" onClick={() => setDrilled(false)}><ArrowLeft className="h-4.5 w-4.5" /></IconBtn>
+          <span style={{ "--dot": colorHexFromKey(selCat.color).solid } as React.CSSProperties} className="h-2.5 w-2.5 shrink-0 rounded-full bg-(--dot)" />
+          <h2 className="min-w-0 flex-1 truncate font-black text-[16px] text-[#1F1F1A]">{toTitleCase(selCat.name)}</h2>
+          <IconBtn label={`Edit ${toTitleCase(selCat.name)}`} edit onClick={() => openEditCat(selCat)}><Pencil className="h-4 w-4" /></IconBtn>
+        </div>
+      )}
 
-      <div className="flex flex-col gap-3">
-        {!hasAny ? (
-          <div className="px-5 py-12 text-[#5F624F] text-center">
-            <Layers className="opacity-40 mx-auto mb-2.5 w-8 h-8" />
-            <p className="font-black text-[#1F1F1A] text-sm">No Event Categories</p>
-            <p className="text-xs">Add your first category to get started.</p>
-          </div>
-        ) : filtered.length === 0 ? (
-          <div className="px-5 py-12 text-[#5F624F] text-center">
-            <Search className="opacity-40 mx-auto mb-2.5 w-6.5 h-6.5" />
-            <p className="font-black text-[#1F1F1A] text-sm">Nothing matches your filters</p>
-            <p className="text-xs">Try clearing the search or filters.</p>
-          </div>
-        ) : (
-          filtered.map((t) => {
-            const open = !collapsed.has(t.id);
-            const subtypes = t.event_subtypes;
-            const catBookable = t.booking_grouping === "per_type" && t.is_bookable;
-            return (
-              <section
-                key={t.id}
-                style={catVars(t.color)}
-                className="bg-[#FFFDF7] border border-[#E6DFC8] rounded-2xl overflow-hidden"
+      <div className="mx-auto w-full max-w-295 px-4 py-6 md:px-6" style={narrow ? { paddingBottom: 88 } : undefined}>
+        {showList && (
+          <div className="mb-4.5 flex flex-wrap items-end justify-between gap-3.5">
+            <div className="min-w-0">
+              <h1 className="font-black text-[20px] tracking-tight text-[#1F1F1A] md:text-[24px]">Event categories</h1>
+              <p className="mt-1.5 max-w-[60ch] text-[13.5px] text-[#5F624F] leading-relaxed">
+                {narrow ? "Tap a category to see the nights inside it." : "Pick a category on the left to see the nights inside it."}
+              </p>
+            </div>
+            {!narrow && (
+              <button
+                type="button"
+                onClick={openNewCat}
+                className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#1B4332] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
               >
-                <header className="flex items-center gap-2 px-4 py-3 bg-(--cat-bg) sm:px-5">
-                  <button
-                    type="button"
-                    onClick={() => toggleCollapse(t.id)}
-                    className="flex flex-wrap flex-1 items-center gap-2.5 min-w-0 text-left"
-                  >
-                    <span className="font-black text-[15px] tracking-[0.04em] whitespace-nowrap text-(--cat-text) uppercase">
-                      {toTitleCase(t.name)}
-                    </span>
-                    <span className="font-black text-[#5F624F] text-xs">({subtypes.length})</span>
-                    {catBookable && <BookingMark title="Bookable · one booking page for the whole category" />}
-                  </button>
+                <Plus className="h-4 w-4 stroke-[2.5]" /> New category
+              </button>
+            )}
+          </div>
+        )}
 
-                  <div className="flex items-center gap-0.5 shrink-0">
+        <div className={cn("grid items-start gap-4.5", narrow ? "grid-cols-1" : "grid-cols-[clamp(230px,25%,290px)_1fr]")}>
+          {showList && (
+            <div className={cn("rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] p-2", !narrow && "sticky top-4")}>
+              {!narrow && <p className="px-1.5 pt-2 pb-1.5 font-black text-[10.5px] text-[#5F624F] uppercase tracking-[0.16em]">Categories</p>}
+              <div className="flex flex-col gap-0.5">
+                {types.map((t) => (
+                  <CategoryRow
+                    key={t.id}
+                    cat={t}
+                    active={!narrow && selCat?.id === t.id}
+                    onClick={() => selectCategory(t.id)}
+                  />
+                ))}
+              </div>
+              {!narrow && (
+                <button
+                  type="button"
+                  onClick={openNewCat}
+                  className="mt-1.5 flex h-8.5 w-full items-center justify-center gap-1.5 rounded-[10px] font-bold text-[12.5px] text-[#5F624F] transition-colors hover:bg-[#EFEADB] hover:text-[#5C4033]"
+                >
+                  <Plus className="h-3.5 w-3.5" /> Add a category
+                </button>
+              )}
+            </div>
+          )}
+
+          {showDetail && selCat && (
+            <div className="flex min-w-0 flex-col gap-3.5">
+              <div className="flex flex-col gap-3 rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] p-3.5">
+                {!narrow && (
+                  <div className="flex flex-wrap items-center gap-2.5">
+                    <span style={{ "--dot": colorHexFromKey(selCat.color).solid } as React.CSSProperties} className="h-3 w-3 shrink-0 rounded-full bg-(--dot)" />
+                    <h2 className="min-w-0 flex-1 font-black text-[18px] text-[#1F1F1A]">{toTitleCase(selCat.name)}</h2>
+                    <IconBtn label={`Edit ${toTitleCase(selCat.name)}`} edit onClick={() => openEditCat(selCat)}><Pencil className="h-3.5 w-3.5" /></IconBtn>
+                    <IconBtn label={`Delete ${toTitleCase(selCat.name)}`} danger onClick={() => removeCat(selCat)}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
+                  </div>
+                )}
+                <p className="text-[13px] text-[#5F624F] leading-relaxed">
+                  <b className="font-bold text-[#1F1F1A]">On the website:</b> {groupingBlurb(selCat.booking_grouping)}
+                </p>
+                <div className="flex flex-wrap gap-2.5">
+                  <div className="flex h-11 min-w-0 flex-[1_1_200px] items-center gap-2.5 rounded-xl border border-[#E6DFC8] bg-[#FFFDF7] px-3">
+                    <Search className="h-4 w-4 shrink-0 text-[#5F624F]" />
+                    <input
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      placeholder={`Search in ${toTitleCase(selCat.name)}`}
+                      aria-label={`Search in ${toTitleCase(selCat.name)}`}
+                      className="min-w-0 flex-1 bg-transparent text-[14.5px] text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/60"
+                    />
+                    {query && (
+                      <button type="button" aria-label="Clear search" onClick={() => setQuery("")} className="grid h-6 w-6 place-items-center rounded-[7px] text-[#5F624F] hover:bg-[#F7F4EA]">
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                  {!narrow && (
                     <button
                       type="button"
-                      onClick={() => openNewSubtype(t)}
-                      aria-label="Add sub-category"
-                      className="flex items-center gap-1.5 bg-[#1B4332] hover:bg-[#1B4332]/85 px-2.5 rounded-lg h-9 sm:h-7 text-white transition-colors"
+                      onClick={() => openNewSub(selCat)}
+                      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#1B4332] px-4 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
                     >
-                      <Plus className="stroke-[2.5] w-3.5 h-3.5" />
-                      <span className="hidden sm:inline font-black text-[10px] uppercase tracking-widest">Sub-Category</span>
+                      <Plus className="h-4 w-4 stroke-[2.5]" /> Add a night
                     </button>
-                    <IconBtn label="Edit category" onClick={() => openEditType(t)}><Edit2 className="w-3.5 h-3.5" /></IconBtn>
-                    <IconBtn label="Delete category" danger onClick={() => removeType(t)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
-                    <IconBtn label="Toggle category" onClick={() => toggleCollapse(t.id)}>
-                      <ChevronDown className={cn("w-4 h-4 transition-transform duration-200", open && "rotate-180")} />
-                    </IconBtn>
-                  </div>
-                </header>
+                  )}
+                </div>
+              </div>
 
-                {open && (
-                  <div className="flex flex-col gap-2 px-3 sm:px-4 pt-1 pb-3.5">
-                    {subtypes.length === 0 && (
-                      <p className="px-1 py-1.5 text-[#5F624F] text-xs italic">No sub-categories match.</p>
-                    )}
-                    {subtypes.map((s) => {
-                      const badges = s.event_subtype_badges ?? [];
-                      const subBookable = s.is_bookable && t.booking_grouping === "per_subtype";
-                      return (
-                        <div
-                          key={s.id}
-                          style={subVars(s.color)}
-                          className="bg-[#F7F4EA] border border-[#E6DFC8] border-l-[3px] border-l-accent rounded-xl overflow-hidden"
-                        >
-                          <div className="flex items-start justify-between gap-2.5 px-3 py-2.5 bg-[color-mix(in_srgb,var(--sub-bg)_45%,#fff)] border-b border-(--sub-border) sm:px-3.5">
-                            <div className="flex flex-wrap flex-1 items-center gap-2.5 min-w-0">
-                              {s.default_image_url && (
-                                /* eslint-disable-next-line @next/next/no-img-element */
-                                <img
-                                  src={s.default_image_url}
-                                  alt=""
-                                  className="h-6 w-6 shrink-0 rounded-md border border-[#E6DFC8] object-cover"
-                                />
-                              )}
-                              <span className="font-black text-[14px] tracking-[0.01em] whitespace-nowrap text-(--sub-text) capitalize">
-                                {toTitleCase(s.name)}
-                              </span>
-                              {subBookable && <BookingMark title="Bookable · one booking page per sub-category" />}
-                              {t.booking_grouping === "per_event" && <BookingMark inverted title="Booked per individual event" />}
-                              <FlagDots s={s} />
-                            </div>
-                            <div className="flex items-center gap-0.5 shrink-0">
-                              <IconBtn label="Edit sub-category" onClick={() => openEditSubtype(s)}><Edit2 className="w-3.5 h-3.5" /></IconBtn>
-                              <IconBtn label="Delete sub-category" danger onClick={() => removeSubtype(s)}><Trash2 className="w-3.5 h-3.5" /></IconBtn>
-                            </div>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2 px-3 sm:px-3.5 py-3">
-                            {badges.map((bg) => (
-                              <BadgeChip
-                                key={bg.id}
-                                badge={bg}
-                                accent
-                                onEdit={() => setBadgeForm({ id: bg.id, event_subtypes_id: s.id, subName: s.name, title: bg.title, description: bg.description ?? "", icon: bg.icon ?? "" })}
-                                onDelete={() => removeBadge(bg.id)}
-                              />
-                            ))}
-                            <button
-                              type="button"
-                              onClick={() => setBadgeForm({ event_subtypes_id: s.id, subName: s.name, title: "", description: "", icon: "" })}
-                              aria-label="Add badge"
-                              className="inline-flex items-center gap-1.5 bg-[#E7EFEA] hover:bg-[#D7E5DD] px-2.5 py-1.5 border border-[#A9C4B7] hover:border-[#1B4332] rounded-[9px] font-black text-[#1B4332] text-[11px] hover:text-[#102A20] uppercase tracking-wide whitespace-nowrap transition-colors"
-                            >
-                              <Plus className="stroke-[2.5] w-3 h-3" />
-                              <span className="hidden sm:inline">{badges.length === 0 ? "Add badge" : "Add"}</span>
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </section>
-            );
-          })
-        )}
+              {subs.length === 0 ? (
+                <div className="rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] px-5 py-11 text-center text-[#5F624F]">
+                  <Layers className="mx-auto h-5.5 w-5.5 opacity-50" />
+                  <p className="mt-2 font-black text-[14px] text-[#1F1F1A]">{query ? "No matches" : "Nothing in here yet"}</p>
+                  <p className="mt-0.5 text-[12.5px]">{query ? "Try a different search." : "Add a night to get started."}</p>
+                </div>
+              ) : (
+                <div className={cn("grid gap-3", narrow ? "grid-cols-1" : "grid-cols-[repeat(auto-fill,minmax(min(100%,340px),1fr))]")}>
+                  {subs.map((s) => (
+                    <SubCard key={s.id} sub={s} onEdit={() => openEditSub(s)} onDelete={() => removeSub(s)} />
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
-      <Sheet open={!!typeForm} onOpenChange={(o) => { if (!o) { setTypeForm(null); setError(null); } }}>
-        <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={SHEET_CLASS}>
-          <SheetGrab />
-          <SheetHead
-            kicker="Category"
-            title={typeForm?.id ? `Edit ${typeForm.name ? toTitleCase(typeForm.name) : "Category"}` : "New Category"}
-            onClose={() => { setTypeForm(null); setError(null); }}
-          />
-          <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-5 min-h-0 overflow-y-auto touch-pan-y">
-            {typeForm && (
-              <>
-                <CollapsibleCard title="Identity">
-                  <FieldRow label="Name" required error={typeErrors.name}>
-                    <SheetInput value={typeForm.name} placeholder="e.g. Games" onChange={(v) => setTypeForm({ ...typeForm, name: v })} />
-                  </FieldRow>
-                  <FieldCol label="Description">
-                    <SheetTextarea value={typeForm.description} placeholder="Internal description (optional)" onChange={(v) => setTypeForm({ ...typeForm, description: v })} />
-                  </FieldCol>
-                  <FieldCol label="Colour">
-                    <ColorSwatches value={typeForm.color} onChange={(c) => setTypeForm({ ...typeForm, color: c })} />
-                  </FieldCol>
-                </CollapsibleCard>
+      {narrow && selCat && (
+        <div className="fixed inset-x-0 bottom-0 z-45 flex gap-2.5 border-t border-[#E6DFC8] bg-[#FFFDF7]/95 px-3 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))] backdrop-blur">
+          <button
+            type="button"
+            onClick={() => (drilled ? openNewSub(selCat) : openNewCat())}
+            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#1B4332] px-4 font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
+          >
+            <Plus className="h-4 w-4 stroke-[2.5]" /> {drilled ? `Add a night to ${toTitleCase(selCat.name)}` : "New category"}
+          </button>
+        </div>
+      )}
 
-                <CollapsibleCard title="Booking display">
-                  <FieldCol label="How events group on the booking hub">
-                    <SegRow
-                      options={BOOKING_GROUPING_OPTIONS.map((o) => o.value)}
-                      value={typeForm.booking_grouping}
-                      onChange={(v) => setTypeForm({ ...typeForm, booking_grouping: v, is_bookable: v === "per_type" ? typeForm.is_bookable : false })}
-                      render={(v) => BOOKING_GROUPING_OPTIONS.find((o) => o.value === v)?.label ?? v}
-                    />
-                    <p className="text-[#5F624F] text-[11px] leading-relaxed">
-                      {typeForm.booking_grouping === "per_event" && "One card per event — each date links to its own booking page."}
-                      {typeForm.booking_grouping === "per_subtype" && "One card per sub-category — all dates share one page with a date dropdown."}
-                      {typeForm.booking_grouping === "per_type" && "One card for the whole category — all its events share one page with a date dropdown."}
-                    </p>
-                  </FieldCol>
-                  {typeForm.booking_grouping === "per_type" && (
-                    <FieldRow label="Title" required error={typeErrors.title}>
-                      <SheetInput value={typeForm.title} placeholder="e.g. Band applications" onChange={(v) => setTypeForm({ ...typeForm, title: v })} />
-                    </FieldRow>
-                  )}
-                  {typeForm.booking_grouping === "per_type" && (
-                    <ToggleRow label="Bookable" sub="Customers can book the whole category online" value={typeForm.is_bookable} onChange={(v) => setTypeForm({ ...typeForm, is_bookable: v })} />
-                  )}
-                </CollapsibleCard>
-
-                {typeForm.booking_grouping === "per_type" && typeForm.is_bookable && (
-                  <BookingGroup>
-                    <BookingCardSection value={typeForm} onChange={(patch) => setTypeForm({ ...typeForm, ...patch })} />
-                    <BookingConfigEditor value={typeForm.booking_config} onChange={(cfg) => setTypeForm({ ...typeForm, booking_config: cfg })} />
-                  </BookingGroup>
-                )}
-              </>
-            )}
-            {error && <ErrorBox message={error} />}
-          </div>
-          <SheetFooter onCancel={() => { setTypeForm(null); setError(null); }} onSave={submitType} pending={isPending} disableSave={typeHasErrors} saveLabel={typeForm?.id ? "Save changes" : "Create"} />
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={!!subtypeForm} onOpenChange={(o) => { if (!o) { setSubtypeForm(null); setError(null); } }}>
-        <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={SHEET_CLASS}>
-          <SheetGrab />
-          <SheetHead
-            kicker={`Sub-category in ${toTitleCase(types.find((t) => t.id === subtypeForm?.event_types_id)?.name)}`}
-            title={subtypeForm?.id ? `Edit ${subtypeForm.name ? toTitleCase(subtypeForm.name) : "Sub-Category"}` : "New Sub-Category"}
-            onClose={() => { setSubtypeForm(null); setError(null); }}
-          />
-          <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-5 min-h-0 overflow-y-auto touch-pan-y">
-            {subtypeForm && (() => {
-              const parent = types.find((t) => t.id === subtypeForm.event_types_id);
-              const ownsBookingPage = parent?.booking_grouping === "per_subtype";
-              return (
-                <>
-                  <CollapsibleCard title="Identity">
-                    <FieldRow label="Name" required error={subtypeErrors.name}>
-                      <SheetInput value={subtypeForm.name} placeholder="e.g. Quiz" onChange={(v) => setSubtypeForm({ ...subtypeForm, name: v })} />
-                    </FieldRow>
-                    <FieldRow label="Title" required={ownsBookingPage} error={subtypeErrors.title}>
-                      <SheetInput value={subtypeForm.title} placeholder="e.g. Quiz Night" onChange={(v) => setSubtypeForm({ ...subtypeForm, title: v })} />
-                    </FieldRow>
-                    <FieldRow label="Default Title">
-                      <SheetInput value={subtypeForm.default_event_title} placeholder="e.g. Thursday Quiz Night" onChange={(v) => setSubtypeForm({ ...subtypeForm, default_event_title: v })} />
-                    </FieldRow>
-                    <FieldCol label="Tagline">
-                      <SheetTextarea value={subtypeForm.tagline} placeholder="Shown on the public booking page…" onChange={(v) => setSubtypeForm({ ...subtypeForm, tagline: v })} />
-                    </FieldCol>
-                    <FieldCol label="Colour">
-                      <ColorSwatches value={subtypeForm.color} onChange={(c) => setSubtypeForm({ ...subtypeForm, color: c })} />
-                    </FieldCol>
-                    <FieldCol label="Default Image">
-                      {subtypeForm.default_image_url ? (
-                        <div className="relative overflow-hidden rounded-xl border border-[#E6DFC8]">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={subtypeForm.default_image_url} alt="Default poster" className="max-h-50 w-full bg-[#F7F4EA] object-cover" />
-                          <button
-                            type="button"
-                            onClick={() => setSubtypeForm({ ...subtypeForm, default_image_url: "" })}
-                            title="Clear default image"
-                            aria-label="Clear default image"
-                            className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ) : (
-                        <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#E6DFC8] bg-[#F7F4EA] py-7 transition-colors hover:border-[#5C4033]">
-                          {imageUploading ? <Loader2 className="h-7 w-7 animate-spin text-[#5F624F]" /> : <Upload className="h-7 w-7 text-[#5F624F] opacity-50" />}
-                          <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">{imageUploading ? "Uploading…" : "Upload"}</span>
-                          <span className="px-4 text-center text-[10px] text-[#5F624F]">Used on every event of this sub-category that has no image of its own</span>
-                          <input type="file" accept="image/*" aria-label="Upload default image" className="hidden" onChange={handleSubtypeImageUpload} disabled={imageUploading} />
-                        </label>
-                      )}
-                    </FieldCol>
-                  </CollapsibleCard>
-
-                  <CollapsibleCard title="Behaviour">
-                    <FieldCol label="What kind of night this is">
-                      <BehaviorGrid value={subtypeForm.behavior} onChange={(v) => setSubtypeForm({ ...subtypeForm, behavior: v })} />
-                    </FieldCol>
-                  </CollapsibleCard>
-
-                  <CollapsibleCard title="Requirements">
-                    {ownsBookingPage && (
-                      <ToggleRow label="Bookable" sub="Customers can book this online" value={subtypeForm.is_bookable} onChange={(v) => setSubtypeForm({ ...subtypeForm, is_bookable: v })} />
-                    )}
-                    <ToggleRow label="Host" value={subtypeForm.host_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, host_required: v })} />
-                    <ToggleRow label="Seating" value={subtypeForm.seating_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, seating_required: v })} />
-                    <ToggleRow label="Payment" value={subtypeForm.payment_required} onChange={(v) => setSubtypeForm({ ...subtypeForm, payment_required: v })} />
-                    {subtypeForm.payment_required && (
-                      <FieldRow label="Default Amount (£)">
-                        <SheetInput type="number" value={subtypeForm.default_payment_amount} placeholder="0.00" onChange={(v) => setSubtypeForm({ ...subtypeForm, default_payment_amount: v })} />
-                      </FieldRow>
-                    )}
-                  </CollapsibleCard>
-
-                  {subtypeForm.is_bookable && ownsBookingPage && (
-                    <BookingGroup>
-                      <BookingCardSection value={subtypeForm} onChange={(patch) => setSubtypeForm({ ...subtypeForm, ...patch })} />
-                      <BookingConfigEditor value={subtypeForm.booking_config} onChange={(cfg) => setSubtypeForm({ ...subtypeForm, booking_config: cfg })} />
-                    </BookingGroup>
-                  )}
-
-                  <CollapsibleCard
-                    title="Display badges"
-                    count={subtypeForm.badges.length}
-                    action={
-                      <button
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); setSubtypeForm({ ...subtypeForm, badges: [...subtypeForm.badges, { title: "", description: "", icon: "Star" }] }); }}
-                        className="inline-flex items-center gap-1 bg-[#1B4332] hover:bg-[#1B4332]/85 px-2.5 py-1.5 rounded-lg font-black text-[10px] text-white uppercase tracking-widest"
-                      >
-                        <Plus className="stroke-[2.5] w-3 h-3" /> Add
-                      </button>
-                    }
-                    bodyClassName="p-3.5 flex flex-col gap-2.5"
-                  >
-                    <p className="text-[#5F624F] text-[11px] leading-relaxed">Shown on this sub-category&apos;s booking page. Each badge is an icon, a title and an optional line of detail.</p>
-                    {subtypeForm.badges.length === 0 ? (
-                      <div className="flex flex-col items-center gap-2 py-5 text-[#5F624F]">
-                        <Tag className="opacity-40 w-5 h-5" />
-                        <span className="font-bold text-xs">No badges yet</span>
-                        <button type="button" onClick={() => setSubtypeForm({ ...subtypeForm, badges: [{ title: "", description: "", icon: "Star" }] })} className="hover:bg-[#E7EFEA] px-4 py-2 border border-[#A9C4B7] hover:border-[#1B4332] border-dashed rounded-[9px] font-black text-[#1B4332] text-[11px] uppercase tracking-wide">Add the first badge</button>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {subtypeForm.badges.map((bg, i) => (
-                          <BadgeEditorRow
-                            key={i}
-                            badge={bg}
-                            onChange={(nb) => setSubtypeForm({ ...subtypeForm, badges: subtypeForm.badges.map((x, j) => (j === i ? nb : x)) })}
-                            onDelete={() => setSubtypeForm({ ...subtypeForm, badges: subtypeForm.badges.filter((_, j) => j !== i) })}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </CollapsibleCard>
-                </>
-              );
-            })()}
-            {error && <ErrorBox message={error} />}
-          </div>
-          <SheetFooter onCancel={() => { setSubtypeForm(null); setError(null); }} onSave={submitSubtype} pending={isPending} disableSave={subtypeHasErrors} saveLabel={subtypeForm?.id ? "Save changes" : "Create"} />
-        </SheetContent>
-      </Sheet>
-
-      <Sheet open={!!badgeForm} onOpenChange={(o) => { if (!o) { setBadgeForm(null); setError(null); } }}>
-        <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={cn(SHEET_CLASS, "sm:w-120")}>
-          <SheetGrab />
-          <SheetHead
-            kicker={badgeForm ? `${toTitleCase(badgeForm.subName)} · badge` : "Badge"}
-            title={badgeForm?.id ? "Edit Badge" : "New Badge"}
-            onClose={() => { setBadgeForm(null); setError(null); }}
-          />
-          <div className="flex-1 space-y-3.5 px-4 sm:px-5 py-5 min-h-0 overflow-y-auto touch-pan-y">
-            {badgeForm && (
-              <>
-                <div className="flex justify-center py-1">
-                  <BadgeChip badge={{ id: -1, title: badgeForm.title || "Badge title", description: badgeForm.description || null, icon: badgeForm.icon || null }} large />
-                </div>
-                <CollapsibleCard title="Badge">
-                  <FieldRow label="Title" required error={badgeErrors.title}>
-                    <SheetInput value={badgeForm.title} placeholder="e.g. Every Thursday" onChange={(v) => setBadgeForm({ ...badgeForm, title: v })} />
-                  </FieldRow>
-                  <FieldRow label="Description">
-                    <SheetInput value={badgeForm.description} placeholder="e.g. 8:00PM start" onChange={(v) => setBadgeForm({ ...badgeForm, description: v })} />
-                  </FieldRow>
-                  <FieldCol label="Icon">
-                    <IconGrid value={badgeForm.icon} onChange={(ic) => setBadgeForm({ ...badgeForm, icon: ic })} />
-                  </FieldCol>
-                </CollapsibleCard>
-              </>
-            )}
-            {error && <ErrorBox message={error} />}
-          </div>
-          <SheetFooter onCancel={() => { setBadgeForm(null); setError(null); }} onSave={submitBadge} pending={isPending} disableSave={badgeHasErrors} saveLabel={badgeForm?.id ? "Save badge" : "Add badge"} />
-        </SheetContent>
-      </Sheet>
+      {catForm && (
+        <CategorySheet form={catForm} setForm={setCatForm} onClose={closeSheets} onSave={submitCat} pending={isPending} error={error} />
+      )}
+      {subForm && (
+        <SubtypeSheet
+          form={subForm}
+          setForm={setSubForm}
+          parent={types.find((t) => t.id === subForm.event_types_id)}
+          onClose={closeSheets}
+          onSave={submitSub}
+          pending={isPending}
+          error={error}
+        />
+      )}
 
       {ConfirmDialogUI}
-    </div>
+    </>
   );
 }
 
+/* ---------------------------------------------------------------- explorer parts */
 
-function FilterBar({ filters, setFilters, types }: { filters: Filters; setFilters: (f: Filters) => void; types: EventTypeRecord[] }) {
-  const [open, setOpen] = useState(false);
-  const set = (patch: Partial<Filters>) => setFilters({ ...filters, ...patch });
-  const active =
-    (filters.category !== "all" ? 1 : 0) + (filters.behavior !== "all" ? 1 : 0) +
-    (filters.bookable ? 1 : 0) + (filters.hasBadges ? 1 : 0);
-
+function CategoryRow({ cat, active, onClick }: { cat: EventTypeRecord; active: boolean; onClick: () => void }) {
+  const count = cat.event_subtypes?.length ?? 0;
   return (
-    <div className="flex flex-col gap-2.5">
-      <div className="flex items-center gap-2 bg-[#FFFDF7] px-3 py-1.5 pl-3 border border-[#E6DFC8] rounded-[13px]">
-        <Search className="w-4.25 h-4.25 text-[#5F624F] shrink-0" />
-        <input
-          value={filters.q}
-          aria-label="Search categories, sub-categories and badges"
-          placeholder="Search types, sub-categories, badges…"
-          onChange={(e) => set({ q: e.target.value })}
-          className="flex-1 bg-transparent outline-none min-w-0 font-medium text-[#1F1F1A] placeholder:text-[#5F624F]/60 text-sm"
-        />
-        {filters.q && (
-          <button type="button" aria-label="Clear search" onClick={() => set({ q: "" })} className="place-items-center grid hover:bg-[#F7F4EA] rounded-[7px] w-6 h-6 text-[#5F624F]">
-            <X className="w-3.5 h-3.5" />
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setOpen(!open)}
-          aria-label="Toggle filters"
-          className={cn(
-            "flex items-center gap-1.5 px-3 border rounded-[9px] h-8 font-black text-[11px] uppercase tracking-wide transition-colors shrink-0",
-            open || active > 0 ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F] hover:border-[#5C4033]/40",
-          )}
+    <button
+      type="button"
+      onClick={onClick}
+      aria-current={active}
+      style={{ "--dot": colorHexFromKey(cat.color).solid } as React.CSSProperties}
+      className={cn(
+        "flex w-full items-center gap-2.75 rounded-xl border px-3 py-3 text-left transition-colors",
+        active ? "border-[#5C4033] bg-[#F1E9E2]" : "border-transparent hover:bg-[#F7F4EA]",
+      )}
+    >
+      <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-(--dot)" />
+      <span className="min-w-0 flex-1">
+        <span className="block font-black text-[14px] text-[#1F1F1A]">{toTitleCase(cat.name)}</span>
+        <span className="mt-px block text-[12px] text-[#5F624F]">{count} sub-{count === 1 ? "category" : "categories"}</span>
+      </span>
+      <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-[#5F624F]" />
+    </button>
+  );
+}
+
+function SubCard({ sub, onEdit, onDelete }: { sub: Subtype; onEdit: () => void; onDelete: () => void }) {
+  const c = colorHexFromKey(sub.color);
+  const b = behaviourOf(sub.behavior);
+  const badges = sub.event_subtype_badges ?? [];
+  return (
+    <div className="flex flex-col gap-2.75 rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] p-3.5">
+      <div className="flex items-start gap-2.75">
+        <span
+          style={{ "--tile-bg": c.bg, "--tile-text": c.text } as React.CSSProperties}
+          className="grid h-9.5 w-9.5 shrink-0 place-items-center rounded-[10px] bg-(--tile-bg) text-(--tile-text)"
         >
-          <SlidersHorizontal className="w-3.75 h-3.75" />
-          <span>Filters</span>
-          {active > 0 && <span className="place-items-center grid bg-white/25 px-1 rounded-full min-w-4 h-4 text-[10px] leading-none">{active}</span>}
-        </button>
+          <b.Icon className="h-4.5 w-4.5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-black text-[15.5px] text-[#1F1F1A]">{toTitleCase(sub.name)}</p>
+          <p className="mt-0.5 text-[12.5px] text-[#5F624F] leading-snug">
+            {sub.title ? <>Website name <b className="font-bold text-[#1F1F1A]">{sub.title}</b></> : "No website name set"}
+          </p>
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <IconBtn label={`Edit ${toTitleCase(sub.name)}`} edit onClick={onEdit}><Pencil className="h-3.5 w-3.5" /></IconBtn>
+          <IconBtn label={`Delete ${toTitleCase(sub.name)}`} danger onClick={onDelete}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
+        </div>
       </div>
 
-      {open && (
-        <div className="flex flex-col gap-3.5 bg-[#FFFDF7] p-3.5 border border-[#E6DFC8] rounded-[14px]">
-          <FilterGroup label="Category">
-            <FChip active={filters.category === "all"} onClick={() => set({ category: "all" })} label="All" />
-            {types.map((c) => (
-              <FChip key={c.id} active={filters.category === c.id} onClick={() => set({ category: c.id })} label={toTitleCase(c.name)} color={c.color} />
+      <FactChips sub={sub} />
+
+      {badges.length > 0 && (
+        <div className="flex flex-col gap-1.75 rounded-[11px] border border-[#C3D8CC] bg-[#EAF1EC] px-2.5 py-2">
+          <p className="flex items-center gap-1.5 font-black text-[10.5px] text-[#1B4332] uppercase tracking-[0.14em]">
+            <Globe className="h-3 w-3" /> Shown on the booking page
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {badges.map((bg) => (
+              <span key={bg.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[#C3D8CC] bg-[#FFFDF7] px-2 py-1 text-[11.5px] font-semibold text-[#5F624F]">
+                {renderBadgeIcon(bg.icon, "h-3.25 w-3.25")}
+                <b className="font-bold text-[#1F1F1A]">{bg.title}</b>
+                {bg.description && <span>· {bg.description}</span>}
+              </span>
             ))}
-          </FilterGroup>
-          <FilterGroup label="Behaviour">
-            <FChip active={filters.behavior === "all"} onClick={() => set({ behavior: "all" })} label="All" />
-            {BEHAVIOR_OPTIONS.map((b) => (
-              <FChip key={b.value} active={filters.behavior === b.value} onClick={() => set({ behavior: b.value })} label={b.label} />
-            ))}
-          </FilterGroup>
-          <div className="flex flex-row flex-wrap items-center gap-2.5">
-            <FToggle on={filters.bookable} onClick={() => set({ bookable: !filters.bookable })} label="Bookable only" />
-            <FToggle on={filters.hasBadges} onClick={() => set({ hasBadges: !filters.hasBadges })} label="Has badges" />
-            {active > 0 && (
-              <button type="button" onClick={() => set({ category: "all", behavior: "all", bookable: false, hasBadges: false })} className="ml-auto font-black text-[#5C4033] text-[11px] hover:underline uppercase tracking-wide">
-                Clear all
-              </button>
-            )}
           </div>
         </div>
       )}
@@ -836,244 +626,563 @@ function FilterBar({ filters, setFilters, types }: { filters: Filters; setFilter
   );
 }
 
-function FilterGroup({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2">
-      <span className="font-black text-[#5F624F] text-[10px] uppercase tracking-[0.12em]">{label}</span>
-      <div className="flex flex-wrap gap-1.5">{children}</div>
-    </div>
+function FactChips({ sub }: { sub: Subtype }) {
+  const b = behaviourOf(sub.behavior);
+  const chips: { key: string; Icon: React.ComponentType<{ className?: string }>; text: string; on?: boolean }[] = [
+    { key: "beh", Icon: b.Icon, text: b.label },
+    sub.is_bookable
+      ? { key: "online", Icon: Globe, text: "Books online", on: true }
+      : { key: "offline", Icon: EyeOff, text: "Not online" },
+  ];
+  if (sub.host_required) chips.push({ key: "host", Icon: User, text: "Needs a host" });
+  if (sub.seating_required) chips.push({ key: "seat", Icon: Armchair, text: "Table seating" });
+  chips.push(
+    sub.payment_required
+      ? { key: "price", Icon: Banknote, text: `£${money(sub.default_payment_amount)} per person` }
+      : { key: "free", Icon: Banknote, text: "Free entry" },
   );
-}
-
-function FChip({ active, onClick, label, color }: { active: boolean; onClick: () => void; label: string; color?: string | null }) {
-  const c = color ? colorHexFromKey(color) : null;
-  const activeColorStyle = active && c ? ({ "--fb": c.bg, "--ft": c.text, "--fbd": c.border } as React.CSSProperties) : undefined;
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      style={activeColorStyle}
-      className={cn(
-        "inline-flex items-center gap-1.5 px-2.5 py-1.5 border rounded-[9px] font-black text-[11px] transition-colors",
-        active && c && "border-(--fbd) bg-(--fb) text-(--ft)",
-        active && !c && "border-[#5C4033] bg-[#5C4033] text-white",
-        !active && "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F] hover:border-[#5C4033]",
-      )}
-    >
-      {c && <span style={{ "--fd": c.solid } as React.CSSProperties} className="h-2 w-2 bg-(--fd) rounded-full" />}
-      {label}
-    </button>
-  );
-}
-
-function FToggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
-  return (
-    <button type="button" onClick={onClick} className="inline-flex items-center gap-2 font-bold text-[#1F1F1A] text-xs">
-      <span className={cn("place-items-center grid border-[1.5px] rounded-md w-4.5 h-4.5 transition-colors", on ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-[#F7F4EA]")}>
-        {on && <Check className="stroke-3 w-3 h-3" />}
-      </span>
-      {label}
-    </button>
-  );
-}
-
-
-function IconBtn({ label, onClick, danger, children }: { label: string; onClick: () => void; danger?: boolean; children: React.ReactNode }) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      onClick={onClick}
-      className={cn(
-        "place-items-center grid rounded-lg w-9 sm:w-7 h-9 sm:h-7 transition-colors shrink-0",
-        danger ? "text-[#c0584d] hover:bg-[#fdecec] hover:text-[#DC2626]" : "text-[#5F624F] hover:bg-[#F7F4EA] hover:text-[#5C4033]",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
-function BadgeChip({ badge, accent, onEdit, onDelete, large }: { badge: Badge; accent?: boolean; onEdit?: () => void; onDelete?: () => void; large?: boolean }) {
-  return (
-    <span
-      onClick={onEdit}
-      title={onEdit ? "Edit badge" : undefined}
-      className={cn(
-        "inline-flex items-center gap-1.5 bg-[#FFFDF7] border border-[#E6DFC8] rounded-[9px] max-w-full",
-        large ? "px-2.5 py-2" : "px-2.5 py-1.5 pl-1.5",
-        onEdit && "cursor-pointer transition-colors hover:border-[#5C4033] hover:bg-[#F7F4EA]",
-      )}
-    >
-      <span className={cn("place-items-center grid bg-[#F7F4EA] rounded-md shrink-0", large ? "h-6.5 w-6.5" : "h-5 w-5", accent ? "text-(--sub-text)" : "text-[#5C4033]")}>
-        {renderBadgeIcon(badge.icon, large ? "w-3.75 h-3.75" : "w-3.25 h-3.25")}
-      </span>
-      <span className={cn("font-black text-[#1F1F1A] truncate whitespace-nowrap", large ? "text-sm" : "text-xs")}>{badge.title}</span>
-      {badge.description && <span className="pl-1.5 border-[#E6DFC8] border-l text-[#5F624F] text-[11px] truncate whitespace-nowrap">{badge.description}</span>}
-      {onDelete && (
-        <button
-          type="button"
-          aria-label="Delete badge"
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="place-items-center grid hover:bg-[#fdecec] ml-0.5 rounded-[5px] w-4.25 h-4.25 text-[#5F624F] hover:text-[#DC2626] shrink-0"
+    <div className="flex flex-wrap gap-1.5">
+      {chips.map(({ key, Icon, text, on }) => (
+        <span
+          key={key}
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11.5px] font-semibold",
+            on ? "border-[#C3D8CC] bg-[#EAF1EC] text-[#1B4332]" : "border-[#EFEADB] bg-[#FBF8F0] text-[#5F624F]",
+          )}
         >
-          <X className="stroke-[2.5] w-3 h-3" />
-        </button>
-      )}
-    </span>
-  );
-}
-
-function FlagDots({ s }: { s: Subtype }) {
-  const flags: { Icon: React.ComponentType<{ className?: string }>; label: string; tone: string }[] = [];
-  if (s.host_required) flags.push({ Icon: User, label: "Host", tone: "bg-[#e0910e] border-[#e0910e] text-white" });
-  if (s.seating_required) flags.push({ Icon: Armchair, label: "Seating", tone: "bg-[#0D9488] border-[#0D9488] text-white" });
-  if (s.payment_required) flags.push({ Icon: PoundSterling, label: "Payment", tone: "bg-[#1F8A5B] border-[#1F8A5B] text-white" });
-  if (!flags.length) return null;
-  return (
-    <span className="inline-flex items-center gap-1">
-      {flags.map(({ Icon, label, tone }) => (
-        <span key={label} title={label} className={cn("place-items-center grid border rounded-md w-5.5 h-5.5", tone)}>
-          <Icon className="w-2.75 h-2.75" />
+          <Icon className="h-3.25 w-3.25 shrink-0" />
+          {text}
         </span>
       ))}
-    </span>
-  );
-}
-
-function BookingMark({ inverted = false, title = "Bookable" }: { inverted?: boolean; title?: string }) {
-  return (
-    <span title={title} className="inline-flex items-center shrink-0">
-      <span
-        className={cn(
-          "place-items-center grid rounded-[7px] w-5.75 h-5.75",
-          inverted ? "border-[1.5px] border-[#862041] bg-white text-[#862041]" : "bg-[#862041] text-white shadow-[0_1px_4px_-1px_rgba(134,32,65,0.6)]",
-        )}
-      >
-        <Ticket className="stroke-[2.2] w-3.25 h-3.25" />
-      </span>
-    </span>
-  );
-}
-
-
-const SHEET_CLASS = "bg-[#F7F4EA] border-t border-[#E6DFC8] rounded-t-[28px] p-0 h-[92vh] flex flex-col outline-none shadow-2xl gap-0 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-165 sm:h-auto sm:max-h-[84vh] sm:rounded-[28px] sm:bottom-5.5 sm:border sm:border-[#E6DFC8]";
-
-function SheetGrab() {
-  return <div className="bg-[#E6DFC8] mx-auto mt-2.5 rounded-full w-10.5 h-1.25 shrink-0" />;
-}
-
-function SheetHead({ kicker, title, onClose }: { kicker: string; title: string; onClose: () => void }) {
-  return (
-    <div className="flex justify-between items-start gap-3 px-5 pt-3 pb-4 border-[#E6DFC8] border-b shrink-0">
-      <div className="min-w-0">
-        <SheetDescription className="mb-1 font-black text-[#5F624F] text-[10px] uppercase tracking-[0.13em]">{kicker}</SheetDescription>
-        <SheetTitle className="font-black text-[#1F1F1A] text-[22px] uppercase leading-none tracking-tight">{title}</SheetTitle>
-      </div>
-      <button type="button" onClick={onClose} aria-label="Close" className="place-items-center grid bg-[#F7F4EA] border border-[#E6DFC8] rounded-[10px] w-9 h-9 text-[#5F624F] hover:text-[#1F1F1A] shrink-0">
-        <X className="w-4.5 h-4.5" />
-      </button>
     </div>
   );
 }
 
-function SheetFooter({ onCancel, onSave, pending, saveLabel, disableSave }: { onCancel: () => void; onSave: () => void; pending: boolean; saveLabel: string; disableSave?: boolean }) {
-  return (
-    <div className="gap-2.5 grid grid-cols-2 bg-[#FFFDF7] px-4 sm:px-5 py-3.5 pb-8 border-[#E6DFC8] border-t shrink-0">
-      <Button
-        type="button"
-        variant="ghost"
-        onClick={onCancel}
-        disabled={pending}
-        className="bg-[#F7F4EA] hover:bg-[#EFEADD] border border-[#E6DFC8] hover:border-[#5C4033] rounded-xl h-12 font-black text-[#5F624F] hover:text-[#5C4033] text-xs uppercase tracking-wide"
-      >
-        Cancel
-      </Button>
-      <Button
-        type="button"
-        disabled={pending || disableSave}
-        title={disableSave ? "Resolve the highlighted fields before saving" : undefined}
-        onClick={onSave}
-        className="bg-[#1B4332] hover:bg-[#2D5F49] disabled:opacity-50 rounded-xl h-12 font-black text-white text-xs uppercase tracking-wide disabled:pointer-events-none"
-      >
-        {pending ? <Loader2 className="w-4 h-4 animate-spin" /> : saveLabel}
-      </Button>
-    </div>
-  );
-}
+/* ---------------------------------------------------------------- sheets */
 
-function CollapsibleCard({ title, count, action, defaultOpen = true, bodyClassName, children }: {
-  title: string; count?: number; action?: React.ReactNode; defaultOpen?: boolean; bodyClassName?: string; children: React.ReactNode;
+const SHEET_CLASS =
+  "flex h-[92vh] flex-col gap-0 rounded-t-[20px] border-t border-[#E6DFC8] bg-[#F7F4EA] p-0 shadow-2xl outline-none sm:inset-x-auto sm:bottom-5 sm:left-1/2 sm:h-auto sm:max-h-[88vh] sm:w-[620px] sm:-translate-x-1/2 sm:rounded-[20px] sm:border";
+
+function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
+  form: CatForm; setForm: (f: CatForm) => void; onClose: () => void; onSave: () => void; pending: boolean; error: string | null;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const set = (patch: Partial<CatForm>) => setForm({ ...form, ...patch });
+  const nameErr = !form.name.trim();
+  const perType = form.booking_grouping === "per_type";
+  const titleErr = perType && !form.title.trim();
+
   return (
-    <div className="bg-white border border-[#E6DFC8] rounded-2xl overflow-hidden">
-      <div className="flex items-center gap-2.5 bg-[#EFEADD] hover:bg-[#E6DFC8] pr-3 transition-colors">
-        <button type="button" onClick={() => setOpen((o) => !o)} className="flex flex-1 items-center gap-1.5 px-4 py-3 text-left">
-          <span className="font-black text-[#5C4033] text-[11px] uppercase tracking-wide">{title}</span>
-          {count != null && <span className="inline-grid place-items-center bg-[#5C4033] px-1.5 rounded-full min-w-4.5 h-4.5 text-[10px] text-white">{count}</span>}
-        </button>
-        {action}
-        <button type="button" onClick={() => setOpen((o) => !o)} aria-label={`Toggle ${title}`} className="place-items-center grid w-7 h-7 text-[#5F624F]">
-          <ChevronDown className={cn("w-4 h-4 transition-transform", open && "rotate-180")} />
-        </button>
-      </div>
-      {open && <div className={bodyClassName ?? ""}>{children}</div>}
+    <Sheet open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={SHEET_CLASS}>
+        <SheetGrab />
+        <SheetHead eyebrow="Category" title={form.isNew ? "New category" : toTitleCase(form.name) || "Category"} onClose={onClose} />
+        <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto p-4">
+          <SheetSection title="Name" blurb="A group name for your own lists.">
+            <Field label="Category name" required help={HELP.catName} hint="Customers never see this." error={nameErr ? "Give it a short name so your team can find it." : undefined}>
+              <TextIn value={form.name} placeholder="e.g. Games" onChange={(v) => set({ name: v })} />
+            </Field>
+            <Field label="Colour in your lists" help={HELP.colour} hint={HINT.colour}>
+              <Swatches value={form.color} onChange={(c) => set({ color: c })} />
+            </Field>
+          </SheetSection>
+
+          <SheetSection title="How it shows on the website" blurb="Pick the one that matches how people book.">
+            <Field label="Booking pages" help={HELP.grouping} hint={HINT.grouping}>
+              <GroupingPicker value={form.booking_grouping} onChange={(v) => set({ booking_grouping: v })} />
+            </Field>
+          </SheetSection>
+
+          {perType && (
+            <SheetSection title="Booking" blurb="This whole category shares one booking page.">
+              <Field label="Booking page name" required help={HELP.title} hint={HINT.title} error={titleErr ? "Give the booking page a name customers will recognise." : undefined}>
+                <TextIn value={form.title} placeholder="e.g. Hire the function room" onChange={(v) => set({ title: v })} />
+              </Field>
+              <div className="border-t border-[#E6DFC8] pt-3.5">
+                <BigToggle
+                  label="Can customers book it online?"
+                  help={HELP.bookable}
+                  on={form.is_bookable}
+                  onChange={(v) => set({ is_bookable: v })}
+                  onText="Yes — bookable on the website" onSub="A booking page is created for it."
+                  offText="No — phone or walk-in only" offSub="You can still add bookings by hand."
+                />
+              </div>
+              {form.is_bookable && (
+                <div className="border-t border-[#E6DFC8] pt-3.5">
+                  <BookingFormEditor
+                    card={form}
+                    onCard={(patch) => set(patch)}
+                    config={form.booking_config}
+                    onConfig={(cfg) => set({ booking_config: cfg })}
+                    fallbackTitle={form.title || form.name}
+                  />
+                </div>
+              )}
+            </SheetSection>
+          )}
+
+          {error && <ErrorBox message={error} />}
+        </div>
+        <SheetFoot
+          onCancel={onClose}
+          onSave={onSave}
+          pending={pending}
+          disableSave={nameErr || titleErr}
+          saveLabel={form.isNew ? "Create" : "Save changes"}
+        />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+const TABS: { id: string; label: string }[] = [
+  { id: "basics", label: "Name" },
+  { id: "kind", label: "Kind of night" },
+  { id: "needs", label: "What it needs" },
+  { id: "web", label: "Website" },
+  { id: "booking", label: "Booking form" },
+];
+
+function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }: {
+  form: SubForm; setForm: (f: SubForm) => void; parent: EventTypeRecord | undefined;
+  onClose: () => void; onSave: () => void; pending: boolean; error: string | null;
+}) {
+  const [activeTab, setActiveTab] = useState("basics");
+  const set = (patch: Partial<SubForm>) => setForm({ ...form, ...patch });
+
+  const ownsPage = parent?.booking_grouping === "per_subtype";
+  const showBookable = ownsPage;
+  const tabs = TABS.filter((t) => t.id !== "booking" || (showBookable && form.is_bookable));
+  const cur = tabs.some((t) => t.id === activeTab) ? activeTab : "basics";
+  const idx = tabs.findIndex((t) => t.id === cur);
+  const last = idx === tabs.length - 1;
+
+  const nameErr = !form.name.trim();
+  const titleErr = ownsPage && !form.title.trim();
+  const disableSave = nameErr || titleErr;
+
+  return (
+    <Sheet open onOpenChange={(o) => { if (!o) onClose(); }}>
+      <SheetContent side="bottom" showCloseButton={false} onOpenAutoFocus={(e) => e.preventDefault()} className={SHEET_CLASS}>
+        <SheetGrab />
+        <SheetHead
+          eyebrow={`Sub-category in ${toTitleCase(parent?.name)}`}
+          title={form.isNew ? "New sub-category" : toTitleCase(form.name) || "Sub-category"}
+          onClose={onClose}
+        />
+
+        <div className="flex flex-wrap gap-1 bg-[#FFFDF7] px-3 pb-2.5" role="tablist" aria-label="Sub-category settings">
+          {tabs.map((t, k) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              aria-selected={cur === t.id}
+              onClick={() => setActiveTab(t.id)}
+              className={cn(
+                "rounded-[9px] px-2.75 py-2 font-bold text-[12.5px] transition-colors",
+                cur === t.id ? "bg-[#F1E9E2] text-[#5C4033]" : "text-[#5F624F] hover:text-[#5C4033]",
+              )}
+            >
+              <span className="mr-1 opacity-55">{k + 1}</span>{t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col gap-3.5 overflow-y-auto p-4">
+          {cur === "basics" && (
+            <SheetSection title="Name" blurb="What you call it, and what customers read.">
+              <Field label="Short name" required help={HELP.name} hint={HINT.name} error={nameErr ? "Give it a short name so your team can find it." : undefined}>
+                <TextIn value={form.name} placeholder="e.g. Quiz" onChange={(v) => set({ name: v })} />
+              </Field>
+              <Field label="Website name" required={ownsPage} help={HELP.title} hint={HINT.title} error={titleErr ? "Give it a website name so customers know what they are booking." : undefined}>
+                <TextIn value={form.title} placeholder="e.g. Quiz Night" onChange={(v) => set({ title: v })} />
+              </Field>
+              <Field label="Fills in new events as" help={HELP.defaultTitle} hint={HINT.defaultTitle}>
+                <TextIn value={form.default_event_title} placeholder="e.g. Thursday Quiz Night" onChange={(v) => set({ default_event_title: v })} />
+              </Field>
+              <Field label="Colour in your lists" help={HELP.colour} hint={HINT.colour}>
+                <Swatches value={form.color} onChange={(c) => set({ color: c })} />
+              </Field>
+            </SheetSection>
+          )}
+
+          {cur === "kind" && (
+            <SheetSection title="Kind of night" blurb="This switches on the right tools.">
+              <Field label="Kind of night" help={HELP.behaviour} hint={HINT.behaviour}>
+                <BehaviourPicker value={form.behavior} onChange={(v) => set({ behavior: v })} />
+              </Field>
+            </SheetSection>
+          )}
+
+          {cur === "needs" && (
+            <SheetSection title="What it needs" blurb="Set once — every date of this kind follows.">
+              {showBookable && (
+                <BigToggle
+                  label="Can customers book it online?" help={HELP.bookable}
+                  on={form.is_bookable} onChange={(v) => set({ is_bookable: v })}
+                  onText="Yes — bookable on the website" onSub="A booking page is created for it."
+                  offText="No — phone or walk-in only" offSub="You can still add bookings by hand."
+                />
+              )}
+              <BigToggle
+                label="Does someone have to run it?" help={HELP.host}
+                on={form.host_required} onChange={(v) => set({ host_required: v })}
+                onText="Yes — a host is needed" onSub="You'll be asked who is hosting each date."
+                offText="No host needed"
+              />
+              <BigToggle
+                label="Are guests given tables?" help={HELP.seating}
+                on={form.seating_required} onChange={(v) => set({ seating_required: v })}
+                onText="Yes — seated" onSub="Tables are allocated when people book."
+                offText="No — standing"
+              />
+              <BigToggle
+                label="Do people pay to book?" help={HELP.payment}
+                on={form.payment_required} onChange={(v) => set({ payment_required: v })}
+                onText="Yes — paid entry" offText="Free to book"
+              />
+              {form.payment_required && (
+                <Field label="Price per person (£)" help={HELP.price} hint={HINT.price}>
+                  <TextIn type="number" value={form.default_payment_amount} placeholder="5.00" onChange={(v) => set({ default_payment_amount: v })} />
+                </Field>
+              )}
+            </SheetSection>
+          )}
+
+          {cur === "web" && (
+            <>
+              <SheetSection title="What customers see" blurb="Words, picture and badges on the booking page.">
+                <Field label="One line to sell it" help={HELP.tagline} hint={HINT.tagline}>
+                  <AreaIn value={form.tagline} placeholder="Six rounds, one winner, plenty of arguing." onChange={(v) => set({ tagline: v })} />
+                </Field>
+                <Field label="Poster picture" help={HELP.image} hint={HINT.image}>
+                  <Dropzone
+                    url={form.default_image_url}
+                    subline="Used when an event has no picture of its own"
+                    ariaLabel="Upload poster picture"
+                    pathPrefix="event-subtypes/"
+                    onUpload={(u) => set({ default_image_url: u })}
+                    onClear={() => set({ default_image_url: "" })}
+                  />
+                </Field>
+                <Field label="Badges" help={HELP.badges} hint={HINT.badges}>
+                  <BadgeEditor badges={form.badges} onChange={(badges) => set({ badges })} />
+                </Field>
+              </SheetSection>
+
+              <div className="flex flex-col gap-2 rounded-xl border border-[#E6DFC8] bg-[#FBF8F0] p-3">
+                <p className="font-black text-[10.5px] text-[#5F624F] uppercase tracking-[0.16em]">How it will look</p>
+                <p className="font-black text-[16px] text-[#1F1F1A]">{form.title || form.name || "Your night"}</p>
+                {form.tagline && <p className="text-[13px] text-[#5F624F]">{form.tagline}</p>}
+                {form.badges.filter((b) => b.title.trim()).length > 0 && (
+                  <div className="flex flex-wrap gap-1.5">
+                    {form.badges.filter((b) => b.title.trim()).map((b, i) => (
+                      <span key={i} className="inline-flex items-center gap-1.5 rounded-lg border border-[#EFEADB] bg-[#FBF8F0] px-2 py-1 text-[11.5px] font-semibold text-[#5F624F]">
+                        {renderBadgeIcon(b.icon, "h-3.25 w-3.25")}
+                        <b className="font-bold text-[#1F1F1A]">{b.title}</b>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {cur === "booking" && (
+            <BookingFormEditor
+              card={form}
+              onCard={(patch) => set(patch)}
+              config={form.booking_config}
+              onConfig={(cfg) => set({ booking_config: cfg })}
+              fallbackTitle={form.title || form.name}
+            />
+          )}
+
+          {error && <ErrorBox message={error} />}
+        </div>
+
+        <SheetFoot
+          onCancel={onClose}
+          onSave={last ? onSave : undefined}
+          onNext={last ? undefined : () => setActiveTab(tabs[idx + 1].id)}
+          nextLabel={last ? undefined : `Next: ${tabs[idx + 1].label}`}
+          pending={pending}
+          disableSave={disableSave}
+          disableNext={nameErr}
+          saveLabel={form.isNew ? "Create" : "Save changes"}
+        />
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+/* ---------------------------------------------------------------- booking form editor (tab 5 / per_type) */
+
+const BOOK_FIELDS: { key: FieldKey; label: string; locked?: boolean; size?: boolean }[] = [
+  { key: "name", label: "Their name", locked: true },
+  { key: "email", label: "Email address", locked: true },
+  { key: "phone", label: "Phone number" },
+  { key: "group_size", label: "How many people", size: true },
+  { key: "group_name", label: "Team or group name" },
+  { key: "special_requests", label: "Anything else we should know" },
+];
+
+function BookingFormEditor({ card, onCard, config, onConfig, fallbackTitle }: {
+  card: CardDraft;
+  onCard: (patch: Partial<CardDraft>) => void;
+  config: ResolvedBookingConfig;
+  onConfig: (cfg: ResolvedBookingConfig) => void;
+  fallbackTitle: string;
+}) {
+  const setField = (key: FieldKey, patch: Partial<ResolvedBookingConfig["fields"][FieldKey]>) =>
+    onConfig({ ...config, fields: { ...config.fields, [key]: { ...config.fields[key], ...patch } } });
+
+  return (
+    <div className="flex flex-col gap-3.5">
+      <BookingBlock title="Booking card" blurb="The tile customers tap on the booking page.">
+        <p className="text-[12px] text-[#5F624F] leading-relaxed">Leave a box blank and it falls back to the website name, a calendar icon and the automatic label.</p>
+        <Field label="Card title" help={HELP.cardTitle} hint={HINT.cardTitle}>
+          <TextIn value={card.booking_card_title} placeholder={fallbackTitle || "e.g. Quiz Night"} onChange={(v) => onCard({ booking_card_title: v })} />
+        </Field>
+        <Field label="Card tagline" help={HELP.cardTagline} hint={HINT.cardTagline}>
+          <AreaIn value={card.booking_card_tagline} placeholder="Book a table for our weekly quiz night. Eight rounds, great prizes, and happy hour vibes." onChange={(v) => onCard({ booking_card_tagline: v })} />
+        </Field>
+        <Field label="Card note" help={HELP.cardNote} hint={HINT.cardNote}>
+          <TextIn value={card.booking_card_badge} placeholder="Thursdays" onChange={(v) => onCard({ booking_card_badge: v })} />
+        </Field>
+        <Field label="Card icon" help={HELP.cardIcon}>
+          <CardIconGrid value={card.booking_card_icon} onChange={(name) => onCard({ booking_card_icon: name })} />
+        </Field>
+      </BookingBlock>
+
+      <BookingBlock title="Booking page" blurb="The page people land on after tapping the card.">
+        <Field label="Booking image (logo)" help={HELP.bookingImage} hint={HINT.bookingImage}>
+          <Dropzone
+            url={config.booking_image_url ?? ""}
+            subline="JPG or PNG from your phone or computer"
+            ariaLabel="Upload booking image"
+            pathPrefix=""
+            onUpload={(u) => onConfig({ ...config, booking_image_url: u })}
+            onClear={() => onConfig({ ...config, booking_image_url: null })}
+          />
+        </Field>
+        <Field label="Tagline" help={HELP.bookingTagline} hint={HINT.bookingTagline}>
+          <TextIn value={config.tag_line} placeholder="Description shown under the logo" onChange={(v) => onConfig({ ...config, tag_line: v })} />
+        </Field>
+      </BookingBlock>
+
+      <BookingBlock title="Form fields" blurb="The questions the customer answers when booking.">
+        <p className="text-[12px] text-[#5F624F] leading-relaxed">
+          <b className="font-bold text-[#1F1F1A]">Shown</b> puts the question on the form. <b className="font-bold text-[#1F1F1A]">Required</b> means they cannot book without answering it.
+        </p>
+        {BOOK_FIELDS.map((fd) => {
+          const v = config.fields[fd.key];
+          const shown = fd.locked ? true : v.visible;
+          const required = fd.locked ? true : v.required;
+          return (
+            <div key={fd.key} className="overflow-hidden rounded-xl border border-[#E6DFC8] bg-[#FBF8F0]">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2.5 px-2.75 py-2.5 max-[560px]:grid-cols-2">
+                <b className="min-w-0 text-[13px] text-[#1F1F1A] max-[560px]:col-span-2">{fd.label}</b>
+                <span className="flex items-center justify-end gap-1.75">
+                  <span className={cn("w-12 text-right font-black text-[10.5px] uppercase tracking-widest", shown ? "text-[#1B4332]" : "text-[#5F624F]")}>Shown</span>
+                  <MiniSw on={shown} disabled={fd.locked} label={`Show ${fd.label}`} onClick={() => setField(fd.key, { visible: !v.visible })} />
+                </span>
+                <span className={cn("flex items-center justify-end gap-1.75", !shown && "opacity-40")}>
+                  <span className={cn("w-18.5 text-right font-black text-[10.5px] uppercase tracking-widest", required ? "text-[#B45309]" : "text-[#5F624F]")}>{required ? "Required" : "Optional"}</span>
+                  <MiniSw on={required} tone="req" disabled={fd.locked || !shown} label={`Make ${fd.label} required`} onClick={() => setField(fd.key, { required: !v.required })} />
+                </span>
+              </div>
+              {shown && (
+                <div className="flex flex-col gap-2.25 border-t border-[#E6DFC8] bg-white p-2.75">
+                  <Field label="Wording on the form" help={HELP.wording}>
+                    <TextIn value={v.label} ariaLabel={`Wording for ${fd.label}`} onChange={(val) => setField(fd.key, { label: val })} />
+                  </Field>
+                  {fd.size && (
+                    <div className="flex flex-wrap gap-2.25">
+                      <span className="flex-[1_1_120px]">
+                        <Field label="Smallest group" help={HELP.smallest}>
+                          <TextIn type="number" value={String(config.fields.group_size.min)} ariaLabel="Smallest group" onChange={(val) => setField("group_size", { min: Math.max(1, parseInt(val, 10) || 1) })} />
+                        </Field>
+                      </span>
+                      <span className="flex-[1_1_120px]">
+                        <Field label="Biggest group" help={HELP.biggest}>
+                          <TextIn type="number" value={String(config.fields.group_size.max)} ariaLabel="Biggest group" onChange={(val) => setField("group_size", { max: Math.max(1, parseInt(val, 10) || 1) })} />
+                        </Field>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </BookingBlock>
     </div>
   );
 }
 
-function BookingGroup({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(true);
+function BookingBlock({ title, blurb, children }: { title: string; blurb: string; children: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-2.5 bg-[#1F8A5B]/5 p-2.5 border-[#bfe3cf] border-[1.5px] rounded-[18px]">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="flex items-center gap-2 px-1.5 pt-1 pb-0.5 font-black text-[#1F8A5B] text-[10px] uppercase tracking-widest">
-        <span className="place-items-center grid bg-[#1F8A5B] rounded-md w-5 h-5 text-white shrink-0"><Ticket className="stroke-[2.2] w-3 h-3" /></span>
-        <span>Booking setup</span>
-        <span className="ml-auto font-bold text-[#1F8A5B]/70 normal-case tracking-normal">shown while bookable</span>
-        <ChevronDown className={cn("w-4 h-4 text-[#1F8A5B] transition-transform", open && "rotate-180")} />
+    <div className="overflow-hidden rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7]">
+      <div className="border-b border-[#EFEADB] bg-[#FBF8F0] px-3.5 py-3">
+        <p className="font-black text-[13px] uppercase tracking-widest text-[#1F1F1A]">{title}</p>
+        <p className="mt-0.5 text-[12px] text-[#5F624F]">{blurb}</p>
+      </div>
+      <div className="flex flex-col gap-3.5 p-3.5">{children}</div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------- badge editor */
+
+function BadgeEditor({ badges, onChange }: { badges: BadgeDraft[]; onChange: (b: BadgeDraft[]) => void }) {
+  const update = (i: number, patch: Partial<BadgeDraft>) => onChange(badges.map((b, j) => (j === i ? { ...b, ...patch } : b)));
+  const remove = (i: number) => onChange(badges.filter((_, j) => j !== i));
+  const add = () => onChange([...badges, { title: "", description: "", icon: "Star" }]);
+  return (
+    <div className="flex flex-col gap-2.25">
+      {badges.length === 0 && (
+        <p className="text-[12px] text-[#5F624F] leading-relaxed">No badges yet. Most nights look good with two, like “Free entry” and “Thursdays 7pm”.</p>
+      )}
+      {badges.map((b, i) => (
+        <BadgeRow key={i} badge={b} onChange={(patch) => update(i, patch)} onDelete={() => remove(i)} />
+      ))}
+      <button
+        type="button"
+        onClick={add}
+        className="inline-flex h-8.5 w-fit items-center gap-1.5 rounded-[10px] border border-[#E6DFC8] bg-[#FFFDF7] px-3 font-bold text-[12.5px] text-[#1F1F1A] transition-colors hover:border-[#5C4033]"
+      >
+        <Plus className="h-3.5 w-3.5" /> Add a badge
       </button>
-      {open && <div className="flex flex-col gap-2.5">{children}</div>}
     </div>
   );
 }
 
-
-function FieldRow({ label, required, error, children }: { label: string; required?: boolean; error?: string; children: React.ReactNode }) {
+function BadgeRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onChange: (patch: Partial<BadgeDraft>) => void; onDelete: () => void }) {
+  const [pickOpen, setPickOpen] = useState(false);
   return (
-    <div className="px-4 py-3 border-[#E6DFC8] border-t first:border-t-0">
-      <div className="flex items-center gap-3">
-        <span className={cn("font-black text-[10px] uppercase tracking-wide shrink-0", error ? "text-[#DC2626]" : "text-[#5F624F]")}>
-          {label}{required && <span className="ml-0.5 text-[#DC2626]">*</span>}
-        </span>
-        <div className="flex flex-1 justify-end min-w-0">{children}</div>
+    <div className="rounded-xl border border-[#E6DFC8] bg-[#FBF8F0] p-2.5">
+      <div className="flex items-start gap-2.5">
+        <button
+          type="button"
+          aria-label="Change badge icon"
+          onClick={() => setPickOpen((o) => !o)}
+          className="relative grid h-8 w-8 shrink-0 place-items-center rounded-[9px] bg-[#F1E9E2] text-[#5C4033]"
+        >
+          {renderBadgeIcon(badge.icon, "h-4 w-4")}
+          <span className="absolute -right-1 -bottom-1 grid h-4 w-4 place-items-center rounded-full bg-[#5C4033] text-white">
+            <ChevronDown className="h-2.5 w-2.5 stroke-3" />
+          </span>
+        </button>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <input
+            value={badge.title}
+            placeholder="Badge title, e.g. Free entry"
+            aria-label="Badge title"
+            onChange={(e) => onChange({ title: e.target.value })}
+            className="w-full border-b border-transparent bg-transparent py-0.5 font-bold text-[13px] text-[#1F1F1A] outline-none placeholder:text-[#5F624F]/50 focus:border-[#E6DFC8]"
+          />
+          <input
+            value={badge.description}
+            placeholder="Extra detail, e.g. 7pm start"
+            aria-label="Badge description"
+            onChange={(e) => onChange({ description: e.target.value })}
+            className="w-full border-b border-transparent bg-transparent py-0.5 text-[11.5px] text-[#5F624F] outline-none placeholder:text-[#5F624F]/50 focus:border-[#E6DFC8]"
+          />
+        </div>
+        <button type="button" aria-label="Remove badge" onClick={onDelete} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[#5F624F] transition-colors hover:bg-[#FBECEA] hover:text-[#DC2626]">
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
       </div>
-      {error && <FieldError message={error} />}
+      {pickOpen && (
+        <div className="mt-2.5 border-t border-[#E6DFC8] pt-2.5">
+          <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-8">
+            {Object.keys(ICON_OPTIONS).map((name) => (
+              <button
+                key={name}
+                type="button"
+                title={name}
+                aria-label={`Icon ${name}`}
+                aria-pressed={badge.icon === name}
+                onClick={() => { onChange({ icon: name }); setPickOpen(false); }}
+                className={cn(
+                  "grid aspect-square place-items-center rounded-lg border transition-colors",
+                  badge.icon === name ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-[#FFFDF7] text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033]",
+                )}
+              >
+                {renderBadgeIcon(name, "h-4 w-4")}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function FieldCol({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+const renderBadgeIcon = (iconStr: string | null, size = "h-4 w-4") => {
+  if (!iconStr || !(iconStr in ICON_OPTIONS)) return <Tag className={size} />;
+  const I = ICON_OPTIONS[iconStr];
+  return <I className={size} />;
+};
+
+/* ---------------------------------------------------------------- shared controls */
+
+function InfoTip({ text, label }: { text: string; label: string }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="flex flex-col gap-2 px-4 py-3 border-[#E6DFC8] border-t first:border-t-0">
-      <span className={cn("font-black text-[10px] uppercase tracking-wide", error ? "text-[#DC2626]" : "text-[#5F624F]")}>{label}</span>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`What does ${label} mean?`}
+          aria-expanded={open}
+          onMouseEnter={() => setOpen(true)}
+          onMouseLeave={() => setOpen(false)}
+          className={cn(
+            "grid h-5 w-5 shrink-0 place-items-center rounded-full border transition-colors",
+            open ? "border-[#5C4033] bg-[#5C4033] text-white" : "border-[#E6DFC8] bg-[#FBF8F0] text-[#5F624F] hover:border-[#5C4033] hover:bg-[#5C4033] hover:text-white",
+          )}
+        >
+          <Info className="h-3 w-3" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="start"
+        sideOffset={8}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="w-[min(268px,74vw)] rounded-[11px] border-0 bg-[#1F1F1A] p-3 text-[12.5px] leading-relaxed text-[#F7F4EA] shadow-[0_14px_34px_-14px_rgba(31,31,26,0.6)]"
+      >
+        {text}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function Field({ label, help, hint, required, error, children }: {
+  label: string; help?: string; hint?: string; required?: boolean; error?: string; children: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.75">
+        <span className="font-bold text-[12.5px] text-[#1F1F1A]">
+          {label}{required && <span className="ml-1 font-semibold text-[11px] text-[#B4453C]">required</span>}
+        </span>
+        {help && <InfoTip text={help} label={label} />}
+      </div>
       {children}
-      {error && <FieldError message={error} />}
+      {hint && !error && <p className="text-[12px] text-[#5F624F] leading-relaxed">{hint}</p>}
+      {error && <p className="font-semibold text-[12px] text-[#B4453C]">{error}</p>}
     </div>
   );
 }
 
-function FieldError({ message }: { message: string }) {
-  return (
-    <p className="flex items-center gap-1 mt-1.5 font-bold text-[#DC2626] text-[11px] leading-snug">
-      <AlertCircle className="w-3 h-3 shrink-0" />
-      {message}
-    </p>
-  );
-}
-
-function SheetInput({ value, onChange, placeholder, type }: { value: string; onChange: (v: string) => void; placeholder?: string; type?: "text" | "number" }) {
+function TextIn({ value, onChange, placeholder, type, ariaLabel }: {
+  value: string; onChange: (v: string) => void; placeholder?: string; type?: "text" | "number"; ariaLabel?: string;
+}) {
   return (
     <input
       type={type ?? "text"}
@@ -1081,102 +1190,83 @@ function SheetInput({ value, onChange, placeholder, type }: { value: string; onC
       step={type === "number" ? "0.01" : undefined}
       value={value}
       placeholder={placeholder}
-      aria-label={placeholder}
+      aria-label={ariaLabel ?? placeholder ?? "Value"}
       onChange={(e) => onChange(e.target.value)}
-      className="bg-transparent outline-none w-full font-semibold text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-sm text-right"
+      className="h-11 w-full rounded-[10px] border border-[#E6DFC8] bg-white px-3 text-[14.5px] text-[#1F1F1A] outline-none transition-colors placeholder:text-[#5F624F]/50 focus-visible:border-[#5C4033] focus-visible:ring-[3px] focus-visible:ring-[#5C4033]/12"
     />
   );
 }
 
-function SheetTextarea({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+function AreaIn({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <textarea
       value={value}
       placeholder={placeholder}
-      aria-label={placeholder}
-      rows={2}
+      aria-label={placeholder ?? "Value"}
       onChange={(e) => onChange(e.target.value)}
-      className="bg-[#F7F4EA] px-3 py-2.5 border border-[#E6DFC8] focus-visible:border-[#5C4033] rounded-[10px] outline-none focus-visible:ring-[#5C4033]/10 focus-visible:ring-[3px] w-full font-medium text-[#1F1F1A] placeholder:text-[#5F624F]/40 text-sm leading-relaxed resize-none"
+      className="min-h-19.5 w-full resize-y rounded-[10px] border border-[#E6DFC8] bg-white px-3 py-2.5 text-[14.5px] leading-relaxed text-[#1F1F1A] outline-none transition-colors placeholder:text-[#5F624F]/50 focus-visible:border-[#5C4033] focus-visible:ring-[3px] focus-visible:ring-[#5C4033]/12"
     />
   );
 }
 
-function SegRow<T extends string>({ options, value, onChange, render }: { options: T[]; value: T; onChange: (v: T) => void; render?: (v: T) => string }) {
+function BigToggle({ label, help, on, onChange, onText, onSub, offText, offSub }: {
+  label: string; help: string; on: boolean; onChange: (v: boolean) => void;
+  onText: string; onSub?: string; offText: string; offSub?: string;
+}) {
   return (
-    <div className="flex gap-0.75 bg-[#F7F4EA] p-0.75 border border-[#E6DFC8] rounded-xl">
-      {options.map((o) => (
-        <button
-          key={o}
-          type="button"
-          onClick={() => onChange(o)}
-          className={cn(
-            "flex-1 px-2 py-2.5 rounded-lg font-extrabold text-[11px] uppercase tracking-wide transition-colors",
-            value === o ? "bg-[#5C4033] text-white" : "text-[#5F624F] hover:text-[#5C4033]",
-          )}
-        >
-          {render ? render(o) : o}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function ToggleRow({ label, sub, value, onChange }: { label: string; sub?: string; value: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <div className="flex justify-between items-center gap-3 px-4 py-3 border-[#E6DFC8] border-t first:border-t-0">
-      <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="font-bold text-[#1F1F1A] text-[13px]">{label}</span>
-        {sub && <span className="text-[#5F624F] text-[11px]">{sub}</span>}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-1.75">
+        <span className="font-bold text-[12.5px] text-[#1F1F1A]">{label}</span>
+        <InfoTip text={help} label={label} />
       </div>
-      <Switch value={value} onChange={onChange} label={label} />
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={label}
+        onClick={() => onChange(!on)}
+        className={cn(
+          "flex w-full items-start gap-3 rounded-xl border p-3 text-left transition-colors",
+          on ? "border-[#C3D8CC] bg-[#EAF1EC]" : "border-[#E6DFC8] bg-[#FBF8F0]",
+        )}
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block font-bold text-[13.5px] text-[#1F1F1A]">{on ? onText : offText}</span>
+          {(on ? onSub : offSub) && <span className="mt-0.5 block text-[12px] text-[#5F624F] leading-snug">{on ? onSub : offSub}</span>}
+        </span>
+        <span className={cn("relative mt-0.5 h-7 w-11.5 shrink-0 rounded-full transition-colors", on ? "bg-[#1B4332]" : "bg-[#DCD5C0]")}>
+          <span className={cn("absolute top-0.75 left-0.75 h-5.5 w-5.5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition-transform", on && "translate-x-4.5")} />
+        </span>
+      </button>
     </div>
   );
 }
 
-function Switch({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
+function MiniSw({ on, onClick, label, tone, disabled }: {
+  on: boolean; onClick: () => void; label: string; tone?: "req"; disabled?: boolean;
+}) {
   return (
     <button
       type="button"
       role="switch"
-      aria-checked={value}
-      aria-label={`Toggle ${label}`}
-      onClick={() => onChange(!value)}
-      className={cn("relative rounded-full w-11 h-6.25 transition-colors shrink-0", value ? "bg-[#22a356]" : "bg-[#d8d0bb]")}
+      aria-checked={on}
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "relative h-6 w-10 shrink-0 rounded-full transition-colors",
+        disabled ? "cursor-default opacity-55" : "cursor-pointer",
+        on ? (tone === "req" ? "bg-[#B45309]" : "bg-[#1B4332]") : "bg-[#DCD5C0]",
+      )}
     >
-      <span className={cn("top-[2.5px] left-[2.5px] absolute bg-white shadow rounded-full w-5 h-5 transition-transform", value && "translate-x-4.75")} />
+      <span className={cn("absolute top-0.75 left-0.75 h-4.5 w-4.5 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,0.2)] transition-transform", on && "translate-x-4")} />
     </button>
   );
 }
 
-function BehaviorGrid({ value, onChange }: { value: EventBehavior; onChange: (v: EventBehavior) => void }) {
+function Swatches({ value, onChange }: { value: string | null; onChange: (c: string | null) => void }) {
   return (
-    <div className="gap-1.75 grid grid-cols-3">
-      {BEHAVIOR_OPTIONS.map((o) => {
-        const I = BEHAVIOR_ICON[o.value];
-        return (
-          <button
-            key={o.value}
-            type="button"
-            onClick={() => onChange(o.value)}
-            className={cn(
-              "flex flex-col items-center gap-1.5 px-1.5 py-2.5 border rounded-xl font-extrabold text-[10px] uppercase tracking-wide transition-colors",
-              value === o.value
-                ? "border-[#5C4033] bg-[#5C4033] text-white"
-                : "border-[#E6DFC8] bg-[#F7F4EA] text-[#5F624F] hover:border-[#5C4033] hover:text-[#5C4033]",
-            )}
-          >
-            <I className="w-3.75 h-3.75" />
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-function ColorSwatches({ value, onChange }: { value: string | null; onChange: (c: string | null) => void }) {
-  return (
-    <div className="flex flex-wrap gap-1.75">
+    <div className="flex flex-wrap gap-2.25">
       {EVENT_TYPE_COLORS.map((c) => {
         const sel = value === c.key;
         return (
@@ -1189,11 +1279,11 @@ function ColorSwatches({ value, onChange }: { value: string | null; onChange: (c
             onClick={() => onChange(sel ? null : c.key)}
             style={{ "--sw": colorHexFromKey(c.key).solid } as React.CSSProperties}
             className={cn(
-              "grid h-6.5 w-6.5 place-items-center rounded-full bg-(--sw) transition-transform hover:scale-110",
-              sel ? "scale-110 ring-2 ring-[#5C4033] ring-offset-2 ring-offset-[#F7F4EA]" : "opacity-80 hover:opacity-100",
+              "grid h-7.5 w-7.5 place-items-center rounded-full border-2 bg-(--sw) transition-transform hover:scale-110",
+              sel ? "border-[#1F1F1A] ring-2 ring-inset ring-white" : "border-transparent opacity-85 hover:opacity-100",
             )}
           >
-            {sel && <Check className="drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)] w-3.5 h-3.5 text-white" />}
+            {sel && <Check className="h-3.5 w-3.5 text-white drop-shadow-[0_1px_1px_rgba(0,0,0,0.3)]" />}
           </button>
         );
       })}
@@ -1201,88 +1291,236 @@ function ColorSwatches({ value, onChange }: { value: string | null; onChange: (c
   );
 }
 
-function BookingCardSection({ value, onChange }: { value: CardForm; onChange: (patch: Partial<CardForm>) => void }) {
+function BehaviourPicker({ value, onChange }: { value: EventBehavior; onChange: (v: EventBehavior) => void }) {
   return (
-    <CollapsibleCard title="Booking Card">
-      <div className="px-4 pt-3">
-        <p className="text-[#5F624F] text-[11px] leading-relaxed">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
-      </div>
-      <FieldRow label="Card Title">
-        <SheetInput value={value.booking_card_title} placeholder="e.g. Music Bingo" onChange={(v) => onChange({ booking_card_title: v })} />
-      </FieldRow>
-      <FieldCol label="Card Tagline">
-        <SheetTextarea value={value.booking_card_tagline} placeholder="Short line shown under the title…" onChange={(v) => onChange({ booking_card_tagline: v })} />
-      </FieldCol>
-      <FieldRow label="Card Note">
-        <SheetInput value={value.booking_card_badge} placeholder="e.g. Thursdays, Members only" onChange={(v) => onChange({ booking_card_badge: v })} />
-      </FieldRow>
-      <div className="border-[#E6DFC8] border-t">
-        <IconPicker label="Card Icon" value={value.booking_card_icon} onChange={(name) => onChange({ booking_card_icon: name })} />
-      </div>
-    </CollapsibleCard>
-  );
-}
-
-
-const renderBadgeIcon = (iconStr: string | null, size = "w-4 h-4") => {
-  if (!iconStr || !(iconStr in ICON_OPTIONS)) return <Tag className={size} />;
-  const I = ICON_OPTIONS[iconStr as keyof typeof ICON_OPTIONS];
-  return <I className={size} />;
-};
-
-function IconGrid({ value, onChange }: { value: string | null; onChange: (name: string) => void }) {
-  return (
-    <div className="gap-1.5 grid grid-cols-6 sm:grid-cols-8">
-      {Object.entries(ICON_OPTIONS).map(([name, IconComponent]) => (
-        <button
-          key={name}
-          title={name}
-          type="button"
-          aria-label={`Icon ${name}`}
-          aria-pressed={value === name}
-          onClick={() => onChange(name)}
-          className={cn(
-            "place-items-center grid border rounded-lg aspect-square active:scale-95 transition-colors",
-            value === name
-              ? "border-[#5C4033] bg-[#5C4033] text-white"
-              : "border-[#E6DFC8] bg-[#FFFDF7] text-[#5F624F] hover:border-[#5C4033] hover:bg-[#F7F4EA] hover:text-[#5C4033]",
-          )}
-        >
-          <IconComponent className="w-4.25 h-4.25" />
-        </button>
-      ))}
+    <div className="grid gap-2.25 grid-cols-[repeat(auto-fit,minmax(150px,1fr))]">
+      {BEHAVIOURS.map((b) => {
+        const sel = value === b.value;
+        return (
+          <button
+            key={b.value}
+            type="button"
+            aria-pressed={sel}
+            onClick={() => onChange(b.value)}
+            className={cn(
+              "flex items-start gap-2.25 rounded-xl border p-2.75 text-left transition-colors",
+              sel ? "border-[#5C4033] bg-[#F1E9E2] shadow-[0_0_0_2px_rgba(92,64,51,0.14)]" : "border-[#E6DFC8] bg-[#FBF8F0] hover:border-[#5C4033]",
+            )}
+          >
+            <b.Icon className="h-4.5 w-4.5 shrink-0 text-[#5C4033]" />
+            <span className="min-w-0">
+              <span className="block font-bold text-[13px] text-[#1F1F1A]">{b.label}</span>
+              <span className="mt-0.5 block text-[11.5px] text-[#5F624F] leading-snug">{b.blurb}</span>
+            </span>
+          </button>
+        );
+      })}
     </div>
   );
 }
 
-function BadgeEditorRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onChange: (b: BadgeDraft) => void; onDelete: () => void }) {
-  const [pickOpen, setPickOpen] = useState(false);
+function GroupingPicker({ value, onChange }: { value: BookingGrouping; onChange: (v: BookingGrouping) => void }) {
   return (
-    <div className="bg-[#F7F4EA] p-2.5 border border-[#E6DFC8] rounded-xl">
-      <div className="flex items-start gap-2.5">
+    <div className="flex flex-col gap-2.25">
+      {GROUPINGS.map((g) => {
+        const sel = value === g.value;
+        const Icon = sel ? Check : Globe;
+        return (
+          <button
+            key={g.value}
+            type="button"
+            aria-pressed={sel}
+            onClick={() => onChange(g.value)}
+            className={cn(
+              "flex items-start gap-2.25 rounded-xl border p-2.75 text-left transition-colors",
+              sel ? "border-[#5C4033] bg-[#F1E9E2] shadow-[0_0_0_2px_rgba(92,64,51,0.14)]" : "border-[#E6DFC8] bg-[#FBF8F0] hover:border-[#5C4033]",
+            )}
+          >
+            <Icon className="h-4.5 w-4.5 shrink-0 text-[#5C4033]" />
+            <span className="min-w-0">
+              <span className="block font-bold text-[13px] text-[#1F1F1A]">{g.label}</span>
+              <span className="mt-0.5 block text-[11.5px] text-[#5F624F] leading-snug">{g.blurb}</span>
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function CardIconGrid({ value, onChange }: { value: string | null; onChange: (name: string | null) => void }) {
+  return (
+    <div className="grid gap-2 grid-cols-[repeat(auto-fill,minmax(52px,1fr))]">
+      {BOOKING_CARD_ICON_NAMES.map((name) => {
+        const Icon = BOOKING_CARD_ICONS[name];
+        const sel = value === name;
+        return (
+          <button
+            key={name}
+            type="button"
+            title={name}
+            aria-label={name}
+            aria-pressed={sel}
+            onClick={() => onChange(sel ? null : name)}
+            className={cn(
+              "grid h-12 place-items-center rounded-[11px] border-[1.5px] transition-colors",
+              sel ? "border-[#1B4332] bg-[#EAF1EC] text-[#1B4332]" : "border-[#E6DFC8] bg-white text-[#5F624F] hover:border-[#5C4033]",
+            )}
+          >
+            <Icon className="h-4.5 w-4.5" />
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function Dropzone({ url, subline, ariaLabel, pathPrefix, onUpload, onClear }: {
+  url: string; subline: string; ariaLabel: string; pathPrefix: string; onUpload: (u: string) => void; onClear: () => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  const handle = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError(null);
+    try {
+      const ext = file.name.split(".").pop();
+      const path = `${pathPrefix}${crypto.randomUUID()}.${ext}`;
+      const { data, error } = await storageClient.storage.from(IMAGE_BUCKET).upload(path, file, { cacheControl: "3600", upsert: false });
+      if (error) throw error;
+      const publicUrl = storageClient.storage.from(IMAGE_BUCKET).getPublicUrl(data.path).data.publicUrl;
+      onUpload(publicUrl);
+    } catch (ex) {
+      setUploadError(ex instanceof Error ? ex.message : "Upload failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  if (url) {
+    return (
+      <div className="relative overflow-hidden rounded-xl border border-[#E6DFC8]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={url} alt="" className="max-h-50 w-full bg-[#F7F4EA] object-cover" />
         <button
           type="button"
-          aria-label="Change icon"
-          onClick={() => setPickOpen((o) => !o)}
-          className="relative place-items-center grid bg-white border border-[#E6DFC8] rounded-[10px] w-10 h-10 text-[#5C4033] shrink-0"
+          onClick={onClear}
+          aria-label="Remove image"
+          title="Remove image"
+          className="absolute top-2 right-2 rounded-lg bg-black/60 p-1.5 text-white transition-colors hover:bg-black/80"
         >
-          {renderBadgeIcon(badge.icon, "w-4.5 h-4.5")}
-          <span className="-right-1 -bottom-1 absolute place-items-center grid bg-[#5C4033] rounded-full w-4 h-4 text-white">
-            <ChevronDown className="stroke-3 w-2.5 h-2.5" />
-          </span>
-        </button>
-        <div className="flex flex-col flex-1 gap-1.5 min-w-0">
-          <input value={badge.title} placeholder="Badge title" aria-label="Badge title" onChange={(e) => onChange({ ...badge, title: e.target.value })} className="bg-transparent py-0.5 border-transparent focus:border-[#E6DFC8] border-b outline-none w-full font-extrabold text-[#1F1F1A] text-[13px] placeholder:text-[#5F624F]/40" />
-          <input value={badge.description} placeholder="Short description" aria-label="Badge description" onChange={(e) => onChange({ ...badge, description: e.target.value })} className="bg-transparent py-0.5 border-transparent focus:border-[#E6DFC8] border-b outline-none w-full text-[#5F624F] placeholder:text-[#5F624F]/40 text-xs" />
-        </div>
-        <button type="button" aria-label="Remove badge" onClick={onDelete} className="place-items-center grid hover:bg-[#fdecec] rounded-lg w-7 h-7 text-[#5F624F] hover:text-[#DC2626] shrink-0">
-          <Trash2 className="w-3.5 h-3.5" />
+          <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
-      {pickOpen && (
-        <div className="mt-2.5 pt-2.5 border-[#E6DFC8] border-t">
-          <IconGrid value={badge.icon} onChange={(ic) => { onChange({ ...badge, icon: ic }); setPickOpen(false); }} />
-        </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-[#E6DFC8] bg-[#FBF8F0] py-5.5 transition-colors hover:border-[#5C4033]">
+        {uploading ? <Loader2 className="h-5.5 w-5.5 animate-spin text-[#5F624F]" /> : <ImageIcon className="h-5.5 w-5.5 text-[#5F624F]" />}
+        <span className="font-black text-[12.5px] tracking-[0.08em] text-[#5C4033] uppercase">{uploading ? "Uploading…" : "Choose a picture"}</span>
+        <span className="px-4 text-center text-[11.5px] text-[#5F624F]">{subline}</span>
+        <input type="file" accept="image/*" aria-label={ariaLabel} className="hidden" onChange={handle} disabled={uploading} />
+      </label>
+      {uploadError && <p className="font-semibold text-[11px] text-[#B4453C]">{uploadError}</p>}
+    </div>
+  );
+}
+
+function IconBtn({ label, onClick, edit, danger, children }: {
+  label: string; onClick: () => void; edit?: boolean; danger?: boolean; children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className={cn(
+        "grid h-10 w-10 shrink-0 place-items-center rounded-[10px] transition-colors",
+        danger ? "text-[#DC2626] hover:bg-[#FBECEA]" : edit ? "text-[#B45309] hover:bg-[#EFEADB]" : "text-[#5F624F] hover:bg-[#EFEADB] hover:text-[#5C4033]",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/* ---------------------------------------------------------------- sheet chrome */
+
+function SheetGrab() {
+  return <div className="mx-auto mt-2 h-1 w-11 shrink-0 rounded-full bg-[#E6DFC8]" />;
+}
+
+function SheetHead({ eyebrow, title, onClose }: { eyebrow: string; title: string; onClose: () => void }) {
+  return (
+    <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#E6DFC8] bg-[#FFFDF7] px-4 pt-3 pb-3.5">
+      <div className="min-w-0">
+        <SheetDescription className="font-black text-[10.5px] text-[#5F624F] uppercase tracking-[0.13em]">{eyebrow}</SheetDescription>
+        <SheetTitle className="mt-1 font-black text-[18px] text-[#1F1F1A]">{title}</SheetTitle>
+      </div>
+      <button type="button" onClick={onClose} aria-label="Close" className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-[#5F624F] transition-colors hover:bg-[#EFEADB] hover:text-[#1F1F1A]">
+        <X className="h-4.5 w-4.5" />
+      </button>
+    </div>
+  );
+}
+
+function SheetSection({ title, blurb, children }: { title: string; blurb: string; children: React.ReactNode }) {
+  return (
+    <section className="overflow-hidden rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7]">
+      <header className="border-b border-[#EFEADB] bg-[#FBF8F0] px-3.5 py-3">
+        <h3 className="font-black text-[13px] uppercase tracking-widest text-[#1F1F1A]">{title}</h3>
+        <p className="mt-0.5 text-[12px] text-[#5F624F]">{blurb}</p>
+      </header>
+      <div className="flex flex-col gap-3.5 p-3.5">{children}</div>
+    </section>
+  );
+}
+
+function SheetFoot({ onCancel, onSave, onNext, nextLabel, pending, disableSave, disableNext, saveLabel }: {
+  onCancel: () => void;
+  onSave?: () => void;
+  onNext?: () => void;
+  nextLabel?: string;
+  pending: boolean;
+  disableSave?: boolean;
+  disableNext?: boolean;
+  saveLabel: string;
+}) {
+  return (
+    <div className="grid shrink-0 grid-cols-2 gap-2.5 border-t border-[#E6DFC8] bg-[#FFFDF7] px-4 py-3.5 pb-[calc(14px+env(safe-area-inset-bottom))] sm:flex sm:justify-end">
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={pending}
+        className="h-12 rounded-xl border border-[#E6DFC8] bg-[#F7F4EA] font-black text-[12px] text-[#5F624F] uppercase tracking-widest transition-colors hover:border-[#5C4033] hover:text-[#5C4033] disabled:opacity-50 sm:min-w-35"
+      >
+        Cancel
+      </button>
+      {onNext ? (
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={disableNext}
+          className="h-12 rounded-xl bg-[#1B4332] font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85 disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
+        >
+          {nextLabel}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={pending || disableSave}
+          title={disableSave ? "Fill in the highlighted fields first" : undefined}
+          className="grid h-12 place-items-center rounded-xl bg-[#1B4332] font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85 disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
+        >
+          {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : saveLabel}
+        </button>
       )}
     </div>
   );
@@ -1290,8 +1528,8 @@ function BadgeEditorRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onCh
 
 function ErrorBox({ message }: { message: string }) {
   return (
-    <div className="flex items-start gap-2.5 bg-red-50 p-3 border border-red-200 rounded-2xl">
-      <AlertCircle className="mt-0.5 w-4 h-4 text-red-500 shrink-0" />
+    <div className="flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 p-3">
+      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
       <p className="font-bold text-[11px] text-red-600 leading-snug">{message}</p>
     </div>
   );
