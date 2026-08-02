@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React, { useState, useTransition } from "react"
 import Link from "next/link"
@@ -289,16 +289,16 @@ export default function PrivateLayoutClient({
     return (
         <div className="pt-safe-top flex h-screen min-h-screen bg-[#F7F4EA] sm:overflow-hidden">
             <aside className={cn(
-                "sticky top-0 z-50 hidden h-screen shrink-0 flex-col border-r border-[#E6DFC8] bg-white transition-[width] duration-300 sm:flex",
+                "sticky top-0 z-50 hidden h-screen shrink-0 flex-col border-r border-nav-line bg-nav-bg transition-[width] duration-300 sm:flex",
                 collapsed ? "w-16" : "w-72"
             )}>
                 <div className={cn(
-                    "flex min-h-10 items-center gap-3 border-b border-[#E6DFC8] px-3 py-3",
+                    "flex min-h-10 items-center gap-3 border-b border-nav-line px-3 py-3",
                     collapsed ? "justify-center" : "justify-between px-6"
                 )}>
                     {!collapsed && (
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#5C4033] shadow-sm">
-                            <span className="font-black text-sm text-white">{initials}</span>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-nav-selected ring-1 ring-nav-line">
+                            <span className="font-black text-sm text-nav-ink">{initials}</span>
                         </div>
                     )}
                     <button
@@ -306,7 +306,7 @@ export default function PrivateLayoutClient({
                         onClick={() => setCollapsed((c) => !c)}
                         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
                         title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#5F624F] hover:bg-[#5C4033]/5"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-nav-muted transition-colors hover:bg-nav-selected hover:text-nav-ink"
                     >
                         {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
                     </button>
@@ -363,14 +363,14 @@ export default function PrivateLayoutClient({
                                         onClick={collapsed ? () => { setCollapsed(false); openGroup?.() } : toggle}
                                         title={collapsed ? item.label : undefined}
                                         className={cn(
-                                            "relative flex w-full items-center gap-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300",
+                                            "relative flex w-full items-center gap-3 rounded-xl border-l-2 text-xs font-bold tracking-wider uppercase transition-colors duration-300",
                                             collapsed ? "justify-center px-0 py-3" : "px-4 py-3",
                                             isActive
-                                                ? "bg-[#5C4033] text-white shadow-lg shadow-[#5C4033]/10"
-                                                : "text-[#5F624F] hover:bg-[#5C4033]/5"
+                                                ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                : "border-transparent text-nav-ink hover:bg-nav-selected"
                                         )}
                                     >
-                                        <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-[#5F624F]")} />
+                                        <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-nav-ink" : "text-nav-muted")} />
 
                                         {collapsed && isRequests && pendingRequestsCount > 0 && (
                                             <span className="absolute top-1.5 right-2 h-2 w-2 rounded-full bg-amber-500" aria-hidden="true" />
@@ -402,20 +402,20 @@ export default function PrivateLayoutClient({
                                         href={item.href}
                                         title={collapsed ? item.label : undefined}
                                         className={cn(
-                                            "flex items-center gap-3 rounded-xl text-xs font-bold tracking-wider uppercase transition-all duration-300",
+                                            "flex items-center gap-3 rounded-xl border-l-2 text-xs font-bold tracking-wider uppercase transition-colors duration-300",
                                             collapsed ? "justify-center px-0 py-3" : "px-4 py-3",
                                             isActive
-                                                ? "bg-[#5C4033] text-white shadow-lg shadow-[#5C4033]/10"
-                                                : "text-[#5F624F] hover:bg-[#5C4033]/5"
+                                                ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                : "border-transparent text-nav-ink hover:bg-nav-selected"
                                         )}
                                     >
-                                        <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-white" : "text-[#5F624F]")} />
+                                        <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-nav-ink" : "text-nav-muted")} />
                                         {!collapsed && item.label}
                                     </Link>
                                 )}
 
                                 {isEvents && eventsOpen && !collapsed && (
-                                    <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
+                                    <div className="mt-1 ml-4 space-y-1 border-l border-nav-line pb-2 pl-2">
                                         {eventSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href.replace(/\/$/, "")
                                             const Icon = sub.icon
@@ -424,21 +424,21 @@ export default function PrivateLayoutClient({
                                                     key={sub.href}
                                                     href={sub.href}
                                                     className={cn(
-                                                        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
+                                                        "flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-colors duration-200",
                                                         isSubActive
-                                                            ? "bg-[#5C4033]/15 text-[#5C4033]"
-                                                            : "text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
+                                                            ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                            : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
                                                     )}
                                                 >
                                                     {sub.colorHex ? (
                                                         <span
                                                             style={{ "--cc": sub.colorHex } as React.CSSProperties}
-                                                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-(--cc)/15"
+                                                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-(--cc)/25"
                                                         >
                                                             {Icon && <Icon className="h-3 w-3 text-(--cc)" />}
                                                         </span>
                                                     ) : (
-                                                        Icon && <Icon className={cn("h-3.5 w-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                        Icon && <Icon className={cn("h-3.5 w-3.5", isSubActive ? "text-nav-indicator" : "text-nav-muted")} />
                                                     )}
                                                     {sub.label}
                                                 </Link>
@@ -448,7 +448,7 @@ export default function PrivateLayoutClient({
                                 )}
 
                                 {isRequests && requestsOpen && !collapsed && (
-                                    <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
+                                    <div className="mt-1 ml-4 space-y-1 border-l border-nav-line pb-2 pl-2">
                                         {requestSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
                                             const Icon = sub.icon
@@ -457,21 +457,21 @@ export default function PrivateLayoutClient({
                                                     key={sub.href}
                                                     href={sub.href}
                                                     className={cn(
-                                                        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
+                                                        "flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-colors duration-200",
                                                         isSubActive
-                                                            ? "bg-[#5C4033]/15 text-[#5C4033]"
-                                                            : "text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
+                                                            ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                            : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
                                                     )}
                                                 >
                                                     {sub.colorHex ? (
                                                         <span
                                                             style={{ "--cc": sub.colorHex } as React.CSSProperties}
-                                                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-(--cc)/15"
+                                                            className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-(--cc)/25"
                                                         >
                                                             {Icon && <Icon className="h-3 w-3 text-(--cc)" />}
                                                         </span>
                                                     ) : (
-                                                        Icon && <Icon className={cn("h-3.5 w-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                        Icon && <Icon className={cn("h-3.5 w-3.5", isSubActive ? "text-nav-indicator" : "text-nav-muted")} />
                                                     )}
                                                     <span className="min-w-0 flex-1 truncate">{sub.label}</span>
                                                     {typeof sub.count === "number" && sub.count > 0 && (
@@ -486,7 +486,7 @@ export default function PrivateLayoutClient({
                                 )}
 
                                 {isEventsNav && eventsNavOpen && !collapsed && (
-                                    <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
+                                    <div className="mt-1 ml-4 space-y-1 border-l border-nav-line pb-2 pl-2">
                                         {eventsNavSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href
                                             return (
@@ -494,13 +494,13 @@ export default function PrivateLayoutClient({
                                                     key={sub.href}
                                                     href={sub.href}
                                                     className={cn(
-                                                        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
+                                                        "flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-colors duration-200",
                                                         isSubActive
-                                                            ? "bg-[#5C4033]/15 text-[#5C4033]"
-                                                            : "text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
+                                                            ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                            : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
                                                     )}
                                                 >
-                                                    <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-nav-indicator" : "text-nav-muted")} />
                                                     {sub.label}
                                                 </Link>
                                             )
@@ -510,18 +510,18 @@ export default function PrivateLayoutClient({
                                             type="button"
                                             onClick={() => setQuizOpen((p) => !p)}
                                             className={cn(
-                                                "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
+                                                "flex w-full items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-colors duration-200",
                                                 onQuizPath
-                                                    ? "bg-[#5C4033]/15 text-[#5C4033]"
-                                                    : "text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
+                                                    ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                    : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
                                             )}
                                         >
-                                            <Brain className={cn("h-3.5 w-3.5", onQuizPath ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                            <Brain className={cn("h-3.5 w-3.5", onQuizPath ? "text-nav-indicator" : "text-nav-muted")} />
                                             <span className="flex-1 text-left">Quiz</span>
                                             {quizOpen ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />}
                                         </button>
                                         {quizOpen && (
-                                            <div className="mt-1 ml-3 space-y-1 border-l border-[#E6DFC8] pb-1 pl-2">
+                                            <div className="mt-1 ml-3 space-y-1 border-l border-nav-line pb-1 pl-2">
                                                 {quizSubItems.map((sub) => {
                                                     const isSubActive = normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
                                                     return (
@@ -529,13 +529,13 @@ export default function PrivateLayoutClient({
                                                             key={sub.href}
                                                             href={sub.href}
                                                             className={cn(
-                                                                "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
+                                                                "flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-colors duration-200",
                                                                 isSubActive
-                                                                    ? "bg-[#5C4033]/15 text-[#5C4033]"
-                                                                    : "text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
+                                                                    ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                                    : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
                                                             )}
                                                         >
-                                                            <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                            <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-nav-indicator" : "text-nav-muted")} />
                                                             {sub.label}
                                                         </Link>
                                                     )
@@ -546,7 +546,7 @@ export default function PrivateLayoutClient({
                                 )}
 
                                 {isSettings && settingsOpen && !collapsed && (
-                                    <div className="mt-1 ml-4 space-y-1 border-l border-[#E6DFC8] pb-2 pl-2">
+                                    <div className="mt-1 ml-4 space-y-1 border-l border-nav-line pb-2 pl-2">
                                         {settingsSubItems.map((sub) => {
                                             const isSubActive = normalizedPathname === sub.href
                                             return (
@@ -554,13 +554,13 @@ export default function PrivateLayoutClient({
                                                     key={sub.href}
                                                     href={sub.href}
                                                     className={cn(
-                                                        "flex items-center gap-2.5 rounded-lg px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-all duration-200",
+                                                        "flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[11px] font-bold tracking-wider uppercase transition-colors duration-200",
                                                         isSubActive
-                                                            ? "bg-[#5C4033]/15 text-[#5C4033]"
-                                                            : "text-[#5F624F] hover:bg-[#5C4033]/5 hover:text-[#5C4033]"
+                                                            ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                            : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
                                                     )}
                                                 >
-                                                    <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-[#5C4033]" : "text-[#5F624F]/50")} />
+                                                    <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-nav-indicator" : "text-nav-muted")} />
                                                     {sub.label}
                                                 </Link>
                                             )
@@ -572,22 +572,22 @@ export default function PrivateLayoutClient({
                     })}
                 </nav>
 
-                <div className="space-y-2 border-t border-[#E6DFC8] p-4">
+                <div className="space-y-2 border-t border-nav-line p-4">
                     <button
                         type="button"
                         onClick={handleSignOut}
                         disabled={isPending}
                         title={collapsed ? "Sign Out" : undefined}
                         className={cn(
-                            "flex w-full items-center gap-3 rounded-xl py-2.5 text-xs font-bold tracking-wider text-[#5F624F] uppercase transition-all duration-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50",
+                            "flex w-full items-center gap-3 rounded-xl py-2.5 text-xs font-bold tracking-wider text-nav-muted uppercase transition-colors duration-200 hover:bg-red-500/15 hover:text-red-300 disabled:opacity-50",
                             collapsed ? "justify-center px-0" : "px-4"
                         )}
                     >
                         <LogOut className="h-4 w-4 shrink-0" />
-                        {!collapsed && (isPending ? "Signing out…" : "Sign Out")}
+                        {!collapsed && (isPending ? "Signing outâ€¦" : "Sign Out")}
                     </button>
                     {!collapsed && (
-                        <p className="px-4 text-[9px] font-bold tracking-widest text-[#5F624F]/70 uppercase">
+                        <p className="px-4 text-[9px] font-bold tracking-widest text-nav-muted/70 uppercase">
                             v0.1.0 Alpha
                         </p>
                     )}
@@ -630,7 +630,7 @@ export default function PrivateLayoutClient({
                     {children}
                 </main>
 
-                <nav className="fixed right-0 bottom-0 left-0 z-50 border-t border-[#E6DFC8] bg-white py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] sm:hidden">
+                <nav className="fixed right-0 bottom-0 left-0 z-50 border-t border-nav-line bg-nav-bg py-2 shadow-[0_-4px_20px_rgba(0,0,0,0.18)] sm:hidden">
                     <div className="mx-auto flex w-full max-w-md items-center justify-around px-4">
                         {navItems.map((item) => {
                             const normalizedPathname = pathname?.replace(/\/$/, "") || ""
@@ -654,7 +654,7 @@ export default function PrivateLayoutClient({
                                 >
                                     <div className={cn(
                                         "relative flex items-center justify-center rounded-full px-3 py-1 transition-all duration-300",
-                                        isActive ? "bg-[#5C4033]/15 text-[#5C4033]" : "text-[#5F624F]"
+                                        isActive ? "bg-nav-selected text-nav-ink" : "text-nav-muted"
                                     )}>
                                         <item.icon className="mx-auto h-5 w-5" />
 
@@ -670,12 +670,12 @@ export default function PrivateLayoutClient({
                                     </div>
                                     <span className={cn(
                                         "block w-full text-center text-[9px] font-bold tracking-tight uppercase transition-colors",
-                                        isActive ? "text-[#5C4033]" : "text-[#5F624F]"
+                                        isActive ? "text-nav-ink" : "text-nav-muted"
                                     )}>
                                         {item.label}
                                     </span>
                                     {isActive && (
-                                        <div className="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 animate-in rounded-full bg-[#5C4033] duration-300 fade-in zoom-in" />
+                                        <div className="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 animate-in rounded-full bg-nav-indicator duration-300 fade-in zoom-in" />
                                     )}
                                 </Link>
                             )

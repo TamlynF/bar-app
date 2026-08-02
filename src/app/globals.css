@@ -66,6 +66,30 @@
 }
 
 /* ════════════════════════════════════════════════════════════════
+   ADMIN NAV - dark olive chrome for the private sidebar + bottom
+   nav only. Separates navigation from the cream working area and
+   nods to the public site without borrowing its "After Dark" look.
+   Never use these on admin content surfaces (cards, sheets, forms).
+   ════════════════════════════════════════════════════════════════ */
+:root {
+  --nav-bg: #263019; /* sidebar / bottom-nav background   */
+  --nav-ink: #dde2d1; /* normal + selected label text      */
+  --nav-muted: #aeb69d; /* idle icons, secondary labels      */
+  --nav-selected: #34451f; /* selected item fill                */
+  --nav-indicator: #d7a928; /* thin gold active marker           */
+  --nav-line: rgb(174 182 157 / 0.22); /* dividers, nested rails */
+}
+
+@theme inline {
+  --color-nav-bg: var(--nav-bg);
+  --color-nav-ink: var(--nav-ink);
+  --color-nav-muted: var(--nav-muted);
+  --color-nav-selected: var(--nav-selected);
+  --color-nav-indicator: var(--nav-indicator);
+  --color-nav-line: var(--nav-line);
+}
+
+/* ════════════════════════════════════════════════════════════════
    AFTER DARK - public "After Dark" surface tokens (home redesign).
    Default = dark; [data-surface="light"] flips bg/ink/line. Gold +
    neon are fixed in both. Namespaced (--canvas/--ink/--gold/…) so they

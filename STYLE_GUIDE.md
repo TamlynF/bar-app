@@ -80,6 +80,8 @@ Staff *are* cycling between Dashboard / Bookings / Events / Settings constantly 
 - **Desktop (≥sm):** fixed left sidebar, ~256px wide, collapsible sub-sections under Bookings / Events / Settings
 - **Mobile (<sm):** persistent bottom nav with 4 items (Dashboard, Bookings, Events, Settings) - the four top-level destinations only. Sub-sections accessed via the page itself.
 
+Both surfaces use the **dark olive nav chrome** (`nav-*` tokens), not the cream admin palette - see "Admin navigation chrome" under Surface 2.
+
 This pattern is already implemented in `src/app/(private)/private-layout-client.tsx`. Don't duplicate it; reuse it.
 
 ---
@@ -169,10 +171,33 @@ The vibe is **a coffee-shop notebook**. Warm cream paper, espresso ink, soft bor
 --admin-ink         #1F1F1A    /* primary text */
 --admin-ink-muted   #5F624F    /* secondary text / labels */
 --admin-border      #E6DFC8    /* soft border, divider */
---admin-primary     #5C4033    /* espresso - buttons, active nav */
+--admin-primary     #5C4033    /* espresso - buttons */
 --admin-accent      #C8956D    /* warm tan - highlights, "today" markers */
 --admin-gold        #FDCC4B    /* used sparingly to tie to brand */
 ```
+
+#### Admin navigation chrome - dark olive
+
+The sidebar and mobile bottom nav are **deliberately not** on the cream palette. Dark olive chrome separates navigation from the working area and nods to the public site without copying its "After Dark" look.
+
+```
+--nav-bg          #263019    /* sidebar + bottom-nav background */
+--nav-ink         #DDE2D1    /* normal and selected label text  */
+--nav-muted       #AEB69D    /* idle icons, secondary labels    */
+--nav-selected    #34451F    /* selected item fill              */
+--nav-indicator   #D7A928    /* thin gold active marker         */
+--nav-line        #AEB69D38  /* dividers, nested rails (22%)    */
+```
+
+These are real Tailwind colours, defined in `globals.css` and re-exported through `@theme inline`. **Use the utility, not the hex**: `bg-nav-bg`, `text-nav-ink`, `text-nav-muted`, `bg-nav-selected`, `border-nav-indicator`, `border-nav-line`. Opacity modifiers work as normal (`text-nav-muted/70`).
+
+Rules:
+- **Scope is navigation chrome only.** Never put `nav-*` on a card, sheet, form or any content surface - admin content stays cream/espresso. Conversely, don't use `#5C4033` espresso for nav state.
+- **Selected item = fill + indicator, never gold fill.** A selected item gets `bg-nav-selected` plus a thin `border-l-2 border-nav-indicator`. Filling the whole item with gold makes it visually dominant and fights the working area for attention.
+- **Give inactive items `border-l-2 border-transparent`** so the indicator doesn't shift the row by 2px when it becomes active.
+- **Icons are muted when idle, ink when active** - `text-nav-muted` → `text-nav-ink`.
+- On the mobile bottom nav there's no left edge to mark, so the active item gets the `bg-nav-selected` pill plus the gold dot underneath (`bg-nav-indicator`).
+- The top header bar stays white/cream - it belongs to the working area, not the nav.
 
 Status colours: use semantic Tailwind shades:
 - Confirmed → `green-50/700`
