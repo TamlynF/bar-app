@@ -80,7 +80,7 @@ export interface Booking {
 export const dynamic = 'force-dynamic';
 
 function formatTime(t?: string | null): string {
-  if (!t) return "—";
+  if (!t) return "-";
   const [hh, mm] = t.split(":");
   const h = parseInt(hh, 10);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -181,7 +181,7 @@ export default async function QuizBookingsPage({
                   <div className="flex items-center gap-1.5">
                     <User className="h-3.5 w-3.5 shrink-0 text-[#5F624F] opacity-50" />
                     <span className="text-xs font-bold text-[#1F1F1A]">
-                      {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "—"}
+                      {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "-"}
                     </span>
                   </div>
                 </div>
@@ -250,7 +250,7 @@ export default async function QuizBookingsPage({
                     <div className="flex min-w-0 items-center gap-1.5">
                       <User className="h-3.5 w-3.5 shrink-0 text-[#5F624F] opacity-50" />
                       <span className="truncate text-xs font-bold text-[#1F1F1A]">
-                        {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "—"}
+                        {(eventDetails?.host as { full_name?: string } | null)?.full_name ?? "-"}
                       </span>
                     </div>
                   </div>
@@ -274,7 +274,7 @@ export default async function QuizBookingsPage({
 
                 <div>
                   <p className="mb-0.5 text-[10px] font-bold tracking-wide text-[#5F624F]/50 uppercase">Title</p>
-                  <p className="text-sm font-bold text-[#1F1F1A]">{eventDetails?.title || "—"}</p>
+                  <p className="text-sm font-bold text-[#1F1F1A]">{eventDetails?.title || "-"}</p>
                 </div>
 
                 {(eventDetails as { description?: string } | null)?.description && (

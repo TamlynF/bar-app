@@ -122,7 +122,7 @@ type SupabaseLike = {
 };
 
 export type VenueSalesData = {
-  connected: boolean;          // any sales rows at all — false = sync hasn't run / not wired
+  connected: boolean;          // any sales rows at all - false = sync hasn't run / not wired
   lastSyncedAt: string | null;
   thisMonth: SalesTotals;
   lastMonth: SalesTotals;

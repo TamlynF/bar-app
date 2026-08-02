@@ -46,11 +46,11 @@ describe("describeBookingChanges", () => {
 
   it("reports a special request being added and removed", () => {
     const added = describeBookingChanges(base, { ...base, specialRequests: "Window table" });
-    expect(added).toEqual([{ label: "Special Requests", from: "—", to: "Window table" }]);
+    expect(added).toEqual([{ label: "Special Requests", from: "-", to: "Window table" }]);
 
     const withReq = { ...base, specialRequests: "Window table" };
     const removed = describeBookingChanges(withReq, { ...withReq, specialRequests: null });
-    expect(removed).toEqual([{ label: "Special Requests", from: "Window table", to: "—" }]);
+    expect(removed).toEqual([{ label: "Special Requests", from: "Window table", to: "-" }]);
   });
 
   it("ignores a status change that is only a difference in casing", () => {
@@ -114,7 +114,7 @@ describe("admin emails", () => {
       booking: base,
       adminUrl: "https://example.test/event-bookings",
     });
-    expect(subject).toBe("New booking — Boxing Day Bash, Sat, 26 Dec 2026 (4 People)");
+    expect(subject).toBe("New booking - Boxing Day Bash, Sat, 26 Dec 2026 (4 People)");
   });
 
   it("includes the customer's contact details for follow-up", () => {

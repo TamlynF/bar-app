@@ -66,7 +66,7 @@ export default function TrendsClient({
       } else if (result.added > 0) {
         toast.success(`Added ${result.added} new trend${result.added === 1 ? "" : "s"}.`);
       } else {
-        toast.info("No new trends this time — you're up to date.");
+        toast.info("No new trends this time - you're up to date.");
       }
     });
   };
@@ -195,7 +195,7 @@ export default function TrendsClient({
                 </button>
                 <p className="text-[11px] leading-snug text-[#5F624F] opacity-70">
                   {trendTab === "ads"
-                    ? "Reels/TikTok formats bars & venues are winning with right now — tied to current events & memes."
+                    ? "Reels/TikTok formats bars & venues are winning with right now - tied to current events & memes."
                     : "Events other UK bars, pubs, venues & hospitality spots are running right now."}
                 </p>
                 <p className="text-[10px] text-[#5F624F] tabular-nums opacity-50">

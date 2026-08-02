@@ -85,7 +85,7 @@ export function TrendCard({
 
           {e && (
             <p className="text-[10.5px] font-semibold text-[#5F624F] opacity-80">
-              Effort: {e.bolts} {trend.effort} — roughly {e.note}.
+              Effort: {e.bolts} {trend.effort} - roughly {e.note}.
             </p>
           )}
 

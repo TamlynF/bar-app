@@ -156,7 +156,7 @@ export async function createEventBooking(formData: FormData) {
       const missing = missingSquareConfig();
       if (missing.length) {
         console.error(
-          `[createEventBooking] Square not configured — missing ${missing.join(", ")}. ` +
+          `[createEventBooking] Square not configured - missing ${missing.join(", ")}. ` +
             `Set them in .env.local and restart the dev server (env vars load at startup).`
         );
         return { error: "Payments are temporarily unavailable. Please try again later." };
@@ -278,7 +278,7 @@ export async function createEventBooking(formData: FormData) {
           `[createEventBooking] Square rejected the payment-link request (HTTP ${squareErr.statusCode ?? "?"}, ` +
             `AUTHENTICATION_ERROR). SQUARE_ENVIRONMENT=${env}, SQUARE_LOCATION_ID=${process.env.SQUARE_LOCATION_ID}. ` +
             `If Orders/Payments work but only checkout fails, the Online Checkout API is not enabled for this ` +
-            `Square app/test account — enable it (or use a full-capability sandbox test account) in the Square ` +
+            `Square app/test account - enable it (or use a full-capability sandbox test account) in the Square ` +
             `Developer Dashboard. Otherwise verify SQUARE_ACCESS_TOKEN matches SQUARE_ENVIRONMENT and restart the dev server.`
         );
       } else {

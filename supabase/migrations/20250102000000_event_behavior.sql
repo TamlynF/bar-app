@@ -4,12 +4,12 @@
 -- This mirrors the production change. Capability flags
 -- (is_bookable / host_required / seating_required / payment_required on
 -- event_subtypes; is_active / is_bookable / is_fully_booked on events) are
--- kept — they are independent, not part of this discriminator.
+-- kept - they are independent, not part of this discriminator.
 
 -- 1. Add (nullable for backfill)
 alter table public.event_subtypes add column behavior text;
 
--- 2. Backfill — precedence quiz > bingo(name) > karaoke > music_act > private > standard
+-- 2. Backfill - precedence quiz > bingo(name) > karaoke > music_act > private > standard
 update public.event_subtypes set behavior =
   case
     when is_quiz            then 'quiz'

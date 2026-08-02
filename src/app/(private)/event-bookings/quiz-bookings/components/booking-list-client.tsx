@@ -655,11 +655,11 @@ export default function BookingListClient({ initialBookings, selectedDate }: { i
                     )}
 
                     <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white shadow-sm">
-                      <InfoRow icon={<Calendar className="h-4 w-4" />}      label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMMM yyyy") : "—"} />
+                      <InfoRow icon={<Calendar className="h-4 w-4" />}      label="Event Date" value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMMM yyyy") : "-"} />
                       <InfoRow icon={<Users className="h-4 w-4" />}      label="Group Size" value={`${selectedBooking.group_size} Guests`} />
                       
                         <InfoRow icon={<TableIcon className="h-4 w-4" />} label="Table" value={selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned"} />
-                      <InfoRow icon={<Clock3 className="h-4 w-4" />}        label="Booked On"  value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "—"} />
+                      <InfoRow icon={<Clock3 className="h-4 w-4" />}        label="Booked On"  value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "-"} />
                       {selectedBooking.updated_at && (
                         <InfoRow icon={<History className="h-4 w-4" />} label="Last Modified" value={format(new Date(selectedBooking.updated_at), "dd MMM yyyy · HH:mm")} />
                       )}

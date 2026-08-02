@@ -667,12 +667,12 @@ export default function BingoBookingListClient({
                       <InfoRow
                         icon={<Calendar className="h-4 w-4" />}
                         label="Event Date"
-                        value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMMM yyyy") : "—"}
+                        value={selectedBooking.events?.event_date ? format(new Date(selectedBooking.events.event_date), "do MMMM yyyy") : "-"}
                       />
                       <InfoRow
                         icon={<User className="h-4 w-4" />}
                         label="Table Name"
-                        value={selectedBooking.group_name || "—"}
+                        value={selectedBooking.group_name || "-"}
                       />
                       <InfoRow
                         icon={<Users className="h-4 w-4" />}
@@ -687,7 +687,7 @@ export default function BingoBookingListClient({
                       <InfoRow
                         icon={<Clock3 className="h-4 w-4" />}
                         label="Booked On"
-                        value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "—"}
+                        value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "-"}
                       />
                     </div>
 

@@ -325,7 +325,7 @@ export default function BookingList({
       });
       if (save) {
         const ok = await persistEdits();
-        if (!ok) return; // save failed or was backed out of — stay in the editor
+        if (!ok) return; // save failed or was backed out of - stay in the editor
       }
     }
     proceed();
@@ -431,7 +431,7 @@ export default function BookingList({
     const viewBody = (
       <div className="animate-in space-y-5 duration-300 fade-in">
         <div className="grid grid-cols-2 gap-2.5">
-          <Fact icon={<Calendar className="h-4 w-4" />} label="Event date" value={eventDate ? format(eventDate, "do MMM yyyy") : "—"} />
+          <Fact icon={<Calendar className="h-4 w-4" />} label="Event date" value={eventDate ? format(eventDate, "do MMM yyyy") : "-"} />
           <Fact icon={<Users className="h-4 w-4" />} label="Group size" value={`${selectedBooking.group_size ?? 0} guests`} />
           {seatingRequired && (
             <Fact icon={<TableIcon className="h-4 w-4" />} label="Table" value={tableName} accent={!hasTable} />
@@ -439,7 +439,7 @@ export default function BookingList({
           <Fact
             icon={<Clock3 className="h-4 w-4" />}
             label="Booked on"
-            value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "—"}
+            value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "-"}
             small
           />
         </div>

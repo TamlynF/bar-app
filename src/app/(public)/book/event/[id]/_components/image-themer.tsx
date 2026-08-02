@@ -12,7 +12,7 @@ export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
     img.onload = () => {
       if (cancelled) return;
       try {
-        const size = 48; // small sample — plenty for a dominant colour
+        const size = 48; // small sample - plenty for a dominant colour
         const canvas = document.createElement("canvas");
         canvas.width = size;
         canvas.height = size;
@@ -43,7 +43,7 @@ export default function ImageThemer({ imageUrl }: { imageUrl: string }) {
         for (const bkt of buckets.values()) {
           if (!best || bkt.weight > best.weight) best = bkt;
         }
-        if (!best) return; // nothing vibrant — keep default olive theme
+        if (!best) return; // nothing vibrant - keep default olive theme
 
         const r = Math.round(best.r / best.count);
         const g = Math.round(best.g / best.count);

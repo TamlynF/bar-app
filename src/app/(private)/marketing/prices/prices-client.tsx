@@ -312,7 +312,7 @@ export default function PricesClient({
                           )}
                         </div>
                         {allVenues.length === 0 ? (
-                          <p className="px-3 py-4 text-[11px] text-[#5F624F]/70">No venues to choose yet — refresh prices first.</p>
+                          <p className="px-3 py-4 text-[11px] text-[#5F624F]/70">No venues to choose yet - refresh prices first.</p>
                         ) : (
                           <div className="max-h-64 overflow-y-auto p-1">
                             {allVenues.map((v) => {
@@ -384,7 +384,7 @@ export default function PricesClient({
                       </td>
                       {row.cells.map((c, i) => (
                         <td key={i} className="px-2 py-2.5 text-right text-[12px] text-[#5F624F] tabular-nums">
-                          {c == null ? <span className="text-[#5F624F]/40">—</span> : formatGbp(c)}
+                          {c == null ? <span className="text-[#5F624F]/40">-</span> : formatGbp(c)}
                         </td>
                       ))}
                     </tr>
@@ -394,7 +394,7 @@ export default function PricesClient({
             </table>
             {matrix.venues.length === 0 && (
               <p className="px-4 py-4 text-[11px] text-[#5F624F]/70 sm:px-5">
-                No venue could be matched to your benchmark items yet — try the Avg view or refresh prices.
+                No venue could be matched to your benchmark items yet - try the Avg view or refresh prices.
               </p>
             )}
           </div>

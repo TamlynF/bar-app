@@ -59,7 +59,7 @@ function formatDays(days: number[] | null | undefined): string {
 }
 
 function formatDate(dateStr: string | null) {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -348,14 +348,14 @@ export default function SpecialsClient({
                       <RichTextContent html={selected.description} variant="admin" />
                     </div>
                   ) : (
-                    <DetailCell label="Description" value="—" />
+                    <DetailCell label="Description" value="-" />
                   )}
                   <DetailCell
                     label="Badges"
                     value={
                       selected.badges.length > 0
                         ? selected.badges.join(", ")
-                        : "—"
+                        : "-"
                     }
                   />
                   <DetailCell

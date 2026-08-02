@@ -115,7 +115,7 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
                 className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none"
               />
             ) : (
-              <span className="min-w-0 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{field.label || "—"}</span>
+              <span className="min-w-0 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{field.label || "-"}</span>
             )}
           </div>
 

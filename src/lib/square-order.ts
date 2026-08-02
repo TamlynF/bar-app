@@ -18,7 +18,7 @@ export function buildBuyerPhone(
 }
 
 export function formatTicketLineName(title: string, groupSize: number): string {
-  return `${title} — ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`;
+  return `${title} - ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`;
 }
 
 export interface EventOrderInput {

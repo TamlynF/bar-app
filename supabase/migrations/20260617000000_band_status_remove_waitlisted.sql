@@ -2,7 +2,7 @@
 --
 -- `waitlisted` is no longer settable from the app (removed from the BandStatus
 -- type and the admin UI). Move any existing waitlisted applications back to the
--- review queue (`pending` — which has the same "linked event is inactive"
+-- review queue (`pending` - which has the same "linked event is inactive"
 -- behaviour), then replace the status CHECK constraint so the database rejects
 -- `waitlisted` as well.
 

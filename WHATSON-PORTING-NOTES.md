@@ -1,17 +1,17 @@
-# What's On — porting notes (mockup → bar-app Next.js)
+# What's On - porting notes (mockup → bar-app Next.js)
 
 Companion to `PORTING-NOTES.md` (which already covers the colour + type port). This
 doc describes the **new What's On page behaviour** so it can be rebuilt in the real
 app (`src/app/(public)/whats-on/`) using Tailwind v4 + TSX components.
 
-The mockup is a CDN-React + inline-CSS prototype. Don't copy it verbatim — treat it
+The mockup is a CDN-React + inline-CSS prototype. Don't copy it verbatim - treat it
 as the spec and translate into the repo's component vocabulary.
 
 Mockup source files (in the design project):
-- `app/whats-on-data.js`   — sample schedule + per-kind hue/icon map
-- `app/wo-shared.jsx`      — page shell: header, search, filter chips, section assembly
-- `app/wo-design-stack.jsx`— the Stack flip card (front + back)
-- `app/whats-on-app.jsx`   — palette vars + chrome + Tweaks
+- `app/whats-on-data.js`   - sample schedule + per-kind hue/icon map
+- `app/wo-shared.jsx`      - page shell: header, search, filter chips, section assembly
+- `app/wo-design-stack.jsx`- the Stack flip card (front + back)
+- `app/whats-on-app.jsx`   - palette vars + chrome + Tweaks
 
 ---
 
@@ -36,7 +36,7 @@ The live `whats-on/page.tsx` renders: SectionHeading → **NextEventHero** →
    blurb + details. **Only one card open at a time** (parent holds `openId`). The
    back **auto-grows** to fit its content (measure the taller face, set height).
 6. **Book/Sing button on the FRONT** (not the back). Karaoke → "Sing", gigs →
-   "Get tickets", else "Book". The back has **no buttons** — price shown as text.
+   "Get tickets", else "Book". The back has **no buttons** - price shown as text.
 
 ---
 
@@ -50,7 +50,7 @@ The live `whats-on/page.tsx` renders: SectionHeading → **NextEventHero** →
   `SectionHeading` → `<WhatsOnGrid past={past} upcoming={upcoming} tabs={tabs}
   nextEventId={nextEventId} />` → `ScheduleMore`.
 
-### `components/whats-on-grid.tsx` (client) — the orchestrator
+### `components/whats-on-grid.tsx` (client) - the orchestrator
 Holds the interactive state (this is where most work goes):
 - `const [query, setQuery] = useState("")`
 - `const [active, setActive] = useState<string|"all">("all")`
@@ -65,7 +65,7 @@ Holds the interactive state (this is where most work goes):
 - Pass `open={openId===e.id}` + `onToggle={()=>setOpenId(p=>p===e.id?null:e.id)}`
   to every card.
 
-### `components/editorial/event-card.tsx` — make it a flip card
+### `components/editorial/event-card.tsx` - make it a flip card
 - Props: `event`, `open`, `onToggle`, `isPast`, `isNext`.
 - Markup: `.flip` (perspective) › `.flip-inner` (`transform-style:preserve-3d`,
   `rotateY(180deg)` when `open`) › two `.flip-face` (front + `.back` rotated 180,
@@ -78,7 +78,7 @@ Holds the interactive state (this is where most work goes):
   `max(frontRef.scrollHeight, backRef.scrollHeight)`; clear it when closed. Add
   `transition: height .45s` and keep `backface-visibility:hidden` on both faces.
 - Note: a flex child with `overflow:hidden` + `white-space:nowrap` can collapse to
-  0 height — give the title `flex:none` (this bit us in the mockup).
+  0 height - give the title `flex:none` (this bit us in the mockup).
 
 ### `components/editorial/filter-tabs.tsx`
 - Container: `flex flex-nowrap gap-2 overflow-x-auto [scrollbar-width:none]
@@ -90,7 +90,7 @@ Holds the interactive state (this is where most work goes):
 The mockup adds fields the back face needs: `blurb`, `host`, `age`. In the real app,
 extend `serializeEvent` (in `lib/events-display.ts`) to surface equivalents (e.g.
 a `description`/`door_policy` column, or compose from existing fields). The per-kind
-colour already exists as `event_subtypes.color` — use it where the mockup uses its
+colour already exists as `event_subtypes.color` - use it where the mockup uses its
 `hue`.
 
 ---

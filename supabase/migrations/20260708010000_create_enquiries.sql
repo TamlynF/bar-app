@@ -1,4 +1,4 @@
--- General enquiries — the in-app replacement for Instagram DM questions.
+-- General enquiries - the in-app replacement for Instagram DM questions.
 -- Workflow: pending (amber, needs a reply) → responded (green, reply emailed)
 -- → closed (stone, no further action).
 

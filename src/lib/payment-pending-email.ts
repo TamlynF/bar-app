@@ -20,7 +20,7 @@ export function buildPaymentPendingEmail(p: {
         <div style="padding: 40px 30px; color: #1F1F1A;">
           <h2 style="margin-top: 0; font-size: 22px; font-weight: 900; text-transform: uppercase; letter-spacing: -0.5px;">Almost there, ${p.name}!</h2>
           <p style="font-size: 16px; line-height: 1.6; color: #5F624F; font-weight: 500;">
-            We've saved your details for <strong>${p.eventTitle}</strong>, but we haven't received your payment yet — so your spot isn't secured. Finish checkout below and you're in.
+            We've saved your details for <strong>${p.eventTitle}</strong>, but we haven't received your payment yet - so your spot isn't secured. Finish checkout below and you're in.
           </p>
           <div style="background-color: #F7F4EA; border: 2px solid #E6DFC8; border-radius: 16px; padding: 24px; margin: 32px 0;">
             <table width="100%" cellpadding="0" cellspacing="0" style="font-size: 15px;">

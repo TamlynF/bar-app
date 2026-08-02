@@ -1,15 +1,15 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   AFTER DARK — missing utility classes
+   AFTER DARK - missing utility classes
 
-   WHY: this repo does NOT auto-generate Tailwind utilities from scanned source —
+   WHY: this repo does NOT auto-generate Tailwind utilities from scanned source -
    it keeps a hand-written list in globals.css (the "scripts/check-utilities.mjs"
    block). Registering @theme tokens alone is not enough; each utility class must
    exist here too. Only `.bg-canvas`, `.bg-canvas/85` and `.text-ink-2` were
-   written — every other After Dark token class no-ops, so borders disappear and
+   written - every other After Dark token class no-ops, so borders disappear and
    text-ink / text-neon fall back to black.
 
    HOW TO APPLY: paste this whole block into globals.css INSIDE the big
-   `@layer utilities { … }` block (anywhere before its closing `}` — e.g. right
+   `@layer utilities { … }` block (anywhere before its closing `}` - e.g. right
    after the existing `.bg-canvas { … }` / `.text-ink-2 { … }` rules).
    Then STOP the dev server, delete the `.next` folder, and run `npm run dev`
    again so Tailwind rebuilds with the new classes.

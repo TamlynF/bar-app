@@ -40,7 +40,7 @@ describe("formatGbp", () => {
   });
 
   it("renders an em dash for null/invalid", () => {
-    expect(formatGbp(null)).toBe("—");
-    expect(formatGbp(undefined)).toBe("—");
+    expect(formatGbp(null)).toBe("-");
+    expect(formatGbp(undefined)).toBe("-");
   });
 });

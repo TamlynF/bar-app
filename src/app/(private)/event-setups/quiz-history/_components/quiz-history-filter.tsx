@@ -43,7 +43,7 @@ export default function QuizHistoryFilter({
           <option value="all">All Quiz Nights</option>
           {quizEvents.map(evt => (
             <option key={evt.id} value={evt.id}>
-              {evt.title || 'Quiz Night'} — {format(new Date(evt.date), "dd/MM/yy")}
+              {evt.title || 'Quiz Night'} - {format(new Date(evt.date), "dd/MM/yy")}
             </option>
           ))}
         </select>

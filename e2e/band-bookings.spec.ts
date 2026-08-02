@@ -3,7 +3,7 @@ import path from "path";
 
 test.use({ storageState: path.resolve(__dirname, ".auth/admin.json") });
 
-test.describe("band booking — selected date/time editing", () => {
+test.describe("band booking - selected date/time editing", () => {
   test("preferred date defaults start to 10pm and end to start + 2h", async ({ page }) => {
     await page.goto("/event-bookings/music-bookings");
 

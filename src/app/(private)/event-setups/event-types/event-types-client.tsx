@@ -33,7 +33,7 @@ const storageClient = createBrowserClient(
 
 const IMAGE_BUCKET = "booking-images";
 
-/* Badge icons persist as these keys — keep them stable so existing badges keep rendering. */
+/* Badge icons persist as these keys - keep them stable so existing badges keep rendering. */
 const ICON_OPTIONS: Record<string, React.ComponentType<{ className?: string }>> = {
   MapPin, Clock, Calendar, Users, DollarSign, Star, CheckCircle, Music, Utensils,
   GlassWater, Heart, Smile, Sparkles, AlertCircle, Info, Beer, Banknote, Trophy,
@@ -41,7 +41,7 @@ const ICON_OPTIONS: Record<string, React.ComponentType<{ className?: string }>> 
 };
 
 const BEHAVIOURS: { value: EventBehavior; label: string; blurb: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { value: "standard", label: "Standard night", blurb: "No extra tools — just a normal event.", Icon: Sparkles },
+  { value: "standard", label: "Standard night", blurb: "No extra tools - just a normal event.", Icon: Sparkles },
   { value: "quiz", label: "Quiz", blurb: "Adds rounds, teams and scoring.", Icon: Trophy },
   { value: "bingo", label: "Bingo", blurb: "Adds bingo cards and number calling.", Icon: Disc3 },
   { value: "karaoke", label: "Karaoke", blurb: "Adds a singer sign-up list.", Icon: Mic },
@@ -59,13 +59,13 @@ const groupingBlurb = (v: BookingGrouping) => GROUPINGS.find((g) => g.value === 
 
 const HELP = {
   name: "The short name your team sees in lists and on the rota. Keep it to one or two words, like “Quiz”.",
-  catName: "The group this sits in, like “Games” or “Music”. Customers never see this — it just keeps your lists tidy.",
+  catName: "The group this sits in, like “Games” or “Music”. Customers never see this - it just keeps your lists tidy.",
   title: "The heading customers read on the website when they book. It can be longer and friendlier, e.g. “Thursday Quiz Night”.",
   defaultTitle: "When you add a new event of this kind, the name is filled in for you. You can still change it for a one-off.",
   tagline: "One short line under the title on the website that sells the night. Think of what you would shout across the bar.",
-  colour: "Only for you and your team — the colour this shows as in your lists and calendar. It does not appear on the website.",
+  colour: "Only for you and your team - the colour this shows as in your lists and calendar. It does not appear on the website.",
   image: "The photo or poster used on the website whenever an event of this kind has no picture of its own.",
-  behaviour: "Tells the system what extra tools to switch on — quiz rounds, bingo numbers, a karaoke sign-up sheet, and so on.",
+  behaviour: "Tells the system what extra tools to switch on - quiz rounds, bingo numbers, a karaoke sign-up sheet, and so on.",
   bookable: "On: customers can reserve a place online. Off: they must ring or turn up (you can still add bookings by hand).",
   host: "Tick if someone has to run this night. You will be asked who is hosting each time you schedule one.",
   seating: "Tick if guests are given tables. Leave it off for stand-up nights so you are not asked to allocate seats.",
@@ -77,7 +77,7 @@ const HELP = {
   cardTagline: "A sentence or two on the tile telling people what the night is.",
   cardNote: "A short word or two in the corner of the tile, like “Thursdays” or “Popular”. Leave blank for none.",
   cardIcon: "The little picture on the tile. Pick whatever looks closest to the night.",
-  bookingImage: "A logo or poster shown at the top of the booking page — handy for a sponsor.",
+  bookingImage: "A logo or poster shown at the top of the booking page - handy for a sponsor.",
   bookingTagline: "One line under the logo on the booking page.",
   wording: "What the customer reads next to the box. Plain words work best.",
   smallest: "The fewest people you will take on one booking.",
@@ -89,7 +89,7 @@ const HINT = {
   title: "What customers read when they book.",
   defaultTitle: "Saves retyping it every week.",
   tagline: "One line, on the website under the title.",
-  colour: "Team only — never shown to customers.",
+  colour: "Team only - never shown to customers.",
   image: "Optional. Used when an event has no picture.",
   behaviour: "Decides which extra tools you get.",
   price: "What one person pays to book.",
@@ -692,8 +692,8 @@ function CategorySheet({ form, setForm, onClose, onSave, pending, error }: {
                   help={HELP.bookable}
                   on={form.is_bookable}
                   onChange={(v) => set({ is_bookable: v })}
-                  onText="Yes — bookable on the website" onSub="A booking page is created for it."
-                  offText="No — phone or walk-in only" offSub="You can still add bookings by hand."
+                  onText="Yes - bookable on the website" onSub="A booking page is created for it."
+                  offText="No - phone or walk-in only" offSub="You can still add bookings by hand."
                 />
               </div>
               {form.is_bookable && (
@@ -827,31 +827,31 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
           )}
 
           {cur === "needs" && (
-            <SheetSection title="What it needs" blurb="Set once — every date of this kind follows.">
+            <SheetSection title="What it needs" blurb="Set once - every date of this kind follows.">
               {showBookable && (
                 <BigToggle
                   label="Can customers book it online?" help={HELP.bookable}
                   on={form.is_bookable} onChange={(v) => set({ is_bookable: v })}
-                  onText="Yes — bookable on the website" onSub="A booking page is created for it."
-                  offText="No — phone or walk-in only" offSub="You can still add bookings by hand."
+                  onText="Yes - bookable on the website" onSub="A booking page is created for it."
+                  offText="No - phone or walk-in only" offSub="You can still add bookings by hand."
                 />
               )}
               <BigToggle
                 label="Does someone have to run it?" help={HELP.host}
                 on={form.host_required} onChange={(v) => set({ host_required: v })}
-                onText="Yes — a host is needed" onSub="You'll be asked who is hosting each date."
+                onText="Yes - a host is needed" onSub="You'll be asked who is hosting each date."
                 offText="No host needed"
               />
               <BigToggle
                 label="Are guests given tables?" help={HELP.seating}
                 on={form.seating_required} onChange={(v) => set({ seating_required: v })}
-                onText="Yes — seated" onSub="Tables are allocated when people book."
-                offText="No — standing"
+                onText="Yes - seated" onSub="Tables are allocated when people book."
+                offText="No - standing"
               />
               <BigToggle
                 label="Do people pay to book?" help={HELP.payment}
                 on={form.payment_required} onChange={(v) => set({ payment_required: v })}
-                onText="Yes — paid entry" offText="Free to book"
+                onText="Yes - paid entry" offText="Free to book"
               />
               {form.payment_required && (
                 <Field label="Price per person (£)" help={HELP.price} hint={HINT.price}>

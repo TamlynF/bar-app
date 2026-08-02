@@ -211,7 +211,7 @@ function EnquiryCard({ enquiry }: { enquiry: Enquiry }) {
 
             <div className="space-y-2">
               <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
-                {enquiry.subject ? `Message — ${enquiry.subject}` : "Message"}
+                {enquiry.subject ? `Message - ${enquiry.subject}` : "Message"}
               </p>
               <div className="rounded-2xl border border-[#E6DFC8] bg-white px-4 py-3">
                 <p className="text-sm leading-relaxed whitespace-pre-wrap text-[#1F1F1A]">{enquiry.message}</p>

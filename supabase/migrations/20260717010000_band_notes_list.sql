@@ -20,7 +20,7 @@ create table if not exists public.band_booking_notes (
 );
 
 -- A note is meaningless without its request, so it goes when the request goes.
--- Authors are audit stamps and merely go null when an employee is removed —
+-- Authors are audit stamps and merely go null when an employee is removed -
 -- matching band_booking_requests.created_by / updated_by.
 alter table public.band_booking_notes
   drop constraint if exists band_booking_notes_request_id_fkey;

@@ -97,7 +97,7 @@ beforeEach(() => {
   h.notifyAdminBookingCreated.mockReset().mockResolvedValue(undefined);
 });
 
-describe("createEventBooking — paid path", () => {
+describe("createEventBooking - paid path", () => {
   it("creates a Square payment link and persists the pending booking", async () => {
     const { client, calls } = makeSupabase({
       events: [{ data: { ...bookableEvent, payment_amount: 15 } }],
@@ -126,7 +126,7 @@ describe("createEventBooking — paid path", () => {
     ]);
     expect(calls.deletes).toHaveLength(0);
 
-    // not a confirmation — just a link back to finish checkout
+    // not a confirmation - just a link back to finish checkout
     expect(h.send).toHaveBeenCalledTimes(1);
     expect(h.send.mock.calls[0][0].subject).toMatch(/finish your booking/i);
     expect(h.send.mock.calls[0][0].html).toContain("/book/event/7/success?bookingId=42");
@@ -195,7 +195,7 @@ describe("createEventBooking — paid path", () => {
   });
 });
 
-describe("createEventBooking — free path", () => {
+describe("createEventBooking - free path", () => {
   it("confirms immediately and never calls Square", async () => {
     const { client, calls } = makeSupabase({
       events: [{ data: { ...bookableEvent, payment_amount: 0 } }],
@@ -217,7 +217,7 @@ describe("createEventBooking — free path", () => {
   });
 });
 
-describe("createEventBooking — guards", () => {
+describe("createEventBooking - guards", () => {
   it("returns a validation error without touching Square when a field is missing", async () => {
     h.client = makeSupabase({}).client;
     const result = await createEventBooking(formData({ email: "" }));

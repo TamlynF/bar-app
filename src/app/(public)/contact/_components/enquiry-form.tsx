@@ -34,7 +34,7 @@ export default function EnquiryForm() {
           Message Sent!
         </h3>
         <p className="text-sm leading-relaxed font-medium text-stone-400">
-          Thanks for getting in touch — we&apos;ll get back to you as soon as
+          Thanks for getting in touch - we&apos;ll get back to you as soon as
           we can. Check your inbox for a confirmation.
         </p>
       </div>
@@ -97,7 +97,7 @@ export default function EnquiryForm() {
           required
           rows={5}
           maxLength={4000}
-          placeholder="Ask us anything — gigs, karaoke, the menu, lost property..."
+          placeholder="Ask us anything - gigs, karaoke, the menu, lost property..."
           className={`${inputClasses} resize-none`}
         />
       </div>

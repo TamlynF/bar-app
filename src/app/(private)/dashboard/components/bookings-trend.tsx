@@ -218,7 +218,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
     if (v === "all") return "All bookable events";
     if (v.startsWith("type:")) {
       const t = taxonomy.find((t) => t.id === v.slice(5));
-      return t ? `${titleCase(t.name)} — all` : "All bookable events";
+      return t ? `${titleCase(t.name)} - all` : "All bookable events";
     }
     if (v.startsWith("sub:")) {
       for (const t of taxonomy) {

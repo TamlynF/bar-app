@@ -214,7 +214,7 @@ export function SpotifyPlayer({ trackId, title, compact = false }: SpotifyPlayer
     try {
       const deviceId = await connectPlayer()
       if (!deviceId) {
-        setError('Player not ready — tap again')
+        setError('Player not ready - tap again')
         setIsLoading(false)
         return
       }

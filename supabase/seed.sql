@@ -65,7 +65,7 @@ values
 insert into public.event_subtype_badges (id, event_subtypes_id, icon, title, description)
 values (1, 1, 'Calendar', 'Every Thursday', '8:00PM start');
 
--- Default poster for the quiz subtype. Events never copy this — it is resolved at
+-- Default poster for the quiz subtype. Events never copy this - it is resolved at
 -- render time, so every quiz event without its own image_url picks it up.
 update public.event_subtypes set default_image_url = '/backdrop.jpeg' where id = 1;
 
@@ -97,7 +97,7 @@ values
 insert into public.specials
   (title, description, badges, start_date, end_date, days_of_week, is_active, display_order)
 values
-  ('Two-for-Tuesday', '<p>Any two house cocktails for £12, all night. From the house cocktail list at the bar — not with other offers.</p>',
+  ('Two-for-Tuesday', '<p>Any two house cocktails for £12, all night. From the house cocktail list at the bar - not with other offers.</p>',
    ARRAY['Cocktails'], CURRENT_DATE, CURRENT_DATE + 60, ARRAY[2]::smallint[], true, 0),
   ('Quiz-Night Pints', '<p>£4 selected draught while the rounds run. One per round, be sensible.</p>',
    ARRAY['Draught'], CURRENT_DATE, null, ARRAY[4]::smallint[], true, 1),
@@ -105,7 +105,7 @@ values
    ARRAY['Late'], CURRENT_DATE, null, ARRAY[5,6]::smallint[], true, 2);
 
 -- ── Merchandise (branded goods shown on the public home page) ────────────────
--- Showcase only — price is a display label, nothing is ever charged here.
+-- Showcase only - price is a display label, nothing is ever charged here.
 -- display_order runs 1..N over the active rows; inactive rows always sit at 0.
 insert into public.merchandise
   (name, description, image_url, price, is_active, display_order)
@@ -116,7 +116,7 @@ values
    null, 12.50, true, 2),
   ('Etched Pint Glass', '<p>Half-litre glass etched with the house mark. Ask at the bar.</p>',
    null, null, true, 3),
-  ('Tour Poster 2025', '<p>Sold out — kept here for the archive.</p>',
+  ('Tour Poster 2025', '<p>Sold out - kept here for the archive.</p>',
    null, 15.00, false, 0);
 
 -- ── Reset identity sequences past the seeded ids ─────────────────────────────

@@ -658,7 +658,7 @@ export default function QuizGeneratorPage() {
               </span>
               <span className="shrink-0 text-[10px] font-bold text-[#5F624F]/50">/</span>
               <span className="shrink-0 text-[11px] font-bold tracking-tight text-[#5F624F] uppercase">
-                {selectedEventId ? format(new Date(upcomingEvents.find(e => String(e.id) === selectedEventId)?.date || ''), "dd MMM") : '—'}
+                {selectedEventId ? format(new Date(upcomingEvents.find(e => String(e.id) === selectedEventId)?.date || ''), "dd MMM") : '-'}
               </span>
             </div>
           </div>
@@ -928,7 +928,7 @@ export default function QuizGeneratorPage() {
                       ) : (
                         <>
                           <p className="truncate text-sm leading-tight font-bold tracking-tight text-[#1F1F1A]">
-                            [{song.year}] {song.artist} — {song.title}
+                            [{song.year}] {song.artist} - {song.title}
                           </p>
                           <p className="mt-0.5 line-clamp-1 text-xs leading-tight font-medium text-[#5F624F]">
                             {song.intro_description}
@@ -1066,7 +1066,7 @@ export default function QuizGeneratorPage() {
               <div key={snippet.id} className="overflow-hidden rounded-lg border border-[#5C4033]/20 bg-white shadow-sm">
                 <div className="flex items-center gap-2 px-2.5 py-2">
                   <span className="shrink-0 rounded bg-[#5C4033] px-1.5 py-0.5 font-black text-[10px] tracking-wider text-white">
-                    {snippet.release_year || '—'}
+                    {snippet.release_year || '-'}
                   </span>
                   <div className="min-w-0 flex-1">
                     {isHigherOrLower && snippet.hint_year && (

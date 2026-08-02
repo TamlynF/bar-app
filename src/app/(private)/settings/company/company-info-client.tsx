@@ -57,7 +57,7 @@ const inputClasses = "h-14 rounded-2xl border-2 border-[#E6DFC8] bg-white text-b
 function InfoRow({ icon, label, value, href }: {
   icon: React.ReactNode; label: string; value: string | null; href?: string;
 }) {
-  const display = value || "—";
+  const display = value || "-";
   return (
     <div className="flex items-center gap-3 border-b border-[#E6DFC8] px-5 py-4 last:border-0">
       <div className="flex shrink-0 items-center gap-2 text-[#5F624F] opacity-60">
@@ -388,7 +388,7 @@ export default function CompanyInfoClient({ initialData }: { initialData: Compan
                         <span className="w-8 text-[10px] font-bold tracking-wide uppercase">{DAY_LABELS[day]}</span>
                       </div>
                       <span className="flex-1 text-right font-black text-sm text-[#1F1F1A]">
-                        {hours.open || "—"} – {hours.close || "—"}
+                        {hours.open || "-"} – {hours.close || "-"}
                       </span>
                     </div>
                   );

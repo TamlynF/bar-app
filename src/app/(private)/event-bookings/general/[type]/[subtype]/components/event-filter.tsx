@@ -25,7 +25,7 @@ function formatTime(t?: string | null) {
 function formatEventLabel(e: EventItem) {
   const dateStr = format(parseISO(e.date), "eee, do MMM yy");
   const time = formatTime(e.start_time);
-  return time ? `${dateStr} — ${time}` : dateStr;
+  return time ? `${dateStr} - ${time}` : dateStr;
 }
 
 export default function EventTypeFilter({
@@ -97,7 +97,7 @@ export default function EventTypeFilter({
               onFocus={() => { setQuery(""); setOpen(true); }}
               onClick={() => setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 150)}
-              placeholder={selected ? displayValue : "All history — type to filter…"}
+              placeholder={selected ? displayValue : "All history - type to filter…"}
               className="min-w-0 flex-1 bg-transparent font-black text-sm tracking-tight text-[#1F1F1A] uppercase outline-none placeholder:font-medium placeholder:tracking-normal placeholder:text-[#5F624F]/50 placeholder:normal-case sm:text-xs"
             />
           </div>

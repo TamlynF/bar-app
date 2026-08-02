@@ -244,7 +244,7 @@ export default async function WhatsOnEventPage({
                   ? "This show has finished"
                   : event.isBookable
                     ? "Get your tickets!"
-                    : "Free entry — just walk in"}
+                    : "Free entry - just walk in"}
               </h2>
 
               <div className="mt-5 flex items-center justify-between gap-4 border-b border-hairline pb-5">

@@ -44,13 +44,13 @@ function DetailRow({ label, value }: { label: string; value: React.ReactNode }) 
       <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
-      <span className="text-right text-sm font-bold text-[#1F1F1A]">{value || "—"}</span>
+      <span className="text-right text-sm font-bold text-[#1F1F1A]">{value || "-"}</span>
     </div>
   );
 }
 
 function formatTime(t?: string | null): string {
-  if (!t) return "—";
+  if (!t) return "-";
   const [hh, mm] = t.split(":");
   const h = parseInt(hh, 10);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -59,7 +59,7 @@ function formatTime(t?: string | null): string {
 }
 
 function formatDate(d?: string | null): string {
-  if (!d) return "—";
+  if (!d) return "-";
   return new Date(d).toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",

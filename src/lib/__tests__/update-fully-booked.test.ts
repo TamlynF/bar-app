@@ -51,7 +51,7 @@ describe("sumConfirmedGroupSizes", () => {
   });
 });
 
-describe("updateFullyBookedStatus — seated events", () => {
+describe("updateFullyBookedStatus - seated events", () => {
   it("marks the event full when no table is free", async () => {
     h.getFreeTablesForEvent.mockResolvedValue([]);
     const { client, updates } = makeSupabase({
@@ -89,7 +89,7 @@ describe("updateFullyBookedStatus — seated events", () => {
   });
 });
 
-describe("updateFullyBookedStatus — non-seated events", () => {
+describe("updateFullyBookedStatus - non-seated events", () => {
   it("marks the event full when confirmed group sizes reach venue capacity", async () => {
     const { client, updates } = makeSupabase({
       events: [{ data: { id: 2, seating_required: false } }],
@@ -139,7 +139,7 @@ describe("updateFullyBookedStatus — non-seated events", () => {
   });
 });
 
-describe("updateFullyBookedStatus — missing event", () => {
+describe("updateFullyBookedStatus - missing event", () => {
   it("does nothing when the event cannot be loaded", async () => {
     const { client, updates } = makeSupabase({ events: [{ data: null }] });
 

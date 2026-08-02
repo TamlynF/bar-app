@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { adminBookingsHref, checkoutReturnPath, manageBookingPath, publicBookingUrl } from "@/lib/booking-links";
 
-describe("adminBookingsHref — grouping-driven routing", () => {
+describe("adminBookingsHref - grouping-driven routing", () => {
   const base = {
     behavior: "standard" as const,
     eventType: "Live Music",
@@ -64,7 +64,7 @@ describe("adminBookingsHref — grouping-driven routing", () => {
   });
 });
 
-describe("adminBookingsHref — fallbacks when grouping is unknown", () => {
+describe("adminBookingsHref - fallbacks when grouping is unknown", () => {
   it("falls back to the per-event page when an id is known", () => {
     expect(adminBookingsHref({ behavior: "standard", eventId: 42 })).toBe("/event-bookings/event/42");
     expect(adminBookingsHref({ behavior: "karaoke", eventId: 7, bookingId: 3 })).toBe(

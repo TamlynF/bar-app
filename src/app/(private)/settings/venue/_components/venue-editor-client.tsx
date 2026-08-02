@@ -481,7 +481,7 @@ export default function VenueEditorClient({
         <div>
           <h2 className="font-black text-base tracking-tight text-[#1F1F1A] uppercase">Venue Layout</h2>
           <p className="mt-0.5 text-[11px] font-bold text-[#5F624F]">
-            {companyName ? `${companyName} — ` : ""}draw the room, drop obstacles, place fixtures, doors &amp; seating.
+            {companyName ? `${companyName} - ` : ""}draw the room, drop obstacles, place fixtures, doors &amp; seating.
             Reused by every event&apos;s floor-plan calculator.
           </p>
         </div>
@@ -530,7 +530,7 @@ export default function VenueEditorClient({
             {drawingPoly ? (
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-black text-[11px] tracking-wide text-[#5C4033] uppercase">
-                  Drawing polygon — tap to add points ({drawingPoly.length})
+                  Drawing polygon - tap to add points ({drawingPoly.length})
                 </span>
                 <Button type="button" onClick={finishPolygonObstacle} disabled={drawingPoly.length < 3} className="h-9 rounded-xl bg-[#1B4332] px-3 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#1B4332]/85 disabled:opacity-40">
                   <Check className="mr-1.5 h-3.5 w-3.5" /> Finish

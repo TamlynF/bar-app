@@ -13,7 +13,7 @@ interface QuizEvent {
 
 function formatEventLabel(event: QuizEvent) {
   const date = format(parseISO(event.date), "eeee, do MMMM yyyy");
-  return event.title ? `${date} — ${event.title}` : date;
+  return event.title ? `${date} - ${event.title}` : date;
 }
 
 export default function QuizEventFilter({
@@ -97,7 +97,7 @@ export default function QuizEventFilter({
               }}
               onClick={() => setOpen(true)}
               onBlur={() => setTimeout(() => setOpen(false), 150)}
-              placeholder={selectedEvent ? displayValue : "All history — type to filter…"}
+              placeholder={selectedEvent ? displayValue : "All history - type to filter…"}
               className="min-w-0 flex-1 bg-transparent font-black text-sm tracking-tight text-[#1F1F1A] uppercase outline-none placeholder:font-medium placeholder:tracking-normal placeholder:text-[#5F624F]/50 placeholder:normal-case"
             />
           </div>

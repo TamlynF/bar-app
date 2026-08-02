@@ -52,7 +52,7 @@ export async function releaseStaleUnpaidBookings(
 
     if (orderId) {
       const tender = await findSquareTender(orderId);
-      if (tender === undefined) continue; // Square unreachable — leave it for the next run
+      if (tender === undefined) continue; // Square unreachable - leave it for the next run
       if (tender) {
         const paidAmount = tender.amountMoney?.amount
           ? Number(tender.amountMoney.amount) / 100

@@ -156,7 +156,7 @@ function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
-      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "—"}</span>
+      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "-"}</span>
     </div>
   );
 }
@@ -167,7 +167,7 @@ function toTitleCase(s?: string | null): string {
 }
 
 function formatDateTime(iso?: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString("en-GB", {
     day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
@@ -189,7 +189,7 @@ function EditRow({
     <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
       <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
       {!editable ? (
-        <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{readOnlyValue ?? (value || "—")}</span>
+        <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{readOnlyValue ?? (value || "-")}</span>
       ) : (
         <input
           aria-label={label}
@@ -210,7 +210,7 @@ function ContactRow({ label, value, href, icon: Icon }: { label: string; value: 
     <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
       <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
       <div className="flex min-w-0 items-center gap-2">
-        <span className="truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "—"}</span>
+        <span className="truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "-"}</span>
         {href && (
           <a
             href={href}
@@ -384,7 +384,7 @@ function StageStepper({
             <button
               type="button"
               aria-current="step"
-              title="Cancellation reason for applicant — click to view or edit"
+              title="Cancellation reason for applicant - click to view or edit"
               className={cn(
                 "relative flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-full border-2 px-3.5 transition-all hover:brightness-95 sm:h-10",
                 t.bg,
@@ -454,7 +454,7 @@ function StageStepper({
           type="button"
           disabled={!!pendingStage}
           onClick={() => onSelect("cancelled")}
-          title="Reject enquiry — a terminal exit, not a pipeline step"
+          title="Reject enquiry - a terminal exit, not a pipeline step"
           className="ml-auto flex h-12 shrink-0 items-center gap-2 rounded-full border-2 border-dashed border-red-300 bg-red-50 px-3.5 text-red-600 transition-colors hover:bg-red-100 disabled:pointer-events-none disabled:opacity-50 sm:h-10"
         >
           {pendingStage === "cancelled" ? (
@@ -615,7 +615,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
 
   const hasClashes = clashes.length > 0;
   const clashWarning = hasClashes
-    ? `Clashes with ${clashes.map((c) => c.title).join(", ")} — pick another time.`
+    ? `Clashes with ${clashes.map((c) => c.title).join(", ")} - pick another time.`
     : undefined;
   const slotIsSet = !!selectedDate && !!selectedStartTime && !!selectedEndTime && !hasClashes;
 
@@ -851,7 +851,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
         await updatePrivateHireStatus(request.id, newStatus, note || undefined);
         setAdminNotes(note);
         const label = STATUS_TOAST[newStatus];
-        toast.success(newStatus === "pending" ? label : `${label} — enquirer emailed`);
+        toast.success(newStatus === "pending" ? label : `${label} - enquirer emailed`);
       } catch {
         setError("Failed to update. Please try again.");
       } finally {
@@ -875,7 +875,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
           const ok = await confirm({
             title: "Save changes?",
             description:
-              "This hire is confirmed — saving updates its details and the linked event.",
+              "This hire is confirmed - saving updates its details and the linked event.",
             confirmLabel: "Save Changes",
           });
           if (!ok) return;
@@ -1131,7 +1131,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                     )}
                     <SheetRow label="Submitted" value={formatDateTime(request.created_at)} />
                     <SheetRow label="Last Modified" value={formatDateTime(request.updated_at)} />
-                    <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "—"} />
+                    <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "-"} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -1161,8 +1161,8 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                           onClick={(e) => e.stopPropagation()}
                           title={
                             eventIsActive
-                              ? `View linked event #${request.event_id} — on the schedule`
-                              : `View linked event #${request.event_id} — off the schedule`
+                              ? `View linked event #${request.event_id} - on the schedule`
+                              : `View linked event #${request.event_id} - off the schedule`
                           }
                           className={cn(
                             "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] tracking-wider uppercase transition-colors",
@@ -1204,13 +1204,13 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                     <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Type / Subtype</span>
                     {!editable || !options ? (
                       <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">
-                        {typeName || "—"}
+                        {typeName || "-"}
                         <span className="mx-1.5 font-normal text-[#5F624F]/50">/</span>
-                        {subtypeName || "—"}
+                        {subtypeName || "-"}
                       </span>
                     ) : (
                       <div className="flex min-w-0 items-center justify-end gap-1.5">
-                        <span className="shrink-0 text-[13px] font-semibold text-[#1F1F1A]">{typeName || "—"}</span>
+                        <span className="shrink-0 text-[13px] font-semibold text-[#1F1F1A]">{typeName || "-"}</span>
                         <span className="shrink-0 text-[#5F624F]/50">/</span>
                         <select
                           aria-label="Subtype"
@@ -1218,7 +1218,7 @@ export function PrivateHireCard({ request }: { request: PrivateHireRequest }) {
                           onChange={(e) => setSubtypeId(e.target.value)}
                           className="min-w-0 cursor-pointer bg-transparent text-right text-[13px] font-semibold text-[#1F1F1A] outline-none [text-align-last:right]"
                         >
-                          {!subtypeId && <option value="">—</option>}
+                          {!subtypeId && <option value="">-</option>}
                           {subtypeOptions.map((s) => (
                             <option key={s.id} value={String(s.id)}>{toTitleCase(s.name)}</option>
                           ))}
@@ -1528,7 +1528,7 @@ function ClashList({ clashes }: { clashes: ClashEvent[] }) {
       <div className="flex items-center gap-2">
         <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-600" />
         <p className="font-black text-[10px] tracking-tight text-red-700 uppercase">
-          Time slot full — conflicts with:
+          Time slot full - conflicts with:
         </p>
       </div>
       <ul className="list-disc space-y-0.5 pl-6">

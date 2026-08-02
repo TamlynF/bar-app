@@ -313,9 +313,9 @@ export default function PromoContentClient({
               <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                   <DetailCell label="Title" value={selected.title} />
-                  <DetailCell label="Description" value={selected.description || "—"} />
+                  <DetailCell label="Description" value={selected.description || "-"} />
                   <DetailCell label="Media Type" value={selected.media_type} />
-                  <DetailCell label="External URL" value={selected.external_url || "—"} />
+                  <DetailCell label="External URL" value={selected.external_url || "-"} />
                   <DetailCell label="Status" value={selected.is_active ? "Active" : "Inactive"} />
                   <DetailCell label="Display Order" value={String(selected.display_order)} />
                 </div>

@@ -290,7 +290,7 @@ export default function MenuClient({
                 )}
                 {!isCollapsed && cat.menu_items.length === 0 && (
                   <div className="px-4 py-4 text-center text-[11px] text-[#5F624F]">
-                    No items — tap + to add
+                    No items - tap + to add
                   </div>
                 )}
               </section>
@@ -335,7 +335,7 @@ export default function MenuClient({
             {sheet?.type === "view-category" && (
               <div className="space-y-3">
                 <DetailCell label="Name" value={sheet.category.name} />
-                <DetailCell label="Note" value={sheet.category.note || "—"} />
+                <DetailCell label="Note" value={sheet.category.note || "-"} />
                 <DetailCell label="Order" value={String(sheet.category.display_order)} />
                 <DetailCell label="Status" value={sheet.category.is_active ? "Active" : "Inactive"} />
                 <DetailCell label="Items" value={String(sheet.category.menu_items.length)} />

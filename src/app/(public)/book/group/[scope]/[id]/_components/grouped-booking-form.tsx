@@ -81,7 +81,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
   function eventOptionLabel(ev: GroupedEvent) {
     const time = formatTime(ev.start_time);
     const base = time ? `${formatEventDate(ev.date)} · ${time}` : formatEventDate(ev.date);
-    return showTitleInSelector && ev.title ? `${base} — ${ev.title}` : base;
+    return showTitleInSelector && ev.title ? `${base} - ${ev.title}` : base;
   }
 
   const selectedEvent = events.find((e) => String(e.id) === eventId) ?? events[0];
@@ -503,7 +503,7 @@ export default function GroupedBookingForm({ events, config, showTitleInSelector
             <Loader2 className="h-6 w-6 animate-spin" />
           ) : hasPricing ? (
             <span className="flex items-center">
-              Pay &amp; Book — £{total.toFixed(2)} <ChevronRight className="ml-2 h-6 w-6" />
+              Pay &amp; Book - £{total.toFixed(2)} <ChevronRight className="ml-2 h-6 w-6" />
             </span>
           ) : (
             <span className="flex items-center">

@@ -14,46 +14,46 @@ npm run build        # Production build (also runs TypeScript check)
 npm run lint         # ESLint
 npm run start        # Start production server
 
-npm test             # Unit tests (Vitest) — pure logic in src/lib
-npm run test:e2e     # End-to-end (Playwright) — runs on phone + desktop viewports
+npm test             # Unit tests (Vitest) - pure logic in src/lib
+npm run test:e2e     # End-to-end (Playwright) - runs on phone + desktop viewports
 npm run db:start     # Start local Supabase (Docker, Linux containers) for E2E
 npm run db:reset     # Rebuild local DB from supabase/migrations + supabase/seed.sql
 npm run db:stop      # Stop local Supabase
 ```
 
 **Testing** (see `TESTING.md` for the full guide):
-- **Unit tests** (Vitest) live beside the code in `src/lib/__tests__/*.test.ts` — pure functions only; don't unit-test Server Components.
+- **Unit tests** (Vitest) live beside the code in `src/lib/__tests__/*.test.ts` - pure functions only; don't unit-test Server Components.
 - **E2E tests** (Playwright) live in `e2e/` and run against a **local** Supabase stack (`supabase/` migrations + seed), never production. Every spec runs on both a mobile and a desktop viewport.
 - Always run `npm test` before committing; run the E2E suite when touching booking/event flows.
-- The schema migration in `supabase/migrations/` is a local **test** schema (RLS off) introspected from prod — don't treat it as the production source of truth.
+- The schema migration in `supabase/migrations/` is a local **test** schema (RLS off) introspected from prod - don't treat it as the production source of truth.
 
 ## Git workflow
 
 **Do not commit or push changes.** All git operations (staging, committing, pushing) are done manually by the user.
 
 **Commit message conventions (for reference):**
-- `add: <thing>` — new feature or file
-- `fix: <thing>` — bug fix
-- `update: <thing>` — enhancement to existing feature
-- `refactor: <thing>` — restructure without behaviour change
+- `add: <thing>` - new feature or file
+- `fix: <thing>` - bug fix
+- `update: <thing>` - enhancement to existing feature
+- `refactor: <thing>` - restructure without behaviour change
 
 Always run `npm run build` successfully before committing.
 
 ---
 
-## Tech stack — do not deviate without asking
+## Tech stack - do not deviate without asking
 
 - **Framework:** Next.js 16 (App Router, Server Components by default, React 19, React Compiler enabled)
 - **Language:** TypeScript, strict mode
-- **Styling:** Tailwind CSS 4 only — no CSS modules in new code (existing `.module.css` files are tolerated, but don't add more). No styled-components. **No inline `style` props** — this triggers Edge DevTools `no-inline-styles` warnings. **Utility generation is now ON**: `src/app/globals.css` starts with `@import "tailwindcss";` (+ `@import "tw-animate-css";`) and `@source` globs, so Tailwind auto-generates any utility/arbitrary value you use — no need to hand-add utilities. Only genuinely custom semantic classes (`.olive-bg`, `.neon-*`, `.swatch-*`, the `[style*="--ev-c"]` colour hooks, `.rich-content`, etc.) live hand-written under `@layer utilities` at the bottom of `globals.css`; add new ones there only when a class can't be expressed as a Tailwind utility. (Historical note: this file used to be committed as pre-compiled CSS with utilities hand-maintained; that's no longer the case.) For dynamic values that can't be expressed as static Tailwind classes:
-  1. **Preferred:** Set a CSS custom property via `style` and consume it via Tailwind arbitrary value — e.g. `style={{ "--badge-color": color } as React.CSSProperties}` + `className="bg-[var(--badge-color)]"`. This keeps the actual styling in classes.
+- **Styling:** Tailwind CSS 4 only - no CSS modules in new code (existing `.module.css` files are tolerated, but don't add more). No styled-components. **No inline `style` props** - this triggers Edge DevTools `no-inline-styles` warnings. **Utility generation is now ON**: `src/app/globals.css` starts with `@import "tailwindcss";` (+ `@import "tw-animate-css";`) and `@source` globs, so Tailwind auto-generates any utility/arbitrary value you use - no need to hand-add utilities. Only genuinely custom semantic classes (`.olive-bg`, `.neon-*`, `.swatch-*`, the `[style*="--ev-c"]` colour hooks, `.rich-content`, etc.) live hand-written under `@layer utilities` at the bottom of `globals.css`; add new ones there only when a class can't be expressed as a Tailwind utility. (Historical note: this file used to be committed as pre-compiled CSS with utilities hand-maintained; that's no longer the case.) For dynamic values that can't be expressed as static Tailwind classes:
+  1. **Preferred:** Set a CSS custom property via `style` and consume it via Tailwind arbitrary value - e.g. `style={{ "--badge-color": color } as React.CSSProperties}` + `className="bg-[var(--badge-color)]"`. This keeps the actual styling in classes.
   2. **Acceptable:** Use `style` only for CSS custom properties (`--var-name`), never for standard CSS properties like `backgroundColor`, `color`, `borderColor`, `minWidth`, etc.
   3. When refactoring existing inline styles, convert `style={{ backgroundColor: x, color: y }}` → `style={{ "--c": x, "--bg": y } as React.CSSProperties}` + Tailwind `text-[var(--c)] bg-[var(--bg)]`.
 
-  Also **prefer the canonical scale token over an arbitrary px value** when the value is on the scale (`min-w-50` not `min-w-[200px]`) — see the "Prefer canonical Tailwind classes" rule under Visual standards below.
-- **Component library:** shadcn/ui (new-york style), components live in `src/components/ui/`. Owned by us — edit freely.
+  Also **prefer the canonical scale token over an arbitrary px value** when the value is on the scale (`min-w-50` not `min-w-[200px]`) - see the "Prefer canonical Tailwind classes" rule under Visual standards below.
+- **Component library:** shadcn/ui (new-york style), components live in `src/components/ui/`. Owned by us - edit freely.
 - **Primitives:** Radix UI (via shadcn)
-- **Icons:** Lucide React for UI/interface icons. For brand/social logos (Instagram, Facebook, YouTube, X, TikTok, etc.), use Simple Icons via `react-icons/si` (`SiInstagram`, `SiFacebook`, `SiYoutube`, …) — Lucide's brand icons are deprecated and being removed in v1.0. Don't add other icon libraries without asking.
+- **Icons:** Lucide React for UI/interface icons. For brand/social logos (Instagram, Facebook, YouTube, X, TikTok, etc.), use Simple Icons via `react-icons/si` (`SiInstagram`, `SiFacebook`, `SiYoutube`, …) - Lucide's brand icons are deprecated and being removed in v1.0. Don't add other icon libraries without asking.
 - **Forms:** react-hook-form + zod where validation is non-trivial; plain `useState` is fine for simple forms
 - **Auth:** Supabase Auth via `@supabase/ssr`
 - **DB:** Supabase Postgres (no Prisma; use the Supabase client directly)
@@ -62,7 +62,7 @@ Always run `npm run build` successfully before committing.
 - **AI:** Google Gemini (quiz generation)
 - **Storage:** Supabase Storage (`gallery`, `band-videos` buckets)
 - **Music:** Spotify Web Playback SDK (quiz integration only)
-- **Animations:** `tw-animate-css` + Tailwind animate utilities. No Framer Motion (yet) — ask before adding.
+- **Animations:** `tw-animate-css` + Tailwind animate utilities. No Framer Motion (yet) - ask before adding.
 - **Toasts:** `sonner`
 - **Date handling:** `date-fns` only
 - **Charts/tables:** none currently; ask before adding
@@ -102,7 +102,7 @@ src/app/
 
 ---
 
-## Supabase clients — pick the right one
+## Supabase clients - pick the right one
 
 - **Server** (`@/lib/supabase/server.ts`) → Server Components, Server Actions, `proxy.ts`. Reads cookies via `next/headers`.
 - **Browser** (`@/lib/supabase/client.ts`) → Client Components that need direct access (e.g. Storage uploads).
@@ -111,7 +111,7 @@ src/app/
 Required env vars:
 ```
 NEXT_PUBLIC_SUPABASE_URL
-NEXT_PUBLIC_SUPABASE_ANON_KEY            # JWT — used in proxy.ts and browser client
+NEXT_PUBLIC_SUPABASE_ANON_KEY            # JWT - used in proxy.ts and browser client
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY     # New Supabase publishable key format
 SUPABASE_SERVICE_ROLE_KEY                # Admin client only, never NEXT_PUBLIC_
 RESEND_API_KEY
@@ -132,7 +132,7 @@ GOOGLE_MAPS_API_KEY                      # Static Maps image on /contact, proxie
 
 - **Reads** happen in async Server Components via the server Supabase client. Don't fetch in `useEffect` unless there's a specific client-side reason.
 - **Writes** go through Server Actions co-located with the route (`actions.ts`). No API routes for mutations unless there's a specific reason (webhooks, third-party callbacks like Square).
-- **Email sending** fires from Server Actions — never from client code.
+- **Email sending** fires from Server Actions - never from client code.
 
 For unauthenticated/public mutations (booking forms, manage-booking page), Server Actions are still fine; they don't require an authenticated session.
 
@@ -144,7 +144,7 @@ This app has two faces and they look intentionally different. **Don't mix them.*
 
 ### Public site (`/`, `/book`, `/menu`, `/gallery`, `/contact`)
 - Dark theme: `#26300D` (deep olive) background, `#FDCC4B` (gold) accent
-- "Gritty bar" aesthetic — see `STYLE_GUIDE.md` for the full palette and rules
+- "Gritty bar" aesthetic - see `STYLE_GUIDE.md` for the full palette and rules
 - Mobile-first; design at 375px width and scale up
 - Bottom-sheet style nav at the top is acceptable; no persistent bottom nav on public pages
 - Big, confident typography; lots of uppercase tracking; serif or bold display vibes welcome
@@ -152,7 +152,7 @@ This app has two faces and they look intentionally different. **Don't mix them.*
 
 ### Admin portal (`/dashboard`, `/event-bookings/*`, `/event-setups/*`, `/settings/*`)
 - Light/warm theme: `#F7F4EA` background, `#5C4033` espresso primary, `#E6DFC8` borders
-- Card-based information density — this is a working tool, not a marketing surface
+- Card-based information density - this is a working tool, not a marketing surface
 - Sidebar nav on desktop (≥sm), persistent bottom nav on mobile (≤sm)
 - Sheet-based detail/edit views (bottom sheet on mobile, centered on desktop)
 
@@ -160,11 +160,11 @@ If you find yourself styling a public page with espresso/cream tones, or an admi
 
 ---
 
-## Visual standards (summary — full version in `STYLE_GUIDE.md`)
+## Visual standards (summary - full version in `STYLE_GUIDE.md`)
 
 - **Touch targets ≥ 44×44px** on anything tappable on mobile (WCAG)
-- **Icon-only buttons/links need `aria-label` or `title`** — a `<button>`/`<a>` containing only a Lucide icon must have an accessible name, or Edge DevTools fires `axe/name-role-value` ("Buttons must have discernible text"). Same class of Edge DevTools warning as `no-inline-styles`. See STYLE_GUIDE Accessibility.
-- **Every form element needs a label** — `<input>`/`<select>`/`<textarea>`, including checkboxes, need a `<label htmlFor>` or `aria-label`. A `<span>` sitting next to the input is not a label. Missing → Edge DevTools `axe/forms` ("Form elements must have labels"). See STYLE_GUIDE Accessibility.
+- **Icon-only buttons/links need `aria-label` or `title`** - a `<button>`/`<a>` containing only a Lucide icon must have an accessible name, or Edge DevTools fires `axe/name-role-value` ("Buttons must have discernible text"). Same class of Edge DevTools warning as `no-inline-styles`. See STYLE_GUIDE Accessibility.
+- **Every form element needs a label** - `<input>`/`<select>`/`<textarea>`, including checkboxes, need a `<label htmlFor>` or `aria-label`. A `<span>` sitting next to the input is not a label. Missing → Edge DevTools `axe/forms` ("Form elements must have labels"). See STYLE_GUIDE Accessibility.
 - **Prefer canonical Tailwind classes over arbitrary values.** If a value sits on the spacing/size scale, use the token, not the bracket form: `min-w-50` not `min-w-[200px]`, `gap-2` not `gap-[8px]`, `p-4` not `p-[16px]`, `text-sm` not `text-[14px]`, `w-px` not `w-[1px]`. (Scale token `N` = `N × 0.25rem` = `N × 4px` at the 16px root, so `px ÷ 4` gives the token.) This is exactly what the IntelliSense `suggestCanonicalClasses` hint flags. Arbitrary `[...]` is **reserved** for: values with no canonical token (`text-[10px]`, `text-[13px]`), non-spacing units (`h-[85vh]`, `w-[90%]`), custom palette hex (`border-[#E6DFC8]`), and dynamic CSS vars (`bg-[var(--badge-color)]`). Don't invent off-scale px values just to use a bracket.
 - **Type scale:** Tailwind defaults. Display headings get `font-black uppercase tracking-tight` or `tracking-tighter`. Eyebrows/labels get `text-[10px] font-black uppercase tracking-widest`.
 - **Colour usage:** Public pages use the olive/gold palette plus deep burgundy and a neon accent (see STYLE_GUIDE). Admin pages stay on the espresso/cream palette.
@@ -177,10 +177,10 @@ If you find yourself styling a public page with espresso/cream tones, or an admi
 
 ## Code style
 
-- **Do not add comments to code.** The code should be self-documenting — prefer a clearer name or a small extracted function over a comment explaining what something does.
+- **Do not add comments to code.** The code should be self-documenting - prefer a clearer name or a small extracted function over a comment explaining what something does.
 - **Never add change-narration comments** (`// added X`, `// new`, `// updated to handle Y`, `// removed old handler`). The diff already says this.
 - Only write a comment when the user explicitly asks for one, or when the surrounding file already comments that exact kind of construct and omitting it would be inconsistent.
-- **Keep existing comments** — don't strip comments already in the file unless the code they describe is being deleted or the comment has become wrong.
+- **Keep existing comments** - don't strip comments already in the file unless the code they describe is being deleted or the comment has become wrong.
 
 ---
 
@@ -188,19 +188,19 @@ If you find yourself styling a public page with espresso/cream tones, or an admi
 
 The booking pages share a public dark theme but each has its own logic:
 
-- `/book` — hub, lists quiz/bingo/band/private + upcoming bookable events
-- `/book/quiz` — Thursday quiz booking form (free, lazy event creation, waitlist when full)
-- `/book/bingo` — Music Bingo (paid via Square, pay upfront)
-- `/book/band` — band/artist stage application (review queue)
-- `/book/private` — private hire enquiry (review queue)
-- `/book/event/[id]` — generic ticketed event booking (paid via Square)
-- `/manage-booking/[id]` — public self-service (view, modify, cancel)
+- `/book` - hub, lists quiz/bingo/band/private + upcoming bookable events
+- `/book/quiz` - Thursday quiz booking form (free, lazy event creation, waitlist when full)
+- `/book/bingo` - Music Bingo (paid via Square, pay upfront)
+- `/book/band` - band/artist stage application (review queue)
+- `/book/private` - private hire enquiry (review queue)
+- `/book/event/[id]` - generic ticketed event booking (paid via Square)
+- `/manage-booking/[id]` - public self-service (view, modify, cancel)
 
 ---
 
-## Common pitfalls — known issues to avoid
+## Common pitfalls - known issues to avoid
 
-- **`use client` directives:** Server Components are the default. Don't add `"use client"` unless you actually need state, effects, or browser APIs. Layouts (`layout.tsx`) under `(private)/` and `(public)/` are currently marked `"use client"` because they use `usePathname` — that's deliberate, don't change without thinking.
+- **`use client` directives:** Server Components are the default. Don't add `"use client"` unless you actually need state, effects, or browser APIs. Layouts (`layout.tsx`) under `(private)/` and `(public)/` are currently marked `"use client"` because they use `usePathname` - that's deliberate, don't change without thinking.
 - **Cookie/JWT mismatch:** `proxy.ts` and the browser client use `NEXT_PUBLIC_SUPABASE_ANON_KEY` (the JWT). The server client uses `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. Don't swap them.
 - **`event_types` joins:** Supabase joins can return as array OR object depending on the query. Always handle both: `const et = Array.isArray(ev.event_types) ? ev.event_types[0] : ev.event_types`.
 - **Square BigInt:** Square payment amounts use `BigInt`. Don't try to `JSON.stringify` a payment link response without handling it.
@@ -213,18 +213,18 @@ The booking pages share a public dark theme but each has its own logic:
 
 | Table | Purpose |
 |---|---|
-| `bookings` | Quiz / bingo / event bookings — status: `confirmed`, `waitlisted`, `pending`, `cancelled` |
+| `bookings` | Quiz / bingo / event bookings - status: `confirmed`, `waitlisted`, `pending`, `cancelled` |
 | `contacts` | Customer details (shared across booking types, keyed on email) |
-| `events` / `event_types` / `event_subtypes` | Schedule. Events are created from exactly three places: the admin event sheet, the band `booked` transition, and private-hire `confirmed` — there is no lazy creation on booking. Poster images resolve at render (`src/lib/event-image.ts`): `events.image_url` → the booked act's `music_acts.cover_image_url` → `event_subtypes.default_image_url`. A null `events.image_url` means "inherit", so changing a subtype default updates every non-overridden event; nothing is ever copied between rows |
+| `events` / `event_types` / `event_subtypes` | Schedule. Events are created from exactly three places: the admin event sheet, the band `booked` transition, and private-hire `confirmed` - there is no lazy creation on booking. Poster images resolve at render (`src/lib/event-image.ts`): `events.image_url` → the booked act's `music_acts.cover_image_url` → `event_subtypes.default_image_url`. A null `events.image_url` means "inherit", so changing a subtype default updates every non-overridden event; nothing is ever copied between rows |
 | `booking_table_mappings` | Seating assignment for confirmed bookings |
 | `tables` | Physical tables with `max_capacity` |
-| `band_booking_requests` | Stage applications — five-stage pipeline: `new` → `reviewing` → `offered` → `booked` → `declined`. `booked` (with a date) places an active `events` row; every other status deactivates the linked event. `offered` emails an offer, `booked`/`declined` email the outcome; reschedule sends a request back to `offered`. Separate `payment_status` (`no_payment`/`unpaid`/`partially_paid`/`paid`/`over_paid`, derived from amounts) tracks the fee |
-| `private_hire_requests` | Private hire enquiries — status: `pending`, `confirmed`, `cancelled`. `confirmed` (with a date) places/updates an active `events` row; `cancelled` deactivates the linked event |
+| `band_booking_requests` | Stage applications - five-stage pipeline: `new` → `reviewing` → `offered` → `booked` → `declined`. `booked` (with a date) places an active `events` row; every other status deactivates the linked event. `offered` emails an offer, `booked`/`declined` email the outcome; reschedule sends a request back to `offered`. Separate `payment_status` (`no_payment`/`unpaid`/`partially_paid`/`paid`/`over_paid`, derived from amounts) tracks the fee |
+| `private_hire_requests` | Private hire enquiries - status: `pending`, `confirmed`, `cancelled`. `confirmed` (with a date) places/updates an active `events` row; `cancelled` deactivates the linked event |
 | `quiz_category_configs` | Quiz rounds + question count targets |
 | `past_quiz_questions` | Archive (fed back to Gemini to avoid repeats) |
 | `gallery_images` | Media on the public gallery and homepage |
 | `specials` | Drink deals on the homepage |
-| `merchandise` | Branded goods shown on the homepage — display only, no checkout. `display_order` is auto-resequenced 1..N across active rows (see `src/lib/merchandise-order.ts`); inactive rows sit at 0 |
+| `merchandise` | Branded goods shown on the homepage - display only, no checkout. `display_order` is auto-resequenced 1..N across active rows (see `src/lib/merchandise-order.ts`); inactive rows sit at 0 |
 | `promo_content` | Social-style promo cards on the homepage |
 | `menu_categories` / `menu_items` | Public menu |
 | `company_information` | Address, socials, opening hours, capacity |
@@ -248,6 +248,6 @@ The booking pages share a public dark theme but each has its own logic:
 - Refactor `proxy.ts` to `middleware.ts` or rename the exported function
 - Use API routes for mutations that could be Server Actions
 - Disable TypeScript or ESLint rules
-- Commit secrets — `.env.local` only, never committed
+- Commit secrets - `.env.local` only, never committed
 - Use `git add .` or `git add -A`
 - Touch the admin theme when working on public pages, or vice versa

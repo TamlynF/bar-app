@@ -380,7 +380,7 @@ export function computeFloorPlan(input: FloorPlanInput): FloorPlanResult {
   if (unplaced.length > 0) {
     warnings.push({
       level: "warn",
-      message: `Only ${n} of ${tables.length} tables fit — ${unplaced.length} could not be placed.`,
+      message: `Only ${n} of ${tables.length} tables fit - ${unplaced.length} could not be placed.`,
     });
   }
   if (settings.aisleWidth < MIN_AISLE) {

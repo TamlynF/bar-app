@@ -64,7 +64,7 @@ export async function loadBookingSnapshot(
     return null;
   }
   if (!data) {
-    console.warn(`[booking-notifications] booking ${bookingId} not found — no email sent`);
+    console.warn(`[booking-notifications] booking ${bookingId} not found - no email sent`);
     return null;
   }
 
@@ -84,7 +84,7 @@ export async function loadBookingSnapshot(
   const event = unwrap(data.events as unknown as EventRel | EventRel[] | null);
 
   if (!contact?.email) {
-    console.warn(`[booking-notifications] booking ${bookingId} has no contact email — no email sent`);
+    console.warn(`[booking-notifications] booking ${bookingId} has no contact email - no email sent`);
     return null;
   }
 

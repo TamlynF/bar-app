@@ -141,7 +141,7 @@ function toTitleCase(str?: string | null) {
 }
 
 function formatDate(dateStr: string | null) {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     weekday: "short",
     day: "numeric",
@@ -151,12 +151,12 @@ function formatDate(dateStr: string | null) {
 }
 
 function formatTime(timeStr: string | null) {
-  if (!timeStr) return "—";
+  if (!timeStr) return "-";
   return timeStr.substring(0, 5);
 }
 
 function formatDateTime(iso?: string | null) {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString("en-GB", {
     day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit",
   });
@@ -168,7 +168,7 @@ function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
-      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "—"}</span>
+      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "-"}</span>
     </div>
   );
 }
@@ -922,8 +922,8 @@ export default function EventsClient({
 
   const TL_START_MIN = 8 * 60;
   const TL_END_MIN = 26 * 60;
-  const TL_MIN_GAP = 26; // % — keep stacked pills from overlapping (fits 2-line phone pills)
-  const TL_MAX_TOP = 78; // % — keep the last pill inside the cell
+  const TL_MIN_GAP = 26; // % - keep stacked pills from overlapping (fits 2-line phone pills)
+  const TL_MAX_TOP = 78; // % - keep the last pill inside the cell
   const timeTopPct = (startTime: string | null) => {
     const m = startTime ? parseTimeToMinutes(startTime.slice(0, 5)) : null;
     if (m == null) return 0;
@@ -1366,9 +1366,9 @@ export default function EventsClient({
                         />
                       )}
                       <SheetRow label="Created" value={formatDateTime(selected.created_at)} />
-                      <SheetRow label="Created By" value={selected.created_by ? (employeeById.get(selected.created_by) ?? "—") : "—"} />
+                      <SheetRow label="Created By" value={selected.created_by ? (employeeById.get(selected.created_by) ?? "-") : "-"} />
                       <SheetRow label="Last Modified" value={formatDateTime(selected.updated_at)} />
-                      <SheetRow label="Modified By" value={selected.updated_by ? (employeeById.get(selected.updated_by) ?? "—") : "—"} />
+                      <SheetRow label="Modified By" value={selected.updated_by ? (employeeById.get(selected.updated_by) ?? "-") : "-"} />
                     </PopoverContent>
                   </Popover>
 
@@ -1462,15 +1462,15 @@ export default function EventsClient({
                       label="Type / Subtype"
                       value={
                         <>
-                          {toTitleCase(type?.name) || "—"}
+                          {toTitleCase(type?.name) || "-"}
                           <span className="mx-1.5 font-normal text-[#5F624F]/50">/</span>
-                          {toTitleCase(sub?.name) || "—"}
+                          {toTitleCase(sub?.name) || "-"}
                         </>
                       }
                     />
                     <DetailCell label="Date" value={formatDate(selected.date)} />
-                    <DetailCell label="Time" value={selected.start_time || selected.end_time ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}` : "—"} />
-                    {(sub?.host_required || selected.host_employee_id != null) && <DetailCell label="Host" value={host?.full_name ?? "—"} />}
+                    <DetailCell label="Time" value={selected.start_time || selected.end_time ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}` : "-"} />
+                    {(sub?.host_required || selected.host_employee_id != null) && <DetailCell label="Host" value={host?.full_name ?? "-"} />}
                     {(sub?.payment_required || hasPricing) && (
                       <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
                     )}
@@ -1532,7 +1532,7 @@ export default function EventsClient({
                       >
                         <DetailCell label="Fully Booked" toggle={!!selected.is_fully_booked} />
                         {showWinningTeam && (
-                          <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "—"} />
+                          <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "-"} />
                         )}
                         <div className="grid grid-cols-3 divide-x divide-[#E6DFC8]/50 border-b border-[#E6DFC8] last:border-0">
                           <div className="px-2 py-2 text-center sm:px-3">
@@ -1848,7 +1848,7 @@ export default function EventsClient({
                                 >
                                   <option value="">No booking</option>
                                   {eventBookings.map(b => (
-                                    <option key={b.id} value={b.id}>#{b.id} — {b.group_name || "Unnamed"}</option>
+                                    <option key={b.id} value={b.id}>#{b.id} - {b.group_name || "Unnamed"}</option>
                                   ))}
                                 </select>
                                 <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5F624F]" />
@@ -1990,7 +1990,7 @@ function DetailCell({ label, value, icon, toggle, accent }: { label: string; val
       {toggle !== undefined ? (
         <ToggleSlider on={toggle} />
       ) : (
-        <span className={cn("text-right text-[13px] font-semibold", accent ?? "text-[#1F1F1A]")}>{value || "—"}</span>
+        <span className={cn("text-right text-[13px] font-semibold", accent ?? "text-[#1F1F1A]")}>{value || "-"}</span>
       )}
     </div>
   );

@@ -30,13 +30,13 @@ function formatEventDate(date: string | null): string {
 }
 
 function people(size: number | null): string {
-  if (size == null) return "—";
+  if (size == null) return "-";
   return `${size} ${size === 1 ? "Person" : "People"}`;
 }
 
 function blank(value: string | null | undefined): string {
   const trimmed = value?.trim();
-  return trimmed ? trimmed : "—";
+  return trimmed ? trimmed : "-";
 }
 
 export function describeBookingChanges(
@@ -188,7 +188,7 @@ export function buildBookingChangedEmail(p: {
       heading: p.booking.eventTitle,
       greeting: `Hey ${p.booking.customerName}!`,
       intro: p.changedByAdmin
-        ? "We've updated your booking. Here's what changed — if this doesn't look right, please get in touch."
+        ? "We've updated your booking. Here's what changed - if this doesn't look right, please get in touch."
         : "Your booking has been updated. Here's what changed.",
       bodyHtml: changeRowsHtml(p.changes),
       ctaLabel: "View Booking",
@@ -208,9 +208,9 @@ export function buildBookingCancelledEmail(p: {
       greeting: `Hey ${p.booking.customerName},`,
       intro: p.cancelledByAdmin
         ? "Your booking has been cancelled by the venue. If you weren't expecting this, please get in touch."
-        : "Your booking has been cancelled. Sorry to miss you — you're welcome back any time.",
+        : "Your booking has been cancelled. Sorry to miss you - you're welcome back any time.",
       bodyHtml: detailRowsHtml(bookingDetailRows(p.booking)),
-      footnote: "If you paid for this booking, refunds are handled by our team — please allow 3–5 business days.",
+      footnote: "If you paid for this booking, refunds are handled by our team - please allow 3–5 business days.",
     }),
   };
 }
@@ -229,7 +229,7 @@ export function buildAdminNewBookingEmail(p: {
 }): BookingEmail {
   console.log("buildAdminNewBookingEmail", JSON.stringify(p, null, 2), "adminUrl:", p.adminUrl);
   return {
-    subject: `New booking — ${p.booking.eventTitle}, ${formatEventDate(p.booking.eventDate)} (${people(p.booking.groupSize)})`,
+    subject: `New booking - ${p.booking.eventTitle}, ${formatEventDate(p.booking.eventDate)} (${people(p.booking.groupSize)})`,
     html: layout({
       heading: "New Booking",
       eyebrow: p.booking.eventTitle,
@@ -248,7 +248,7 @@ export function buildAdminBookingChangedEmail(p: {
   adminUrl: string;
 }): BookingEmail {
   return {
-    subject: `Booking changed — ${p.booking.eventTitle}, ${formatEventDate(p.booking.eventDate)} (#${p.booking.bookingId})`,
+    subject: `Booking changed - ${p.booking.eventTitle}, ${formatEventDate(p.booking.eventDate)} (#${p.booking.bookingId})`,
     html: layout({
       heading: "Booking Changed",
       eyebrow: p.booking.eventTitle,
@@ -266,7 +266,7 @@ export function buildAdminBookingCancelledEmail(p: {
   adminUrl: string;
 }): BookingEmail {
   return {
-    subject: `Booking cancelled — ${p.booking.eventTitle}, ${formatEventDate(p.booking.eventDate)} (#${p.booking.bookingId})`,
+    subject: `Booking cancelled - ${p.booking.eventTitle}, ${formatEventDate(p.booking.eventDate)} (#${p.booking.bookingId})`,
     html: layout({
       heading: "Booking Cancelled",
       eyebrow: p.booking.eventTitle,

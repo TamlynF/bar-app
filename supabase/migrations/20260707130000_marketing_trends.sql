@@ -1,4 +1,4 @@
--- Marketing Trends & Competitor Insights — schema.
+-- Marketing Trends & Competitor Insights - schema.
 --
 -- Backs the admin "Marketing" section: AI/web-sourced advertising & competitor-event
 -- trends staff can save/ignore, local competitor drink/snack/food prices for menu
@@ -6,7 +6,7 @@
 -- All additive + idempotent. IDs use uuid to match the app's "generated content"
 -- tables (band/private requests, generated quiz questions).
 
--- ── marketing_trends — one row per AI-surfaced trend ─────────────────────────
+-- ── marketing_trends - one row per AI-surfaced trend ─────────────────────────
 create table if not exists public.marketing_trends (
   id          uuid not null default gen_random_uuid(),
   kind        text not null,               -- 'advertising' | 'event_idea'
@@ -51,7 +51,7 @@ create unique index if not exists marketing_trends_signature_key
 create index if not exists marketing_trends_state_idx on public.marketing_trends (state);
 create index if not exists marketing_trends_kind_idx  on public.marketing_trends (kind);
 
--- ── competitor_prices — local competitor price data points ───────────────────
+-- ── competitor_prices - local competitor price data points ───────────────────
 create table if not exists public.competitor_prices (
   id           uuid not null default gen_random_uuid(),
   venue_name   text not null,
@@ -79,7 +79,7 @@ alter table public.competitor_prices
 
 create index if not exists competitor_prices_area_idx on public.competitor_prices (area);
 
--- ── marketing_settings — single row (like company_information) ────────────────
+-- ── marketing_settings - single row (like company_information) ────────────────
 create table if not exists public.marketing_settings (
   id                     uuid not null default gen_random_uuid(),
   comparison_area        text,

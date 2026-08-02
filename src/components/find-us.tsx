@@ -142,7 +142,7 @@ export function FindUs({ info }: { info: CompanyInfo }) {
         ) : (
           <div className="flex items-center rounded-2xl border border-hairline bg-canvas-2 p-5">
             <p className="text-sm font-medium text-stone-400">
-              Opening hours coming soon — give us a call or check our socials.
+              Opening hours coming soon - give us a call or check our socials.
             </p>
           </div>
         )}

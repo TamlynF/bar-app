@@ -81,7 +81,7 @@ test.afterEach(async () => {
   if (typeId) await admin.from("event_types").delete().eq("id", typeId);
 });
 
-test.describe("public grouped booking — shared config source", () => {
+test.describe("public grouped booking - shared config source", () => {
   test("per_type scope renders the category's shared booking config", async ({ page }) => {
     await page.goto(`/book/group/type/${typeId}`);
 

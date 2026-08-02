@@ -122,7 +122,7 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
   const handleCancel = async () => {
     const ok = await confirm({
       title: "Cancel booking",
-      description: "Are you sure you want to cancel this booking? Refunds are processed by our team — please allow 3–5 business days.",
+      description: "Are you sure you want to cancel this booking? Refunds are processed by our team - please allow 3–5 business days.",
       confirmLabel: "Cancel booking",
       variant: "destructive",
     });
@@ -226,17 +226,17 @@ export default function ManageBingoBooking({ booking }: { booking: BingoManageBo
             <DetailRow
               icon={<User />}
               label="Table Name"
-              value={booking.group_name ?? "—"}
+              value={booking.group_name ?? "-"}
             />
             <DetailRow
               icon={<Users />}
               label="People"
-              value={`${booking.group_size ?? "—"} ${booking.group_size === 1 ? "person" : "people"}`}
+              value={`${booking.group_size ?? "-"} ${booking.group_size === 1 ? "person" : "people"}`}
             />
             <DetailRow
               icon={<User />}
               label="Booked By"
-              value={booking.contacts?.full_name ?? "—"}
+              value={booking.contacts?.full_name ?? "-"}
             />
             <DetailRow
               icon={<CreditCard />}

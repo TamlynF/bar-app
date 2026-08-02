@@ -18,7 +18,7 @@ function row(
 
 const ABC = [row(1, "A", 1), row(2, "B", 2), row(3, "C", 3)];
 
-describe("planSave — creating", () => {
+describe("planSave - creating", () => {
   it("appends a new active item after the last active one", () => {
     const plan = planSave(ABC, { id: null, isActive: true, targetPosition: null });
     expect(plan.position).toBe(4);
@@ -44,7 +44,7 @@ describe("planSave — creating", () => {
   });
 });
 
-describe("planSave — deactivating", () => {
+describe("planSave - deactivating", () => {
   it("moves the row to 0 and closes the gap above it", () => {
     const plan = planSave(ABC, { id: 2, isActive: false, targetPosition: 2 });
     expect(plan.position).toBe(0);
@@ -58,7 +58,7 @@ describe("planSave — deactivating", () => {
   });
 });
 
-describe("planSave — reactivating", () => {
+describe("planSave - reactivating", () => {
   it("appends a previously inactive row to the end", () => {
     const rows = [row(1, "A", 1), row(3, "C", 2), row(2, "B", 0, false)];
     const plan = planSave(rows, { id: 2, isActive: true, targetPosition: 0 });
@@ -67,7 +67,7 @@ describe("planSave — reactivating", () => {
   });
 });
 
-describe("planSave — moving", () => {
+describe("planSave - moving", () => {
   it("shifts rather than swaps when moving down", () => {
     const plan = planSave(ABC, { id: 1, isActive: true, targetPosition: 3 });
     expect(plan.position).toBe(3);
@@ -114,7 +114,7 @@ describe("planSave — moving", () => {
   });
 });
 
-describe("planSave — self-healing", () => {
+describe("planSave - self-healing", () => {
   it("renumbers gappy positions into a contiguous run", () => {
     const rows = [row(1, "A", 5), row(2, "B", 9), row(3, "C", 40)];
     const plan = planSave(rows, { id: 2, isActive: true, targetPosition: 2 });
@@ -131,7 +131,7 @@ describe("planSave — self-healing", () => {
     expect(plan.changes).toEqual([{ id: 2, display_order: 0 }]);
   });
 
-  it("is idempotent — a second identical save changes nothing", () => {
+  it("is idempotent - a second identical save changes nothing", () => {
     const first = planSave(ABC, { id: 1, isActive: true, targetPosition: 3 });
     const settled: OrderRow[] = ABC.map((r) => {
       if (r.id === 1) return { ...r, display_order: first.position };

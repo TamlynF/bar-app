@@ -50,7 +50,7 @@ test.afterEach(async () => {
   if (contactId) await admin.from("contacts").delete().eq("id", contactId);
 });
 
-test.describe("general bookings — sheet edit & delete", () => {
+test.describe("general bookings - sheet edit & delete", () => {
   test("edit updates the booking and persists", async ({ page }) => {
     await page.goto(ROUTE);
 

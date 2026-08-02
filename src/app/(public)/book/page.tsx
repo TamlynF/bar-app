@@ -48,7 +48,7 @@ type BookingCard = {
   tagline: string;
   icon: string | null; // Lucide icon name, resolved at render
   note: string | null; // admin line under the title (e.g. "Thursdays")
-  cta: string; // footer verb — derived, never authored
+  cta: string; // footer verb - derived, never authored
   colorHex: string; // tint for icon + badge
   date: string | null; // earliest upcoming date (YYYY-MM-DD); null on standing enquiries
   count: number; // number of events represented (1 = single event)
@@ -74,7 +74,7 @@ const REQUEST_CARDS: BookingCard[] = [
     key: "request-music_act",
     href: "/book/band",
     title: "Play Our Stage",
-    tagline: "Bands, DJs and solo artists — send us your links and we'll find you a date.",
+    tagline: "Bands, DJs and solo artists - send us your links and we'll find you a date.",
     icon: "Music",
     note: null,
     cta: "Apply to play",
@@ -90,7 +90,7 @@ const REQUEST_CARDS: BookingCard[] = [
     key: "request-private",
     href: "/book/private",
     title: "Private Hire",
-    tagline: "Birthdays, wedding receptions, corporate nights — tell us what you need.",
+    tagline: "Birthdays, wedding receptions, corporate nights - tell us what you need.",
     icon: "Sparkles",
     note: null,
     cta: "Send an enquiry",
@@ -225,7 +225,7 @@ export default async function BookingHubPage() {
         key={card.key}
         href={card.href}
         style={{ "--cc": card.colorHex } as React.CSSProperties}
-        aria-label={`${card.title} — ${ctaLabel}`}
+        aria-label={`${card.title} - ${ctaLabel}`}
         className={
           "group flex cursor-pointer flex-col rounded-2xl border p-4 shadow-lg shadow-black/20 transition-all duration-300 hover:-translate-y-1 hover:border-(--cc)/50 hover:shadow-xl hover:shadow-black/40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-(--cc) active:scale-[0.99] sm:p-5 " +
           (card.isRequest
@@ -303,7 +303,7 @@ export default async function BookingHubPage() {
         <PageHeader
           eyebrow="Bookings"
           title="Book Your Experience"
-          subtitle="Tickets for what's on — or get in touch about playing our stage and private hire."
+          subtitle="Tickets for what's on - or get in touch about playing our stage and private hire."
         />
 
         <div>

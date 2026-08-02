@@ -31,7 +31,7 @@ export default function BandDetailClient({ request }: { request: BandRequest }) 
         const result = await updateBandStatus(request.id, status, adminNotes || undefined);
         if (result?.clashes?.length) {
           setError(
-            `This slot clashes with ${result.clashes.map((c) => c.title).join(", ")} — pick another time.`
+            `This slot clashes with ${result.clashes.map((c) => c.title).join(", ")} - pick another time.`
           );
           return;
         }

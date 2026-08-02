@@ -1,4 +1,4 @@
-# Event List Redesign — Design Spec / Token Sheet
+# Event List Redesign - Design Spec / Token Sheet
 
 Exact values from the approved prototype (`Event List.html` / `styles.css`).
 Attach this alongside the Claude Code handoff prompt. Mobile canvas: **390 × 844** (iPhone 12 Pro).
@@ -34,13 +34,13 @@ Usage: `hot` = spine / dot / selected chip fill; `bg` = tag + date-badge fill; `
 ## 3. Status colors
 | Status | fg | bg | line |
 |---|---|---|---|
-| Tonight (today) | `#FFFFFF` on `#FF6B35` | — | — |
-| Full | `#B91C1C` | `#FEE2E2` | — |
-| Inactive | `#6B7280` | `#F3F4F6` | — |
+| Tonight (today) | `#FFFFFF` on `#FF6B35` | - | - |
+| Full | `#B91C1C` | `#FEE2E2` | - |
+| Inactive | `#6B7280` | `#F3F4F6` | - |
 | Confirmed | `#15803D` | `#DCFCE7` | `#BBE9C9` |
 | Waitlisted | `#B45309` | `#FEF3C7` | `#F4D58D` |
 | Cancelled | `#6B7280` | `#F1F0EA` | `#E1DCCB` |
-| Quiz ok / warn / bad | `#16A34A` / `#D97706` / `#DC2626` | — | — |
+| Quiz ok / warn / bad | `#16A34A` / `#D97706` / `#DC2626` | - | - |
 
 ---
 
@@ -51,11 +51,11 @@ Families (already wired in app): **Anton** = `--font-display`, **Archivo** = `--
 |---|---|---|---|
 | App header title | Anton | 23px | uppercase, `.03em` |
 | Sheet / event title | Anton | 27px | uppercase, `.01em` |
-| Date-badge day number | Anton | 17px (rows) / 24–30px (agenda) | — |
+| Date-badge day number | Anton | 17px (rows) / 24–30px (agenda) | - |
 | Section header | Archivo Black | 10.5px | uppercase, `.05em` |
 | Detail-row label | Archivo Black | 10.5px | uppercase, `.03em`, color muted |
 | Detail-row value | Archivo Black | 11–12px | `.3px`, color ink, right-aligned |
-| Row title | Archivo Black | 14.5px (compact 13.5px) | — |
+| Row title | Archivo Black | 14.5px (compact 13.5px) | - |
 | Row sub (time/host) | Archivo (600) | 11px | color muted |
 | Tagline | Archivo (500 italic) | 11px | `#A39D86` |
 | Category tag | Archivo Black | 9.5px (sm 9px) | uppercase, `.05em` |
@@ -108,4 +108,4 @@ Min text size on this surface: **9px** (tags only); body labels ≥10.5px.
 - Sticky header stack: header (search + "+ New") → chips row → sort/quick-filter row, all pinned together.
 - List grouped by date with sticky day separators (Today / Tomorrow / weekday + date).
 - Detail/edit/booking screens are **bottom sheets** on phone; max-height ~90%, scrollable body, fixed footer.
-- Sheet sections: never let a column flexbox shrink them — set `flex: none` so the body scrolls instead of clipping rows.
+- Sheet sections: never let a column flexbox shrink them - set `flex: none` so the body scrolls instead of clipping rows.

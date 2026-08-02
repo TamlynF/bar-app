@@ -53,7 +53,7 @@ function toTitleCase(str: string) {
 }
 
 function formatTime(t?: string | null) {
-  if (!t) return "—";
+  if (!t) return "-";
   const [hh, mm] = t.split(":");
   const h = parseInt(hh, 10);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -166,7 +166,7 @@ export default async function EventDetailPage({
       year: "numeric",
     }),
     timeLabel: `${formatTime(event.start_time)} – ${formatTime(event.end_time)}`,
-    hostName: hostName ?? "—",
+    hostName: hostName ?? "-",
     badgeClass: null,
     badgeLabel: subtype || type ? toTitleCase(subtype || type) : null,
     paymentAmount: event.payment_amount ?? null,

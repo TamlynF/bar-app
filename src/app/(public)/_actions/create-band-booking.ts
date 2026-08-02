@@ -118,7 +118,7 @@ async function sendBookerEmail(name: string, email: string) {
         <p>Thanks for applying to perform at <strong>Don Fenticas</strong>. We've received your application and our team will review it shortly.</p>
         <p>We'll be in touch via email once we've had a chance to review your details.</p>
         <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
-          <p style="margin:0;font-size:14px;color:#6b7280;">🎸 Don Fenticas — Live Music Venue</p>
+          <p style="margin:0;font-size:14px;color:#6b7280;">🎸 Don Fenticas - Live Music Venue</p>
         </div>
         <p style="font-size:12px;color:#6b7280;">If you have any questions, reply to this email.</p>
       </div>
@@ -127,7 +127,7 @@ async function sendBookerEmail(name: string, email: string) {
   await resend.emails.send({
     from: FROM,
     to: email,
-    subject: "Band Application Received — Don Fenticas",
+    subject: "Band Application Received - Don Fenticas",
     html,
   });
 }
@@ -142,7 +142,7 @@ async function sendAdminEmail(data: BandBookingData, id: string) {
     .filter(Boolean)
     .map((u, i) => {
       const desc = data.video_descriptions?.[i]?.trim();
-      return `<li>${u}${desc ? ` — ${desc}` : ""}</li>`;
+      return `<li>${u}${desc ? ` - ${desc}` : ""}</li>`;
     })
     .join("");
   const dates = data.preferred_dates.filter(Boolean).join(", ") || "Not specified";
@@ -160,7 +160,7 @@ async function sendAdminEmail(data: BandBookingData, id: string) {
           ${data.payment_amount != null ? `<p><strong>Expected Payment:</strong> £${data.payment_amount}</p>` : ""}
           <p><strong>Booker Name:</strong> ${data.booker_name}</p>
           <p><strong>Email:</strong> ${data.email}</p>
-          <p><strong>Phone:</strong> ${data.phone_no || "—"}</p>
+          <p><strong>Phone:</strong> ${data.phone_no || "-"}</p>
           <p><strong>Preferred Dates:</strong> ${dates}</p>
           ${socials ? `<p><strong>Social Links:</strong></p><ul>${socials}</ul>` : ""}
           ${videos ? `<p><strong>Video Links:</strong></p><ul>${videos}</ul>` : ""}
@@ -180,7 +180,7 @@ async function sendAdminEmail(data: BandBookingData, id: string) {
   await resend.emails.send({
     from: FROM,
     to: ADMIN_EMAIL,
-    subject: `New Band Application — ${data.booker_name}`,
+    subject: `New Band Application - ${data.booker_name}`,
     html,
   });
 }

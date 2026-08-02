@@ -193,7 +193,7 @@ export default function BandNotesPopover({
             </label>
             <div className="flex items-center justify-between gap-2">
               <p className="text-[10px] leading-snug text-[#5F624F]/70">
-                Internal only — never shared with the band.
+                Internal only - never shared with the band.
               </p>
               <button
                 type="button"

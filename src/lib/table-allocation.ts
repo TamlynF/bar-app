@@ -417,7 +417,7 @@ export async function clearMappingOnStatusChange(
 
 export function seatingErrorMessage(reason: "no_table" | "double_booked" | "unavailable"): string {
   if (reason === "no_table") {
-    return "Cannot confirm this booking — no available table for this group size. Free up a table or adjust the group size first.";
+    return "Cannot confirm this booking - no available table for this group size. Free up a table or adjust the group size first.";
   }
   if (reason === "double_booked") {
     return "That table was just taken by another booking for this event.";

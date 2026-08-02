@@ -18,7 +18,7 @@ export default function LeaderboardEventFilter({
   const router = useRouter();
 
   const label = (e: LeaderboardEvent) =>
-    `${format(parseDate(e.date), "dd MMM yyyy")}${e.title ? ` — ${e.title}` : ""}`;
+    `${format(parseDate(e.date), "dd MMM yyyy")}${e.title ? ` - ${e.title}` : ""}`;
 
   return (
     <div className="relative w-full sm:w-80">

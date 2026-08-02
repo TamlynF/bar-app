@@ -500,7 +500,7 @@ export default function FloorPlanClient({
           </Link>
           <div>
             <h2 className="font-black text-base leading-tight tracking-tight text-[#1F1F1A] uppercase">
-              Floor Plan — {event.title}
+              Floor Plan - {event.title}
             </h2>
             <p className="text-[11px] font-bold text-[#5F624F] tabular-nums">{eventDate}</p>
           </div>

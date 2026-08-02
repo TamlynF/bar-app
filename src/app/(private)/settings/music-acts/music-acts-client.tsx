@@ -353,7 +353,7 @@ export default function MusicActsClient({
                       <span className="truncate font-black text-sm text-[#1F1F1A]">{a.group_name}</span>
                     </div>
                     <p className="truncate text-[11px] font-medium text-[#5F624F]">
-                      {[a.type, a.genre].filter(Boolean).join(" · ") || "—"}
+                      {[a.type, a.genre].filter(Boolean).join(" · ") || "-"}
                     </p>
                     <div className="mt-1 flex items-center gap-1.5">
                       <CountChip label="Booked" value={c.bookings} />
@@ -476,18 +476,18 @@ function ViewMode({ act, counts }: { act: MusicActWithContact; counts?: ActCount
         <CountChip label="Upcoming" value={c.upcoming} />
       </div>
       <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
-        <DetailCell label="Type" value={act.type || "—"} />
-        <DetailCell label="Genre" value={act.genre || "—"} />
-        <DetailCell label="Introduction" value={act.introduction || "—"} />
-        <DetailCell label="Contact" value={act.contact?.full_name || "—"} />
-        <DetailCell label="Email" value={act.contact?.email || "—"} />
-        <DetailCell label="Phone" value={act.contact?.phone_no || "—"} />
+        <DetailCell label="Type" value={act.type || "-"} />
+        <DetailCell label="Genre" value={act.genre || "-"} />
+        <DetailCell label="Introduction" value={act.introduction || "-"} />
+        <DetailCell label="Contact" value={act.contact?.full_name || "-"} />
+        <DetailCell label="Email" value={act.contact?.email || "-"} />
+        <DetailCell label="Phone" value={act.contact?.phone_no || "-"} />
         {(act.bank_account_no || act.bank_sort_code) && (
           <>
-            <DetailCell label="Bank Name" value={act.bank_account_name || "—"} />
-            <DetailCell label="Account No" value={act.bank_account_no || "—"} />
-            <DetailCell label="Sort Code" value={act.bank_sort_code || "—"} />
-            <DetailCell label="Payment Ref" value={act.bank_payment_ref || "—"} />
+            <DetailCell label="Bank Name" value={act.bank_account_name || "-"} />
+            <DetailCell label="Account No" value={act.bank_account_no || "-"} />
+            <DetailCell label="Sort Code" value={act.bank_sort_code || "-"} />
+            <DetailCell label="Payment Ref" value={act.bank_payment_ref || "-"} />
           </>
         )}
         {act.internal_notes && <DetailCell label="Notes" value={act.internal_notes} />}

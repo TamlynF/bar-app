@@ -250,7 +250,7 @@ export default function QuizCategoriesClient({
               <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                 <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                   <DetailCell label="Category" value={selected.category_name} />
-                  <DetailCell label="Short Name" value={selected.short_name || "—"} />
+                  <DetailCell label="Short Name" value={selected.short_name || "-"} />
                   <DetailCell label="Round Order" value={String(selected.order_no)} />
                   <DetailCell label="Questions" value={String(selected.question_count)} />
                   <DetailCell label="Points / Q" value={String(selected.points_per_question)} />

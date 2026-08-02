@@ -507,7 +507,7 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
                 <span className="text-[10px] font-bold text-stone-400">{videoFiles.length}/{MAX_VIDEOS}</span>
               </div>
               <p className="-mt-1 text-[11px] text-stone-500">
-                Upload at least one video of your act (MP4, WebM, MOV — max 250 MB each).
+                Upload at least one video of your act (MP4, WebM, MOV - max 250 MB each).
               </p>
 
               {videoFiles.length > 0 && (
@@ -669,7 +669,7 @@ export default function BandBookingForm({ typeOptions, availableDates }: BandBoo
               </div>
 
               <p className="text-[11px] text-stone-500">
-                Only nights with a free 2-hour stage slot are selectable — Fridays, Saturdays, and
+                Only nights with a free 2-hour stage slot are selectable - Fridays, Saturdays, and
                 public holidays (plus the night before).
               </p>
             </div>

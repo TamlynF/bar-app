@@ -13,17 +13,17 @@ function blocklistLine(blocklist: string[]): string {
     .join("; ")}.`;
 }
 
-const TONE = `VOICE — write like the bar's own switched-on social manager talking to the owner: punchy, plain, human, a bit of cheek. Every line must be concrete and specific — never vague or corporate.
-- Name the ACTUAL thing driving it: the specific match, meme, song + artist, creator, headline, number or date — not "a trending audio" but the named track and roughly how many videos use it.
+const TONE = `VOICE - write like the bar's own switched-on social manager talking to the owner: punchy, plain, human, a bit of cheek. Every line must be concrete and specific - never vague or corporate.
+- Name the ACTUAL thing driving it: the specific match, meme, song + artist, creator, headline, number or date - not "a trending audio" but the named track and roughly how many videos use it.
 - Keep sentences short and lively. One idea per sentence, no padding.
 - BANNED words/phrases (never use): leverage, utilise, engagement, content strategy, elevate, curate, synergy, "in today's fast-paced", "short-form video content that…", "reacts humorously to", "creating content that". Just say the thing plainly.`;
 
 const ACTION_EFFORT_SCHEMA =
-  '  "action": "ONE concrete sentence: exactly what to film/post/run THIS WEEK — the specific shot, overlay text, audio or offer, and when to post it",\n' +
+  '  "action": "ONE concrete sentence: exactly what to film/post/run THIS WEEK - the specific shot, overlay text, audio or offer, and when to post it",\n' +
   '  "effort": "exactly one of: Easy, Medium, Big",';
 
 const PRICE_ACTION_EFFORT_SCHEMA =
-  '  "action": "ONE vivid sentence — the exact in-venue pricing play to run THIS WEEK. Give it a FUN, ownable name (a chalkboard pledge, a named house pour, a timed happy-hour, a bundle), commit to a specific price, say who and when it applies, and name the local rival or chain it undercuts. A REAL move at the bar — never \'film a reel\' or \'post a video\'.",\n' +
+  '  "action": "ONE vivid sentence - the exact in-venue pricing play to run THIS WEEK. Give it a FUN, ownable name (a chalkboard pledge, a named house pour, a timed happy-hour, a bundle), commit to a specific price, say who and when it applies, and name the local rival or chain it undercuts. A REAL move at the bar - never \'film a reel\' or \'post a video\'.",\n' +
   '  "effort": "exactly one of: Easy, Medium, Big",';
 
 export function buildAdvertisingTrendsPrompt(area: string, todayISO: string, blocklist: string[] = []): string {
@@ -40,9 +40,9 @@ ${TONE}
 
 Return ONLY a JSON array (no prose, no markdown fences). Each element:
 {
-  "title": "punchy, max 8 words, vivid — the actual idea, not a category label (e.g. 'World Cup pub reaction reel')",
+  "title": "punchy, max 8 words, vivid - the actual idea, not a category label (e.g. 'World Cup pub reaction reel')",
   "summary": "1-2 short, plain-English sentences: what the trend actually is",
-  "relevance": "ONE punchy sentence on why it's hot RIGHT NOW — name the specific match/meme/song/creator/number/date",
+  "relevance": "ONE punchy sentence on why it's hot RIGHT NOW - name the specific match/meme/song/creator/number/date",
 ${ACTION_EFFORT_SCHEMA}
   "category": "one of: reel, meme, seasonal, current_event, format, hashtag",
   "source_url": "a real URL to an example post or article (from your search)",
@@ -63,9 +63,9 @@ ${TONE}
 
 Return ONLY a JSON array (no prose, no markdown fences). Each element:
 {
-  "title": "punchy, max 8 words, vivid — the actual format, not a generic label (e.g. '90s Britpop bottomless brunch')",
+  "title": "punchy, max 8 words, vivid - the actual format, not a generic label (e.g. '90s Britpop bottomless brunch')",
   "summary": "1-2 short, plain-English sentences: what the business is actually doing",
-  "relevance": "ONE punchy sentence on why it'd work for this venue — name the crowd, night or moment it taps",
+  "relevance": "ONE punchy sentence on why it'd work for this venue - name the crowd, night or moment it taps",
 ${ACTION_EFFORT_SCHEMA}
   "category": "one of: theme_night, live_music, quiz, tasting, seasonal, community",
   "source_url": "a real URL to the event/business (from your search)",
@@ -83,13 +83,13 @@ export function buildPriceTrendsPrompt(
 ): string {
   const radiusLine = radius ? ` (within roughly ${radius})` : "";
   const contextBlock = priceContext.trim()
-    ? `\nHERE IS THE VENUE'S OWN PRICING vs LOCAL RIVALS RIGHT NOW — build plays off these REAL numbers, name the actual rivals, and quote the exact gaps:\n${priceContext.trim()}\n`
+    ? `\nHERE IS THE VENUE'S OWN PRICING vs LOCAL RIVALS RIGHT NOW - build plays off these REAL numbers, name the actual rivals, and quote the exact gaps:\n${priceContext.trim()}\n`
     : "";
   return `You are the pricing scout inside the app of ${VENUE}. Comparison area: ${area}${radiusLine}.
 Today's date is ${todayISO}. Use web search for CURRENT UK drink/hospitality pricing data and news RIGHT NOW.
 ${contextBlock}
-Find 5 pricing plays this venue could run to win on value or margin. Make them CREATIVE and FUN — the kind of cheeky, ownable move a switched-on landlord chalks on a board, not safe corporate advice. Ground each in something real:
-- The venue's own price gap above — name the rival and quote the exact before→after numbers or the £ difference.
+Find 5 pricing plays this venue could run to win on value or margin. Make them CREATIVE and FUN - the kind of cheeky, ownable move a switched-on landlord chalks on a board, not safe corporate advice. Ground each in something real:
+- The venue's own price gap above - name the rival and quote the exact before→after numbers or the £ difference.
 - Actual pint/drink price data or trade-press reports (name the report, the beer AND the price) near ${area}.
 - Category momentum (a drink whose sales/searches are spiking) that justifies a deal or feature.
 - Happy-hour / value-pledge / bundle positioning that beats nearby ${SECTORS}.${blocklistLine(blocklist)}
@@ -100,9 +100,9 @@ ${TONE}
 
 Return ONLY a JSON array (no prose, no markdown fences). Each element:
 {
-  "title": "punchy, max 8 words — the play itself, vivid (e.g. 'Beat the £5+ pint with a value pledge')",
+  "title": "punchy, max 8 words - the play itself, vivid (e.g. 'Beat the £5+ pint with a value pledge')",
   "summary": "1 short, plain-English sentence: the value angle in a line",
-  "relevance": "ONE punchy sentence on why NOW — name a specific local rival or trade report and the exact numbers/price gap behind it, tied to this week (e.g. 'Greene King IPA nearby is now £4.55, up from £3.85')",
+  "relevance": "ONE punchy sentence on why NOW - name a specific local rival or trade report and the exact numbers/price gap behind it, tied to this week (e.g. 'Greene King IPA nearby is now £4.55, up from £3.85')",
 ${PRICE_ACTION_EFFORT_SCHEMA}
   "category": "one of: price_positioning, deal, happy_hour, value_pledge, bundle, seasonal_pricing",
   "source_url": "a real URL to the price data/report/menu (from your search)",

@@ -10,7 +10,7 @@ export default async function RequestsHubPage() {
     const requestItems = [
         {
             title: "Band Applications",
-            description: "Acts applying to play — review, confirm, book",
+            description: "Acts applying to play - review, confirm, book",
             href: "/event-bookings/music-bookings",
             icon: Guitar,
             color: "bg-sky-50 text-sky-600",

@@ -41,7 +41,7 @@ beforeEach(() => {
   h.getFreeTablesForEvent.mockReset();
 });
 
-describe("checkSeatingAvailability — non-seated events", () => {
+describe("checkSeatingAvailability - non-seated events", () => {
   it("has space while the group fits inside the venue capacity", async () => {
     h.client = makeSupabase({
       events: [nonSeatedEvent],
@@ -79,7 +79,7 @@ describe("checkSeatingAvailability — non-seated events", () => {
   });
 });
 
-describe("checkSeatingAvailability — seated events", () => {
+describe("checkSeatingAvailability - seated events", () => {
   it("falls back to table allocation instead of venue capacity", async () => {
     h.getFreeTablesForEvent.mockResolvedValue([{ id: 2, max_capacity: 6 }]);
     h.client = makeSupabase({

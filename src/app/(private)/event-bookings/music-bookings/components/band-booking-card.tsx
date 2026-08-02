@@ -410,7 +410,7 @@ function StageStepper({
             <button
               type="button"
               aria-current="step"
-              title="Decline reason for applicant — click to view or edit"
+              title="Decline reason for applicant - click to view or edit"
               className={cn(
                 "relative flex h-12 shrink-0 cursor-pointer items-center gap-2 rounded-full border-2 px-3.5 transition-all hover:brightness-95 sm:h-10",
                 t.bg,
@@ -480,7 +480,7 @@ function StageStepper({
           type="button"
           disabled={!!pendingStage}
           onClick={() => onSelect("declined")}
-          title="Decline application — a terminal exit, not a pipeline step"
+          title="Decline application - a terminal exit, not a pipeline step"
           className="ml-auto flex h-12 shrink-0 items-center gap-2 rounded-full border-2 border-dashed border-red-300 bg-red-50 px-3.5 text-red-600 transition-colors hover:bg-red-100 disabled:pointer-events-none disabled:opacity-50 sm:h-10"
         >
           {pendingStage === "declined" ? (
@@ -570,7 +570,7 @@ function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
       <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
         {label}
       </span>
-      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "—"}</span>
+      <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">{value || "-"}</span>
     </div>
   );
 }
@@ -600,7 +600,7 @@ function EditRow({
     <div className="flex items-center justify-between gap-3 border-b border-[#E6DFC8] px-4 py-2 last:border-0 sm:px-5">
       <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">{label}</span>
       {!editable ? (
-        <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{readOnlyValue ?? (value || "—")}</span>
+        <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">{readOnlyValue ?? (value || "-")}</span>
       ) : options ? (
         <select
           aria-label={label}
@@ -705,7 +705,7 @@ const LIFECYCLE_META: Record<BandLifecycleStage, { label: string; className: str
 };
 
 function formatDateTime(iso?: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "-";
   return new Date(iso).toLocaleString("en-GB", {
     day: "numeric",
     month: "long",
@@ -832,7 +832,7 @@ export function BandBookingCard({
 
   const hasClashes = clashes.length > 0;
   const clashWarning = hasClashes
-    ? `Clashes with ${clashes.map((c) => c.title).join(", ")} — pick another time.`
+    ? `Clashes with ${clashes.map((c) => c.title).join(", ")} - pick another time.`
     : undefined;
   const slotIsSet = !!selectedDate && !!selectedStartTime && !!selectedEndTime && !hasClashes;
 
@@ -1226,7 +1226,7 @@ export function BandBookingCard({
         const result = await updateBandStatus(request.id, newStatus, note || undefined);
         if (result?.clashes?.length) {
           setClashes(result.clashes);
-          toast.error("This slot now clashes with another event — pick another time.");
+          toast.error("This slot now clashes with another event - pick another time.");
           return;
         }
         if (isDecline) setAdminNotes(note);
@@ -1236,7 +1236,7 @@ export function BandBookingCard({
           if (result?.emailError) {
             toast.error(`${label}, but the email didn't send: ${result.emailError}`);
           } else {
-            toast.success(`${label} — band emailed`);
+            toast.success(`${label} - band emailed`);
           }
         } else {
           toast.success(label);
@@ -1287,7 +1287,7 @@ export function BandBookingCard({
             if (result?.emailError) {
               toast.error(`Booking updated, but the email didn't send: ${result.emailError}`);
             } else {
-              toast.success("Booking updated — band notified");
+              toast.success("Booking updated - band notified");
             }
             setSheetOpen(false);
           });
@@ -1298,7 +1298,7 @@ export function BandBookingCard({
           const ok = await confirm({
             title: "Save changes?",
             description:
-              "This booking is booked — saving updates its details and the linked event.",
+              "This booking is booked - saving updates its details and the linked event.",
             confirmLabel: "Save Changes",
           });
           if (!ok) return;
@@ -1472,7 +1472,7 @@ export function BandBookingCard({
               <BandNotesPopover requestId={request.id} notes={bandNoteList} editable={editable}>
                 <button
                   type="button"
-                  title={`Band notes (internal) — ${bandNoteList.length}`}
+                  title={`Band notes (internal) - ${bandNoteList.length}`}
                   className={cn(
                     "pointer-events-auto relative z-20 -my-3 -mr-3 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition-transform hover:scale-110 active:scale-90",
                     wide && "@2xl:order-1 @2xl:mr-0"
@@ -1704,7 +1704,7 @@ export function BandBookingCard({
                     )}
                     <SheetRow label="Submitted" value={formatDateTime(request.created_at)} />
                     <SheetRow label="Last Modified" value={formatDateTime(request.updated_at)} />
-                    <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "—"} />
+                    <SheetRow label="Modified By" value={request.updated_by_employee?.full_name || "-"} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -1734,8 +1734,8 @@ export function BandBookingCard({
                         onClick={(e) => e.stopPropagation()}
                         title={
                           eventIsActive
-                            ? `View linked event #${request.event_id} — on the schedule`
-                            : `View linked event #${request.event_id} — off the schedule`
+                            ? `View linked event #${request.event_id} - on the schedule`
+                            : `View linked event #${request.event_id} - off the schedule`
                         }
                         className={cn(
                           "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-[10px] tracking-wider uppercase transition-colors",
@@ -1776,9 +1776,9 @@ export function BandBookingCard({
                   <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5F624F] uppercase">Type / Genre</span>
                   {!editable ? (
                     <span className="min-w-0 flex-1 truncate text-right text-[13px] font-semibold text-[#1F1F1A]">
-                      {toTitleCase(request.type) || "—"}
+                      {toTitleCase(request.type) || "-"}
                       <span className="mx-1.5 font-normal text-[#5F624F]/50">/</span>
-                      {toTitleCase(request.genre) || "—"}
+                      {toTitleCase(request.genre) || "-"}
                     </span>
                   ) : (
                     <div className="flex min-w-0 items-center justify-end gap-1.5">
@@ -2152,7 +2152,7 @@ export function BandBookingCard({
 
                       {editable && sheetVideos.length < MAX_VIDEOS && (
                         <p className="px-4 pt-2 pb-3 text-[10px] leading-snug text-[#5F624F]/70 sm:px-5">
-                          MP4, WebM or MOV — max 250 MB each. Applied when you hit Save Changes.{" "}
+                          MP4, WebM or MOV - max 250 MB each. Applied when you hit Save Changes.{" "}
                           {sheetVideos.length}/{MAX_VIDEOS}
                         </p>
                       )}
@@ -2281,10 +2281,10 @@ export function BandBookingCard({
                               <span className="text-right text-[13px] font-semibold text-[#1F1F1A]">£{(request.paid_amount ?? 0).toFixed(2)}</span>
                             )}
                           </div>
-                          <EditRow label="Account Name" value={bankAccountName} onChange={setBankAccountName} editable={editable} placeholder="—" />
-                          <EditRow label="Account No." value={bankAccountNo} onChange={setBankAccountNo} editable={editable} placeholder="—" />
-                          <EditRow label="Sort Code" value={bankSortCode} onChange={setBankSortCode} editable={editable} placeholder="—" />
-                          <EditRow label="Payment Ref" value={bankPaymentRef} onChange={setBankPaymentRef} editable={editable} placeholder="—" />
+                          <EditRow label="Account Name" value={bankAccountName} onChange={setBankAccountName} editable={editable} placeholder="-" />
+                          <EditRow label="Account No." value={bankAccountNo} onChange={setBankAccountNo} editable={editable} placeholder="-" />
+                          <EditRow label="Sort Code" value={bankSortCode} onChange={setBankSortCode} editable={editable} placeholder="-" />
+                          <EditRow label="Payment Ref" value={bankPaymentRef} onChange={setBankPaymentRef} editable={editable} placeholder="-" />
                         </>
                       )}
                       <button
@@ -2515,7 +2515,7 @@ function ClashList({ clashes }: { clashes: ClashEvent[] }) {
       <div className="flex items-center gap-2">
         <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-600" />
         <p className="font-black text-[10px] tracking-tight text-red-700 uppercase">
-          Time slot full — conflicts with:
+          Time slot full - conflicts with:
         </p>
       </div>
       <ul className="list-disc space-y-0.5 pl-6">

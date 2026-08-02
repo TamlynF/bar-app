@@ -4,7 +4,7 @@
 // then compile styles.css (see .design-sync/NOTES.md "Tailwind CSS compile").
 //
 // esbuild is resolved from the staged converter deps (.ds-sync/node_modules),
-// which are recreated per clone by the SKILL step-7 `npm i` — same lifecycle as
+// which are recreated per clone by the SKILL step-7 `npm i` - same lifecycle as
 // the fork symlink. See NOTES.md "Why this repo is not a normal package-shape DS".
 import { build } from "../.ds-sync/node_modules/esbuild/lib/main.js";
 import { mkdirSync, writeFileSync } from "node:fs";
@@ -30,7 +30,7 @@ await build({
 //    CRITICAL: spell variant/size out as DIRECT LITERAL members and use
 //    `extends React.*HTMLAttributes`. The ts-morph extractor DROPS
 //    `VariantProps<typeof buttonVariants>` and `React.ComponentProps<"button">`
-//    (unresolved generics) — a reconstruction that relies on them silently
+//    (unresolved generics) - a reconstruction that relies on them silently
 //    emits a Button.d.ts MISSING variant/size. Direct literal members survive;
 //    native attrs come from the `extends`. (Learned 2026-07-07.)
 writeFileSync(

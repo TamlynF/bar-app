@@ -67,7 +67,7 @@ function toTitleCase(str?: string | null) {
 }
 
 function formatDate(dateStr: string | null) {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -239,7 +239,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                           {toTitleCase(employee.role) || "No role"}
                         </p>
                         <span className={cn("shrink-0 text-[10px] font-bold", muted)}>
-                          {toTitleCase(employee.employment_type?.replace("-", " ")) || "—"}
+                          {toTitleCase(employee.employment_type?.replace("-", " ")) || "-"}
                         </span>
                         <span className="flex w-6 shrink-0 items-center justify-center">
                           <span className={cn("flex h-6 w-6 items-center justify-center rounded-full border border-[#E6DFC8] bg-[#F7F4EA] text-[10px] font-bold", muted)}>
@@ -263,7 +263,7 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                         {toTitleCase(employee.role) || "No role"}
                       </span>
                       <span className="rounded-lg border border-[#E6DFC8] bg-[#F7F4EA] px-2 py-1 text-[11px] font-bold text-[#5F624F]">
-                        {toTitleCase(employee.employment_type?.replace("-", " ")) || "—"}
+                        {toTitleCase(employee.employment_type?.replace("-", " ")) || "-"}
                       </span>
                       <span className={cn(
                         "rounded-lg border px-2 py-1 text-[11px] font-bold",
@@ -335,10 +335,10 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                 <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
                   <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                     <DetailCell label="Full Name" value={selected.full_name} />
-                    <DetailCell label="Role" value={toTitleCase(selected.role) || "—"} />
-                    <DetailCell label="Contract" value={toTitleCase(selected.employment_type?.replace("-", " ")) || "—"} />
+                    <DetailCell label="Role" value={toTitleCase(selected.role) || "-"} />
+                    <DetailCell label="Contract" value={toTitleCase(selected.employment_type?.replace("-", " ")) || "-"} />
                     <DetailCell label="Email" value={selected.email} />
-                    <DetailCell label="Phone" value={phone || "—"} />
+                    <DetailCell label="Phone" value={phone || "-"} />
                     <DetailCell label="Started" value={formatDate(selected.start_date)} />
                     <DetailCell label="Left" value={formatDate(selected.end_date)} />
                     <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
@@ -368,11 +368,11 @@ export default function EmployeesClient({ initialEmployees = [] }: { initialEmpl
                     />
                     <DetailCell
                       label="Invite Accepted"
-                      value={selected.invite_accepted_at ? formatDate(selected.invite_accepted_at) : selected.invite_sent_at ? "Pending" : "—"}
+                      value={selected.invite_accepted_at ? formatDate(selected.invite_accepted_at) : selected.invite_sent_at ? "Pending" : "-"}
                     />
                     <DetailCell
                       label="Password Reset Sent"
-                      value={selected.password_reset_sent_at ? formatDate(selected.password_reset_sent_at) : "—"}
+                      value={selected.password_reset_sent_at ? formatDate(selected.password_reset_sent_at) : "-"}
                     />
                   </div>
 

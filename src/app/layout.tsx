@@ -34,7 +34,7 @@ export const metadata: Metadata = {
     template: "%s | Don Fenticas",
   },
   description:
-    "Don Fenticas, Regent Street, Hinckley — quiz nights, live music, karaoke, and unforgettable nights out.",
+    "Don Fenticas, Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
   icons: {
     icon: "/df-mark.jpg",
     shortcut: "/df-mark.jpg",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Don Fenticas | Bar & Live Music Venue",
     description:
-      "Regent Street, Hinckley — quiz nights, live music, karaoke, and unforgettable nights out.",
+      "Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
     siteName: "Don Fenticas",
     url: siteUrl,
     locale: "en_GB",
@@ -67,7 +67,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "Don Fenticas | Bar & Live Music Venue",
     description:
-      "Regent Street, Hinckley — quiz nights, live music, karaoke, and unforgettable nights out.",
+      "Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
     images: ["/logo.jpeg"],
   },
 };

@@ -30,7 +30,7 @@ export type ContactRecord = {
 };
 
 function formatDate(dateStr: string | null) {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
@@ -247,7 +247,7 @@ export default function CustomersClient({ initialContacts = [] }: { initialConta
                   <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                     <DetailCell label="Full Name" value={selected.full_name} />
                     <DetailCell label="Email" value={selected.email} />
-                    <DetailCell label="Phone" value={phone || "—"} />
+                    <DetailCell label="Phone" value={phone || "-"} />
                     <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
                   </div>
 

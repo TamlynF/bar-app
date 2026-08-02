@@ -53,7 +53,7 @@ export function PublicNavBar({
             href="/"
             className="inline-flex w-fit shrink-0 items-center"
             onClick={() => setMenuOpen(false)}
-            aria-label="Don Fenticas — home"
+            aria-label="Don Fenticas - home"
           >
             <Image
               src="/CompanyName.png"

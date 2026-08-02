@@ -10,7 +10,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 
-// Display — huge titles, ticker, date numerals
+// Display - huge titles, ticker, date numerals
 const anton = Anton({
   subsets: ["latin"],
   weight: "400",
@@ -18,7 +18,7 @@ const anton = Anton({
   display: "swap",
 });
 
-// UI / body — labels, buttons, paragraphs (also covers font-black titles at weight 900)
+// UI / body - labels, buttons, paragraphs (also covers font-black titles at weight 900)
 const archivo = Archivo({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -43,7 +43,7 @@ export const metadata: Metadata = {
     template: "%s | Don Fenticas",
   },
   description:
-    "Don Fenticas, Regent Street, Hinckley — quiz nights, live music, karaoke, and unforgettable nights out.",
+    "Don Fenticas, Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -53,7 +53,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Don Fenticas | Bar & Live Music Venue",
     description:
-      "Regent Street, Hinckley — quiz nights, live music, karaoke, and unforgettable nights out.",
+      "Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
     siteName: "Don Fenticas",
     url: siteUrl,
     locale: "en_GB",
@@ -71,7 +71,7 @@ export const metadata: Metadata = {
     card: "summary",
     title: "Don Fenticas | Bar & Live Music Venue",
     description:
-      "Regent Street, Hinckley — quiz nights, live music, karaoke, and unforgettable nights out.",
+      "Regent Street, Hinckley - quiz nights, live music, karaoke, and unforgettable nights out.",
     images: ["/logo.jpeg"],
   },
 };

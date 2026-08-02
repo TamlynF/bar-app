@@ -354,7 +354,7 @@ export default function BandBookingListClient({
             return (
               <section
                 key={col}
-                aria-label={`${theme.label} — ${items.length} request${items.length === 1 ? "" : "s"}`}
+                aria-label={`${theme.label} - ${items.length} request${items.length === 1 ? "" : "s"}`}
                 className={cn(
                   "flex flex-col gap-2",
                   spreadColumns

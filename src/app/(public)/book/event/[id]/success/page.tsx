@@ -129,7 +129,7 @@ export default async function EventSuccessPage({
         icon={<AlertTriangle className="h-10 w-10 text-amber-500" />}
         color="amber"
         title="Payment Not Completed"
-        message="We haven't received a payment for this booking, so your spot isn't secured yet. Nothing has been charged — you can try again below."
+        message="We haven't received a payment for this booking, so your spot isn't secured yet. Nothing has been charged - you can try again below."
         eventTitle={eventTitle}
         eventDate={eventDate}
         groupSize={booking.group_size}

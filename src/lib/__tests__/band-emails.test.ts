@@ -77,7 +77,7 @@ describe("buildOfferEmail", () => {
 
   it("falls back to 'you' when the act has no group name", () => {
     const e = buildOfferEmail({ ...base, groupName: null, paymentAmount: 50 });
-    expect(e.subject).toBe("We'd love to book you — Don Fenticas");
+    expect(e.subject).toBe("We'd love to book you - Don Fenticas");
     expect(e.body.join(" ")).toContain("have you play");
   });
 });

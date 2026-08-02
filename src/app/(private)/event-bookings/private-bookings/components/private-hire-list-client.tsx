@@ -192,7 +192,7 @@ export default function PrivateHireListClient({
             return (
               <section
                 key={col}
-                aria-label={`${theme.label} — ${items.length} enquir${items.length === 1 ? "y" : "ies"}`}
+                aria-label={`${theme.label} - ${items.length} enquir${items.length === 1 ? "y" : "ies"}`}
                 className={cn(
                   "flex flex-col gap-2",
                   spreadColumns

@@ -396,7 +396,7 @@ export default function MerchandiseClient({
                       />
                     </div>
                   ) : (
-                    <DetailCell label="Description" value="—" />
+                    <DetailCell label="Description" value="-" />
                   )}
                   <DetailCell label="Price" value={priceLabel(selected.price)} />
                   <DetailCell

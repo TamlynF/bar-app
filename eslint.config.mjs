@@ -52,7 +52,7 @@ const eslintConfig = defineConfig([
             "^bg-dropdown$",
             "^cat-", // cat-banner, cat-items, cat-note
             "^dir-(ltr|rtl)$",
-            "^ev-", // ev-dot, ev-text — the [style*="--ev-c"] colour hooks
+            "^ev-", // ev-dot, ev-text - the [style*="--ev-c"] colour hooks
             "^input-scheme-dark$",
             "^is-lit$",
             "^menu-", // menu-col, menu-frame, menu-grid, menu-row, ...

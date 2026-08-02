@@ -140,9 +140,9 @@ export async function generateQuizAction(
   
   Requirements:
   - Exactly ${numberOfQuestions} unique questions.
-  - Difficulty: ${difficulty === 'Easy' ? 'All questions should be easy — common knowledge that most people would know.' : difficulty === 'Difficult' ? 'All questions should be challenging — obscure facts and "bar-room debate" level difficulty.' : 'Mixture of easy, medium, and "bar-room debate" hard.'}
+  - Difficulty: ${difficulty === 'Easy' ? 'All questions should be easy - common knowledge that most people would know.' : difficulty === 'Difficult' ? 'All questions should be challenging - obscure facts and "bar-room debate" level difficulty.' : 'Mixture of easy, medium, and "bar-room debate" hard.'}
   - Each question must be a direct, concise question only. No conversational filler, no preamble, no phrases like "Right then", "Here's one for you", "A proper head scratcher" etc. Just the question itself.
-  - Answers must be short and factual — just the answer, nothing else.
+  - Answers must be short and factual - just the answer, nothing else.
   - Avoid these past questions: [${pastQuestionsList}].
   - Format: JSON array.`;
 
@@ -638,9 +638,9 @@ Generate exactly ${numberOfSongs} songs that are famous for having distinctive i
 
 Requirements:
 - Songs from 1960 to present day, sorted chronologically by release year (ascending).
-- Spread across decades — include songs from the 60s, 70s, 80s, 90s, 2000s, 2010s, and 2020s where possible.
+- Spread across decades - include songs from the 60s, 70s, 80s, 90s, 2000s, 2010s, and 2020s where possible.
 - Well-known, recognizable songs that a British pub audience would know.
-- The instrumental intro must be iconic and identifiable — think guitar riffs, piano intros, synth openings, drum patterns.
+- The instrumental intro must be iconic and identifiable - think guitar riffs, piano intros, synth openings, drum patterns.
 ${topicLine}
 ${difficultyLine}
 - Avoid these previously used songs: [${existingList}]
@@ -985,7 +985,7 @@ export async function generatePictureRoundAction(
     const difficultyGuide = difficulty === 'Easy'
       ? 'very well-known, instantly recognisable by almost everyone'
       : difficulty === 'Difficult'
-        ? 'less common or niche — a challenge for enthusiasts'
+        ? 'less common or niche - a challenge for enthusiasts'
         : 'a mix of well-known and moderately challenging'
 
     const excludeRule = existingAnswers.length > 0
@@ -996,7 +996,7 @@ export async function generatePictureRoundAction(
 
 Rules:
 - Each item must be a specific named thing with a visually distinctive appearance (suitable for a single photograph)
-- Vary across the topic — avoid repetition within subtypes (e.g. for "dog breeds" don't list 5 retrievers)
+- Vary across the topic - avoid repetition within subtypes (e.g. for "dog breeds" don't list 5 retrievers)
 - Difficulty: ${difficultyGuide}${excludeRule}
 - Return ONLY a valid JSON array of strings. No markdown, no explanation.
 Example for topic "dog breeds": ["Labrador Retriever","French Bulldog","Border Collie","Dalmatian","Dachshund"]`

@@ -28,7 +28,7 @@ export function PublicFooter({ info }: { info?: CompanyInfo }) {
             Don Fenticas
           </p>
           <p className="mt-2 max-w-60 text-xs leading-relaxed text-stone-500">
-            Live music, DJs, quiz nights and karaoke — your local late-night
+            Live music, DJs, quiz nights and karaoke - your local late-night
             bar.
           </p>
         </div>

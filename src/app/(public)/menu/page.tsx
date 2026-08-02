@@ -5,7 +5,7 @@ import { Wine } from "lucide-react";
 export const metadata = {
   title: "Menu | Don Fenticas",
   description:
-    "Explore the Don Fenticas menu — draught, cocktails, spirits, wine, and snacks.",
+    "Explore the Don Fenticas menu - draught, cocktails, spirits, wine, and snacks.",
 };
 
 export const revalidate = 300;
@@ -139,7 +139,7 @@ export default async function MenuPage() {
 
           <div className="mb-5 text-center">
             <span className="spirits-pill inline-block rounded-sm bg-[#FDCC4B] px-3 py-1 font-black text-[10px] tracking-wide text-[#26300D] uppercase sm:px-4 sm:text-xs">
-              Spirits* — (+ £1.45 for mixers, + £1.95 for tonic)
+              Spirits* - (+ £1.45 for mixers, + £1.95 for tonic)
             </span>
           </div>
 

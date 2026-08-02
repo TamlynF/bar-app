@@ -46,7 +46,7 @@ console.log("Booking fetcheddd:", booking);
 
     const tender = order?.tenders?.[0];
     if (!tender) {
-      console.log("No tenders found — payment not yet applied for booking ID:", bookingId);
+      console.log("No tenders found - payment not yet applied for booking ID:", bookingId);
       return { status: "pending" as const, booking };
     }
 
@@ -154,7 +154,7 @@ export default async function BingoSuccessPage({
         icon={<AlertTriangle className="h-10 w-10 text-amber-500" />}
         color="amber"
         title="Payment Not Completed"
-        message="We haven't received a payment for this booking, so your spot isn't secured yet. Nothing has been charged — you can try again below."
+        message="We haven't received a payment for this booking, so your spot isn't secured yet. Nothing has been charged - you can try again below."
         eventDate={eventDate}
         groupSize={booking.group_size}
         name={contact?.full_name}

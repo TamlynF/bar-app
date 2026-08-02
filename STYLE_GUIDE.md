@@ -1,4 +1,4 @@
-# STYLE_GUIDE.md — Don Fenticas Design Language
+# STYLE_GUIDE.md - Don Fenticas Design Language
 
 This file is the visual and interaction source of truth. Read it before touching any UI. It complements `CLAUDE.md` (which covers architecture and tech).
 
@@ -6,7 +6,7 @@ The app has **two surfaces** and they look intentionally different. Get the surf
 
 ---
 
-## Page identity rules — NON-NEGOTIABLE
+## Page identity rules - NON-NEGOTIABLE
 
 **The bar's name and logo appear exactly once per page: in the sticky top nav.**
 
@@ -16,7 +16,7 @@ The H1 of every page is the **purpose of that page**, not the bar's name:
 
 | Page | H1 |
 |---|---|
-| `/` (home) | `THE SCHEDULE` (or `WHAT'S ON`) — the schedule is the content priority |
+| `/` (home) | `THE SCHEDULE` (or `WHAT'S ON`) - the schedule is the content priority |
 | `/menu` | `MENU` |
 | `/gallery` | `GALLERY` |
 | `/contact` | `ABOUT US` or `GET IN TOUCH` |
@@ -25,19 +25,19 @@ The H1 of every page is the **purpose of that page**, not the bar's name:
 | `/manage-booking/[id]` | `YOUR BOOKING` |
 | `/login` | `STAFF LOGIN` |
 
-**The home page is the only exception** where the bar's identity gets hero treatment — a single `CompanyName.png` wordmark in the hero, plus the location pill and featured-event CTA. This exception applies to the home page only; all sub-pages still follow the single-logo-in-nav rule.
+**The home page is the only exception** where the bar's identity gets hero treatment - a single `CompanyName.png` wordmark in the hero, plus the location pill and featured-event CTA. This exception applies to the home page only; all sub-pages still follow the single-logo-in-nav rule.
 
-If you find yourself adding `<Image src="/CompanyName.png" ... className="w-[80%]" />` to a page wrapper, **stop**. You're recreating the redundancy this rule exists to prevent — this applies to sub-pages; the home hero is the one sanctioned use.
+If you find yourself adding `<Image src="/CompanyName.png" ... className="w-[80%]" />` to a page wrapper, **stop**. You're recreating the redundancy this rule exists to prevent - this applies to sub-pages; the home hero is the one sanctioned use.
 
 ### What to lead each page with instead
 
 Below the sticky nav, the top of every page should look like:
 
 ```
-[Optional back link — "← Back" or "← Home"]
-[Eyebrow pill — small, coloured, uppercase, tracked (e.g. "DRINKS & SNACKS")]
-[H1 — the page's purpose, in display weight, uppercase, tracking-tighter]
-[One-line subtitle — stone-400, regular weight]
+[Optional back link - "← Back" or "← Home"]
+[Eyebrow pill - small, coloured, uppercase, tracked (e.g. "DRINKS & SNACKS")]
+[H1 - the page's purpose, in display weight, uppercase, tracking-tighter]
+[One-line subtitle - stone-400, regular weight]
 [Content starts]
 ```
 
@@ -45,24 +45,24 @@ Keep the top of each page to ~120-150px before content begins. No more.
 
 ---
 
-## Navigation patterns — when to use which
+## Navigation patterns - when to use which
 
-The decision is not "modern apps use bottom nav" or "hamburgers are bad" — it's **what's the user actually doing on this surface, and how many destinations are there?**
+The decision is not "modern apps use bottom nav" or "hamburgers are bad" - it's **what's the user actually doing on this surface, and how many destinations are there?**
 
 ### Public site → visible top nav
 
 Visitors arrive to find info (events, menu) or take an action (book, call). They are *not* cycling between sections like an app user. A visible top nav with the primary destinations + a primary CTA is the correct pattern.
 
-The nav spans the **full screen width** at every breakpoint — no `max-w-*` container. Gutters are `px-4 sm:px-6 lg:px-10`, matching the full-bleed sections on the home page.
+The nav spans the **full screen width** at every breakpoint - no `max-w-*` container. Gutters are `px-4 sm:px-6 lg:px-10`, matching the full-bleed sections on the home page.
 
-**Required composition — desktop (`sm:` and up):**
+**Required composition - desktop (`sm:` and up):**
 - Logo on the left (small, links home)
-- Primary destinations (`What's On`, `Menu`, `Gallery`, `Contact`) — text links, centred
+- Primary destinations (`What's On`, `Menu`, `Gallery`, `Contact`) - text links, centred
 - `Staff Login` icon, then the gold `Book` CTA pill, far right
 - No hamburger
 
-**Required composition — mobile (below `sm:`):**
-- Logo on the left, hamburger on the right — **nothing else in the bar**
+**Required composition - mobile (below `sm:`):**
+- Logo on the left, hamburger on the right - **nothing else in the bar**
 - The drawer opens with the gold `Book` CTA as a full-width pill at the top, then `Home`, the primary destinations, and `Staff Login` last
 
 Mobile deliberately trades the always-visible Book pill for a clean two-element bar (the Bongo's Bingo pattern). Book stays the first and most prominent thing in the drawer, so it is never more than two taps away, and the home hero carries its own Book CTA above the fold.
@@ -78,13 +78,13 @@ Mobile deliberately trades the always-visible Book pill for a clean two-element 
 Staff *are* cycling between Dashboard / Bookings / Events / Settings constantly during a shift. They need persistent, predictable navigation.
 
 - **Desktop (≥sm):** fixed left sidebar, ~256px wide, collapsible sub-sections under Bookings / Events / Settings
-- **Mobile (<sm):** persistent bottom nav with 4 items (Dashboard, Bookings, Events, Settings) — the four top-level destinations only. Sub-sections accessed via the page itself.
+- **Mobile (<sm):** persistent bottom nav with 4 items (Dashboard, Bookings, Events, Settings) - the four top-level destinations only. Sub-sections accessed via the page itself.
 
 This pattern is already implemented in `src/app/(private)/private-layout-client.tsx`. Don't duplicate it; reuse it.
 
 ---
 
-## Surface 1 — Public site (the gritty bar)
+## Surface 1 - Public site (the gritty bar)
 
 Routes: `/`, `/book/*`, `/menu`, `/gallery`, `/contact`, `/manage-booking/*`, `/login`, `/accept-invite`, `/update-password`
 
@@ -113,13 +113,13 @@ Type on dark:
 
 **Rules:**
 - The default page background is `#1a2008` (deepest). `#26300D` is reserved for cards/sections that should sit *up* from the canvas.
-- Gold (`#FDCC4B`) is the hero accent — use it for the brand in the nav, primary CTAs, and at most one or two focal points per screen.
-- Burgundy (`#7A1F1F`) flags "Specials" and offers — drink deals, last-call urgency.
-- Neon orange (`#FF6B35`) is for "live now" / "tonight" / "selling fast" — used sparingly, with a subtle glow.
+- Gold (`#FDCC4B`) is the hero accent - use it for the brand in the nav, primary CTAs, and at most one or two focal points per screen.
+- Burgundy (`#7A1F1F`) flags "Specials" and offers - drink deals, last-call urgency.
+- Neon orange (`#FF6B35`) is for "live now" / "tonight" / "selling fast" - used sparingly, with a subtle glow.
 
 ### Typography on the public site
 
-- Display headings (page H1s): `font-black uppercase tracking-tighter` — they should feel like signage.
+- Display headings (page H1s): `font-black uppercase tracking-tighter` - they should feel like signage.
 - Eyebrows/section labels: `text-[10px] font-black uppercase tracking-[0.2em]` to `tracking-widest`.
 - Body: `text-sm font-medium` for descriptions, `text-xs` for metadata.
 - Numerals always `tabular-nums` when in lists/tables.
@@ -130,7 +130,7 @@ Type on dark:
 - **Soft glow blurs** behind hero content using gold and burgundy with `blur-[120px]` at low opacity (`/5` to `/10`).
 - **Card surfaces** lift off the canvas with `bg-white/[0.04]` and `border border-white/[0.08]`. Hover: `bg-white/[0.07]`.
 - **Dividers** between sections: thin lines, `bg-stone-800/50` for subtle, `bg-[#FDCC4B]/20` for emphasis.
-- **Drop shadows** on hero accents: `drop-shadow-[0_8px_40px_rgba(253,204,75,0.15)]` — gives a "lit from above" glow.
+- **Drop shadows** on hero accents: `drop-shadow-[0_8px_40px_rgba(253,204,75,0.15)]` - gives a "lit from above" glow.
 
 ### Mobile-first rules (375px width is the design target)
 
@@ -138,24 +138,24 @@ Type on dark:
 - Nav stays ≤ 5 items. On mobile the bar is logo + hamburger only; everything else is in the drawer.
 - All tappable elements ≥ 44px on the shorter side (Tailwind `h-11` or `h-12`).
 - Horizontal-scroll rows (events, gallery) need `snap-x snap-mandatory` and `no-scrollbar`.
-- Sticky elements: only one at a time. Either the top nav OR a bottom CTA bar — never both.
+- Sticky elements: only one at a time. Either the top nav OR a bottom CTA bar - never both.
 
 ### Section anatomy on the public site
 
 Every section follows the same skeleton:
 
 ```
-[eyebrow pill — small, coloured, uppercase, tracked]
-[H2 headline — display, uppercase, tight]
-[Optional subtitle — stone-500, regular weight]
-[Content — cards / list / grid]
+[eyebrow pill - small, coloured, uppercase, tracked]
+[H2 headline - display, uppercase, tight]
+[Optional subtitle - stone-500, regular weight]
+[Content - cards / list / grid]
 ```
 
 Sections are separated by `py-10 sm:py-16` (generous breathing room).
 
 ---
 
-## Surface 2 — Admin portal (the working tool)
+## Surface 2 - Admin portal (the working tool)
 
 Routes: `/dashboard`, `/event-bookings/*`, `/event-setups/*`, `/settings/*`
 
@@ -169,8 +169,8 @@ The vibe is **a coffee-shop notebook**. Warm cream paper, espresso ink, soft bor
 --admin-ink         #1F1F1A    /* primary text */
 --admin-ink-muted   #5F624F    /* secondary text / labels */
 --admin-border      #E6DFC8    /* soft border, divider */
---admin-primary     #5C4033    /* espresso — buttons, active nav */
---admin-accent      #C8956D    /* warm tan — highlights, "today" markers */
+--admin-primary     #5C4033    /* espresso - buttons, active nav */
+--admin-accent      #C8956D    /* warm tan - highlights, "today" markers */
 --admin-gold        #FDCC4B    /* used sparingly to tie to brand */
 ```
 
@@ -194,22 +194,22 @@ Status colours: use semantic Tailwind shades:
 - Sheets: bottom sheet on mobile (`h-[85vh]`), centered on desktop (`sm:rounded-[2rem] sm:bottom-6 sm:w-[560px]`)
 - Sticky sheet headers and footers with `bg-white/80 backdrop-blur-md`
 
-### Action buttons — Edit, Save, Add/Create (admin)
+### Action buttons - Edit, Save, Add/Create (admin)
 
-The primary record-mutation actions have a **fixed colour identity** across the admin portal so they read the same on every booking/detail/settings surface. When you add one of these buttons, its `className` MUST contain the exact utilities below (compose layout/sizing — `h-12 rounded-xl …`, or a small `h-7` header variant — around them):
+The primary record-mutation actions have a **fixed colour identity** across the admin portal so they read the same on every booking/detail/settings surface. When you add one of these buttons, its `className` MUST contain the exact utilities below (compose layout/sizing - `h-12 rounded-xl …`, or a small `h-7` header variant - around them):
 
 - **Edit** (amber): `bg-[#B45309] hover:bg-[#B45309]/85 text-white font-black uppercase tracking-widest`
 - **Save / Add / Create / New** (green): `bg-[#1B4332] hover:bg-[#1B4332]/85 text-white font-black uppercase tracking-widest`
 
-`#B45309` is the Edit colour; `#1B4332` is the **green for any record-creating or record-saving action** — Save, plus "Add X" / "Create X" / "New X" / "Upload X" buttons. Don't substitute espresso (`#5C4033`) for an Edit/Save/Add/Create action, and don't use these two hexes for unrelated controls.
+`#B45309` is the Edit colour; `#1B4332` is the **green for any record-creating or record-saving action** - Save, plus "Add X" / "Create X" / "New X" / "Upload X" buttons. Don't substitute espresso (`#5C4033`) for an Edit/Save/Add/Create action, and don't use these two hexes for unrelated controls.
 
 ---
 
 ## Cross-surface rules
 
-### Tailwind class form — canonical over arbitrary
+### Tailwind class form - canonical over arbitrary
 - Use the canonical scale token when a value is on the spacing/size scale: `min-w-50` not `min-w-[200px]`, `gap-2` not `gap-[8px]`, `text-sm` not `text-[14px]`. (`px ÷ 4` = the token.) This is what the IntelliSense `suggestCanonicalClasses` hint flags.
-- Bracket values like `text-[10px]`, `tracking-[0.2em]`, and `h-[85vh]` used in this guide are **intentional exceptions** — they have no canonical token (off-grid px, or non-spacing units). Leave them as-is; don't "correct" them. Reserve `[...]` for: no-canonical values, non-spacing units (`vh`/`%`), custom palette hex (`border-[#E6DFC8]`), and dynamic CSS vars.
+- Bracket values like `text-[10px]`, `tracking-[0.2em]`, and `h-[85vh]` used in this guide are **intentional exceptions** - they have no canonical token (off-grid px, or non-spacing units). Leave them as-is; don't "correct" them. Reserve `[...]` for: no-canonical values, non-spacing units (`vh`/`%`), custom palette hex (`border-[#E6DFC8]`), and dynamic CSS vars.
 
 ### Touch targets
 - Minimum 44×44px on mobile (`h-11` / `h-12`). `h-9`/`h-10` fine on desktop only.
@@ -223,7 +223,7 @@ The primary record-mutation actions have a **fixed colour identity** across the 
 - Labels above inputs, not floating.
 - Inline validation on blur (not every keystroke unless it's a duplicate check).
 - One field per row on mobile.
-- Native `<input type="date">` and `<input type="time">` — don't reinvent.
+- Native `<input type="date">` and `<input type="time">` - don't reinvent.
 - Submit buttons full-width on mobile.
 
 ### Loading states
@@ -243,14 +243,14 @@ Always provide one:
 - Use `tw-animate-css` utilities (`animate-in fade-in slide-in-from-bottom-2 duration-300`) for sheet entrances.
 - Page transitions: Next.js defaults.
 
-### Accessibility — non-negotiable
+### Accessibility - non-negotiable
 - Keyboard reachable
 - Visible focus rings (don't strip without replacing)
 - Semantic HTML (`<button>`, `<a>`, `<nav>`)
 - `alt=""` for decorative, meaningful alt otherwise
-- Labels on every input (visible or `sr-only`) — every form element (`<input>`, `<select>`, `<textarea>`), **including checkboxes/radios**, needs a programmatic label: a `<label htmlFor>`, an `aria-label`, or an `aria-labelledby`. A nearby `<span>` that merely sits next to the input does **not** count. Without one, Edge DevTools fires `axe/forms` ("Form elements must have labels").
+- Labels on every input (visible or `sr-only`) - every form element (`<input>`, `<select>`, `<textarea>`), **including checkboxes/radios**, needs a programmatic label: a `<label htmlFor>`, an `aria-label`, or an `aria-labelledby`. A nearby `<span>` that merely sits next to the input does **not** count. Without one, Edge DevTools fires `axe/forms` ("Form elements must have labels").
 - WCAG AA contrast: 4.5:1 body, 3:1 large text
-- **Icon-only buttons/links must have discernible text** — a `<button>`/`<a>` whose only child is a Lucide icon (e.g. `<ChevronDown />`, `<Plus />`, `<X />`) needs an `aria-label` or `title` describing the action. Without one, Edge DevTools fires `axe/name-role-value` ("Buttons must have discernible text"). The icon's `className` is not a label. Example: `<button aria-label="Toggle section">`.
+- **Icon-only buttons/links must have discernible text** - a `<button>`/`<a>` whose only child is a Lucide icon (e.g. `<ChevronDown />`, `<Plus />`, `<X />`) needs an `aria-label` or `title` describing the action. Without one, Edge DevTools fires `axe/name-role-value` ("Buttons must have discernible text"). The icon's `className` is not a label. Example: `<button aria-label="Toggle section">`.
 
 ### Performance
 - Lighthouse mobile 90+ on every public page.
@@ -261,7 +261,7 @@ Always provide one:
 
 ---
 
-## Specific patterns already in use — reuse, don't reinvent
+## Specific patterns already in use - reuse, don't reinvent
 
 | Need | Existing pattern |
 |---|---|
@@ -274,13 +274,13 @@ Always provide one:
 | Section label (admin) | `SectionLabel` in `dashboard/components/section-label.tsx` |
 | Public-site form input | `bg-black/40 border border-white/10 rounded-2xl pl-11 pr-4 py-4` with icon left, label above |
 | Public page wrapper | `<main className="min-h-dvh w-full bg-[#1a2008] ...">` + inline `<style>` to force body bg |
-| Public page top nav | See `TopNav` in `src/app/page.tsx` — reuse this component across public sub-pages |
+| Public page top nav | See `TopNav` in `src/app/page.tsx` - reuse this component across public sub-pages |
 
 If a pattern doesn't exist yet and you build a new one, build it *consistently* across the surface and add it here.
 
 ---
 
-## Anti-patterns — clean up when you touch the file
+## Anti-patterns - clean up when you touch the file
 
 1. **Hero logo / brand name repetition on sub-pages.** Delete on sight. The nav is the only place the brand appears (see "Page identity rules" above).
 2. **Long pages without component extraction.** When you touch one, extract repeated JSX into `components/`.

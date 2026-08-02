@@ -318,18 +318,18 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
 
                 {mediaSizes[selected.id]?.level === "reject" && (
                   <WarningBox
-                    message={`Only ${mediaSizes[selected.id].width} x ${mediaSizes[selected.id].height} — this looks blurry when opened fullscreen on the public gallery. Replace it with a file of at least ${LIGHTBOX_MIN_EDGE[selected.media_type === "video" ? "video" : "image"]}px on the longest side.`}
+                    message={`Only ${mediaSizes[selected.id].width} x ${mediaSizes[selected.id].height} - this looks blurry when opened fullscreen on the public gallery. Replace it with a file of at least ${LIGHTBOX_MIN_EDGE[selected.media_type === "video" ? "video" : "image"]}px on the longest side.`}
                   />
                 )}
                 <div className="overflow-hidden rounded-3xl border-2 border-[#E6DFC8] bg-white">
                   <DetailCell label="Title" value={selected.title} />
-                  <DetailCell label="Description" value={selected.description || "—"} />
+                  <DetailCell label="Description" value={selected.description || "-"} />
                   <DetailCell label="Status" value={selected.is_active ? "Active" : "Hidden"} />
                   <DetailCell label="Order" value={String(selected.display_order)} />
                   {mediaSizes[selected.id] && (
                     <DetailCell
                       label="Size"
-                      value={`${mediaSizes[selected.id].width} x ${mediaSizes[selected.id].height} — ${QUALITY_SUMMARY[mediaSizes[selected.id].level]}`}
+                      value={`${mediaSizes[selected.id].width} x ${mediaSizes[selected.id].height} - ${QUALITY_SUMMARY[mediaSizes[selected.id].level]}`}
                     />
                   )}
                   {selected.created_at && (
@@ -376,7 +376,7 @@ export default function GalleryClient({ initialImages = [] }: { initialImages: G
                       </span>
                       <span className="mt-1 text-[9px] text-[#5F624F] opacity-60">Images or videos up to 50MB</span>
                       <span className="mt-1 text-[9px] text-[#5F624F] opacity-60">
-                        Longest side {LIGHTBOX_MIN_EDGE.image}px minimum, {LIGHTBOX_IDEAL_EDGE}px ideal — the gallery opens fullscreen
+                        Longest side {LIGHTBOX_MIN_EDGE.image}px minimum, {LIGHTBOX_IDEAL_EDGE}px ideal - the gallery opens fullscreen
                       </span>
                       <input type="file" accept="image/*,video/*" className="hidden" onChange={handleUpload} disabled={uploadingImage} />
                     </label>
@@ -504,7 +504,7 @@ function QualityBadge({ measured }: { measured?: MeasuredMedia }) {
 
   return (
     <div
-      title={`${measured.width} x ${measured.height} — ${QUALITY_SUMMARY[measured.level]}`}
+      title={`${measured.width} x ${measured.height} - ${QUALITY_SUMMARY[measured.level]}`}
       className={cn(
         "absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 font-black text-[8px] text-white uppercase",
         measured.level === "reject" ? "bg-red-500/85" : "bg-[#B45309]/85"

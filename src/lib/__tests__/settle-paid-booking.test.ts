@@ -63,7 +63,7 @@ beforeEach(() => {
   h.notifyAdminBookingCreated.mockReset().mockResolvedValue(undefined);
 });
 
-describe("settlePaidBooking — non-seated event", () => {
+describe("settlePaidBooking - non-seated event", () => {
   it("confirms the booking and records the payment", async () => {
     const { client, updates } = makeSupabase({
       bookings: [{ data: pendingBooking }, claimed],
@@ -100,7 +100,7 @@ describe("settlePaidBooking — non-seated event", () => {
   });
 });
 
-describe("settlePaidBooking — seated event", () => {
+describe("settlePaidBooking - seated event", () => {
   it("allocates a table and writes the mapping only after payment", async () => {
     h.allocateOnCreate.mockResolvedValue({ status: "confirmed", table: { id: 3, max_capacity: 6 } });
     h.commitMapping.mockResolvedValue({ ok: true, addSeat: 0 });
@@ -165,7 +165,7 @@ describe("settlePaidBooking — seated event", () => {
   });
 });
 
-describe("settlePaidBooking — idempotency", () => {
+describe("settlePaidBooking - idempotency", () => {
   it("does nothing when the booking is already paid", async () => {
     const { client, updates } = makeSupabase({
       bookings: [{ data: { ...pendingBooking, payment_status: "paid", status: "confirmed" } }],
@@ -202,7 +202,7 @@ describe("settlePaidBooking — idempotency", () => {
   });
 });
 
-describe("settlePaidBooking — non-pending booking", () => {
+describe("settlePaidBooking - non-pending booking", () => {
   it("keeps an existing status instead of promoting it", async () => {
     const { client, updates } = makeSupabase({
       bookings: [{ data: { ...pendingBooking, status: "waitlisted" } }, claimed],

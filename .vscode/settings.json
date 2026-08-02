@@ -16,11 +16,11 @@
   "editor.defaultFormatter": "dbaeumer.vscode-eslint",
   "notebook.defaultFormatter": "dbaeumer.vscode-eslint",
   "eslint.debug": true,
-  // No formatter runs on save — nothing rewrites Tailwind classes while you edit.
+  // No formatter runs on save - nothing rewrites Tailwind classes while you edit.
   // Class ordering is deliberately not enforced (see eslint.config.mjs); the
   // pre-commit hook still runs `eslint --fix` for unused-imports + fails loudly on
   // conflicting/unknown classes. If classes still get reordered on save, an
-  // external extension (e.g. Headwind) or an AI edit tool is doing it — disable it.
+  // external extension (e.g. Headwind) or an AI edit tool is doing it - disable it.
   "editor.formatOnSave": false,
   "eslint.format.enable": false,
   "editor.codeActionsOnSave": {

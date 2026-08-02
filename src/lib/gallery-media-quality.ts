@@ -60,7 +60,7 @@ export function gradeGalleryMedia({
     return {
       level: "reject",
       longEdge,
-      message: `${KIND_LABEL[kind]} is too small for the fullscreen gallery (${size}). The longest side must be at least ${minimum}px — ${LIGHTBOX_IDEAL_EDGE}px is ideal.`,
+      message: `${KIND_LABEL[kind]} is too small for the fullscreen gallery (${size}). The longest side must be at least ${minimum}px - ${LIGHTBOX_IDEAL_EDGE}px is ideal.`,
     };
   }
 
@@ -75,6 +75,6 @@ export function gradeGalleryMedia({
   return {
     level: "good",
     longEdge,
-    message: `${size} — sharp at fullscreen.`,
+    message: `${size} - sharp at fullscreen.`,
   };
 }

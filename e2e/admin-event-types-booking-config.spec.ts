@@ -12,7 +12,7 @@ const admin = createClient(
 
 const ROUTE = "/event-setups/event-types";
 
-test.describe("event category editor — booking config gated by grouping", () => {
+test.describe("event category editor - booking config gated by grouping", () => {
   test("category Bookable + booking config appear only for Per Category grouping", async ({ page }) => {
     await page.goto(ROUTE);
 
@@ -43,7 +43,7 @@ test.describe("event category editor — booking config gated by grouping", () =
   });
 });
 
-test.describe("sub-type editor — Bookable gated by category grouping", () => {
+test.describe("sub-type editor - Bookable gated by category grouping", () => {
   let perSubtypeId: number;
   let perEventId: number;
   let uniq: string;

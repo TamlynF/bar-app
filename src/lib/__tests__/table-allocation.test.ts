@@ -178,7 +178,7 @@ describe("decideCreate", () => {
   });
 });
 
-describe("decideSizeChange — increase (3a)", () => {
+describe("decideSizeChange - increase (3a)", () => {
   const booking = mb(1, 4, 100, 6); // 4 people on a 6-seat
 
   it("keeps the table when the new size still fits", () => {
@@ -210,7 +210,7 @@ describe("decideSizeChange — increase (3a)", () => {
   });
 });
 
-describe("decideSizeChange — decrease (3b)", () => {
+describe("decideSizeChange - decrease (3b)", () => {
   const booking = mb(1, 8, 100, 10); // 8 people on a 10-seat, dropping
 
   it("relocates to a tighter free table (worked example)", () => {
@@ -237,7 +237,7 @@ describe("decideSizeChange — decrease (3b)", () => {
   });
 });
 
-describe("decideSizeChange — unchanged size", () => {
+describe("decideSizeChange - unchanged size", () => {
   it("keeps the table and recomputes add_seat", () => {
     const booking = mb(1, 8, 100, 6); // overflowing table
     const res = decideSizeChange(booking, 8, [], []);

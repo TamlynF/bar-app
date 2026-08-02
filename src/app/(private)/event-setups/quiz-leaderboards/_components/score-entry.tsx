@@ -111,7 +111,7 @@ export default function ScoreEntry({
               >
                 {events.map((e) => (
                   <option key={e.id} value={e.id}>
-                    {format(parseDate(e.date), "dd MMM yyyy")}{e.title ? ` — ${e.title}` : ""}
+                    {format(parseDate(e.date), "dd MMM yyyy")}{e.title ? ` - ${e.title}` : ""}
                   </option>
                 ))}
               </select>
@@ -168,7 +168,7 @@ export default function ScoreEntry({
                       inputMode="decimal"
                       value={r.scoreInput}
                       onChange={(e) => setScore(r.bookingId, e.target.value)}
-                      placeholder="—"
+                      placeholder="-"
                       className="h-11 w-full rounded-xl border border-[#E6DFC8] bg-white px-3 text-center font-black text-base text-[#1F1F1A] tabular-nums transition-colors outline-none placeholder:text-[#5F624F]/30 focus:border-[#5C4033]"
                     />
                   </div>

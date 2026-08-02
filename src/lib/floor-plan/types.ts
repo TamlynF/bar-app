@@ -2,7 +2,7 @@ export type Point = { x: number; y: number };
 
 export type RoomOutline = {
   points: Point[]; // ordered polygon vertices (>= 3)
-  width: number; // bounding-box width (m) — used for the SVG viewport
+  width: number; // bounding-box width (m) - used for the SVG viewport
   length: number; // bounding-box length (m)
 };
 

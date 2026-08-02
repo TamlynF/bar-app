@@ -110,7 +110,7 @@ describe("bandLifecycleStages", () => {
     });
   });
 
-  describe("exactly one request is upcoming — the next night on the schedule", () => {
+  describe("exactly one request is upcoming - the next night on the schedule", () => {
     const now = at("2026-05-22T12:00:00");
 
     it("tags only the soonest of several future gigs", () => {

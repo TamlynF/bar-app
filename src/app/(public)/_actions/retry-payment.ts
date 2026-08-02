@@ -146,7 +146,7 @@ export async function retryBookingPayment(bookingId: string | number): Promise<R
   if (!checkoutUrl) {
     await releaseUnpaidBooking(supabase, { bookingId, eventId });
     return {
-      error: "We still couldn't start checkout, so this booking has been cancelled. Nothing has been charged — please book again or contact the bar.",
+      error: "We still couldn't start checkout, so this booking has been cancelled. Nothing has been charged - please book again or contact the bar.",
       cancelled: true,
     };
   }

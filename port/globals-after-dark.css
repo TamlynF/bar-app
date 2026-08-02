@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   AFTER DARK — palette + type tokens to MERGE into src/app/globals.css
+   AFTER DARK - palette + type tokens to MERGE into src/app/globals.css
 
    HOW TO APPLY (3 edits):
 
@@ -9,12 +9,12 @@
 
    2) PASTE the @theme + token blocks below right AFTER your existing
       `@theme inline { … }` admin block (so the public tokens register as
-      Tailwind colour/font utilities). These names are NEW — they do NOT
+      Tailwind colour/font utilities). These names are NEW - they do NOT
       collide with the admin shadcn tokens (--accent/--background stay admin).
 
    3) Use the new utilities in the public components (see find/replace table
       in PORTING-NOTES.md). The gold accent #FDCC4B is unchanged, so existing
-      bg-[#FDCC4B] usage keeps working — migrate to `text-gold`/`bg-gold` only
+      bg-[#FDCC4B] usage keeps working - migrate to `text-gold`/`bg-gold` only
       if you want the single-token swap.
    ═══════════════════════════════════════════════════════════════════════════ */
 
@@ -27,7 +27,7 @@
   --ink:      #fff4cc;            /* primary text (warm cream)          */
   --ink-2:    #b4b294;            /* secondary / muted text             */
   --hairline: rgb(255 255 255 / 0.10);
-  --gold:     #fdcc4b;            /* accent — CTAs, eyebrows, prices    */
+  --gold:     #fdcc4b;            /* accent - CTAs, eyebrows, prices    */
   --on-gold:  #1a2008;            /* text/icon placed ON gold           */
   --neon:     #ff6b35;            /* live / "on tonight" urgency        */
   --burgundy: #7a1f1f;            /* ambient glow only                  */

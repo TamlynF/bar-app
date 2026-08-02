@@ -253,7 +253,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     const cols = 3;
     const total = 9; // fixed 3×3 grid to match the Word layout / fit one page
     if (sorted.length > total) {
-      toast.info("Sheet fits a 3×3 grid — printing the first 9 questions");
+      toast.info("Sheet fits a 3×3 grid - printing the first 9 questions");
     }
     const cells = Array.from({ length: total }, (_, i) => {
       const q = sorted[i];
@@ -286,7 +286,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       toast.error("Allow pop-ups to print the sheet");
       return;
     }
-    win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(category_name)} — Quiz Sheet</title>
+    win.document.write(`<!DOCTYPE html><html><head><title>${escapeHtml(category_name)} - Quiz Sheet</title>
       <style>${printStyles}</style></head>
       <body>
         <div class="sheet">
@@ -380,7 +380,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                 ) : (
                   <div className="space-y-1.5 rounded-xl border-2 border-[#E6DFC8] bg-[#F7F4EA] p-2.5">
                     <p className="font-black text-[10px] tracking-wide text-[#5F624F] uppercase">
-                      Spotify playlist — copy into a browser or the Spotify app
+                      Spotify playlist - copy into a browser or the Spotify app
                     </p>
                     <div className="flex items-center gap-2">
                       <a

@@ -115,7 +115,7 @@ export async function updatePrivateHireFields(
       ? privateHireSubtypeLabel(sub, record.reason_for_hire || "Private Hire")
       : record.reason || record.reason_for_hire || "Private Hire";
     const eventUpdate: Record<string, unknown> = {
-      title: `${record.full_name} — ${label}`,
+      title: `${record.full_name} - ${label}`,
       date: record.selected_date,
       start_time: record.selected_start_time,
       end_time: record.selected_end_time,
@@ -190,7 +190,7 @@ export async function updatePrivateHireStatus(
 
     const now = new Date().toISOString();
     const eventFields = {
-      title: `${record.full_name} — ${label}`,
+      title: `${record.full_name} - ${label}`,
       date: record.selected_date,
       start_time: record.selected_start_time,
       end_time: record.selected_end_time,

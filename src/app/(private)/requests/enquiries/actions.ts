@@ -73,7 +73,7 @@ export async function replyToEnquiry(id: string, replyMessage: string) {
     from: FROM,
     to: record.email,
     replyTo: REPLY_TO,
-    subject: `Re: ${record.subject || "Your enquiry"} — Don Fenticas`,
+    subject: `Re: ${record.subject || "Your enquiry"} - Don Fenticas`,
     html,
   });
 

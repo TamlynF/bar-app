@@ -1,4 +1,4 @@
--- Floor Plan Layout Calculator — Phase 1 schema.
+-- Floor Plan Layout Calculator - Phase 1 schema.
 --
 -- Adds venue geometry (configured once, reused per event), per-table geometry,
 -- an event_id on table mappings (source of truth for which tables an event uses),
@@ -7,7 +7,7 @@
 -- Coordinate convention for every geometry JSONB below: metres, origin top-left,
 -- +x right / +y down. Facing is degrees 0-359.
 
--- ── 1. company_information — venue geometry ──────────────────────────────────
+-- ── 1. company_information - venue geometry ──────────────────────────────────
 -- room_outline: { points: [{x,y}, ...], width, length } | null
 -- obstacles:    [{ id, label, shape:'rect'|'polygon', x, y, width, length, points? }]
 -- fixtures:     [{ id, type:'stage'|'bar'|'dj_booth'|'projector'|'tv', label,
@@ -17,7 +17,7 @@ alter table public.company_information
   add column if not exists obstacles    jsonb not null default '[]'::jsonb,
   add column if not exists fixtures     jsonb not null default '[]'::jsonb;
 
--- ── 2. tables — table geometry (metres) ──────────────────────────────────────
+-- ── 2. tables - table geometry (metres) ──────────────────────────────────────
 alter table public.tables
   add column if not exists shape    text not null default 'round',
   add column if not exists diameter numeric,        -- round tables
@@ -29,7 +29,7 @@ alter table public.tables
 alter table public.tables
   add constraint tables_shape_check check (shape in ('round', 'rect'));
 
--- ── 3. booking_table_mappings — event_id ─────────────────────────────────────
+-- ── 3. booking_table_mappings - event_id ─────────────────────────────────────
 alter table public.booking_table_mappings
   add column if not exists event_id bigint;
 
@@ -58,7 +58,7 @@ alter table public.booking_table_mappings
   foreign key (booking_id) references public.bookings(id)
   on update cascade on delete cascade;
 
--- ── 4. events — saved floor plan layout ──────────────────────────────────────
+-- ── 4. events - saved floor plan layout ──────────────────────────────────────
 -- floor_plan_layout: {
 --   version, savedAt,
 --   settings: { chairZone, aisleWidth, mustSee: [focalId, ...] },

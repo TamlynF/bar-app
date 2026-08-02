@@ -1,17 +1,17 @@
--- Square venue sales — schema.
+-- Square venue sales - schema.
 --
 -- Backs the admin dashboard "Venue Sales" section. A scheduled job
 -- (/api/square/sync, Vercel Cron) pulls completed Square orders into
 -- square_sales (one row per Square order), flattened so the dashboard can
 -- read takings/tips/fees/refunds and per-category splits straight from
--- Supabase — matching the app's "reads come from Supabase" pattern rather
+-- Supabase - matching the app's "reads come from Supabase" pattern rather
 -- than hitting the Square API on every page load.
 --
 -- These are ACTUAL venue takings (bar + food + POS), kept DISTINCT from the
 -- app's pre-booked booking revenue; the dashboard never sums the two.
 -- All additive + idempotent.
 
--- ── square_sales — one row per Square order ──────────────────────────────────
+-- ── square_sales - one row per Square order ──────────────────────────────────
 create table if not exists public.square_sales (
   square_order_id    text not null,
   location_id        text,
@@ -43,7 +43,7 @@ create index if not exists square_sales_business_date_idx
 create index if not exists square_sales_created_at_idx
   on public.square_sales (created_at);
 
--- ── square_sync_state — single row, tracks incremental sync watermark ─────────
+-- ── square_sync_state - single row, tracks incremental sync watermark ─────────
 create table if not exists public.square_sync_state (
   id             integer not null default 1,
   last_synced_at timestamptz,                 -- high-water mark: orders updated after this are re-pulled

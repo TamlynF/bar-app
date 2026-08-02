@@ -1,9 +1,9 @@
 -- How an event category presents its bookable events on the public /book hub:
---   'per_event'   — one card per event (the historical behaviour), each linking
+--   'per_event'   - one card per event (the historical behaviour), each linking
 --                   to /book/event/[id].
---   'per_subtype' — events collapsed by sub-type into a single card/page per
+--   'per_subtype' - events collapsed by sub-type into a single card/page per
 --                   sub-type, with a date dropdown (/book/group/subtype/[id]).
---   'per_type'    — all the category's events collapsed into one card/page, with
+--   'per_type'    - all the category's events collapsed into one card/page, with
 --                   a date dropdown (/book/group/type/[id]).
 -- Only affects the generic "Upcoming Events" list; the bespoke quiz/bingo/band/
 -- private cards are unaffected.

@@ -146,7 +146,7 @@ export async function createBingoBooking(formData: FormData) {
         referenceId: String(newBooking.id),
         metadata: { booking_id: String(newBooking.id), event_id: String(eventId) },
         lineItems: [{
-          name: `Music Bingo — ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`,
+          name: `Music Bingo - ${groupSize} ticket${groupSize !== 1 ? "s" : ""}`,
           quantity: String(groupSize),
           basePriceMoney: {
             amount: BigInt(paymentAmount),

@@ -46,7 +46,7 @@ export function buildRescheduleEmail(p: {
   const timeLabel = [formatTime12(p.startTime), formatTime12(p.endTime)].filter(Boolean).join(" – ");
 
   return {
-    subject: "Please confirm your updated performance slot — Don Fenticas",
+    subject: "Please confirm your updated performance slot - Don Fenticas",
     heading: "Slot Updated",
     greeting: `Hey ${p.name},`,
     body: [
@@ -74,12 +74,12 @@ export function buildOfferEmail(p: {
     : "to be arranged";
 
   return {
-    subject: `We'd love to book you${p.groupName ? `, ${p.groupName}` : ""} — Don Fenticas`,
+    subject: `We'd love to book you${p.groupName ? `, ${p.groupName}` : ""} - Don Fenticas`,
     heading: "We'd Love to Book You",
     greeting: `Hi ${p.name},`,
     body: [
-      `Great news — we'd love to have ${p.groupName ?? "you"} play at Don Fenticas. Here's what we're offering:`,
-      "Reply to this email to accept the slot or discuss details — once you confirm, we'll lock it in and it goes on our events calendar.",
+      `Great news - we'd love to have ${p.groupName ?? "you"} play at Don Fenticas. Here's what we're offering:`,
+      "Reply to this email to accept the slot or discuss details - once you confirm, we'll lock it in and it goes on our events calendar.",
     ],
     dateLabel,
     timeLabel,
@@ -105,7 +105,7 @@ export function buildOutcomeEmail(p: {
   return {
     subject: isConfirmed
       ? "Your Performance at Don Fenticas is Confirmed!"
-      : "Update on Your Application — Don Fenticas",
+      : "Update on Your Application - Don Fenticas",
     heading: isConfirmed ? "You're Confirmed!" : "Application Update",
     greeting: `Hey ${p.name},`,
     body: isConfirmed

@@ -368,7 +368,7 @@ export default function TablesClient({
                     />
                     <DetailRow
                       label="Available"
-                      value={selected.available ? "Yes — bookable" : "No — hidden"}
+                      value={selected.available ? "Yes - bookable" : "No - hidden"}
                       valueClassName={selected.available ? "text-green-700" : "text-red-600"}
                       icon={
                         selected.available ? (
@@ -604,7 +604,7 @@ export default function TablesClient({
                         onChange={(e) => setChairMode(e.target.value as "auto" | "sides" | "bench")}
                         className="h-14 w-full rounded-2xl border-2 border-[#E6DFC8] bg-white px-4 text-sm font-bold text-[#1F1F1A] transition-all outline-none focus:border-[#5C4033]"
                       >
-                        <option value="auto">Auto — spread around the table</option>
+                        <option value="auto">Auto - spread around the table</option>
                         <option value="sides">Chairs per side</option>
                         <option value="bench">Bench down each long side</option>
                       </select>
@@ -882,7 +882,7 @@ function chairBadge(t: Table): string {
 function chairSummaryFull(t: Table): string {
   if (t.shape !== "rect") return "Auto";
   const cl = t.chair_layout;
-  if (!cl || cl.mode === "auto") return "Auto — spread evenly";
+  if (!cl || cl.mode === "auto") return "Auto - spread evenly";
   if (cl.mode === "bench") return `Bench · ${cl.perSide ?? 0} per side`;
   return `${cl.perSide ?? 0} per side${cl.ends ? ` · ${cl.ends} per end` : ""}`;
 }

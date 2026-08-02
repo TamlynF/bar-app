@@ -5,7 +5,7 @@ import { Brain, BookOpen } from "lucide-react";
 import CategorySection from "./category-section";
 
 function formatDate(dateStr: string | null) {
-  if (!dateStr) return "—";
+  if (!dateStr) return "-";
   return new Date(dateStr).toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
@@ -51,7 +51,7 @@ export async function generateMetadata({
     .single();
   return {
     title: event?.title
-      ? `${event.title} — Quiz Questions | Don Fenticas`
+      ? `${event.title} - Quiz Questions | Don Fenticas`
       : "Quiz Questions | Don Fenticas",
   };
 }

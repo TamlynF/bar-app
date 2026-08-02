@@ -61,8 +61,8 @@ describe("buildBuyerPhone", () => {
 
 describe("formatTicketLineName", () => {
   it("pluralises tickets and omits ids", () => {
-    expect(formatTicketLineName("Boxing Day Bash", 1)).toBe("Boxing Day Bash — 1 ticket");
-    expect(formatTicketLineName("Boxing Day Bash", 3)).toBe("Boxing Day Bash — 3 tickets");
+    expect(formatTicketLineName("Boxing Day Bash", 1)).toBe("Boxing Day Bash - 1 ticket");
+    expect(formatTicketLineName("Boxing Day Bash", 3)).toBe("Boxing Day Bash - 3 tickets");
   });
 });
 
@@ -83,7 +83,7 @@ describe("buildEventOrder", () => {
     const order = buildEventOrder(baseInput);
     expect(order.referenceId).toBe("42");
     expect(order.metadata).toEqual({ booking_id: "42", event_id: "7" });
-    expect(order.lineItems?.[0].name).toBe("Boxing Day Bash — 3 tickets");
+    expect(order.lineItems?.[0].name).toBe("Boxing Day Bash - 3 tickets");
     expect(order.lineItems?.[0].name).not.toContain("42");
   });
 

@@ -166,7 +166,7 @@ export default function EventBookingForm({ event, config }: Props) {
           A confirmation email is on its way.
         </p>
         <p className="mb-6 text-xs text-stone-500">
-          <span className="font-black text-white">{event.title}</span> — {formatEventDate(event.date)}
+          <span className="font-black text-white">{event.title}</span> - {formatEventDate(event.date)}
         </p>
         <Button
           onClick={() => {
@@ -417,7 +417,7 @@ export default function EventBookingForm({ event, config }: Props) {
           {isPending ? (
             <Loader2 className="h-6 w-6 animate-spin" />
           ) : hasPricing ? (
-            <span className="flex items-center">Pay & Book — £{total.toFixed(2)} <ChevronRight className="ml-2 h-6 w-6" /></span>
+            <span className="flex items-center">Pay & Book - £{total.toFixed(2)} <ChevronRight className="ml-2 h-6 w-6" /></span>
           ) : (
             <span className="flex items-center">Confirm Booking <ChevronRight className="ml-2 h-6 w-6" /></span>
           )}

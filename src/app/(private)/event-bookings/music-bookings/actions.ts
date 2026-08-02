@@ -430,7 +430,7 @@ async function sendRescheduleEmail(
       </div>
       <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
         <p style="margin:0;font-size:11px;color:#5F624F;">
-          Don Fenticas — Unit 1, Regent St, Hinckley LE10 0BB
+          Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
         </p>
       </div>
     </div>`;
@@ -490,7 +490,7 @@ async function sendOutcomeEmail(
       </div>
       <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
         <p style="margin:0;font-size:11px;color:#5F624F;">
-          Don Fenticas — Unit 1, Regent St, Hinckley LE10 0BB
+          Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
         </p>
       </div>
     </div>`;
@@ -549,7 +549,7 @@ async function sendOfferEmail(
       </div>
       <div style="padding:16px 24px;border-top:1px solid #E6DFC8;text-align:center;">
         <p style="margin:0;font-size:11px;color:#5F624F;">
-          Don Fenticas — Unit 1, Regent St, Hinckley LE10 0BB
+          Don Fenticas - Unit 1, Regent St, Hinckley LE10 0BB
         </p>
       </div>
     </div>`;

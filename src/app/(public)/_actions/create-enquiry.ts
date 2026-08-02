@@ -60,7 +60,7 @@ async function sendEnquirerEmail(name: string, email: string) {
         <h2 style="margin-top:0;color:#111827;">Hi ${name}!</h2>
         <p>Thanks for getting in touch with <strong>Don Fenticas</strong>. We've received your message and one of the team will get back to you shortly.</p>
         <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
-          <p style="margin:0;font-size:14px;color:#6b7280;">🎸 Don Fenticas — Grassroots Live Music & Nightlife, Hinckley</p>
+          <p style="margin:0;font-size:14px;color:#6b7280;">🎸 Don Fenticas - Grassroots Live Music & Nightlife, Hinckley</p>
         </div>
         <p style="font-size:12px;color:#6b7280;">If it's urgent, you can reply directly to this email.</p>
       </div>
@@ -69,7 +69,7 @@ async function sendEnquirerEmail(name: string, email: string) {
   await resend.emails.send({
     from: FROM,
     to: email,
-    subject: "We've got your message — Don Fenticas",
+    subject: "We've got your message - Don Fenticas",
     html,
   });
 }
@@ -82,8 +82,8 @@ async function sendAdminEmail(data: EnquiryData, id: string) {
         <div style="background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0;">
           <p><strong>Name:</strong> ${data.full_name}</p>
           <p><strong>Email:</strong> ${data.email}</p>
-          <p><strong>Phone:</strong> ${data.phone_no || "—"}</p>
-          <p><strong>Subject:</strong> ${data.subject || "—"}</p>
+          <p><strong>Phone:</strong> ${data.phone_no || "-"}</p>
+          <p><strong>Subject:</strong> ${data.subject || "-"}</p>
           <p><strong>Message:</strong></p>
           <p style="white-space:pre-wrap;">${data.message}</p>
         </div>
@@ -94,7 +94,7 @@ async function sendAdminEmail(data: EnquiryData, id: string) {
   await resend.emails.send({
     from: FROM,
     to: ADMIN_EMAIL,
-    subject: `New Enquiry — ${data.full_name}${data.subject ? `: ${data.subject}` : ""}`,
+    subject: `New Enquiry - ${data.full_name}${data.subject ? `: ${data.subject}` : ""}`,
     html,
   });
 }

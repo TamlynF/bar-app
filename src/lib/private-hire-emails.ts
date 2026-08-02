@@ -16,7 +16,7 @@ export function buildPrivateHireOutcomeEmail(p: {
   return {
     subject: isConfirmed
       ? "Your Private Hire Enquiry Has Been Confirmed! 🎉"
-      : "Update on Your Private Hire Enquiry — Don Fenticas",
+      : "Update on Your Private Hire Enquiry - Don Fenticas",
     heading: isConfirmed ? "You're Confirmed!" : "Enquiry Update",
     greeting: `Hi ${p.name}!`,
     body: isConfirmed

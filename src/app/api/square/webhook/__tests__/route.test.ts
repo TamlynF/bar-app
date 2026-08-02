@@ -95,7 +95,7 @@ beforeEach(() => {
   h.settle.mockReset().mockResolvedValue({ outcome: "settled", status: "confirmed" });
 });
 
-describe("square webhook — payment.completed settlement", () => {
+describe("square webhook - payment.completed settlement", () => {
   it("settles the booking with the payment details and emails the booker", async () => {
     h.client = makeSupabase({ ...pendingBooking }).client;
 
@@ -140,7 +140,7 @@ describe("square webhook — payment.completed settlement", () => {
     expect(h.sendMock).not.toHaveBeenCalled();
   });
 
-  it("is idempotent — an already-paid booking is never settled again", async () => {
+  it("is idempotent - an already-paid booking is never settled again", async () => {
     h.client = makeSupabase({ ...pendingBooking, payment_status: "paid" }).client;
 
     const res = await POST(makeRequest(paymentCompleted({})));
@@ -161,7 +161,7 @@ describe("square webhook — payment.completed settlement", () => {
   });
 });
 
-describe("square webhook — guards", () => {
+describe("square webhook - guards", () => {
   it("ignores event types other than payment.completed", async () => {
     h.client = makeSupabase({ ...pendingBooking }).client;
 

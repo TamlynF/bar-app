@@ -46,7 +46,7 @@ export default function StatCard({
                 : "text-[#5F624F]"
           )}
         >
-          {delta.direction === "up" ? "▲" : delta.direction === "down" ? "▼" : "—"}{" "}
+          {delta.direction === "up" ? "▲" : delta.direction === "down" ? "▼" : "-"}{" "}
           {Math.abs(delta.pct)}% vs last month
         </p>
       )}

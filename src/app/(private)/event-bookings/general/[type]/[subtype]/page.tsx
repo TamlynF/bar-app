@@ -34,7 +34,7 @@ function toTitleCase(str: string) {
 }
 
 function formatTime(t?: string | null) {
-  if (!t) return "—";
+  if (!t) return "-";
   const [hh, mm] = t.split(":");
   const h = parseInt(hh, 10);
   const ampm = h >= 12 ? "PM" : "AM";
@@ -158,7 +158,7 @@ export default async function GeneralEventBookingsPage({
           weekday: "short", day: "numeric", month: "short", year: "numeric",
         }),
         timeLabel: `${formatTime(eventDetails.start_time)} – ${formatTime(eventDetails.end_time)}`,
-        hostName: hostName ?? "—",
+        hostName: hostName ?? "-",
         badgeClass: et ? badgeClassFromColor(et.badge_color) : null,
         badgeLabel: et ? toTitleCase(et.sub_type || et.type) : null,
         paymentAmount,

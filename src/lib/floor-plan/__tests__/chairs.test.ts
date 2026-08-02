@@ -25,7 +25,7 @@ describe("chairLayoutSeatCount", () => {
   });
 });
 
-describe("computeTableChairs — round", () => {
+describe("computeTableChairs - round", () => {
   it("rings all seats around the table", () => {
     const { chairs, benches } = computeTableChairs({ ...baseInput, shape: "round", baseSeats: 6, layout: null });
     expect(chairs).toHaveLength(6);
@@ -42,7 +42,7 @@ describe("computeTableChairs — round", () => {
   });
 });
 
-describe("computeTableChairs — rect", () => {
+describe("computeTableChairs - rect", () => {
   it("auto-splits seats across the two long (left/right) sides of a tall table", () => {
     const { chairs } = computeTableChairs({ ...baseInput, shape: "rect", baseSeats: 6, layout: null });
     expect(chairs).toHaveLength(6);

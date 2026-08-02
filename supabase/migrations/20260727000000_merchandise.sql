@@ -1,12 +1,12 @@
 -- Merchandise: branded goods the venue shows off on the public home page
--- (t-shirts, totes, glassware). Showcase only — there is no basket, no Square
+-- (t-shirts, totes, glassware). Showcase only - there is no basket, no Square
 -- catalogue link and no stock tracking. `price` is a display label so guests
 -- know what to expect at the bar; the app never charges it.
 --
 -- display_order is maintained as a contiguous 1..N sequence over the ACTIVE
 -- rows only, resequenced in application code (see src/lib/merchandise-order.ts).
 -- Inactive rows always sit at 0. There is deliberately no unique constraint or
--- trigger enforcing this — the invariant is an application concern, and this
+-- trigger enforcing this - the invariant is an application concern, and this
 -- schema has no triggers or functions anywhere.
 --
 -- bigint identity PK and the audit quad follow the specials convention;

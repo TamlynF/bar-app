@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("public quiz booking — happy path", () => {
+test.describe("public quiz booking - happy path", () => {
   test("books a table and shows the confirmation screen", async ({ page }, testInfo) => {
     await page.goto("/book/quiz");
 
