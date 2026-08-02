@@ -19,6 +19,7 @@ import {
   deletePastQuestionAction,
   syncCategoryPlaylistAction,
 } from "@/app/(private)/event-setups/quiz-generator/actions";
+import QuizRoundSheet, { type NextRoundSummary } from "./quiz-round-sheet";
 
 type Question = {
   id: string;
@@ -46,6 +47,9 @@ type Props = {
   isHigherLower?: boolean;
   playlistUrl?: string | null;
   autoOpen?: boolean;
+  // The next round still needing questions, for the sheet's footer. Optional —
+  // omit it and the footer just says the quiz is ready.
+  nextRound?: NextRoundSummary | null;
 };
 
 const printStyles = `
@@ -71,9 +75,20 @@ const printStyles = `
   @page { size: A4; margin: 1.2cm; }
 `;
 
-export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, playlistUrl: initialPlaylistUrl, autoOpen }: Props) {
+export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, playlistUrl: initialPlaylistUrl, autoOpen, nextRound }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
+
+  // Questions are held locally so inline edits feel instant, which means a
+  // router.refresh() after approving would otherwise be ignored. Resync when the
+  // server sends a different set of rows — keyed on the ids so an unrelated
+  // parent re-render doesn't wipe an in-progress edit.
+  const initialQuestionIds = initialQuestions.map((q) => q.id).join("|");
+  useEffect(() => {
+    setQuestions(initialQuestions);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialQuestionIds]);
+
   const isHigherOrLower = includeSpotify && !!isHigherLower;
   const hideQuestionText = !!includeSpotify && !isHigherLower;
   const count = questions.length;
@@ -346,14 +361,30 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
         </button>
 
         {!isPastEvent && !isComplete && (
-          <Link
-            href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
-            className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary px-3 text-[12px] font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:px-4 sm:text-[13px]"
-          >
-            <Sparkles className="h-4 w-4" />
-            <span className="sm:hidden">{hasAny ? `Add ${remaining}` : "Start"}</span>
-            <span className="hidden sm:inline">{hasAny ? `Add ${remaining} question${remaining === 1 ? "" : "s"}` : "Start round"}</span>
-          </Link>
+          // Picture and music-snippet rounds resolve images and Spotify track IDs
+          // and lock their topic, so they still run in the full generator. Plain
+          // question rounds build in place.
+          isPicture || includeSpotify || configId == null ? (
+            <Link
+              href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
+              className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary px-3 text-[12px] font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:px-4 sm:text-[13px]"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="sm:hidden">{hasAny ? `Add ${remaining}` : "Start"}</span>
+              <span className="hidden sm:inline">{hasAny ? `Add ${remaining} question${remaining === 1 ? "" : "s"}` : "Start round"}</span>
+            </Link>
+          ) : (
+            <QuizRoundSheet
+              eventId={eventId}
+              categoryConfigId={configId}
+              category_name={category_name}
+              question_count={question_count}
+              savedQuestions={questions}
+              orderNo={orderNo}
+              nextRound={nextRound}
+              onApproved={() => setOpen(true)}
+            />
+          )
         )}
       </div>
 

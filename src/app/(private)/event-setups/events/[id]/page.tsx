@@ -114,9 +114,39 @@ export default async function EventQuizQuestionsPage({
     0
   );
   const progress = targetQuestions > 0 ? Math.min(100, Math.round((totalQuestions / targetQuestions) * 100)) : 0;
+
+  // Picture and music-snippet rounds resolve images and Spotify track IDs, so
+  // they still run in the full generator. Everything else now builds in place,
+  // and the continue link just opens the round on this page.
+  const firstIncompleteNeedsGenerator =
+    !!firstIncompleteCategory &&
+    (firstIncompleteCategory.is_picture || firstIncompleteCategory.include_spotify);
+
   const continueHref = firstIncompleteCategory
-    ? `/event-setups/quiz-generator?event_id=${event.id}&category=${encodeURIComponent(firstIncompleteCategory.category_name)}`
+    ? firstIncompleteNeedsGenerator
+      ? `/event-setups/quiz-generator?event_id=${event.id}&category=${encodeURIComponent(firstIncompleteCategory.category_name)}`
+      : `/event-setups/events/${event.id}?category=${encodeURIComponent(firstIncompleteCategory.category_name)}`
     : null;
+
+  // The next round after each one that still needs questions. Drives the round
+  // sheet's footer so approving hands you onward rather than dead-ending.
+  // Recomputed every render, so it stays correct as rounds fill up.
+  const withNext = byCategory.map((cat, i) => {
+    const following = byCategory
+      .slice(i + 1)
+      .find((c) => c.questions.length < c.question_count);
+
+    return {
+      ...cat,
+      nextRound: following
+        ? {
+            categoryName: following.category_name,
+            savedCount: following.questions.length,
+            targetCount: following.question_count,
+          }
+        : null,
+    };
+  });
 
   return (
     <div className="mx-auto animate-in space-y-4 p-2 text-left duration-700 fade-in sm:max-w-2xl sm:p-6 md:max-w-7xl lg:max-w-7xl">
@@ -185,7 +215,7 @@ export default async function EventQuizQuestionsPage({
       </div>
 
       <div className="space-y-4">
-        {byCategory.map((cat) => (
+        {withNext.map((cat) => (
           <CategorySection
             key={cat.id}
             eventId={event.id}
@@ -200,10 +230,11 @@ export default async function EventQuizQuestionsPage({
             isHigherLower={cat.is_higher_lower}
             playlistUrl={playlistByCategory.get(cat.id) ?? null}
             autoOpen={focusCategory === cat.category_name}
+            nextRound={cat.nextRound}
           />
         ))}
 
-        {byCategory.length === 0 && (
+        {withNext.length === 0 && (
           <div className="rounded-2xl border border-dashed border-admin-line py-14 text-center">
             <BookOpen className="mx-auto mb-3 h-8 w-8 text-admin-muted opacity-20" />
             <p className="text-[15px] font-bold text-admin-ink">No quiz categories configured</p>

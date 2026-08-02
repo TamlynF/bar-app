@@ -518,6 +518,7 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
 
   revalidatePath('/event-setups/quiz-generator');
   revalidatePath('/event-setups/quiz-history');
+  revalidatePath('/event-setups/events/[id]', 'page');
   if (eventId) revalidatePath(`/event-setups/events/${eventId}`);
   return { success: true };
 }
