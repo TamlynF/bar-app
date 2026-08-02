@@ -30,7 +30,6 @@ import {
   Check,
   Search,
   X,
-  Clock,
   Flame,
   ArrowDownUp,
   Grid2X2,
@@ -41,7 +40,14 @@ import {
   ExternalLink,
   CopyPlus,
   Undo2,
+  MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import QRCode from "qrcode";
 import { createBrowserClient } from "@supabase/ssr";
 import { saveEventAction, deleteEventAction, setEventQr } from "./actions";
@@ -176,6 +182,7 @@ function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 /* Month cells render at most this many chips before falling back to "+n more". */
 const DAY_CHIP_LIMIT = 4;
@@ -199,6 +206,16 @@ function relativeDayOf(dateStr: string, todayStr: string) {
   if (diff === -1) return "Yesterday";
   if (diff > 1 && diff < 7) return WEEKDAYS_LONG[parseDate(dateStr).getDay()];
   return `${weekdayOf(dateStr)} ${dayNumOf(dateStr)} ${monthAbbrOf(dateStr)}`;
+}
+
+/* "Saturday 8 August", or Today/Tomorrow/Yesterday with the date appended. */
+function fullDayLabel(dateStr: string, todayStr: string) {
+  const d = parseDate(dateStr);
+  const dated = `${WEEKDAYS_LONG[d.getDay()]} ${d.getDate()} ${MONTHS_LONG[d.getMonth()]}`;
+  const relative = relativeDayOf(dateStr, todayStr);
+  return relative === "Today" || relative === "Tomorrow" || relative === "Yesterday"
+    ? `${relative} · ${dated}`
+    : dated;
 }
 
 function shortHost(fullName: string) {
@@ -252,6 +269,7 @@ export default function EventsClient({
   bookings = [],
   actCoverByEvent = {},
   linkedRequestByEvent = {},
+  venueCapacity = null,
   filter,
   initialFrom,
   initialTo,
@@ -266,6 +284,8 @@ export default function EventsClient({
   bookings: BookingRecord[];
   actCoverByEvent?: Record<number, string>;
   linkedRequestByEvent?: Record<number, LinkedRequest>;
+  /** Venue-wide seat count from company_information; null when it isn't configured. */
+  venueCapacity?: number | null;
   filter?: string;
   initialFrom?: string;
   initialTo?: string;
@@ -871,13 +891,53 @@ export default function EventsClient({
     const hasPricing = !!event.payment_amount && event.payment_amount > 0;
     const isTonight = event.date === todayStr && !inactive;
 
+    const timeLabel = `${formatTime(event.start_time)}${event.end_time ? `–${formatTime(event.end_time)}` : ""}`;
+    const showBooked = event.is_bookable || bStats.confirmedPeople > 0;
+    const bookedNode = venueCapacity ? (
+      <>
+        <span className="font-semibold text-admin-ink">{bStats.confirmedPeople}</span>
+        <span aria-hidden="true"> / </span>
+        <span>{venueCapacity}</span> booked
+      </>
+    ) : (
+      <>{bStats.confirmedPeople === 1 ? "1 booked" : `${bStats.confirmedPeople} booked`}</>
+    );
+    const bookedAria = venueCapacity
+      ? `${bStats.confirmedPeople} of ${venueCapacity} booked`
+      : `${bStats.confirmedPeople} booked`;
+    const priceLabel = hasPricing ? `£${event.payment_amount!.toFixed(2)}` : null;
+
+    const statusFlags = (
+      <>
+        {event.is_fully_booked && (
+          <span className="rounded bg-admin-error-bg px-1.5 py-0.5 text-[12px] font-semibold tracking-wide text-admin-error uppercase">Full</span>
+        )}
+        {inactive && (
+          <span className="rounded bg-admin-surface px-1.5 py-0.5 text-[12px] font-semibold tracking-wide text-admin-muted uppercase">Inactive</span>
+        )}
+        {quizStat && !quizStat.allComplete && (
+          <span
+            title={quizStat.someExist ? "Quiz questions incomplete" : "No quiz questions yet"}
+            className={cn(
+              "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[12px] font-semibold",
+              quizStat.someExist ? "bg-admin-warning-bg text-admin-warning" : "bg-admin-error-bg text-admin-error"
+            )}
+          >
+            {quizStat.someExist ? <AlertTriangle className="h-3 w-3" /> : <AlertCircle className="h-3 w-3" />}
+            Quiz
+          </span>
+        )}
+      </>
+    );
+
     return (
       <div
         key={event.id}
         style={{ "--spine": accentHex } as React.CSSProperties}
         className={cn(
-          "group relative flex w-full items-center gap-3 rounded-2xl border bg-white py-3 pr-3 pl-4 text-left transition hover:-translate-y-px hover:border-[#D8CEAF] hover:shadow-md active:translate-y-0 active:scale-[0.995] sm:gap-4 sm:px-4 sm:py-3.5",
-          isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-[#D8D5C8]",
+          "group relative w-full rounded-xl border bg-admin-card text-left transition-colors",
+          "pointer-fine:transition-shadow pointer-fine:hover:shadow-md",
+          isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-admin-line hover:border-admin-primary/40",
           inactive && "opacity-60"
         )}
       >
@@ -885,77 +945,94 @@ export default function EventsClient({
           type="button"
           onClick={() => openView(event)}
           aria-label={`Open ${event.title || "Untitled Event"}`}
-          className="absolute inset-0 rounded-2xl"
+          className="absolute inset-0 rounded-xl focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none"
         />
 
-        <span className="absolute top-3 bottom-3 left-0 w-1 rounded-full bg-(--spine)" />
+        <span className="absolute top-2.5 bottom-2.5 left-0 w-1 rounded-full bg-(--spine)" aria-hidden="true" />
 
         {isTonight && (
-          <span className="absolute -top-2 left-3 z-1 inline-flex h-4.75 items-center gap-1 rounded-full bg-[#FF6B35] px-2 font-bold text-[12px] text-white shadow">
+          <span className="absolute -top-2 left-3 z-1 inline-flex h-4.75 items-center gap-1 rounded-full bg-[#FF6B35] px-2 text-[12px] font-semibold text-white shadow">
             <Flame className="h-2.5 w-2.5" /> Tonight
           </span>
         )}
 
-        <div className={cn("pointer-events-none relative flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border sm:hidden", badgeClass)}>
-          <span className="font-bold text-[12px] leading-none tracking-tighter">{monthAbbrOf(event.date)}</span>
-          <span className="font-bold text-base leading-none sm:text-lg">{dayNumOf(event.date)}</span>
+        {/* Mobile: badge + status, title over two lines, then time / bookings / price */}
+        <div className="flex items-start gap-2 py-2.5 pr-2 pl-4 sm:hidden">
+          <div className="pointer-events-none min-w-0 flex-1">
+            <div className="mb-0.5 flex flex-wrap items-center gap-1.5">
+              {sub && <span className={cn("rounded px-1.5 py-0.5 text-[12px] font-semibold tracking-wide uppercase", badgeClass)}>{toTitleCase(sub.name)}</span>}
+              {statusFlags}
+            </div>
+            <p className={cn("line-clamp-2 text-[15px] leading-snug font-bold", inactive ? "text-admin-muted" : "text-admin-ink")}>
+              {event.title || "Untitled Event"}
+            </p>
+            <p className="mt-0.5 text-[12px] font-medium text-admin-muted tabular-nums">{timeLabel}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-1.5 text-[12px] font-medium text-admin-muted">
+              {showBooked && <span className="tabular-nums" aria-label={bookedAria}>{bookedNode}</span>}
+              {showBooked && priceLabel && <span aria-hidden="true">·</span>}
+              {priceLabel && <span className="tabular-nums">{priceLabel}</span>}
+              {host && (showBooked || priceLabel) && <span aria-hidden="true">·</span>}
+              {host && <span>{shortHost(host.full_name)}</span>}
+            </p>
+          </div>
+          <ChevronRight className="pointer-events-none mt-8 h-4 w-4 shrink-0 text-admin-muted" />
         </div>
 
-        <div className="pointer-events-none relative min-w-0 flex-1">
-          <div className="mb-1 flex flex-wrap items-center gap-1.5">
-            {sub && <span className={cn("rounded px-1.5 py-0.5 font-bold text-[12px]", badgeClass)}>{toTitleCase(sub.name)}</span>}
-            {inactive && <span className="rounded bg-gray-100 px-1.5 py-0.5 font-bold text-[12px] text-gray-500">Inactive</span>}
-            {quizStat && !quizStat.allComplete && (
-              <span className="inline-flex items-center gap-0.5">
-                <span className="font-bold text-[12px] text-[#5E6654]">Qz</span>
-                {quizStat.someExist
-                  ? <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-                  : <AlertCircle className="h-3.5 w-3.5 text-red-500" />}
-              </span>
-            )}
+        {/* Desktop / tablet: fixed column grid so ten rows scan quickly */}
+        <div className="hidden min-h-19 grid-cols-[minmax(0,1fr)_140px_110px_100px_76px] items-center gap-4 px-4 sm:grid">
+          <div className="pointer-events-none min-w-0">
+            <p className={cn("line-clamp-2 text-[15px] leading-snug font-bold", inactive ? "text-admin-muted" : "text-admin-ink")}>
+              {event.title || "Untitled Event"}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+              {sub && <span className={cn("rounded px-1.5 py-0.5 text-[12px] font-semibold tracking-wide uppercase", badgeClass)}>{toTitleCase(sub.name)}</span>}
+              {statusFlags}
+            </div>
           </div>
-          <p className={cn("truncate font-bold text-sm leading-tight sm:text-[15px]", inactive ? "text-[#5E6654]" : "text-[#20231A]")}>
-            {event.title || "Untitled Event"}
-          </p>
-          <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[13px] font-semibold text-[#5E6654] sm:text-xs">
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-              {formatTime(event.start_time)}{event.end_time ? `–${formatTime(event.end_time)}` : ""}
-            </span>
+
+          <div className="pointer-events-none min-w-0 text-[12px] font-medium text-admin-muted">
+            <p className="tabular-nums">{timeLabel}</p>
             {host && (
-              <span className="inline-flex items-center gap-1.5">
-                <span className="inline-grid h-4.25 w-4.25 place-items-center rounded-full bg-(--spine) font-bold text-[13px] text-white">
+              <p className="mt-0.5 flex items-center gap-1.5">
+                <span className="inline-grid h-4.25 w-4.25 shrink-0 place-items-center rounded-full bg-(--spine) text-[12px] font-semibold text-white">
                   {host.full_name[0]}
                 </span>
-                {shortHost(host.full_name)}
-              </span>
+                <span className="truncate">{shortHost(host.full_name)}</span>
+              </p>
             )}
           </div>
-        </div>
 
-        <div className="relative z-2 flex shrink-0 items-center gap-1 sm:gap-2">
-          <div className="pointer-events-none flex flex-col items-end gap-1.5 sm:flex-row sm:items-center">
-            {(event.is_bookable || bStats.confirmedPeople > 0) && (
-              <span className="inline-flex items-center gap-1 rounded-lg bg-[#F4F1E8] px-2 py-1 font-bold text-xs text-[#5E6654] tabular-nums">
-                <Users className="h-3.5 w-3.5" />{bStats.confirmedPeople}
-                <span className="hidden font-bold sm:inline">booked</span>
-              </span>
+          <p className="pointer-events-none text-[12px] font-medium text-admin-muted tabular-nums" aria-label={showBooked ? bookedAria : undefined}>
+            {showBooked ? bookedNode : ""}
+          </p>
+
+          <p className="pointer-events-none text-[12px] font-medium text-admin-muted tabular-nums">
+            {priceLabel ?? ""}
+          </p>
+
+          <div className="relative z-2 flex items-center justify-end gap-0.5">
+            {canCopy(event) && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    title={`More actions for ${event.title || "Untitled Event"}`}
+                    aria-label={`More actions for ${event.title || "Untitled Event"}`}
+                    className="flex h-11 w-11 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  <DropdownMenuItem onClick={() => openCopy(event)}>
+                    <CopyPlus className="h-4 w-4" />
+                    Copy event
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
-            {hasPricing && <span className="font-bold text-[13px] text-green-700 sm:rounded-lg sm:bg-green-50 sm:px-2 sm:py-1 sm:text-xs">£{event.payment_amount!.toFixed(2)}</span>}
-            {event.is_fully_booked && <span className="rounded bg-red-50 px-1.5 py-0.5 font-bold text-[12px] text-red-600">Full</span>}
+            <ChevronRight className="pointer-events-none h-4 w-4 shrink-0 text-admin-muted transition-transform group-hover:translate-x-0.5" />
           </div>
-          {canCopy(event) && (
-            <button
-              type="button"
-              onClick={() => openCopy(event)}
-              title="Copy this event"
-              aria-label={`Copy ${event.title || "Untitled Event"}`}
-              className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white text-[#34451F] transition-colors hover:bg-[#EFE8D4]"
-            >
-              <CopyPlus className="h-3.5 w-3.5" />
-            </button>
-          )}
-          <ChevronRight className="pointer-events-none h-4 w-4 text-[#5E6654] opacity-40 transition-transform group-hover:translate-x-0.5" />
         </div>
       </div>
     );
@@ -1380,10 +1457,14 @@ export default function EventsClient({
         <div className="space-y-1.5 sm:space-y-2">
           {dayGroups.map((group) => (
             <section key={group.date} className="space-y-1.5 sm:space-y-2">
-              <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#F4F1E8] py-1.5">
-                <span className="font-bold text-[13px] text-[#34451F] sm:text-xs lg:text-sm">{relativeDayOf(group.date, todayStr)}</span>
-                <span className="h-px flex-1 bg-[#D8D5C8]" />
-                <span className="text-[12px] font-bold text-[#5E6654] sm:text-[13px] lg:text-xs">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
+              <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-admin-line bg-admin-bg/95 px-1 py-2 backdrop-blur">
+                <h2 className="min-w-0 truncate text-[13px] font-semibold tracking-wide text-admin-primary uppercase">
+                  {fullDayLabel(group.date, todayStr)}
+                  <span className="sm:hidden"> · {group.events.length} event{group.events.length === 1 ? "" : "s"}</span>
+                </h2>
+                <span className="hidden shrink-0 text-[12px] font-semibold tracking-wide text-admin-muted uppercase tabular-nums sm:inline">
+                  {group.events.length} event{group.events.length === 1 ? "" : "s"}
+                </span>
               </div>
               {group.events.map((event) => renderEventRow(event))}
             </section>

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getVenueMaxCapacity } from "@/lib/update-fully-booked";
 import EventsClient, { type LinkedRequest } from "./event-setups-client";
 
 export default async function EventsPage({
@@ -27,6 +28,8 @@ export default async function EventsPage({
     supabase.from("private_hire_requests").select("id, event_id").not("event_id", "is", null),
   ]);
 
+  const venueCapacity = await getVenueMaxCapacity(supabase);
+
   const actCoverByEvent: Record<number, string> = {};
   for (const row of actCovers ?? []) {
     const act = Array.isArray(row.music_acts) ? row.music_acts[0] : row.music_acts;
@@ -43,5 +46,5 @@ export default async function EventsPage({
     if (row.event_id != null) linkedRequestByEvent[row.event_id] = { kind: "private", id: row.id };
   }
 
-  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} actCoverByEvent={actCoverByEvent} linkedRequestByEvent={linkedRequestByEvent} filter={filter} initialFrom={from} initialTo={to} initialQuick={quick} />;
+  return <EventsClient initialEvents={events ?? []} eventTypes={eventTypes ?? []} eventSubtypes={eventSubtypes ?? []} employees={employees ?? []} quizCategories={quizCategories ?? []} quizQuestions={quizQuestions ?? []} bookings={bookings ?? []} actCoverByEvent={actCoverByEvent} linkedRequestByEvent={linkedRequestByEvent} venueCapacity={venueCapacity} filter={filter} initialFrom={from} initialTo={to} initialQuick={quick} />;
 }
