@@ -177,6 +177,9 @@ const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const WEEKDAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 const MONTHS_ABBR = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
+/* Month cells render at most this many chips before falling back to "+n more". */
+const DAY_CHIP_LIMIT = 4;
+
 function parseDate(dateStr: string) {
   return new Date(dateStr + "T00:00:00");
 }
@@ -288,6 +291,7 @@ export default function EventsClient({
   const [selectedCalendarDate, setSelectedCalendarDate] = useState(() =>
     format(new Date(), "yyyy-MM-dd")
   );
+  const [calendarView, setCalendarView] = useState<"month" | "week">("month");
   const [quickFilters, setQuickFilters] = useState<Set<string>>(
     () => new Set((initialQuick ?? "").split(",").map((s) => s.trim()).filter(Boolean))
   );
@@ -809,11 +813,38 @@ export default function EventsClient({
     calendarCells.push(`${calendarMonth.year}-${mm}-${String(d).padStart(2, "0")}`);
   }
   while (calendarCells.length % 7 !== 0) calendarCells.push(null);
+  const weekCells: string[] = (() => {
+    const start = parseDate(selectedCalendarDate);
+    start.setDate(start.getDate() - start.getDay());
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return format(d, "yyyy-MM-dd");
+    });
+  })();
+  const isWeekView = calendarView === "week";
+  const gridCells: (string | null)[] = isWeekView ? weekCells : calendarCells;
+  const gridRowCount = isWeekView ? 1 : calendarCells.length / 7;
+  const weekLabel = (() => {
+    const first = weekCells[0];
+    const last = weekCells[6];
+    const sameMonth = first.slice(0, 7) === last.slice(0, 7);
+    const head = `${dayNumOf(first)}${sameMonth ? "" : ` ${monthAbbrOf(first)}`}`;
+    return `${head} – ${dayNumOf(last)} ${monthAbbrOf(last)} ${last.slice(0, 4)}`;
+  })();
+  const periodLabel = isWeekView ? weekLabel : calMonthLabel;
   const shiftMonth = (delta: number) => {
     const d = new Date(calendarMonth.year, calendarMonth.month + delta, 1);
     setCalendarMonth({ year: d.getFullYear(), month: d.getMonth() });
     setSelectedCalendarDate(format(d, "yyyy-MM-dd"));
   };
+  const shiftWeek = (delta: number) => {
+    const d = parseDate(selectedCalendarDate);
+    d.setDate(d.getDate() + delta * 7);
+    setCalendarMonth({ year: d.getFullYear(), month: d.getMonth() });
+    setSelectedCalendarDate(format(d, "yyyy-MM-dd"));
+  };
+  const shiftPeriod = (delta: number) => (isWeekView ? shiftWeek(delta) : shiftMonth(delta));
   const goToday = () => {
     const n = new Date();
     setCalendarMonth({ year: n.getFullYear(), month: n.getMonth() });
@@ -941,15 +972,15 @@ export default function EventsClient({
         onClick={() => openView(event)}
         title={`${event.title || "Untitled Event"}${event.start_time ? ` · ${formatTime(event.start_time)}` : ""}`}
         className={cn(
-          "flex w-full min-w-0 items-center gap-1.5 overflow-hidden rounded-md border px-1.5 py-1 text-left transition hover:brightness-95",
+          "flex w-full min-w-0 items-center gap-1 overflow-hidden rounded border px-1 py-px text-left transition hover:brightness-95",
           badgeClass,
           inactive && "line-through opacity-50",
         )}
       >
         {event.start_time && (
-          <span className="shrink-0 font-black text-[10px] leading-tight tabular-nums lg:text-[11px]">{formatTime(event.start_time)}</span>
+          <span className="shrink-0 font-black text-[9.5px] leading-snug tabular-nums lg:text-[10px]">{formatTime(event.start_time)}</span>
         )}
-        <span className="min-w-0 truncate text-[10px] leading-tight font-bold lg:text-[11px]">{event.title || "Untitled"}</span>
+        <span className="min-w-0 truncate text-[9.5px] leading-snug font-bold lg:text-[10px]">{event.title || "Untitled"}</span>
       </button>
     );
   };
@@ -1024,7 +1055,7 @@ export default function EventsClient({
     <div className={cn(
       "mx-auto space-y-3 bg-[#F4F1E8] px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
       viewMode === "calendar"
-        ? "sm:max-w-2xl md:max-w-4xl lg:max-w-6xl xl:max-w-368 2xl:max-w-432"
+        ? "sm:flex sm:h-[calc(100dvh-7rem)] sm:flex-col sm:max-w-2xl md:h-[calc(100dvh-8.5rem)] md:max-w-4xl lg:max-w-6xl xl:max-w-368 2xl:max-w-432"
         : "sm:max-w-2xl md:max-w-4xl lg:max-w-6xl"
     )}>
 
@@ -1039,7 +1070,7 @@ export default function EventsClient({
         </div>
       )}
 
-      <div className="rounded-2xl border border-[#D8D5C8] bg-white/60 p-2.5 shadow-sm sm:p-3">
+      <div className="shrink-0 rounded-2xl border border-[#D8D5C8] bg-white/60 p-2.5 shadow-sm sm:p-3">
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex items-center rounded-xl border border-[#D8D5C8] bg-white p-0.5">
           <button
@@ -1194,29 +1225,46 @@ export default function EventsClient({
       )}
 
       {viewMode === "calendar" ? (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2 rounded-2xl border border-[#D8D5C8] bg-white px-3 py-2.5 shadow-sm">
-            <button type="button" onClick={() => shiftMonth(-1)} title="Previous month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
+        <div className="space-y-3 sm:flex sm:min-h-0 sm:flex-1 sm:flex-col sm:space-y-2">
+          <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-[#D8D5C8] bg-white px-3 py-2.5 shadow-sm">
+            <button type="button" onClick={() => shiftPeriod(-1)} title={isWeekView ? "Previous week" : "Previous month"} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <h3 className="min-w-0 flex-1 text-center font-black text-sm tracking-tight text-[#20231A] uppercase sm:text-base">{calMonthLabel}</h3>
-            <button type="button" onClick={() => shiftMonth(1)} title="Next month" className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
+            <h3 className="min-w-0 flex-1 text-center font-black text-sm tracking-tight text-[#20231A] uppercase sm:text-base">{periodLabel}</h3>
+            <button type="button" onClick={() => shiftPeriod(1)} title={isWeekView ? "Next week" : "Next month"} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
               <ChevronRight className="h-4 w-4" />
             </button>
-            <button type="button" onClick={goToday} className="h-9 rounded-xl border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#D8D5C8] sm:px-3 sm:text-[10px]">
+            <div className="inline-flex shrink-0 items-center rounded-xl border border-[#D8D5C8] bg-white p-0.5">
+              {(["month", "week"] as const).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => setCalendarView(v)}
+                  aria-pressed={calendarView === v}
+                  title={v === "month" ? "Month view" : "Week view"}
+                  className={cn(
+                    "inline-flex h-8 items-center rounded-lg px-2.5 font-black text-[9px] tracking-wide uppercase transition-colors sm:px-3 sm:text-[10px]",
+                    calendarView === v ? "bg-[#34451F] text-white" : "text-[#5E6654] hover:text-[#34451F]"
+                  )}
+                >
+                  {v}
+                </button>
+              ))}
+            </div>
+            <button type="button" onClick={goToday} className="h-9 shrink-0 rounded-xl border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#D8D5C8] sm:px-3 sm:text-[10px]">
               Today
             </button>
           </div>
 
-          <div className="rounded-2xl border border-[#D8D5C8] bg-white p-2 shadow-sm sm:p-3">
-            <div className="grid grid-cols-7 gap-1">
+          <div className="rounded-2xl border border-[#D8D5C8] bg-white p-2 shadow-sm sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
+            <div className="grid shrink-0 grid-cols-7 gap-1">
               {WEEKDAYS.map((w) => (
-                <div key={w} className="py-1.5 text-center font-black text-[9px] tracking-wide text-[#5E6654] uppercase sm:text-[11px] lg:text-xs">{w}</div>
+                <div key={w} className="py-1 text-center font-black text-[9px] tracking-wide text-[#5E6654] uppercase sm:text-[10px]">{w}</div>
               ))}
             </div>
 
             <div className="grid grid-cols-7 gap-1 sm:hidden">
-              {calendarCells.map((dateStr, i) => {
+              {gridCells.map((dateStr, i) => {
                 if (!dateStr) return <div key={`mobile-blank-${i}`} className="aspect-square" />;
                 const dayEvents = eventsByDate.get(dateStr) ?? [];
                 const isToday = dateStr === todayStr;
@@ -1246,28 +1294,44 @@ export default function EventsClient({
               })}
             </div>
 
-            <div className="hidden grid-cols-7 gap-1.5 sm:grid lg:gap-2">
-              {calendarCells.map((dateStr, i) => {
-                if (!dateStr) return <div key={`blank-${i}`} className="min-h-36 rounded-xl bg-[#F4F1E8]/70 lg:min-h-44" />;
+            <div
+              style={{ "--cal-rows": gridRowCount, "--cal-row-min": isWeekView ? "0px" : "5rem" } as React.CSSProperties}
+              className="no-scrollbar mt-0.5 hidden min-h-0 flex-1 grid-cols-7 grid-rows-[repeat(var(--cal-rows),minmax(var(--cal-row-min),1fr))] gap-1 overflow-y-auto sm:grid"
+            >
+              {gridCells.map((dateStr, i) => {
+                if (!dateStr) return <div key={`blank-${i}`} className="rounded-lg bg-[#F4F1E8]/70" />;
                 const dayEvents = eventsByDate.get(dateStr) ?? [];
                 const isToday = dateStr === todayStr;
                 const isWeekend = [0, 6].includes(parseDate(dateStr).getDay());
-                const MAX = 4;
-                const shown = dayEvents.slice(0, MAX);
+                const shown = isWeekView ? dayEvents : dayEvents.slice(0, DAY_CHIP_LIMIT);
                 const extra = dayEvents.length - shown.length;
                 return (
-                  <div key={dateStr} className={cn("flex min-h-36 min-w-0 flex-col overflow-hidden rounded-xl border p-1.5 lg:min-h-44 lg:p-2", isToday ? "border-[#FF6B35] bg-[#FFF9F6] ring-1 ring-[#FF6B35]/30" : isWeekend ? "border-[#D8D5C8] bg-[#FCFAF4]" : "border-[#D8D5C8] bg-white")}>
-                    <div className="mb-1.5 flex items-center justify-between">
-                      <span className={cn("inline-grid h-6 min-w-6 place-items-center rounded-full px-1 font-black text-xs tabular-nums lg:text-sm", isToday ? "bg-[#FF6B35] text-white" : "text-[#5E6654]")}>{Number(dateStr.slice(-2))}</span>
+                  <div key={dateStr} className={cn("flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border p-1", isToday ? "border-[#FF6B35] bg-[#FFF9F6] ring-1 ring-[#FF6B35]/30" : isWeekend ? "border-[#D8D5C8] bg-[#FCFAF4]" : "border-[#D8D5C8] bg-white")}>
+                    <div className="mb-0.5 flex shrink-0 items-center justify-between gap-1">
+                      <span className={cn("inline-grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 font-black text-[11px] tabular-nums", isToday ? "bg-[#FF6B35] text-white" : "text-[#5E6654]")}>{Number(dateStr.slice(-2))}</span>
                       {dayEvents.length > 0 && <span className="font-black text-[9px] text-[#5E6654]/60 tabular-nums">{dayEvents.length}</span>}
                     </div>
-                    <div className="space-y-1">
+                    <div className="no-scrollbar min-h-0 flex-1 space-y-0.5 overflow-y-auto">
                       {shown.map((event) => <div key={event.id}>{renderCalendarChip(event)}</div>)}
                     </div>
                     {extra > 0 && (
-                      <button type="button" onClick={() => openView(dayEvents[MAX])} className="mt-auto self-end rounded-md px-1.5 py-1 font-black text-[9px] tracking-wide text-[#34451F] uppercase hover:bg-[#EFE8D4] lg:text-[10px]">
-                        +{extra} more
-                      </button>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            title={`Show all ${dayEvents.length} events on ${formatDate(dateStr)}`}
+                            className="mt-0.5 shrink-0 rounded px-1 py-px text-left font-black text-[9.5px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#E5EBD8]"
+                          >
+                            +{extra} more
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent align="start" className="w-60 rounded-xl border border-[#D8D5C8] bg-white p-2">
+                          <p className="mb-1.5 px-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{formatDate(dateStr)}</p>
+                          <div className="max-h-72 space-y-0.5 overflow-y-auto">
+                            {dayEvents.map((event) => <div key={event.id}>{renderCalendarChip(event)}</div>)}
+                          </div>
+                        </PopoverContent>
+                      </Popover>
                     )}
                   </div>
                 );
