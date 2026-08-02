@@ -357,7 +357,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const removeCat = async (t: EventTypeRecord) => {
     const ok = await confirm({
       title: `Delete “${toTitleCase(t.name)}”`,
-      description: "This deletes the category and all the nights inside it, along with their badges.",
+      description: "This deletes the category and all the sub-categories inside it, along with their badges.",
       confirmLabel: "Delete", variant: "destructive",
     });
     if (!ok) return;
@@ -370,13 +370,13 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   const removeSub = async (s: Subtype) => {
     const ok = await confirm({
       title: `Delete “${toTitleCase(s.name)}”`,
-      description: "This deletes the night and its badges.",
+      description: "This deletes the sub-category and its badges.",
       confirmLabel: "Delete", variant: "destructive",
     });
     if (!ok) return;
     startTransition(async () => {
       const res = await deleteSubtypeAction(s.id);
-      if (res?.error) toast.error(res.error); else toast.success("Night deleted");
+      if (res?.error) toast.error(res.error); else toast.success("Sub-category deleted");
     });
   };
 
@@ -407,38 +407,32 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
   return (
     <>
       {narrow && drilled && selCat && (
-        <div className="sticky top-0 z-40 flex items-center gap-2.5 border-b border-[#E6DFC8] bg-[#FFFDF7]/95 px-3 py-2 backdrop-blur">
+        <div className="sticky top-0 z-40 flex items-center gap-2 border-b border-[#E6DFC8] bg-[#FFFDF7]/95 px-3 py-2 backdrop-blur">
           <IconBtn label="Back to categories" onClick={() => setDrilled(false)}><ArrowLeft className="h-4.5 w-4.5" /></IconBtn>
           <span style={{ "--dot": colorHexFromKey(selCat.color).solid } as React.CSSProperties} className="h-2.5 w-2.5 shrink-0 rounded-full bg-(--dot)" />
           <h2 className="min-w-0 flex-1 truncate font-black text-[16px] text-[#1F1F1A]">{toTitleCase(selCat.name)}</h2>
+          <IconBtn label={`Add a sub-category to ${toTitleCase(selCat.name)}`} create onClick={() => openNewSub(selCat)}><Plus className="h-4.5 w-4.5 stroke-[2.5]" /></IconBtn>
           <IconBtn label={`Edit ${toTitleCase(selCat.name)}`} edit onClick={() => openEditCat(selCat)}><Pencil className="h-4 w-4" /></IconBtn>
+          <IconBtn label={`Delete ${toTitleCase(selCat.name)}`} danger onClick={() => removeCat(selCat)}><Trash2 className="h-4 w-4" /></IconBtn>
         </div>
       )}
 
-      <div className="mx-auto w-full max-w-295 px-4 py-6 md:px-6" style={narrow ? { paddingBottom: 88 } : undefined}>
-        {showList && (
-          <div className="mb-4.5 flex flex-wrap items-end justify-between gap-3.5">
-            <div className="min-w-0">
-              <h1 className="font-black text-[20px] tracking-tight text-[#1F1F1A] md:text-[24px]">Event categories</h1>
-              <p className="mt-1.5 max-w-[60ch] text-[13.5px] text-[#5F624F] leading-relaxed">
-                {narrow ? "Tap a category to see the nights inside it." : "Pick a category on the left to see the nights inside it."}
-              </p>
-            </div>
-            {!narrow && (
-              <button
-                type="button"
-                onClick={openNewCat}
-                className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#1B4332] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
-              >
-                <Plus className="h-4 w-4 stroke-[2.5]" /> New category
-              </button>
-            )}
+      <div className="mx-auto w-full max-w-295 px-4 pt-4 pb-6 md:px-6 md:pt-0">
+        {showList && narrow && (
+          <div className="mb-4.5 flex justify-end">
+            <button
+              type="button"
+              onClick={openNewCat}
+              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#1B4332] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
+            >
+              <Plus className="h-4 w-4 stroke-[2.5]" /> Category
+            </button>
           </div>
         )}
 
         <div className={cn("grid items-start gap-4.5", narrow ? "grid-cols-1" : "grid-cols-[clamp(230px,25%,290px)_1fr]")}>
           {showList && (
-            <div className={cn("rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] p-2", !narrow && "sticky top-4")}>
+            <div className={cn("rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] p-2", !narrow && "sticky top-18")}>
               {!narrow && <p className="px-1.5 pt-2 pb-1.5 font-black text-[10.5px] text-[#5F624F] uppercase tracking-[0.16em]">Categories</p>}
               <div className="flex flex-col gap-0.5">
                 {types.map((t) => (
@@ -454,9 +448,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 <button
                   type="button"
                   onClick={openNewCat}
-                  className="mt-1.5 flex h-8.5 w-full items-center justify-center gap-1.5 rounded-[10px] font-bold text-[12.5px] text-[#5F624F] transition-colors hover:bg-[#EFEADB] hover:text-[#5C4033]"
+                  className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#1B4332] font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
                 >
-                  <Plus className="h-3.5 w-3.5" /> Add a category
+                  <Plus className="h-4 w-4 stroke-[2.5]" /> Category
                 </button>
               )}
             </div>
@@ -498,7 +492,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                       onClick={() => openNewSub(selCat)}
                       className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#1B4332] px-4 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
                     >
-                      <Plus className="h-4 w-4 stroke-[2.5]" /> Add a night
+                      <Plus className="h-4 w-4 stroke-[2.5]" /> Sub-category
                     </button>
                   )}
                 </div>
@@ -508,7 +502,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 <div className="rounded-[14px] border border-[#E6DFC8] bg-[#FFFDF7] px-5 py-11 text-center text-[#5F624F]">
                   <Layers className="mx-auto h-5.5 w-5.5 opacity-50" />
                   <p className="mt-2 font-black text-[14px] text-[#1F1F1A]">{query ? "No matches" : "Nothing in here yet"}</p>
-                  <p className="mt-0.5 text-[12.5px]">{query ? "Try a different search." : "Add a night to get started."}</p>
+                  <p className="mt-0.5 text-[12.5px]">{query ? "Try a different search." : "Add a sub-category to get started."}</p>
                 </div>
               ) : (
                 <div className={cn("grid gap-3", narrow ? "grid-cols-1" : "grid-cols-[repeat(auto-fill,minmax(min(100%,340px),1fr))]")}>
@@ -521,18 +515,6 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
           )}
         </div>
       </div>
-
-      {narrow && selCat && (
-        <div className="fixed inset-x-0 bottom-0 z-45 flex gap-2.5 border-t border-[#E6DFC8] bg-[#FFFDF7]/95 px-3 pt-2.5 pb-[calc(10px+env(safe-area-inset-bottom))] backdrop-blur">
-          <button
-            type="button"
-            onClick={() => (drilled ? openNewSub(selCat) : openNewCat())}
-            className="inline-flex h-12 flex-1 items-center justify-center gap-2 rounded-[10px] bg-[#1B4332] px-4 font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#1B4332]/85"
-          >
-            <Plus className="h-4 w-4 stroke-[2.5]" /> {drilled ? `Add a night to ${toTitleCase(selCat.name)}` : "New category"}
-          </button>
-        </div>
-      )}
 
       {catForm && (
         <CategorySheet form={catForm} setForm={setCatForm} onClose={closeSheets} onSave={submitCat} pending={isPending} error={error} />
@@ -1431,8 +1413,8 @@ function Dropzone({ url, subline, ariaLabel, pathPrefix, onUpload, onClear }: {
   );
 }
 
-function IconBtn({ label, onClick, edit, danger, children }: {
-  label: string; onClick: () => void; edit?: boolean; danger?: boolean; children: React.ReactNode;
+function IconBtn({ label, onClick, edit, danger, create, children }: {
+  label: string; onClick: () => void; edit?: boolean; danger?: boolean; create?: boolean; children: React.ReactNode;
 }) {
   return (
     <button
@@ -1442,7 +1424,8 @@ function IconBtn({ label, onClick, edit, danger, children }: {
       onClick={onClick}
       className={cn(
         "grid h-10 w-10 shrink-0 place-items-center rounded-[10px] transition-colors",
-        danger ? "text-[#DC2626] hover:bg-[#FBECEA]" : edit ? "text-[#B45309] hover:bg-[#EFEADB]" : "text-[#5F624F] hover:bg-[#EFEADB] hover:text-[#5C4033]",
+        create ? "bg-[#1B4332] font-black text-white uppercase tracking-widest hover:bg-[#1B4332]/85"
+          : danger ? "text-[#DC2626] hover:bg-[#FBECEA]" : edit ? "text-[#B45309] hover:bg-[#EFEADB]" : "text-[#5F624F] hover:bg-[#EFEADB] hover:text-[#5C4033]",
       )}
     >
       {children}
