@@ -541,7 +541,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                     {isEditing ? (
                       <div className="animate-in space-y-3 duration-200 zoom-in-95 fade-in">
                         <div className="flex items-center gap-2">
-                          <label className="ml-1 font-bold text-xs text-admin-muted">Question No.</label>
+                          <label className="ml-1 text-[13px] font-medium text-admin-muted">Question No.</label>
                           <input
                             type="number"
                             inputMode="numeric"
@@ -553,19 +553,19 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                               const val = e.target.value.replace(/\D/g, '');
                               setEditForm({ ...editForm, questionNo: val === '' ? 0 : parseInt(val) });
                             }}
-                            className="h-10 w-16 rounded-lg border border-admin-line bg-white px-3 py-2 text-center font-semibold text-xs text-admin-primary tabular-nums outline-none focus:border-admin-primary"
+                            className="h-11 w-18 rounded-lg border border-admin-line bg-white px-3 py-2 text-center text-base font-semibold text-admin-primary tabular-nums outline-none focus:border-admin-primary sm:text-sm"
                           />
                         </div>
                         {isPicture && q.image_url && (
                           <div className="space-y-1.5">
-                            <label className="ml-1 font-bold text-xs text-admin-muted">Image</label>
+                            <label className="ml-1 text-[13px] font-medium text-admin-muted">Image</label>
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={newImagePreview ?? q.image_url}
                               alt={q.answer_text}
                               className="h-40 w-full rounded-xl object-cover"
                             />
-                            <label className="flex h-9 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-admin-line font-semibold text-xs tracking-wide text-admin-muted transition-all hover:border-admin-primary hover:text-admin-primary">
+                            <label className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-admin-line text-[13px] font-semibold text-admin-muted transition-all hover:border-admin-primary hover:text-admin-primary">
                               <Upload className="h-3.5 w-3.5" />
                               {newImageFile ? newImageFile.name : 'Replace image'}
                               <input type="file" accept="image/*" className="hidden" onChange={handleImageChange} />
@@ -574,39 +574,40 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                         )}
                         {!isPicture && !hideQuestionText && (
                           <div className="space-y-1.5">
-                            <label className="ml-1 font-bold text-xs text-admin-muted">Question</label>
+                            <label className="ml-1 text-[13px] font-medium text-admin-muted">Question</label>
                             <textarea
                               title="Edit question"
                               value={editForm.question}
                               onChange={(e) => setEditForm({ ...editForm, question: e.target.value })}
-                              className="min-h-30 w-full resize-none rounded-xl border-2 border-admin-line bg-admin-bg/30 p-3 text-xs leading-relaxed outline-none focus:border-admin-primary"
+                              className="min-h-30 w-full resize-none rounded-xl border-2 border-admin-line bg-admin-bg/30 p-3 text-base leading-relaxed text-admin-ink outline-none focus:border-admin-primary sm:text-sm"
                             />
                           </div>
                         )}
                         <div className="space-y-1.5">
-                          <label className="ml-1 font-bold text-xs text-admin-muted">Answer</label>
+                          <label className="ml-1 text-[13px] font-medium text-admin-muted">Answer</label>
                           <input
                             title="Edit answer"
                             value={editForm.answer}
                             onChange={(e) => setEditForm({ ...editForm, answer: e.target.value })}
-                            className="h-11 w-full rounded-xl border-2 border-admin-primary/15 bg-admin-primary/10 px-3 font-semibold text-xs text-admin-primary outline-none focus:border-admin-primary"
+                            className="h-11 w-full rounded-xl border-2 border-admin-primary/15 bg-admin-primary/10 px-3 text-base font-semibold text-admin-primary outline-none focus:border-admin-primary sm:text-sm"
                           />
                         </div>
                         <div className="flex gap-2 pt-1">
                           <Button
                             onClick={() => saveEdit(q.id)}
                             disabled={isPending}
-                            className="h-10 flex-1 rounded-xl bg-admin-primary font-semibold text-xs tracking-wide text-white hover:bg-admin-primary-hover"
+                            className="h-11 flex-1 rounded-xl bg-admin-primary text-[13px] font-semibold text-white hover:bg-admin-primary-hover"
                           >
-                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-3.5 w-3.5" /> Save</>}
+                            {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" /> Save</>}
                           </Button>
                           <Button
                             variant="outline"
                             onClick={cancelEditing}
                             disabled={isPending}
-                            className="h-10 rounded-xl border-2 border-admin-line bg-red-500 px-4 text-xs font-bold text-white"
+                            className="h-11 shrink-0 rounded-xl border border-admin-line bg-admin-card px-5 text-[13px] font-semibold text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
                           >
-                            <X className="h-3.5 w-3.5" />
+                            <X className="mr-2 h-4 w-4" />
+                            Cancel
                           </Button>
                         </div>
                       </div>
