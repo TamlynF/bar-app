@@ -282,6 +282,7 @@ export async function updatePastQuestionAction(
   }
 
   let newImageUrl: string | null | undefined = undefined;
+  let swapBack: { id: string; questionNo: number } | null = null;
 
   if (imageData) {
     const adminClient = createAdminClient()
@@ -343,21 +344,14 @@ export async function updatePastQuestionAction(
         .order('question_no', { ascending: true, nullsFirst: false })
 
       if (allQs && allQs.length > 0) {
-        const allIds = allQs.map(q => q.id)
         const clamped = Math.max(1, Math.min(newQuestionNo, allQs.length))
+        const occupant = allQs.find(q => q.id !== id && q.question_no === clamped)
 
-        await supabase.from('past_quiz_questions').update({ question_no: null }).in('id', allIds)
-
-        const others = allQs.map(q => q.id).filter(qid => qid !== id)
-        others.splice(clamped - 1, 0, id)
-
-        for (let i = 0; i < others.length; i++) {
-          if (others[i] !== id) {
-            await supabase
-              .from('past_quiz_questions')
-              .update({ question_no: i + 1 })
-              .eq('id', others[i])
-          }
+        if (occupant) {
+          /* Park the occupant, then hand it this question's old number - a swap,
+             so the category keeps exactly one question per number. */
+          await supabase.from('past_quiz_questions').update({ question_no: null }).eq('id', occupant.id)
+          swapBack = { id: occupant.id, questionNo: currentQ.question_no ?? clamped }
         }
         updateFields.question_no = clamped
       }
@@ -373,6 +367,14 @@ export async function updatePastQuestionAction(
     console.error("Update error:", error);
     throw new Error("Failed to update question.");
   }
+
+  if (swapBack) {
+    await supabase
+      .from('past_quiz_questions')
+      .update({ question_no: swapBack.questionNo })
+      .eq('id', swapBack.id);
+  }
+
   revalidatePath('/event-setups/events/[id]', 'page');
   return { success: true, image_url: newImageUrl };
 }
@@ -382,7 +384,7 @@ export async function deletePastQuestionAction(id: string) {
 
   const { data: row } = await supabase
     .from('past_quiz_questions')
-    .select('image_url')
+    .select('image_url, events_id, quiz_category_configs_id')
     .eq('id', id)
     .single()
 
@@ -410,8 +412,39 @@ export async function deletePastQuestionAction(id: string) {
     console.error("Delete error:", error);
     throw new Error("Failed to delete question.");
   }
+
+  await renumberCategoryQuestions(supabase, row?.events_id, row?.quiz_category_configs_id);
+
   revalidatePath('/event-setups/events/[id]', 'page');
   return { success: true };
+}
+
+/* Keeps a category's question numbers contiguous from 1 after a delete. */
+async function renumberCategoryQuestions(
+  supabase: SupabaseClient,
+  eventsId: number | null | undefined,
+  categoryConfigId: number | null | undefined
+) {
+  if (eventsId == null || categoryConfigId == null) return;
+
+  const { data: remaining } = await supabase
+    .from('past_quiz_questions')
+    .select('id, question_no')
+    .eq('events_id', eventsId)
+    .eq('quiz_category_configs_id', categoryConfigId)
+    .order('question_no', { ascending: true, nullsFirst: false })
+    .order('created_at', { ascending: true });
+
+  if (!remaining) return;
+
+  for (let i = 0; i < remaining.length; i++) {
+    if (remaining[i].question_no !== i + 1) {
+      await supabase
+        .from('past_quiz_questions')
+        .update({ question_no: i + 1 })
+        .eq('id', remaining[i].id);
+    }
+  }
 }
 
 export async function getQuizEventsAction(): Promise<QuizEventSummary[]> {

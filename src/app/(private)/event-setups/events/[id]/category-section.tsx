@@ -186,14 +186,30 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       toast.error("Question number is required");
       return;
     }
-    const currentQ = questions.find((q) => q.id === id);
-    if (editForm.questionNo !== (currentQ?.question_no ?? 0)) {
-      const duplicate = questions.find((q) => q.id !== id && q.question_no === editForm.questionNo);
-      if (duplicate) {
-        toast.error(`Q${editForm.questionNo} is already taken`);
-        return;
-      }
+    if (editForm.questionNo > questions.length) {
+      toast.error(
+        `${category_name} has ${questions.length} question${questions.length === 1 ? "" : "s"}, so the number must be between 1 and ${questions.length}.`
+      );
+      return;
     }
+    const currentQ = questions.find((q) => q.id === id);
+    const currentNo = currentQ?.question_no ?? 0;
+    const numberChanged = editForm.questionNo !== currentNo;
+    const swapWith = numberChanged
+      ? questions.find((q) => q.id !== id && q.question_no === editForm.questionNo)
+      : undefined;
+
+    if (numberChanged) {
+      const ok = await confirm({
+        title: `Move to question ${editForm.questionNo}?`,
+        description: swapWith
+          ? `Question ${currentNo} will become question ${editForm.questionNo} in ${category_name}. Question ${editForm.questionNo} is already taken, so that question will swap places and become question ${currentNo}.`
+          : `Question ${currentNo} will become question ${editForm.questionNo} in ${category_name}.`,
+        confirmLabel: "Save changes",
+      });
+      if (!ok) return;
+    }
+
     setIsPending(true);
     try {
       let imageData: { base64: string; mimeType: string; oldImageUrl: string | null } | null = null;
@@ -217,15 +233,18 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           question_no: editForm.questionNo,
           ...(result.image_url != null ? { image_url: result.image_url.split("?")[0] + cacheBust } : result.image_url === null ? { image_url: null } : {}),
         } : q);
-        const currentNo = prev.find(q => q.id === id)?.question_no;
-        if (currentNo === editForm.questionNo) return updated;
-        const others = updated.filter(q => q.id !== id);
-        const editedQ = updated.find(q => q.id === id)!;
-        const clamped = Math.max(1, Math.min(editForm.questionNo, prev.length));
-        others.splice(clamped - 1, 0, editedQ);
-        return others.map((q, i) => ({ ...q, question_no: i + 1 }));
+        if (!numberChanged) return updated;
+        /* Mirror the server-side swap so the list matches without a refetch. */
+        const swapped = swapWith
+          ? updated.map((q) => (q.id === swapWith.id ? { ...q, question_no: currentNo } : q))
+          : updated;
+        return [...swapped].sort((a, b) => (a.question_no ?? 0) - (b.question_no ?? 0));
       });
-      toast.success("Question updated");
+      toast.success(
+        swapWith
+          ? `Saved. Questions ${currentNo} and ${editForm.questionNo} swapped places.`
+          : "Question updated"
+      );
       setEditingId(null);
       if (newImagePreview) URL.revokeObjectURL(newImagePreview);
       setNewImageFile(null);
@@ -238,9 +257,15 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   };
 
   const deleteQuestion = async (id: string) => {
+    const target = questions.find((q) => q.id === id);
+    const targetNo = target?.question_no ?? questions.findIndex((q) => q.id === id) + 1;
+    const willRenumber = questions.some((q) => (q.question_no ?? 0) > targetNo);
+
     const ok = await confirm({
       title: "Delete question",
-      description: "Delete this question? This cannot be undone.",
+      description: willRenumber
+        ? `Are you sure you want to delete ${category_name} question number ${targetNo} from this quiz? The questions after it will be renumbered so they still run from 1. This cannot be undone.`
+        : `Are you sure you want to delete ${category_name} question number ${targetNo} from this quiz? This cannot be undone.`,
       confirmLabel: "Delete",
       variant: "destructive",
     });
@@ -248,8 +273,13 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
     setIsPending(true);
     try {
       await deletePastQuestionAction(id);
-      setQuestions((prev) => prev.filter((q) => q.id !== id));
-      toast.success("Question deleted");
+      setQuestions((prev) =>
+        prev
+          .filter((q) => q.id !== id)
+          .sort((a, b) => (a.question_no ?? 0) - (b.question_no ?? 0))
+          .map((q, i) => ({ ...q, question_no: i + 1 }))
+      );
+      toast.success(willRenumber ? "Question deleted and the rest renumbered" : "Question deleted");
       if (includeSpotify && configId != null) {
         syncCategoryPlaylistAction(eventId, configId).catch(() => {});
       }
