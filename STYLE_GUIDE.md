@@ -227,10 +227,38 @@ Reserved for **meaning**, never decoration:
 
 ### Typography on admin
 
-- Headings: `font-black uppercase tracking-tighter`
-- Labels: `text-[10px] font-black uppercase tracking-wide text-admin-muted`
-- Body: `text-sm font-medium` or `text-xs`
-- Data: `tabular-nums` for numerals
+**Archivo only. Never Archivo Black or Anton on an admin screen** - those stay on public-facing branding. The admin surface earns hierarchy from *size and weight*, not from shouting.
+
+| Element | Mobile | Desktop | Weight |
+|---|---:|---:|---:|
+| Page title | 18px | 20-24px | 700 `font-bold` |
+| Breadcrumb | 12px | 13px | 500 `font-medium` |
+| Page description | 14px | 14px | 400 `font-normal` |
+| Section heading | 14px | 15-16px | 700 `font-bold` |
+| Card title | 16px | 16-18px | 700 `font-bold` |
+| Body | 14px | 14px | 400-500 |
+| Secondary information | 12-13px | 13px | 500 `font-medium` |
+| Input text | 14-16px | 14px | 400 |
+| Button / tab | 13-14px | 13-14px | 600 `font-semibold` |
+| Badge / status | 11-12px | 11-12px | 600 `font-semibold` |
+| Sidebar top-level | - | 13-14px | 600 `font-semibold` |
+| Sidebar child | - | 12-13px | 500 `font-medium` |
+| Mobile nav label | 10-11px | - | 600 `font-semibold` |
+| Dashboard value | 24-32px | 28-36px | 700-800 |
+
+**Never below 11px for anything that carries meaning.** 9px and 10px metadata is unreadable for a manager glancing at a phone behind the bar.
+
+Line height: body ~1.5 (`leading-normal`), metadata ~1.4 (`leading-snug`), headings ~1.2-1.3 (`leading-tight`).
+
+#### Sentence case, not uppercase
+
+Ordinary interface text is **sentence case**: page titles, section headings, navigation, buttons, field labels, descriptions. "Add event", not "ADD EVENT". "Event categories", not "EVENT CATEGORIES".
+
+Uppercase is reserved for genuinely compact labels where the word *is* the whole meaning - status pills (`Confirmed`, `Pending`), date abbreviations (`AUG`), and small chart/table axis labels. Even there, prefer `text-[11px] font-semibold tracking-wide` over `font-black tracking-widest`.
+
+Tracking: page title `tracking-tight`; card title `tracking-tight` or default; body, navigation and buttons default; small uppercase pills `tracking-wide`. **`tracking-widest` is retired on admin.**
+
+`font-black` is retired on admin - `font-bold` is the heaviest weight used. Keep `tabular-nums` on every numeral in a list, table or KPI.
 
 ### Cards & sheets
 

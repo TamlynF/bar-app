@@ -475,7 +475,7 @@ export default async function DashboardPage() {
       <div className="mx-auto max-w-6xl space-y-5 px-4 py-4 sm:py-0 md:px-6">
 
         <header className="flex justify-center">
-          <p className="text-sm font-bold tracking-wide text-[#5E6654] uppercase">
+          <p className="text-sm font-bold text-[#5E6654]">
             {format(new Date(), "EEEE, do MMMM yyyy")}
           </p>
         </header>
@@ -558,8 +558,8 @@ export default async function DashboardPage() {
               ) : (
                 <div className="rounded-2xl border border-[#D8D5C8] bg-white p-10 text-center">
                   <CalendarDays className="mx-auto mb-3 h-10 w-10 text-[#5E6654] opacity-20" />
-                  <p className="font-black text-sm text-[#20231A]">No Upcoming Events</p>
-                  <p className="mt-1 text-[11px] font-medium text-[#5E6654]">
+                  <p className="font-bold text-sm text-[#20231A]">No Upcoming Events</p>
+                  <p className="mt-1 text-[13px] font-medium text-[#5E6654]">
                     Schedule an event in Settings to see it here.
                   </p>
                 </div>
@@ -615,7 +615,7 @@ function QuickLink({
       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F4F1E8] shadow-sm transition-colors group-hover:bg-white">
         <Icon className="h-5 w-5 text-[#34451F]" />
       </div>
-      <span className="font-black text-[10px] tracking-wide text-[#20231A] uppercase">
+      <span className="font-bold text-[12px] text-[#20231A]">
         {label}
       </span>
     </Link>

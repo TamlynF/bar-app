@@ -18,8 +18,8 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
           <CheckCircle2 className="h-6 w-6 text-white" />
         </div>
         <div>
-          <p className="font-black text-sm tracking-tight text-[#20231A] uppercase">All clear</p>
-          <p className="mt-0.5 text-xs font-semibold text-[#5E6654]">Nothing needs action right now.</p>
+          <p className="text-base leading-tight font-bold tracking-tight text-admin-ink">All clear</p>
+          <p className="mt-0.5 text-sm font-normal text-admin-muted">Nothing needs action right now.</p>
         </div>
       </div>
     );
@@ -34,9 +34,9 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
           <BellRing className="h-6 w-6 text-white" />
         </div>
         <div className="flex items-baseline gap-2">
-          <span className="font-black text-3xl leading-none text-[#20231A] tabular-nums">{total}</span>
-          <span className="font-black text-[11px] leading-tight tracking-wide text-[#5E6654] uppercase">
-            items need
+          <span className="text-3xl leading-none font-bold text-admin-ink tabular-nums">{total}</span>
+          <span className="text-sm leading-snug font-medium text-admin-muted">
+            Items need
             <br />
             action
           </span>
@@ -61,8 +61,8 @@ export default function NeedsActionHero({ items, total }: { items: ActionItem[];
             className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full border border-[#D8D5C8] bg-white px-3 transition-colors hover:border-[#d8cfb3] hover:bg-[#f3efe1]"
           >
             <span className={cn("h-2.5 w-2.5 shrink-0 rounded-[3px]", i.color)} />
-            <span className="text-xs font-bold whitespace-nowrap text-[#20231A]">{i.label}</span>
-            <span className="font-black text-[13px] text-[#20231A] tabular-nums">{i.count}</span>
+            <span className="text-[13px] font-medium whitespace-nowrap text-admin-ink">{i.label}</span>
+            <span className="text-[13px] font-bold text-admin-ink tabular-nums">{i.count}</span>
           </Link>
         ))}
       </div>

@@ -25,15 +25,15 @@ export default function TonightCard({
   return (
     <div className="flex items-center gap-3 rounded-2xl border border-[#D8D5C8] bg-white p-3.5 shadow-sm">
       <div className="flex h-12 w-12 shrink-0 flex-col items-center justify-center rounded-xl bg-[#34451F] leading-none text-white">
-        <span className="font-black text-xs tracking-wide tabular-nums">{start ?? "TBC"}</span>
-        {end && <span className="mt-0.5 text-[9px] font-bold text-white/60 tabular-nums">{end}</span>}
+        <span className="font-bold text-xs tracking-wide tabular-nums">{start ?? "TBC"}</span>
+        {end && <span className="mt-0.5 text-[12px] font-bold text-white/60 tabular-nums">{end}</span>}
       </div>
 
       <div className="min-w-0 flex-1">
-        <div className="truncate font-black text-[15px] tracking-tight text-[#20231A] uppercase">
+        <div className="truncate font-bold text-[15px] tracking-tight text-[#20231A] uppercase">
           {event.title}
         </div>
-        <div className="mt-0.5 truncate text-[11px] font-semibold text-[#5E6654]">{meta}</div>
+        <div className="mt-0.5 truncate text-[13px] font-semibold text-[#5E6654]">{meta}</div>
         {capacity > 0 && (
           <div className="mt-2 h-2 overflow-hidden rounded-full border border-[#D8D5C8] bg-[#F4F1E8]">
             <div
@@ -46,7 +46,7 @@ export default function TonightCard({
 
       <Link
         href={event.href}
-        className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-[#34451F] px-4 font-black text-[11px] tracking-wide text-white uppercase transition-colors hover:bg-[#283719]"
+        className="inline-flex h-10 shrink-0 items-center justify-center rounded-xl bg-[#34451F] px-4 font-semibold text-[13px] tracking-wide text-white transition-colors hover:bg-[#283719]"
       >
         Open
       </Link>

@@ -31,7 +31,7 @@ export default function ActionRow({
       >
         <Icon className={cn("h-3.5 w-3.5", hasItems ? activeColor : "text-[#5E6654]")} />
       </div>
-      <span className="flex-1 text-[11px] font-bold tracking-wide text-[#5E6654] uppercase sm:text-[11px]">
+      <span className="flex-1 text-[13px] font-bold tracking-wide text-[#5E6654] uppercase sm:text-[13px]">
         {label}
       </span>
       <div className="flex shrink-0 items-center gap-2">

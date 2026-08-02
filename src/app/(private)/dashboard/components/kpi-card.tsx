@@ -29,8 +29,8 @@ export default function KpiCard({
   return (
     <div className="rounded-2xl border border-[#D8D5C8] bg-white p-3.5 shadow-sm">
       <div className="mb-2 flex items-baseline justify-between">
-        <span className="font-black text-[9px] tracking-wide text-[#5E6654] uppercase">{monthLabel} collection rate</span>
-        <span className={cn("font-black text-[11px] tabular-nums", outstanding > 0 ? "text-amber-700" : "text-green-700")}>
+        <span className="text-[13px] font-medium text-admin-muted">{monthLabel} collection rate</span>
+        <span className={cn("text-[13px] font-semibold tabular-nums", outstanding > 0 ? "text-admin-warning" : "text-admin-success")}>
           {pct}%{outstanding > 0 ? ` · £${outstanding.toFixed(0)} due` : ""}
         </span>
       </div>
@@ -42,10 +42,10 @@ export default function KpiCard({
       </div>
 
       <div className="mt-3.5 grid grid-cols-2 gap-px overflow-hidden rounded-xl bg-[#D8D5C8]">
-        <Cell label="Collected" value={`£${collected.toFixed(0)}`} valueClass="text-green-700" trend={{ value: `${collectedDeltaPct}%`, up: collectedDeltaPct >= 0 }} />
-        <Cell label="Outstanding" value={`£${outstanding.toFixed(0)}`} valueClass="text-amber-700" sub={`${unpaidCount} unpaid`} />
-        <Cell label="Confirmed" value={String(confirmed)} valueClass="text-[#20231A]" trend={{ value: signed(confirmedDelta), up: confirmedDelta >= 0 }} />
-        <Cell label="New Guests" value={String(newGuests)} valueClass="text-[#20231A]" trend={{ value: signed(newGuestsDelta), up: newGuestsDelta >= 0 }} />
+        <Cell label="Collected" value={`£${collected.toFixed(0)}`} valueClass="text-admin-success" trend={{ value: `${collectedDeltaPct}%`, up: collectedDeltaPct >= 0 }} />
+        <Cell label="Outstanding" value={`£${outstanding.toFixed(0)}`} valueClass="text-admin-warning" sub={`${unpaidCount} unpaid`} />
+        <Cell label="Confirmed" value={String(confirmed)} valueClass="text-admin-ink" trend={{ value: signed(confirmedDelta), up: confirmedDelta >= 0 }} />
+        <Cell label="New guests" value={String(newGuests)} valueClass="text-admin-ink" trend={{ value: signed(newGuestsDelta), up: newGuestsDelta >= 0 }} />
       </div>
     </div>
   );
@@ -66,16 +66,16 @@ function Cell({
 }) {
   return (
     <div className="bg-white px-3 py-2.5">
-      <div className="font-black text-[9px] tracking-wide text-[#5E6654] uppercase">{label}</div>
+      <div className="text-[12px] font-medium text-admin-muted">{label}</div>
       <div className="mt-1 flex items-baseline gap-1.5">
-        <span className={cn("font-black text-xl leading-none tabular-nums", valueClass)}>{value}</span>
+        <span className={cn("text-2xl leading-tight font-bold tabular-nums", valueClass)}>{value}</span>
         {trend && (
-          <span className={cn("inline-flex items-center gap-0.5 font-black text-[9px]", trend.up ? "text-green-700" : "text-red-600")}>
+          <span className={cn("inline-flex items-center gap-0.5 text-[12px] font-semibold", trend.up ? "text-admin-success" : "text-admin-error")}>
             {trend.up ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />}
             {trend.value}
           </span>
         )}
-        {sub && <span className="text-[9px] font-bold tracking-wide text-[#5E6654] uppercase">{sub}</span>}
+        {sub && <span className="text-[12px] font-normal text-admin-muted">{sub}</span>}
       </div>
     </div>
   );

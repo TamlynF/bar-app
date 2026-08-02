@@ -165,7 +165,7 @@ function formatDateTime(iso?: string | null) {
 function SheetRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+      <span className="shrink-0 pt-0.5 font-bold text-[12px] text-[#5E6654]">
         {label}
       </span>
       <span className="text-right text-[13px] font-semibold text-[#20231A]">{value || "-"}</span>
@@ -891,40 +891,40 @@ export default function EventsClient({
         <span className="absolute top-3 bottom-3 left-0 w-1 rounded-full bg-(--spine)" />
 
         {isTonight && (
-          <span className="absolute -top-2 left-3 z-1 inline-flex h-4.75 items-center gap-1 rounded-full bg-[#FF6B35] px-2 font-black text-[9px] tracking-wide text-white uppercase shadow">
+          <span className="absolute -top-2 left-3 z-1 inline-flex h-4.75 items-center gap-1 rounded-full bg-[#FF6B35] px-2 font-bold text-[12px] text-white shadow">
             <Flame className="h-2.5 w-2.5" /> Tonight
           </span>
         )}
 
         <div className={cn("pointer-events-none relative flex h-11 w-11 shrink-0 flex-col items-center justify-center rounded-xl border sm:hidden", badgeClass)}>
-          <span className="font-black text-[9px] leading-none tracking-tighter uppercase">{monthAbbrOf(event.date)}</span>
-          <span className="font-black text-base leading-none sm:text-lg">{dayNumOf(event.date)}</span>
+          <span className="font-bold text-[12px] leading-none tracking-tighter">{monthAbbrOf(event.date)}</span>
+          <span className="font-bold text-base leading-none sm:text-lg">{dayNumOf(event.date)}</span>
         </div>
 
         <div className="pointer-events-none relative min-w-0 flex-1">
           <div className="mb-1 flex flex-wrap items-center gap-1.5">
-            {sub && <span className={cn("rounded px-1.5 py-0.5 font-black text-[9px] tracking-wide uppercase", badgeClass)}>{toTitleCase(sub.name)}</span>}
-            {inactive && <span className="rounded bg-gray-100 px-1.5 py-0.5 font-black text-[9px] tracking-wide text-gray-500 uppercase">Inactive</span>}
+            {sub && <span className={cn("rounded px-1.5 py-0.5 font-bold text-[12px]", badgeClass)}>{toTitleCase(sub.name)}</span>}
+            {inactive && <span className="rounded bg-gray-100 px-1.5 py-0.5 font-bold text-[12px] text-gray-500">Inactive</span>}
             {quizStat && !quizStat.allComplete && (
               <span className="inline-flex items-center gap-0.5">
-                <span className="font-black text-[9px] text-[#5E6654]">Qz</span>
+                <span className="font-bold text-[12px] text-[#5E6654]">Qz</span>
                 {quizStat.someExist
                   ? <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
                   : <AlertCircle className="h-3.5 w-3.5 text-red-500" />}
               </span>
             )}
           </div>
-          <p className={cn("truncate font-black text-sm leading-tight sm:text-[15px]", inactive ? "text-[#5E6654]" : "text-[#20231A]")}>
+          <p className={cn("truncate font-bold text-sm leading-tight sm:text-[15px]", inactive ? "text-[#5E6654]" : "text-[#20231A]")}>
             {event.title || "Untitled Event"}
           </p>
-          <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[11px] font-semibold text-[#5E6654] sm:text-xs">
+          <div className="mt-1 flex flex-wrap items-center gap-2.5 text-[13px] font-semibold text-[#5E6654] sm:text-xs">
             <span className="inline-flex items-center gap-1">
               <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
               {formatTime(event.start_time)}{event.end_time ? `–${formatTime(event.end_time)}` : ""}
             </span>
             {host && (
               <span className="inline-flex items-center gap-1.5">
-                <span className="inline-grid h-4.25 w-4.25 place-items-center rounded-full bg-(--spine) font-black text-[8.5px] text-white">
+                <span className="inline-grid h-4.25 w-4.25 place-items-center rounded-full bg-(--spine) font-bold text-[13px] text-white">
                   {host.full_name[0]}
                 </span>
                 {shortHost(host.full_name)}
@@ -936,13 +936,13 @@ export default function EventsClient({
         <div className="relative z-2 flex shrink-0 items-center gap-1 sm:gap-2">
           <div className="pointer-events-none flex flex-col items-end gap-1.5 sm:flex-row sm:items-center">
             {(event.is_bookable || bStats.confirmedPeople > 0) && (
-              <span className="inline-flex items-center gap-1 rounded-lg bg-[#F4F1E8] px-2 py-1 font-black text-xs text-[#5E6654] tabular-nums">
+              <span className="inline-flex items-center gap-1 rounded-lg bg-[#F4F1E8] px-2 py-1 font-bold text-xs text-[#5E6654] tabular-nums">
                 <Users className="h-3.5 w-3.5" />{bStats.confirmedPeople}
                 <span className="hidden font-bold sm:inline">booked</span>
               </span>
             )}
-            {hasPricing && <span className="font-black text-[11px] text-green-700 sm:rounded-lg sm:bg-green-50 sm:px-2 sm:py-1 sm:text-xs">£{event.payment_amount!.toFixed(2)}</span>}
-            {event.is_fully_booked && <span className="rounded bg-red-50 px-1.5 py-0.5 font-black text-[9px] tracking-wide text-red-600 uppercase">Full</span>}
+            {hasPricing && <span className="font-bold text-[13px] text-green-700 sm:rounded-lg sm:bg-green-50 sm:px-2 sm:py-1 sm:text-xs">£{event.payment_amount!.toFixed(2)}</span>}
+            {event.is_fully_booked && <span className="rounded bg-red-50 px-1.5 py-0.5 font-bold text-[12px] text-red-600">Full</span>}
           </div>
           {canCopy(event) && (
             <button
@@ -978,9 +978,9 @@ export default function EventsClient({
         )}
       >
         {event.start_time && (
-          <span className="shrink-0 font-black text-[9.5px] leading-snug tabular-nums lg:text-[10px]">{formatTime(event.start_time)}</span>
+          <span className="shrink-0 font-bold text-[12px] leading-snug tabular-nums lg:text-[12px]">{formatTime(event.start_time)}</span>
         )}
-        <span className="min-w-0 truncate text-[9.5px] leading-snug font-bold lg:text-[10px]">{event.title || "Untitled"}</span>
+        <span className="min-w-0 truncate text-[12px] leading-snug font-bold lg:text-[12px]">{event.title || "Untitled"}</span>
       </button>
     );
   };
@@ -1061,10 +1061,10 @@ export default function EventsClient({
 
       {filter === "quiz-incomplete" && (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-2.5">
-          <p className="font-black text-[11px] tracking-wide text-amber-700 uppercase">
+          <p className="font-bold text-[13px] text-amber-700">
             Upcoming quizzes with incomplete questions
           </p>
-          <Link href="/event-setups/events" className="shrink-0 font-black text-[11px] tracking-wide text-amber-700 uppercase underline">
+          <Link href="/event-setups/events" className="shrink-0 font-bold text-[13px] text-amber-700 underline">
             Clear
           </Link>
         </div>
@@ -1079,7 +1079,7 @@ export default function EventsClient({
             aria-pressed={viewMode === "list"}
             title="List view"
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 font-black text-[10px] tracking-wide uppercase transition-colors sm:px-3",
+              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[12px] transition-colors sm:px-3",
               viewMode === "list" ? "bg-[#34451F] text-white" : "text-[#5E6654] hover:text-[#34451F]"
             )}
           >
@@ -1091,7 +1091,7 @@ export default function EventsClient({
             aria-pressed={viewMode === "calendar"}
             title="Calendar view"
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 font-black text-[10px] tracking-wide uppercase transition-colors sm:px-3",
+              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[12px] transition-colors sm:px-3",
               viewMode === "calendar" ? "bg-[#34451F] text-white" : "text-[#5E6654] hover:text-[#34451F]"
             )}
           >
@@ -1102,11 +1102,11 @@ export default function EventsClient({
         <button
           type="button"
           onClick={() => openAdd()}
-          title="New Event"
+          title="Add event"
           className="order-2 ml-auto inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3 text-white shadow-sm transition-colors hover:bg-[#283719] lg:order-3 lg:ml-0"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
-          <span className="font-black text-[10px] tracking-widest uppercase">New <span className="hidden sm:inline">event</span></span>
+          <span className="text-[13px] font-semibold">Add event</span>
         </button>
 
       <div className="order-3 flex w-full items-center gap-2 lg:order-2 lg:min-w-0 lg:flex-1">
@@ -1114,7 +1114,7 @@ export default function EventsClient({
           <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
           <input
             type="text"
-            placeholder="Search title, date or host..."
+            placeholder="Search events by title, date or host"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="min-w-0 flex-1 bg-transparent text-sm text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
@@ -1133,7 +1133,7 @@ export default function EventsClient({
           aria-expanded={showFilters}
           title={showFilters ? "Hide filters" : "Show filters"}
           className={cn(
-            "inline-flex h-11 w-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border font-black text-[11px] tracking-widest uppercase transition-colors sm:w-auto sm:px-4",
+            "inline-flex h-11 w-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border font-bold text-[13px] transition-colors sm:w-auto sm:px-4",
             showFilters || activeFilterCount > 0
               ? "border-[#34451F] bg-[#34451F] text-white"
               : "border-[#D8D5C8] bg-white text-[#5E6654] hover:text-[#34451F]"
@@ -1142,7 +1142,7 @@ export default function EventsClient({
           <SlidersHorizontal className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 font-black text-[9px] text-[#34451F] tabular-nums">
+            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 font-bold text-[12px] text-[#34451F] tabular-nums">
               {activeFilterCount}
             </span>
           )}
@@ -1156,7 +1156,7 @@ export default function EventsClient({
             type="button"
             onClick={() => setCatFilter("all")}
             className={cn(
-              "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 font-black text-[10px] tracking-wide uppercase transition-colors",
+              "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 font-bold text-[12px] transition-colors",
               catFilter === "all" ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-white text-[#5E6654]"
             )}
           >
@@ -1170,7 +1170,7 @@ export default function EventsClient({
                 type="button"
                 onClick={() => setCatFilter(sel ? "all" : type.id)}
                 className={cn(
-                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 font-black text-[10px] tracking-wide uppercase transition-colors",
+                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 font-bold text-[12px] transition-colors",
                   sel ? "border-[#34451F] bg-[#34451F] text-white" : cn(badgeClassFromColor(type.color), "rounded-full")
                 )}
               >
@@ -1184,7 +1184,7 @@ export default function EventsClient({
           <button
             type="button"
             onClick={() => setSortSoon((s) => !s)}
-            className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#34451F] uppercase"
+            className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-bold text-[12px] text-[#34451F]"
           >
             <ArrowDownUp className="h-3 w-3" /> {sortSoon ? "Soonest" : "Latest"}
           </button>
@@ -1197,7 +1197,7 @@ export default function EventsClient({
                 type="button"
                 onClick={() => toggleQuickFilter(q.key)}
                 className={cn(
-                  "h-7 shrink-0 rounded-full border px-3 font-black text-[9px] tracking-wide uppercase transition-colors",
+                  "h-7 shrink-0 rounded-full border px-3 font-bold text-[12px] transition-colors",
                   on ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-white text-[#5E6654]"
                 )}
               >
@@ -1213,12 +1213,12 @@ export default function EventsClient({
 
       {viewMode === "list" && anyFilterActive && (
         <div className="flex items-center gap-1.5 px-1 text-xs font-semibold text-[#5E6654]">
-          <b className="font-black text-[13px] text-[#20231A]">{visibleEvents.length}</b>
+          <b className="font-bold text-[13px] text-[#20231A]">{visibleEvents.length}</b>
           event{visibleEvents.length === 1 ? "" : "s"}
           {catFilter !== "all" && (
-            <> in <span className="font-black text-[#34451F]">{toTitleCase(typeById.get(catFilter)?.name)}</span></>
+            <> in <span className="font-bold text-[#34451F]">{toTitleCase(typeById.get(catFilter)?.name)}</span></>
           )}
-          <button type="button" onClick={clearAllFilters} className="ml-auto font-black text-[10px] tracking-wide text-[#34451F] uppercase underline">
+          <button type="button" onClick={clearAllFilters} className="ml-auto font-bold text-[12px] text-[#34451F] underline">
             Clear all
           </button>
         </div>
@@ -1230,7 +1230,7 @@ export default function EventsClient({
             <button type="button" onClick={() => shiftPeriod(-1)} title={isWeekView ? "Previous week" : "Previous month"} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <h3 className="min-w-0 flex-1 text-center font-black text-sm tracking-tight text-[#20231A] uppercase sm:text-base">{periodLabel}</h3>
+            <h3 className="min-w-0 flex-1 text-center font-bold text-sm tracking-tight text-[#20231A] sm:text-base">{periodLabel}</h3>
             <button type="button" onClick={() => shiftPeriod(1)} title={isWeekView ? "Next week" : "Next month"} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-[#34451F] transition-colors hover:bg-[#EFE8D4]">
               <ChevronRight className="h-4 w-4" />
             </button>
@@ -1243,7 +1243,7 @@ export default function EventsClient({
                   aria-pressed={calendarView === v}
                   title={v === "month" ? "Month view" : "Week view"}
                   className={cn(
-                    "inline-flex h-8 items-center rounded-lg px-2.5 font-black text-[9px] tracking-wide uppercase transition-colors sm:px-3 sm:text-[10px]",
+                    "inline-flex h-8 items-center rounded-lg px-2.5 font-bold text-[12px] transition-colors sm:px-3 sm:text-[12px]",
                     calendarView === v ? "bg-[#34451F] text-white" : "text-[#5E6654] hover:text-[#34451F]"
                   )}
                 >
@@ -1251,7 +1251,7 @@ export default function EventsClient({
                 </button>
               ))}
             </div>
-            <button type="button" onClick={goToday} className="h-9 shrink-0 rounded-xl border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-black text-[9px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#D8D5C8] sm:px-3 sm:text-[10px]">
+            <button type="button" onClick={goToday} className="h-9 shrink-0 rounded-xl border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-bold text-[12px] text-[#34451F] transition-colors hover:bg-[#D8D5C8] sm:px-3 sm:text-[12px]">
               Today
             </button>
           </div>
@@ -1259,7 +1259,7 @@ export default function EventsClient({
           <div className="rounded-2xl border border-[#D8D5C8] bg-white p-2 shadow-sm sm:flex sm:min-h-0 sm:flex-1 sm:flex-col">
             <div className="grid shrink-0 grid-cols-7 gap-1">
               {WEEKDAYS.map((w) => (
-                <div key={w} className="py-1 text-center font-black text-[9px] tracking-wide text-[#5E6654] uppercase sm:text-[10px]">{w}</div>
+                <div key={w} className="py-1 text-center font-bold text-[12px] text-[#5E6654] sm:text-[12px]">{w}</div>
               ))}
             </div>
 
@@ -1277,7 +1277,7 @@ export default function EventsClient({
                     aria-label={`${formatDate(dateStr)}, ${dayEvents.length} event${dayEvents.length === 1 ? "" : "s"}`}
                     aria-pressed={isSelected}
                     className={cn(
-                      "relative flex aspect-square min-h-10 flex-col items-center justify-center rounded-xl border text-xs font-black tabular-nums transition-colors",
+                      "relative flex aspect-square min-h-10 flex-col items-center justify-center rounded-xl border text-xs font-bold tabular-nums transition-colors",
                       isSelected
                         ? "border-[#34451F] bg-[#34451F] text-white"
                         : isToday
@@ -1308,8 +1308,8 @@ export default function EventsClient({
                 return (
                   <div key={dateStr} className={cn("flex min-h-0 min-w-0 flex-col overflow-hidden rounded-lg border p-1", isToday ? "border-[#FF6B35] bg-[#FFF9F6] ring-1 ring-[#FF6B35]/30" : isWeekend ? "border-[#D8D5C8] bg-[#FCFAF4]" : "border-[#D8D5C8] bg-white")}>
                     <div className="mb-0.5 flex shrink-0 items-center justify-between gap-1">
-                      <span className={cn("inline-grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 font-black text-[11px] tabular-nums", isToday ? "bg-[#FF6B35] text-white" : "text-[#5E6654]")}>{Number(dateStr.slice(-2))}</span>
-                      {dayEvents.length > 0 && <span className="font-black text-[9px] text-[#5E6654]/60 tabular-nums">{dayEvents.length}</span>}
+                      <span className={cn("inline-grid h-4.5 min-w-4.5 place-items-center rounded-full px-1 font-bold text-[13px] tabular-nums", isToday ? "bg-[#FF6B35] text-white" : "text-[#5E6654]")}>{Number(dateStr.slice(-2))}</span>
+                      {dayEvents.length > 0 && <span className="font-bold text-[12px] text-[#5E6654]/60 tabular-nums">{dayEvents.length}</span>}
                     </div>
                     <div className="no-scrollbar min-h-0 flex-1 space-y-0.5 overflow-y-auto">
                       {shown.map((event) => <div key={event.id}>{renderCalendarChip(event)}</div>)}
@@ -1320,13 +1320,13 @@ export default function EventsClient({
                           <button
                             type="button"
                             title={`Show all ${dayEvents.length} events on ${formatDate(dateStr)}`}
-                            className="mt-0.5 shrink-0 rounded px-1 py-px text-left font-black text-[9.5px] tracking-wide text-[#34451F] uppercase transition-colors hover:bg-[#E5EBD8]"
+                            className="mt-0.5 shrink-0 rounded px-1 py-px text-left font-bold text-[12px] text-[#34451F] transition-colors hover:bg-[#E5EBD8]"
                           >
                             +{extra} more
                           </button>
                         </PopoverTrigger>
                         <PopoverContent align="start" className="w-60 rounded-xl border border-[#D8D5C8] bg-white p-2">
-                          <p className="mb-1.5 px-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{formatDate(dateStr)}</p>
+                          <p className="mb-1.5 px-1 font-bold text-[12px] text-[#5E6654]">{formatDate(dateStr)}</p>
                           <div className="max-h-72 space-y-0.5 overflow-y-auto">
                             {dayEvents.map((event) => <div key={event.id}>{renderCalendarChip(event)}</div>)}
                           </div>
@@ -1342,10 +1342,10 @@ export default function EventsClient({
           <section className="space-y-2 sm:hidden">
             <div className="flex items-center gap-2 px-1 py-1">
               <div className="min-w-0 flex-1">
-                <p className="font-black text-sm text-[#20231A]">{selectedCalendarLabel}</p>
-                <p className="text-[11px] font-semibold text-[#5E6654]">{selectedCalendarEvents.length} event{selectedCalendarEvents.length === 1 ? "" : "s"}</p>
+                <p className="font-bold text-sm text-[#20231A]">{selectedCalendarLabel}</p>
+                <p className="text-[13px] font-semibold text-[#5E6654]">{selectedCalendarEvents.length} event{selectedCalendarEvents.length === 1 ? "" : "s"}</p>
               </div>
-              <button type="button" onClick={() => openAdd(undefined, selectedCalendarDate)} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
+              <button type="button" onClick={() => openAdd(undefined, selectedCalendarDate)} className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-[#D8D5C8] bg-white px-3 font-bold text-[12px] text-[#34451F]">
                 <Plus className="h-3.5 w-3.5" /> Add
               </button>
             </div>
@@ -1362,16 +1362,16 @@ export default function EventsClient({
       ) : visibleEvents.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
           <CalendarDays className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-          <p className="font-black text-sm text-[#20231A]">
+          <p className="font-bold text-sm text-[#20231A]">
             {filter === "quiz-incomplete" ? "No upcoming quizzes with incomplete questions" : "Nothing matches"}
           </p>
-          <p className="mt-1 text-[11px] text-[#5E6654]">
+          <p className="mt-1 text-[13px] text-[#5E6654]">
             {filter === "quiz-incomplete"
               ? "All quiz questions are complete"
               : anyFilterActive ? "No events with these filters" : "No events for the selected dates"}
           </p>
           {anyFilterActive && filter !== "quiz-incomplete" && (
-            <button type="button" onClick={clearAllFilters} className="mt-3 font-black text-[11px] tracking-wide text-[#34451F] uppercase underline">
+            <button type="button" onClick={clearAllFilters} className="mt-3 font-bold text-[13px] text-[#34451F] underline">
               Reset filters
             </button>
           )}
@@ -1381,9 +1381,9 @@ export default function EventsClient({
           {dayGroups.map((group) => (
             <section key={group.date} className="space-y-1.5 sm:space-y-2">
               <div className="sticky top-0 z-10 flex items-center gap-2 bg-[#F4F1E8] py-1.5">
-                <span className="font-black text-[11px] tracking-wide text-[#34451F] uppercase sm:text-xs lg:text-sm">{relativeDayOf(group.date, todayStr)}</span>
+                <span className="font-bold text-[13px] text-[#34451F] sm:text-xs lg:text-sm">{relativeDayOf(group.date, todayStr)}</span>
                 <span className="h-px flex-1 bg-[#D8D5C8]" />
-                <span className="text-[10px] font-bold text-[#5E6654] sm:text-[11px] lg:text-xs">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
+                <span className="text-[12px] font-bold text-[#5E6654] sm:text-[13px] lg:text-xs">{weekdayOf(group.date)} {dayNumOf(group.date)} {monthAbbrOf(group.date)}</span>
               </div>
               {group.events.map((event) => renderEventRow(event))}
             </section>
@@ -1404,7 +1404,7 @@ export default function EventsClient({
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-2.5 pb-2 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-lg leading-tight tracking-tighter text-[#20231A] uppercase">
+                <SheetTitle className="truncate font-bold text-lg leading-tight tracking-tighter text-[#20231A]">
                   {sheetTitle}
                   {selected && (
                     <span className="ml-1.5 text-[13px] font-semibold tracking-wide text-[#5E6654] normal-case italic tabular-nums">
@@ -1420,7 +1420,7 @@ export default function EventsClient({
                 {isAdding && copySourceId && (
                   <div className="mt-1 flex items-center gap-1.5">
                     <CopyPlus className="h-3 w-3 text-[#5E6654]" />
-                    <span className="font-black text-xs tracking-wide text-[#5E6654] uppercase tabular-nums">Copied from #{copySourceId}</span>
+                    <span className="text-[13px] font-medium text-[#5E6654] tabular-nums">Copied from #{copySourceId}</span>
                   </div>
                 )}
               </div>
@@ -1435,11 +1435,11 @@ export default function EventsClient({
                         className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-2.5 text-blue-700 transition-colors hover:bg-blue-50 hover:text-blue-800 lg:px-3"
                       >
                         <Info className="h-4.5 w-4.5 shrink-0" />
-                        <span className="hidden font-black text-[11px] tracking-widest uppercase lg:inline">System Info</span>
+                        <span className="hidden font-bold text-[13px] lg:inline">System Info</span>
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
-                      <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
+                      <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-bold text-[12px] text-[#34451F]">
                         System Information
                       </span>
                       <SheetRow label="Creation Method" value={eventCreationMethodLabel(selected.creation_method)} />
@@ -1480,7 +1480,7 @@ export default function EventsClient({
                       className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#34451F] px-2.5 text-white shadow-sm transition-colors hover:bg-[#283719] lg:px-3"
                     >
                       <CopyPlus className="h-4.5 w-4.5 shrink-0" />
-                      <span className="hidden font-black text-[11px] tracking-widest uppercase lg:inline">Copy</span>
+                      <span className="hidden font-bold text-[13px] lg:inline">Copy</span>
                     </button>
                   )}
                 </div>
@@ -1490,7 +1490,7 @@ export default function EventsClient({
             {selected && !isAdding && (
               <div className="mt-1.5 flex items-center gap-3">
                 <span className={cn(
-                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border-2 px-3 font-black text-[10px] tracking-widest uppercase",
+                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border-2 px-3 font-bold text-[12px]",
                   selected.is_active !== false ? "border-green-300 bg-green-100 text-green-700" : "border-red-300 bg-red-100 text-red-600"
                 )}>
                   <span className={cn("h-2 w-2 shrink-0 rounded-full", selected.is_active !== false ? "bg-green-500" : "bg-red-500")} />
@@ -1538,7 +1538,7 @@ export default function EventsClient({
                   <ViewSection title="Event Details" className="lg:col-start-1 lg:row-start-1" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)}>
                     {poster.url && (
                       <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                        <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Poster</span>
+                        <span className="shrink-0 pt-0.5 font-bold text-[12px] text-[#5E6654]">Poster</span>
                         <div className="flex min-w-0 flex-col items-end gap-1">
                           <a
                             href={poster.url}
@@ -1551,7 +1551,7 @@ export default function EventsClient({
                             <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="h-16 w-28 object-contain" />
                           </a>
                           {posterNote && (
-                            <span className="text-right text-[10px] leading-snug font-bold text-[#5E6654]">{posterNote}</span>
+                            <span className="text-right text-[12px] leading-snug font-bold text-[#5E6654]">{posterNote}</span>
                           )}
                         </div>
                       </div>
@@ -1591,7 +1591,7 @@ export default function EventsClient({
                           <Link
                             href={`/event-setups/events/${selected.id}`}
                             title="Manage Quiz"
-                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#283719]"
+                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-semibold text-[12px] tracking-wider text-white transition-colors hover:bg-[#283719]"
                           >
                             <Brain className="h-3.5 w-3.5 shrink-0" />
                             Manage Quiz
@@ -1600,7 +1600,7 @@ export default function EventsClient({
                       >
                         {categoryCounts.map(cat => (
                           <div key={cat.id} className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                            <span className="shrink-0 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{cat.category_name}</span>
+                            <span className="shrink-0 pt-0.5 font-bold text-[12px] text-[#5E6654]">{cat.category_name}</span>
                             <span className="flex items-center gap-1.5 text-right text-[13px] font-semibold text-[#20231A]">
                               {cat.count >= cat.question_count ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" /> : cat.count > 0 ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />}
                               <span className="tabular-nums">{cat.count} / {cat.question_count}</span>
@@ -1622,7 +1622,7 @@ export default function EventsClient({
                           <Link
                             href={viewAllHref}
                             title="View all bookings"
-                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#283719]"
+                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-semibold text-[12px] tracking-wider text-white transition-colors hover:bg-[#283719]"
                           >
                             <Users className="h-3.5 w-3.5 shrink-0" />
                             View All
@@ -1635,25 +1635,25 @@ export default function EventsClient({
                         )}
                         <div className="grid grid-cols-3 divide-x divide-[#D8D5C8]/50 border-b border-[#D8D5C8] last:border-0">
                           <div className="px-2 py-2 text-center sm:px-3">
-                            <p className="font-black text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
-                            <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase sm:text-[9px]">Confirmed</p>
+                            <p className="font-bold text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
+                            <p className="font-bold text-[12px] text-[#5E6654] sm:text-[12px]">Confirmed</p>
                           </div>
                           <div className="px-2 py-2 text-center sm:px-3">
-                            <p className="font-black text-base leading-tight text-amber-500 tabular-nums sm:text-lg">{bk.waitlistedPeople}</p>
-                            <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase sm:text-[9px]">Waitlisted</p>
+                            <p className="font-bold text-base leading-tight text-amber-500 tabular-nums sm:text-lg">{bk.waitlistedPeople}</p>
+                            <p className="font-bold text-[12px] text-[#5E6654] sm:text-[12px]">Waitlisted</p>
                           </div>
                           <div className="px-2 py-2 text-center sm:px-3">
-                            <p className="font-black text-base leading-tight text-red-500 tabular-nums sm:text-lg">{bk.cancelledPeople}</p>
-                            <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase sm:text-[9px]">Cancelled</p>
+                            <p className="font-bold text-base leading-tight text-red-500 tabular-nums sm:text-lg">{bk.cancelledPeople}</p>
+                            <p className="font-bold text-[12px] text-[#5E6654] sm:text-[12px]">Cancelled</p>
                           </div>
                         </div>
                         {selected.seating_required && (
                           <div className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                            <span className="shrink-0 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Floor Plan</span>
+                            <span className="shrink-0 font-bold text-[12px] text-[#5E6654]">Floor Plan</span>
                             <Link
                               href={`/settings/floor-plan/${selected.id}`}
                               title="Floor plan layout calculator"
-                              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-black text-[10px] tracking-wider text-[#34451F] uppercase transition-colors hover:bg-[#34451F] hover:text-white"
+                              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
                             >
                               <Grid2X2 className="h-3.5 w-3.5 shrink-0" />
                               Layout Calculator
@@ -1674,7 +1674,7 @@ export default function EventsClient({
                             bookingPageExtra={
                               <>
                                 <div className="flex items-center justify-between gap-3 border-t border-[#D8D5C8] px-4 py-2">
-                                  <span className="flex shrink-0 items-center gap-1.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                                  <span className="flex shrink-0 items-center gap-1.5 font-bold text-[12px] text-[#5E6654]">
                                     <Link2 className="h-3.5 w-3.5" />
                                     Booking Link
                                   </span>
@@ -1697,18 +1697,18 @@ export default function EventsClient({
                                 </div>
 
                                 <div className="flex items-start justify-between gap-4 border-t border-[#D8D5C8] px-4 py-2">
-                                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+                                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-bold text-[12px] text-[#5E6654]">
                                     <QrCode className="h-3.5 w-3.5" />
                                     Booking QR
                                   </span>
                                   {selected.booking_qr_url ? (
                                     <div className="flex items-start gap-2">
                                       <div className="flex flex-col items-end gap-1.5">
-                                        <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-black text-[10px] tracking-wider text-[#34451F] uppercase transition-colors hover:bg-[#34451F] hover:text-white">
+                                        <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white">
                                           {qrCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
                                           {qrCopied ? "Copied" : "Copy QR"}
                                         </button>
-                                        <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-black text-[10px] tracking-wider text-[#34451F] uppercase transition-colors hover:bg-[#34451F] hover:text-white disabled:opacity-50">
+                                        <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white disabled:opacity-50">
                                           {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
                                           Regenerate
                                         </button>
@@ -1717,7 +1717,7 @@ export default function EventsClient({
                                       <img src={selected.booking_qr_url} alt="Booking link QR code" className="h-20 w-20 shrink-0 rounded-lg border border-[#D8D5C8] bg-white p-1" />
                                     </div>
                                   ) : (
-                                    <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-black text-[10px] tracking-wider text-white uppercase transition-colors hover:bg-[#283719] disabled:opacity-50">
+                                    <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-semibold text-[12px] tracking-wider text-white transition-colors hover:bg-[#283719] disabled:opacity-50">
                                       {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
                                       Generate QR
                                     </button>
@@ -1748,7 +1748,7 @@ export default function EventsClient({
 
                 <FormSection title="Event Details" open={formDetailsOpen} onToggle={() => setFormDetailsOpen((o) => !o)}>
                   <div className="border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                    <span className="mb-2 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Poster Image</span>
+                    <span className="mb-2 block font-bold text-[12px] text-[#5E6654]">Poster Image</span>
                     <input type="hidden" name="image_url" value={formImageUrl} />
                     {formImageUrl ? (
                       <div className="relative overflow-hidden rounded-xl border border-[#D8D5C8]">
@@ -1770,20 +1770,20 @@ export default function EventsClient({
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img src={inheritedForForm.url} alt="Inherited poster" className="max-h-32 w-full bg-[#F4F1E8] object-contain opacity-75" />
                         </div>
-                        <p className="text-[10px] text-[#5E6654]">
+                        <p className="text-[12px] text-[#5E6654]">
                           {imageSourceLabel(inheritedForForm.source, selectedSubtype?.name)}. It updates automatically when that image changes.
                         </p>
                         <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-[#D8D5C8] bg-[#F4F1E8] py-3 transition-colors hover:border-[#34451F]">
                           {imageUploading ? <Loader2 className="h-4 w-4 animate-spin text-[#5E6654]" /> : <Upload className="h-4 w-4 text-[#5E6654] opacity-50" />}
-                          <span className="font-black text-[11px] tracking-wide text-[#34451F] uppercase">{imageUploading ? "Uploading…" : "Use a different image"}</span>
+                          <span className="font-bold text-[13px] text-[#34451F]">{imageUploading ? "Uploading…" : "Use a different image"}</span>
                           <input type="file" accept="image/*" aria-label="Upload a different poster image" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
                         </label>
                       </div>
                     ) : (
                       <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[#D8D5C8] bg-[#F4F1E8] py-7 transition-colors hover:border-[#34451F]">
                         {imageUploading ? <Loader2 className="h-7 w-7 animate-spin text-[#5E6654]" /> : <Upload className="h-7 w-7 text-[#5E6654] opacity-50" />}
-                        <span className="font-black text-[11px] tracking-wide text-[#34451F] uppercase">{imageUploading ? "Uploading…" : "Upload"}</span>
-                        <span className="text-[10px] text-[#5E6654]">Shown on the public What&apos;s On card</span>
+                        <span className="font-bold text-[13px] text-[#34451F]">{imageUploading ? "Uploading…" : "Upload"}</span>
+                        <span className="text-[12px] text-[#5E6654]">Shown on the public What&apos;s On card</span>
                         <input type="file" accept="image/*" aria-label="Upload poster image" className="hidden" onChange={handleImageUpload} disabled={imageUploading} />
                       </label>
                     )}
@@ -1973,10 +1973,10 @@ export default function EventsClient({
                 {formIsBookable && selectedTypeForForm?.booking_grouping === "per_event" && (
                   <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white lg:col-span-2">
                     <div className="flex min-h-14 w-full items-center gap-3 border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-3 sm:px-5">
-                      <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">Booking Card</span>
+                      <span className="font-bold text-[12px] text-[#34451F]">Booking Card</span>
                     </div>
                     <div className="border-b border-[#D8D5C8] px-4 py-2 sm:px-5">
-                      <p className="text-[10px] leading-relaxed text-[#5E6654]">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
+                      <p className="text-[12px] leading-relaxed text-[#5E6654]">Shown on the public booking hub card. Blank fields fall back to the title, a calendar icon, and the auto badge.</p>
                     </div>
                     <FormRow label="Card Title">
                       <input name="booking_card_title" placeholder="e.g. Music Bingo" value={formCardTitle} onChange={(e) => setFormCardTitle(e.target.value)} className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
@@ -2002,11 +2002,11 @@ export default function EventsClient({
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
             {!showForm && selected && (
               <div className="grid grid-cols-2 gap-3">
-                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-12 rounded-xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-widest text-red-500 uppercase hover:border-red-200 hover:bg-red-50">
+                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-12 rounded-xl border-2 border-[#D8D5C8] bg-white px-4 text-[13px] font-semibold text-[#B33A32] hover:border-red-200 hover:bg-red-50">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   Delete
                 </Button>
-                <Button onClick={openEdit} className="h-12 flex-1 rounded-xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95">
+                <Button onClick={openEdit} className="h-12 flex-1 rounded-xl border border-[#34451F] font-semibold text-[12px] tracking-wide text-[#34451F] hover:bg-[#E5EBD8] active:scale-95">
                   <Pencil className="mr-2 h-4 w-4" />Edit
                 </Button>
               </div>
@@ -2014,11 +2014,11 @@ export default function EventsClient({
 
             {showForm && (
               <div className="grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-12 rounded-xl border-2 border-[#34451F]/30 bg-white font-black text-[10px] tracking-widest text-[#34451F] uppercase shadow-sm hover:bg-[#F4F1E8] hover:text-[#34451F]">
+                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-12 rounded-xl border-2 border-[#34451F]/30 bg-white font-semibold text-[12px] tracking-wide text-[#34451F] shadow-sm hover:bg-[#F4F1E8] hover:text-[#34451F]">
                   <Undo2 className="mr-2 h-4 w-4" />
                   Cancel
                 </Button>
-                <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-12 rounded-xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95 disabled:pointer-events-none disabled:opacity-50">
+                <Button type="button" disabled={isPending || hasFieldErrors || imageUploading} title={hasFieldErrors ? "Resolve the highlighted fields before saving" : undefined} onClick={() => { const form = document.getElementById('event-form') as HTMLFormElement | null; if (form) form.requestSubmit(); }} className="h-12 rounded-xl bg-[#34451F] font-semibold text-[12px] tracking-wide text-white shadow-lg hover:bg-[#283719] active:scale-95 disabled:pointer-events-none disabled:opacity-50">
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-2 h-4 w-4" />Save</>}
                 </Button>
               </div>
@@ -2038,13 +2038,13 @@ function FormRow({ label, required, error, warning, children }: { label: string;
     <div className="border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
       <div className="flex items-center justify-between gap-3">
         <div className={cn("flex shrink-0 items-center gap-1", error ? "text-red-600" : warning ? "text-amber-600" : "text-[#5E6654]")}>
-          <span className="font-black text-[10px] tracking-wide whitespace-nowrap uppercase">{label}</span>
-          {required && <span className="font-black text-[10px] text-red-500">*</span>}
+          <span className="font-bold text-[12px] whitespace-nowrap">{label}</span>
+          {required && <span className="font-bold text-[12px] text-red-500">*</span>}
         </div>
         {children}
       </div>
       {message && (
-        <p className={cn("mt-1.5 flex items-center gap-1 text-[11px] leading-snug font-bold", isWarning ? "text-amber-600" : "text-red-600")}>
+        <p className={cn("mt-1.5 flex items-center gap-1 text-[13px] leading-snug font-bold", isWarning ? "text-amber-600" : "text-red-600")}>
           {isWarning ? <AlertTriangle className="h-3 w-3 shrink-0" /> : <AlertCircle className="h-3 w-3 shrink-0" />}
           {message}
         </p>
@@ -2062,7 +2062,7 @@ function ViewSection({ title, open, onToggle, headerRight, className, children }
           onClick={onToggle}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">{title}</span>
+          <span className="font-bold text-[12px] text-[#34451F]">{title}</span>
         </button>
         {headerRight}
         <button
@@ -2082,7 +2082,7 @@ function ViewSection({ title, open, onToggle, headerRight, className, children }
 function DetailCell({ label, value, icon, toggle, accent }: { label: string; value?: React.ReactNode; icon?: React.ReactNode; toggle?: boolean; accent?: string }) {
   return (
     <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-      <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-black text-[10px] tracking-wide whitespace-nowrap text-[#5E6654] uppercase">
+      <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
         {icon}
         {label}
       </span>
@@ -2128,7 +2128,7 @@ function FormSection({ title, open, onToggle, children, className }: { title: st
           onClick={onToggle}
           className="flex flex-1 items-center text-left transition-all hover:brightness-95"
         >
-          <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">{title}</span>
+          <span className="font-bold text-[12px] text-[#34451F]">{title}</span>
         </button>
         <button
           type="button"

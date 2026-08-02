@@ -16,8 +16,8 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
   if (!data.connected) {
     return (
       <div className="rounded-2xl border border-[#D8D5C8] bg-white p-8 text-center">
-        <p className="font-black text-sm text-[#20231A]">No Square sales yet</p>
-        <p className="mt-1 text-[11px] leading-relaxed font-medium text-[#5E6654]">
+        <p className="font-bold text-sm text-[#20231A]">No Square sales yet</p>
+        <p className="mt-1 text-[13px] leading-relaxed font-medium text-[#5E6654]">
           Takings appear here once the hourly Square sync has run against live
           sales data. Bar, food and POS sales are shown separately from
           pre-booked booking revenue.
@@ -60,7 +60,7 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm sm:p-5">
-          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+          <p className="mb-3 font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
             Takings · last 30 days
           </p>
           <div className="h-44">
@@ -97,12 +97,12 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
         </div>
 
         <div className="rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm sm:p-5">
-          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+          <p className="mb-3 font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
             Sales by category · this month
           </p>
           {categories.length === 0 ? (
             <div className="flex h-44 items-center justify-center">
-              <p className="font-black text-[9px] tracking-wide text-[#5E6654] uppercase opacity-40">
+              <p className="font-bold text-[12px] tracking-wide text-[#5E6654] uppercase opacity-40">
                 No categorised sales yet
               </p>
             </div>
@@ -138,15 +138,15 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
 
       {byEvent.length > 0 && (
         <div className="rounded-2xl border border-[#D8D5C8] bg-white p-4 shadow-sm sm:p-5">
-          <p className="mb-3 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
+          <p className="mb-3 font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
             Takings by event night · this month
           </p>
           <ul className="divide-y divide-[#D8D5C8]">
             {byEvent.map((e) => (
               <li key={`${e.date}-${e.title}`} className="flex items-center justify-between gap-3 py-2">
                 <div className="min-w-0">
-                  <p className="truncate font-black text-xs text-[#20231A]">{e.title}</p>
-                  <p className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">
+                  <p className="truncate font-bold text-xs text-[#20231A]">{e.title}</p>
+                  <p className="text-[12px] font-bold tracking-wide text-[#5E6654] uppercase">
                     {new Date(e.date + "T00:00:00").toLocaleDateString("en-GB", {
                       weekday: "short",
                       day: "numeric",
@@ -155,9 +155,9 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
                   </p>
                 </div>
                 <div className="shrink-0 text-right">
-                  <p className="font-black text-sm text-[#34451F] tabular-nums">£{e.takings.toFixed(2)}</p>
+                  <p className="font-bold text-sm text-[#34451F] tabular-nums">£{e.takings.toFixed(2)}</p>
                   {e.tips > 0 && (
-                    <p className="text-[10px] font-bold text-[#5E6654] tabular-nums">£{e.tips.toFixed(2)} tips</p>
+                    <p className="text-[12px] font-bold text-[#5E6654] tabular-nums">£{e.tips.toFixed(2)} tips</p>
                   )}
                 </div>
               </li>
@@ -167,7 +167,7 @@ export function VenueSalesSection({ data }: { data: VenueSalesData }) {
       )}
 
       {data.lastSyncedAt && (
-        <p className="text-right text-[9px] font-bold tracking-wide text-[#8A8266] uppercase">
+        <p className="text-right text-[12px] font-bold tracking-wide text-[#8A8266] uppercase">
           Synced {formatDistanceToNow(new Date(data.lastSyncedAt), { addSuffix: true })}
         </p>
       )}

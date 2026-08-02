@@ -58,16 +58,16 @@ export default function BookingsHubClient({ groups }: { groups: AdminBookingGrou
                     <Icon className="h-6 w-6 text-(--cc)" />
                   </div>
                   <div className="flex min-w-0 flex-col text-left">
-                    <span className="truncate font-black leading-none tracking-tight text-[#20231A] uppercase">
+                    <span className="truncate text-base leading-tight font-bold tracking-tight text-[#20231A]">
                       {group.label}
                     </span>
                     <div className="mt-1.5 flex items-center gap-1.5">
                       {group.typeLabel && (
-                        <span className="text-[11px] font-bold tracking-wider text-[#5E6654] uppercase opacity-60">
+                        <span className="text-[13px] font-bold text-[#5E6654] opacity-60">
                           {group.typeLabel}
                         </span>
                       )}
-                      <span className={`rounded px-1.5 py-0.5 font-black text-[9px] tracking-wide uppercase ${badgeClasses}`}>
+                      <span className={`rounded px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase ${badgeClasses}`}>
                         {group.count} upcoming
                       </span>
                     </div>

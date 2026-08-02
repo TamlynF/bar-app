@@ -41,16 +41,16 @@ export function BandCalendarClient({
       <div className="flex flex-wrap items-center gap-4 border-t border-[#D8D5C8] pt-2">
         <div className="flex items-center gap-1.5">
           <div className="h-3 w-3 rounded-sm bg-[#34451F]" />
-          <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Confirmed</span>
+          <span className="text-[12px] font-medium text-admin-muted">Confirmed</span>
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-3 w-3 rounded-sm border border-[#C8956D] bg-[#C8956D]/60" />
-          <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Requested</span>
+          <span className="text-[12px] font-medium text-admin-muted">Requested</span>
         </div>
         {popularDates.length > 0 && (
           <div className="flex items-center gap-1.5">
             <div className="h-3 w-3 rounded-sm ring-2 ring-[#C8956D] ring-offset-1" />
-            <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">Most popular</span>
+            <span className="text-[12px] font-medium text-admin-muted">Most popular</span>
           </div>
         )}
       </div>

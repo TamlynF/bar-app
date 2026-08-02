@@ -387,14 +387,14 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
     return (
       <div className="mx-auto w-full max-w-295 px-6 py-16 text-center text-[#5E6654]">
         <Layers className="mx-auto mb-3 h-8 w-8 opacity-40" />
-        <p className="font-black text-[#20231A] text-sm">No event categories yet</p>
+        <p className="font-bold text-[#20231A] text-sm">No event categories yet</p>
         <p className="mt-1 text-xs">Add your first category to get started.</p>
         <button
           type="button"
           onClick={openNewCat}
-          className="mt-5 inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#34451F] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719]"
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-[10px] bg-[#34451F] px-5 font-semibold text-[13px] text-white tracking-wide transition-colors hover:bg-[#283719]"
         >
-          <Plus className="h-4 w-4 stroke-[2.5]" /> New category
+          <Plus className="h-4 w-4 stroke-[2.5]" /> Add category
         </button>
         {catForm && (
           <CategorySheet form={catForm} setForm={setCatForm} onClose={closeSheets} onSave={submitCat} pending={isPending} error={error} />
@@ -410,7 +410,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         <div className="sticky top-0 z-40 flex items-center gap-2 border-b border-[#D8D5C8] bg-[#FFFEFA]/95 px-3 py-2 backdrop-blur">
           <IconBtn label="Back to categories" onClick={() => setDrilled(false)}><ArrowLeft className="h-4.5 w-4.5" /></IconBtn>
           <span style={{ "--dot": colorHexFromKey(selCat.color).solid } as React.CSSProperties} className="h-2.5 w-2.5 shrink-0 rounded-full bg-(--dot)" />
-          <h2 className="min-w-0 flex-1 truncate font-black text-[16px] text-[#20231A]">{toTitleCase(selCat.name)}</h2>
+          <h2 className="min-w-0 flex-1 truncate font-bold text-[16px] text-[#20231A]">{toTitleCase(selCat.name)}</h2>
           <IconBtn label={`Add a sub-category to ${toTitleCase(selCat.name)}`} create onClick={() => openNewSub(selCat)}><Plus className="h-4.5 w-4.5 stroke-[2.5]" /></IconBtn>
           <IconBtn label={`Edit ${toTitleCase(selCat.name)}`} edit onClick={() => openEditCat(selCat)}><Pencil className="h-4 w-4" /></IconBtn>
           <IconBtn label={`Delete ${toTitleCase(selCat.name)}`} danger onClick={() => removeCat(selCat)}><Trash2 className="h-4 w-4" /></IconBtn>
@@ -423,9 +423,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
             <button
               type="button"
               onClick={openNewCat}
-              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#34451F] px-5 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719]"
+              className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#34451F] px-5 font-semibold text-[13px] text-white tracking-wide transition-colors hover:bg-[#283719]"
             >
-              <Plus className="h-4 w-4 stroke-[2.5]" /> Category
+              <Plus className="h-4 w-4 stroke-[2.5]" /> Add category
             </button>
           </div>
         )}
@@ -433,7 +433,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
         <div className={cn("grid items-start gap-4.5", narrow ? "grid-cols-1" : "grid-cols-[clamp(230px,25%,290px)_1fr]")}>
           {showList && (
             <div className={cn("rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA] p-2", !narrow && "sticky top-18")}>
-              {!narrow && <p className="px-1.5 pt-2 pb-1.5 font-black text-[10.5px] text-[#5E6654] uppercase tracking-[0.16em]">Categories</p>}
+              {!narrow && <p className="px-1.5 pt-2 pb-1.5 font-bold text-[12px] text-[#5E6654]">Categories</p>}
               <div className="flex flex-col gap-0.5">
                 {types.map((t) => (
                   <CategoryRow
@@ -448,9 +448,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 <button
                   type="button"
                   onClick={openNewCat}
-                  className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#34451F] font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719]"
+                  className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-[10px] bg-[#34451F] font-semibold text-[13px] text-white tracking-wide transition-colors hover:bg-[#283719]"
                 >
-                  <Plus className="h-4 w-4 stroke-[2.5]" /> Category
+                  <Plus className="h-4 w-4 stroke-[2.5]" /> Add category
                 </button>
               )}
             </div>
@@ -462,7 +462,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                 {!narrow && (
                   <div className="flex flex-wrap items-center gap-2.5">
                     <span style={{ "--dot": colorHexFromKey(selCat.color).solid } as React.CSSProperties} className="h-3 w-3 shrink-0 rounded-full bg-(--dot)" />
-                    <h2 className="min-w-0 flex-1 font-black text-[18px] text-[#20231A]">{toTitleCase(selCat.name)}</h2>
+                    <h2 className="min-w-0 flex-1 font-bold text-[18px] text-[#20231A]">{toTitleCase(selCat.name)}</h2>
                     <IconBtn label={`Edit ${toTitleCase(selCat.name)}`} edit onClick={() => openEditCat(selCat)}><Pencil className="h-3.5 w-3.5" /></IconBtn>
                     <IconBtn label={`Delete ${toTitleCase(selCat.name)}`} danger onClick={() => removeCat(selCat)}><Trash2 className="h-3.5 w-3.5" /></IconBtn>
                   </div>
@@ -490,9 +490,9 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
                     <button
                       type="button"
                       onClick={() => openNewSub(selCat)}
-                      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#34451F] px-4 font-black text-[11px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719]"
+                      className="inline-flex h-11 shrink-0 items-center gap-2 rounded-[10px] bg-[#34451F] px-4 font-semibold text-[13px] text-white tracking-wide transition-colors hover:bg-[#283719]"
                     >
-                      <Plus className="h-4 w-4 stroke-[2.5]" /> Sub-category
+                      <Plus className="h-4 w-4 stroke-[2.5]" /> Add sub-category
                     </button>
                   )}
                 </div>
@@ -501,7 +501,7 @@ export default function EventTypesClient({ initialEventTypes = [] }: { initialEv
               {subs.length === 0 ? (
                 <div className="rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA] px-5 py-11 text-center text-[#5E6654]">
                   <Layers className="mx-auto h-5.5 w-5.5 opacity-50" />
-                  <p className="mt-2 font-black text-[14px] text-[#20231A]">{query ? "No matches" : "Nothing in here yet"}</p>
+                  <p className="mt-2 font-bold text-[14px] text-[#20231A]">{query ? "No matches" : "Nothing in here yet"}</p>
                   <p className="mt-0.5 text-[12.5px]">{query ? "Try a different search." : "Add a sub-category to get started."}</p>
                 </div>
               ) : (
@@ -553,7 +553,7 @@ function CategoryRow({ cat, active, onClick }: { cat: EventTypeRecord; active: b
     >
       <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-(--dot)" />
       <span className="min-w-0 flex-1">
-        <span className="block font-black text-[14px] text-[#20231A]">{toTitleCase(cat.name)}</span>
+        <span className="block font-bold text-[14px] text-[#20231A]">{toTitleCase(cat.name)}</span>
         <span className="mt-px block text-[12px] text-[#5E6654]">{count} sub-{count === 1 ? "category" : "categories"}</span>
       </span>
       <ChevronDown className="h-4 w-4 shrink-0 -rotate-90 text-[#5E6654]" />
@@ -575,7 +575,7 @@ function SubCard({ sub, onEdit, onDelete }: { sub: Subtype; onEdit: () => void; 
           <b.Icon className="h-4.5 w-4.5" />
         </span>
         <div className="min-w-0 flex-1">
-          <p className="font-black text-[15.5px] text-[#20231A]">{toTitleCase(sub.name)}</p>
+          <p className="font-bold text-[15.5px] text-[#20231A]">{toTitleCase(sub.name)}</p>
           <p className="mt-0.5 text-[12.5px] text-[#5E6654] leading-snug">
             {sub.title ? <>Website name <b className="font-bold text-[#20231A]">{sub.title}</b></> : "No website name set"}
           </p>
@@ -590,12 +590,12 @@ function SubCard({ sub, onEdit, onDelete }: { sub: Subtype; onEdit: () => void; 
 
       {badges.length > 0 && (
         <div className="flex flex-col gap-1.75 rounded-[11px] border border-[#D8D5C8] bg-[#E5EBD8] px-2.5 py-2">
-          <p className="flex items-center gap-1.5 font-black text-[10.5px] text-[#34451F] uppercase tracking-[0.14em]">
-            <Globe className="h-3 w-3" /> Shown on the booking page
+          <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#34451F]">
+            <Globe className="h-3.5 w-3.5" /> Shown on the booking page
           </p>
           <div className="flex flex-wrap gap-1.5">
             {badges.map((bg) => (
-              <span key={bg.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#FFFEFA] px-2 py-1 text-[11.5px] font-semibold text-[#5E6654]">
+              <span key={bg.id} className="inline-flex items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#FFFEFA] px-2 py-1 text-[13px] font-semibold text-[#5E6654]">
                 {renderBadgeIcon(bg.icon, "h-3.25 w-3.25")}
                 <b className="font-bold text-[#20231A]">{bg.title}</b>
                 {bg.description && <span>· {bg.description}</span>}
@@ -629,7 +629,7 @@ function FactChips({ sub }: { sub: Subtype }) {
         <span
           key={key}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[11.5px] font-semibold",
+            "inline-flex items-center gap-1.5 rounded-lg border px-2 py-1 text-[13px] font-semibold",
             on ? "border-[#D8D5C8] bg-[#E5EBD8] text-[#34451F]" : "border-[#ECE9DE] bg-[#ECE9DE] text-[#5E6654]",
           )}
         >
@@ -883,13 +883,13 @@ function SubtypeSheet({ form, setForm, parent, onClose, onSave, pending, error }
               </SheetSection>
 
               <div className="flex flex-col gap-2 rounded-xl border border-[#D8D5C8] bg-[#ECE9DE] p-3">
-                <p className="font-black text-[10.5px] text-[#5E6654] uppercase tracking-[0.16em]">How it will look</p>
-                <p className="font-black text-[16px] text-[#20231A]">{form.title || form.name || "Your night"}</p>
+                <p className="font-bold text-[12px] text-[#5E6654]">How it will look</p>
+                <p className="font-bold text-[16px] text-[#20231A]">{form.title || form.name || "Your night"}</p>
                 {form.tagline && <p className="text-[13px] text-[#5E6654]">{form.tagline}</p>}
                 {form.badges.filter((b) => b.title.trim()).length > 0 && (
                   <div className="flex flex-wrap gap-1.5">
                     {form.badges.filter((b) => b.title.trim()).map((b, i) => (
-                      <span key={i} className="inline-flex items-center gap-1.5 rounded-lg border border-[#ECE9DE] bg-[#ECE9DE] px-2 py-1 text-[11.5px] font-semibold text-[#5E6654]">
+                      <span key={i} className="inline-flex items-center gap-1.5 rounded-lg border border-[#ECE9DE] bg-[#ECE9DE] px-2 py-1 text-[13px] font-semibold text-[#5E6654]">
                         {renderBadgeIcon(b.icon, "h-3.25 w-3.25")}
                         <b className="font-bold text-[#20231A]">{b.title}</b>
                       </span>
@@ -997,11 +997,11 @@ function BookingFormEditor({ card, onCard, config, onConfig, fallbackTitle }: {
               <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-2.5 px-2.75 py-2.5 max-[560px]:grid-cols-2">
                 <b className="min-w-0 text-[13px] text-[#20231A] max-[560px]:col-span-2">{fd.label}</b>
                 <span className="flex items-center justify-end gap-1.75">
-                  <span className={cn("w-12 text-right font-black text-[10.5px] uppercase tracking-widest", shown ? "text-[#34451F]" : "text-[#5E6654]")}>Shown</span>
+                  <span className={cn("w-12 text-right font-bold text-[12px]", shown ? "text-[#34451F]" : "text-[#5E6654]")}>Shown</span>
                   <MiniSw on={shown} disabled={fd.locked} label={`Show ${fd.label}`} onClick={() => setField(fd.key, { visible: !v.visible })} />
                 </span>
                 <span className={cn("flex items-center justify-end gap-1.75", !shown && "opacity-40")}>
-                  <span className={cn("w-18.5 text-right font-black text-[10.5px] uppercase tracking-widest", required ? "text-[#34451F]" : "text-[#5E6654]")}>{required ? "Required" : "Optional"}</span>
+                  <span className={cn("w-18.5 text-right font-bold text-[12px]", required ? "text-[#34451F]" : "text-[#5E6654]")}>{required ? "Required" : "Optional"}</span>
                   <MiniSw on={required} tone="req" disabled={fd.locked || !shown} label={`Make ${fd.label} required`} onClick={() => setField(fd.key, { required: !v.required })} />
                 </span>
               </div>
@@ -1038,7 +1038,7 @@ function BookingBlock({ title, blurb, children }: { title: string; blurb: string
   return (
     <div className="overflow-hidden rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA]">
       <div className="border-b border-[#ECE9DE] bg-[#ECE9DE] px-3.5 py-3">
-        <p className="font-black text-[13px] uppercase tracking-widest text-[#20231A]">{title}</p>
+        <p className="font-bold text-[13px] text-[#20231A]">{title}</p>
         <p className="mt-0.5 text-[12px] text-[#5E6654]">{blurb}</p>
       </div>
       <div className="flex flex-col gap-3.5 p-3.5">{children}</div>
@@ -1100,7 +1100,7 @@ function BadgeRow({ badge, onChange, onDelete }: { badge: BadgeDraft; onChange: 
             placeholder="Extra detail, e.g. 7pm start"
             aria-label="Badge description"
             onChange={(e) => onChange({ description: e.target.value })}
-            className="w-full border-b border-transparent bg-transparent py-0.5 text-[11.5px] text-[#5E6654] outline-none placeholder:text-[#5E6654]/50 focus:border-[#D8D5C8]"
+            className="w-full border-b border-transparent bg-transparent py-0.5 text-[13px] text-[#5E6654] outline-none placeholder:text-[#5E6654]/50 focus:border-[#D8D5C8]"
           />
         </div>
         <button type="button" aria-label="Remove badge" onClick={onDelete} className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[#5E6654] transition-colors hover:bg-[#FBECEA] hover:text-[#DC2626]">
@@ -1180,7 +1180,7 @@ function Field({ label, help, hint, required, error, children }: {
     <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-1.75">
         <span className="font-bold text-[12.5px] text-[#20231A]">
-          {label}{required && <span className="ml-1 font-semibold text-[11px] text-[#B4453C]">required</span>}
+          {label}{required && <span className="ml-1 font-semibold text-[13px] text-[#B4453C]">required</span>}
         </span>
         {help && <InfoTip text={help} label={label} />}
       </div>
@@ -1321,7 +1321,7 @@ function BehaviourPicker({ value, onChange }: { value: EventBehavior; onChange: 
             <b.Icon className="h-4.5 w-4.5 shrink-0 text-[#34451F]" />
             <span className="min-w-0">
               <span className="block font-bold text-[13px] text-[#20231A]">{b.label}</span>
-              <span className="mt-0.5 block text-[11.5px] text-[#5E6654] leading-snug">{b.blurb}</span>
+              <span className="mt-0.5 block text-[13px] text-[#5E6654] leading-snug">{b.blurb}</span>
             </span>
           </button>
         );
@@ -1350,7 +1350,7 @@ function GroupingPicker({ value, onChange }: { value: BookingGrouping; onChange:
             <Icon className="h-4.5 w-4.5 shrink-0 text-[#34451F]" />
             <span className="min-w-0">
               <span className="block font-bold text-[13px] text-[#20231A]">{g.label}</span>
-              <span className="mt-0.5 block text-[11.5px] text-[#5E6654] leading-snug">{g.blurb}</span>
+              <span className="mt-0.5 block text-[13px] text-[#5E6654] leading-snug">{g.blurb}</span>
             </span>
           </button>
         );
@@ -1433,11 +1433,11 @@ function Dropzone({ url, subline, ariaLabel, pathPrefix, onUpload, onClear }: {
     <div className="flex flex-col gap-1.5">
       <label className="flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-xl border-[1.5px] border-dashed border-[#D8D5C8] bg-[#ECE9DE] py-5.5 transition-colors hover:border-[#34451F]">
         {uploading ? <Loader2 className="h-5.5 w-5.5 animate-spin text-[#5E6654]" /> : <ImageIcon className="h-5.5 w-5.5 text-[#5E6654]" />}
-        <span className="font-black text-[12.5px] tracking-[0.08em] text-[#34451F] uppercase">{uploading ? "Uploading…" : "Choose a picture"}</span>
-        <span className="px-4 text-center text-[11.5px] text-[#5E6654]">{subline}</span>
+        <span className="text-[13px] font-semibold text-[#34451F]">{uploading ? "Uploading…" : "Choose a picture"}</span>
+        <span className="px-4 text-center text-[13px] text-[#5E6654]">{subline}</span>
         <input type="file" accept="image/*" aria-label={ariaLabel} className="hidden" onChange={handle} disabled={uploading} />
       </label>
-      {uploadError && <p className="font-semibold text-[11px] text-[#B4453C]">{uploadError}</p>}
+      {uploadError && <p className="font-semibold text-[13px] text-[#B4453C]">{uploadError}</p>}
     </div>
   );
 }
@@ -1453,7 +1453,7 @@ function IconBtn({ label, onClick, edit, danger, create, children }: {
       onClick={onClick}
       className={cn(
         "grid h-10 w-10 shrink-0 place-items-center rounded-[10px] transition-colors",
-        create ? "bg-[#34451F] font-black text-white uppercase tracking-widest hover:bg-[#283719]"
+        create ? "bg-[#34451F] text-white hover:bg-[#283719]"
           : danger ? "text-[#DC2626] hover:bg-[#FBECEA]" : edit ? "text-[#34451F] hover:bg-[#ECE9DE]" : "text-[#5E6654] hover:bg-[#ECE9DE] hover:text-[#34451F]",
       )}
     >
@@ -1472,8 +1472,8 @@ function SheetHead({ eyebrow, title, onClose }: { eyebrow: string; title: string
   return (
     <div className="flex shrink-0 items-start justify-between gap-3 border-b border-[#D8D5C8] bg-[#FFFEFA] px-4 pt-3 pb-3.5">
       <div className="min-w-0">
-        <SheetDescription className="font-black text-[10.5px] text-[#5E6654] uppercase tracking-[0.13em]">{eyebrow}</SheetDescription>
-        <SheetTitle className="mt-1 font-black text-[18px] text-[#20231A]">{title}</SheetTitle>
+        <SheetDescription className="font-bold text-[12px] text-[#5E6654]">{eyebrow}</SheetDescription>
+        <SheetTitle className="mt-1 font-bold text-[18px] text-[#20231A]">{title}</SheetTitle>
       </div>
       <button type="button" onClick={onClose} aria-label="Close" className="grid h-10 w-10 shrink-0 place-items-center rounded-[10px] text-[#5E6654] transition-colors hover:bg-[#ECE9DE] hover:text-[#20231A]">
         <X className="h-4.5 w-4.5" />
@@ -1486,7 +1486,7 @@ function SheetSection({ title, blurb, children }: { title: string; blurb: string
   return (
     <section className="overflow-hidden rounded-[14px] border border-[#D8D5C8] bg-[#FFFEFA]">
       <header className="border-b border-[#ECE9DE] bg-[#ECE9DE] px-3.5 py-3">
-        <h3 className="font-black text-[13px] uppercase tracking-widest text-[#20231A]">{title}</h3>
+        <h3 className="font-bold text-[13px] text-[#20231A]">{title}</h3>
         <p className="mt-0.5 text-[12px] text-[#5E6654]">{blurb}</p>
       </header>
       <div className="flex flex-col gap-3.5 p-3.5">{children}</div>
@@ -1511,7 +1511,7 @@ function SheetFoot({ onCancel, cancelLabel = "Cancel", onSave, onNext, nextLabel
         type="button"
         onClick={onCancel}
         disabled={pending}
-        className="h-12 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] font-black text-[12px] text-[#5E6654] uppercase tracking-widest transition-colors hover:border-[#34451F] hover:text-[#34451F] disabled:opacity-50 sm:min-w-35"
+        className="h-12 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] font-semibold text-[12px] text-[#5E6654] tracking-wide transition-colors hover:border-[#34451F] hover:text-[#34451F] disabled:opacity-50 sm:min-w-35"
       >
         {cancelLabel}
       </button>
@@ -1520,7 +1520,7 @@ function SheetFoot({ onCancel, cancelLabel = "Cancel", onSave, onNext, nextLabel
           type="button"
           onClick={onNext}
           disabled={disableNext}
-          className="h-12 rounded-xl bg-[#34451F] font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
+          className="h-12 rounded-xl bg-[#34451F] font-semibold text-[12px] text-white tracking-wide transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
         >
           {nextLabel}
         </button>
@@ -1530,7 +1530,7 @@ function SheetFoot({ onCancel, cancelLabel = "Cancel", onSave, onNext, nextLabel
           onClick={onSave}
           disabled={pending || disableSave}
           title={disableSave ? "Fill in the highlighted fields first" : undefined}
-          className="grid h-12 place-items-center rounded-xl bg-[#34451F] font-black text-[12px] text-white uppercase tracking-widest transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
+          className="grid h-12 place-items-center rounded-xl bg-[#34451F] font-semibold text-[12px] text-white tracking-wide transition-colors hover:bg-[#283719] disabled:pointer-events-none disabled:opacity-50 sm:min-w-35"
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : saveLabel}
         </button>
@@ -1543,7 +1543,7 @@ function ErrorBox({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 p-3">
       <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
-      <p className="font-bold text-[11px] text-red-600 leading-snug">{message}</p>
+      <p className="font-bold text-[13px] text-red-600 leading-snug">{message}</p>
     </div>
   );
 }

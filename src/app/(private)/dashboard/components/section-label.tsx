@@ -14,13 +14,13 @@ export default function SectionLabel({
   return (
     <div className="flex items-center gap-2 px-1">
       <Icon
-        className={cn("h-4 w-4", highlight ? "text-red-600" : "text-[#5E6654]")}
+        className={cn("h-4.5 w-4.5", highlight ? "text-admin-error" : "text-admin-muted")}
       />
-      <h2 className="font-black text-[11px] tracking-wide text-[#5E6654] uppercase">
+      <h2 className="text-[15px] leading-tight font-bold tracking-tight text-admin-ink">
         {label}
       </h2>
       {badge && (
-        <span className="ml-1 animate-pulse rounded-full bg-red-500 px-2 py-0.5 font-black text-[9px] text-white">
+        <span className="ml-1 rounded-full bg-admin-error px-2 py-0.5 text-[11px] font-semibold text-white">
           {badge}
         </span>
       )}

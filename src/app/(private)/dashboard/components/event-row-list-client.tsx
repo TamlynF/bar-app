@@ -25,7 +25,7 @@ function TonightBadge() {
     return (
         <span className="inline-flex shrink-0 items-center gap-1.5">
             <span className="ad-blink h-1.5 w-1.5 rounded-full bg-[#FF6B35] shadow-[0_0_8px_#FF6B35]" aria-hidden="true" />
-            <span className="font-black text-[9px] tracking-[0.15em] text-[#FF6B35] uppercase">On tonight</span>
+            <span className="font-bold text-[12px] tracking-[0.15em] text-[#FF6B35] uppercase">On tonight</span>
         </span>
     );
 }
@@ -63,23 +63,23 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
                             "w-11 shrink-0 rounded-lg py-0.5 text-center sm:w-12 sm:py-1",
                             today ? "bg-[#FF6B35]" : "bg-[#F4F1E8]"
                         )}>
-                            <p className={cn("text-[9px] font-bold tracking-wide uppercase", today ? "text-white" : "text-[#5E6654]")}>
+                            <p className={cn("text-[12px] font-bold tracking-wide uppercase", today ? "text-white" : "text-[#5E6654]")}>
                                 {format(parsed, "EEE")}
                             </p>
-                            <p className={cn("font-black text-base leading-tight sm:text-lg", today ? "text-white" : "text-[#20231A]")}>
+                            <p className={cn("font-bold text-base leading-tight sm:text-lg", today ? "text-white" : "text-[#20231A]")}>
                                 {format(parsed, "d")}
                             </p>
-                            <p className={cn("text-[9px] font-bold tracking-wide uppercase", today ? "text-white" : "text-[#5E6654]")}>
+                            <p className={cn("text-[12px] font-bold tracking-wide uppercase", today ? "text-white" : "text-[#5E6654]")}>
                                 {format(parsed, "MMM")}
                             </p>
                         </div>
 
                         <div className="min-w-0 flex-1">
                             <div className="flex min-w-0 items-center gap-1.5">
-                                <p className="truncate font-black text-sm text-[#20231A]">{item.title}</p>
+                                <p className="truncate font-bold text-sm text-[#20231A]">{item.title}</p>
                                 {today && <TonightBadge />}
                             </div>
-                            <div className="mt-0.5 flex items-center gap-1 text-[11px] font-medium text-[#5E6654]">
+                            <div className="mt-0.5 flex items-center gap-1 text-[13px] font-medium text-[#5E6654]">
                                 <Clock className="h-3 w-3 shrink-0 opacity-50" />
                                 {startEndTime}
                             </div>
@@ -87,7 +87,7 @@ export function EventRowListClient({ items }: { items: ListItem[] }) {
 
                         {item.eventType && (
                             <span className={cn(
-                                "hidden shrink-0 rounded-md px-2 py-0.5 text-[9px] font-bold tracking-wide whitespace-nowrap uppercase sm:inline-block",
+                                "hidden shrink-0 rounded-md px-2 py-0.5 text-[12px] font-bold tracking-wide whitespace-nowrap uppercase sm:inline-block",
                                 badgeClass(item.eventType)
                             )}>
                                 {badgeLabel(item.eventType)}

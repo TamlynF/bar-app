@@ -235,7 +235,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
     <section className="space-y-2">
       <div className="flex items-center gap-2 px-1">
         <TrendingUp className="h-4 w-4 text-[#5E6654]" />
-        <h2 className="font-black text-[11px] tracking-wide text-[#5E6654] uppercase">Bookings</h2>
+        <h2 className="font-bold text-[13px] tracking-wide text-[#5E6654] uppercase">Bookings</h2>
         <div className="ml-auto flex gap-1 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-1 shadow-sm">
           {(["week", "month", "year"] as Range[]).map((r) => (
             <button
@@ -243,7 +243,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               type="button"
               onClick={() => setRange(r)}
               className={cn(
-                "rounded-lg px-3 py-1.5 font-black text-[10px] tracking-wide uppercase transition-colors",
+                "rounded-lg px-3 py-1.5 font-bold text-[12px] tracking-wide uppercase transition-colors",
                 range === r ? "bg-[#34451F] text-white shadow-sm" : "text-[#5E6654] hover:bg-white",
               )}
             >
@@ -261,7 +261,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               type="button"
               onClick={() => setOpen((o) => !o)}
               className={cn(
-                "flex w-full items-center gap-2 rounded-lg border bg-[#F4F1E8] px-3 py-2 text-[11px] font-bold text-[#20231A] transition-colors",
+                "flex w-full items-center gap-2 rounded-lg border bg-[#F4F1E8] px-3 py-2 text-[13px] font-bold text-[#20231A] transition-colors",
                 open ? "border-[#34451F] ring-2 ring-[#34451F]/15" : "border-[#D8D5C8] hover:border-[#d3cbb0]",
               )}
             >
@@ -272,7 +272,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
               <div className="absolute top-[calc(100%+6px)] right-0 left-0 z-40 overflow-hidden rounded-xl border border-[#D8D5C8] bg-white shadow-[0_18px_40px_-12px_rgba(31,31,26,0.30)]">
                 <div className="grid grid-cols-2">
                   <div className="max-h-60 overflow-y-auto border-r border-[#D8D5C8] p-1.5">
-                    <p className="px-2 pt-1.5 pb-1 font-black text-[8px] tracking-[0.09em] text-[#a7a288] uppercase">Event type</p>
+                    <p className="px-2 pt-1.5 pb-1 font-bold text-[13px] tracking-[0.09em] text-[#a7a288] uppercase">Event type</p>
                     <FilterOpt
                       label="All bookable events"
                       active={applied === "all"}
@@ -291,12 +291,12 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                   </div>
                   <div className="max-h-60 overflow-y-auto p-1.5">
                     {!selectedType ? (
-                      <p className="p-3 text-[10px] leading-relaxed font-medium text-[#a7a288] italic">
+                      <p className="p-3 text-[12px] leading-relaxed font-medium text-[#a7a288] italic">
                         Pick an event type to filter by its sub-types.
                       </p>
                     ) : (
                       <>
-                        <p className="px-2 pt-1.5 pb-1 font-black text-[8px] tracking-[0.09em] text-[#a7a288] uppercase">{titleCase(selectedType.name)} sub-type</p>
+                        <p className="px-2 pt-1.5 pb-1 font-bold text-[13px] tracking-[0.09em] text-[#a7a288] uppercase">{titleCase(selectedType.name)} sub-type</p>
                         <FilterOpt
                           label={`All ${titleCase(selectedType.name)}`}
                           active={applied === `type:${selectedType.id}`}
@@ -311,7 +311,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                           />
                         ))}
                         {selectedType.subs.length === 0 && (
-                          <p className="p-3 text-[10px] font-medium text-[#a7a288] italic">No sub-types with bookings.</p>
+                          <p className="p-3 text-[12px] font-medium text-[#a7a288] italic">No sub-types with bookings.</p>
                         )}
                       </>
                     )}
@@ -327,7 +327,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
                 type="button"
                 onClick={() => setView(vw)}
                 className={cn(
-                  "rounded-md px-2.5 py-1.5 font-black text-[9px] tracking-wide uppercase transition-colors",
+                  "rounded-md px-2.5 py-1.5 font-bold text-[12px] tracking-wide uppercase transition-colors",
                   view === vw ? "bg-[#34451F] text-white shadow-sm" : "text-[#5E6654] hover:bg-white",
                 )}
               >
@@ -340,18 +340,18 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
         {isDetail ? (
           <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 px-0.5">
             {detail.length === 0 ? (
-              <span className="text-[9px] font-bold tracking-wide text-[#a7a288] uppercase">No breakdown for this selection</span>
+              <span className="text-[12px] font-bold tracking-wide text-[#a7a288] uppercase">No breakdown for this selection</span>
             ) : (
               <>
                 {detail.map((s) => (
-                  <span key={s.id} className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5E6654] uppercase">
+                  <span key={s.id} className="flex items-center gap-1.5 font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
                     <i
                       className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-(--c)"
                       style={{ "--c": s.color } as React.CSSProperties}
                     /> {titleCase(s.name)}
                   </span>
                 ))}
-                <span className="basis-full text-[8px] font-bold tracking-wide text-[#a7a288] uppercase">
+                <span className="basis-full text-[13px] font-bold tracking-wide text-[#a7a288] uppercase">
                   Solid = {period.curLbl} · dashed = {period.prevLbl}
                 </span>
               </>
@@ -359,13 +359,13 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
           </div>
         ) : (
           <div className="mb-2.5 flex items-center gap-4 px-0.5">
-            <span className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5E6654] uppercase">
+            <span className="flex items-center gap-1.5 font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
               <i className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-[#34451F]" /> {period.curLbl}
             </span>
-            <span className="flex items-center gap-1.5 font-black text-[9px] tracking-wide text-[#5E6654] uppercase">
+            <span className="flex items-center gap-1.5 font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
               <i className="h-0 w-3.5 rounded-sm border-t-[2.5px] border-dashed border-[#bdb49a]" /> {period.prevLbl}
             </span>
-            <span className={cn("ml-auto font-black text-[9px] tracking-wide uppercase", up ? "text-green-700" : "text-red-600")}>
+            <span className={cn("ml-auto font-bold text-[12px] tracking-wide uppercase", up ? "text-green-700" : "text-red-600")}>
               {delta}
             </span>
           </div>
@@ -376,7 +376,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
             {ticks.map((t) => (
               <span
                 key={t}
-                className="absolute top-(--t) right-0 -translate-y-1/2 font-black text-[8.5px] text-[#a7a288] tabular-nums"
+                className="absolute top-(--t) right-0 -translate-y-1/2 font-bold text-[13px] text-[#a7a288] tabular-nums"
                 style={{ "--t": `${(yFor(t, niceMax) / H) * 100}%` } as React.CSSProperties}
               >
                 {t}
@@ -444,7 +444,7 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
 
           <div className="mt-1.5 flex justify-between px-0.5">
             {period.labels.map((l) => (
-              <span key={l} className="text-[9px] font-bold tracking-wide text-[#5E6654] uppercase">
+              <span key={l} className="text-[12px] font-bold tracking-wide text-[#5E6654] uppercase">
                 {l}
               </span>
             ))}
@@ -473,7 +473,7 @@ function FilterOpt({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-left text-[11px] font-bold transition-colors",
+        "flex w-full items-center gap-1.5 rounded-lg px-2 py-2 text-left text-[13px] font-bold transition-colors",
         active ? "bg-[#34451F] text-white" : selected ? "bg-[#efe9d8] text-[#34451F]" : "text-[#20231A] hover:bg-[#F4F1E8]",
       )}
     >
