@@ -1477,10 +1477,10 @@ export default function EventsClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none
+          className="flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none
             sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
-            sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2
-            sm:rounded-4xl sm:border-2 lg:max-h-[90vh] lg:w-6xl xl:w-7xl"
+            sm:max-h-[88vh] sm:w-160 sm:max-w-[96vw] sm:-translate-x-1/2
+            sm:rounded-4xl sm:border-2 lg:max-h-[94vh] lg:w-7xl xl:w-352"
         >
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-2.5 pb-2 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
@@ -1511,12 +1511,12 @@ export default function EventsClient({
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        aria-label="System information"
-                        title="System information"
-                        className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-2.5 text-blue-700 transition-colors hover:bg-blue-50 hover:text-blue-800 lg:px-3"
+                        aria-label="Details"
+                        title="Creation and modification details"
+                        className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-2.5 text-blue-700 transition-colors hover:bg-blue-50 hover:text-blue-800 sm:px-3"
                       >
                         <Info className="h-4.5 w-4.5 shrink-0" />
-                        <span className="hidden font-bold text-[13px] lg:inline">System Info</span>
+                        <span className="hidden font-bold text-[13px] sm:inline">Details</span>
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
@@ -2095,7 +2095,7 @@ export default function EventsClient({
                   {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
                   Delete
                 </Button>
-                <Button onClick={openEdit} className="h-12 flex-1 rounded-xl border border-[#34451F] font-semibold text-[12px] tracking-wide text-[#34451F] hover:bg-[#E5EBD8] active:scale-95">
+                <Button variant="ghost" onClick={openEdit} className="h-12 flex-1 rounded-xl border border-[#34451F] bg-white px-4 text-[13px] font-semibold tracking-wide text-[#34451F] hover:bg-[#E5EBD8] hover:text-[#34451F] active:scale-95">
                   <Pencil className="mr-2 h-4 w-4" />Edit
                 </Button>
               </div>
