@@ -174,15 +174,20 @@ function Hint({
   );
 }
 
+const hasPaymentFor = (booking: GeneralBooking) =>
+  Number(booking.events?.event_payment_amount) > 0 || Number(booking.total_amount) > 0;
+
 export default function BookingList({
   bookings,
   showEventColumn = false,
   seatingRequired = true,
+  showPayment = true,
   initialSelectedId = null,
 }: {
   bookings: GeneralBooking[];
   showEventColumn?: boolean;
   seatingRequired?: boolean;
+  showPayment?: boolean;
   initialSelectedId?: string | null;
 }) {
   const router = useRouter();
@@ -214,7 +219,8 @@ export default function BookingList({
     if (row) row.scrollIntoView({ block: "center" });
   }, [initialSelectedId]);
 
-  const columnCount = 6 + (showEventColumn ? 1 : 0) + (seatingRequired ? 1 : 0);
+  const columnCount =
+    5 + (showEventColumn ? 1 : 0) + (seatingRequired ? 1 : 0) + (showPayment ? 1 : 0);
 
   const handleEnterEditMode = async () => {
     if (!openBooking) return;
@@ -415,23 +421,19 @@ export default function BookingList({
               )}
             </DetailRow>
           )}
-          <DetailRow label="Payment">
-            {total <= 0 && paid <= 0 ? (
-              <span className="text-[#5E6654]">No payment required</span>
-            ) : (
-              <>
-                £{paid.toFixed(2)} <span className="text-[#5E6654]">of £{total.toFixed(2)}</span>
-                <span
-                  className={cn(
-                    "ml-2 inline-flex items-center rounded-full px-2 py-0.5 font-black text-[9.5px] tracking-[0.08em] uppercase",
-                    isPaid ? "bg-[#E7F2E0] text-[#2F6420]" : "bg-[#ECE9DE] text-[#5E6654]",
-                  )}
-                >
-                  {isPaid ? "Paid" : "Unpaid"}
-                </span>
-              </>
-            )}
-          </DetailRow>
+          {hasPaymentFor(booking) && (
+            <DetailRow label="Payment">
+              £{paid.toFixed(2)} <span className="text-[#5E6654]">of £{total.toFixed(2)}</span>
+              <span
+                className={cn(
+                  "ml-2 inline-flex items-center rounded-full px-2 py-0.5 font-black text-[9.5px] tracking-[0.08em] uppercase",
+                  isPaid ? "bg-[#E7F2E0] text-[#2F6420]" : "bg-[#ECE9DE] text-[#5E6654]",
+                )}
+              >
+                {isPaid ? "Paid" : "Unpaid"}
+              </span>
+            </DetailRow>
+          )}
         </div>
 
         <div className="flex flex-col gap-2.5">
@@ -683,7 +685,7 @@ export default function BookingList({
               <th className={headCell}>Booked by</th>
               <th className={cn(headCell, "w-17.5 text-center")}>Guests</th>
               {seatingRequired && <th className={cn(headCell, "w-25")}>Table</th>}
-              <th className={cn(headCell, "w-27.5")}>Payment</th>
+              {showPayment && <th className={cn(headCell, "w-27.5")}>Payment</th>}
               <th className={cn(headCell, "w-30")}>Status</th>
             </tr>
           </thead>
@@ -762,17 +764,19 @@ export default function BookingList({
                           )}
                         </td>
                       )}
-                      <td className={bodyCell(open)}>
-                        {total <= 0 && paid <= 0 ? (
-                          <span className="text-[#5E6654]">—</span>
-                        ) : paid >= total ? (
-                          <span className="font-bold text-[#2F6420]">Paid £{paid.toFixed(2)}</span>
-                        ) : (
-                          <span className="text-[#5E6654]">
-                            £{paid.toFixed(2)} of £{total.toFixed(2)}
-                          </span>
-                        )}
-                      </td>
+                      {showPayment && (
+                        <td className={bodyCell(open)}>
+                          {!hasPaymentFor(booking) ? (
+                            <span className="text-[#5E6654]">—</span>
+                          ) : paid >= total ? (
+                            <span className="font-bold text-[#2F6420]">Paid £{paid.toFixed(2)}</span>
+                          ) : (
+                            <span className="text-[#5E6654]">
+                              £{paid.toFixed(2)} of £{total.toFixed(2)}
+                            </span>
+                          )}
+                        </td>
+                      )}
                       <td className={bodyCell(open)}>
                         <StatusPill status={status} />
                       </td>

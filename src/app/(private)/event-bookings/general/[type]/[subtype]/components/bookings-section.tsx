@@ -76,6 +76,9 @@ export default function BookingsSection({
   const seatingRequired = summary
     ? summary.seatingRequired
     : bookings.some(b => b.events?.seating_required !== false);
+  const showPayment = summary
+    ? Number(summary.paymentAmount) > 0 || summary.totalExpected > 0
+    : bookings.some(b => Number(b.events?.event_payment_amount) > 0 || Number(b.total_amount) > 0);
 
   const tabs = [
     { key: ALL_TAB, label: "Everything" },
@@ -131,6 +134,7 @@ export default function BookingsSection({
         bookings={filteredBookings}
         showEventColumn={!summary}
         seatingRequired={seatingRequired}
+        showPayment={showPayment}
         initialSelectedId={initialSelectedId}
       />
 

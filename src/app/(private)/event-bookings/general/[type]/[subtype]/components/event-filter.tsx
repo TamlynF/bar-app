@@ -151,15 +151,9 @@ export default function EventPickerBanner({
               <span className="text-xs text-[#5E6654]">of £{summary.totalExpected.toFixed(0)}</span>
             </Chip>
           )}
-          {summary?.quiz && (
+          {summary?.quiz && summary.quiz.status !== "Incomplete" && (
             <Chip label="Quiz">
-              <span
-                className={cn(
-                  summary.quiz.status === "Complete" && "text-[#2F6420]",
-                  summary.quiz.status === "Incomplete" && "text-[#B07A16]",
-                  summary.quiz.status === "Not Started" && "text-[#5E6654]",
-                )}
-              >
+              <span className={summary.quiz.status === "Complete" ? "text-[#2F6420]" : "text-[#5E6654]"}>
                 {summary.quiz.status}
               </span>
               {summary.quiz.total > 0 && (
@@ -174,7 +168,7 @@ export default function EventPickerBanner({
         {summary && showPicker && (
           <Link
             href={`/event-bookings/event/${summary.eventId}`}
-            className="inline-flex h-9.5 items-center rounded-[11px] border border-[#34451F] bg-white px-4 font-black text-[10.5px] tracking-widest text-[#34451F] uppercase transition-colors hover:bg-[#E5EBD8]"
+            className="inline-flex h-9.5 items-center rounded-[11px] border border-[#D8D5C8] bg-white px-4 font-black text-[10.5px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#ECE9DE]"
           >
             Manage event
           </Link>
