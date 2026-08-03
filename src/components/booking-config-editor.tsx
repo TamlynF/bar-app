@@ -87,16 +87,18 @@ function FormFieldCard({ name, locked, field, isGroupSize, editable, onChange }:
 }) {
   return (
     <div className={cn("overflow-hidden rounded-xl border border-[#D8D5C8] bg-white", !field.visible && "opacity-60")}>
-      <div className="grid grid-cols-3 items-center gap-3 border-b border-[#D8D5C8] bg-[#EFEADD] px-4 py-2">
-        <span className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">{name}</span>
-        <div className="flex items-center justify-center gap-2">
-          <span className={cn("font-black text-[10px] tracking-wide uppercase", field.visible ? "text-[#1F8A5B]" : "text-[#5E6654]")}>
+      {/* Below sm the name takes its own line, so the two toggles keep their
+          labels intact instead of the second one wrapping under the first. */}
+      <div className="grid grid-cols-2 items-center gap-x-3 gap-y-1.5 border-b border-[#D8D5C8] bg-[#EFEADD] px-4 py-2 sm:grid-cols-3">
+        <span className="col-span-2 font-black text-[10px] tracking-wide text-[#5E6654] uppercase sm:col-span-1">{name}</span>
+        <div className="flex items-center gap-2 sm:justify-center">
+          <span className={cn("font-black text-[10px] tracking-wide whitespace-nowrap uppercase", field.visible ? "text-[#1F8A5B]" : "text-[#5E6654]")}>
             {field.visible ? "Shown" : "Hidden"}
           </span>
           {editable && <Switch label={name} value={field.visible} locked={locked} onChange={!locked ? (v) => onChange({ visible: v }) : undefined} />}
         </div>
         <div className="flex items-center justify-end gap-2">
-          <span className={cn("font-black text-[10px] tracking-wide uppercase", field.required ? "text-[#C2410C]" : "text-[#5E6654]/60")}>
+          <span className={cn("font-black text-[10px] tracking-wide whitespace-nowrap uppercase", field.required ? "text-[#C2410C]" : "text-[#5E6654]/60")}>
             {field.required ? "Required" : "Not Required"}
           </span>
           {editable && <Switch label={`${name} required`} color="orange" value={field.required} locked={locked} onChange={!locked ? (v) => onChange({ required: v }) : undefined} />}
