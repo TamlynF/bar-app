@@ -297,7 +297,8 @@ export default function PrivateLayoutClient({
                 if (eventId) {
                     const setupHref = internalHref(searchParams.get("back"))
                     const eventTitle = searchParams.get("title")
-                    const subtitle = eventTitle ?? `Event #${eventId}`
+                    const navLabel = eventSubItems.find((s) => normalizedPath === s.href)?.label
+                    const subtitle = eventTitle ?? navLabel ?? `Event #${eventId}`
                     if (setupHref) {
                         return {
                             title: "Bookings",

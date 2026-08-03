@@ -7,11 +7,6 @@ import { badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors
 import { cardIcon } from "@/lib/booking-card-icons";
 import type { AdminBookingGroup } from "@/lib/admin-booking-groups";
 
-const groupHref = (group: AdminBookingGroup) =>
-  group.grouping === "per_event"
-    ? `${group.href}?title=${encodeURIComponent(group.label)}`
-    : group.href;
-
 export default function BookingsHubClient({ groups }: { groups: AdminBookingGroup[] }) {
   const [query, setQuery] = useState("");
 
@@ -52,7 +47,7 @@ export default function BookingsHubClient({ groups }: { groups: AdminBookingGrou
             return (
               <Link
                 key={group.key}
-                href={groupHref(group)}
+                href={group.href}
                 className="group flex items-center justify-between rounded-3xl border border-[#D8D5C8] bg-white p-3 shadow-sm transition-all hover:border-[#34451F] hover:shadow-md active:scale-[0.98]"
               >
                 <div className="flex items-center gap-4">
