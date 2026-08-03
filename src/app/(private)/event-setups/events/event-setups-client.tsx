@@ -41,16 +41,19 @@ import {
   CopyPlus,
   Undo2,
   MoreVertical,
+  Ban,
 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 import QRCode from "qrcode";
 import { createBrowserClient } from "@supabase/ssr";
-import { saveEventAction, deleteEventAction, setEventQr } from "./actions";
+import { saveEventAction, deleteEventAction, setEventQr, setEventActiveAction } from "./actions";
 import { DatePicker, dateRangeLabel, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
 import { resolveEventImage, type EventImageSource } from "@/lib/event-image";
@@ -703,23 +706,69 @@ export default function EventsClient({
     });
   };
 
-  const handleDelete = async () => {
-    if (!selected) return;
+  const deleteEvent = async (
+    event: EventRecord,
+    onError: (message: string) => void,
+    onDeleted?: () => void,
+  ) => {
     const ok = await confirm({
       title: "Delete event",
-      description: "Delete this event? This cannot be undone.",
+      description: `Delete "${event.title || "Untitled Event"}"? This cannot be undone.`,
       confirmLabel: "Delete",
       variant: "destructive",
     });
     if (!ok) return;
     startTransition(async () => {
-      const result = await deleteEventAction(selected.id);
+      const result = await deleteEventAction(event.id);
       if (result?.error) {
-        setFormError(result.error);
+        onError(result.error);
       } else {
-        closeSheet();
+        onDeleted?.();
       }
     });
+  };
+
+  const handleDelete = async () => {
+    if (!selected) return;
+    await deleteEvent(selected, setFormError, closeSheet);
+  };
+
+  const handleRowDelete = (event: EventRecord) =>
+    void deleteEvent(event, (message) => toast.error(message), () => {
+      toast.success("Event deleted");
+      if (selected?.id === event.id) closeSheet();
+    });
+
+  const toggleEventActive = (event: EventRecord) => {
+    const nextActive = event.is_active === false;
+    startTransition(async () => {
+      const result = await setEventActiveAction(event.id, nextActive);
+      if (result?.error) {
+        toast.error(result.error);
+      } else {
+        toast.success(nextActive ? "Event activated" : "Event deactivated");
+        setSelected((cur) => (cur && cur.id === event.id ? { ...cur, is_active: nextActive } : cur));
+      }
+    });
+  };
+
+  const bookingsHrefFor = (event: EventRecord) => {
+    const type = typeById.get(event.event_types_id);
+    const sub = subtypeById.get(event.event_subtypes_id);
+    const group = buildAdminBookingGroups([{
+      id: event.id,
+      title: event.title,
+      date: event.date,
+      event_types: type ? { name: type.name, color: type.color, booking_grouping: type.booking_grouping } : null,
+      event_subtypes: sub ? { name: sub.name, color: sub.color } : null,
+    }])[0];
+    const base = group
+      ? (group.href.startsWith("/event-bookings/general/")
+          ? `${group.href}?eventId=${event.id}`
+          : group.href)
+      : `/event-bookings/event/${event.id}`;
+    const returnHref = `/event-setups/events?open=${event.id}`;
+    return `${base}${base.includes("?") ? "&" : "?"}from=${encodeURIComponent(returnHref)}`;
   };
 
   const todayStr = new Date().toISOString().split("T")[0];
@@ -1052,26 +1101,48 @@ export default function EventsClient({
           </p>
 
           <div className="relative z-2 flex items-center justify-end gap-0.5">
-            {canCopy(event) && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    title={`More actions for ${event.title || "Untitled Event"}`}
-                    aria-label={`More actions for ${event.title || "Untitled Event"}`}
-                    className="flex h-11 w-11 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-40">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  title={`More actions for ${event.title || "Untitled Event"}`}
+                  aria-label={`More actions for ${event.title || "Untitled Event"}`}
+                  className="flex h-11 w-11 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                {isQuiz && (
+                  <DropdownMenuItem onClick={() => router.push(`/event-setups/events/${event.id}`)}>
+                    <Brain className="h-4 w-4" />
+                    View quiz
+                  </DropdownMenuItem>
+                )}
+                {event.is_bookable && (
+                  <DropdownMenuItem onClick={() => router.push(bookingsHrefFor(event))}>
+                    <Users className="h-4 w-4" />
+                    View bookings
+                  </DropdownMenuItem>
+                )}
+                {(isQuiz || event.is_bookable) && <DropdownMenuSeparator />}
+                {canCopy(event) && (
                   <DropdownMenuItem onClick={() => openCopy(event)}>
                     <CopyPlus className="h-4 w-4" />
                     Copy event
                   </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
+                )}
+                <DropdownMenuItem disabled={isPending} onClick={() => toggleEventActive(event)}>
+                  {inactive ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                  {inactive ? "Activate event" : "Deactivate event"}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem variant="destructive" onClick={() => handleRowDelete(event)}>
+                  <Trash2 className="h-4 w-4" />
+                  Delete event
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <ChevronRight className="pointer-events-none h-4 w-4 shrink-0 text-admin-muted transition-transform group-hover:translate-x-0.5" />
           </div>
         </div>
@@ -1722,20 +1793,7 @@ export default function EventsClient({
               const host = employees.find((e) => e.id === selected.host_employee_id);
               const isQuiz = sub?.behavior === "quiz";
               const bk = getBookingStats(selected.id, bookings);
-              const viewAllGroup = buildAdminBookingGroups([{
-                id: selected.id,
-                title: selected.title,
-                date: selected.date,
-                event_types: type ? { name: type.name, color: type.color, booking_grouping: type.booking_grouping } : null,
-                event_subtypes: sub ? { name: sub.name, color: sub.color } : null,
-              }])[0];
-              const baseViewAllHref = viewAllGroup
-                ? (viewAllGroup.href.startsWith("/event-bookings/general/")
-                    ? `${viewAllGroup.href}?eventId=${selected.id}`
-                    : viewAllGroup.href)
-                : `/event-bookings/event/${selected.id}`;
-              const returnHref = `/event-setups/events?open=${selected.id}`;
-              const viewAllHref = `${baseViewAllHref}${baseViewAllHref.includes("?") ? "&" : "?"}from=${encodeURIComponent(returnHref)}`;
+              const viewAllHref = bookingsHrefFor(selected);
               const poster = resolveEventImage({
                 eventImageUrl: selected.image_url,
                 actCoverUrl: actCoverByEvent[selected.id],
@@ -2279,9 +2337,10 @@ export default function EventsClient({
               </div>
             )}
           </div>
-          {ConfirmDialogUI}
         </SheetContent>
       </Sheet>
+
+      {ConfirmDialogUI}
     </div>
   );
 }

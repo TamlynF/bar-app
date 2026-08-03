@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { revalidatePublicEventPages } from "@/lib/revalidate-public";
 import { publicBookingUrl } from "@/lib/booking-links";
 import { isBookingGrouping } from "@/lib/booking-grouping";
-import { validateEventForm, type EventClashCandidate } from "@/lib/event-form-validation";
+import { validateEventForm, findActiveEventClashes, type EventClashCandidate } from "@/lib/event-form-validation";
 import { isEventCreationMethod } from "@/lib/event-creation";
 import { resolveEventIsActive } from "@/lib/event-active";
 
@@ -169,6 +169,47 @@ export async function setEventQr(id: number, qrDataUrl: string | null) {
   } catch (error) {
     console.error("Error saving event QR:", error);
     return { error: error instanceof Error ? error.message : "Failed to save QR code." };
+  }
+}
+
+export async function setEventActiveAction(id: number, isActive: boolean) {
+  const supabase = await createClient();
+  try {
+    const { data: event, error: loadError } = await supabase
+      .from("events")
+      .select("title, date, start_time, end_time")
+      .eq("id", id)
+      .single();
+    if (loadError) throw loadError;
+
+    const slot = { date: event.date, startTime: event.start_time, endTime: event.end_time };
+    if (isActive && !resolveEventIsActive(true, slot)) {
+      return { error: "Add a date, start time and end time before activating this event." };
+    }
+
+    if (isActive) {
+      const { data: sameDay } = await supabase
+        .from("events")
+        .select("id, title, start_time, end_time, date, is_active")
+        .eq("date", event.date);
+      const clashes = findActiveEventClashes(
+        { id, date: event.date as string, start: event.start_time as string, end: event.end_time as string },
+        (sameDay ?? []) as EventClashCandidate[]
+      );
+      if (clashes.length > 0) {
+        const c = clashes[0];
+        return { error: `Clashes with an active event: ${c.title} (${c.start}${c.end ? ` - ${c.end}` : ""}).` };
+      }
+    }
+
+    const { error } = await supabase.from("events").update({ is_active: isActive }).eq("id", id);
+    if (error) throw error;
+    revalidatePath("/event-setups/events");
+    revalidatePublicEventPages();
+    return { success: true };
+  } catch (error) {
+    console.error("Error updating event status:", error);
+    return { error: error instanceof Error ? error.message : "Failed to update the event status." };
   }
 }
 
