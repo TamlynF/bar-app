@@ -1553,7 +1553,7 @@ export default function EventsClient({
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
           className={cn(
-            "flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto sm:max-h-[88vh] sm:w-160 sm:max-w-[96vw] sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 lg:max-h-[94vh]",
+            "flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto sm:max-h-[92vh] sm:w-3xl sm:max-w-[96vw] sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 md:w-4xl lg:max-h-[94vh] lg:w-5xl xl:w-6xl",
             showForm && "lg:w-7xl xl:w-352"
           )}
         >
@@ -1686,12 +1686,12 @@ export default function EventsClient({
                 <div role="status" className="mt-2 rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-2.5">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 sm:flex-nowrap">
                     <div className="min-w-0 flex-1 basis-full sm:basis-auto">
-                      <p className="flex items-center gap-1.5 text-[13px] font-bold text-amber-700">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] font-bold text-amber-700">
                         <AlertTriangle className="h-4 w-4 shrink-0" />
-                        {viewQuiz.someExist ? "Quiz not finished" : "Quiz not started"}
-                      </p>
-                      <p className="mt-0.5 text-[12px] font-semibold text-amber-700/80 tabular-nums">
-                        {viewQuiz.total} of {viewQuiz.target} questions written · {viewQuiz.target - viewQuiz.total} to go
+                        <span>{viewQuiz.someExist ? "Quiz not finished" : "Quiz not started"}</span>
+                        <span className="font-semibold text-amber-700/80 tabular-nums">
+                          {viewQuiz.total} of {viewQuiz.target} questions
+                        </span>
                       </p>
                       <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-amber-200/70">
                         <div
