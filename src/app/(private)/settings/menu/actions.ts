@@ -52,6 +52,15 @@ function readTargetPosition(formData: FormData): number | null {
   return raw === "" ? null : Number(raw);
 }
 
+/* Blank stays null rather than 0 so "no mixer" and "the mixer is free" don't
+   read the same to the price comparison. */
+function readMixerSurcharge(formData: FormData): number | null {
+  const raw = formData.get("mixer_surcharge")?.toString().trim() ?? "";
+  if (!raw) return null;
+  const value = Number(raw.replace(/[£\s]/g, ""));
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
 export async function saveCategoryAction(formData: FormData) {
   const supabase = await createClient();
   const id = formData.get("id")?.toString();
@@ -75,6 +84,7 @@ export async function saveCategoryAction(formData: FormData) {
     const payload = {
       name,
       note: formData.get("note")?.toString() || null,
+      mixer_surcharge: readMixerSurcharge(formData),
       display_order: plan.position,
       is_active: isActive,
     };
@@ -135,10 +145,6 @@ export async function saveItemAction(formData: FormData) {
   const name = formData.get("name")?.toString().trim() || "";
   const price = formData.get("price")?.toString().trim() || "";
   const isActive = formData.get("is_active") !== "false";
-  const surchargeInput = formData.get("mixer_surcharge")?.toString().trim() || "";
-  const surchargeValue = Number(surchargeInput.replace(/[£\s]/g, ""));
-  const mixerSurcharge =
-    surchargeInput && Number.isFinite(surchargeValue) && surchargeValue > 0 ? surchargeValue : null;
 
   if (!name || !price) return { error: "Name and price are required." };
   if (!categoryId) return { error: "Category is required." };
@@ -158,7 +164,6 @@ export async function saveItemAction(formData: FormData) {
       category_id: categoryId,
       name,
       price,
-      mixer_surcharge: mixerSurcharge,
       display_order: plan.position,
       is_active: isActive,
     };
