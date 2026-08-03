@@ -6,9 +6,9 @@
 // The round is built in place, in a single-column sheet that reads
 // top-to-bottom like a set of instructions:
 //
-//   sticky header  — round name, plain-English subtitle, segmented progress bar
-//   scrolling body — step 1 (create), step 2 (pick), saved questions collapsed
-//   sticky footer  — a status sentence that counts down to done, then Add
+//   sticky header  - round name, plain-English subtitle, segmented progress bar
+//   scrolling body - step 1 (create), step 2 (pick), saved questions collapsed
+//   sticky footer  - a status sentence that counts down to done, then Add
 //
 // What differs from the old generator, and why:
 //
@@ -17,17 +17,17 @@
 //   2. Generation over-produces (needed + DRAFT_BUFFER) and selection is capped
 //      at exactly what the round needs. "Over limit" is now unreachable rather
 //      than a red error you have to go and resolve.
-//   3. Partial adds are allowed, and approving never empties the screen — the
+//   3. Partial adds are allowed, and approving never empties the screen - the
 //      body becomes a success view that offers the rest of the round.
 //
 // One skeleton serves all three round types; only the card body, the noun in
 // the copy, and the pair of server actions vary:
 //
-//   question — generateQuizAction        / saveQuizToDatabase
-//   picture  — generatePictureRoundAction / savePictureRoundAction  (topic is
+//   question - generateQuizAction        / saveQuizToDatabase
+//   picture  - generatePictureRoundAction / savePictureRoundAction  (topic is
 //              required, and locked once the round has pictures, because every
 //              row in a picture round shares one question_text)
-//   song     — generateMusicSnippetsAction / saveMusicSnippetsAction (saving
+//   song     - generateMusicSnippetsAction / saveMusicSnippetsAction (saving
 //              also syncs the round's Spotify playlist)
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
@@ -369,10 +369,10 @@ export default function QuizRoundSheet({
           next.delete(index);
           return next;
         }
-        // Hard cap. A tick past the round size simply does not take — no error
+        // Hard cap. A tick past the round size simply does not take - no error
         // state, no disabled Add, nothing to go and resolve.
         if (next.size >= selectionCap) {
-          toast.info(`That's ${selectionCap} already — untick one first.`);
+          toast.info(`That's ${selectionCap} already - untick one first.`);
           return prev;
         }
         next.add(index);
@@ -471,22 +471,22 @@ export default function QuizRoundSheet({
         ? "Round complete"
         : `${plural(remaining, `more ${noun}`)} still needed.`;
     }
-    if (isComplete) return `This round is full — all ${question_count} ${noun}s are saved.`;
+    if (isComplete) return `This round is full - all ${question_count} ${noun}s are saved.`;
     return `You need ${plural(needed, `more ${noun}`)} to finish this round.`;
   })();
 
   // Every footer state reads as a countdown to done, never as an error.
   const footerStatus = (() => {
-    if (topicMissing) return `Type a topic first — picture rounds need one.`;
+    if (topicMissing) return `Type a topic first - picture rounds need one.`;
     if (isGenerating) return `Creating ${noun}s…`;
     if (drafts.length === 0) {
       return isComplete
         ? `This round is full. Create extras if you want spares on the night.`
         : `Create some ${noun}s to get started.`;
     }
-    if (selected.size === 0) return `Nothing picked yet — tick at least 1 ${noun} to add.`;
-    if (selected.size >= needed) return "Ready — this completes the round.";
-    return `${selected.size} picked — you can add now, ${plural(
+    if (selected.size === 0) return `Nothing picked yet - tick at least 1 ${noun} to add.`;
+    if (selected.size >= needed) return "Ready - this completes the round.";
+    return `${selected.size} picked - you can add now, ${plural(
       needed - selected.size,
       noun
     )} will still be needed.`;
@@ -514,7 +514,7 @@ export default function QuizRoundSheet({
 
   return (
     <>
-      {/* Trigger — fills the round row's fixed action slot */}
+      {/* Trigger - fills the round row's fixed action slot */}
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -579,7 +579,7 @@ export default function QuizRoundSheet({
           </div>
 
           {approved ? (
-            /* ---- Success view — replaces body and footer */
+            /* ---- Success view - replaces body and footer */
             <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-8 text-center sm:px-6">
               {(() => {
                 const remaining = Math.max(question_count - approved.savedAfter, 0);
@@ -610,7 +610,7 @@ export default function QuizRoundSheet({
                     <p className="mx-auto mt-1.5 max-w-100 text-sm text-admin-muted">
                       {complete
                         ? `${category_name} now has all ${approved.savedAfter} of ${question_count} ${noun}s.`
-                        : `${category_name} now has ${approved.savedAfter} of ${question_count} — ${plural(
+                        : `${category_name} now has ${approved.savedAfter} of ${question_count} - ${plural(
                             remaining,
                             noun
                           )} still needed.`}
@@ -625,7 +625,7 @@ export default function QuizRoundSheet({
                           <Check className="h-4 w-4 shrink-0 text-admin-success" />
                           <p className="min-w-0 flex-1 text-[13px] leading-snug font-semibold text-admin-ink">
                             {isSongDraft(d)
-                              ? `${d.title} — ${d.artist}`
+                              ? `${d.title} - ${d.artist}`
                               : isPictureDraft(d)
                                 ? "Picture card"
                                 : d.question}
@@ -647,7 +647,7 @@ export default function QuizRoundSheet({
                       <p className="mx-auto mt-4 flex max-w-125 items-center justify-center gap-2 rounded-xl border border-admin-success/25 bg-admin-success-bg px-4 py-2.5 text-[13px] font-semibold text-admin-success">
                         <Music className="h-4 w-4 shrink-0" />
                         {approved.playlistSynced
-                          ? `Spotify playlist updated — the ${plural(
+                          ? `Spotify playlist updated - the ${plural(
                               approved.added.length,
                               "new song"
                             )} ${approved.added.length === 1 ? "was" : "were"} added automatically.`
@@ -670,7 +670,7 @@ export default function QuizRoundSheet({
                           onClick={closeSheet}
                           className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-6 text-sm font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:w-auto"
                         >
-                          Done — back to quiz
+                          Done - back to quiz
                         </button>
                       ) : (
                         <>
@@ -680,7 +680,7 @@ export default function QuizRoundSheet({
                             className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-6 text-sm font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:w-auto"
                           >
                             <Sparkles className="h-4 w-4" />
-                            Keep going — add the rest
+                            Keep going - add the rest
                           </button>
                           <button
                             type="button"
@@ -700,7 +700,7 @@ export default function QuizRoundSheet({
             <>
               {/* ---- Scrolling body */}
               <div className="min-h-0 flex-1 touch-pan-y overflow-y-auto px-4 py-5 sm:px-6">
-                {/* Spotify — picking is never blocked on connecting */}
+                {/* Spotify - picking is never blocked on connecting */}
                 {kind === "song" && (
                   <div className="mb-5 flex flex-wrap items-center gap-3 rounded-2xl border border-admin-success/25 bg-admin-success-bg px-4 py-3">
                     <div className="min-w-50 flex-1">
@@ -712,7 +712,7 @@ export default function QuizRoundSheet({
                       <p className="mt-0.5 text-[13px] text-admin-success/80">
                         {spotifyConnected
                           ? "Songs you approve are added to this round's playlist automatically."
-                          : "You can still pick songs now — the playlist fills in once connected."}
+                          : "You can still pick songs now - the playlist fills in once connected."}
                       </p>
                     </div>
 
@@ -743,7 +743,7 @@ export default function QuizRoundSheet({
                   </div>
                 )}
 
-                {/* Step 1 — create */}
+                {/* Step 1 - create */}
                 <section className="mb-6">
                   {setupOpen ? (
                     <>
@@ -763,11 +763,11 @@ export default function QuizRoundSheet({
                             Topic{" "}
                             {isPicture ? (
                               <span className="font-semibold text-admin-warning normal-case">
-                                — required for picture rounds
+                                - required for picture rounds
                               </span>
                             ) : (
                               <span className="font-medium normal-case">
-                                — optional, leave blank for a general mix
+                                - optional, leave blank for a general mix
                               </span>
                             )}
                           </label>
@@ -797,7 +797,7 @@ export default function QuizRoundSheet({
                           {topicLocked && (
                             <p className="mt-1.5 flex items-start gap-1.5 text-[13px] font-medium text-admin-muted">
                               <Lock className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                              Picture rounds keep one topic — this round is already &ldquo;
+                              Picture rounds keep one topic - this round is already &ldquo;
                               {lockedTopic}&rdquo;, so new pictures stay on that topic.
                             </p>
                           )}
@@ -864,7 +864,7 @@ export default function QuizRoundSheet({
                   )}
                 </section>
 
-                {/* Step 2 — pick */}
+                {/* Step 2 - pick */}
                 {(isGenerating || drafts.length > 0) && (
                   <section className="mb-6">
                     <p className="mb-2.5 flex items-center gap-2 text-[12px] font-bold tracking-wide text-admin-primary uppercase">
@@ -895,7 +895,7 @@ export default function QuizRoundSheet({
 
                     {autoPickShown && selected.size > 0 && (
                       <p className="mb-3 rounded-xl border border-admin-primary/20 bg-admin-primary-soft px-4 py-2.5 text-[13px] font-semibold text-admin-primary">
-                        We&apos;ve picked {selected.size} for you — untick one if you&apos;d
+                        We&apos;ve picked {selected.size}{" "} for you - untick one if you&apos;d
                         like a different {noun}.
                       </p>
                     )}
@@ -1012,7 +1012,7 @@ export default function QuizRoundSheet({
                                 <div className="mt-3">
                                   <SpotifyPlayer
                                     trackId={song.spotify_track_id}
-                                    title={`${song.title} — ${song.artist}`}
+                                    title={`${song.title} - ${song.artist}`}
                                     compact
                                   />
                                 </div>
@@ -1101,7 +1101,7 @@ export default function QuizRoundSheet({
                   </section>
                 )}
 
-                {/* Already saved — on demand only */}
+                {/* Already saved - on demand only */}
                 {savedCount > 0 && (
                   <section className="overflow-hidden rounded-2xl border border-admin-line bg-admin-surface">
                     <button
@@ -1119,7 +1119,7 @@ export default function QuizRoundSheet({
                         Already saved in this round
                       </span>
                       <span className="hidden text-[13px] text-admin-muted sm:inline">
-                        — locked, just for reference
+                        - locked, just for reference
                       </span>
                       <ChevronDown
                         className={cn(

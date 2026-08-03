@@ -47,9 +47,9 @@ type Props = {
   isHigherLower?: boolean;
   playlistUrl?: string | null;
   autoOpen?: boolean;
-  // Set by "Continue building quiz" — lands on the round with its sheet open.
+  // Set by "Continue building quiz" - lands on the round with its sheet open.
   openSheet?: boolean;
-  // The next round still needing questions, for the sheet's footer. Optional —
+  // The next round still needing questions, for the sheet's footer. Optional -
   // omit it and the footer just says the quiz is ready.
   nextRound?: NextRoundSummary | null;
 };
@@ -83,7 +83,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
 
   // Questions are held locally so inline edits feel instant, which means a
   // router.refresh() after approving would otherwise be ignored. Resync when the
-  // server sends a different set of rows — keyed on the ids so an unrelated
+  // server sends a different set of rows - keyed on the ids so an unrelated
   // parent re-render doesn't wipe an in-progress edit.
   const initialQuestionIds = initialQuestions.map((q) => q.id).join("|");
   useEffect(() => {

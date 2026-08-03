@@ -65,7 +65,7 @@ export function deriveRoundStage(args: {
   return "empty";
 }
 
-// The stage being worked towards — dashed outline in the rail, the way OFFERED
+// The stage being worked towards - dashed outline in the rail, the way OFFERED
 // reads in the band sheet.
 export function nextRoundStage(current: QuizRoundStage): QuizRoundStage | null {
   const order: QuizRoundStage[] = ["empty", "reviewing", "complete"];
@@ -87,7 +87,7 @@ export function generationCount(savedCount: number, targetCount: number): number
   return needed > 0 ? needed + DRAFT_BUFFER : DRAFT_BUFFER;
 }
 
-// Loose comparison — punctuation and casing vary between generations even when
+// Loose comparison - punctuation and casing vary between generations even when
 // the question is effectively the same one.
 export function normaliseQuestion(text: string | null | undefined): string {
   return (text || "")

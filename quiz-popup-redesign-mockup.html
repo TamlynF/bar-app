@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Quiz round — Add questions (redesign mockup)</title>
+<title>Quiz round - Add questions (redesign mockup)</title>
 <style>
   :root{
     --ink:#22281a;
@@ -356,7 +356,7 @@
 </head>
 <body>
 <div class="demo-note">
-  <div class="txt">Interactive mockup — the quiz page and its popup. Press any round’s button to open the popup (each opens a sample round of that type: question, picture or song).</div>
+  <div class="txt">Interactive mockup - the quiz page and its popup. Press any round’s button to open the popup (each opens a sample round of that type: question, picture or song).</div>
 </div>
 
 <!-- ===================== ROUND LIST PAGE ===================== -->
@@ -417,9 +417,9 @@
       <div class="gen-panel">
         <div class="gen-grid">
           <div class="field">
-            <label for="topic" id="topicLabel">Topic <span class="opt">— optional, leave blank for a general mix</span></label>
+            <label for="topic" id="topicLabel">Topic <span class="opt">- optional, leave blank for a general mix</span></label>
             <input id="topic" type="text" placeholder="Type a topic, e.g. 90s britpop">
-            <div class="topic-locked-note" id="topicLockedNote">🔒 Picture rounds keep one topic — this round is already “Dog breeds”, so new pictures stay on that topic.</div>
+            <div class="topic-locked-note" id="topicLockedNote">🔒 Picture rounds keep one topic - this round is already “Dog breeds”, so new pictures stay on that topic.</div>
           </div>
           <div class="gen-row2">
             <div class="field">
@@ -458,7 +458,7 @@
         <summary>
           <span class="pill" id="savedCount">8</span>
           <span id="savedLabel">Already saved in this round</span>
-          <span style="font-weight:400;color:#8a8f78;font-size:.85rem">— locked, just for reference</span>
+          <span style="font-weight:400;color:#8a8f78;font-size:.85rem">- locked, just for reference</span>
           <span class="chev">▾</span>
         </summary>
         <div class="saved-list" id="savedList"></div>
@@ -474,7 +474,7 @@
     <p id="successText"></p>
     <div class="added" id="addedList"></div>
     <div class="playlist-note" id="playlistNote"></div>
-    <button class="btn btn-primary" id="successBtn" onclick="closeSheet()">Done — back to quiz</button>
+    <button class="btn btn-primary" id="successBtn" onclick="closeSheet()">Done - back to quiz</button>
   </div>
 
   <!-- ===================== FOOTER ===================== -->
@@ -654,7 +654,7 @@ function openNext(){
 
 function draftText(d){
   if(mode==='picture') return d.a;
-  if(mode==='music') return d.t+' — '+d.ar;
+  if(mode==='music') return d.t+' - '+d.ar;
   return d.q;
 }
 
@@ -680,7 +680,7 @@ function renderSaved(){
     if(mode==='picture'){
       div.innerHTML = `<span class="lock">🔒</span><span class="thumb small photo">${s.pic}</span><span>${i+1}. Picture ${i+1}</span><span class="ans">${s.a}</span>`;
     } else if(mode==='music'){
-      div.innerHTML = `<span class="lock">🔒</span><span class="thumb small art">♪</span><span>${i+1}. ${s.t} — ${s.ar}</span><span class="ans">${s.y}</span>`;
+      div.innerHTML = `<span class="lock">🔒</span><span class="thumb small art">♪</span><span>${i+1}. ${s.t} - ${s.ar}</span><span class="ans">${s.y}</span>`;
     } else {
       div.innerHTML = `<span class="lock">🔒</span><span>${i+1}. ${s.q}</span><span class="ans">${s.a}</span>`;
     }
@@ -696,7 +696,7 @@ function renderSpotifyBanner(){
     b.innerHTML = `<div class="msg">✓ Spotify connected<small>Songs you approve are added to this round’s playlist automatically.</small></div>
       <button class="btn-spotify outline" onclick="fakeToast()">🎵 Open playlist</button>`;
   } else {
-    b.innerHTML = `<div class="msg">Connect Spotify to build this round’s playlist<small>You can still pick songs now — the playlist fills in once connected.</small></div>
+    b.innerHTML = `<div class="msg">Connect Spotify to build this round’s playlist<small>You can still pick songs now - the playlist fills in once connected.</small></div>
       <button class="btn-spotify" onclick="connectSpotify()">🎵 Connect Spotify</button>`;
   }
 }
@@ -721,12 +721,12 @@ function applyModeChrome(){
   topic.placeholder=c.topicPlaceholder; topic.value=''; topic.disabled=false;
   lockedNote.classList.remove('show');
   if(mode==='picture'){
-    label.innerHTML='Topic <span class="req">— required for picture rounds</span>';
+    label.innerHTML='Topic <span class="req">- required for picture rounds</span>';
     if(c.topicLockedValue && savedAll().length>0){
       topic.value=c.topicLockedValue; topic.disabled=true; lockedNote.classList.add('show');
     }
   } else {
-    label.innerHTML='Topic <span class="opt">— optional, leave blank for a general mix</span>';
+    label.innerHTML='Topic <span class="opt">- optional, leave blank for a general mix</span>';
   }
   renderSpotifyBanner();
 }
@@ -735,7 +735,7 @@ function generate(){
   const c=cfg();
   if(mode==='picture' && !document.getElementById('topic').value.trim()){
     document.getElementById('topic').focus();
-    document.getElementById('footStatus').textContent='Type a topic first — picture rounds need one.';
+    document.getElementById('footStatus').textContent='Type a topic first - picture rounds need one.';
     return;
   }
   const btn=document.getElementById('genBtn'), regen=document.getElementById('regenBtn');
@@ -799,7 +799,7 @@ function renderDrafts(){
   });
   const note=document.getElementById('autoPickNote');
   if(autoPicked && selected.size>0){
-    note.textContent = `We’ve picked ${selected.size} for you — untick one if you’d like a different ${cfg().noun}.`;
+    note.textContent = `We’ve picked ${selected.size} for you - untick one if you’d like a different ${cfg().noun}.`;
     note.classList.add('show');
   } else {
     note.classList.remove('show');
@@ -840,15 +840,15 @@ function updateFooter(){
     return;
   }
   if(size===0){
-    st.textContent='Nothing picked yet — tick at least 1 '+c.noun+' to add.';
+    st.textContent='Nothing picked yet - tick at least 1 '+c.noun+' to add.';
     st.classList.remove('ready'); btn.disabled=true;
     btn.textContent='Add '+c.noun+'s to round';
   } else if(size<n){
-    st.textContent=size+' picked — you can add now, '+plural(n-size, c.noun)+' will still be needed.';
+    st.textContent=size+' picked - you can add now, '+plural(n-size, c.noun)+' will still be needed.';
     st.classList.remove('ready'); btn.disabled=false;
     btn.textContent='Add '+plural(size, c.noun)+' to round';
   } else {
-    st.textContent='✓ Ready — this completes the round.';
+    st.textContent='✓ Ready - this completes the round.';
     st.classList.add('ready'); btn.disabled=false;
     btn.textContent='Add '+plural(size, c.noun)+' to round';
   }
@@ -864,7 +864,7 @@ function approve(){
     if(mode==='picture'){
       div.innerHTML=`<span style="color:var(--green-ok)">＋</span><span class="thumb small photo">${d.pic}</span><span>Picture card</span><span class="ans">${d.a}</span>`;
     } else if(mode==='music'){
-      div.innerHTML=`<span style="color:var(--green-ok)">＋</span><span class="thumb small art">♪</span><span>${d.t} — ${d.ar}</span><span class="ans">${d.y}</span>`;
+      div.innerHTML=`<span style="color:var(--green-ok)">＋</span><span class="thumb small art">♪</span><span>${d.t} - ${d.ar}</span><span class="ans">${d.y}</span>`;
     } else {
       div.innerHTML=`<span style="color:var(--green-ok)">＋</span><span>${d.q}</span><span class="ans">${d.a}</span>`;
     }
@@ -880,23 +880,23 @@ function approve(){
     complete ? 'Round complete!' : plural(added.length, c.noun)+' added';
   document.getElementById('successText').innerHTML = complete
     ? `${roundName} now has all <strong>${savedN} of ${TOTAL}</strong> ${c.noun}s.`
-    : `${roundName} now has <strong>${savedN} of ${TOTAL}</strong> — ${plural(remaining, c.noun)} still needed.`;
+    : `${roundName} now has <strong>${savedN} of ${TOTAL}</strong> - ${plural(remaining, c.noun)} still needed.`;
 
   const pn=document.getElementById('playlistNote');
   pn.classList.remove('show');
   if(mode==='music'){
     pn.textContent = spotifyConnected
-      ? `🎵 Spotify playlist updated — the ${plural(added.length,'new song')} ${added.length===1?'was':'were'} added automatically.`
+      ? `🎵 Spotify playlist updated - the ${plural(added.length,'new song')} ${added.length===1?'was':'were'} added automatically.`
       : '🎵 Songs saved. Connect Spotify to add them to the round’s playlist.';
     pn.classList.add('show');
   }
 
   const sb=document.getElementById('successBtn');
   if(complete){
-    sb.textContent='Done — back to quiz';
+    sb.textContent='Done - back to quiz';
     sb.onclick=closeSheet;
   } else {
-    sb.textContent='Keep going — add the rest';
+    sb.textContent='Keep going - add the rest';
     sb.onclick=continueRound;
   }
 

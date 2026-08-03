@@ -40,7 +40,7 @@ becomes:
 
 The sheet renders its own trigger button, so the wrapping `div` and its styling stay as they are.
 
-`categoryConfig` is the full `QuizCategoryConfig` row — `category-section.tsx` currently receives it spread into separate props (`category_name`, `question_count`, `is_picture`, `include_spotify`, `is_higher_lower`, `order_no`). Pass the whole row down from the page instead of destructuring it; the sheet needs `id`, `points_per_question` and `short_name` too.
+`categoryConfig` is the full `QuizCategoryConfig` row - `category-section.tsx` currently receives it spread into separate props (`category_name`, `question_count`, `is_picture`, `include_spotify`, `is_higher_lower`, `order_no`). Pass the whole row down from the page instead of destructuring it; the sheet needs `id`, `points_per_question` and `short_name` too.
 
 ## Action contract
 
@@ -61,7 +61,7 @@ approveQuizQuestionsAction(
 ): Promise<{ error?: string }>
 ```
 
-If your existing approve action is named differently, or takes the questions first, change the import and the single call site in `handleApprove` — nothing else depends on it.
+If your existing approve action is named differently, or takes the questions first, change the import and the single call site in `handleApprove` - nothing else depends on it.
 
 It should also `revalidatePath` the event route so `router.refresh()` picks up the new saved rows and the header pill flips green.
 
@@ -91,13 +91,13 @@ const withNext = byCategory.map((cat, i) => {
 
 Pass `nextRound` into each `CategorySection`, which forwards it to the sheet.
 
-## Optional — keeping the sheet open between rounds
+## Optional - keeping the sheet open between rounds
 
 Without `onAdvanceToRound`, the `Next: …` button closes the sheet and the user reopens on the next round. To keep it open, lift the active round into the page as state and have the sheet read it, then pass a setter as `onAdvanceToRound`. That turns eight rounds into one uninterrupted sitting, which is the whole point on a Thursday afternoon.
 
 ## Deliberately not handled
 
-Picture rounds and music-snippet rounds still route out to `/event-setups/quiz-generator`. Those two generate images and resolve Spotify track IDs, and the topic locks once set — reimplementing that blind would have been guesswork. The sheet detects them via `is_picture` / `include_spotify` and shows a hand-off panel instead. Worth folding in as a second pass once the standard flow is proven.
+Picture rounds and music-snippet rounds still route out to `/event-setups/quiz-generator`. Those two generate images and resolve Spotify track IDs, and the topic locks once set - reimplementing that blind would have been guesswork. The sheet detects them via `is_picture` / `include_spotify` and shows a hand-off panel instead. Worth folding in as a second pass once the standard flow is proven.
 
 ## Redirect the old route
 

@@ -5,9 +5,9 @@
 // The pipeline rail from the band booking sheet, extracted so both features
 // share one implementation.
 //
-//   Interactive (band)  — pass onSelect. Stages become buttons that advance the
+//   Interactive (band)  - pass onSelect. Stages become buttons that advance the
 //                         record.
-//   Read-only (quiz)    — omit onSelect. Stages render as spans, because quiz
+//   Read-only (quiz)    - omit onSelect. Stages render as spans, because quiz
 //                         stages are derived from data. If they looked clickable
 //                         the first thing anyone would try is clicking
 //                         "Complete" to skip the work.
