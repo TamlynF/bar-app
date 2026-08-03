@@ -51,11 +51,11 @@ import {
 import QRCode from "qrcode";
 import { createBrowserClient } from "@supabase/ssr";
 import { saveEventAction, deleteEventAction, setEventQr } from "./actions";
-import { DatePicker, type DateRange } from "./month-picker";
+import { DatePicker, dateRangeLabel, type DateRange } from "./month-picker";
 import { cn } from "@/lib/utils";
 import { resolveEventImage, type EventImageSource } from "@/lib/event-image";
 import { useConfirm } from "@/components/ui/confirm-dialog";
-import { badgeClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
+import { badgeClassFromColor, badgeSelectedClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
 import { buildAdminBookingGroups } from "@/lib/admin-booking-groups";
 import { findActiveEventClashes, isOvernightEnd } from "@/lib/event-form-validation";
 import { parseTimeToMinutes, addHoursToTime } from "@/lib/event-clash";
@@ -300,7 +300,7 @@ export default function EventsClient({
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
-  const [catFilter, setCatFilter] = useState<number | "all">("all");
+  const [catFilters, setCatFilters] = useState<Set<number>>(new Set());
   const [sortSoon, setSortSoon] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [showFilters, setShowFilters] = useState(!!initialQuick);
@@ -390,6 +390,13 @@ export default function EventsClient({
     window.history.replaceState(null, "", "/event-setups/events");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  const toggleCatFilter = (id: number) =>
+    setCatFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
 
   const toggleQuickFilter = (key: string) =>
     setQuickFilters((prev) => {
@@ -789,16 +796,18 @@ export default function EventsClient({
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((t) => ({ type: t, count: typeCounts.get(t.id) ?? 0 }));
 
+  const passesCat = (e: EventRecord) => catFilters.size === 0 || catFilters.has(e.event_types_id);
+
   const visibleEvents = baseEvents
-    .filter((e) => matchesFilters(e) && passesQuick(e) && (catFilter === "all" || e.event_types_id === catFilter))
+    .filter((e) => matchesFilters(e) && passesQuick(e) && passesCat(e))
     .sort((a, b) => {
       const cmp = (a.date ?? "").localeCompare(b.date ?? "") || (a.start_time ?? "").localeCompare(b.start_time ?? "");
       return sortSoon ? cmp : -cmp;
     });
 
-  const anyFilterActive = isSearching || catFilter !== "all" || quickFilters.size > 0;
-  const activeFilterCount = (catFilter !== "all" ? 1 : 0) + quickFilters.size;
-  const clearAllFilters = () => { setCatFilter("all"); setQuickFilters(new Set()); setSearchQuery(""); };
+  const anyFilterActive = isSearching || catFilters.size > 0 || quickFilters.size > 0;
+  const activeFilterCount = catFilters.size + quickFilters.size;
+  const clearAllFilters = () => { setCatFilters(new Set()); setQuickFilters(new Set()); setSearchQuery(""); };
 
   const dayGroups: { date: string; events: EventRecord[] }[] = [];
   for (const e of visibleEvents) {
@@ -816,7 +825,7 @@ export default function EventsClient({
   const eventsByDate = new Map<string, EventRecord[]>();
   for (const e of baseEvents) {
     if (!e.date) continue;
-    if (!(matchesSearchOnly(e) && passesQuick(e) && (catFilter === "all" || e.event_types_id === catFilter))) continue;
+    if (!(matchesSearchOnly(e) && passesQuick(e) && passesCat(e))) continue;
     if (!eventsByDate.has(e.date)) eventsByDate.set(e.date, []);
     eventsByDate.get(e.date)!.push(e);
   }
@@ -870,6 +879,38 @@ export default function EventsClient({
     setCalendarMonth({ year: n.getFullYear(), month: n.getMonth() });
     setSelectedCalendarDate(format(n, "yyyy-MM-dd"));
   };
+  // What the filter bar is currently showing, spelled out. The calendar counts
+  // the period on screen; the list counts everything the filters let through.
+  const calendarPeriodCount = gridCells.reduce(
+    (total, date) => total + (date ? (eventsByDate.get(date)?.length ?? 0) : 0),
+    0
+  );
+  const filterSummaryCount = viewMode === "calendar" ? calendarPeriodCount : visibleEvents.length;
+
+  const filterSummaryParts: { prefix: string; label: string }[] = [];
+  if (catFilters.size > 0) {
+    filterSummaryParts.push({
+      prefix: "in",
+      label: chipTypes
+        .filter(({ type }) => catFilters.has(type.id))
+        .map(({ type }) => toTitleCase(type.name))
+        .join(", "),
+    });
+  }
+  if (isSearching) filterSummaryParts.push({ prefix: "matching", label: `"${searchQuery.trim()}"` });
+  if (viewMode === "list" && dateRange?.start) {
+    filterSummaryParts.push({ prefix: "", label: dateRangeLabel(dateRange) });
+  }
+  if (quickFilters.size > 0) {
+    filterSummaryParts.push({
+      prefix: "",
+      label: QUICK_FILTERS.filter((q) => quickFilters.has(q.key)).map((q) => q.label).join(", "),
+    });
+  }
+  if (viewMode === "list") {
+    filterSummaryParts.push({ prefix: "sorted", label: sortSoon ? "soonest first" : "latest first" });
+  }
+
   const selectedCalendarEvents = eventsByDate.get(selectedCalendarDate) ?? [];
   const selectedCalendarLabel = parseDate(selectedCalendarDate).toLocaleDateString("en-GB", {
     weekday: "long",
@@ -1244,31 +1285,33 @@ export default function EventsClient({
         <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
-            onClick={() => setCatFilter("all")}
+            onClick={() => setCatFilters(new Set())}
+            aria-pressed={catFilters.size === 0}
             className={cn(
               "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition-colors sm:h-9",
-              catFilter === "all"
+              catFilters.size === 0
                 ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
                 : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
             )}
           >
-            {catFilter === "all" && <Check className="h-3.5 w-3.5" />}
+            {catFilters.size === 0 && <Check className="h-3.5 w-3.5" />}
             All <span className="opacity-70">{chipBase.length}</span>
           </button>
           {chipTypes.map(({ type, count }) => {
-            const sel = catFilter === type.id;
+            const sel = catFilters.has(type.id);
             return (
               <button
                 key={type.id}
                 type="button"
-                onClick={() => setCatFilter(sel ? "all" : type.id)}
+                aria-pressed={sel}
+                onClick={() => toggleCatFilter(type.id)}
                 className={cn(
-                  "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition-all sm:h-9",
-                  badgeClassFromColor(type.color),
-                  "rounded-full",
-                  sel && "ring-2 ring-admin-primary ring-offset-1 ring-offset-admin-card"
+                  "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold transition-colors sm:h-9",
+                  sel ? badgeSelectedClassFromColor(type.color) : badgeClassFromColor(type.color),
+                  "rounded-full"
                 )}
               >
+                {sel && <Check className="h-3.5 w-3.5" />}
                 {toTitleCase(type.name)} <span className="opacity-70">{count}</span>
               </button>
             );
@@ -1276,14 +1319,20 @@ export default function EventsClient({
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <button
-            type="button"
-            onClick={() => setSortSoon((s) => !s)}
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-admin-line bg-admin-surface px-3 text-[12px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
-          >
-            <ArrowDownUp className="h-3.5 w-3.5" /> {sortSoon ? "Soonest" : "Latest"}
-          </button>
-          <span className="h-4 w-px shrink-0 bg-admin-line" />
+          {/* The calendar is laid out by date, so sorting has nothing to act on. */}
+          {viewMode === "list" && (
+            <>
+              <button
+                type="button"
+                onClick={() => setSortSoon((s) => !s)}
+                title={sortSoon ? "Sorted soonest first" : "Sorted latest first"}
+                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-admin-line bg-admin-surface px-3 text-[12px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
+              >
+                <ArrowDownUp className="h-3.5 w-3.5" /> {sortSoon ? "Soonest" : "Latest"}
+              </button>
+              <span className="h-4 w-px shrink-0 bg-admin-line" />
+            </>
+          )}
           {QUICK_FILTERS.map((q) => {
             const on = quickFilters.has(q.key);
             return (
@@ -1310,13 +1359,17 @@ export default function EventsClient({
       </div>
       </div>
 
-      {viewMode === "list" && anyFilterActive && (
-        <div className="flex items-center gap-1.5 px-1 text-xs font-semibold text-[#5E6654]">
-          <b className="font-bold text-[13px] text-[#20231A]">{visibleEvents.length}</b>
-          event{visibleEvents.length === 1 ? "" : "s"}
-          {catFilter !== "all" && (
-            <> in <span className="font-bold text-[#34451F]">{toTitleCase(typeById.get(catFilter)?.name)}</span></>
-          )}
+      {anyFilterActive && (
+        <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 px-1 text-xs font-semibold text-[#5E6654]">
+          <b className="font-bold text-[13px] text-[#20231A]">{filterSummaryCount}</b>
+          event{filterSummaryCount === 1 ? "" : "s"}
+          {filterSummaryParts.map((part) => (
+            <span key={part.label} className="flex items-center gap-1.5">
+              <span aria-hidden="true" className="text-[#5E6654]/40">·</span>
+              <span className="text-[#5E6654]">{part.prefix}</span>
+              <span className="font-bold text-[#34451F]">{part.label}</span>
+            </span>
+          ))}
           <button type="button" onClick={clearAllFilters} className="ml-auto font-bold text-[12px] text-[#34451F] underline">
             Clear all
           </button>

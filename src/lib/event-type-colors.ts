@@ -1,24 +1,24 @@
 export const EVENT_TYPE_COLORS = [
-  { key: "amber",   swatchClass: "swatch-amber",   badge: "bg-amber-100 text-amber-700 border border-amber-200" },
-  { key: "green",   swatchClass: "swatch-green",   badge: "bg-green-100 text-green-700 border border-green-200" },
-  { key: "purple",  swatchClass: "swatch-purple",  badge: "bg-purple-100 text-purple-700 border border-purple-200" },
-  { key: "blue",    swatchClass: "swatch-blue",    badge: "bg-blue-100 text-blue-700 border border-blue-200" },
-  { key: "rose",    swatchClass: "swatch-rose",    badge: "bg-rose-100 text-rose-700 border border-rose-200" },
-  { key: "sky",     swatchClass: "swatch-sky",     badge: "bg-sky-100 text-sky-700 border border-sky-200" },
-  { key: "orange",  swatchClass: "swatch-orange",  badge: "bg-orange-100 text-orange-700 border border-orange-200" },
-  { key: "teal",    swatchClass: "swatch-teal",    badge: "bg-teal-100 text-teal-700 border border-teal-200" },
-  { key: "indigo",  swatchClass: "swatch-indigo",  badge: "bg-indigo-100 text-indigo-700 border border-indigo-200" },
-  { key: "pink",    swatchClass: "swatch-pink",    badge: "bg-pink-100 text-pink-700 border border-pink-200" },
-  { key: "red",     swatchClass: "swatch-red",     badge: "bg-red-100 text-red-700 border border-red-200" },
-  { key: "yellow",  swatchClass: "swatch-yellow",  badge: "bg-yellow-100 text-yellow-700 border border-yellow-200" },
-  { key: "emerald", swatchClass: "swatch-emerald", badge: "bg-emerald-100 text-emerald-700 border border-emerald-200" },
-  { key: "lime",    swatchClass: "swatch-lime",    badge: "bg-lime-100 text-lime-700 border border-lime-200" },
-  { key: "cyan",    swatchClass: "swatch-cyan",    badge: "bg-cyan-100 text-cyan-700 border border-cyan-200" },
-  { key: "violet",  swatchClass: "swatch-violet",  badge: "bg-violet-100 text-violet-700 border border-violet-200" },
-  { key: "fuchsia", swatchClass: "swatch-fuchsia", badge: "bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200" },
-  { key: "slate",   swatchClass: "swatch-slate",   badge: "bg-slate-100 text-slate-700 border border-slate-200" },
-  { key: "zinc",    swatchClass: "swatch-zinc",    badge: "bg-zinc-100 text-zinc-700 border border-zinc-200" },
-  { key: "stone",   swatchClass: "swatch-stone",   badge: "bg-stone-100 text-stone-700 border border-stone-200" },
+  { key: "amber",   swatchClass: "swatch-amber",   badge: "bg-amber-100 text-amber-700 border border-amber-200", badgeSelected: "bg-amber-700 text-white border border-amber-800" },
+  { key: "green",   swatchClass: "swatch-green",   badge: "bg-green-100 text-green-700 border border-green-200", badgeSelected: "bg-green-700 text-white border border-green-800" },
+  { key: "purple",  swatchClass: "swatch-purple",  badge: "bg-purple-100 text-purple-700 border border-purple-200", badgeSelected: "bg-purple-700 text-white border border-purple-800" },
+  { key: "blue",    swatchClass: "swatch-blue",    badge: "bg-blue-100 text-blue-700 border border-blue-200", badgeSelected: "bg-blue-700 text-white border border-blue-800" },
+  { key: "rose",    swatchClass: "swatch-rose",    badge: "bg-rose-100 text-rose-700 border border-rose-200", badgeSelected: "bg-rose-700 text-white border border-rose-800" },
+  { key: "sky",     swatchClass: "swatch-sky",     badge: "bg-sky-100 text-sky-700 border border-sky-200", badgeSelected: "bg-sky-700 text-white border border-sky-800" },
+  { key: "orange",  swatchClass: "swatch-orange",  badge: "bg-orange-100 text-orange-700 border border-orange-200", badgeSelected: "bg-orange-700 text-white border border-orange-800" },
+  { key: "teal",    swatchClass: "swatch-teal",    badge: "bg-teal-100 text-teal-700 border border-teal-200", badgeSelected: "bg-teal-700 text-white border border-teal-800" },
+  { key: "indigo",  swatchClass: "swatch-indigo",  badge: "bg-indigo-100 text-indigo-700 border border-indigo-200", badgeSelected: "bg-indigo-700 text-white border border-indigo-800" },
+  { key: "pink",    swatchClass: "swatch-pink",    badge: "bg-pink-100 text-pink-700 border border-pink-200", badgeSelected: "bg-pink-700 text-white border border-pink-800" },
+  { key: "red",     swatchClass: "swatch-red",     badge: "bg-red-100 text-red-700 border border-red-200", badgeSelected: "bg-red-700 text-white border border-red-800" },
+  { key: "yellow",  swatchClass: "swatch-yellow",  badge: "bg-yellow-100 text-yellow-700 border border-yellow-200", badgeSelected: "bg-yellow-700 text-white border border-yellow-800" },
+  { key: "emerald", swatchClass: "swatch-emerald", badge: "bg-emerald-100 text-emerald-700 border border-emerald-200", badgeSelected: "bg-emerald-700 text-white border border-emerald-800" },
+  { key: "lime",    swatchClass: "swatch-lime",    badge: "bg-lime-100 text-lime-700 border border-lime-200", badgeSelected: "bg-lime-700 text-white border border-lime-800" },
+  { key: "cyan",    swatchClass: "swatch-cyan",    badge: "bg-cyan-100 text-cyan-700 border border-cyan-200", badgeSelected: "bg-cyan-700 text-white border border-cyan-800" },
+  { key: "violet",  swatchClass: "swatch-violet",  badge: "bg-violet-100 text-violet-700 border border-violet-200", badgeSelected: "bg-violet-700 text-white border border-violet-800" },
+  { key: "fuchsia", swatchClass: "swatch-fuchsia", badge: "bg-fuchsia-100 text-fuchsia-700 border border-fuchsia-200", badgeSelected: "bg-fuchsia-700 text-white border border-fuchsia-800" },
+  { key: "slate",   swatchClass: "swatch-slate",   badge: "bg-slate-100 text-slate-700 border border-slate-200", badgeSelected: "bg-slate-700 text-white border border-slate-800" },
+  { key: "zinc",    swatchClass: "swatch-zinc",    badge: "bg-zinc-100 text-zinc-700 border border-zinc-200", badgeSelected: "bg-zinc-700 text-white border border-zinc-800" },
+  { key: "stone",   swatchClass: "swatch-stone",   badge: "bg-stone-100 text-stone-700 border border-stone-200", badgeSelected: "bg-stone-700 text-white border border-stone-800" },
 ] as const;
 
 export type ColorKey = typeof EVENT_TYPE_COLORS[number]["key"];
@@ -64,9 +64,18 @@ export function colorHexFromKey(color: string | null | undefined): ColorHex {
 
 export const FALLBACK_BADGE = "bg-[#F4F1E8] text-[#5E6654] border border-[#D8D5C8]";
 
+export const FALLBACK_BADGE_SELECTED = "bg-[#34451F] text-white border border-[#283719]";
+
 export function badgeClassFromColor(color: string | null | undefined): string {
   const found = EVENT_TYPE_COLORS.find(c => c.key === color);
   return found ? found.badge : FALLBACK_BADGE;
+}
+
+// Same hue, darker fill and light text - a selected event-type keeps its
+// identity instead of turning olive like every other selected control.
+export function badgeSelectedClassFromColor(color: string | null | undefined): string {
+  const found = EVENT_TYPE_COLORS.find(c => c.key === color);
+  return found ? found.badgeSelected : FALLBACK_BADGE_SELECTED;
 }
 
 export function swatchHexFromColor(color: string | null | undefined): string | undefined {
