@@ -30,7 +30,7 @@ function optionLabel(event: EventItem) {
 
 function Chip({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2 rounded-xl border border-[#C9BB93] bg-white px-3 py-2 sm:gap-2.5 sm:px-3.5 sm:py-2.5">
+    <div className="flex items-center gap-2.5 rounded-xl border border-[#C9BB93] bg-white px-3.5 py-2.5">
       <span className={FIELD_LABEL}>{label}</span>
       <span className="text-[15px] font-bold text-[#20231A] tabular-nums">{children}</span>
     </div>
@@ -76,16 +76,31 @@ export default function EventPickerBanner({
   };
 
   const hasPayments = !!summary && (summary.totalExpected > 0 || summary.totalPaid > 0);
+  const showQuiz = !!summary?.quiz && summary.quiz.status !== "Incomplete";
+
+  const compactStats = [
+    `${stats.bookings} ${stats.bookings === 1 ? "booking" : "bookings"}`,
+    `${stats.guests} ${stats.guests === 1 ? "guest" : "guests"}`,
+    summary?.seated ? `${summary.seated.assigned}/${summary.seated.total} seated` : null,
+    summary && hasPayments
+      ? `£${summary.totalPaid.toFixed(0)} of £${summary.totalExpected.toFixed(0)} paid`
+      : null,
+    showQuiz && summary?.quiz
+      ? `Quiz ${summary.quiz.status.toLowerCase()}${summary.quiz.total > 0 ? ` ${summary.quiz.count}/${summary.quiz.total}` : ""}`
+      : null,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
-    <section className="flex flex-wrap items-end gap-x-6 gap-y-3.5 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-4 py-4 sm:gap-y-4 sm:px-5 sm:py-4.5">
+    <section className="flex flex-wrap items-end gap-x-6 gap-y-2.5 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-3.5 py-3.5 sm:gap-y-4 sm:px-5 sm:py-4.5">
       <div className="min-w-0 flex-1">
         {showPicker ? (
-          <label htmlFor="event-picker" className={cn(FIELD_LABEL, "mb-1.5 block")}>
+          <label htmlFor="event-picker" className={cn(FIELD_LABEL, "mb-1 block sm:mb-1.5")}>
             Step 1 · Choose which event to view
           </label>
         ) : (
-          <span className={cn(FIELD_LABEL, "mb-1.5 block")}>Event</span>
+          <span className={cn(FIELD_LABEL, "mb-1 block sm:mb-1.5")}>Event</span>
         )}
         {showPicker ? (
           <div className="relative inline-block w-full max-w-full sm:w-auto">
@@ -93,7 +108,7 @@ export default function EventPickerBanner({
               id="event-picker"
               value={selectedEventId ?? ALL_EVENTS}
               onChange={e => handleChange(e.target.value)}
-              className="h-13 w-full appearance-none rounded-[13px] border-2 border-[#34451F] bg-white pr-11 pl-4 text-sm font-semibold text-[#20231A] outline-none focus:shadow-[0_0_0_3px_rgba(215,169,40,0.35)] sm:w-auto sm:min-w-85"
+              className="h-11 w-full appearance-none rounded-xl border-2 border-[#34451F] bg-white pr-11 pl-3.5 text-sm font-semibold text-[#20231A] outline-none focus:shadow-[0_0_0_3px_rgba(215,169,40,0.35)] sm:h-13 sm:w-auto sm:min-w-85 sm:rounded-[13px] sm:pl-4"
             >
               <option value={ALL_EVENTS}>All events — full history</option>
               {upcoming.length > 0 && (
@@ -118,14 +133,15 @@ export default function EventPickerBanner({
             <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-[#34451F]" />
           </div>
         ) : (
-          <h2 className="flex h-13 items-center text-lg leading-tight font-bold tracking-tight text-[#20231A]">
+          <h2 className="flex min-h-11 items-center text-lg leading-tight font-bold tracking-tight text-[#20231A] sm:h-13">
             {summary?.title || "Untitled event"}
           </h2>
         )}
-        <p className="mt-2 text-[13px] leading-snug font-medium text-[#5E6654]">
+        <p className="mt-1.5 text-[13px] leading-snug font-medium text-[#5E6654] sm:mt-2">
           {summary ? (
             <>
-              {summary.dateLabel} · {summary.timeLabel} · Hosted by {summary.hostName} ·{" "}
+              {summary.dateLabel} · {summary.timeLabel}
+              <span className="max-sm:hidden"> · Hosted by {summary.hostName}</span> ·{" "}
               <span className={summary.isActive ? "text-[#2F6420]" : "text-[#96302A]"}>
                 {summary.isActive ? "Active event" : "Inactive event"}
               </span>
@@ -134,10 +150,18 @@ export default function EventPickerBanner({
             "Showing every booking across all events — pick one above to focus on it."
           )}
         </p>
+        <p className="mt-1 text-[13px] leading-snug font-medium text-[#5E6654] tabular-nums sm:hidden">
+          {compactStats}
+        </p>
       </div>
 
-      <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:gap-2.5">
-        <div className="flex flex-wrap gap-2 sm:gap-2.5">
+      <div
+        className={cn(
+          "flex w-full flex-wrap items-end gap-2 sm:w-auto sm:gap-2.5",
+          !(summary && showPicker) && "max-sm:hidden",
+        )}
+      >
+        <div className="hidden flex-wrap gap-2 sm:flex sm:gap-2.5">
           <Chip label="Bookings">{stats.bookings}</Chip>
           <Chip label="Guests">{stats.guests}</Chip>
           {summary?.seated && (
@@ -153,7 +177,7 @@ export default function EventPickerBanner({
               </span>
             </Chip>
           )}
-          {summary?.quiz && summary.quiz.status !== "Incomplete" && (
+          {showQuiz && summary?.quiz && (
             <Chip label="Quiz">
               <span className={summary.quiz.status === "Complete" ? "text-[#2F6420]" : "text-[#5E6654]"}>
                 {summary.quiz.status}
