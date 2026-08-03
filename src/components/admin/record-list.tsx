@@ -180,8 +180,8 @@ export function FilterChip({
       className={cn(
         "inline-flex h-11 items-center gap-1.5 rounded-full border px-3 text-[11px] font-semibold tracking-wide transition-colors sm:h-9",
         active
-          ? "border-admin-primary bg-admin-primary text-white"
-          : "border-admin-line bg-admin-card text-admin-muted hover:border-admin-primary/30",
+          ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
+          : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink",
       )}
     >
       {children}
