@@ -59,7 +59,6 @@ import { cn } from "@/lib/utils";
 import { resolveEventImage, type EventImageSource } from "@/lib/event-image";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { badgeClassFromColor, badgeSelectedClassFromColor, swatchHexFromColor } from "@/lib/event-type-colors";
-import { buildAdminBookingGroups } from "@/lib/admin-booking-groups";
 import { findActiveEventClashes, isOvernightEnd } from "@/lib/event-form-validation";
 import { parseTimeToMinutes, addHoursToTime } from "@/lib/event-clash";
 import { BookingConfigEditor } from "@/components/booking-config-editor";
@@ -229,6 +228,7 @@ function shortHost(fullName: string) {
 
 export type Employee = { id: number; full_name: string };
 
+type EventLinkOrigin = "sheet" | "list";
 type QuizCategory = { id: number; category_name: string; question_count: number; short_name?: string; order_no: number };
 type QuizQuestion = { id: string; events_id: number; quiz_category_configs_id: number | null };
 type BookingRecord = { id: number; event_id: number; status: string; group_size: number; group_name: string | null };
@@ -299,6 +299,7 @@ export default function EventsClient({
   const router = useRouter();
   const [selected, setSelected] = useState<EventRecord | null>(null);
   const [returnHref, setReturnHref] = useState<string | null>(null);
+  const [focusedId, setFocusedId] = useState<number | null>(null);
   const [isAdding, setIsAdding] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -382,6 +383,13 @@ export default function EventsClient({
     if (back && back.startsWith("/") && !back.startsWith("//") && !back.startsWith("/\\")) {
       setReturnHref(back);
     }
+    // "open" and "focus" stay in the URL for as long as they describe what you
+    // are looking at, so the browser's back button restores the same view.
+    const focusId = searchParams.get("focus") || params.get("focus");
+    if (focusId) {
+      const focusEvent = initialEvents.find((e) => String(e.id) === focusId);
+      if (focusEvent) setFocusedId(focusEvent.id);
+    }
     const openId = searchParams.get("open") || params.get("open");
     if (!openId) return;
     const event = initialEvents.find((e) => String(e.id) === openId);
@@ -390,9 +398,15 @@ export default function EventsClient({
       setIsEditing(false);
       setIsAdding(false);
     }
-    window.history.replaceState(null, "", "/event-setups/events");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]);
+
+  useEffect(() => {
+    if (focusedId == null) return;
+    document
+      .querySelector(`[data-event-row="${focusedId}"]`)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+  }, [focusedId]);
 
   const toggleCatFilter = (id: number) =>
     setCatFilters((prev) => {
@@ -482,6 +496,7 @@ export default function EventsClient({
     setIsEditing(false);
     setIsAdding(false);
     setCopySourceId(null);
+    setFocusedId(null);
     setSelected(event);
     window.history.replaceState(null, "", `/event-setups/events?open=${event.id}`);
   };
@@ -698,7 +713,7 @@ export default function EventsClient({
         setSelected(saved);
         setIsEditing(false);
         setFormError(null);
-        window.history.replaceState(null, "", "/event-setups/events");
+        window.history.replaceState(null, "", `/event-setups/events?open=${saved.id}`);
         void reconcileQrAfterSave(saved, prevUrl, prevQr);
       } else {
         closeSheet();
@@ -752,23 +767,25 @@ export default function EventsClient({
     });
   };
 
-  const bookingsHrefFor = (event: EventRecord) => {
-    const type = typeById.get(event.event_types_id);
-    const sub = subtypeById.get(event.event_subtypes_id);
-    const group = buildAdminBookingGroups([{
-      id: event.id,
-      title: event.title,
-      date: event.date,
-      event_types: type ? { name: type.name, color: type.color, booking_grouping: type.booking_grouping } : null,
-      event_subtypes: sub ? { name: sub.name, color: sub.color } : null,
-    }])[0];
-    const base = group
-      ? (group.href.startsWith("/event-bookings/general/")
-          ? `${group.href}?eventId=${event.id}`
-          : group.href)
-      : `/event-bookings/event/${event.id}`;
-    const returnHref = `/event-setups/events?open=${event.id}`;
-    return `${base}${base.includes("?") ? "&" : "?"}from=${encodeURIComponent(returnHref)}`;
+  // Where the breadcrumb and the back arrow land you: the sheet you came from,
+  // or the list row you came from.
+  const listReturnHref = (eventId: number, origin: EventLinkOrigin) =>
+    origin === "sheet" ? `/event-setups/events?open=${eventId}` : `/event-setups/events?focus=${eventId}`;
+
+  // Leaving the list from a row menu stamps that row on the current history
+  // entry, so browser-back lands on the list with the row still highlighted.
+  const navigateFromRow = (event: EventRecord, href: string) => {
+    window.history.replaceState(null, "", listReturnHref(event.id, "list"));
+    router.push(href);
+  };
+
+  const quizHrefFor = (event: EventRecord, origin: EventLinkOrigin) =>
+    `/event-setups/events/${event.id}?back=${encodeURIComponent(listReturnHref(event.id, origin))}`;
+
+  const bookingsHrefFor = (event: EventRecord, origin: EventLinkOrigin) => {
+    const params = new URLSearchParams({ back: listReturnHref(event.id, origin) });
+    if (event.title) params.set("title", event.title);
+    return `/event-bookings/event/${event.id}?${params.toString()}`;
   };
 
   const todayStr = new Date().toISOString().split("T")[0];
@@ -1023,12 +1040,14 @@ export default function EventsClient({
     return (
       <div
         key={event.id}
+        data-event-row={event.id}
         style={{ "--spine": accentHex } as React.CSSProperties}
         className={cn(
           "group relative w-full rounded-xl border bg-admin-card text-left transition-colors",
           "pointer-fine:transition-shadow pointer-fine:hover:shadow-md",
           isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-admin-line hover:border-admin-primary/40",
-          inactive && "opacity-60"
+          inactive && "opacity-60",
+          focusedId === event.id && "border-admin-primary bg-admin-primary-soft/40 ring-2 ring-admin-primary/30"
         )}
       >
         <button
@@ -1114,13 +1133,13 @@ export default function EventsClient({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
                 {isQuiz && (
-                  <DropdownMenuItem onClick={() => router.push(`/event-setups/events/${event.id}`)}>
+                  <DropdownMenuItem onClick={() => navigateFromRow(event, quizHrefFor(event, "list"))}>
                     <Brain className="h-4 w-4" />
                     View quiz
                   </DropdownMenuItem>
                 )}
                 {event.is_bookable && (
-                  <DropdownMenuItem onClick={() => router.push(bookingsHrefFor(event))}>
+                  <DropdownMenuItem onClick={() => navigateFromRow(event, bookingsHrefFor(event, "list"))}>
                     <Users className="h-4 w-4" />
                     View bookings
                   </DropdownMenuItem>
@@ -1772,7 +1791,7 @@ export default function EventsClient({
                       </div>
                     </div>
                     <Link
-                      href={`/event-setups/events/${selected.id}`}
+                      href={quizHrefFor(selected, "sheet")}
                       className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-4 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719] sm:h-10 sm:w-auto"
                     >
                       <Brain className="h-4 w-4 shrink-0" />
@@ -1793,7 +1812,7 @@ export default function EventsClient({
               const host = employees.find((e) => e.id === selected.host_employee_id);
               const isQuiz = sub?.behavior === "quiz";
               const bk = getBookingStats(selected.id, bookings);
-              const viewAllHref = bookingsHrefFor(selected);
+              const viewAllHref = bookingsHrefFor(selected, "sheet");
               const poster = resolveEventImage({
                 eventImageUrl: selected.image_url,
                 actCoverUrl: actCoverByEvent[selected.id],
@@ -1912,7 +1931,7 @@ export default function EventsClient({
                     const savedQuestionCount = categoryCounts.reduce((total, category) => total + category.count, 0);
                     const targetQuestionCount = categoryCounts.reduce((total, category) => total + category.question_count, 0);
                     const quizIsComplete = categoryCounts.length > 0 && categoryCounts.every(category => category.count >= category.question_count);
-                    const quizHref = `/event-setups/events/${selected.id}`;
+                    const quizHref = quizHrefFor(selected, "sheet");
                     return (
                       <ViewSection
                         title="Quiz Rounds"

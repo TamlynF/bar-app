@@ -61,13 +61,14 @@ export default async function EventQuizQuestionsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ category?: string; completed?: string; open?: string }>;
+  searchParams: Promise<{ category?: string; completed?: string; open?: string; back?: string }>;
 }) {
   const { id } = await params;
   const {
     category: focusCategory,
     completed: completedCategory,
     open: openParam,
+    back: backParam,
   } = await searchParams;
   const supabase = await createClient();
 
@@ -121,8 +122,12 @@ export default async function EventQuizQuestionsPage({
 
   // Every round type now builds in place, so continuing opens the first
   // unfinished round's sheet on this page rather than navigating away.
+  const backSuffix =
+    backParam && backParam.startsWith("/") && !backParam.startsWith("//")
+      ? `&back=${encodeURIComponent(backParam)}`
+      : "";
   const continueHref = firstIncompleteCategory
-    ? `/event-setups/events/${event.id}?category=${encodeURIComponent(firstIncompleteCategory.category_name)}&open=1`
+    ? `/event-setups/events/${event.id}?category=${encodeURIComponent(firstIncompleteCategory.category_name)}&open=1${backSuffix}`
     : null;
 
   // The next round after each one that still needs questions. Drives the round

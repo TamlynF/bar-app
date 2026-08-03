@@ -44,12 +44,21 @@ import { signOut } from "@/app/login/actions"
 import { cardIcon } from "@/lib/booking-card-icons"
 import { swatchHexFromColor } from "@/lib/event-type-colors"
 
+type Crumb = { label: string; href?: string | null };
+
 type PageInfo = {
     title: string;
     subtitle: string | null;
     backHref: string | null;
     description?: string | null;
+    // Set when a page needs more than the default "title > subtitle" pair.
+    trail?: Crumb[];
 };
+
+function internalHref(value: string | null): string | null {
+    if (!value || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) return null
+    return value
+}
 
 type BookingNavItem = { label: string; href: string; icon?: string | null; color?: string | null; count?: number };
 type SubItem = {
@@ -247,7 +256,18 @@ export default function PrivateLayoutClient({
             if (segment === "events") {
                 const eventId = normalizedPath.split("/")[3]
                 if (eventId) {
-                    return { title: "Events", subtitle: "Quiz questions", backHref: `/event-setups/events?open=${eventId}` }
+                    const eventHref = internalHref(searchParams.get("back")) ?? `/event-setups/events?open=${eventId}`
+                    return {
+                        title: "Events",
+                        subtitle: "Quiz questions",
+                        backHref: eventHref,
+                        trail: [
+                            { label: "Events", href: "/event-setups" },
+                            { label: "Event list", href: "/event-setups/events" },
+                            { label: `#${eventId}`, href: eventHref },
+                            { label: "Quiz questions" },
+                        ],
+                    }
                 }
             }
 
@@ -268,6 +288,27 @@ export default function PrivateLayoutClient({
             )
             if (matchedRequest) {
                 return { title: "Requests", subtitle: matchedRequest.label, backHref: "/requests" }
+            }
+
+            if (segment === "event") {
+                const eventId = normalizedPath.split("/")[3]
+                if (eventId) {
+                    const eventHref = internalHref(searchParams.get("back")) ?? `/event-setups/events?open=${eventId}`
+                    const eventTitle = searchParams.get("title")
+                    const trail: Crumb[] = [
+                        { label: "Events", href: "/event-setups" },
+                        { label: "Event list", href: "/event-setups/events" },
+                        { label: `#${eventId}`, href: eventHref },
+                        { label: "Bookings", href: "/event-bookings" },
+                    ]
+                    if (eventTitle) trail.push({ label: eventTitle })
+                    return {
+                        title: "Bookings",
+                        subtitle: eventTitle ?? `Event #${eventId}`,
+                        backHref: eventHref,
+                        trail,
+                    }
+                }
             }
 
             if (segment === "music-bookings") {
@@ -310,7 +351,8 @@ export default function PrivateLayoutClient({
         return { title: "Venue manager", subtitle: null, backHref: null, description: null }
     }
 
-    const { title, subtitle, backHref, description = null } = getPageInfo() as PageInfo
+    const { title, subtitle, backHref, description = null, trail } = getPageInfo() as PageInfo
+    const crumbs: Crumb[] = trail ?? [{ label: title, href: backHref }, { label: subtitle ?? "" }]
 
     return (
         <div className="pt-safe-top flex min-h-screen bg-[#F4F1E8] sm:h-screen sm:overflow-hidden">
@@ -645,22 +687,33 @@ export default function PrivateLayoutClient({
                     <div className="mx-auto hidden max-w-7xl flex-col justify-center px-6 py-3 sm:flex sm:min-h-16 md:px-8">
                         {subtitle && (
                             <nav aria-label="Breadcrumb" className="mb-0.5">
-                                <ol className="flex items-center gap-1 text-[13px] font-medium text-admin-muted">
-                                    <li className="flex items-center">
-                                        {backHref ? (
-                                            <Link href={backHref} className="rounded transition-colors hover:text-admin-ink hover:underline">
-                                                {title}
-                                            </Link>
-                                        ) : (
-                                            <span>{title}</span>
-                                        )}
-                                    </li>
-                                    <li className="flex items-center" aria-hidden="true">
-                                        <ChevronRight className="h-3.5 w-3.5 opacity-60" />
-                                    </li>
-                                    <li className="flex min-w-0 items-center">
-                                        <span aria-current="page" className="truncate text-admin-ink">{subtitle}</span>
-                                    </li>
+                                <ol className="flex flex-wrap items-center gap-1 text-[13px] font-medium text-admin-muted">
+                                    {crumbs.map((crumb, index) => {
+                                        const isLast = index === crumbs.length - 1
+                                        return (
+                                            <React.Fragment key={`${crumb.label}-${index}`}>
+                                                {index > 0 && (
+                                                    <li className="flex items-center" aria-hidden="true">
+                                                        <ChevronRight className="h-3.5 w-3.5 opacity-60" />
+                                                    </li>
+                                                )}
+                                                <li className="flex min-w-0 items-center">
+                                                    {isLast || !crumb.href ? (
+                                                        <span
+                                                            aria-current={isLast ? "page" : undefined}
+                                                            className={cn("truncate", isLast && "text-admin-ink")}
+                                                        >
+                                                            {crumb.label}
+                                                        </span>
+                                                    ) : (
+                                                        <Link href={crumb.href} className="rounded transition-colors hover:text-admin-ink hover:underline">
+                                                            {crumb.label}
+                                                        </Link>
+                                                    )}
+                                                </li>
+                                            </React.Fragment>
+                                        )
+                                    })}
                                 </ol>
                             </nav>
                         )}
