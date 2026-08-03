@@ -48,7 +48,14 @@ export type MarketingSettings = {
   updated_by?: number | null;
 };
 
-export type MenuItemLite = { id: number; name: string; price: string; category?: string | null };
+export type MenuItemLite = {
+  id: number;
+  name: string;
+  price: string;
+  category?: string | null;
+  // Charged on top for a spirit's mixer, so the spirit round compares like for like.
+  mixer_surcharge?: number | null;
+};
 
 export type AiTrend = {
   title: string;

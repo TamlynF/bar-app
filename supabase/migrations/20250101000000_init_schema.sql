@@ -274,10 +274,13 @@ CREATE TABLE public.menu_items (
   category_id bigint NOT NULL,
   name text NOT NULL,
   price text NOT NULL,
+  mixer_surcharge numeric,
   display_order integer NOT NULL DEFAULT 0,
   is_active boolean NOT NULL DEFAULT true,
   created_at timestamp with time zone NOT NULL DEFAULT now(),
-  updated_at timestamp with time zone NOT NULL DEFAULT now()
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_by bigint,
+  updated_by bigint
 );
 
 CREATE TABLE public.past_quiz_questions (

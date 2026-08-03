@@ -20,7 +20,7 @@ export default async function MarketingTrendsPage() {
       .order("fetched_at", { ascending: false }),
     supabase
       .from("menu_categories")
-      .select("name, menu_items(id, name, price, is_active)")
+      .select("name, menu_items(id, name, price, mixer_surcharge, is_active)")
       .eq("is_active", true),
     readMarketingSettings(supabase),
     readCompanyAddress(supabase),
@@ -36,10 +36,21 @@ export default async function MarketingTrendsPage() {
 
   const menuItems: MenuItemLite[] = [];
   (menuCats ?? []).forEach(
-    (cat: { name: string; menu_items?: { id: number; name: string; price: string; is_active: boolean }[] }) => {
+    (cat: {
+      name: string;
+      menu_items?: { id: number; name: string; price: string; mixer_surcharge: number | null; is_active: boolean }[];
+    }) => {
       (cat.menu_items ?? [])
         .filter((it) => it.is_active)
-        .forEach((it) => menuItems.push({ id: it.id, name: it.name, price: it.price, category: cat.name }));
+        .forEach((it) =>
+          menuItems.push({
+            id: it.id,
+            name: it.name,
+            price: it.price,
+            category: cat.name,
+            mixer_surcharge: it.mixer_surcharge,
+          }),
+        );
     },
   );
 

@@ -111,9 +111,9 @@ export default function PricesClient({
   );
 
   const scored = shownComparison.filter(
-    (c) => c.ownPrice != null && c.competitorAvg != null && c.sampleCount > 0,
+    (c) => c.ownPrice != null && c.competitorMedian != null && c.sampleCount > 0,
   );
-  const yourScore = scored.filter((c) => (c.ownPrice as number) < (c.competitorAvg as number)).length;
+  const yourScore = scored.filter((c) => (c.ownPrice as number) < (c.competitorMedian as number)).length;
   const localScore = scored.length - yourScore;
 
   const scoreLine =
@@ -550,8 +550,8 @@ export default function PricesClient({
               )
             ) : (
               shownComparison.map((c) => {
-                const hasData = c.sampleCount > 0 && c.competitorAvg != null;
-                const winning = hasData && c.ownPrice != null && c.ownPrice < (c.competitorAvg as number);
+                const hasData = c.sampleCount > 0 && c.competitorMedian != null;
+                const winning = hasData && c.ownPrice != null && c.ownPrice < (c.competitorMedian as number);
                 return (
                   <div
                     key={rowKey(c)}
@@ -574,7 +574,7 @@ export default function PricesClient({
                       {c.ownPrice == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c.ownPrice)}
                     </span>
                     <span className="w-24 text-right font-medium text-[13.5px] text-[#5E6654] tabular-nums">
-                      {hasData ? `vs ${formatGbp(c.competitorAvg)}` : "—"}
+                      {hasData ? `vs ${formatGbp(c.competitorMedian)}` : "—"}
                     </span>
                     <span
                       className={cn(
@@ -599,8 +599,8 @@ export default function PricesClient({
               <span />
             </div>
             {shownComparison.map((c) => {
-              const hasData = c.sampleCount > 0 && c.competitorAvg != null;
-              const winning = hasData && c.ownPrice != null && c.ownPrice < (c.competitorAvg as number);
+              const hasData = c.sampleCount > 0 && c.competitorMedian != null;
+              const winning = hasData && c.ownPrice != null && c.ownPrice < (c.competitorMedian as number);
               const open = openRowKey === rowKey(c);
               const breakdown = open ? breakdownFor(c.key) : [];
               return (
@@ -629,7 +629,7 @@ export default function PricesClient({
                       {c.ownPrice == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c.ownPrice)}
                     </span>
                     <span className="text-right font-medium text-[12.5px] text-[#5E6654] tabular-nums">
-                      {hasData ? formatGbp(c.competitorAvg) : <span className="text-[#5E6654]/45">—</span>}
+                      {hasData ? formatGbp(c.competitorMedian) : <span className="text-[#5E6654]/45">—</span>}
                     </span>
                     {hasData ? (
                       <ChevronDown
@@ -645,6 +645,19 @@ export default function PricesClient({
 
                   {open && (
                     <div className="px-3.5 pb-3">
+                      <p className="mb-1.5 text-[11.5px] leading-snug text-[#5E6654]">
+                        Typical <span className="font-semibold text-[#20231A] tabular-nums">{formatGbp(c.competitorMedian)}</span>
+                        {c.competitorMin != null && c.competitorMax != null && (
+                          <> · range <span className="tabular-nums">{formatGbp(c.competitorMin)}–{formatGbp(c.competitorMax)}</span></>
+                        )}
+                        {c.competitorAvg != null && (
+                          <> · avg <span className="tabular-nums">{formatGbp(c.competitorAvg)}</span></>
+                        )}
+                        {" "}
+                        <span className="text-[#5E6654]/70">
+                          from {c.sampleCount} {c.sampleCount === 1 ? "price" : "prices"}
+                        </span>
+                      </p>
                       <p className="mb-1.5 font-bold text-[10.5px] tracking-[0.06em] text-[#5E6654] uppercase">
                         The breakdown — venue by venue
                       </p>

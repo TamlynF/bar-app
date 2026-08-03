@@ -41,6 +41,31 @@ describe("matchBenchmark", () => {
     expect(key("Nobby's Nuts Salted")).toBe("snack");
     expect(key("Sauvignon Blanc")).toBe("wine_glass");
   });
+
+  it("falls back to the category when the name is only a brand", () => {
+    expect(matchBenchmark("Beefeater Dry", "Gin")?.key).toBe("spirit_mixer");
+    expect(matchBenchmark("Grey Goose", "Vodka")?.key).toBe("spirit_mixer");
+    expect(matchBenchmark("Dead Man's Fingers Spiced", "Rum")?.key).toBe("spirit_mixer");
+    expect(matchBenchmark("Jack Daniel's", "Whiskey")?.key).toBe("spirit_mixer");
+    expect(matchBenchmark("Jose Cuervo Blanco", "Tequila")?.key).toBe("spirit_mixer");
+    expect(matchBenchmark("Pinot Grigio", "White Wine")?.key).toBe("wine_glass");
+    expect(matchBenchmark("Sprite", "Soft Drinks")?.key).toBe("soft_drink");
+    expect(matchBenchmark("Pipers Salted", "Crisps")?.key).toBe("snack");
+  });
+
+  it("never lets an ambiguous category decide the round", () => {
+    expect(matchBenchmark("Hawkstone Cider", "Draught")).toBeNull();
+    expect(matchBenchmark("Desperados 330ml", "Bottled Selection")).toBeNull();
+  });
+
+  it("keeps a 0% serve out of its round however it is shelved", () => {
+    expect(matchBenchmark("Tanqueray 0.0", "Gin")).toBeNull();
+    expect(matchBenchmark("Corona 0%", "Non-Alcoholic")).toBeNull();
+  });
+
+  it("lets the name win over the category", () => {
+    expect(matchBenchmark("Baby Guinness", "Shots")?.key).toBe("pint_ale");
+  });
 });
 
 const competitor = (venue: string, item: string, amount: number): CompetitorPrice => ({
@@ -129,6 +154,71 @@ describe("buildComparison", () => {
     const spirit = rows.find((c) => c.key === "spirit_mixer");
     expect(spirit?.ownItemName).toBe("TJ Vodka");
   });
+
+  it("prices the spirit round off the bar list, not the shot list", () => {
+    const rows = buildComparison([], [
+      { id: 1, name: "TJ Vodka", price: "£4.00 / 6 for £20.00", category: "Shots" },
+      { id: 2, name: "Beefeater Dry", price: "£4.00 single / £7.00 double", category: "Gin" },
+      { id: 3, name: "Grey Goose", price: "£5.00 single / £9.00 double", category: "Vodka" },
+    ]);
+    const spirit = rows.find((c) => c.key === "spirit_mixer");
+    expect(spirit?.ownPoolSize).toBe(2);
+    expect(spirit?.ownItemName).toBe("Beefeater Dry");
+    expect(spirit?.ownPrice).toBe(4);
+  });
+
+  it("adds the mixer surcharge to the spirit round", () => {
+    const rows = buildComparison([competitor("The Flintlock", "Gin & Tonic", 5.5)], [
+      { id: 1, name: "Beefeater Dry", price: "£4.00 single / £7.00 double", category: "Gin", mixer_surcharge: 1.95 },
+    ]);
+    const spirit = rows.find((c) => c.key === "spirit_mixer");
+    expect(spirit?.ownPrice).toBe(5.95);
+    expect(spirit?.verdict).toBe("above");
+  });
+
+  it("leaves rounds without a mixer untouched by the surcharge", () => {
+    const rows = buildComparison([], [
+      { id: 1, name: "DF Session Lager", price: "£4.95", category: "Draught", mixer_surcharge: 1.45 },
+    ]);
+    expect(rows.find((c) => c.key === "pint_lager")?.ownPrice).toBe(4.95);
+  });
+
+  it("brings brand-named wines into the glass round", () => {
+    const rows = buildComparison([], [
+      { id: 1, name: "Pinot Grigio", price: "£5.95 small / £7.95 large", category: "White Wine" },
+      { id: 2, name: "Sauvignon Blanc", price: "£6.75 small / £8.50 large", category: "White Wine" },
+      { id: 3, name: "Oyster Bay", price: "£25.00 bottle", category: "White Wine" },
+    ]);
+    const wine = rows.find((c) => c.key === "wine_glass");
+    expect(wine?.ownPoolSize).toBe(3);
+    expect(wine?.ownPrice).toBe(6.75);
+  });
+});
+
+describe("competitor centre", () => {
+  const locals = [
+    competitor("The Flintlock", "Lager", 4.5),
+    competitor("The Anchor", "Lager", 4.6),
+    competitor("The Crown", "Lager", 4.7),
+    competitor("The Gastro", "Lager", 9.0),
+  ];
+
+  it("does not let one outlier flip the verdict", () => {
+    const row = buildComparison(locals, [
+      { id: 1, name: "DF Session Lager", price: "£4.95", category: "Draught" },
+    ]).find((c) => c.key === "pint_lager");
+
+    expect(row?.competitorAvg).toBe(5.7);
+    expect(row?.competitorMedian).toBe(4.65);
+    expect(row?.verdict).toBe("above");
+  });
+
+  it("averages the two middle prices on an even sample", () => {
+    const row = buildComparison(locals, []).find((c) => c.key === "pint_lager");
+    expect(row?.competitorMin).toBe(4.5);
+    expect(row?.competitorMax).toBe(9);
+    expect(row?.competitorMedian).toBe(4.65);
+  });
 });
 
 describe("buildMenuComparison", () => {
@@ -143,6 +233,7 @@ describe("buildMenuComparison", () => {
     expect(rows[0].ownPrice).toBe(5.5);
     expect(rows[0].matchLabel).toBe("Pint (Lager)");
     expect(rows[0].competitorAvg).toBe(4.5);
+    expect(rows[0].competitorMedian).toBe(4.5);
     expect(rows[0].verdict).toBe("above");
 
     expect(rows[1].matchLabel).toBeNull();

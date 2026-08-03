@@ -51,6 +51,7 @@ export type MenuItem = AuditFields & {
   category_id: number;
   name: string;
   price: string;
+  mixer_surcharge: number | null;
   display_order: number;
   is_active: boolean;
 };
@@ -662,6 +663,19 @@ export default function MenuClient({
                   </FormRow>
                   <FormRow label="Price" required>
                     <input name="price" required aria-label="Price" placeholder="e.g. £8.95" defaultValue={sheetItem?.price ?? ""} className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
+                  </FormRow>
+                  <FormRow label="Mixer extra">
+                    <input
+                      name="mixer_surcharge"
+                      type="number"
+                      step="0.05"
+                      min="0"
+                      inputMode="decimal"
+                      aria-label="Mixer surcharge"
+                      placeholder="e.g. 1.45"
+                      defaultValue={sheetItem?.mixer_surcharge ?? ""}
+                      className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
+                    />
                   </FormRow>
                   <FormRow label="Status">
                     <StatusToggle value={isActive} onChange={setIsActive} />
