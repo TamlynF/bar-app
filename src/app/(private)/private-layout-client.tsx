@@ -6,10 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import {
     LayoutDashboard,
     Settings,
-    CalendarDays,
     ArrowLeft,
-    Sparkles,
-    ShoppingBag,
     LogOut,
     TrendingUp,
     Brain,
@@ -17,18 +14,7 @@ import {
     ChevronUp,
     ChevronRight,
     Tickets,
-    Grid2X2,
     CalendarCogIcon,
-    Component,
-    Dices,
-    BookUser,
-    Medal,
-    UserCog2,
-    Building2,
-    UtensilsCrossed,
-    Image as ImageIcon,
-    Camera,
-    Crown,
     Inbox,
     Guitar,
     PartyPopper,
@@ -43,6 +29,15 @@ import { cn } from "@/lib/utils"
 import { signOut } from "@/app/login/actions"
 import { cardIcon } from "@/lib/booking-card-icons"
 import { swatchHexFromColor } from "@/lib/event-type-colors"
+import {
+    QUIZ_HUB_HREF,
+    QUIZ_NAV_ITEMS,
+    SCHEDULE_HREF,
+    SETTINGS_NAV_ITEMS,
+    isQuizPath,
+    isSchedulePath,
+    isSettingsPath,
+} from "@/lib/admin-nav"
 
 type Crumb = { label: string; href?: string | null };
 
@@ -69,14 +64,6 @@ type SubItem = {
     count?: number;
 };
 
-const QUIZ_PATHS = [
-    "/event-setups/quiz-history",
-    "/event-setups/quiz-categories",
-    "/event-setups/quiz-generator",
-    "/event-setups/quiz-leaderboards",
-    "/settings/teams",
-]
-
 const REQUEST_PATHS = [
     "/requests",
     "/event-bookings/music-bookings",
@@ -84,10 +71,6 @@ const REQUEST_PATHS = [
 ]
 
 const WIDE_PATHS = ["/event-bookings/music-bookings", "/event-bookings/private-bookings", "/marketing/trends"]
-
-function isQuizPath(path: string): boolean {
-    return QUIZ_PATHS.some((q) => path === q || path.startsWith(`${q}/`))
-}
 
 export default function PrivateLayoutClient({
     children,
@@ -122,7 +105,6 @@ export default function PrivateLayoutClient({
 
     const [eventsOpen, setEventsOpen] = useState(() => !!pathname && pathname.startsWith("/event-bookings") && !isRequestPath(pathname))
     const [requestsOpen, setRequestsOpen] = useState(() => !!pathname && isRequestPath(pathname))
-    const [eventsNavOpen, setEventsNavOpen] = useState(() => !!pathname && (pathname.startsWith("/event-setups") || isQuizPath(pathname)))
     const [quizOpen, setQuizOpen] = useState(() => !!pathname && isQuizPath(pathname))
     const [settingsOpen, setSettingsOpen] = useState(() => !!pathname && pathname.startsWith("/settings") && !isQuizPath(pathname))
 
@@ -142,7 +124,8 @@ export default function PrivateLayoutClient({
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Guests", href: "/guests", icon: Users },
-        { label: "Events", href: "/event-setups", icon: CalendarCogIcon },
+        { label: "Schedule", href: SCHEDULE_HREF, icon: CalendarCogIcon },
+        { label: "Quiz", href: QUIZ_HUB_HREF, icon: Brain },
     ]
 
     /* Trends and Settings live behind "More" so the five mobile targets stay legible. */
@@ -159,7 +142,8 @@ export default function PrivateLayoutClient({
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { label: "Bookings", href: "/event-bookings", icon: Tickets },
         { label: "Requests", href: "/requests", icon: Inbox },
-        { label: "Events", href: "/event-setups", icon: CalendarCogIcon },
+        { label: "Schedule", href: SCHEDULE_HREF, icon: CalendarCogIcon },
+        { label: "Quiz", href: QUIZ_HUB_HREF, icon: Brain },
         { label: "Market trends", href: "/marketing/trends", icon: TrendingUp },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
@@ -180,30 +164,8 @@ export default function PrivateLayoutClient({
         { label: "Enquiries", href: "/requests/enquiries", icon: MessageSquare, colorHex: "#DC2626", count: pendingEnquiriesCount },
     ]
 
-    const eventsNavSubItems = [
-        { label: "Event list", href: "/event-setups/events", icon: CalendarDays },
-        { label: "Event categories", href: "/event-setups/event-types", icon: Component },
-    ]
-
-    const quizSubItems = [
-        { label: "Quiz history", href: "/event-setups/quiz-history", icon: Grid2X2 },
-        { label: "Quiz rules", href: "/event-setups/quiz-categories", icon: Dices },
-        { label: "Leaderboard", href: "/event-setups/quiz-leaderboards", icon: Crown },
-        { label: "Teams", href: "/settings/teams", icon: Medal },
-    ]
-
-    const settingsSubItems = [
-        { label: "Company info", href: "/settings/company", icon: Building2 },
-        { label: "Customers", href: "/settings/customers", icon: BookUser },
-        { label: "Music acts", href: "/settings/music-acts", icon: Guitar },
-        { label: "Seating plan", href: "/settings/tables", icon: Grid2X2 },
-        { label: "Menu", href: "/settings/menu", icon: UtensilsCrossed },
-        { label: "Specials", href: "/settings/specials", icon: Sparkles },
-        { label: "Merchandise", href: "/settings/merchandise", icon: ShoppingBag },
-        { label: "Promo content", href: "/settings/promo-content", icon: ImageIcon },
-        { label: "Gallery", href: "/settings/gallery", icon: Camera },
-        { label: "System users", href: "/settings/users", icon: UserCog2 },
-    ]
+    const quizSubItems = QUIZ_NAV_ITEMS
+    const settingsSubItems = SETTINGS_NAV_ITEMS
 
     const getPageInfo = () => {
         if (!pathname) return { title: "Venue manager", subtitle: null, backHref: null, description: null }
@@ -226,17 +188,21 @@ export default function PrivateLayoutClient({
         }
 
         if (normalizedPath.startsWith("/event-setups")) {
-            if (normalizedPath === "/event-setups") return { title: "Events", subtitle: null, backHref: null, description: "Set up what your venue runs and when it runs." }
+            if (normalizedPath === "/event-setups") return { title: "Schedule", subtitle: null, backHref: null, description: "View and manage scheduled venue events." }
 
             const segment = normalizedPath.split("/")[2]
+
+            if (segment === "quiz") {
+                return { title: "Quiz", subtitle: null, backHref: null, description: "Rounds, rules, teams and the season leaderboard." }
+            }
 
             const quizMap: Record<string, string> = {
                 "quiz-history": "Quiz history",
                 "quiz-categories": "Quiz rules",
-                "leaderboard": "Leaderboard",
+                "quiz-leaderboards": "Leaderboard",
             }
             if (quizMap[segment]) {
-                return { title: "Quiz", subtitle: quizMap[segment], backHref: "/event-setups" }
+                return { title: "Quiz", subtitle: quizMap[segment], backHref: QUIZ_HUB_HREF }
             }
 
             if (segment === "quiz-generator") {
@@ -246,38 +212,33 @@ export default function PrivateLayoutClient({
                     const categoryParam = category ? `?category=${encodeURIComponent(category)}` : ''
                     return { title: "Quiz", subtitle: "Quiz generator", backHref: `/event-setups/events/${eventId}${categoryParam}` }
                 }
-                return { title: "Quiz", subtitle: "Quiz generator", backHref: "/event-setups" }
+                return { title: "Quiz", subtitle: "Quiz generator", backHref: QUIZ_HUB_HREF }
             }
 
-            const eventSetupsMap: Record<string, string> = {
-                "events": "Event list",
-                "event-types": "Event categories",
+            if (segment === "event-types") {
+                return { title: "Settings", subtitle: "Event categories", backHref: "/settings", description: "Set up the different types of events your venue runs." }
             }
-            const subtitle = eventSetupsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
 
             if (segment === "events") {
                 const eventId = normalizedPath.split("/")[3]
                 if (eventId) {
-                    const eventHref = internalHref(searchParams.get("back")) ?? `/event-setups/events?open=${eventId}`
+                    const eventHref = internalHref(searchParams.get("back")) ?? `${SCHEDULE_HREF}?open=${eventId}`
                     return {
-                        title: "Events",
+                        title: "Schedule",
                         subtitle: "Quiz questions",
                         backHref: eventHref,
                         trail: [
-                            { label: "Events", href: "/event-setups" },
-                            { label: "Event list", href: "/event-setups/events" },
+                            { label: "Schedule", href: SCHEDULE_HREF },
                             { label: `#${eventId}`, href: eventHref },
                             { label: "Quiz questions" },
                         ],
                     }
                 }
+                return { title: "Schedule", subtitle: null, backHref: null, description: "View and manage scheduled venue events." }
             }
 
-            const eventSetupsDescriptions: Record<string, string> = {
-                "events": "View and manage scheduled venue events.",
-                "event-types": "Set up the different types of events your venue runs.",
-            }
-            return { title: "Events", subtitle, backHref: "/event-setups", description: eventSetupsDescriptions[segment] ?? null }
+            const subtitle = segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : ""
+            return { title: "Schedule", subtitle, backHref: SCHEDULE_HREF }
         }
 
         if (normalizedPath.startsWith("/event-bookings")) {
@@ -305,8 +266,7 @@ export default function PrivateLayoutClient({
                             subtitle,
                             backHref: setupHref,
                             trail: [
-                                { label: "Events", href: "/event-setups" },
-                                { label: "Event list", href: "/event-setups/events" },
+                                { label: "Schedule", href: SCHEDULE_HREF },
                                 { label: `#${eventId}`, href: setupHref },
                                 { label: "Bookings", href: "/event-bookings" },
                                 { label: subtitle },
@@ -345,7 +305,7 @@ export default function PrivateLayoutClient({
             const segment = normalizedPath.split("/")[2]
 
             if (segment === "teams") {
-                return { title: "Quiz", subtitle: "Teams", backHref: "/settings" }
+                return { title: "Quiz", subtitle: "Teams", backHref: QUIZ_HUB_HREF }
             }
 
             const settingsMap: Record<string, string> = {
@@ -400,28 +360,30 @@ export default function PrivateLayoutClient({
                         const isSettings = item.label === "Settings"
                         const isEvents = item.label === "Bookings"
                         const isRequests = item.label === "Requests"
-                        const isEventsNav = item.label === "Events"
+                        const isQuizNav = item.label === "Quiz"
 
                         const isActive = isRequests
                             ? onRequestPath
                             : isEvents
                             ? (normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)) && !onRequestPath
-                            : isEventsNav
-                            ? (normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)) || onQuizPath
+                            : isQuizNav
+                            ? onQuizPath
+                            : item.label === "Schedule"
+                            ? isSchedulePath(normalizedPathname)
                             : isSettings
-                            ? (normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)) && !onQuizPath
+                            ? isSettingsPath(normalizedPathname)
                             : normalizedPathname === normalizedHref || (item.href !== "/dashboard" && normalizedPathname.startsWith(`${normalizedHref}/`))
 
-                        const hasSubItems = isEvents || isRequests || isSettings || isEventsNav
-                        const isOpen = isEvents ? eventsOpen : isRequests ? requestsOpen : isSettings ? settingsOpen : isEventsNav ? eventsNavOpen : false
+                        const hasSubItems = isEvents || isRequests || isSettings || isQuizNav
+                        const isOpen = isEvents ? eventsOpen : isRequests ? requestsOpen : isSettings ? settingsOpen : isQuizNav ? quizOpen : false
                         const toggle = isEvents
                             ? () => setEventsOpen((p) => !p)
                             : isRequests
                             ? () => setRequestsOpen((p) => !p)
                             : isSettings
                             ? () => setSettingsOpen((p) => !p)
-                            : isEventsNav
-                            ? () => setEventsNavOpen((p) => !p)
+                            : isQuizNav
+                            ? () => setQuizOpen((p) => !p)
                             : undefined
                         const openGroup = isEvents
                             ? () => setEventsOpen(true)
@@ -429,8 +391,8 @@ export default function PrivateLayoutClient({
                             ? () => setRequestsOpen(true)
                             : isSettings
                             ? () => setSettingsOpen(true)
-                            : isEventsNav
-                            ? () => setEventsNavOpen(true)
+                            : isQuizNav
+                            ? () => setQuizOpen(true)
                             : undefined
 
                         return (
@@ -563,10 +525,10 @@ export default function PrivateLayoutClient({
                                     </div>
                                 )}
 
-                                {isEventsNav && eventsNavOpen && !collapsed && (
+                                {isQuizNav && quizOpen && !collapsed && (
                                     <div className="mt-1 ml-4 space-y-1 border-l border-nav-line pb-2 pl-2">
-                                        {eventsNavSubItems.map((sub) => {
-                                            const isSubActive = normalizedPathname === sub.href
+                                        {quizSubItems.map((sub) => {
+                                            const isSubActive = normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
                                             return (
                                                 <Link
                                                     key={sub.href}
@@ -583,43 +545,6 @@ export default function PrivateLayoutClient({
                                                 </Link>
                                             )
                                         })}
-
-                                        <button
-                                            type="button"
-                                            onClick={() => setQuizOpen((p) => !p)}
-                                            className={cn(
-                                                "flex w-full items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[13px] font-medium transition-colors duration-200",
-                                                onQuizPath
-                                                    ? "border-nav-indicator bg-nav-selected text-nav-ink"
-                                                    : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
-                                            )}
-                                        >
-                                            <Brain className={cn("h-3.5 w-3.5", onQuizPath ? "text-nav-indicator" : "text-nav-muted")} />
-                                            <span className="flex-1 text-left">Quiz</span>
-                                            {quizOpen ? <ChevronUp className="h-3 w-3 shrink-0" /> : <ChevronDown className="h-3 w-3 shrink-0" />}
-                                        </button>
-                                        {quizOpen && (
-                                            <div className="mt-1 ml-3 space-y-1 border-l border-nav-line pb-1 pl-2">
-                                                {quizSubItems.map((sub) => {
-                                                    const isSubActive = normalizedPathname === sub.href || normalizedPathname.startsWith(`${sub.href}/`)
-                                                    return (
-                                                        <Link
-                                                            key={sub.href}
-                                                            href={sub.href}
-                                                            className={cn(
-                                                                "flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[13px] font-medium transition-colors duration-200",
-                                                                isSubActive
-                                                                    ? "border-nav-indicator bg-nav-selected text-nav-ink"
-                                                                    : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
-                                                            )}
-                                                        >
-                                                            <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-nav-indicator" : "text-nav-muted")} />
-                                                            {sub.label}
-                                                        </Link>
-                                                    )
-                                                })}
-                                            </div>
-                                        )}
                                     </div>
                                 )}
 
@@ -755,6 +680,10 @@ export default function PrivateLayoutClient({
                                     || isRequestPath(normalizedPathname)
                                     || normalizedPathname === "/event-bookings"
                                     || normalizedPathname.startsWith("/event-bookings/")
+                                : item.label === "Quiz"
+                                ? isQuizPath(normalizedPathname)
+                                : item.label === "Schedule"
+                                ? isSchedulePath(normalizedPathname)
                                 : normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)
 
                             return (
