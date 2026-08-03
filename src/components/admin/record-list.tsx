@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Plus, ChevronDown, ChevronRight, Search, X } from "lucide-react";
+import { Plus, ChevronDown, ChevronRight, Search, SlidersHorizontal, X } from "lucide-react";
 
 export function RecordList({
   variant = "panel",
@@ -15,6 +15,9 @@ export function RecordList({
   addLabel = "Create",
   collapsible = true,
   toolbar,
+  filters,
+  activeFilterCount = 0,
+  detail,
   children,
 }: {
   variant?: "panel" | "cards";
@@ -25,13 +28,24 @@ export function RecordList({
   addLabel?: string;
   collapsible?: boolean;
   toolbar?: React.ReactNode;
+  // Filter pills, tucked behind a Filters button next to the search box.
+  filters?: React.ReactNode;
+  activeFilterCount?: number;
+  // Detail panel shown beside the rows from xl up, below the toolbar.
+  detail?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [showFilters, setShowFilters] = useState(activeFilterCount > 0);
 
   if (variant === "cards") {
     return (
-      <div className="space-y-2.5">
+      <div
+        className={cn(
+          "space-y-2.5",
+          detail && "xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:space-y-0 xl:gap-2.5",
+        )}
+      >
         <div className="flex items-center justify-between gap-3">
           <p className="text-[11px] font-semibold tracking-wide text-admin-muted">
             {countLabel}
@@ -45,8 +59,52 @@ export function RecordList({
             {addLabel}
           </Button>
         </div>
-        {toolbar}
-        {children}
+
+        {(toolbar || filters) && (
+          <div className="rounded-2xl border border-admin-line bg-admin-card/60 p-2.5 shadow-sm sm:p-3">
+            <div className="flex items-center gap-2">
+              {toolbar && <div className="min-w-0 flex-1">{toolbar}</div>}
+              {filters && (
+                <button
+                  type="button"
+                  onClick={() => setShowFilters((s) => !s)}
+                  aria-pressed={showFilters}
+                  aria-expanded={showFilters}
+                  title={showFilters ? "Hide filters" : "Show filters"}
+                  className={cn(
+                    "inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-xl border text-[13px] font-semibold transition-colors sm:w-auto sm:px-4",
+                    showFilters || activeFilterCount > 0
+                      ? "border-admin-primary/30 bg-admin-primary-soft text-admin-primary"
+                      : "border-admin-line bg-admin-card text-admin-muted hover:border-admin-primary/40 hover:bg-admin-surface hover:text-admin-ink",
+                  )}
+                >
+                  <SlidersHorizontal className="h-4 w-4 shrink-0" />
+                  <span className="hidden sm:inline">Filters</span>
+                  {activeFilterCount > 0 && (
+                    <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-admin-primary px-1.5 text-[11px] font-semibold text-white tabular-nums">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
+              )}
+            </div>
+
+            {filters && showFilters && (
+              <div className="mt-2.5 border-t border-admin-line pt-2.5">{filters}</div>
+            )}
+          </div>
+        )}
+
+        {detail ? (
+          <div className="xl:grid xl:min-h-0 xl:flex-1 xl:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] xl:items-stretch xl:gap-5">
+            <div className="xl:h-full xl:min-h-0 xl:overflow-y-auto xl:pr-1 xl:pb-1">
+              {children}
+            </div>
+            {detail}
+          </div>
+        ) : (
+          children
+        )}
       </div>
     );
   }
@@ -178,7 +236,7 @@ export function FilterChip({
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "inline-flex h-11 items-center gap-1.5 rounded-full border px-3 text-[11px] font-semibold tracking-wide transition-colors sm:h-9",
+        "inline-flex h-8 items-center gap-1 rounded-full border px-2.5 text-[10.5px] font-semibold tracking-wide transition-colors sm:h-9 sm:gap-1.5 sm:px-3 sm:text-[11px]",
         active
           ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
           : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink",
@@ -230,16 +288,22 @@ export function StatusPill({
   children: React.ReactNode;
   className?: string;
 }) {
+  // Success and error read from the icon and colour alone, so on a phone the
+  // label steps aside for the row's own content. It stays in the accessibility
+  // tree rather than being removed.
+  const iconOnlyOnMobile = !!icon && (tone === "success" || tone === "error");
+
   return (
     <span
       className={cn(
         "inline-flex shrink-0 items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold tracking-wide",
         STATUS_TONES[tone],
         className,
+        iconOnlyOnMobile && "max-sm:min-w-0 max-sm:justify-center max-sm:px-1.5",
       )}
     >
       {icon}
-      {children}
+      {iconOnlyOnMobile ? <span className="max-sm:sr-only">{children}</span> : children}
     </span>
   );
 }

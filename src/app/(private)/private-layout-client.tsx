@@ -673,7 +673,7 @@ export default function PrivateLayoutClient({
                 </header>
 
                 <main className={cn(
-                    "mx-auto w-full flex-1 p-1 pb-20 sm:py-6 sm:pb-8",
+                    "mx-auto w-full flex-1 p-1 pb-20 sm:min-h-0 sm:py-6 sm:pb-8",
                     isWidePath ? "max-w-none" : "max-w-7xl sm:px-6"
                 )}>
                     {children}

@@ -135,15 +135,366 @@ export default function TablesClient({
         ? "Edit table"
         : (selected?.name ?? "");
 
+  const detailPanel = (
+  <RecordSheet
+    open={sheet.open}
+    onClose={sheet.close}
+    mode={mode}
+    title={title}
+    recordId={selected?.id}
+    formId="table-form"
+    isPending={sheet.isPending}
+    onEdit={startEdit}
+    onDelete={handleDelete}
+    onCancel={cancel}
+    confirmUI={sheet.ConfirmDialogUI}
+    layout="split"
+    emptyState={
+      <>
+        <LayoutDashboard className="mb-3 h-8 w-8 text-admin-muted opacity-30" />
+        <p className="text-sm font-semibold text-admin-ink">No table selected</p>
+        <p className="mt-1 text-[11px] text-admin-muted">
+          Pick a table from the list to see its details here.
+        </p>
+      </>
+    }
+  >
+    {!showForm && selected && (
+      <div className="animate-in duration-200 fade-in">
+        <DetailCard>
+          <DetailCell label="Table name" value={selected.name} />
+          <DetailCell
+            label="Max capacity"
+            value={`${selected.max_capacity} guests`}
+            icon={<Users className="h-4 w-4" />}
+          />
+          <DetailCell
+            label="Available"
+            value={selected.available ? "Yes - bookable" : "No - hidden"}
+            valueClassName={
+              selected.available ? "text-admin-success" : "text-admin-error"
+            }
+            icon={
+              selected.available ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <XCircle className="h-4 w-4" />
+              )
+            }
+          />
+          <DetailCell
+            label="Shape"
+            value={selected.shape === "rect" ? "Rectangular" : "Round"}
+            icon={
+              selected.shape === "rect" ? (
+                <RectangleHorizontal className="h-4 w-4" />
+              ) : (
+                <Circle className="h-4 w-4" />
+              )
+            }
+          />
+          <DetailCell
+            label="Size"
+            value={sizeText(selected)}
+            icon={<Ruler className="h-4 w-4" />}
+          />
+          {selected.shape === "rect" && (
+            <DetailCell
+              label="Chair arrangement"
+              value={chairSummaryFull(selected)}
+              icon={<Armchair className="h-4 w-4" />}
+            />
+          )}
+          {selected.description && (
+            <DetailCell label="Location / notes" value={selected.description} />
+          )}
+        </DetailCard>
+
+        {sheet.formError && (
+          <div className="mt-4">
+            <ErrorBox message={sheet.formError} />
+          </div>
+        )}
+      </div>
+    )}
+
+    {showForm && (
+      <form
+        id="table-form"
+        action={sheet.submit(saveTableAction)}
+        className="flex animate-in flex-col gap-3 duration-200 fade-in"
+      >
+        {formDefault && (
+          <input type="hidden" name="id" value={formDefault.id} />
+        )}
+
+        <Section
+          title="Details"
+          open={openSections.details}
+          onToggle={() => toggleSection("details")}
+        >
+          <div className="space-y-2">
+            <Label className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted">
+              Table name <span className="text-admin-error">*</span>
+            </Label>
+            <Input
+              name="name"
+              placeholder="e.g. Window Booth 1"
+              defaultValue={formDefault?.name ?? ""}
+              required
+              className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-base font-semibold transition-all focus:border-admin-primary sm:text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted">
+              Location / notes
+            </Label>
+            <Input
+              name="description"
+              placeholder="e.g. Near the fireplace, quiet corner..."
+              defaultValue={formDefault?.description ?? ""}
+              className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
+            />
+          </div>
+        </Section>
+
+        <Section
+          title="Capacity & availability"
+          open={openSections.capacity}
+          onToggle={() => toggleSection("capacity")}
+        >
+          <div className="space-y-2">
+            <Label className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted">
+              Max capacity <span className="text-admin-error">*</span>
+            </Label>
+            <div className="flex h-14 items-center overflow-hidden rounded-2xl border-2 border-admin-line bg-admin-card transition-all focus-within:border-admin-primary">
+              <div className="flex h-full shrink-0 items-center justify-center border-r-2 border-admin-line px-4">
+                <Users className="h-4 w-4 text-admin-muted" />
+              </div>
+              <input
+                name="capacity"
+                type="number"
+                min={1}
+                placeholder="4"
+                required
+                defaultValue={formDefault?.max_capacity ?? ""}
+                aria-label="Max capacity"
+                className="h-full flex-1 bg-transparent px-3 text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40"
+              />
+            </div>
+          </div>
+
+          <label className="flex cursor-pointer items-center justify-between gap-3 pt-1">
+            <span>
+              <span className="block text-sm font-semibold text-admin-ink">
+                Available for booking
+              </span>
+              <span className="mt-0.5 block text-[11px] font-medium text-admin-muted">
+                Allow this table to be assigned to bookings
+              </span>
+            </span>
+            <span className="relative inline-block shrink-0">
+              <input
+                type="checkbox"
+                name="available"
+                defaultChecked={formDefault ? formDefault.available : true}
+                className="peer sr-only"
+              />
+              <span className="block h-6 w-11 rounded-full bg-admin-line transition-colors peer-checked:bg-admin-success" />
+              <span className="pointer-events-none absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+            </span>
+          </label>
+        </Section>
+
+        <Section
+          title="Shape & size"
+          open={openSections.shape}
+          onToggle={() => toggleSection("shape")}
+        >
+          <div className="space-y-2">
+            <Label
+              htmlFor="table-shape"
+              className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
+            >
+              Shape <span className="text-admin-error">*</span>
+            </Label>
+            <select
+              id="table-shape"
+              name="shape"
+              title="Table shape"
+              aria-label="Table shape"
+              value={shape}
+              onChange={(e) => setShape(e.target.value as "round" | "rect")}
+              className="h-14 w-full rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold text-admin-ink transition-all outline-none focus:border-admin-primary"
+            >
+              <option value="round">Round</option>
+              <option value="rect">Rectangular</option>
+            </select>
+          </div>
+
+          {shape === "round" ? (
+            <div className="space-y-2">
+              <Label
+                htmlFor="table-diameter"
+                className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
+              >
+                Diameter (m)
+              </Label>
+              <Input
+                id="table-diameter"
+                name="diameter"
+                type="number"
+                min={0}
+                step={0.05}
+                placeholder="e.g. 1.2"
+                defaultValue={formDefault?.diameter ?? ""}
+                className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
+              />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="table-width"
+                  className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
+                >
+                  Width (m)
+                </Label>
+                <Input
+                  id="table-width"
+                  name="width"
+                  type="number"
+                  min={0}
+                  step={0.05}
+                  placeholder="e.g. 0.8"
+                  defaultValue={formDefault?.width ?? ""}
+                  className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="table-length"
+                  className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
+                >
+                  Length (m)
+                </Label>
+                <Input
+                  id="table-length"
+                  name="length"
+                  type="number"
+                  min={0}
+                  step={0.05}
+                  placeholder="e.g. 1.6"
+                  defaultValue={formDefault?.length ?? ""}
+                  className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
+                />
+              </div>
+            </div>
+          )}
+        </Section>
+
+        {shape === "rect" && (
+          <Section
+            title="Chair arrangement"
+            open={openSections.chairs}
+            onToggle={() => toggleSection("chairs")}
+          >
+            <div className="space-y-2">
+              <Label
+                htmlFor="table-chair-mode"
+                className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
+              >
+                Arrangement
+              </Label>
+              <select
+                id="table-chair-mode"
+                name="chair_mode"
+                title="Chair arrangement"
+                aria-label="Chair arrangement"
+                value={chairMode}
+                onChange={(e) =>
+                  setChairMode(e.target.value as "auto" | "sides" | "bench")
+                }
+                className="h-14 w-full rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold text-admin-ink transition-all outline-none focus:border-admin-primary"
+              >
+                <option value="auto">Auto - spread around the table</option>
+                <option value="sides">Chairs per side</option>
+                <option value="bench">Bench down each long side</option>
+              </select>
+            </div>
+
+            {chairMode !== "auto" && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="table-chair-per-side"
+                    className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
+                  >
+                    {chairMode === "bench" ? "Seats per bench" : "Chairs per side"}
+                  </Label>
+                  <Input
+                    id="table-chair-per-side"
+                    name="chair_per_side"
+                    type="number"
+                    min={0}
+                    step={1}
+                    placeholder="e.g. 3"
+                    defaultValue={formDefault?.chair_layout?.perSide ?? ""}
+                    className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
+                  />
+                </div>
+                {chairMode === "sides" && (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="table-chair-ends"
+                      className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
+                    >
+                      Chairs per end
+                    </Label>
+                    <Input
+                      id="table-chair-ends"
+                      name="chair_ends"
+                      type="number"
+                      min={0}
+                      step={1}
+                      placeholder="e.g. 0"
+                      defaultValue={formDefault?.chair_layout?.ends ?? ""}
+                      className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </Section>
+        )}
+
+        {sheet.formError && <ErrorBox message={sheet.formError} />}
+      </form>
+    )}
+  </RecordSheet>
+  );
+
   return (
-    <div className="max-w-4xl space-y-4 px-4 py-4 sm:py-0 md:px-6">
+    <div className="max-w-4xl space-y-4 px-4 pt-0 pb-4 sm:py-0 md:px-6 xl:h-full xl:max-w-none xl:space-y-0 xl:overflow-hidden">
+      <div className="space-y-4 xl:h-full xl:min-h-0">
       {initialTables.length === 0 ? (
         <EmptyState
           icon={LayoutDashboard}
           title="No tables yet"
           description="Add your first table to get started"
+          action={
+            <button
+              type="button"
+              onClick={openAdd}
+              className="text-[11px] font-semibold tracking-wide text-admin-primary underline underline-offset-2"
+            >
+              Add your first table
+            </button>
+          }
         />
-      ) : (
+      ) : null}
+      {initialTables.length === 0 && detailPanel}
+      {initialTables.length > 0 && (
         <RecordList
           variant="cards"
           onAdd={openAdd}
@@ -157,15 +508,20 @@ export default function TablesClient({
               )}
             </>
           }
+          detail={detailPanel}
+          activeFilterCount={
+            (shapeFilter !== "all" ? 1 : 0) + (availFilter !== "all" ? 1 : 0)
+          }
           toolbar={
-            <div className="space-y-2.5">
-              <ListSearchInput
-                value={query}
-                onChange={setQuery}
-                placeholder="Search by table name, ID or location..."
-                label="Search tables"
-              />
-              <div className="flex flex-wrap items-center gap-1.5">
+            <ListSearchInput
+              value={query}
+              onChange={setQuery}
+              placeholder="Search by table name, ID or location..."
+              label="Search tables"
+            />
+          }
+          filters={
+            <div className="flex flex-wrap items-center gap-1.5">
                 <FilterChip
                   active={shapeFilter === "all"}
                   onClick={() => setShapeFilter("all")}
@@ -215,7 +571,6 @@ export default function TablesClient({
                     Clear
                   </button>
                 )}
-              </div>
             </div>
           }
         >
@@ -250,14 +605,9 @@ export default function TablesClient({
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="shrink-0 rounded-md border border-admin-line bg-admin-surface px-1.5 py-0.5 text-[10px] font-semibold text-admin-muted tabular-nums">
-                        #{table.id}
-                      </span>
-                      <p className="truncate font-semibold text-admin-ink">
-                        {table.name}
-                      </p>
-                    </div>
+                    <p className="truncate font-semibold text-admin-ink">
+                      {table.name}
+                    </p>
                     {table.description && (
                       <p className="mt-0.5 truncate text-[11px] font-medium text-admin-muted">
                         {table.description}
@@ -271,24 +621,6 @@ export default function TablesClient({
                       icon={<Users className="h-3 w-3" />}
                     >
                       {table.max_capacity}
-                    </InfoBadge>
-                    <InfoBadge
-                      className="hidden min-w-32 justify-start sm:inline-flex"
-                      icon={
-                        table.shape === "rect" ? (
-                          <RectangleHorizontal className="h-3 w-3" />
-                        ) : (
-                          <Circle className="h-3 w-3" />
-                        )
-                      }
-                    >
-                      {table.shape === "rect" ? "Rectangular" : "Round"}
-                    </InfoBadge>
-                    <InfoBadge
-                      className="hidden min-w-28 justify-start md:inline-flex"
-                      icon={<Armchair className="h-3 w-3" />}
-                    >
-                      {chairBadge(table)}
                     </InfoBadge>
                   </div>
 
@@ -311,333 +643,7 @@ export default function TablesClient({
           )}
         </RecordList>
       )}
-
-      <RecordSheet
-        open={sheet.open}
-        onClose={sheet.close}
-        mode={mode}
-        title={title}
-        recordId={selected?.id}
-        formId="table-form"
-        isPending={sheet.isPending}
-        onEdit={startEdit}
-        onDelete={handleDelete}
-        onCancel={cancel}
-        confirmUI={sheet.ConfirmDialogUI}
-      >
-        {!showForm && selected && (
-          <div className="animate-in duration-200 fade-in">
-            <DetailCard>
-              <DetailCell label="Table name" value={selected.name} />
-              <DetailCell
-                label="Max capacity"
-                value={`${selected.max_capacity} guests`}
-                icon={<Users className="h-4 w-4" />}
-              />
-              <DetailCell
-                label="Available"
-                value={selected.available ? "Yes - bookable" : "No - hidden"}
-                valueClassName={
-                  selected.available ? "text-admin-success" : "text-admin-error"
-                }
-                icon={
-                  selected.available ? (
-                    <CheckCircle2 className="h-4 w-4" />
-                  ) : (
-                    <XCircle className="h-4 w-4" />
-                  )
-                }
-              />
-              <DetailCell
-                label="Shape"
-                value={selected.shape === "rect" ? "Rectangular" : "Round"}
-                icon={
-                  selected.shape === "rect" ? (
-                    <RectangleHorizontal className="h-4 w-4" />
-                  ) : (
-                    <Circle className="h-4 w-4" />
-                  )
-                }
-              />
-              <DetailCell
-                label="Size"
-                value={sizeText(selected)}
-                icon={<Ruler className="h-4 w-4" />}
-              />
-              {selected.shape === "rect" && (
-                <DetailCell
-                  label="Chair arrangement"
-                  value={chairSummaryFull(selected)}
-                  icon={<Armchair className="h-4 w-4" />}
-                />
-              )}
-              {selected.description && (
-                <DetailCell label="Location / notes" value={selected.description} />
-              )}
-            </DetailCard>
-
-            {sheet.formError && (
-              <div className="mt-4">
-                <ErrorBox message={sheet.formError} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {showForm && (
-          <form
-            id="table-form"
-            action={sheet.submit(saveTableAction)}
-            className="flex animate-in flex-col gap-3 duration-200 fade-in"
-          >
-            {formDefault && (
-              <input type="hidden" name="id" value={formDefault.id} />
-            )}
-
-            <Section
-              title="Details"
-              open={openSections.details}
-              onToggle={() => toggleSection("details")}
-            >
-              <div className="space-y-2">
-                <Label className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted">
-                  Table name <span className="text-admin-error">*</span>
-                </Label>
-                <Input
-                  name="name"
-                  placeholder="e.g. Window Booth 1"
-                  defaultValue={formDefault?.name ?? ""}
-                  required
-                  className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-base font-semibold transition-all focus:border-admin-primary sm:text-sm"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted">
-                  Location / notes
-                </Label>
-                <Input
-                  name="description"
-                  placeholder="e.g. Near the fireplace, quiet corner..."
-                  defaultValue={formDefault?.description ?? ""}
-                  className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
-                />
-              </div>
-            </Section>
-
-            <Section
-              title="Capacity & availability"
-              open={openSections.capacity}
-              onToggle={() => toggleSection("capacity")}
-            >
-              <div className="space-y-2">
-                <Label className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted">
-                  Max capacity <span className="text-admin-error">*</span>
-                </Label>
-                <div className="flex h-14 items-center overflow-hidden rounded-2xl border-2 border-admin-line bg-admin-card transition-all focus-within:border-admin-primary">
-                  <div className="flex h-full shrink-0 items-center justify-center border-r-2 border-admin-line px-4">
-                    <Users className="h-4 w-4 text-admin-muted" />
-                  </div>
-                  <input
-                    name="capacity"
-                    type="number"
-                    min={1}
-                    placeholder="4"
-                    required
-                    defaultValue={formDefault?.max_capacity ?? ""}
-                    aria-label="Max capacity"
-                    className="h-full flex-1 bg-transparent px-3 text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40"
-                  />
-                </div>
-              </div>
-
-              <label className="flex cursor-pointer items-center justify-between gap-3 pt-1">
-                <span>
-                  <span className="block text-sm font-semibold text-admin-ink">
-                    Available for booking
-                  </span>
-                  <span className="mt-0.5 block text-[11px] font-medium text-admin-muted">
-                    Allow this table to be assigned to bookings
-                  </span>
-                </span>
-                <span className="relative inline-block shrink-0">
-                  <input
-                    type="checkbox"
-                    name="available"
-                    defaultChecked={formDefault ? formDefault.available : true}
-                    className="peer sr-only"
-                  />
-                  <span className="block h-6 w-11 rounded-full bg-admin-line transition-colors peer-checked:bg-admin-success" />
-                  <span className="pointer-events-none absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
-                </span>
-              </label>
-            </Section>
-
-            <Section
-              title="Shape & size"
-              open={openSections.shape}
-              onToggle={() => toggleSection("shape")}
-            >
-              <div className="space-y-2">
-                <Label
-                  htmlFor="table-shape"
-                  className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
-                >
-                  Shape <span className="text-admin-error">*</span>
-                </Label>
-                <select
-                  id="table-shape"
-                  name="shape"
-                  title="Table shape"
-                  aria-label="Table shape"
-                  value={shape}
-                  onChange={(e) => setShape(e.target.value as "round" | "rect")}
-                  className="h-14 w-full rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold text-admin-ink transition-all outline-none focus:border-admin-primary"
-                >
-                  <option value="round">Round</option>
-                  <option value="rect">Rectangular</option>
-                </select>
-              </div>
-
-              {shape === "round" ? (
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="table-diameter"
-                    className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
-                  >
-                    Diameter (m)
-                  </Label>
-                  <Input
-                    id="table-diameter"
-                    name="diameter"
-                    type="number"
-                    min={0}
-                    step={0.05}
-                    placeholder="e.g. 1.2"
-                    defaultValue={formDefault?.diameter ?? ""}
-                    className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
-                  />
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="table-width"
-                      className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
-                    >
-                      Width (m)
-                    </Label>
-                    <Input
-                      id="table-width"
-                      name="width"
-                      type="number"
-                      min={0}
-                      step={0.05}
-                      placeholder="e.g. 0.8"
-                      defaultValue={formDefault?.width ?? ""}
-                      className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label
-                      htmlFor="table-length"
-                      className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
-                    >
-                      Length (m)
-                    </Label>
-                    <Input
-                      id="table-length"
-                      name="length"
-                      type="number"
-                      min={0}
-                      step={0.05}
-                      placeholder="e.g. 1.6"
-                      defaultValue={formDefault?.length ?? ""}
-                      className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
-                    />
-                  </div>
-                </div>
-              )}
-            </Section>
-
-            {shape === "rect" && (
-              <Section
-                title="Chair arrangement"
-                open={openSections.chairs}
-                onToggle={() => toggleSection("chairs")}
-              >
-                <div className="space-y-2">
-                  <Label
-                    htmlFor="table-chair-mode"
-                    className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
-                  >
-                    Arrangement
-                  </Label>
-                  <select
-                    id="table-chair-mode"
-                    name="chair_mode"
-                    title="Chair arrangement"
-                    aria-label="Chair arrangement"
-                    value={chairMode}
-                    onChange={(e) =>
-                      setChairMode(e.target.value as "auto" | "sides" | "bench")
-                    }
-                    className="h-14 w-full rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold text-admin-ink transition-all outline-none focus:border-admin-primary"
-                  >
-                    <option value="auto">Auto - spread around the table</option>
-                    <option value="sides">Chairs per side</option>
-                    <option value="bench">Bench down each long side</option>
-                  </select>
-                </div>
-
-                {chairMode !== "auto" && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="table-chair-per-side"
-                        className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
-                      >
-                        {chairMode === "bench" ? "Seats per bench" : "Chairs per side"}
-                      </Label>
-                      <Input
-                        id="table-chair-per-side"
-                        name="chair_per_side"
-                        type="number"
-                        min={0}
-                        step={1}
-                        placeholder="e.g. 3"
-                        defaultValue={formDefault?.chair_layout?.perSide ?? ""}
-                        className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
-                      />
-                    </div>
-                    {chairMode === "sides" && (
-                      <div className="space-y-2">
-                        <Label
-                          htmlFor="table-chair-ends"
-                          className="ml-1 text-[11px] font-semibold tracking-wide text-admin-muted"
-                        >
-                          Chairs per end
-                        </Label>
-                        <Input
-                          id="table-chair-ends"
-                          name="chair_ends"
-                          type="number"
-                          min={0}
-                          step={1}
-                          placeholder="e.g. 0"
-                          defaultValue={formDefault?.chair_layout?.ends ?? ""}
-                          className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-sm font-semibold transition-all focus:border-admin-primary"
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </Section>
-            )}
-
-            {sheet.formError && <ErrorBox message={sheet.formError} />}
-          </form>
-        )}
-      </RecordSheet>
+      </div>
     </div>
   );
 }
@@ -681,14 +687,6 @@ function sizeText(t: Table): string {
     return t.width && t.length ? `${t.width} × ${t.length} m` : "Not set";
   }
   return t.diameter ? `${t.diameter} m ⌀` : "Not set";
-}
-
-function chairBadge(t: Table): string {
-  if (t.shape !== "rect") return "Auto";
-  const cl = t.chair_layout;
-  if (!cl || cl.mode === "auto") return "Auto";
-  if (cl.mode === "bench") return "Bench";
-  return `${cl.perSide ?? 0} per side`;
 }
 
 function chairSummaryFull(t: Table): string {

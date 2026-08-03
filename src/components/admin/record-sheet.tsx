@@ -4,6 +4,7 @@ import React, { useCallback, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useMediaQuery } from "@/hooks/use-media-query";
 import { cn } from "@/lib/utils";
 import {
   Loader2,
@@ -113,6 +114,8 @@ export function useRecordSheet<T>() {
   };
 }
 
+const SPLIT_QUERY = "(min-width: 1280px)";
+
 export function RecordSheet({
   open,
   onClose,
@@ -126,6 +129,8 @@ export function RecordSheet({
   onDelete,
   onCancel,
   confirmUI,
+  layout = "sheet",
+  emptyState,
   children,
 }: {
   open: boolean;
@@ -140,9 +145,118 @@ export function RecordSheet({
   onDelete: () => void;
   onCancel: () => void;
   confirmUI?: React.ReactNode;
+  // "split" keeps the bottom sheet on phones and tablets but shows the record
+  // beside the list from 1280px up.
+  layout?: "sheet" | "split";
+  emptyState?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const showForm = mode === "add" || mode === "edit";
+  const isWide = useMediaQuery(SPLIT_QUERY);
+  const split = layout === "split" && isWide;
+  const TitleTag: React.ElementType = split ? "h2" : SheetTitle;
+
+  const panel = (
+    <>
+      <div className="sticky top-0 z-30 shrink-0 border-b border-admin-line bg-admin-card/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+        <TitleTag className="truncate text-xl leading-tight font-bold tracking-tight text-admin-ink">
+          {title}
+        </TitleTag>
+        {recordId != null && (
+          <div className="mt-1 flex items-center gap-1.5">
+            <Hash className="h-3 w-3 text-admin-muted" />
+            <span className="text-xs font-semibold tracking-wide text-admin-muted tabular-nums">
+              ID: {recordId}
+            </span>
+          </div>
+        )}
+      </div>
+
+      <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
+        {children}
+        <div className="h-4" />
+      </div>
+
+      <div className="z-40 shrink-0 border-t-2 border-admin-primary/15 bg-admin-line px-6 py-5 pb-10 sm:rounded-b-4xl sm:pb-5">
+        {mode === "view" ? (
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              variant="ghost"
+              onClick={onDelete}
+              disabled={isPending}
+              className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-[13px] font-semibold text-admin-error hover:border-admin-error/30 hover:bg-admin-error-bg"
+            >
+              {isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={onEdit}
+              className="h-14 rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
+            >
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit
+            </Button>
+          </div>
+        ) : (
+          showForm && (
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancel}
+                disabled={isPending}
+                className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card text-[13px] font-semibold text-admin-muted hover:bg-admin-surface"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                form={formId}
+                disabled={isPending || saveDisabled}
+                className="h-14 rounded-2xl bg-admin-primary text-[13px] font-semibold text-white shadow-lg hover:bg-admin-primary-hover active:scale-95"
+              >
+                {isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save
+                  </>
+                )}
+              </Button>
+            </div>
+          )
+        )}
+      </div>
+    </>
+  );
+
+  if (split) {
+    return (
+      <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-4xl border-2 border-admin-line bg-admin-bg shadow-xl">
+        {open ? (
+          panel
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center px-8 text-center">
+            {emptyState ?? (
+              <>
+                <p className="text-sm font-semibold text-admin-ink">Nothing selected</p>
+                <p className="mt-1 text-[11px] text-admin-muted">
+                  Pick a record from the list to see its details here.
+                </p>
+              </>
+            )}
+          </div>
+        )}
+        {confirmUI}
+      </aside>
+    );
+  }
 
   return (
     <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
@@ -156,24 +270,7 @@ export function RecordSheet({
           sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
           sm:border-2 sm:border-admin-line"
       >
-        <div className="sticky top-0 z-30 shrink-0 border-b border-admin-line bg-admin-card/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-          <SheetTitle className="truncate text-xl leading-tight font-bold tracking-tight text-admin-ink">
-            {title}
-          </SheetTitle>
-          {recordId != null && (
-            <div className="mt-1 flex items-center gap-1.5">
-              <Hash className="h-3 w-3 text-admin-muted" />
-              <span className="text-xs font-semibold tracking-wide text-admin-muted tabular-nums">
-                ID: {recordId}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-          {children}
-          <div className="h-4" />
-        </div>
+        {panel}
 
         <div className="z-40 shrink-0 border-t-2 border-admin-primary/15 bg-admin-line px-6 py-5 pb-10 sm:rounded-b-4xl sm:pb-5">
           {mode === "view" ? (
@@ -192,8 +289,9 @@ export function RecordSheet({
                 Delete
               </Button>
               <Button
+                variant="ghost"
                 onClick={onEdit}
-                className="h-14 rounded-2xl border border-admin-primary text-[13px] font-semibold text-admin-primary hover:bg-admin-primary-soft active:scale-95"
+                className="h-14 rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
               >
                 <Pencil className="mr-2 h-4 w-4" />
                 Edit
