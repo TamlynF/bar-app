@@ -1,10 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import React from "react";
-import { badgeClassFromColor } from "@/lib/event-type-colors";
 import { getEventsForType, getBookingsForType, getEventDetailsForType, getAllTables, getQuizStatsForEvent, getTypeRequestKind, getBandRequestsForType, getPrivateHireRequestsForType, getNextActiveEventIdForType } from "./actions";
 import { ALL_SUBTYPES } from "@/lib/booking-grouping";
-import EventTypeFilter from "./components/event-filter";
 import { type GeneralBooking } from "./components/booking-list";
 import BookingsSection, { type EventSummary } from "./components/bookings-section";
 import BandBookingListClient from "../../../music-bookings/components/band-booking-list-client";
@@ -24,13 +22,6 @@ function RequestsShell({ title, subtitle, children }: { title: string; subtitle:
       </div>
     </div>
   );
-}
-
-function toTitleCase(str: string) {
-  return str
-    .split(/[\s\-_]+/)
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
 }
 
 function formatTime(t?: string | null) {
@@ -56,7 +47,6 @@ export default async function GeneralEventBookingsPage({
     ? status.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean)
     : [];
   const isAllSubtypes = subtype === ALL_SUBTYPES;
-  const filterLabel = isAllSubtypes ? toTitleCase(type) : toTitleCase(subtype);
 
   const requestKind = isAllSubtypes ? await getTypeRequestKind(type) : null;
   if (requestKind === "music_act") {
@@ -88,13 +78,9 @@ export default async function GeneralEventBookingsPage({
 
   const bookings = rawBookings as unknown as GeneralBooking[];
 
-  const etType = eventDetails
-    ? (Array.isArray(eventDetails.event_types) ? eventDetails.event_types[0] : eventDetails.event_types) as { name: string } | null
-    : null;
   const etSub = eventDetails
     ? (Array.isArray(eventDetails.event_subtypes) ? eventDetails.event_subtypes[0] : eventDetails.event_subtypes) as { name: string; color?: string | null; behavior?: string | null } | null
     : null;
-  const et = (etType || etSub) ? { type: etType?.name ?? "", sub_type: etSub?.name ?? "", badge_color: etSub?.color ?? null } : null;
 
   const hostName = eventDetails?.host && !Array.isArray(eventDetails.host)
     ? (eventDetails.host as { full_name: string }).full_name
@@ -116,24 +102,14 @@ export default async function GeneralEventBookingsPage({
     totalExpected += lineTotal;
   }
 
-  let tableStats: { capacity: number; total: number; assigned: number }[] | null = null;
+  let seated: { assigned: number; total: number } | null = null;
   if (selectedEventId && eventDetails && seatingRequired) {
     const allTables = await getAllTables();
-    const groups: Record<number, { total: number; assigned: number }> = {};
-    for (const t of allTables) {
-      const cap = t.max_capacity || 0;
-      if (!groups[cap]) groups[cap] = { total: 0, assigned: 0 };
-      groups[cap].total++;
-    }
+    let assigned = 0;
     for (const b of bookings) {
-      for (const m of b.booking_table_mappings ?? []) {
-        const cap = m.tables?.tables_capacity || 0;
-        if (groups[cap]) groups[cap].assigned++;
-      }
+      assigned += (b.booking_table_mappings ?? []).filter(m => m.tables).length;
     }
-    tableStats = Object.entries(groups)
-      .map(([cap, v]) => ({ capacity: Number(cap), ...v }))
-      .sort((a, b) => a.capacity - b.capacity);
+    seated = { assigned, total: allTables.length };
   }
 
   let quiz: EventSummary["quiz"] = null;
@@ -152,43 +128,34 @@ export default async function GeneralEventBookingsPage({
 
   const summary: EventSummary | null = selectedEventId && eventDetails
     ? {
+        eventId: selectedEventId,
         title: eventDetails.title ?? "",
         isActive,
         dateLabel: new Date(eventDetails.date + "T00:00:00").toLocaleDateString("en-GB", {
-          weekday: "short", day: "numeric", month: "short", year: "numeric",
+          weekday: "long", day: "numeric", month: "long", year: "numeric",
         }),
         timeLabel: `${formatTime(eventDetails.start_time)} – ${formatTime(eventDetails.end_time)}`,
         hostName: hostName ?? "-",
-        badgeClass: et ? badgeClassFromColor(et.badge_color) : null,
-        badgeLabel: et ? toTitleCase(et.sub_type || et.type) : null,
         paymentAmount,
         totalExpected,
         totalPaid,
+        seatingRequired,
+        seated,
         quiz,
-        tableStats,
       }
     : null;
 
   return (
-    <div className="min-h-screen flex-1 bg-background xl:min-h-0">
-      <div className="mx-auto max-w-7xl space-y-4 px-3 py-3 sm:py-0 md:px-8 xl:flex xl:h-[calc(100vh-7.5rem)] xl:flex-col xl:overflow-hidden">
-
+    <div className="min-h-screen flex-1 bg-background">
+      <div className="mx-auto max-w-7xl px-3 py-3 sm:py-0 md:px-8">
         <BookingsSection
           bookings={bookings}
           summary={summary}
-          type={type}
-          subtype={subtype}
+          events={events}
+          selectedEventId={selectedEventId}
+          todayIso={new Date().toISOString().split("T")[0]}
           initialStatuses={initialStatuses}
           initialSelectedId={bookingId ?? null}
-          eventFilter={
-            <div className="w-full rounded-2xl border border-[#D8D5C8] bg-white p-1.5 shadow-sm sm:rounded-xl sm:p-1">
-              <EventTypeFilter
-                events={events}
-                selectedEventId={selectedEventId}
-                label={filterLabel}
-              />
-            </div>
-          }
         />
       </div>
     </div>

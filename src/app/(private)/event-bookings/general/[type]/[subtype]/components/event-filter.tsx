@@ -1,142 +1,185 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React from "react";
+import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { Search, X } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { type EventSummary } from "./bookings-section";
 
-interface EventItem {
+export interface EventItem {
   id: string;
   date: string;
   title: string | null;
   start_time: string | null;
 }
 
-function formatTime(t?: string | null) {
-  if (!t) return null;
-  const [hh, mm] = t.split(":");
-  const h = parseInt(hh, 10);
-  if (Number.isNaN(h)) return null;
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${mm} ${ampm}`;
+export interface PickerStats {
+  bookings: number;
+  guests: number;
 }
 
-function formatEventLabel(e: EventItem) {
-  const dateStr = format(parseISO(e.date), "eee, do MMM yy");
-  const time = formatTime(e.start_time);
-  return time ? `${dateStr} - ${time}` : dateStr;
+const MICRO_LABEL = "font-black text-[10px] tracking-[0.12em] text-[#5E6654] uppercase";
+
+const ALL_EVENTS = "all";
+
+function optionLabel(event: EventItem) {
+  return `${event.title || "Untitled event"} — ${format(parseISO(event.date), "eee d MMM")}`;
 }
 
-export default function EventTypeFilter({
+function Chip({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2.5 rounded-xl border border-[#C9BB93] bg-white px-3.5 py-2.5">
+      <span className={MICRO_LABEL}>{label}</span>
+      <span className="font-black text-[15px] text-[#20231A] tabular-nums">{children}</span>
+    </div>
+  );
+}
+
+export default function EventPickerBanner({
   events,
   selectedEventId,
-  label,
+  todayIso,
+  summary,
+  stats,
+  showPicker = true,
 }: {
   events: EventItem[];
-  selectedEventId?: string | null;
-  label: string;
+  selectedEventId: string | null;
+  todayIso: string;
+  summary: EventSummary | null;
+  stats: PickerStats;
+  showPicker?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
+  const upcoming = events
+    .filter(e => e.date >= todayIso)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const past = events
+    .filter(e => e.date < todayIso)
+    .sort((a, b) => b.date.localeCompare(a.date));
 
-  const sorted = [...events].sort((a, b) => b.date.localeCompare(a.date));
-
-  const filtered = query.trim()
-    ? sorted.filter(e => formatEventLabel(e).toLowerCase().includes(query.toLowerCase()))
-    : sorted;
-
-  const selected = selectedEventId ? events.find(e => e.id === selectedEventId) : null;
-  const displayValue = selected ? formatEventLabel(selected) : "";
-
-  const handleSelect = (e: EventItem) => {
+  const handleChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
-    params.set("eventId", e.id);
+    params.delete("bookingId");
+    if (value === ALL_EVENTS) {
+      params.delete("eventId");
+      params.set("all", "1");
+    } else {
+      params.delete("all");
+      params.set("eventId", value);
+    }
     router.push(`?${params.toString()}`);
-    setQuery("");
-    setOpen(false);
-    inputRef.current?.blur();
   };
 
-  const handleClear = () => {
-    router.push(`${window.location.pathname}?all=1`);
-    setQuery("");
-    setOpen(false);
-  };
-
-  useEffect(() => {
-    const handler = (ev: MouseEvent) => {
-      if (
-        dropdownRef.current && !dropdownRef.current.contains(ev.target as Node) &&
-        inputRef.current && !inputRef.current.contains(ev.target as Node)
-      ) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+  const hasPayments = !!summary && (summary.totalExpected > 0 || summary.totalPaid > 0);
 
   return (
-    <div className="relative w-full">
-      <div className="flex h-12 items-center gap-3 rounded-xl bg-[#F4F1E8] px-4 sm:h-10 sm:px-3">
-        <div className="flex min-w-0 flex-1 flex-col">
-          <span className="mb-0.5 font-black text-[10px] leading-none tracking-wide text-[#5E6654]/50 uppercase sm:text-[8px]">
-            {label}
-          </span>
-          <div className="flex items-center gap-1.5">
-            <Search className="h-3 w-3 shrink-0 text-[#5E6654]/50" />
-            <input
-              ref={inputRef}
-              type="text"
-              value={open ? query : displayValue}
-              onChange={e => setQuery(e.target.value)}
-              onFocus={() => { setQuery(""); setOpen(true); }}
-              onClick={() => setOpen(true)}
-              onBlur={() => setTimeout(() => setOpen(false), 150)}
-              placeholder={selected ? displayValue : "All history - type to filter…"}
-              className="min-w-0 flex-1 bg-transparent font-black text-sm tracking-tight text-[#20231A] uppercase outline-none placeholder:font-medium placeholder:tracking-normal placeholder:text-[#5E6654]/50 placeholder:normal-case sm:text-xs"
-            />
-          </div>
-        </div>
-        {selectedEventId && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="shrink-0 rounded-lg p-1 transition-colors hover:bg-[#D8D5C8]"
-            aria-label="Clear filter"
-          >
-            <X className="h-3.5 w-3.5 text-[#5E6654]/50" />
-          </button>
+    <section className="flex flex-wrap items-end gap-x-6 gap-y-4 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-5 py-4.5">
+      <div className="min-w-0 flex-1">
+        {showPicker ? (
+          <label htmlFor="event-picker" className={cn(MICRO_LABEL, "mb-1.5 block")}>
+            Step 1 · Choose which event to view
+          </label>
+        ) : (
+          <span className={cn(MICRO_LABEL, "mb-1.5 block")}>Event</span>
         )}
+        {showPicker ? (
+          <div className="relative inline-block w-full max-w-full sm:w-auto">
+            <select
+              id="event-picker"
+              value={selectedEventId ?? ALL_EVENTS}
+              onChange={e => handleChange(e.target.value)}
+              className="h-13 w-full appearance-none rounded-[13px] border-2 border-[#34451F] bg-white pr-11 pl-4 font-black text-sm tracking-wide text-[#20231A] uppercase outline-none focus:shadow-[0_0_0_3px_rgba(215,169,40,0.35)] sm:w-auto sm:min-w-85"
+            >
+              <option value={ALL_EVENTS}>All events — full history</option>
+              {upcoming.length > 0 && (
+                <optgroup label="Upcoming">
+                  {upcoming.map(e => (
+                    <option key={e.id} value={e.id}>
+                      {optionLabel(e)}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+              {past.length > 0 && (
+                <optgroup label="Past">
+                  {past.map(e => (
+                    <option key={e.id} value={e.id}>
+                      {optionLabel(e)}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
+            </select>
+            <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-[#34451F]" />
+          </div>
+        ) : (
+          <h2 className="flex h-13 items-center font-black text-lg tracking-tight text-[#20231A] uppercase">
+            {summary?.title || "Untitled event"}
+          </h2>
+        )}
+        <p className="mt-2 text-xs font-bold text-[#5E6654]">
+          {summary ? (
+            <>
+              {summary.dateLabel} · {summary.timeLabel} · Hosted by {summary.hostName} ·{" "}
+              <span className={summary.isActive ? "text-[#2F6420]" : "text-[#96302A]"}>
+                {summary.isActive ? "Active event" : "Inactive event"}
+              </span>
+            </>
+          ) : (
+            "Showing every booking across all events — pick one above to focus on it."
+          )}
+        </p>
       </div>
 
-      {open && (
-        <div
-          ref={dropdownRef}
-          className="bg-dropdown absolute top-full right-0 left-0 z-9999 mt-1.5 max-h-72 overflow-hidden overflow-y-auto rounded-2xl border border-black/10 shadow-2xl"
-        >
-          {filtered.length === 0 ? (
-            <p className="px-4 py-3 text-[11px] font-bold tracking-wider text-[#5E6654] uppercase">
-              No events match
-            </p>
-          ) : filtered.map(event => (
-            <button
-              key={event.id}
-              type="button"
-              onMouseDown={e => { e.preventDefault(); handleSelect(event); }}
-              className={`flex w-full items-center gap-3 border-b border-black/5 px-4 py-3 text-left transition-colors last:border-0 hover:bg-black/5 ${event.id === selectedEventId ? "bg-black/10" : ""}`}
-            >
-              <span className="font-black text-[11px] tracking-tight text-[#20231A] uppercase">
-                {formatEventLabel(event)}
+      <div className="flex flex-wrap items-end gap-2.5">
+        <div className="flex flex-wrap gap-2.5">
+          <Chip label="Bookings">{stats.bookings}</Chip>
+          <Chip label="Guests">{stats.guests}</Chip>
+          {summary?.seated && (
+            <Chip label="Seated">
+              {summary.seated.assigned}/{summary.seated.total}
+            </Chip>
+          )}
+          {summary && hasPayments && (
+            <Chip label="Paid">
+              £{summary.totalPaid.toFixed(0)}{" "}
+              <span className="text-xs text-[#5E6654]">of £{summary.totalExpected.toFixed(0)}</span>
+            </Chip>
+          )}
+          {summary?.quiz && (
+            <Chip label="Quiz">
+              <span
+                className={cn(
+                  summary.quiz.status === "Complete" && "text-[#2F6420]",
+                  summary.quiz.status === "Incomplete" && "text-[#B07A16]",
+                  summary.quiz.status === "Not Started" && "text-[#5E6654]",
+                )}
+              >
+                {summary.quiz.status}
               </span>
-            </button>
-          ))}
+              {summary.quiz.total > 0 && (
+                <span className="text-xs text-[#5E6654]">
+                  {" "}
+                  {summary.quiz.count}/{summary.quiz.total}
+                </span>
+              )}
+            </Chip>
+          )}
         </div>
-      )}
-    </div>
+        {summary && showPicker && (
+          <Link
+            href={`/event-bookings/event/${summary.eventId}`}
+            className="inline-flex h-9.5 items-center rounded-[11px] border border-[#34451F] bg-white px-4 font-black text-[10.5px] tracking-widest text-[#34451F] uppercase transition-colors hover:bg-[#E5EBD8]"
+          >
+            Manage event
+          </Link>
+        )}
+      </div>
+    </section>
   );
 }

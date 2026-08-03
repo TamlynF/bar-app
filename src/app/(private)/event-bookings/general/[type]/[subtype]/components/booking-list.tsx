@@ -6,39 +6,21 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   AlertCircle,
-  Calendar,
-  CalendarDays,
   CheckCircle2,
-  ChevronDown,
   ChevronRight,
-  Clock3,
-  Coins,
-  ExternalLink,
-  List,
   Loader2,
   Mail,
-  MessageSquareQuote,
   Pencil,
-  Phone,
   RefreshCw,
   Star,
-  Table as TableIcon,
   Trash2,
-  Users,
-  X,
 } from "lucide-react";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { statusTheme } from "@/lib/booking-status-theme";
-import { useMediaQuery } from "@/hooks/use-media-query";
 import {
-  getEventsForType,
   getAvailableTablesForEventGeneral,
   updateGeneralBookingDetails,
   deleteGeneralBooking,
@@ -87,25 +69,54 @@ interface SelectableTable {
   max_capacity: number;
 }
 
-interface SelectableEvent {
-  id: string;
-  date: string;
-  title: string | null;
-}
+export const STATUS_ORDER = ["confirmed", "waitlisted", "pending", "cancelled"] as const;
+
+export const STATUS_STYLES: Record<
+  string,
+  { label: string; bg: string; text: string; border: string; dot: string }
+> = {
+  confirmed: {
+    label: "Confirmed",
+    bg: "bg-[#E7F2E0]",
+    text: "text-[#3B7A2A]",
+    border: "border-[#BAD6A8]",
+    dot: "bg-[#3B7A2A]",
+  },
+  waitlisted: {
+    label: "Waitlisted",
+    bg: "bg-[#FBF3DC]",
+    text: "text-[#B07A16]",
+    border: "border-[#E8D49A]",
+    dot: "bg-[#B07A16]",
+  },
+  pending: {
+    label: "Pending",
+    bg: "bg-[#ECE9DE]",
+    text: "text-[#5E6654]",
+    border: "border-[#D8D5C8]",
+    dot: "bg-[#5E6654]",
+  },
+  cancelled: {
+    label: "Cancelled",
+    bg: "bg-[#F8E5E3]",
+    text: "text-[#B33A32]",
+    border: "border-[#EBC9C6]",
+    dot: "bg-[#B33A32]",
+  },
+};
+
+const MICRO_LABEL = "font-black text-[10px] tracking-[0.12em] text-[#5E6654] uppercase";
+const PANEL = "overflow-hidden rounded-[14px] border border-[#C4C0B0] bg-white";
+const PANEL_HEAD =
+  "border-b border-[#C4C0B0] bg-[#ECE9DE] px-4 py-2.5 font-black text-[10px] tracking-[0.14em] text-[#5E6654] uppercase";
+const FIELD =
+  "h-10.5 w-full rounded-[11px] border-[1.5px] border-[#C9BB93] bg-white px-3 text-[13px] font-bold text-[#20231A] shadow-none focus-visible:border-[#34451F] focus-visible:ring-[3px] focus-visible:ring-[#D7A928]/30";
+const ACTION =
+  "inline-flex items-center justify-center gap-2 font-black text-[10.5px] tracking-[0.07em] uppercase transition-[filter,box-shadow] hover:brightness-[0.94] active:scale-[0.98]";
 
 const normStatus = (s?: string | null) => (s || "").trim().toLowerCase();
 
 const parseDate = (d?: string | null) => (d ? new Date(d + "T00:00:00") : null);
-
-const formatTime = (t?: string | null) => {
-  if (!t) return null;
-  const [hh, mm] = t.split(":");
-  const h = parseInt(hh, 10);
-  if (Number.isNaN(h)) return null;
-  const ampm = h >= 12 ? "PM" : "AM";
-  const h12 = h % 12 || 12;
-  return `${h12}:${mm} ${ampm}`;
-};
 
 const initials = (name?: string | null) =>
   (name || "?")
@@ -115,36 +126,76 @@ const initials = (name?: string | null) =>
     .join("")
     .toUpperCase();
 
-const WIDE_QUERY = "(min-width: 1280px)";
+function StatusPill({ status }: { status: string }) {
+  const style = STATUS_STYLES[status] ?? STATUS_STYLES.pending;
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-black text-[9.5px] tracking-[0.08em] uppercase",
+        style.bg,
+        style.text,
+        style.border,
+      )}
+    >
+      <span className={cn("h-1.75 w-1.75 rounded-full", style.dot)} />
+      {style.label}
+    </span>
+  );
+}
+
+function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-baseline gap-3.5 border-b border-[#E3DCC6] px-4 py-2.5 last:border-b-0">
+      <span className={cn(MICRO_LABEL, "w-27.5 shrink-0")}>{label}</span>
+      <span className="font-black text-[12.5px] text-[#20231A]">{children}</span>
+    </div>
+  );
+}
+
+function Hint({
+  tone,
+  icon,
+  children,
+}: {
+  tone: "green" | "red" | "amber";
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const tones: Record<string, string> = {
+    green: "border-[#BAD6A8] bg-[#E7F2E0] text-[#2F6420]",
+    red: "border-[#EBC9C6] bg-[#F8E5E3] text-[#B33A32]",
+    amber: "border-[#E8D49A] bg-[#FBF3DC] text-[#8A5F0E]",
+  };
+  return (
+    <div className={cn("flex items-center gap-2 rounded-[9px] border px-2.5 py-1.75 text-[11px] font-bold", tones[tone])}>
+      {icon}
+      <span>{children}</span>
+    </div>
+  );
+}
 
 export default function BookingList({
   bookings,
-  showDate = true,
-  type,
-  subtype,
+  showEventColumn = false,
+  seatingRequired = true,
   initialSelectedId = null,
 }: {
   bookings: GeneralBooking[];
-  showDate?: boolean;
-  type: string;
-  subtype: string;
+  showEventColumn?: boolean;
+  seatingRequired?: boolean;
   initialSelectedId?: string | null;
 }) {
   const router = useRouter();
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [isPending, startTransition] = useTransition();
-  const isWide = useMediaQuery(WIDE_QUERY);
 
-  const [selectedId, setSelectedId] = useState<string | null>(() => {
+  const [openId, setOpenId] = useState<string | null>(() => {
     if (!initialSelectedId) return null;
     const match = bookings.find(b => String(b.id) === String(initialSelectedId));
     return match ? match.id : null;
   });
   const [isEditing, setIsEditing] = useState(false);
-  const selectedBooking = selectedId ? bookings.find(b => b.id === selectedId) ?? null : null;
   const [availableTables, setAvailableTables] = useState<SelectableTable[]>([]);
-  const [availableEvents, setAvailableEvents] = useState<SelectableEvent[]>([]);
-
   const [editForm, setEditForm] = useState({
     group_name: "",
     group_size: 0,
@@ -154,68 +205,45 @@ export default function BookingList({
     event_id: "",
   });
 
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const topFocusRef = useRef<HTMLSpanElement>(null);
+  const openBooking = openId ? bookings.find(b => b.id === openId) ?? null : null;
+  const rowRefs = useRef<Record<string, HTMLTableRowElement | null>>({});
 
   useEffect(() => {
-    if (selectedId && !isWide) {
-      const timer = setTimeout(() => {
-        topFocusRef.current?.focus();
-        if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
-      }, 50);
-      return () => clearTimeout(timer);
-    }
-  }, [selectedId, isWide]);
+    if (!initialSelectedId) return;
+    const row = rowRefs.current[initialSelectedId];
+    if (row) row.scrollIntoView({ block: "center" });
+  }, [initialSelectedId]);
 
-  const handleSelectBooking = (booking: GeneralBooking) => {
-    guardedClose(() => {
-      setSelectedId(booking.id);
-      setIsEditing(false);
-    });
-  };
-
-  const closeSheet = () => {
-    setSelectedId(null);
-    setIsEditing(false);
-  };
+  const columnCount = 6 + (showEventColumn ? 1 : 0) + (seatingRequired ? 1 : 0);
 
   const handleEnterEditMode = async () => {
-    if (!selectedBooking) return;
-    const currentTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id;
-    const currentEventId = String(selectedBooking.event_id ?? "");
+    if (!openBooking) return;
+    const currentTableId = openBooking.booking_table_mappings?.[0]?.tables?.tables_id;
+    const currentEventId = String(openBooking.event_id ?? "");
 
     setEditForm({
-      group_name: selectedBooking.group_name || "",
-      group_size: Number(selectedBooking.group_size) || 0,
-      special_requests: selectedBooking.special_requests || "",
+      group_name: openBooking.group_name || "",
+      group_size: Number(openBooking.group_size) || 0,
+      special_requests: openBooking.special_requests || "",
       table_id: currentTableId || "",
-      status: normStatus(selectedBooking.status) || "pending",
+      status: normStatus(openBooking.status) || "pending",
       event_id: currentEventId,
     });
 
     setIsEditing(true);
 
-    if (selectedBooking.event_id) {
+    if (openBooking.event_id) {
       const tables = await getAvailableTablesForEventGeneral(
         currentEventId,
-        Number(selectedBooking.group_size) || 0,
+        Number(openBooking.group_size) || 0,
         currentTableId,
       );
       setAvailableTables(tables as unknown as SelectableTable[]);
     }
-
-    const events = await getEventsForType(type, subtype);
-    setAvailableEvents(events as unknown as SelectableEvent[]);
-  };
-
-  const handleEventChange = async (newEventId: string) => {
-    setEditForm(prev => ({ ...prev, event_id: newEventId, table_id: "" }));
-    const tables = await getAvailableTablesForEventGeneral(newEventId, editForm.group_size, "");
-    setAvailableTables(tables as unknown as SelectableTable[]);
   };
 
   const handleTableChange = (newTableId: string, forcedStatus?: string) => {
-    const originalTableId = selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
+    const originalTableId = openBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
     const wasUnassigned = originalTableId === "";
     const isUnassigned = newTableId === "";
 
@@ -229,7 +257,7 @@ export default function BookingList({
   };
 
   const handleStatusChangeInEdit = (newStatus: string) => {
-    const wasConfirmed = (normStatus(selectedBooking?.status) || "pending") === "confirmed";
+    const wasConfirmed = (normStatus(openBooking?.status) || "pending") === "confirmed";
     let newTableId = editForm.table_id;
     if (wasConfirmed && newStatus !== "confirmed") newTableId = "";
     setEditForm(prev => ({ ...prev, status: newStatus, table_id: newTableId }));
@@ -238,49 +266,48 @@ export default function BookingList({
   const handleGroupSizeChange = async (size: number) => {
     setEditForm(prev => ({ ...prev, group_size: size }));
 
-    if (editForm.event_id) {
-      const tables = await getAvailableTablesForEventGeneral(
-        editForm.event_id,
-        size,
-        selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id,
-      );
-      const newAvailableTables = tables as unknown as SelectableTable[];
-      setAvailableTables(newAvailableTables);
+    if (!editForm.event_id) return;
 
-      const currentTableId = editForm.table_id;
-      if (currentTableId === "") return;
+    const tables = await getAvailableTablesForEventGeneral(
+      editForm.event_id,
+      size,
+      openBooking?.booking_table_mappings?.[0]?.tables?.tables_id,
+    );
+    const newAvailableTables = tables as unknown as SelectableTable[];
+    setAvailableTables(newAvailableTables);
 
-      const isCurrentTableValid = newAvailableTables.some(t => String(t.id) === String(currentTableId));
-      if (!isCurrentTableValid) {
-        if (newAvailableTables.length > 0) {
-          handleTableChange(String(newAvailableTables[0].id));
-          toast.info(`Group size updated. Table auto-reassigned to ${newAvailableTables[0].name}.`);
-        } else {
-          handleTableChange("", "waitlisted");
-          toast.warning("No suitable tables available for this group size. Booking moved to waitlist.");
-        }
-      }
+    const currentTableId = editForm.table_id;
+    if (currentTableId === "") return;
+
+    const isCurrentTableValid = newAvailableTables.some(t => String(t.id) === String(currentTableId));
+    if (isCurrentTableValid) return;
+
+    if (newAvailableTables.length > 0) {
+      handleTableChange(String(newAvailableTables[0].id));
+      toast.info(`Group size updated. Table auto-reassigned to ${newAvailableTables[0].name}.`);
+    } else {
+      handleTableChange("", "waitlisted");
+      toast.warning("No suitable tables available for this group size. Booking moved to waitlist.");
     }
   };
 
   const isDirty = () => {
-    if (!selectedBooking) return false;
-    const currentTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id || "";
+    if (!openBooking) return false;
+    const currentTableId = openBooking.booking_table_mappings?.[0]?.tables?.tables_id || "";
     return (
-      editForm.group_name !== (selectedBooking.group_name || "") ||
-      editForm.group_size !== (Number(selectedBooking.group_size) || 0) ||
-      editForm.special_requests !== (selectedBooking.special_requests || "") ||
+      editForm.group_name !== (openBooking.group_name || "") ||
+      editForm.group_size !== (Number(openBooking.group_size) || 0) ||
+      editForm.special_requests !== (openBooking.special_requests || "") ||
       editForm.table_id !== currentTableId ||
-      editForm.status !== (normStatus(selectedBooking.status) || "pending") ||
-      editForm.event_id !== String(selectedBooking.event_id ?? "")
+      editForm.status !== (normStatus(openBooking.status) || "pending")
     );
   };
 
   const persistEdits = async (): Promise<boolean> => {
-    if (!selectedBooking) return true;
+    if (!openBooking) return true;
 
-    const origStatus = normStatus(selectedBooking.status) || "pending";
-    const origTableId = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_id ?? "";
+    const origStatus = normStatus(openBooking.status) || "pending";
+    const origTableId = openBooking.booking_table_mappings?.[0]?.tables?.tables_id ?? "";
     const hadTable = String(origTableId) !== "";
     const losesTable = hadTable && !editForm.table_id;
     const leavesConfirmed = origStatus === "confirmed" && normStatus(editForm.status) !== "confirmed";
@@ -297,8 +324,8 @@ export default function BookingList({
       if (!ok) return false;
     }
 
-    const bookingId = selectedBooking.id;
-    return new Promise<boolean>((resolve) => {
+    const bookingId = openBooking.id;
+    return new Promise<boolean>(resolve => {
       startTransition(async () => {
         try {
           await updateGeneralBookingDetails(bookingId, editForm);
@@ -325,17 +352,30 @@ export default function BookingList({
       });
       if (save) {
         const ok = await persistEdits();
-        if (!ok) return; // save failed or was backed out of - stay in the editor
+        if (!ok) return;
       }
     }
     proceed();
+  };
+
+  const handleSave = async () => {
+    const ok = await persistEdits();
+    if (ok) setIsEditing(false);
+  };
+
+  const toggleRow = (booking: GeneralBooking) => {
+    guardedClose(() => {
+      setOpenId(current => (current === booking.id ? null : booking.id));
+      setIsEditing(false);
+    });
   };
 
   const handleDeleteBooking = (id: string) => {
     startTransition(async () => {
       try {
         await deleteGeneralBooking(id);
-        closeSheet();
+        setOpenId(null);
+        setIsEditing(false);
         toast.success("Booking deleted permanently");
         router.refresh();
       } catch (error) {
@@ -345,395 +385,415 @@ export default function BookingList({
     });
   };
 
-  const originalTableId = selectedBooking?.booking_table_mappings?.[0]?.tables?.tables_id || "";
-  const originalStatus = normStatus(selectedBooking?.status) || "pending";
-  const originalEventId = String(selectedBooking?.event_id || "");
-  const showTableConfirmedHint =
-    selectedBooking?.events?.seating_required !== false && originalTableId === "" && editForm.table_id !== "" && editForm.status === "confirmed";
-  const showTableCancelledHint =
-    selectedBooking?.events?.seating_required !== false && originalTableId !== "" && editForm.table_id === "" && editForm.status === "cancelled";
-  const showStatusTableUnassignedHint =
-    selectedBooking?.events?.seating_required !== false && originalStatus === "confirmed" && editForm.status !== "confirmed" && editForm.table_id === "";
-  const showEventMoveHint =
-    selectedBooking?.events?.seating_required !== false && originalEventId !== editForm.event_id;
+  const renderView = (booking: GeneralBooking) => {
+    const table = booking.booking_table_mappings?.[0]?.tables;
+    const bookingSeating = seatingRequired && booking.events?.seating_required !== false;
+    const paid = Number(booking.paid_amount) || 0;
+    const total = Number(booking.total_amount) || 0;
+    const isPaid = total > 0 && paid >= total;
+    const contact = booking.contacts;
 
-  const renderPanel = (placement: "inline" | "bottom") => {
-    const isOverlay = placement === "bottom";
-
-    if (!selectedBooking) {
-      if (placement !== "inline") return null;
-      return (
-        <div className="flex h-full flex-col items-center justify-center bg-[#ECE4CE] px-10 text-center">
-          <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-3xl bg-[#F4F1E8] text-[#5E6654]">
-            <List className="h-7 w-7" />
-          </div>
-          <p className="font-black text-base tracking-tight text-[#20231A] uppercase">No booking selected</p>
-          <p className="mt-1.5 max-w-60 text-sm text-[#5E6654]">
-            Pick a team from the list to see and edit its details here.
-          </p>
-        </div>
-      );
-    }
-
-    const status = normStatus(selectedBooking.status) || "pending";
-    const theme = statusTheme[status] || statusTheme.pending;
-    const eventDate = parseDate(selectedBooking.events?.event_date);
-    const tableName = selectedBooking.booking_table_mappings?.[0]?.tables?.tables_name || "Unassigned";
-    const hasTable = !!selectedBooking.booking_table_mappings?.[0]?.tables;
-    const hasPayment = (selectedBooking.total_amount ?? 0) > 0;
-    const seatingRequired = selectedBooking.events?.seating_required !== false;
-
-    const header = (
-      <div className="shrink-0">
-        <div className={cn("h-1.5 w-full", theme.dot)} />
-        <div className="flex items-start justify-between gap-3 border-b border-[#D8D5C8] bg-white/90 px-5 pt-4 pb-3.5 backdrop-blur-md sm:px-6">
-          <div className="min-w-0">
-            <p className="font-black text-[10px] tracking-[0.18em] text-[#5E6654] uppercase">
-              {isEditing ? "Editing" : "Booking"} · Ref {selectedBooking.id}
-            </p>
-            {isOverlay ? (
-              <SheetTitle className="mt-0.5 truncate font-black text-xl leading-tight tracking-tight text-[#20231A] uppercase sm:text-2xl">
-                {selectedBooking.group_name || "Guest Team"}
-              </SheetTitle>
+    return (
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] items-start gap-3.5 whitespace-normal">
+        <div className={PANEL}>
+          <div className={PANEL_HEAD}>Booking details</div>
+          <DetailRow label="Booking ref">#{booking.id}</DetailRow>
+          <DetailRow label="Booked on">
+            {booking.booking_created_at
+              ? format(new Date(booking.booking_created_at), "dd MMM yyyy · HH:mm")
+              : "-"}
+          </DetailRow>
+          {bookingSeating && (
+            <DetailRow label="Table">
+              {table?.tables_name ? (
+                <>
+                  {table.tables_name}
+                  {table.tables_capacity ? ` · seats ${table.tables_capacity}` : ""}
+                </>
+              ) : (
+                <span className="text-[#8A5F0E]">Not assigned yet</span>
+              )}
+            </DetailRow>
+          )}
+          <DetailRow label="Payment">
+            {total <= 0 && paid <= 0 ? (
+              <span className="text-[#5E6654]">No payment required</span>
             ) : (
-              <h2 className="mt-0.5 truncate font-black text-xl leading-tight tracking-tight text-[#20231A] uppercase sm:text-2xl">
-                {selectedBooking.group_name || "Guest Team"}
-              </h2>
+              <>
+                £{paid.toFixed(2)} <span className="text-[#5E6654]">of £{total.toFixed(2)}</span>
+                <span
+                  className={cn(
+                    "ml-2 inline-flex items-center rounded-full px-2 py-0.5 font-black text-[9.5px] tracking-[0.08em] uppercase",
+                    isPaid ? "bg-[#E7F2E0] text-[#2F6420]" : "bg-[#ECE9DE] text-[#5E6654]",
+                  )}
+                >
+                  {isPaid ? "Paid" : "Unpaid"}
+                </span>
+              </>
             )}
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {!isEditing && (
-              <span
-                className={cn(
-                  "inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 font-black text-[11px] tracking-wider uppercase",
-                  theme.bg,
-                  theme.text,
-                  theme.border,
-                )}
-              >
-                <span className={cn("h-2 w-2 rounded-full", theme.dot)} />
-                {status}
+          </DetailRow>
+        </div>
+
+        <div className="flex flex-col gap-2.5">
+          <div className={PANEL}>
+            <div className={PANEL_HEAD}>Contact</div>
+            <div className="flex items-center gap-3 px-4 py-3">
+              <span className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-[10px] bg-[#E5EBD8] font-black text-[11px] text-[#34451F]">
+                {initials(contact?.full_name)}
               </span>
-            )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-black text-xs tracking-[0.06em] text-[#20231A] uppercase">
+                  {contact?.full_name || "Unknown"}
+                </span>
+                {contact?.email && (
+                  <span className="block truncate text-[11.5px] font-semibold text-[#5E6654]">{contact.email}</span>
+                )}
+                {contact?.phone_no && (
+                  <span className="block text-[11.5px] font-semibold text-[#5E6654]">
+                    {contact.country_code ?? ""}
+                    {contact.phone_no}
+                  </span>
+                )}
+              </span>
+              {contact?.email && (
+                <Link
+                  href={`mailto:${contact.email}`}
+                  className={cn(
+                    ACTION,
+                    "h-9 shrink-0 rounded-full border border-[#34451F] bg-[#E5EBD8] px-4 text-[#34451F]",
+                  )}
+                >
+                  <Mail className="h-3.5 w-3.5" /> Email
+                </Link>
+              )}
+            </div>
+          </div>
+
+          {booking.special_requests && (
+            <div className="rounded-[14px] border border-[#E8D49A] bg-[#FBF3DC] px-4 py-2.5">
+              <span className={cn(MICRO_LABEL, "text-[#8A5F0E]")}>Staff note</span>
+              <p className="mt-1 text-[12.5px] font-bold text-[#20231A] italic">
+                &ldquo;{booking.special_requests}&rdquo;
+              </p>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              onClick={() => guardedClose(closeSheet)}
-              aria-label="Close panel"
-              className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#F4F1E8] text-[#5E6654] transition-colors hover:bg-[#D8D5C8]"
+              onClick={handleEnterEditMode}
+              className={cn(
+                ACTION,
+                "h-11 flex-1 rounded-full border border-[#34451F] bg-[#E5EBD8] px-4 text-[#34451F]",
+              )}
             >
-              <X className="h-4 w-4" />
+              <Pencil className="h-3.5 w-3.5" /> Edit booking
+            </button>
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={async () => {
+                const ok = await confirm({
+                  title: "Delete booking",
+                  description: "Permanently delete this booking? This cannot be undone.",
+                  confirmLabel: "Delete",
+                  variant: "destructive",
+                });
+                if (ok) handleDeleteBooking(booking.id);
+              }}
+              className={cn(ACTION, "h-11 rounded-full border border-[#D8D5C8] bg-white px-4 text-[#96302A]")}
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete
             </button>
           </div>
         </div>
       </div>
     );
+  };
 
-    const viewBody = (
-      <div className="animate-in space-y-5 duration-300 fade-in">
-        <div className="grid grid-cols-2 gap-2.5">
-          <Fact icon={<Calendar className="h-4 w-4" />} label="Event date" value={eventDate ? format(eventDate, "do MMM yyyy") : "-"} />
-          <Fact icon={<Users className="h-4 w-4" />} label="Group size" value={`${selectedBooking.group_size ?? 0} guests`} />
-          {seatingRequired && (
-            <Fact icon={<TableIcon className="h-4 w-4" />} label="Table" value={tableName} accent={!hasTable} />
-          )}
-          <Fact
-            icon={<Clock3 className="h-4 w-4" />}
-            label="Booked on"
-            value={selectedBooking.booking_created_at ? format(new Date(selectedBooking.booking_created_at), "dd MMM yyyy · HH:mm") : "-"}
-            small
-          />
-        </div>
+  const renderEditor = (booking: GeneralBooking) => {
+    const originalTableId = booking.booking_table_mappings?.[0]?.tables?.tables_id || "";
+    const originalStatus = normStatus(booking.status) || "pending";
+    const bookingSeating = seatingRequired && booking.events?.seating_required !== false;
 
-        {hasPayment && (
-          <div className="flex items-center justify-between rounded-2xl border border-[#D8D5C8] bg-[#F4F1E8] p-4">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#34451F]">
-                <Coins className="h-4 w-4" />
-              </span>
-              <div>
-                <p className="font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Payment</p>
-                <p className="font-black text-sm text-[#20231A] tabular-nums">
-                  £{(selectedBooking.paid_amount ?? 0).toFixed(2)}{" "}
-                  <span className="text-[#5E6654]">/ £{(selectedBooking.total_amount ?? 0).toFixed(2)}</span>
-                </p>
-              </div>
-            </div>
-            {selectedBooking.payment_status && <PayBadge status={selectedBooking.payment_status} />}
-          </div>
-        )}
-
-        {selectedBooking.contacts && (
-          <section>
-            <SectionLabel>Primary contact</SectionLabel>
-            <div className="flex items-center gap-3.5 rounded-2xl border border-[#D8D5C8] bg-white p-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-[#D8D5C8] bg-[#F4F1E8] font-black text-base text-[#34451F]">
-                {initials(selectedBooking.contacts.full_name)}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">{selectedBooking.contacts.full_name}</p>
-                {selectedBooking.contacts.email && (
-                  <p className="truncate text-xs font-semibold text-[#5E6654]">{selectedBooking.contacts.email}</p>
-                )}
-              </div>
-              <div className="flex shrink-0 gap-2">
-                {selectedBooking.contacts.email && (
-                  <Link
-                    href={`mailto:${selectedBooking.contacts.email}`}
-                    aria-label="Email contact"
-                    title="Email"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#34451F]/7 text-[#34451F] transition-all hover:bg-[#34451F] hover:text-white active:scale-95"
-                  >
-                    <Mail className="h-4 w-4" />
-                  </Link>
-                )}
-                {selectedBooking.contacts.phone_no && (
-                  <Link
-                    href={`tel:${selectedBooking.contacts.country_code ?? ""}${selectedBooking.contacts.phone_no}`}
-                    aria-label="Call contact"
-                    title="Call"
-                    className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#34451F]/7 text-[#34451F] transition-all hover:bg-[#34451F] hover:text-white active:scale-95"
-                  >
-                    <Phone className="h-4 w-4" />
-                  </Link>
-                )}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {selectedBooking.special_requests && (
-          <div className="rounded-2xl border border-[#34451F]/15 bg-[#34451F]/5 p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <MessageSquareQuote className="h-4 w-4 text-[#34451F]" />
-              <span className="font-black text-[10px] tracking-wide text-[#34451F] uppercase">Staff instructions</span>
-            </div>
-            <p className="text-sm leading-relaxed font-bold text-[#20231A] italic">&ldquo;{selectedBooking.special_requests}&rdquo;</p>
-          </div>
-        )}
-
-        {selectedBooking.event_id && (
-          <Link
-            href={`/event-bookings/event/${selectedBooking.event_id}`}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-[#D8D5C8] bg-white px-4 py-3.5 transition-colors hover:bg-[#F4F1E8]"
-          >
-            <span className="flex items-center gap-2.5">
-              <CalendarDays className="h-4 w-4 text-[#34451F]" />
-              <span className="font-black text-xs tracking-wide text-[#34451F] uppercase">Manage event</span>
-            </span>
-            <ExternalLink className="h-3.5 w-3.5 text-[#5E6654]" />
-          </Link>
-        )}
-      </div>
-    );
-
-    const editBody = (
-      <div className="animate-in space-y-5 duration-300 fade-in slide-in-from-bottom-2">
-        <div className="space-y-2">
-          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Event Date &amp; Session</Label>
-          <div className="relative">
-            <select
-              title="Select Event"
-              value={editForm.event_id}
-              onChange={e => handleEventChange(e.target.value)}
-              className="h-12 w-full appearance-none rounded-xl border-[1.5px] border-[#D8D5C8] bg-white px-3.5 text-sm font-bold transition-colors outline-none focus:border-[#34451F]"
-            >
-              {availableEvents.map(e => (
-                <option key={e.id} value={e.id}>
-                  {format(parseDate(e.date)!, "dd MMM yyyy")} - {e.title || "Untitled Event"}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5E6654]" />
-          </div>
-          {showEventMoveHint && (
-            <Hint tone="blue" icon={<CalendarDays className="h-3.5 w-3.5" />}>Moving event. Table assignment has been reset.</Hint>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Group Name</Label>
-          <Input
-            aria-label="Group Name"
-            value={editForm.group_name}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditForm(prev => ({ ...prev, group_name: e.target.value }))}
-            className="h-12 rounded-xl border-[1.5px] border-[#D8D5C8] bg-white px-3.5 text-base font-bold focus:border-[#34451F]"
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-2">
-            <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Group Size</Label>
-            <Input
-              aria-label="Group Size"
-              type="number"
-              min={1}
-              value={editForm.group_size || ""}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleGroupSizeChange(Number(e.target.value) || 0)}
-              className="h-12 rounded-xl border-[1.5px] border-[#D8D5C8] bg-white px-3.5 text-base font-bold focus:border-[#34451F]"
-            />
-          </div>
-          {seatingRequired && (
-            <div className="space-y-2">
-              <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Table</Label>
-              <div className="relative">
-                <select
-                  title="Select Table"
-                  value={editForm.table_id}
-                  onChange={e => handleTableChange(e.target.value)}
-                  className={cn(
-                    "h-12 w-full appearance-none rounded-xl px-3.5 pr-9 text-sm font-bold transition-colors outline-none",
-                    editForm.table_id ? "border-[1.5px] border-[#D8D5C8] bg-white focus:border-[#34451F]" : "border-[1.5px] border-dashed border-[#D8D5C8] bg-[#F4F1E8]",
-                  )}
-                >
-                  <option value="">Unassigned</option>
-                  {availableTables.map(t => (
-                    <option key={t.id} value={t.id}>
-                      {t.name} (seats {t.max_capacity})
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 text-[#5E6654]" />
-              </div>
-            </div>
-          )}
-        </div>
-        {showTableConfirmedHint && (
-          <Hint tone="green" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>Table selected. Status will update to Confirmed.</Hint>
-        )}
-        {showTableCancelledHint && (
-          <Hint tone="red" icon={<AlertCircle className="h-3.5 w-3.5" />}>Table removed. Status will update to Cancelled.</Hint>
-        )}
-
-        <div>
-          <Label className="mb-2 ml-1 block font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Status</Label>
-          <div className="grid grid-cols-2 gap-2">
-            {["confirmed", "waitlisted", "pending", "cancelled"].map(s => {
-              const st = statusTheme[s];
-              const active = editForm.status === s;
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => handleStatusChangeInEdit(s)}
-                  className={cn(
-                    "flex h-12 items-center gap-2 rounded-xl border-2 px-3 font-black text-[11px] tracking-wide uppercase transition-all",
-                    active ? cn(st.bg, st.text, st.cardBorder) : "border-[#D8D5C8] bg-white text-[#5E6654]",
-                  )}
-                >
-                  <span className={cn("h-2.5 w-2.5 rounded-full", st.dot)} />
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </button>
-              );
-            })}
-          </div>
-          {showStatusTableUnassignedHint && (
-            <div className="mt-2">
-              <Hint tone="amber" icon={<RefreshCw className="h-3.5 w-3.5" />}>Status changed. Table assignment will be cleared.</Hint>
-            </div>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label className="ml-1 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">Special Requests</Label>
-          <Textarea
-            aria-label="Special Requests"
-            value={editForm.special_requests}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditForm(prev => ({ ...prev, special_requests: e.target.value }))}
-            placeholder="Dietary needs, table preference, occasion…"
-            className="min-h-28 resize-none rounded-xl border-[1.5px] border-[#D8D5C8] bg-white p-3.5 text-sm font-medium focus:border-[#34451F]"
-          />
-        </div>
-      </div>
-    );
-
-    const footer = isEditing ? null : (
-      <div className="shrink-0 border-t border-[#D8D5C8] bg-white/90 px-5 py-4 shadow-[0_-10px_30px_rgba(0,0,0,0.04)] backdrop-blur-md sm:px-6">
-        <div className="grid grid-cols-[auto_1fr] gap-3">
-          <Button
-            variant="secondary"
-            disabled={isPending}
-            onClick={async () => {
-              const ok = await confirm({
-                title: "Delete booking",
-                description: "Permanently delete this booking? This cannot be undone.",
-                confirmLabel: "Delete",
-                variant: "destructive",
-              });
-              if (ok) handleDeleteBooking(selectedBooking.id);
-            }}
-            className="h-12 rounded-xl px-5 font-black text-[11px] tracking-wide text-[#34451F] uppercase hover:bg-red-50! hover:text-red-600!"
-          >
-            <Trash2 className="mr-1.5 h-4 w-4" />
-            Delete
-          </Button>
-          <Button
-            onClick={handleEnterEditMode}
-            className="h-12 rounded-xl border border-[#34451F] font-black text-xs tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8]"
-          >
-            <Pencil className="mr-2 h-4 w-4" /> Edit
-          </Button>
-        </div>
-      </div>
-    );
+    const showTableConfirmedHint =
+      bookingSeating && originalTableId === "" && editForm.table_id !== "" && editForm.status === "confirmed";
+    const showTableCancelledHint =
+      bookingSeating && originalTableId !== "" && editForm.table_id === "" && editForm.status === "cancelled";
+    const showStatusTableUnassignedHint =
+      bookingSeating && originalStatus === "confirmed" && editForm.status !== "confirmed" && editForm.table_id === "";
 
     return (
-      <div className="flex h-full flex-col overflow-hidden bg-[#ECE4CE]">
-        {isOverlay && <span ref={topFocusRef} tabIndex={-1} className="sr-only" />}
-        {header}
-        <div ref={isOverlay ? scrollContainerRef : undefined} className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#ECE4CE] px-5 py-5 sm:px-6">
-          {isEditing ? editBody : viewBody}
-          <div className="h-2" />
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] items-start gap-3.5 whitespace-normal">
+        <div className={PANEL}>
+          <div className={PANEL_HEAD}>Editing booking #{booking.id}</div>
+          <div className="flex flex-col gap-3 px-4 py-3.5">
+            <div>
+              <label htmlFor={`team-${booking.id}`} className={cn(MICRO_LABEL, "mb-1.5 block")}>
+                Team name
+              </label>
+              <Input
+                id={`team-${booking.id}`}
+                value={editForm.group_name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setEditForm(prev => ({ ...prev, group_name: e.target.value }))
+                }
+                className={FIELD}
+              />
+            </div>
+            <div className={cn("grid gap-2.5", bookingSeating && "grid-cols-2")}>
+              <div>
+                <label htmlFor={`size-${booking.id}`} className={cn(MICRO_LABEL, "mb-1.5 block")}>
+                  Group size
+                </label>
+                <Input
+                  id={`size-${booking.id}`}
+                  type="number"
+                  min={1}
+                  value={editForm.group_size || ""}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    handleGroupSizeChange(Number(e.target.value) || 0)
+                  }
+                  className={FIELD}
+                />
+              </div>
+              {bookingSeating && (
+                <div>
+                  <label htmlFor={`table-${booking.id}`} className={cn(MICRO_LABEL, "mb-1.5 block")}>
+                    Table
+                  </label>
+                  <select
+                    id={`table-${booking.id}`}
+                    value={editForm.table_id}
+                    onChange={e => handleTableChange(e.target.value)}
+                    className={cn(FIELD, "appearance-none focus:border-[#34451F] focus:ring-[3px] focus:ring-[#D7A928]/30")}
+                  >
+                    <option value="">No table yet</option>
+                    {availableTables.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.name} (seats {t.max_capacity})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+            {showTableConfirmedHint && (
+              <Hint tone="green" icon={<CheckCircle2 className="h-3.5 w-3.5 shrink-0" />}>
+                Table picked — status will change to Confirmed.
+              </Hint>
+            )}
+            {showTableCancelledHint && (
+              <Hint tone="red" icon={<AlertCircle className="h-3.5 w-3.5 shrink-0" />}>
+                Table removed — status will change to Cancelled.
+              </Hint>
+            )}
+          </div>
         </div>
-        {footer}
+
+        <div className="flex flex-col gap-2.5">
+          <div className={PANEL}>
+            <div className={PANEL_HEAD}>Status &amp; notes</div>
+            <div className="flex flex-col gap-3 px-4 py-3.5">
+              <div className="grid grid-cols-2 gap-2">
+                {STATUS_ORDER.map(key => {
+                  const style = STATUS_STYLES[key];
+                  const active = editForm.status === key;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => handleStatusChangeInEdit(key)}
+                      className={cn(
+                        "flex h-11 items-center justify-center gap-2 rounded-[10px] border-[1.5px] font-black text-[9.5px] tracking-[0.07em] uppercase transition-colors sm:h-10",
+                        active
+                          ? cn(style.bg, style.text, style.border)
+                          : "border-[#C9BB93] bg-white text-[#5E6654] hover:bg-[#F4F1E8]",
+                      )}
+                    >
+                      <span className={cn("h-2 w-2 rounded-full", style.dot)} />
+                      {style.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {showStatusTableUnassignedHint && (
+                <Hint tone="amber" icon={<RefreshCw className="h-3.5 w-3.5 shrink-0" />}>
+                  Status changed — the table assignment will be cleared.
+                </Hint>
+              )}
+              <div>
+                <label htmlFor={`note-${booking.id}`} className={cn(MICRO_LABEL, "mb-1.5 block")}>
+                  Staff note
+                </label>
+                <Textarea
+                  id={`note-${booking.id}`}
+                  value={editForm.special_requests}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
+                    setEditForm(prev => ({ ...prev, special_requests: e.target.value }))
+                  }
+                  placeholder="Dietary needs, table preference, occasion…"
+                  className={cn(FIELD, "h-auto min-h-16 resize-y py-2.5")}
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              type="button"
+              disabled={isPending}
+              onClick={handleSave}
+              className={cn(ACTION, "h-11 flex-1 rounded-[11px] bg-[#34451F] px-4 text-white hover:bg-[#283719]")}
+            >
+              Save changes
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsEditing(false)}
+              className={cn(ACTION, "h-11 rounded-[11px] border border-[#C9BB93] bg-white px-4 text-[#5E6654]")}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
       </div>
     );
   };
 
-  const listItems = (
-    <div className="space-y-2.5">
-      {bookings.length === 0 ? (
-        <EmptyList />
-      ) : (
-        bookings.map(b => (
-          <RefinedCard
-            key={b.id}
-            booking={b}
-            showDate={showDate}
-            selected={selectedBooking?.id === b.id}
-            onClick={() => handleSelectBooking(b)}
-          />
-        ))
-      )}
-    </div>
-  );
+  const headCell = "sticky top-0 z-10 bg-[#34451F] px-4 py-3 text-left font-black text-[9.5px] tracking-[0.12em] whitespace-nowrap text-[#EDE9D8] uppercase shadow-[inset_0_-2px_0_#26300D]";
+  const bodyCell = (open: boolean) =>
+    cn(
+      "px-4 py-3.25 align-middle text-[12.5px] font-semibold whitespace-nowrap",
+      open ? "border-b border-dotted border-[#C4C0B0]" : "border-b border-[#EDEAE0]",
+    );
 
   return (
-    <div className="xl:flex xl:min-h-0 xl:flex-1 xl:flex-col">
-      {isWide ? (
-        <div className="grid h-full min-h-0 gap-4 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
-          <div className="h-full min-h-0 overflow-y-auto pr-1">
-            {listItems}
-          </div>
-          <aside
-            className="h-full min-h-0 self-stretch overflow-hidden rounded-3xl border-2 border-[#34451F]/15 shadow-xl"
-          >
-            {renderPanel("inline")}
-          </aside>
-        </div>
-      ) : (
-        <>
-          {listItems}
-          <Sheet open={!!selectedBooking} onOpenChange={open => { if (!open) guardedClose(closeSheet); }}>
-            <SheetContent
-              side="bottom"
-              onOpenAutoFocus={e => e.preventDefault()}
-              className="flex h-[88vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none"
-            >
-              {renderPanel("bottom")}
-            </SheetContent>
-          </Sheet>
-        </>
-      )}
+    <>
+      <div className="overflow-x-auto rounded-2xl border border-[#D8D5C8] bg-white sm:max-h-[calc(100svh-24rem)] sm:overflow-y-auto">
+        <table className="w-full min-w-175 border-collapse">
+          <thead>
+            <tr>
+              <th className={cn(headCell, "w-14")}>
+                <span className="sr-only">Expand</span>
+              </th>
+              {showEventColumn && <th className={headCell}>Event</th>}
+              <th className={headCell}>Team name</th>
+              <th className={headCell}>Booked by</th>
+              <th className={cn(headCell, "w-17.5 text-center")}>Guests</th>
+              {seatingRequired && <th className={cn(headCell, "w-25")}>Table</th>}
+              <th className={cn(headCell, "w-27.5")}>Payment</th>
+              <th className={cn(headCell, "w-30")}>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {bookings.length === 0 ? (
+              <tr>
+                <td colSpan={columnCount} className="px-4 py-8 text-center text-[12.5px] font-semibold text-[#5E6654]">
+                  No bookings match — try another filter or clear the search.
+                </td>
+              </tr>
+            ) : (
+              bookings.map(booking => {
+                const open = openId === booking.id;
+                const status = normStatus(booking.status) || "pending";
+                const table = booking.booking_table_mappings?.[0]?.tables;
+                const bookingSeating = booking.events?.seating_required !== false;
+                const paid = Number(booking.paid_amount) || 0;
+                const total = Number(booking.total_amount) || 0;
+                const eventDate = parseDate(booking.events?.event_date);
+                const teamName = booking.group_name || "Guest team";
+
+                return (
+                  <React.Fragment key={booking.id}>
+                    <tr
+                      ref={el => {
+                        rowRefs.current[booking.id] = el;
+                      }}
+                      onClick={() => toggleRow(booking)}
+                      className={cn(
+                        "cursor-pointer transition-colors",
+                        open ? "bg-[#ECE9DE]" : "hover:bg-[#F4F1E8]",
+                      )}
+                    >
+                      <td className={cn(bodyCell(open), "px-1.5 py-0", open && "shadow-[inset_4px_0_0_#34451F]")}>
+                        <button
+                          type="button"
+                          aria-expanded={open}
+                          aria-label={`${open ? "Hide" : "Show"} details for ${teamName}`}
+                          onClick={e => {
+                            e.stopPropagation();
+                            toggleRow(booking);
+                          }}
+                          className="flex h-11 w-11 items-center justify-center rounded-lg text-[#5E6654] transition-colors hover:bg-black/5"
+                        >
+                          <ChevronRight className={cn("h-4 w-4 transition-transform", open && "rotate-90")} />
+                        </button>
+                      </td>
+                      {showEventColumn && (
+                        <td className={cn(bodyCell(open), "text-[#5E6654]")}>
+                          {booking.events?.event_title || "Untitled event"}
+                          {eventDate ? ` · ${format(eventDate, "d MMM yy")}` : ""}
+                        </td>
+                      )}
+                      <td className={bodyCell(open)}>
+                        <span className="font-black text-[12.5px] tracking-[0.06em] text-[#20231A] uppercase">
+                          {teamName}
+                        </span>
+                        {booking.special_requests && (
+                          <span title="Has a staff note" className="ml-1.5 inline-block align-[-2px]">
+                            <Star className="h-3.5 w-3.5 fill-[#B07A16] text-[#B07A16]" />
+                          </span>
+                        )}
+                      </td>
+                      <td className={cn(bodyCell(open), "text-[#5E6654]")}>{booking.contacts?.full_name || "-"}</td>
+                      <td className={cn(bodyCell(open), "text-center font-black text-[13px] text-[#20231A]")}>
+                        {booking.group_size ?? 0}
+                      </td>
+                      {seatingRequired && (
+                        <td className={bodyCell(open)}>
+                          {!bookingSeating ? (
+                            <span className="text-[#5E6654]">—</span>
+                          ) : table?.tables_name ? (
+                            <span className="text-[#20231A]">{table.tables_name}</span>
+                          ) : (
+                            <span className="font-bold text-[#8A5F0E]">None yet</span>
+                          )}
+                        </td>
+                      )}
+                      <td className={bodyCell(open)}>
+                        {total <= 0 && paid <= 0 ? (
+                          <span className="text-[#5E6654]">—</span>
+                        ) : paid >= total ? (
+                          <span className="font-bold text-[#2F6420]">Paid £{paid.toFixed(2)}</span>
+                        ) : (
+                          <span className="text-[#5E6654]">
+                            £{paid.toFixed(2)} of £{total.toFixed(2)}
+                          </span>
+                        )}
+                      </td>
+                      <td className={bodyCell(open)}>
+                        <StatusPill status={status} />
+                      </td>
+                    </tr>
+                    {open && (
+                      <tr>
+                        <td
+                          colSpan={columnCount}
+                          className="border-b border-dotted border-[#C4C0B0] bg-[#F6F4EC] px-5 py-4.5 shadow-[inset_4px_0_0_#34451F]"
+                        >
+                          {isEditing ? renderEditor(booking) : renderView(booking)}
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {isPending && (
         <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#34451F] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
@@ -741,152 +801,6 @@ export default function BookingList({
         </div>
       )}
       {ConfirmDialogUI}
-    </div>
-  );
-}
-
-function RefinedCard({
-  booking,
-  onClick,
-  selected,
-  showDate,
-}: {
-  booking: GeneralBooking;
-  onClick: () => void;
-  selected: boolean;
-  showDate?: boolean;
-}) {
-  const status = normStatus(booking.status) || "pending";
-  const theme = statusTheme[status] || statusTheme.pending;
-  const table = booking.booking_table_mappings?.[0]?.tables;
-  const capacity = table?.tables_capacity;
-  const eventDate = parseDate(booking.events?.event_date);
-  const eventTime = formatTime(booking.events?.event_start_time);
-  const seatingRequired = booking.events?.seating_required !== false;
-  const StatusIcon = theme.icon;
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex w-full items-center gap-3 rounded-2xl p-3 text-left transition-all active:scale-[0.99]",
-        selected
-          ? "border-2 border-[#34451F] bg-[#9A5B00]/4 shadow-lg ring-2 ring-[#9A5B00]/20"
-          : "border border-[#D8D5C8] bg-white shadow-sm",
-      )}
-    >
-      <div className={cn("w-1 shrink-0 self-stretch rounded-full", theme.dot)} />
-      <div className={cn("flex h-11 w-11 shrink-0 items-center justify-center rounded-full border", theme.bg, theme.text, theme.border)}>
-        {showDate && eventDate ? (
-          <div className="flex flex-col items-center justify-center leading-none">
-            <span className="font-black text-[9px] tracking-tighter uppercase opacity-80">{format(eventDate, "MMM")}</span>
-            <span className="font-black text-base tracking-tighter">{format(eventDate, "dd")}</span>
-          </div>
-        ) : (
-          <StatusIcon className="h-5 w-5" />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        {showDate && (
-          <div className="mb-1 hidden min-w-0 items-center gap-1.5 sm:flex">
-            <CalendarDays className="h-3 w-3 shrink-0 text-[#5E6654]/55" />
-            <span className="truncate font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
-              {booking.events?.event_title || "Untitled Event"}
-              {eventTime ? ` · ${eventTime}` : ""}
-            </span>
-          </div>
-        )}
-        <div className="flex min-w-0 items-center gap-1.5">
-          <h4 className="truncate font-black text-sm tracking-tight text-[#20231A] uppercase">{booking.group_name || "Guest Team"}</h4>
-          {booking.special_requests && (
-            <span title="Has staff instructions" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-amber-50 text-amber-700">
-              <Star className="h-3 w-3 fill-current" />
-            </span>
-          )}
-        </div>
-        <div className="mt-1.5 flex items-center justify-between gap-2">
-          <span className="truncate text-xs font-semibold text-[#5E6654]">{booking.contacts?.full_name}</span>
-          <div className="flex shrink-0 items-center gap-2">
-            {seatingRequired && <TableChip name={table?.tables_name} />}
-            <span className="inline-flex items-center gap-1 font-black text-sm text-[#20231A] tabular-nums">
-              <Users className="h-3.5 w-3.5 text-[#5E6654]/55" />
-              {booking.group_size}
-              {seatingRequired && capacity ? <span className="text-[#5E6654]/70">/{capacity}</span> : null}
-            </span>
-          </div>
-        </div>
-      </div>
-      <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
-    </button>
-  );
-}
-
-function TableChip({ name }: { name?: string | null }) {
-  if (!name) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-dashed border-[#D8D5C8] bg-[#F4F1E8] px-2 py-0.5 font-black text-[10px] tracking-wide text-[#5E6654] uppercase">
-        <TableIcon className="h-3 w-3" /> No table
-      </span>
-    );
-  }
-  return (
-    <span className="inline-flex items-center gap-1 rounded-md bg-[#34451F]/7 px-2 py-0.5 font-black text-[10px] tracking-wide text-[#34451F] uppercase">
-      <TableIcon className="h-3 w-3" /> {name.replace("Table ", "T")}
-    </span>
-  );
-}
-
-function EmptyList() {
-  return (
-    <div className="rounded-2xl border border-[#D8D5C8] bg-white p-10 text-center">
-      <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-[#F4F1E8] text-[#5E6654]">
-        <CalendarDays className="h-5 w-5" />
-      </div>
-      <p className="font-black text-sm tracking-tight text-[#20231A] uppercase">No bookings match</p>
-      <p className="mt-1 text-xs text-[#5E6654]">Try clearing a filter or the search.</p>
-    </div>
-  );
-}
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="mb-2 font-black text-[10px] tracking-[0.2em] text-[#5E6654]/70 uppercase">{children}</p>;
-}
-
-function Fact({ icon, label, value, small, accent }: { icon: React.ReactNode; label: string; value: string; small?: boolean; accent?: boolean }) {
-  return (
-    <div className="rounded-2xl border border-[#D8D5C8] bg-white p-3.5">
-      <div className="mb-1.5 flex items-center gap-1.5 text-[#5E6654]">
-        <span className="opacity-70">{icon}</span>
-        <span className="font-black text-[9.5px] tracking-wide uppercase">{label}</span>
-      </div>
-      <p className={cn("font-black leading-tight", small ? "text-xs" : "text-sm", accent ? "text-[#C8956D]" : "text-[#20231A]")}>{value}</p>
-    </div>
-  );
-}
-
-function PayBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    Paid: "bg-green-50 text-green-700",
-    "Part-paid": "bg-amber-50 text-amber-700",
-    Unpaid: "bg-[#F4F1E8] text-[#5E6654]",
-    Refunded: "bg-red-50 text-red-700",
-  };
-  const cls = map[status] || "bg-[#F4F1E8] text-[#5E6654]";
-  return <span className={cn("rounded-full px-3 py-1.5 font-black text-[10px] tracking-wide uppercase", cls)}>{status}</span>;
-}
-
-function Hint({ tone, icon, children }: { tone: "blue" | "green" | "red" | "amber"; icon: React.ReactNode; children: React.ReactNode }) {
-  const tones: Record<string, string> = {
-    blue: "bg-blue-50 border-blue-200 text-blue-700",
-    green: "bg-green-50 border-green-200 text-green-700",
-    red: "bg-red-50 border-red-200 text-red-700",
-    amber: "bg-amber-50 border-amber-200 text-amber-700",
-  };
-  return (
-    <div className={cn("flex animate-in items-center gap-2 rounded-xl border p-3 fade-in slide-in-from-top-1", tones[tone])}>
-      {icon}
-      <p className="font-black text-[10px] tracking-tight uppercase">{children}</p>
-    </div>
+    </>
   );
 }

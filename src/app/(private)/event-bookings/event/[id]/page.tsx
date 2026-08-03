@@ -45,13 +45,6 @@ type BookingRow = {
   }[];
 };
 
-function toTitleCase(str: string) {
-  return str
-    .split(/[\s\-_]+/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
 function formatTime(t?: string | null) {
   if (!t) return "-";
   const [hh, mm] = t.split(":");
@@ -104,10 +97,7 @@ export default async function EventDetailPage({
   const event = rawEvent as unknown as EventRow;
   const bookings = (rawBookings ?? []) as unknown as BookingRow[];
 
-  const etType = Array.isArray(event.event_types) ? event.event_types[0] : event.event_types;
   const etSub = Array.isArray(event.event_subtypes) ? event.event_subtypes[0] : event.event_subtypes;
-  const type = etType?.name ?? "";
-  const subtype = etSub?.name ?? "";
   const seatingRequired = event.seating_required !== false;
   const isQuiz = etSub?.behavior === "quiz";
   const eventPrice = event.payment_amount ?? 0;
@@ -123,23 +113,13 @@ export default async function EventDetailPage({
       b.total_amount != null ? Number(b.total_amount) : eventPrice * (Number(b.group_size) || 0);
   }
 
-  let tableStats: { capacity: number; total: number; assigned: number }[] | null = null;
+  let seated: { assigned: number; total: number } | null = null;
   if (seatingRequired) {
-    const groups: Record<number, { total: number; assigned: number }> = {};
-    for (const t of tablesData ?? []) {
-      const cap = t.max_capacity || 0;
-      if (!groups[cap]) groups[cap] = { total: 0, assigned: 0 };
-      groups[cap].total++;
-    }
+    let assigned = 0;
     for (const b of bookings) {
-      for (const m of b.booking_table_mappings ?? []) {
-        const cap = m.tables?.max_capacity || 0;
-        if (groups[cap]) groups[cap].assigned++;
-      }
+      assigned += (b.booking_table_mappings ?? []).filter((m) => m.tables).length;
     }
-    tableStats = Object.entries(groups)
-      .map(([cap, v]) => ({ capacity: Number(cap), ...v }))
-      .sort((a, b) => a.capacity - b.capacity);
+    seated = { assigned, total: (tablesData ?? []).length };
   }
 
   let quiz: EventSummary["quiz"] = null;
@@ -157,23 +137,23 @@ export default async function EventDetailPage({
   }
 
   const summary: EventSummary = {
+    eventId: String(eventId),
     title: event.title ?? "",
     isActive: event.is_active !== false,
     dateLabel: new Date(event.date + "T00:00:00").toLocaleDateString("en-GB", {
-      weekday: "short",
+      weekday: "long",
       day: "numeric",
-      month: "short",
+      month: "long",
       year: "numeric",
     }),
     timeLabel: `${formatTime(event.start_time)} – ${formatTime(event.end_time)}`,
     hostName: hostName ?? "-",
-    badgeClass: null,
-    badgeLabel: subtype || type ? toTitleCase(subtype || type) : null,
     paymentAmount: event.payment_amount ?? null,
     totalExpected,
     totalPaid,
+    seatingRequired,
+    seated,
     quiz,
-    tableStats,
   };
 
   const generalBookings: GeneralBooking[] = bookings.map((b) => ({
@@ -214,13 +194,15 @@ export default async function EventDetailPage({
   }));
 
   return (
-    <div className="min-h-screen flex-1 bg-background xl:min-h-0">
-      <div className="mx-auto max-w-7xl space-y-4 px-3 py-3 sm:py-0 md:px-8 xl:flex xl:h-[calc(100vh-7.5rem)] xl:flex-col xl:overflow-hidden">
+    <div className="min-h-screen flex-1 bg-background">
+      <div className="mx-auto max-w-7xl px-3 py-3 sm:py-0 md:px-8">
         <BookingsSection
           bookings={generalBookings}
           summary={summary}
-          type={type}
-          subtype={subtype}
+          events={[]}
+          selectedEventId={String(eventId)}
+          todayIso={new Date().toISOString().split("T")[0]}
+          showEventPicker={false}
           initialStatuses={initialStatuses}
           initialSelectedId={bookingId ?? null}
         />
