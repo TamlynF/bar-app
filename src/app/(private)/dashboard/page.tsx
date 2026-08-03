@@ -4,6 +4,7 @@ import Link from "next/link";
 import { format } from "date-fns";
 import {
   CalendarDays,
+  ChevronRight,
   Grid2X2,
   Trophy,
   Plus,
@@ -491,7 +492,19 @@ export default async function DashboardPage() {
           </div>
 
           <section className="space-y-2 lg:row-start-2 lg:col-start-1">
-            <SectionLabel icon={BarChart3} label="Trends" />
+            <SectionLabel
+              icon={BarChart3}
+              label="Trends"
+              action={
+                <Link
+                  href="/marketing/trends"
+                  className="-mr-1.5 inline-flex h-11 items-center gap-1 rounded-lg px-2 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
+                >
+                  Market trends
+                  <ChevronRight className="h-4 w-4 shrink-0" />
+                </Link>
+              }
+            />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <RevenueTrendChart data={analytics.weekly} />
               <RevenueByTypeChart

@@ -5,11 +5,13 @@ export default function SectionLabel({
   label,
   highlight,
   badge,
+  action,
 }: {
   icon: React.ElementType;
   label: string;
   highlight?: boolean;
   badge?: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="flex items-center gap-2 px-1">
@@ -24,6 +26,7 @@ export default function SectionLabel({
           {badge}
         </span>
       )}
+      {action && <div className="ml-auto shrink-0">{action}</div>}
     </div>
   );
 }

@@ -213,6 +213,8 @@ export default function PrivateLayoutClient({
 
         if (normalizedPath === "/guests") return { title: "Guests", subtitle: null, backHref: null, description: "Bookings guests have made and requests waiting on you." }
 
+        if (normalizedPath.startsWith("/marketing")) return { title: "Market trends", subtitle: null, backHref: null, description: "Ideas, events and price-offs from venues near you, refreshed each week." }
+
         if (normalizedPath.startsWith("/requests")) {
             if (normalizedPath === "/requests") return { title: "Requests", subtitle: null, backHref: "/guests", description: "Band applications, private hire and enquiries waiting on a decision." }
             const requestsMap: Record<string, string> = {
