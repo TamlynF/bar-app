@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Search, Inbox, X } from "lucide-react";
+import { Search, Inbox, X, ChevronDown } from "lucide-react";
 import { BandBookingCard, statusTheme, type BandRequest } from "./band-booking-card";
 import { bandLifecycleStages, type BandLifecycleStage } from "@/lib/band-lifecycle";
 import StatusCircle from "./status-circle";
@@ -64,6 +64,15 @@ export default function BandBookingListClient({
   const [filters, setFilters] = useState<BandFilterState>(EMPTY_FILTERS);
   const patchFilters = (patch: Partial<BandFilterState>) =>
     setFilters((f) => ({ ...f, ...patch }));
+
+  const [collapsedColumns, setCollapsedColumns] = useState<Set<string>>(() => new Set());
+  const toggleColumn = (col: string) =>
+    setCollapsedColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(col)) next.delete(col);
+      else next.add(col);
+      return next;
+    });
 
   const typeOptions = useMemo(() => optionsFor(initialRequests, "type"), [initialRequests]);
   const genreOptions = useMemo(() => optionsFor(initialRequests, "genre"), [initialRequests]);
@@ -225,8 +234,8 @@ export default function BandBookingListClient({
     <div className="animate-in space-y-3 duration-500 fade-in">
       <div className="rounded-2xl border border-[#D8D5C8] bg-[#EFE8D4] shadow-md">
         <div className="flex flex-col items-center sm:flex-row">
-          <div className="no-scrollbar overflow-x-auto px-2 pt-2 sm:shrink-0 sm:pt-0">
-            <div className="flex w-full min-w-max items-stretch gap-1 px-2 py-3">
+          <div className="no-scrollbar w-full min-w-0 overflow-x-auto px-1 pt-2 sm:w-auto sm:shrink-0 sm:px-2 sm:pt-0">
+            <div className="flex w-full items-stretch gap-0.5 px-1 py-3 sm:w-max sm:gap-1 sm:px-2">
               <StatusCircle
                 count={stats.total}
                 status="all"
@@ -351,6 +360,7 @@ export default function BandBookingListClient({
           {visibleColumns.map((col) => {
             const theme = statusTheme[col];
             const items = grouped.get(col) ?? [];
+            const isCollapsed = collapsedColumns.has(col);
             return (
               <section
                 key={col}
@@ -362,14 +372,24 @@ export default function BandBookingListClient({
                     : "sm:w-72 sm:shrink-0 xl:w-auto xl:min-w-0 xl:flex-1"
                 )}
               >
-                <div
+                <button
+                  type="button"
+                  onClick={() => toggleColumn(col)}
+                  aria-expanded={!isCollapsed}
+                  aria-label={`${isCollapsed ? "Expand" : "Collapse"} ${theme.label}`}
                   className={cn(
-                    "sticky top-0 z-10 flex items-center justify-between gap-2 rounded-xl border px-3 py-2",
+                    "sticky top-0 z-10 flex min-h-11 items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition-colors hover:brightness-97 sm:min-h-0",
                     theme.bg,
                     theme.border
                   )}
                 >
                   <span className={cn("flex items-center gap-2", theme.text)}>
+                    <ChevronDown
+                      className={cn(
+                        "h-4 w-4 shrink-0 transition-transform duration-200",
+                        isCollapsed && "-rotate-90"
+                      )}
+                    />
                     <span className={cn("h-2 w-2 shrink-0 rounded-full", theme.dot)} />
                     <span className="font-black text-[11px] tracking-widest uppercase">
                       {theme.label}
@@ -384,21 +404,23 @@ export default function BandBookingListClient({
                   >
                     {items.length}
                   </span>
-                </div>
+                </button>
 
-                {items.length === 0 ? (
-                  <p className="rounded-2xl border border-dashed border-[#D8D5C8] bg-white/60 py-8 text-center text-xs font-semibold text-[#5E6654]/60">
-                    Nothing here
-                  </p>
-                ) : (
-                  items.map((req) => (
-                    <BandBookingCard
-                      key={req.id}
-                      request={req}
-                      wide={spreadColumns}
-                      lifecycle={lifecycles.get(req.id) ?? null}
-                    />
-                  ))
+                {!isCollapsed && (
+                  items.length === 0 ? (
+                    <p className="rounded-2xl border border-dashed border-[#D8D5C8] bg-white/60 py-8 text-center text-xs font-semibold text-[#5E6654]/60">
+                      Nothing here
+                    </p>
+                  ) : (
+                    items.map((req) => (
+                      <BandBookingCard
+                        key={req.id}
+                        request={req}
+                        wide={spreadColumns}
+                        lifecycle={lifecycles.get(req.id) ?? null}
+                      />
+                    ))
+                  )
                 )}
               </section>
             );

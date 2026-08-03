@@ -23,7 +23,7 @@ export default async function MusicBookingsPage() {
   const items = (requests ?? []) as unknown as BandRequest[];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-3 py-4 sm:py-0 md:px-4 xl:max-w-none">
+    <div className="mx-auto max-w-4xl space-y-6 px-1.5 py-4 sm:px-3 sm:py-0 md:px-4 xl:max-w-none">
       <BandBookingListClient initialRequests={items} />
     </div>
   );
