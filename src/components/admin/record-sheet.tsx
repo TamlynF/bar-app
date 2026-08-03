@@ -11,7 +11,6 @@ import {
   Save,
   Pencil,
   Trash2,
-  Hash,
   AlertCircle,
 } from "lucide-react";
 
@@ -158,18 +157,15 @@ export function RecordSheet({
 
   const panel = (
     <>
-      <div className="sticky top-0 z-30 shrink-0 border-b border-admin-line bg-admin-card/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-        <TitleTag className="truncate text-xl leading-tight font-bold tracking-tight text-admin-ink">
-          {title}
-        </TitleTag>
-        {recordId != null && (
-          <div className="mt-1 flex items-center gap-1.5">
-            <Hash className="h-3 w-3 text-admin-muted" />
-            <span className="text-xs font-semibold tracking-wide text-admin-muted tabular-nums">
-              ID: {recordId}
+      <div className="sticky top-0 z-30 shrink-0 border-b border-admin-line bg-admin-card/80 px-4 py-3 backdrop-blur-md sm:rounded-t-4xl">
+        <TitleTag className="flex items-baseline gap-2 text-xl leading-tight font-bold tracking-tight text-admin-ink">
+          <span className="truncate">{title}</span>
+          {recordId != null && (
+            <span className="shrink-0 text-[13px] font-semibold text-admin-muted italic tabular-nums">
+              (#ID: {recordId})
             </span>
-          </div>
-        )}
+          )}
+        </TitleTag>
       </div>
 
       <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
@@ -238,7 +234,7 @@ export function RecordSheet({
 
   if (split) {
     return (
-      <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-4xl border-2 border-admin-line bg-admin-bg shadow-xl">
+      <aside className="flex h-full min-h-0 flex-col overflow-hidden rounded-4xl border-2 border-admin-line bg-admin-surface shadow-xl">
         {open ? (
           panel
         ) : (
@@ -265,69 +261,12 @@ export function RecordSheet({
         showCloseButton={false}
         onOpenAutoFocus={(e) => e.preventDefault()}
         className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-admin-line
-          bg-admin-bg p-0 shadow-2xl outline-none
+          bg-admin-surface p-0 shadow-2xl outline-none
           sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
           sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
           sm:border-2 sm:border-admin-line"
       >
         {panel}
-
-        <div className="z-40 shrink-0 border-t-2 border-admin-primary/15 bg-admin-line px-6 py-5 pb-10 sm:rounded-b-4xl sm:pb-5">
-          {mode === "view" ? (
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="ghost"
-                onClick={onDelete}
-                disabled={isPending}
-                className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-[13px] font-semibold text-admin-error hover:border-admin-error/30 hover:bg-admin-error-bg"
-              >
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Trash2 className="mr-2 h-4 w-4" />
-                )}
-                Delete
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={onEdit}
-                className="h-14 rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-            </div>
-          ) : (
-            showForm && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={onCancel}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card text-[13px] font-semibold text-admin-muted hover:bg-admin-surface"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form={formId}
-                  disabled={isPending || saveDisabled}
-                  className="h-14 rounded-2xl bg-admin-primary text-[13px] font-semibold text-white shadow-lg hover:bg-admin-primary-hover active:scale-95"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              </div>
-            )
-          )}
-        </div>
         {confirmUI}
       </SheetContent>
     </Sheet>

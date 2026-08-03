@@ -129,11 +129,7 @@ export default function TablesClient({
   const showForm = mode === "add" || mode === "edit";
   const formDefault = mode === "edit" ? selected : null;
   const title =
-    mode === "add"
-      ? "New table"
-      : mode === "edit"
-        ? "Edit table"
-        : (selected?.name ?? "");
+    mode === "add" ? "New table" : mode === "edit" ? "Edit table" : "View table";
 
   const detailPanel = (
   <RecordSheet
@@ -499,15 +495,6 @@ export default function TablesClient({
           variant="cards"
           onAdd={openAdd}
           addLabel="Add table"
-          countLabel={
-            <>
-              {initialTables.length} table
-              {initialTables.length !== 1 ? "s" : ""}
-              {anyFilterActive && (
-                <span className="text-admin-primary"> · {filtered.length} shown</span>
-              )}
-            </>
-          }
           detail={detailPanel}
           activeFilterCount={
             (shapeFilter !== "all" ? 1 : 0) + (availFilter !== "all" ? 1 : 0)
@@ -594,6 +581,7 @@ export default function TablesClient({
                 <ListRow
                   key={table.id}
                   variant="card"
+                  selected={selected?.id === table.id}
                   onClick={() => sheet.openView(table)}
                 >
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-admin-surface text-admin-primary">

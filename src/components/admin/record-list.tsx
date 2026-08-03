@@ -46,22 +46,24 @@ export function RecordList({
           detail && "xl:flex xl:h-full xl:min-h-0 xl:flex-col xl:space-y-0 xl:gap-2.5",
         )}
       >
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold tracking-wide text-admin-muted">
-            {countLabel}
-          </p>
-          <Button
-            onClick={onAdd}
-            size="sm"
-            className="h-11 rounded-xl bg-admin-primary px-4 text-[13px] font-semibold text-white hover:bg-admin-primary-hover sm:h-9"
-          >
-            <Plus className="mr-1.5 h-3.5 w-3.5" />
-            {addLabel}
-          </Button>
-        </div>
+        {!toolbar && !filters && (
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-semibold tracking-wide text-admin-muted">
+              {countLabel}
+            </p>
+            <Button
+              onClick={onAdd}
+              size="sm"
+              className="h-11 rounded-xl bg-admin-primary px-4 text-[13px] font-semibold text-white hover:bg-admin-primary-hover sm:h-9"
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              {addLabel}
+            </Button>
+          </div>
+        )}
 
         {(toolbar || filters) && (
-          <div className="rounded-2xl border border-admin-line bg-admin-card/60 p-2.5 shadow-sm sm:p-3">
+          <div className="rounded-2xl border border-admin-line bg-admin-card/60 p-2.5 shadow-sm xl:shrink-0 sm:p-3">
             <div className="flex items-center gap-2">
               {toolbar && <div className="min-w-0 flex-1">{toolbar}</div>}
               {filters && (
@@ -87,6 +89,16 @@ export function RecordList({
                   )}
                 </button>
               )}
+
+              <Button
+                onClick={onAdd}
+                size="sm"
+                title={addLabel}
+                className="h-11 shrink-0 rounded-xl bg-admin-primary px-3 text-[13px] font-semibold text-white hover:bg-admin-primary-hover sm:h-9 sm:px-4"
+              >
+                <Plus className="h-3.5 w-3.5 shrink-0 sm:mr-1.5" />
+                <span className="hidden sm:inline">{addLabel}</span>
+              </Button>
             </div>
 
             {filters && showFilters && (
@@ -160,22 +172,29 @@ export function RecordList({
 export function ListRow({
   onClick,
   variant = "panel",
+  selected = false,
   className,
   children,
 }: {
   onClick: () => void;
   variant?: "panel" | "card";
+  selected?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
   return (
     <div
       onClick={onClick}
+      aria-current={selected ? "true" : undefined}
       className={cn(
         "flex cursor-pointer items-center gap-3 transition-all active:scale-[0.99]",
         variant === "card"
           ? "rounded-2xl border border-admin-line bg-admin-card px-4 py-2.5 hover:border-admin-primary/30 hover:shadow-sm"
           : "px-3 py-2.5 hover:bg-admin-surface/60 sm:px-4",
+        selected &&
+          (variant === "card"
+            ? "border-admin-primary bg-admin-primary-soft/50 shadow-sm ring-1 ring-admin-primary/25"
+            : "bg-admin-primary-soft/50"),
         className,
       )}
     >
