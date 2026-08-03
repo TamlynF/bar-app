@@ -1,6 +1,7 @@
 import {
   getFullQuestionHistoryAction,
   getQuizEventsAction,
+  getUpcomingQuizzesAction,
   type PastQuestionRecord,
   type QuizEventSummary,
 } from '@/app/(private)/event-setups/quiz-generator/actions'
@@ -43,12 +44,14 @@ export default async function QuizArchivePage({
   const params = await searchParams
   const eventFilter = params.event || 'all'
 
-  const [history, quizEvents] = await Promise.all([
+  const [history, quizEvents, upcomingQuizzes] = await Promise.all([
     getFullQuestionHistoryAction(eventFilter),
     getQuizEventsAction(),
+    getUpcomingQuizzesAction(),
   ])
 
   const questions = (history ?? []).map(toHistoryQuestion)
+  const nextQuiz = upcomingQuizzes[0] ?? null
 
   return (
     <div className="mx-auto max-w-6xl animate-in space-y-4 px-1 pt-4 pb-32 duration-300 fade-in sm:px-6 sm:pt-0">
@@ -56,6 +59,7 @@ export default async function QuizArchivePage({
         questions={questions}
         quizEvents={quizEvents as QuizEventSummary[]}
         currentFilter={eventFilter}
+        nextQuiz={nextQuiz}
       />
     </div>
   )

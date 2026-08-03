@@ -12,10 +12,12 @@ import {
   ChevronsUp,
   Music,
   Search,
+  Sparkles,
   Tag,
   Target,
   X,
 } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { SpotifyPlayer } from "@/components/spotify-player";
 import QuizHistoryFilter from "./quiz-history-filter";
@@ -47,6 +49,7 @@ type Props = {
   questions: HistoryQuestion[];
   quizEvents: QuizEventSummary[];
   currentFilter: string;
+  nextQuiz: QuizEventSummary | null;
 };
 
 const formatEventDate = (date: string | null) =>
@@ -73,7 +76,7 @@ const difficultyTone = (difficulty: string) => {
   return "border-admin-warning/25 bg-admin-warning-bg text-admin-warning";
 };
 
-export default function QuizHistoryList({ questions, quizEvents, currentFilter }: Props) {
+export default function QuizHistoryList({ questions, quizEvents, currentFilter, nextQuiz }: Props) {
   const [search, setSearch] = useState("");
   const groupByEvent = currentFilter === "all";
   const term = search.trim().toLowerCase();
@@ -160,6 +163,16 @@ export default function QuizHistoryList({ questions, quizEvents, currentFilter }
             </button>
           )}
         </div>
+
+        {nextQuiz && (
+          <Link
+            href={`/event-setups/events/${nextQuiz.id}`}
+            className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl border border-admin-primary px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft"
+          >
+            <Sparkles className="h-4 w-4 shrink-0" />
+            Build {format(new Date(`${nextQuiz.date}T00:00:00`), "EEE d MMM")} quiz
+          </Link>
+        )}
       </div>
 
       {term && (

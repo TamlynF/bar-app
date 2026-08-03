@@ -202,7 +202,7 @@ export default async function DashboardPage() {
       .eq("events.is_active", true),
     supabase
       .from("events")
-      .select("id, event_subtypes!inner(behavior), past_quiz_questions(id)")
+      .select("id, date, event_subtypes!inner(behavior), past_quiz_questions(id)")
       .gte("date", todayStr)
       .lte("date", twelveMonthsStr)
       .eq("is_active", true)
@@ -283,6 +283,15 @@ export default async function DashboardPage() {
     const questions = Array.isArray(ev.past_quiz_questions) ? ev.past_quiz_questions : [];
     return questions.length < totalRequiredQuestions;
   }).length;
+
+  /* Rounds are built on the event page, not the standalone generator, so the
+     quick link aims at the next quiz. With none scheduled there is nothing to
+     build, and the archive is the useful landing. */
+  const nextQuizId = [...(upcomingQuizData ?? [])]
+    .sort((a, b) => String(a.date).localeCompare(String(b.date)))[0]?.id ?? null;
+  const quizQuickLinkHref = nextQuizId
+    ? `/event-setups/events/${nextQuizId}`
+    : "/event-setups/quiz-history";
 
   const now = new Date();
   const currentMonthSaturdays = getSaturdaysInMonth(now.getFullYear(), now.getMonth());
@@ -589,7 +598,7 @@ export default async function DashboardPage() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <QuickLink href="/book" label="Walk-in" icon={Plus} />
             <QuickLink href="/settings/tables" label="Floor Plan" icon={Grid2X2} />
-            <QuickLink href="/event-setups/quiz-generator" label="Quiz" icon={Trophy} />
+            <QuickLink href={quizQuickLinkHref} label="Quiz" icon={Trophy} />
             <QuickLink href="/event-setups/events" label="Schedule" icon={CalendarDays} />
           </div>
         </section>
