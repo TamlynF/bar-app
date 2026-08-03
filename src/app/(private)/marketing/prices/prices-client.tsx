@@ -102,6 +102,13 @@ export default function PricesClient({
     });
   };
 
+  // Which of your menu items supplied the "You" price - the matcher picks the
+  // cheapest name match, so it is worth showing what it landed on.
+  const ownItemNameFor = (key: string) => {
+    const name = comparison.find((c) => c.key === key)?.ownItemName;
+    return name ? `your ${name}` : null;
+  };
+
   const breakdownFor = (key: string) => {
     const row = fullMatrix.rows.find((r) => r.key === key);
     if (!row) return [];
@@ -393,7 +400,12 @@ export default function PricesClient({
                       key={row.key}
                       className="grid grid-cols-(--price-cols) items-center gap-2 border-b border-[#D8D5C8]/60 px-5 py-3 last:border-b-0"
                     >
-                      <span className="font-bold text-[14px] text-[#20231A]">{row.label}</span>
+                      <span className="min-w-0">
+                        <span className="block font-bold text-[14px] text-[#20231A]">{row.label}</span>
+                        <span className="mt-0.5 block truncate text-[11.5px] text-[#5E6654]/80">
+                          {ownItemNameFor(row.key) ?? "nothing on your menu matched"}
+                        </span>
+                      </span>
                       <span className="text-right font-bold text-[15px] text-[#22613F] tabular-nums">
                         {row.ownPrice == null ? (
                           <span className="text-[#5E6654]/45">—</span>
@@ -419,8 +431,13 @@ export default function PricesClient({
                     key={c.key}
                     className="flex items-center gap-3 border-b border-[#D8D5C8]/60 px-5 py-3 last:border-b-0"
                   >
-                    <span className="min-w-0 flex-1 font-bold text-[14px] text-[#20231A]">
-                      {c.label} {winning && <span aria-hidden="true">🏆</span>}
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-bold text-[14px] text-[#20231A]">
+                        {c.label} {winning && <span aria-hidden="true">🏆</span>}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11.5px] text-[#5E6654]/80">
+                        {c.ownItemName ? `your ${c.ownItemName}` : "nothing on your menu matched"}
+                      </span>
                     </span>
                     <span
                       className={cn(
@@ -469,8 +486,13 @@ export default function PricesClient({
                     aria-expanded={open}
                     className="grid w-full grid-cols-[minmax(0,1fr)_58px_58px_24px] items-center gap-2 px-3.5 py-3 text-left disabled:cursor-default"
                   >
-                    <span className="min-w-0 text-[13px] leading-tight font-bold text-[#20231A]">
-                      {c.label} {winning && <span aria-hidden="true">🏆</span>}
+                    <span className="min-w-0">
+                      <span className="block text-[13px] leading-tight font-bold text-[#20231A]">
+                        {c.label} {winning && <span aria-hidden="true">🏆</span>}
+                      </span>
+                      <span className="mt-0.5 block truncate text-[11px] text-[#5E6654]/80">
+                        {c.ownItemName ? `your ${c.ownItemName}` : "no menu match"}
+                      </span>
                     </span>
                     <span
                       className={cn(
