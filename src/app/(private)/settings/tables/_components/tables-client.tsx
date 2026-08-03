@@ -659,7 +659,7 @@ function Section({
         type="button"
         onClick={onToggle}
         aria-expanded={open}
-        className="flex w-full items-center justify-between bg-admin-surface px-5 py-3"
+        className="flex w-full items-center justify-between bg-admin-line px-5 py-3"
       >
         <span className="text-[11px] font-semibold tracking-wide text-admin-primary">
           {title}

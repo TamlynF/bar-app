@@ -175,7 +175,7 @@ export function RecordSheet({
           <div className="h-4" />
         </div>
 
-        <div className="z-40 shrink-0 border-t-2 border-admin-line bg-admin-card/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
+        <div className="z-40 shrink-0 border-t-2 border-admin-primary/15 bg-admin-line px-6 py-5 pb-10 sm:rounded-b-4xl sm:pb-5">
           {mode === "view" ? (
             <div className="grid grid-cols-2 gap-3">
               <Button
