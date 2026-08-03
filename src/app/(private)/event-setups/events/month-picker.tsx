@@ -31,10 +31,12 @@ export function DatePicker({
   value,
   onChange,
   className,
+  appearance = "primary",
 }: {
   value: DateRange | null;
   onChange: (value: DateRange | null) => void;
   className?: string;
+  appearance?: "primary" | "secondary";
 }) {
   const [open, setOpen] = useState(false);
   const initial = value?.start ? new Date(value.start + "T00:00:00") : new Date();
@@ -88,6 +90,7 @@ export function DatePicker({
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
 
   const active = !!value?.start;
+  const secondary = appearance === "secondary";
   const todayISO = toISO(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
 
   return (
@@ -104,13 +107,20 @@ export function DatePicker({
           title="Filter by date"
           className={cn(
             "inline-flex h-11 shrink-0 items-center gap-2 rounded-xl border px-3 text-xs font-bold transition-colors outline-none",
-            active
-              ? "border-[#34451F] bg-[#34451F] text-white"
-              : "border-[#D8D5C8] bg-transparent text-[#20231A] hover:border-[#34451F] focus:border-[#34451F]",
+            secondary
+              ? active
+                ? "border-[#B9C3A8] bg-[#E5EBD8] text-[#34451F] hover:bg-[#DCE4CE]"
+                : "border-[#D8D5C8] bg-white text-[#34451F] hover:border-[#B9C3A8] hover:bg-[#F8F6EF] focus:border-[#34451F]"
+              : active
+                ? "border-[#34451F] bg-[#34451F] text-white"
+                : "border-[#D8D5C8] bg-transparent text-[#20231A] hover:border-[#34451F] focus:border-[#34451F]",
             className
           )}
         >
-          <CalendarIcon className={cn("h-3.5 w-3.5 shrink-0", active ? "text-white/80" : "text-[#5E6654]/60")} />
+          <CalendarIcon className={cn(
+            "h-3.5 w-3.5 shrink-0",
+            secondary ? "text-[#34451F]/70" : active ? "text-white/80" : "text-[#5E6654]/60"
+          )} />
           {dateRangeLabel(value)}
         </button>
       </PopoverTrigger>
