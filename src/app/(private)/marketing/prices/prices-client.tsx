@@ -98,7 +98,10 @@ export default function PricesClient({
         .filter(Boolean)
         .join(" · ");
     }
-    return c.ownItemName ? `your ${c.ownItemName}` : "nothing on your menu matched";
+    if (!c.ownItemName) return "nothing on your menu matched";
+    return (c.ownPoolSize ?? 1) > 1
+      ? `your ${c.ownItemName} · typical of ${c.ownPoolSize}`
+      : `your ${c.ownItemName}`;
   };
 
   const matrix = buildVenueMatrix(competitorPrices, shownComparison, shownVenues);

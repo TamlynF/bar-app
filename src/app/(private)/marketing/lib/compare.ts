@@ -1,20 +1,95 @@
 import { parseGbp } from "@/lib/price";
 import type { CompetitorPrice, MenuItemLite } from "./types";
 
-type Benchmark = { key: string; label: string; keywords: string[] };
+type Benchmark = {
+  key: string;
+  label: string;
+  keywords: string[];
+  exclude?: string[];
+  // Menu categories that serve this round properly - preferred when picking
+  // which of your items represents it.
+  categories?: string[];
+  // Serves that carry the right name but the wrong measure (a Baby Guinness is
+  // not a pint of stout), so they never set your price for the round.
+  wrongServe?: string[];
+};
+
+// A low or no-alcohol serve isn't the same round as the real thing, so it never
+// stands in for your pint price.
+const PINT_CATEGORIES = ["draught", "draft", "keg", "beer", "cider", "pint", "tap"];
+
+// Half measures, shots and tasters carry the drink's name but not its round.
+const SMALL_SERVES = ["half", "third", "baby", "shot", "taster", "schooner"];
+
+const ALCOHOL_FREE = ["0%", "0.0", "alcohol free", "alcohol-free", "non-alcoholic", "no alcohol", "zero alcohol"];
 
 const BENCHMARKS: Benchmark[] = [
-  { key: "pint_lager", label: "Pint (Lager)", keywords: ["lager", "carling", "fosters", "madri", "amstel", "birra", "peroni", "stella"] },
-  { key: "pint_ale", label: "Pint (Ale / Bitter / Stout)", keywords: ["ale", "bitter", "ipa", "stout", "guinness", "pale"] },
-  { key: "spirit_mixer", label: "House Spirit + Mixer", keywords: ["gin", "vodka", "rum", "whisky", "whiskey", "spirit", "tonic", "mixer"] },
-  { key: "wine_glass", label: "Wine (Glass)", keywords: ["wine", "merlot", "sauvignon", "chardonnay", "rose", "rosé", "prosecco", "malbec"] },
-  { key: "soft_drink", label: "Soft Drink", keywords: ["coke", "cola", "pepsi", "lemonade", "fanta", "j2o", "soft", "soda", "juice"] },
-  { key: "snack", label: "Snacks", keywords: ["crisps", "nuts", "olives", "snack", "nachos", "fries", "chips", "pork scratching"] },
+  {
+    key: "pint_lager",
+    label: "Pint (Lager)",
+    keywords: ["lager", "carling", "fosters", "madri", "amstel", "birra", "peroni", "stella"],
+    exclude: ALCOHOL_FREE,
+    categories: PINT_CATEGORIES,
+    wrongServe: SMALL_SERVES,
+  },
+  {
+    key: "pint_ale",
+    label: "Pint (Ale / Bitter / Stout)",
+    keywords: ["ale", "bitter", "ipa", "stout", "guinness", "pale"],
+    // "Ginger ale" and "ginger beer" are soft drinks wearing a beer's name.
+    exclude: [...ALCOHOL_FREE, "ginger"],
+    categories: PINT_CATEGORIES,
+    wrongServe: SMALL_SERVES,
+  },
+  {
+    key: "spirit_mixer",
+    label: "House Spirit + Mixer",
+    // The round is a spirit *with* a mixer - a lone tonic is a soft drink.
+    keywords: ["gin", "vodka", "rum", "whisky", "whiskey", "spirit", "bourbon", "tequila"],
+    exclude: ALCOHOL_FREE,
+    categories: ["spirit", "house"],
+    // Cocktails and bombs use the same spirits at a very different price.
+    wrongServe: [...SMALL_SERVES, "sour", "martini", "mojito", "cocktail", "bomb"],
+  },
+  {
+    key: "wine_glass",
+    label: "Wine (Glass)",
+    keywords: ["wine", "merlot", "sauvignon", "chardonnay", "rose", "rosé", "prosecco", "malbec"],
+    categories: ["wine", "fizz", "champagne"],
+    wrongServe: ["bottle", "carafe", "magnum"],
+  },
+  {
+    key: "soft_drink",
+    label: "Soft Drink",
+    keywords: [
+      "coke", "cola", "pepsi", "lemonade", "fanta", "j2o", "soft", "soda", "juice",
+      "tonic", "ginger ale", "ginger beer",
+    ],
+  },
+  {
+    key: "snack",
+    label: "Snacks",
+    keywords: ["crisps", "nuts", "olives", "snack", "nachos", "fries", "chips", "pork scratching"],
+    categories: ["snack", "crisp", "nut", "bar"],
+  },
 ];
+
+// Whole words only - otherwise "gin" matches "Ginger" and "ale" matches nothing
+// it should. Keywords can contain spaces ("pork scratching"); the boundary is
+// any non-alphanumeric character or the ends of the string.
+function hasWord(haystack: string, keyword: string): boolean {
+  const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`(?:^|[^a-z0-9])${escaped}(?:[^a-z0-9]|$)`, "i").test(haystack);
+}
 
 export function matchBenchmark(name: string): Benchmark | null {
   const n = name.toLowerCase();
-  return BENCHMARKS.find((b) => b.keywords.some((k) => n.includes(k))) ?? null;
+  return (
+    BENCHMARKS.find(
+      (b) =>
+        !(b.exclude ?? []).some((x) => n.includes(x)) && b.keywords.some((k) => hasWord(n, k)),
+    ) ?? null
+  );
 }
 
 function competitorStats(competitorPrices: CompetitorPrice[], key: string | null) {
@@ -47,6 +122,8 @@ export type BenchmarkComparison = {
   label: string;
   ownPrice: number | null;
   ownItemName: string | null;
+  // How many of your items were in the running for this round.
+  ownPoolSize?: number;
   competitorMin: number | null;
   competitorAvg: number | null;
   competitorMax: number | null;
@@ -62,24 +139,59 @@ function verdictFor(own: number | null, avg: number | null): Verdict {
   return "inline";
 }
 
+export type OwnCandidate = { name: string; category: string; price: number };
+
+// Everything of yours that could legitimately stand for a round: right name,
+// readable price, not a wrong measure, and - when any of them sit in a category
+// that serves the round properly - only those.
+export function ownPoolFor(menuItems: MenuItemLite[], benchmarkKey: string): OwnCandidate[] {
+  const b = BENCHMARKS.find((x) => x.key === benchmarkKey);
+  if (!b) return [];
+
+  const candidates = menuItems
+    .map((m) => ({ name: m.name, category: (m.category ?? "").toLowerCase(), price: parseGbp(m.price) }))
+    .filter(
+      (m): m is OwnCandidate =>
+        m.price != null &&
+        matchBenchmark(m.name)?.key === b.key &&
+        !(b.wrongServe ?? []).some((w) => hasWord(m.name, w)),
+    );
+
+  const preferred = candidates.filter((c) =>
+    (b.categories ?? []).some((cat) => c.category.includes(cat)),
+  );
+  return preferred.length ? preferred : candidates;
+}
+
+// The typical price of the pool, not the cheapest - one bargain line shouldn't
+// speak for the whole round. Even-sized pools take the lower middle so the
+// number stays a real item you actually sell.
+export function medianOf(pool: OwnCandidate[]): OwnCandidate | null {
+  if (pool.length === 0) return null;
+  const sorted = [...pool].sort((a, z) => a.price - z.price);
+  return sorted[Math.floor((sorted.length - 1) / 2)];
+}
+
+export function meanPriceOf(pool: OwnCandidate[]): number | null {
+  if (pool.length === 0) return null;
+  return Math.round((pool.reduce((s, c) => s + c.price, 0) / pool.length) * 100) / 100;
+}
+
 export function buildComparison(
   competitorPrices: CompetitorPrice[],
   menuItems: MenuItemLite[],
 ): BenchmarkComparison[] {
   return BENCHMARKS.map((b) => {
     const stats = competitorStats(competitorPrices, b.key);
-
-    const ownMatches = menuItems
-      .map((m) => ({ name: m.name, price: parseGbp(m.price) }))
-      .filter((m) => matchBenchmark(m.name)?.key === b.key && m.price != null)
-      .sort((a, z) => (a.price ?? 0) - (z.price ?? 0));
-    const own = ownMatches[0] ?? null;
+    const pool = ownPoolFor(menuItems, b.key);
+    const own = medianOf(pool);
 
     return {
       key: b.key,
       label: b.label,
       ownPrice: own?.price ?? null,
       ownItemName: own?.name ?? null,
+      ownPoolSize: pool.length,
       competitorMin: stats.min,
       competitorAvg: stats.avg,
       competitorMax: stats.max,
