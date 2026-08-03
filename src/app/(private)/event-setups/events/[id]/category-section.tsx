@@ -589,7 +589,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                             <img
                               src={newImagePreview ?? q.image_url}
                               alt={q.answer_text}
-                              className="h-40 w-full rounded-xl object-cover"
+                              className="h-40 w-full rounded-xl object-cover sm:h-56 sm:w-auto sm:max-w-full sm:object-contain"
                             />
                             <label className="flex h-11 w-full cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed border-admin-line text-[13px] font-semibold text-admin-muted transition-all hover:border-admin-primary hover:text-admin-primary">
                               <Upload className="h-3.5 w-3.5" />
@@ -690,7 +690,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 <img
                                   src={q.image_url}
                                   alt={q.answer_text}
-                                  className="h-40 w-full rounded-xl object-cover"
+                                  className="h-40 w-full rounded-xl object-cover sm:h-56 sm:w-auto sm:max-w-full sm:object-contain"
                                 />
                               ) : (
                                 (!includeSpotify || !q.spotify_track_id) && (
