@@ -266,11 +266,14 @@ export default function TablesClient({
                   </div>
 
                   <div className="flex shrink-0 items-center gap-1.5">
-                    <InfoBadge icon={<Users className="h-3 w-3" />}>
+                    <InfoBadge
+                      className="min-w-14 justify-start"
+                      icon={<Users className="h-3 w-3" />}
+                    >
                       {table.max_capacity}
                     </InfoBadge>
                     <InfoBadge
-                      className="hidden sm:inline-flex"
+                      className="hidden min-w-32 justify-start sm:inline-flex"
                       icon={
                         table.shape === "rect" ? (
                           <RectangleHorizontal className="h-3 w-3" />
@@ -282,7 +285,7 @@ export default function TablesClient({
                       {table.shape === "rect" ? "Rectangular" : "Round"}
                     </InfoBadge>
                     <InfoBadge
-                      className="hidden md:inline-flex"
+                      className="hidden min-w-28 justify-start md:inline-flex"
                       icon={<Armchair className="h-3 w-3" />}
                     >
                       {chairBadge(table)}
@@ -290,6 +293,7 @@ export default function TablesClient({
                   </div>
 
                   <StatusPill
+                    className="min-w-28 justify-center"
                     tone={table.available ? "success" : "error"}
                     icon={
                       table.available ? (
