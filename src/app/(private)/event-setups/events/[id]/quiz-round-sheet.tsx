@@ -31,10 +31,12 @@
 //              also syncs the round's Spotify playlist)
 
 import React, { useCallback, useMemo, useRef, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
   Sparkles,
+  Plus,
   Loader2,
   RefreshCw,
   Lock,
@@ -51,6 +53,22 @@ import {
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { SpotifyPlayer } from "@/components/spotify-player";
 import { cn } from "@/lib/utils";
+
+function DfSpinner({ className }: { className?: string }) {
+  return (
+    <Image
+      src="/df-mark.jpg"
+      alt=""
+      aria-hidden="true"
+      width={96}
+      height={96}
+      className={cn(
+        "animate-spin rounded-full object-cover [animation-duration:1.6s]",
+        className
+      )}
+    />
+  );
+}
 
 import {
   generateQuizAction,
@@ -518,10 +536,13 @@ export default function QuizRoundSheet({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary px-3 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+        aria-label={hasAny ? `Add ${needed} more` : "Start round"}
+        title={hasAny ? `Add ${needed} more` : "Start round"}
+        className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:px-3"
       >
-        <Sparkles className="h-4 w-4 shrink-0" />
-        {hasAny ? `Add ${needed} more` : "Start round"}
+        <Plus className="h-4 w-4 shrink-0 sm:hidden" />
+        <Sparkles className="hidden h-4 w-4 shrink-0 sm:block" />
+        <span className="hidden sm:inline">{hasAny ? `Add ${needed} more` : "Start round"}</span>
       </button>
 
       <Sheet
@@ -848,15 +869,17 @@ export default function QuizRoundSheet({
                       </div>
                     </>
                   ) : (
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl border border-admin-line bg-admin-card px-4 py-3">
-                      <p className="flex items-center gap-2 text-sm font-semibold text-admin-ink">
+                    <div className="flex items-center gap-x-2.5 rounded-2xl border border-admin-line bg-admin-card px-3.5 py-2.5 sm:gap-x-3 sm:px-4 sm:py-3">
+                      <p className="flex min-w-0 items-center gap-1.5 text-[13px] font-semibold text-admin-ink sm:gap-2 sm:text-sm">
                         <CheckCircle2 className="h-4 w-4 shrink-0 text-admin-success" />
-                        {noun.charAt(0).toUpperCase() + noun.slice(1)}s created
+                        <span className="truncate">
+                          {noun.charAt(0).toUpperCase() + noun.slice(1)}s created
+                        </span>
                       </p>
                       <button
                         type="button"
                         onClick={() => setSetupOpen(true)}
-                        className="ml-auto h-11 rounded-xl border border-admin-line bg-white px-3.5 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface"
+                        className="relative ml-auto h-8 shrink-0 rounded-lg border border-admin-primary px-2.5 text-[12px] font-semibold text-admin-primary transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-primary-soft sm:h-11 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
                       >
                         Change topic or difficulty
                       </button>
@@ -901,16 +924,15 @@ export default function QuizRoundSheet({
                     )}
 
                     {isGenerating ? (
-                      <div className="space-y-3">
-                        {Array.from({ length: batchSize }, (_, i) => (
-                          <div
-                            key={i}
-                            className={cn(
-                              "animate-pulse rounded-2xl border border-admin-line bg-admin-surface",
-                              kind === "picture" ? "h-35" : "h-23"
-                            )}
-                          />
-                        ))}
+                      <div
+                        role="status"
+                        aria-live="polite"
+                        className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-admin-line bg-admin-card px-4 py-10"
+                      >
+                        <DfSpinner className="h-12 w-12 sm:h-14 sm:w-14" />
+                        <p className="text-[13px] font-semibold text-admin-muted">
+                          Creating {batchSize} {noun}s…
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -1068,12 +1090,12 @@ export default function QuizRoundSheet({
                                     }}
                                     disabled={isApproving || swappingIndex !== null}
                                     title={`Replace with a different ${noun}`}
-                                    className="flex h-11 shrink-0 items-center gap-1.5 rounded-xl border border-admin-line bg-white px-3.5 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-primary disabled:pointer-events-none disabled:opacity-40"
+                                    className="relative flex h-8 shrink-0 items-center gap-1 rounded-lg border border-admin-line bg-white px-2.5 text-[12px] font-semibold text-admin-muted transition-colors before:absolute before:inset-x-0 before:-inset-y-1.5 before:content-[''] hover:bg-admin-surface hover:text-admin-primary disabled:pointer-events-none disabled:opacity-40 sm:h-11 sm:gap-1.5 sm:rounded-xl sm:px-3.5 sm:text-[13px] sm:before:hidden"
                                   >
                                     {isSwapping ? (
-                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      <Loader2 className="h-3.5 w-3.5 animate-spin sm:h-4 sm:w-4" />
                                     ) : (
-                                      <RefreshCw className="h-4 w-4" />
+                                      <RefreshCw className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                                     )}
                                     Swap
                                   </button>

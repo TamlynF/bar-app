@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { BookOpen, Brain, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical } from "lucide-react";
+import { BookOpen, Brain, ChevronDown, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -358,30 +358,33 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
       {/* Four fixed rails, same order and width on every row: name + status,
           progress chip, action slot, chevron. Complete rounds fill the action
           slot with a tag rather than collapsing it. */}
-      <div className="flex flex-wrap items-center gap-3 border-b border-admin-line bg-admin-surface px-3 py-2.5 sm:px-4">
+      <div className="flex flex-nowrap items-center gap-2 border-b border-admin-line bg-admin-surface px-2 py-2.5 sm:flex-wrap sm:gap-3 sm:px-4">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          className="flex min-h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl px-1 text-left transition-colors hover:bg-admin-card/60 md:basis-auto"
+          className="flex min-h-11 min-w-0 flex-1 basis-auto items-center gap-2.5 rounded-xl px-1 text-left transition-colors hover:bg-admin-card/60 sm:basis-full md:basis-auto"
         >
           <RoundIcon className="h-4 w-4 shrink-0 text-admin-muted" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold tracking-tight text-admin-primary sm:text-[15px]">
+            <p className="line-clamp-2 text-sm font-bold tracking-tight text-admin-primary sm:truncate sm:text-[15px]">
               {orderNo != null ? `${orderNo}. ` : ''}{category_name}
             </p>
             <p className={cn(
-              "mt-0.5 text-[12px] font-medium",
+              "mt-0.5 text-[12px] font-medium tabular-nums",
               isComplete ? "text-admin-success" : hasAny ? "text-admin-warning" : "text-admin-muted"
             )}>
-              {isComplete ? "Round complete" : hasAny ? `${remaining} more needed` : "Not started"}
+              <span className="sm:hidden">{count} / {question_count}</span>
+              <span className="hidden sm:inline">
+                {isComplete ? "Round complete" : hasAny ? `${remaining} more needed` : "Not started"}
+              </span>
             </p>
           </div>
         </button>
 
         <span
           className={cn(
-            "w-18.5 shrink-0 rounded-lg border py-2 text-center text-[13px] font-semibold tabular-nums",
+            "hidden w-18.5 shrink-0 rounded-lg border py-2 text-center text-[13px] font-semibold tabular-nums sm:block",
             isComplete
               ? "border-admin-success/25 bg-admin-success-bg text-admin-success"
               : hasAny
@@ -392,19 +395,25 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
           {count} / {question_count}
         </span>
 
-        <div className="flex flex-1 md:w-47.5 md:flex-none">
+        <div className="flex w-11 flex-none sm:w-auto sm:flex-1 md:w-47.5 md:flex-none">
           {isComplete ? (
-            <span className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-admin-success/40 text-[13px] font-semibold text-admin-success">
+            <span
+              title="Round complete"
+              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-admin-success/40 text-[13px] font-semibold text-admin-success"
+            >
               <Check className="h-4 w-4" />
-              Complete
+              <span className="hidden sm:inline">Complete</span>
             </span>
           ) : isPastEvent ? null : configId == null ? (
             <Link
               href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
-              className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary px-3 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+              aria-label={hasAny ? `Add ${remaining} more` : "Start round"}
+              title={hasAny ? `Add ${remaining} more` : "Start round"}
+              className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:px-3"
             >
-              <Sparkles className="h-4 w-4 shrink-0" />
-              {hasAny ? `Add ${remaining} more` : "Start round"}
+              <Plus className="h-4 w-4 shrink-0 sm:hidden" />
+              <Sparkles className="hidden h-4 w-4 shrink-0 sm:block" />
+              <span className="hidden sm:inline">{hasAny ? `Add ${remaining} more` : "Start round"}</span>
             </Link>
           ) : (
             <QuizRoundSheet
