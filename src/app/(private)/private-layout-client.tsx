@@ -8,7 +8,6 @@ import {
     Settings,
     ArrowLeft,
     LogOut,
-    TrendingUp,
     Brain,
     ChevronDown,
     ChevronUp,
@@ -30,10 +29,12 @@ import { signOut } from "@/app/login/actions"
 import { cardIcon } from "@/lib/booking-card-icons"
 import { swatchHexFromColor } from "@/lib/event-type-colors"
 import {
+    MARKET_TRENDS_ITEM,
     QUIZ_HUB_HREF,
     QUIZ_NAV_ITEMS,
     SCHEDULE_HREF,
     SETTINGS_NAV_ITEMS,
+    isMarketTrendsPath,
     isQuizPath,
     isSchedulePath,
     isSettingsPath,
@@ -130,21 +131,20 @@ export default function PrivateLayoutClient({
 
     /* Trends and Settings live behind "More" so the five mobile targets stay legible. */
     const moreNavItems = [
-        { label: "Market trends", href: "/marketing/trends", icon: TrendingUp },
-        { label: "Settings", href: "/settings", icon: Settings },
+        { label: MARKET_TRENDS_ITEM.label, href: MARKET_TRENDS_ITEM.href, icon: MARKET_TRENDS_ITEM.icon, matches: isMarketTrendsPath },
+        { label: "Settings", href: "/settings", icon: Settings, matches: isSettingsPath },
     ]
     const normalizedPathname = pathname?.replace(/\/$/, "") || ""
-    const onMoreRoute = moreNavItems.some(
-        (i) => normalizedPathname === i.href.replace(/\/$/, "") || normalizedPathname.startsWith(`${i.href.replace(/\/$/, "")}/`)
-    )
+    const onMoreRoute = moreNavItems.some((i) => i.matches(normalizedPathname))
 
+    /* Read and analyse, then operate, then configure. */
     const sidebarItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { label: MARKET_TRENDS_ITEM.label, href: MARKET_TRENDS_ITEM.href, icon: MARKET_TRENDS_ITEM.icon },
         { label: "Bookings", href: "/event-bookings", icon: Tickets },
         { label: "Requests", href: "/requests", icon: Inbox },
         { label: "Schedule", href: SCHEDULE_HREF, icon: CalendarCogIcon },
         { label: "Quiz", href: QUIZ_HUB_HREF, icon: Brain },
-        { label: "Market trends", href: "/marketing/trends", icon: TrendingUp },
         { label: "Settings", href: "/settings", icon: Settings },
     ]
 
@@ -758,8 +758,7 @@ export default function PrivateLayoutClient({
                         </SheetDescription>
                         <div className="flex flex-col p-2">
                             {moreNavItems.map((item) => {
-                                const isActive = normalizedPathname === item.href.replace(/\/$/, "")
-                                    || normalizedPathname.startsWith(`${item.href.replace(/\/$/, "")}/`)
+                                const isActive = item.matches(normalizedPathname)
                                 return (
                                     <Link
                                         key={item.href}

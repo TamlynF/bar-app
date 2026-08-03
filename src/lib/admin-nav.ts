@@ -12,6 +12,7 @@ import {
   Shapes,
   ShoppingBag,
   Sparkles,
+  TrendingUp,
   UserCog2,
   UtensilsCrossed,
   type LucideIcon,
@@ -33,6 +34,18 @@ export type AdminNavGroup = {
 export const SCHEDULE_HREF = "/event-setups/events";
 
 export const QUIZ_HUB_HREF = "/event-setups/quiz";
+
+/* A single weekly read, not a section - /marketing redirects here. */
+export const MARKET_TRENDS_ITEM: AdminNavItem = {
+  label: "Market trends",
+  href: "/marketing/trends",
+  icon: TrendingUp,
+  description: "Ideas, events and price-offs from venues near you",
+};
+
+export function isMarketTrendsPath(path: string): boolean {
+  return path === "/marketing" || path.startsWith("/marketing/");
+}
 
 export const QUIZ_NAV_ITEMS: AdminNavItem[] = [
   {
