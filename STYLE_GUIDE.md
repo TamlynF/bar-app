@@ -271,10 +271,12 @@ Tracking: page title `tracking-tight`; card title `tracking-tight` or default; b
 
 One accent carries weight: **solid olive means "this writes a record"**. Everything else steps back. Compose layout/sizing (`h-12 rounded-xl …`, or a small `h-7` header variant) around these.
 
+Labels follow the admin type scale above - `text-[13px] font-semibold`, sentence case ("Save changes", not "SAVE CHANGES"). The colour is what distinguishes the actions, not the shouting.
+
 | Action | Treatment |
 |---|---|
-| **Save / Create / Add / New / Upload** | Solid olive: `bg-[#34451F] hover:bg-[#283719] text-white font-black uppercase tracking-widest` |
-| **Edit** | Olive outline: `border border-[#34451F] text-[#34451F] hover:bg-[#E5EBD8] font-black uppercase tracking-widest` |
+| **Save / Create / Add / New / Upload** | Solid olive: `bg-[#34451F] hover:bg-[#283719] text-white` |
+| **Edit** | Olive outline: `border border-[#34451F] text-[#34451F] hover:bg-[#E5EBD8]` |
 | **Cancel / dismiss** | Neutral outline: `border border-[#D8D5C8] text-[#5E6654] hover:bg-[#ECE9DE]` |
 | **Delete** | Red (`#B33A32`), and **only behind a confirmation** - never a bare one-tap destructive control |
 
@@ -315,7 +317,7 @@ Rules:
 ### Empty states
 Always provide one:
 - Soft icon at 20-30% opacity
-- "No [thing] yet" headline in `font-black uppercase`
+- "No [thing] yet" headline - `font-black uppercase` on public, `text-sm font-semibold` sentence case on admin
 - One sentence of helper text
 - Optional CTA
 

@@ -105,14 +105,14 @@ export const STATUS_STYLES: Record<
   },
 };
 
-const MICRO_LABEL = "font-black text-[10px] tracking-[0.12em] text-[#5E6654] uppercase";
+const FIELD_LABEL = "text-[11px] font-semibold text-[#5E6654]";
 const PANEL = "overflow-hidden rounded-[14px] border border-[#C4C0B0] bg-white";
 const PANEL_HEAD =
-  "border-b border-[#C4C0B0] bg-[#ECE9DE] px-4 py-2.5 font-black text-[10px] tracking-[0.14em] text-[#5E6654] uppercase";
+  "border-b border-[#C4C0B0] bg-[#ECE9DE] px-4 py-2.5 text-[13px] font-semibold text-[#5E6654]";
 const FIELD =
-  "h-10.5 w-full rounded-[11px] border-[1.5px] border-[#C9BB93] bg-white px-3 text-[13px] font-bold text-[#20231A] shadow-none focus-visible:border-[#34451F] focus-visible:ring-[3px] focus-visible:ring-[#D7A928]/30";
+  "h-10.5 w-full rounded-[11px] border-[1.5px] border-[#C9BB93] bg-white px-3 text-sm font-medium text-[#20231A] shadow-none focus-visible:border-[#34451F] focus-visible:ring-[3px] focus-visible:ring-[#D7A928]/30";
 const ACTION =
-  "inline-flex items-center justify-center gap-2 font-black text-[10.5px] tracking-[0.07em] uppercase transition-[filter,box-shadow] hover:brightness-[0.94] active:scale-[0.98]";
+  "inline-flex items-center justify-center gap-2 text-[13px] font-semibold transition-[filter,box-shadow] hover:brightness-[0.94] active:scale-[0.98]";
 
 const normStatus = (s?: string | null) => (s || "").trim().toLowerCase();
 
@@ -131,7 +131,7 @@ function StatusPill({ status }: { status: string }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-black text-[9.5px] tracking-[0.08em] uppercase",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide",
         style.bg,
         style.text,
         style.border,
@@ -146,8 +146,8 @@ function StatusPill({ status }: { status: string }) {
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-3.5 border-b border-[#E3DCC6] px-4 py-2.5 last:border-b-0">
-      <span className={cn(MICRO_LABEL, "w-27.5 shrink-0")}>{label}</span>
-      <span className="font-black text-[12.5px] text-[#20231A]">{children}</span>
+      <span className={cn(FIELD_LABEL, "w-27.5 shrink-0")}>{label}</span>
+      <span className="text-[13px] font-semibold text-[#20231A]">{children}</span>
     </div>
   );
 }
@@ -167,7 +167,7 @@ function Hint({
     amber: "border-[#E8D49A] bg-[#FBF3DC] text-[#8A5F0E]",
   };
   return (
-    <div className={cn("flex items-center gap-2 rounded-[9px] border px-2.5 py-1.75 text-[11px] font-bold", tones[tone])}>
+    <div className={cn("flex items-center gap-2 rounded-[9px] border px-2.5 py-1.75 text-xs font-medium", tones[tone])}>
       {icon}
       <span>{children}</span>
     </div>
@@ -423,10 +423,11 @@ export default function BookingList({
           )}
           {hasPaymentFor(booking) && (
             <DetailRow label="Payment">
-              £{paid.toFixed(2)} <span className="text-[#5E6654]">of £{total.toFixed(2)}</span>
+              <span className="tabular-nums">£{paid.toFixed(2)}</span>{" "}
+              <span className="text-[#5E6654] tabular-nums">of £{total.toFixed(2)}</span>
               <span
                 className={cn(
-                  "ml-2 inline-flex items-center rounded-full px-2 py-0.5 font-black text-[9.5px] tracking-[0.08em] uppercase",
+                  "ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold tracking-wide",
                   isPaid ? "bg-[#E7F2E0] text-[#2F6420]" : "bg-[#ECE9DE] text-[#5E6654]",
                 )}
               >
@@ -440,18 +441,18 @@ export default function BookingList({
           <div className={PANEL}>
             <div className={PANEL_HEAD}>Contact</div>
             <div className="flex items-center gap-3 px-4 py-3">
-              <span className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-[10px] bg-[#E5EBD8] font-black text-[11px] text-[#34451F]">
+              <span className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-[10px] bg-[#E5EBD8] text-[11px] font-semibold text-[#34451F]">
                 {initials(contact?.full_name)}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-black text-xs tracking-[0.06em] text-[#20231A] uppercase">
+                <span className="block truncate text-sm font-semibold text-[#20231A]">
                   {contact?.full_name || "Unknown"}
                 </span>
                 {contact?.email && (
-                  <span className="block truncate text-[11.5px] font-semibold text-[#5E6654]">{contact.email}</span>
+                  <span className="block truncate text-xs font-medium text-[#5E6654]">{contact.email}</span>
                 )}
                 {contact?.phone_no && (
-                  <span className="block text-[11.5px] font-semibold text-[#5E6654]">
+                  <span className="block text-xs font-medium text-[#5E6654] tabular-nums">
                     {contact.country_code ?? ""}
                     {contact.phone_no}
                   </span>
@@ -473,8 +474,8 @@ export default function BookingList({
 
           {booking.special_requests && (
             <div className="rounded-[14px] border border-[#E8D49A] bg-[#FBF3DC] px-4 py-2.5">
-              <span className={cn(MICRO_LABEL, "text-[#8A5F0E]")}>Staff note</span>
-              <p className="mt-1 text-[12.5px] font-bold text-[#20231A] italic">
+              <span className={cn(FIELD_LABEL, "text-[#8A5F0E]")}>Staff note</span>
+              <p className="mt-1 text-[13px] leading-snug font-medium text-[#20231A] italic">
                 &ldquo;{booking.special_requests}&rdquo;
               </p>
             </div>
@@ -531,7 +532,7 @@ export default function BookingList({
           <div className={PANEL_HEAD}>Editing booking #{booking.id}</div>
           <div className="flex flex-col gap-3 px-4 py-3.5">
             <div>
-              <label htmlFor={`team-${booking.id}`} className={cn(MICRO_LABEL, "mb-1.5 block")}>
+              <label htmlFor={`team-${booking.id}`} className={cn(FIELD_LABEL, "mb-1.5 block")}>
                 Team name
               </label>
               <Input
@@ -545,7 +546,7 @@ export default function BookingList({
             </div>
             <div className={cn("grid gap-2.5", bookingSeating && "grid-cols-2")}>
               <div>
-                <label htmlFor={`size-${booking.id}`} className={cn(MICRO_LABEL, "mb-1.5 block")}>
+                <label htmlFor={`size-${booking.id}`} className={cn(FIELD_LABEL, "mb-1.5 block")}>
                   Group size
                 </label>
                 <Input
@@ -561,7 +562,7 @@ export default function BookingList({
               </div>
               {bookingSeating && (
                 <div>
-                  <label htmlFor={`table-${booking.id}`} className={cn(MICRO_LABEL, "mb-1.5 block")}>
+                  <label htmlFor={`table-${booking.id}`} className={cn(FIELD_LABEL, "mb-1.5 block")}>
                     Table
                   </label>
                   <select
@@ -608,7 +609,7 @@ export default function BookingList({
                       aria-pressed={active}
                       onClick={() => handleStatusChangeInEdit(key)}
                       className={cn(
-                        "flex h-11 items-center justify-center gap-2 rounded-[10px] border-[1.5px] font-black text-[9.5px] tracking-[0.07em] uppercase transition-colors sm:h-10",
+                        "flex h-11 items-center justify-center gap-2 rounded-[10px] border-[1.5px] text-[13px] font-semibold transition-colors sm:h-10",
                         active
                           ? cn(style.bg, style.text, style.border)
                           : "border-[#C9BB93] bg-white text-[#5E6654] hover:bg-[#F4F1E8]",
@@ -626,7 +627,7 @@ export default function BookingList({
                 </Hint>
               )}
               <div>
-                <label htmlFor={`note-${booking.id}`} className={cn(MICRO_LABEL, "mb-1.5 block")}>
+                <label htmlFor={`note-${booking.id}`} className={cn(FIELD_LABEL, "mb-1.5 block")}>
                   Staff note
                 </label>
                 <Textarea
@@ -664,10 +665,10 @@ export default function BookingList({
     );
   };
 
-  const headCell = "sticky top-0 z-10 bg-[#34451F] px-4 py-3 text-left font-black text-[9.5px] tracking-[0.12em] whitespace-nowrap text-[#EDE9D8] uppercase shadow-[inset_0_-2px_0_#26300D]";
+  const headCell = "sticky top-0 z-10 bg-[#34451F] px-4 py-3 text-left text-[11px] font-semibold tracking-wide whitespace-nowrap text-[#EDE9D8] uppercase shadow-[inset_0_-2px_0_#26300D]";
   const bodyCell = (open: boolean) =>
     cn(
-      "px-4 py-3.25 align-middle text-[12.5px] font-semibold whitespace-nowrap",
+      "px-4 py-3.25 align-middle text-[13px] font-medium whitespace-nowrap",
       open ? "border-b border-dotted border-[#C4C0B0]" : "border-b border-[#EDEAE0]",
     );
 
@@ -692,7 +693,7 @@ export default function BookingList({
           <tbody>
             {bookings.length === 0 ? (
               <tr>
-                <td colSpan={columnCount} className="px-4 py-8 text-center text-[12.5px] font-semibold text-[#5E6654]">
+                <td colSpan={columnCount} className="px-4 py-8 text-center text-[13px] font-medium text-[#5E6654]">
                   No bookings match — try another filter or clear the search.
                 </td>
               </tr>
@@ -740,9 +741,7 @@ export default function BookingList({
                         </td>
                       )}
                       <td className={bodyCell(open)}>
-                        <span className="font-black text-[12.5px] tracking-[0.06em] text-[#20231A] uppercase">
-                          {teamName}
-                        </span>
+                        <span className="text-sm font-semibold text-[#20231A]">{teamName}</span>
                         {booking.special_requests && (
                           <span title="Has a staff note" className="ml-1.5 inline-block align-[-2px]">
                             <Star className="h-3.5 w-3.5 fill-[#B07A16] text-[#B07A16]" />
@@ -750,7 +749,7 @@ export default function BookingList({
                         )}
                       </td>
                       <td className={cn(bodyCell(open), "text-[#5E6654]")}>{booking.contacts?.full_name || "-"}</td>
-                      <td className={cn(bodyCell(open), "text-center font-black text-[13px] text-[#20231A]")}>
+                      <td className={cn(bodyCell(open), "text-center text-sm font-semibold text-[#20231A] tabular-nums")}>
                         {booking.group_size ?? 0}
                       </td>
                       {seatingRequired && (
@@ -760,7 +759,7 @@ export default function BookingList({
                           ) : table?.tables_name ? (
                             <span className="text-[#20231A]">{table.tables_name}</span>
                           ) : (
-                            <span className="font-bold text-[#8A5F0E]">None yet</span>
+                            <span className="font-semibold text-[#8A5F0E]">None yet</span>
                           )}
                         </td>
                       )}
@@ -769,9 +768,11 @@ export default function BookingList({
                           {!hasPaymentFor(booking) ? (
                             <span className="text-[#5E6654]">—</span>
                           ) : paid >= total ? (
-                            <span className="font-bold text-[#2F6420]">Paid £{paid.toFixed(2)}</span>
+                            <span className="font-semibold text-[#2F6420] tabular-nums">
+                              Paid £{paid.toFixed(2)}
+                            </span>
                           ) : (
-                            <span className="text-[#5E6654]">
+                            <span className="text-[#5E6654] tabular-nums">
                               £{paid.toFixed(2)} of £{total.toFixed(2)}
                             </span>
                           )}
@@ -800,8 +801,8 @@ export default function BookingList({
       </div>
 
       {isPending && (
-        <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#34451F] px-6 py-3.5 font-black text-[11px] tracking-wide text-white uppercase shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
-          <Loader2 className="h-4 w-4 animate-spin" /> Syncing with DB...
+        <div className="fixed bottom-10 left-1/2 z-100 flex -translate-x-1/2 animate-in items-center gap-3 rounded-full border border-white/10 bg-[#34451F] px-6 py-3.5 text-[13px] font-semibold text-white shadow-2xl duration-300 fade-in slide-in-from-bottom-4">
+          <Loader2 className="h-4 w-4 animate-spin" /> Saving…
         </div>
       )}
       {ConfirmDialogUI}

@@ -15,8 +15,8 @@ function RequestsShell({ title, subtitle, children }: { title: string; subtitle:
     <div className="min-h-screen flex-1 bg-background">
       <div className="mx-auto max-w-4xl space-y-6 px-4 py-4 sm:py-0 md:px-8">
         <div>
-          <h2 className="font-black text-xl tracking-tight text-[#20231A] uppercase">{title}</h2>
-          <p className="mt-0.5 text-xs text-[#5E6654]">{subtitle}</p>
+          <h2 className="text-xl leading-tight font-bold tracking-tight text-[#20231A]">{title}</h2>
+          <p className="mt-1 text-sm leading-normal text-[#5E6654]">{subtitle}</p>
         </div>
         {children}
       </div>
@@ -52,7 +52,7 @@ export default async function GeneralEventBookingsPage({
   if (requestKind === "music_act") {
     const requests = (await getBandRequestsForType()) as unknown as BandRequest[];
     return (
-      <RequestsShell title="Band Applications" subtitle="Review and respond to artist bookings">
+      <RequestsShell title="Band applications" subtitle="Review and respond to artist bookings">
         <BandBookingListClient initialRequests={requests} initialStatuses={initialStatuses} />
       </RequestsShell>
     );
@@ -60,7 +60,7 @@ export default async function GeneralEventBookingsPage({
   if (requestKind === "private") {
     const requests = (await getPrivateHireRequestsForType()) as unknown as PrivateHireRequest[];
     return (
-      <RequestsShell title="Private Hire" subtitle="Review and respond to venue hire enquiries">
+      <RequestsShell title="Private hire" subtitle="Review and respond to venue hire enquiries">
         <PrivateHireListClient initialRequests={requests} initialStatuses={initialStatuses} />
       </RequestsShell>
     );

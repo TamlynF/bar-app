@@ -21,7 +21,7 @@ export interface EventSummary {
   quiz?: { status: string; count: number; total: number } | null;
 }
 
-const MICRO_LABEL = "font-black text-[10px] tracking-[0.12em] text-[#5E6654] uppercase";
+const FIELD_LABEL = "text-[11px] font-semibold text-[#5E6654]";
 
 const ALL_TAB = "all";
 
@@ -97,7 +97,7 @@ export default function BookingsSection({
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className={cn(MICRO_LABEL, "mr-1")}>Step 2 · Show me</span>
+        <span className={cn(FIELD_LABEL, "mr-1")}>Step 2 · Show me</span>
         {tabs.map(tab => {
           const active = statusTab === tab.key;
           return (
@@ -107,25 +107,25 @@ export default function BookingsSection({
               aria-pressed={active}
               onClick={() => setStatusTab(tab.key)}
               className={cn(
-                "h-11 rounded-[10px] px-3.5 font-black text-[10px] tracking-[0.07em] uppercase transition-colors sm:h-9.5",
+                "h-11 rounded-[10px] px-3.5 text-[13px] font-semibold transition-colors sm:h-9.5",
                 active
                   ? "bg-[#34451F] text-white"
                   : "border border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#F4F1E8]",
               )}
             >
-              {tab.label} ({counts[tab.key] ?? 0})
+              {tab.label} <span className="tabular-nums">({counts[tab.key] ?? 0})</span>
             </button>
           );
         })}
         <div className="flex h-11 w-full items-center gap-2 rounded-[10px] border border-[#D8D5C8] bg-white px-3 focus-within:border-[#34451F] sm:ml-auto sm:h-9.5 sm:w-auto">
-          <Search className="h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
+          <Search className="h-4 w-4 shrink-0 text-[#5E6654]" />
           <input
             type="text"
             aria-label="Find a booking by team or contact name"
             placeholder="Find a name…"
             value={searchQuery}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-            className="min-w-0 flex-1 bg-transparent text-[12.5px] font-semibold text-[#20231A] outline-none placeholder:font-medium placeholder:text-[#5E6654] sm:w-37.5 sm:flex-none"
+            className="min-w-0 flex-1 bg-transparent text-sm font-medium text-[#20231A] outline-none placeholder:font-normal placeholder:text-[#5E6654] sm:w-37.5 sm:flex-none"
           />
         </div>
       </div>
@@ -138,7 +138,7 @@ export default function BookingsSection({
         initialSelectedId={initialSelectedId}
       />
 
-      <p className="text-[11.5px] font-semibold text-[#5E6654]">
+      <p className="text-xs leading-snug font-medium text-[#5E6654]">
         Click any row to open its full details right underneath it.
       </p>
     </div>

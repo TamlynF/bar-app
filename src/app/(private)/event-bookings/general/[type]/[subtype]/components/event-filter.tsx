@@ -20,7 +20,7 @@ export interface PickerStats {
   guests: number;
 }
 
-const MICRO_LABEL = "font-black text-[10px] tracking-[0.12em] text-[#5E6654] uppercase";
+const FIELD_LABEL = "text-[11px] font-semibold text-[#5E6654]";
 
 const ALL_EVENTS = "all";
 
@@ -31,8 +31,8 @@ function optionLabel(event: EventItem) {
 function Chip({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center gap-2.5 rounded-xl border border-[#C9BB93] bg-white px-3.5 py-2.5">
-      <span className={MICRO_LABEL}>{label}</span>
-      <span className="font-black text-[15px] text-[#20231A] tabular-nums">{children}</span>
+      <span className={FIELD_LABEL}>{label}</span>
+      <span className="text-[15px] font-bold text-[#20231A] tabular-nums">{children}</span>
     </div>
   );
 }
@@ -81,11 +81,11 @@ export default function EventPickerBanner({
     <section className="flex flex-wrap items-end gap-x-6 gap-y-4 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-5 py-4.5">
       <div className="min-w-0 flex-1">
         {showPicker ? (
-          <label htmlFor="event-picker" className={cn(MICRO_LABEL, "mb-1.5 block")}>
+          <label htmlFor="event-picker" className={cn(FIELD_LABEL, "mb-1.5 block")}>
             Step 1 · Choose which event to view
           </label>
         ) : (
-          <span className={cn(MICRO_LABEL, "mb-1.5 block")}>Event</span>
+          <span className={cn(FIELD_LABEL, "mb-1.5 block")}>Event</span>
         )}
         {showPicker ? (
           <div className="relative inline-block w-full max-w-full sm:w-auto">
@@ -93,7 +93,7 @@ export default function EventPickerBanner({
               id="event-picker"
               value={selectedEventId ?? ALL_EVENTS}
               onChange={e => handleChange(e.target.value)}
-              className="h-13 w-full appearance-none rounded-[13px] border-2 border-[#34451F] bg-white pr-11 pl-4 font-black text-sm tracking-wide text-[#20231A] uppercase outline-none focus:shadow-[0_0_0_3px_rgba(215,169,40,0.35)] sm:w-auto sm:min-w-85"
+              className="h-13 w-full appearance-none rounded-[13px] border-2 border-[#34451F] bg-white pr-11 pl-4 text-sm font-semibold text-[#20231A] outline-none focus:shadow-[0_0_0_3px_rgba(215,169,40,0.35)] sm:w-auto sm:min-w-85"
             >
               <option value={ALL_EVENTS}>All events — full history</option>
               {upcoming.length > 0 && (
@@ -118,11 +118,11 @@ export default function EventPickerBanner({
             <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-[#34451F]" />
           </div>
         ) : (
-          <h2 className="flex h-13 items-center font-black text-lg tracking-tight text-[#20231A] uppercase">
+          <h2 className="flex h-13 items-center text-lg leading-tight font-bold tracking-tight text-[#20231A]">
             {summary?.title || "Untitled event"}
           </h2>
         )}
-        <p className="mt-2 text-xs font-bold text-[#5E6654]">
+        <p className="mt-2 text-[13px] leading-snug font-medium text-[#5E6654]">
           {summary ? (
             <>
               {summary.dateLabel} · {summary.timeLabel} · Hosted by {summary.hostName} ·{" "}
@@ -148,7 +148,9 @@ export default function EventPickerBanner({
           {summary && hasPayments && (
             <Chip label="Paid">
               £{summary.totalPaid.toFixed(0)}{" "}
-              <span className="text-xs text-[#5E6654]">of £{summary.totalExpected.toFixed(0)}</span>
+              <span className="text-[13px] font-medium text-[#5E6654]">
+                of £{summary.totalExpected.toFixed(0)}
+              </span>
             </Chip>
           )}
           {summary?.quiz && summary.quiz.status !== "Incomplete" && (
@@ -157,7 +159,7 @@ export default function EventPickerBanner({
                 {summary.quiz.status}
               </span>
               {summary.quiz.total > 0 && (
-                <span className="text-xs text-[#5E6654]">
+                <span className="text-[13px] font-medium text-[#5E6654]">
                   {" "}
                   {summary.quiz.count}/{summary.quiz.total}
                 </span>
@@ -168,7 +170,7 @@ export default function EventPickerBanner({
         {summary && showPicker && (
           <Link
             href={`/event-bookings/event/${summary.eventId}`}
-            className="inline-flex h-9.5 items-center rounded-[11px] border border-[#D8D5C8] bg-white px-4 font-black text-[10.5px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#ECE9DE]"
+            className="inline-flex h-9.5 items-center rounded-[11px] border border-[#D8D5C8] bg-white px-4 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE]"
           >
             Manage event
           </Link>

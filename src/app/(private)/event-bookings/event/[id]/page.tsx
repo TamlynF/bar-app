@@ -194,7 +194,7 @@ export default async function EventDetailPage({
   }));
 
   return (
-    <div className="min-h-screen flex-1 bg-background">
+    <div className="flex-1 bg-background">
       <div className="mx-auto max-w-7xl px-3 py-3 sm:py-0 md:px-8">
         <BookingsSection
           bookings={generalBookings}
