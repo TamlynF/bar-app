@@ -63,7 +63,7 @@ function DfSpinner({ className }: { className?: string }) {
       width={96}
       height={96}
       className={cn(
-        "animate-spin rounded-full object-cover [animation-duration:1.6s]",
+        "animate-spin rounded-full object-cover animation-duration-[1.6s]",
         className
       )}
     />

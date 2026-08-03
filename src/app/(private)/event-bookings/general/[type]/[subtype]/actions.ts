@@ -1,10 +1,13 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { squareClient } from "@/lib/square";
+import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { updateFullyBookedStatus } from "@/lib/update-fully-booked";
 import { loadBookingSnapshot, notifyBookingChanged } from "@/lib/booking-notifications";
 import {
+  clearMappingOnStatusChange,
   getFreeTablesForEvent,
   reconcileSeatedBookingTable,
   seatingErrorMessage,
@@ -221,6 +224,72 @@ export async function deleteGeneralBooking(id: string) {
   if (booking?.event_id) {
     await updateFullyBookedStatus(supabase, booking.event_id);
   }
+
+  revalidatePath("/dashboard");
+  revalidatePath(GENERAL_PATH, "page");
+}
+
+export async function refundGeneralBooking(id: string) {
+  const supabase = await createClient();
+
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("paid_amount, square_payment_id, event_id")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!booking) throw new Error("Booking not found");
+
+  let updatedById: number | null = null;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (user?.email) {
+    const { data: emp } = await supabase
+      .from("employees")
+      .select("id")
+      .eq("email", user.email)
+      .maybeSingle();
+    if (emp) updatedById = emp.id;
+  }
+
+  const before = await loadBookingSnapshot(id);
+
+  if (booking.square_payment_id) {
+    try {
+      await squareClient.refunds.refundPayment({
+        idempotencyKey: randomUUID(),
+        paymentId: booking.square_payment_id,
+        amountMoney: {
+          amount: BigInt(Math.round((booking.paid_amount ?? 0) * 100)),
+          currency: "GBP",
+        },
+        reason: "Admin refund via Don Fenticas dashboard",
+      });
+    } catch (err) {
+      console.error("Square refund error:", err);
+      throw new Error("Square refund failed. Please process manually in Square dashboard.");
+    }
+  }
+
+  const { error } = await supabase
+    .from("bookings")
+    .update({
+      payment_status: "refunded",
+      status: "cancelled",
+      updated_at: new Date().toISOString(),
+      updated_by: updatedById,
+      updated_by_contact_id: null,
+    })
+    .eq("id", id);
+  if (error) {
+    console.error("Error recording refund:", error);
+    throw new Error("Refund succeeded in Square but the booking could not be updated");
+  }
+
+  await clearMappingOnStatusChange(supabase, id);
+
+  if (booking.event_id) await updateFullyBookedStatus(supabase, booking.event_id);
+
+  if (before) await notifyBookingChanged(id, before.snapshot, { changedByAdmin: true });
 
   revalidatePath("/dashboard");
   revalidatePath(GENERAL_PATH, "page");

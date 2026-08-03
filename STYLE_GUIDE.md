@@ -350,7 +350,7 @@ Always provide one:
 |---|---|
 | Detail / edit panel (admin) | Bottom-sheet (`SheetContent side="bottom"`), sticky header + footer |
 | Confirm destructive action | `useConfirm()` from `@/components/ui/confirm-dialog` |
-| Status pill | `statusTheme` in `quiz-bookings/components/booking-list-client.tsx` |
+| Status pill | `statusTheme` in `@/lib/booking-status-theme` |
 | Event type badge | `badgeClassFromColor()` in `@/lib/event-type-colors` |
 | Capacity bar | CSS variable `--bar-width` / `--capacity-width` |
 | Quick stat card (admin) | `StatCard` in `dashboard/components/stat-card.tsx` |

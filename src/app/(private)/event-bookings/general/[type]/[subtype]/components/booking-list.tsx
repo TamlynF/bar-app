@@ -24,6 +24,7 @@ import {
   getAvailableTablesForEventGeneral,
   updateGeneralBookingDetails,
   deleteGeneralBooking,
+  refundGeneralBooking,
 } from "../actions";
 
 interface TableRow {
@@ -391,12 +392,27 @@ export default function BookingList({
     });
   };
 
+  const handleRefundBooking = (id: string) => {
+    startTransition(async () => {
+      try {
+        await refundGeneralBooking(id);
+        setIsEditing(false);
+        toast.success("Refund processed");
+        router.refresh();
+      } catch (error) {
+        console.error(error);
+        toast.error(error instanceof Error ? error.message : "Refund failed");
+      }
+    });
+  };
+
   const renderView = (booking: GeneralBooking) => {
     const table = booking.booking_table_mappings?.[0]?.tables;
     const bookingSeating = seatingRequired && booking.events?.seating_required !== false;
     const paid = Number(booking.paid_amount) || 0;
     const total = Number(booking.total_amount) || 0;
-    const isPaid = total > 0 && paid >= total;
+    const isRefunded = normStatus(booking.payment_status) === "refunded";
+    const isPaid = total > 0 && paid >= total && !isRefunded;
     const contact = booking.contacts;
 
     return (
@@ -431,7 +447,7 @@ export default function BookingList({
                   isPaid ? "bg-[#E7F2E0] text-[#2F6420]" : "bg-[#ECE9DE] text-[#5E6654]",
                 )}
               >
-                {isPaid ? "Paid" : "Unpaid"}
+                {isRefunded ? "Refunded" : isPaid ? "Paid" : "Unpaid"}
               </span>
             </DetailRow>
           )}
@@ -508,6 +524,33 @@ export default function BookingList({
             >
               <Trash2 className="h-3.5 w-3.5" /> Delete
             </button>
+            {!isRefunded && paid > 0 && (
+              <button
+                type="button"
+                disabled={isPending}
+                onClick={async () => {
+                  const ok = await confirm({
+                    title: "Process refund",
+                    description:
+                      "This will cancel the booking, release its table and attempt a refund via Square. Are you sure?",
+                    confirmLabel: "Refund",
+                    variant: "destructive",
+                  });
+                  if (ok) handleRefundBooking(booking.id);
+                }}
+                className={cn(
+                  ACTION,
+                  "h-11 rounded-full border border-[#D8D5C8] bg-white px-4 text-[#96302A]",
+                )}
+              >
+                {isPending ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Refund via Square
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -770,6 +813,10 @@ export default function BookingList({
                         <td className={cn(bodyCell(open), secondaryCell)}>
                           {!hasPaymentFor(booking) ? (
                             <span className="text-[#5E6654]">—</span>
+                          ) : normStatus(booking.payment_status) === "refunded" ? (
+                            <span className="text-[#5E6654] tabular-nums">
+                              Refunded £{paid.toFixed(2)}
+                            </span>
                           ) : paid >= total ? (
                             <span className="font-semibold text-[#2F6420] tabular-nums">
                               Paid £{paid.toFixed(2)}

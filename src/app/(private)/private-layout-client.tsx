@@ -320,14 +320,10 @@ export default function PrivateLayoutClient({
                 return { title: "Requests", subtitle: "Private hire", backHref: "/requests" }
             }
 
-            const eventsMap: Record<string, string> = {
-                "quiz-bookings": "Quiz",
-                "bingo-bookings": "Bingo",
-            }
             const matchedNav = eventSubItems.find(
                 (s) => normalizedPath === s.href || normalizedPath.startsWith(`${s.href}/`)
             )
-            const subtitle = matchedNav?.label || eventsMap[segment] || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
+            const subtitle = matchedNav?.label || (segment ? segment.charAt(0).toUpperCase() + segment.slice(1).replace("-", " ") : "")
             return { title: "Bookings", subtitle, backHref: "/event-bookings" }
         }
 

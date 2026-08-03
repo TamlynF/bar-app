@@ -155,7 +155,8 @@ export async function updateBooking(
 
     revalidatePath(`/manage-booking/${bookingId}`);
     revalidatePath("/dashboard");
-    revalidatePath("/event-bookings/quiz-bookings");
+    revalidatePath("/event-bookings/general/[type]/[subtype]", "page");
+    revalidatePath("/event-bookings/event/[id]", "page");
 
     return { success: true };
   } catch (err) {

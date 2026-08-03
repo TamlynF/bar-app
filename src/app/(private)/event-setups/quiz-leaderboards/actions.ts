@@ -170,6 +170,7 @@ export async function saveEventScores(
 
   revalidatePath(LEADERBOARD_PATH);
   revalidatePath("/dashboard");
-  revalidatePath("/event-bookings/quiz-bookings");
+  revalidatePath("/event-bookings/general/[type]/[subtype]", "page");
+  revalidatePath("/event-bookings/event/[id]", "page");
   return {};
 }
