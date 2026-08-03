@@ -233,17 +233,17 @@ export default function BookingsTrend({ bookings, nowMs }: { bookings: TrendBook
 
   return (
     <section className="space-y-2">
-      <div className="flex items-center gap-2 px-1">
-        <TrendingUp className="h-4 w-4 text-[#5E6654]" />
+      <div className="flex flex-wrap items-center gap-2 px-1">
+        <TrendingUp className="h-4 w-4 shrink-0 text-[#5E6654]" />
         <h2 className="font-bold text-[13px] tracking-wide text-[#5E6654] uppercase">Bookings</h2>
-        <div className="ml-auto flex gap-1 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-1 shadow-sm">
+        <div className="ml-auto flex shrink-0 gap-1 rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] p-1 shadow-sm">
           {(["week", "month", "year"] as Range[]).map((r) => (
             <button
               key={r}
               type="button"
               onClick={() => setRange(r)}
               className={cn(
-                "rounded-lg px-3 py-1.5 font-bold text-[12px] tracking-wide uppercase transition-colors",
+                "rounded-lg px-2.5 py-1.5 font-bold text-[12px] tracking-wide uppercase transition-colors sm:px-3",
                 range === r ? "bg-[#34451F] text-white shadow-sm" : "text-[#5E6654] hover:bg-white",
               )}
             >

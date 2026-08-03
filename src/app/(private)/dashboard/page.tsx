@@ -482,13 +482,15 @@ export default async function DashboardPage() {
 
         <NeedsActionHero items={actionItems} total={totalActions} />
 
-        <div className="grid items-start gap-5 lg:grid-cols-[1.6fr_1fr]">
+        {/* minmax(0,…) on every track - without it the implicit column sizes to
+            the widest child's min-content and the whole page overflows on a phone. */}
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
 
-          <div className="row-start-1 lg:col-span-2">
+          <div className="lg:row-start-1 lg:col-span-2">
             <BookingsTrend bookings={trendBookings} nowMs={nowMs} />
           </div>
 
-          <section className="row-start-2 space-y-2 lg:col-start-1">
+          <section className="space-y-2 lg:row-start-2 lg:col-start-1">
             <SectionLabel icon={BarChart3} label="Trends" />
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <RevenueTrendChart data={analytics.weekly} />
@@ -517,7 +519,7 @@ export default async function DashboardPage() {
             </div>
           </section>
 
-          <div className="row-start-2 space-y-5 lg:col-start-2">
+          <div className="space-y-5 lg:row-start-2 lg:col-start-2">
             <section className="space-y-2">
               <SectionLabel
                 icon={TrendingUp}
