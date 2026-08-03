@@ -55,7 +55,7 @@ export default function EventPickerBanner({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [detailsOpen, setDetailsOpen] = useState(true);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const upcoming = events
     .filter(e => e.date >= todayIso)
@@ -101,15 +101,48 @@ export default function EventPickerBanner({
     .join(" · ");
 
   return (
-    <section className="flex flex-wrap items-end gap-x-6 gap-y-2.5 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-3.5 py-3.5 max-sm:-mx-3 sm:gap-y-4 sm:px-5 sm:py-4.5">
+    <section className="flex flex-wrap items-end gap-x-6 gap-y-2.5 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-3.5 py-3 max-sm:-mx-3 sm:gap-y-4 sm:px-5 sm:py-3.5">
       <div className="min-w-0 flex-1">
-        <div className="mb-1 flex items-center gap-2 sm:mb-1.5">
+        {showPicker && (
+          <label htmlFor="event-picker" className={cn(FIELD_LABEL, "mb-1.5 block")}>
+            Step 1 · Choose which event to view
+          </label>
+        )}
+        <div className="flex items-center gap-2">
           {showPicker ? (
-            <label htmlFor="event-picker" className={FIELD_LABEL}>
-              Step 1 · Choose which event to view
-            </label>
+            <div className="relative min-w-0 flex-1 sm:flex-none">
+              <select
+                id="event-picker"
+                value={selectedEventId ?? ALL_EVENTS}
+                onChange={e => handleChange(e.target.value)}
+                className="h-11 w-full appearance-none rounded-xl border-2 border-[#34451F] bg-white pr-11 pl-3.5 text-sm font-semibold text-[#20231A] outline-none focus:shadow-[0_0_0_3px_rgba(215,169,40,0.35)] sm:h-12 sm:w-auto sm:min-w-85 sm:rounded-[13px] sm:pl-4"
+              >
+                <option value={ALL_EVENTS}>All events — full history</option>
+                {upcoming.length > 0 && (
+                  <optgroup label="Upcoming">
+                    {upcoming.map(e => (
+                      <option key={e.id} value={e.id}>
+                        {optionLabel(e)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {past.length > 0 && (
+                  <optgroup label="Past">
+                    {past.map(e => (
+                      <option key={e.id} value={e.id}>
+                        {optionLabel(e)}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+              </select>
+              <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-[#34451F]" />
+            </div>
           ) : (
-            <span className={FIELD_LABEL}>Event</span>
+            <h2 className="min-w-0 flex-1 truncate text-lg leading-tight font-bold tracking-tight text-[#20231A]">
+              {summary?.title || "Untitled event"}
+            </h2>
           )}
           <button
             type="button"
@@ -117,46 +150,11 @@ export default function EventPickerBanner({
             aria-expanded={detailsOpen}
             aria-controls="event-banner-details"
             aria-label={detailsOpen ? "Hide event details" : "Show event details"}
-            className="-my-2 -mr-1.5 ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#5E6654] transition-colors hover:bg-black/5 sm:my-0 sm:h-8 sm:w-8"
+            className="-my-2 -mr-1.5 ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#5E6654] transition-colors hover:bg-black/5 sm:my-0 sm:h-9 sm:w-9"
           >
             <ChevronDown className={cn("h-4 w-4 transition-transform", detailsOpen && "rotate-180")} />
           </button>
         </div>
-        {showPicker ? (
-          <div className="relative inline-block w-full max-w-full sm:w-auto">
-            <select
-              id="event-picker"
-              value={selectedEventId ?? ALL_EVENTS}
-              onChange={e => handleChange(e.target.value)}
-              className="h-11 w-full appearance-none rounded-xl border-2 border-[#34451F] bg-white pr-11 pl-3.5 text-sm font-semibold text-[#20231A] outline-none focus:shadow-[0_0_0_3px_rgba(215,169,40,0.35)] sm:h-13 sm:w-auto sm:min-w-85 sm:rounded-[13px] sm:pl-4"
-            >
-              <option value={ALL_EVENTS}>All events — full history</option>
-              {upcoming.length > 0 && (
-                <optgroup label="Upcoming">
-                  {upcoming.map(e => (
-                    <option key={e.id} value={e.id}>
-                      {optionLabel(e)}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-              {past.length > 0 && (
-                <optgroup label="Past">
-                  {past.map(e => (
-                    <option key={e.id} value={e.id}>
-                      {optionLabel(e)}
-                    </option>
-                  ))}
-                </optgroup>
-              )}
-            </select>
-            <ChevronDown className="pointer-events-none absolute top-1/2 right-4 h-4 w-4 -translate-y-1/2 text-[#34451F]" />
-          </div>
-        ) : (
-          <h2 className="flex min-h-11 items-center text-lg leading-tight font-bold tracking-tight text-[#20231A] sm:h-13">
-            {summary?.title || "Untitled event"}
-          </h2>
-        )}
         {detailsOpen && (
           <div id="event-banner-details">
             <p className="mt-1.5 text-[13px] leading-snug font-medium text-[#5E6654] sm:mt-2">
