@@ -12,15 +12,38 @@ const BENCHMARKS: Benchmark[] = [
   { key: "snack", label: "Snacks", keywords: ["crisps", "nuts", "olives", "snack", "nachos", "fries", "chips", "pork scratching"] },
 ];
 
-function matchBenchmark(name: string): Benchmark | null {
+export function matchBenchmark(name: string): Benchmark | null {
   const n = name.toLowerCase();
   return BENCHMARKS.find((b) => b.keywords.some((k) => n.includes(k))) ?? null;
+}
+
+function competitorStats(competitorPrices: CompetitorPrice[], key: string | null) {
+  const amounts = key
+    ? competitorPrices
+        .filter((c) => matchBenchmark(c.item_name)?.key === key)
+        .map((c) => c.price_amount ?? parseGbp(c.price_text))
+        .filter((v): v is number => v != null)
+    : [];
+
+  return {
+    min: amounts.length ? Math.min(...amounts) : null,
+    max: amounts.length ? Math.max(...amounts) : null,
+    avg: amounts.length
+      ? Math.round((amounts.reduce((s, v) => s + v, 0) / amounts.length) * 100) / 100
+      : null,
+    count: amounts.length,
+  };
 }
 
 export type Verdict = "above" | "below" | "inline" | "unknown";
 
 export type BenchmarkComparison = {
+  // Which benchmark the local prices come from - several menu rows can share one.
   key: string;
+  // Unique per row when comparing real menu items; benchmark rows don't need it.
+  rowId?: string;
+  // The local benchmark a menu row is measured against, for the row's sub-line.
+  matchLabel?: string | null;
   label: string;
   ownPrice: number | null;
   ownItemName: string | null;
@@ -44,16 +67,7 @@ export function buildComparison(
   menuItems: MenuItemLite[],
 ): BenchmarkComparison[] {
   return BENCHMARKS.map((b) => {
-    const compAmounts = competitorPrices
-      .filter((c) => matchBenchmark(c.item_name)?.key === b.key)
-      .map((c) => c.price_amount ?? parseGbp(c.price_text))
-      .filter((v): v is number => v != null);
-
-    const competitorMin = compAmounts.length ? Math.min(...compAmounts) : null;
-    const competitorMax = compAmounts.length ? Math.max(...compAmounts) : null;
-    const competitorAvg = compAmounts.length
-      ? Math.round((compAmounts.reduce((s, v) => s + v, 0) / compAmounts.length) * 100) / 100
-      : null;
+    const stats = competitorStats(competitorPrices, b.key);
 
     const ownMatches = menuItems
       .map((m) => ({ name: m.name, price: parseGbp(m.price) }))
@@ -66,11 +80,39 @@ export function buildComparison(
       label: b.label,
       ownPrice: own?.price ?? null,
       ownItemName: own?.name ?? null,
-      competitorMin,
-      competitorAvg,
-      competitorMax,
-      sampleCount: compAmounts.length,
-      verdict: verdictFor(own?.price ?? null, competitorAvg),
+      competitorMin: stats.min,
+      competitorAvg: stats.avg,
+      competitorMax: stats.max,
+      sampleCount: stats.count,
+      verdict: verdictFor(own?.price ?? null, stats.avg),
+    };
+  });
+}
+
+// One row per real menu item instead of the six fixed rounds. Local prices still
+// come from the benchmark the item's name matches, so a "Peroni" is measured
+// against local lagers.
+export function buildMenuComparison(
+  competitorPrices: CompetitorPrice[],
+  menuItems: MenuItemLite[],
+): BenchmarkComparison[] {
+  return menuItems.map((m) => {
+    const b = matchBenchmark(m.name);
+    const stats = competitorStats(competitorPrices, b?.key ?? null);
+    const ownPrice = parseGbp(m.price);
+
+    return {
+      key: b?.key ?? `unmatched:${m.id}`,
+      rowId: `item:${m.id}`,
+      matchLabel: b?.label ?? null,
+      label: m.name,
+      ownPrice,
+      ownItemName: m.category ?? null,
+      competitorMin: stats.min,
+      competitorAvg: stats.avg,
+      competitorMax: stats.max,
+      sampleCount: stats.count,
+      verdict: verdictFor(ownPrice, stats.avg),
     };
   });
 }

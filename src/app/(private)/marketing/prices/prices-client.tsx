@@ -6,14 +6,17 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatGbp } from "@/lib/price";
 import { refreshPriceInsightsAction, updateComparisonAreaAction } from "./actions";
-import { buildVenueMatrix, rankedVenues } from "../lib/compare";
+import { buildMenuComparison, buildVenueMatrix, rankedVenues } from "../lib/compare";
 import { TrendCard } from "../trends/trend-card";
 import type { BenchmarkComparison } from "../lib/compare";
-import type { CompetitorPrice, MarketingTrend, TrendState } from "../lib/types";
+import type { CompetitorPrice, MarketingTrend, MenuItemLite, TrendState } from "../lib/types";
 
 type PriceView = "summary" | "byVenue";
+type CompareMode = "rounds" | "menu";
 
 const MAX_VENUES = 4;
+
+const rowKey = (c: BenchmarkComparison) => c.rowId ?? c.key;
 
 function formatWhen(iso: string | null): string {
   if (!iso) return "never";
@@ -26,6 +29,7 @@ export default function PricesClient({
   lastRefresh,
   comparison,
   competitorPrices,
+  menuItems,
   priceTrends,
   onSetTrendState,
   pendingTrendId,
@@ -35,6 +39,7 @@ export default function PricesClient({
   lastRefresh: string | null;
   comparison: BenchmarkComparison[];
   competitorPrices: CompetitorPrice[];
+  menuItems: MenuItemLite[];
   priceTrends: MarketingTrend[];
   onSetTrendState: (id: string, state: TrendState) => void;
   pendingTrendId: string | null;
@@ -44,8 +49,10 @@ export default function PricesClient({
   const [isEditing, setIsEditing] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
   const [view, setView] = useState<PriceView>("summary");
+  const [compareMode, setCompareMode] = useState<CompareMode>("rounds");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [pickedItems, setPickedItems] = useState<string[] | null>(null);
+  const [pickedRounds, setPickedRounds] = useState<string[] | null>(null);
+  const [pickedMenu, setPickedMenu] = useState<string[] | null>(null);
   const [pickedVenues, setPickedVenues] = useState<string[] | null>(null);
   const [openRowKey, setOpenRowKey] = useState<string | null>(null);
 
@@ -56,10 +63,43 @@ export default function PricesClient({
     return (kept.length ? kept : allVenues.slice(0, MAX_VENUES)).slice(0, MAX_VENUES);
   }, [pickedVenues, allVenues]);
 
-  const shownComparison = useMemo(
-    () => (pickedItems == null ? comparison : comparison.filter((c) => pickedItems.includes(c.key))),
-    [comparison, pickedItems],
+  // One row per real menu item, measured against the local benchmark its name
+  // matches. Items with no local match (or no readable price) stay off by
+  // default but can be ticked on.
+  const menuRows = useMemo(
+    () => buildMenuComparison(competitorPrices, menuItems),
+    [competitorPrices, menuItems],
   );
+  const defaultMenuRows = useMemo(
+    () => menuRows.filter((r) => r.matchLabel && r.ownPrice != null),
+    [menuRows],
+  );
+
+  const shownComparison = useMemo(() => {
+    if (compareMode === "menu") {
+      return pickedMenu == null ? defaultMenuRows : menuRows.filter((r) => pickedMenu.includes(rowKey(r)));
+    }
+    return pickedRounds == null ? comparison : comparison.filter((c) => pickedRounds.includes(c.key));
+  }, [compareMode, comparison, pickedRounds, pickedMenu, menuRows, defaultMenuRows]);
+
+  const menuByCategory = useMemo(() => {
+    const groups = new Map<string, BenchmarkComparison[]>();
+    menuRows.forEach((r) => {
+      const cat = r.ownItemName ?? "Uncategorised";
+      if (!groups.has(cat)) groups.set(cat, []);
+      groups.get(cat)!.push(r);
+    });
+    return [...groups.entries()];
+  }, [menuRows]);
+
+  const subLabel = (c: BenchmarkComparison) => {
+    if (compareMode === "menu") {
+      return [c.ownItemName, c.matchLabel ? `vs local ${c.matchLabel}` : "no local match"]
+        .filter(Boolean)
+        .join(" · ");
+    }
+    return c.ownItemName ? `your ${c.ownItemName}` : "nothing on your menu matched";
+  };
 
   const matrix = buildVenueMatrix(competitorPrices, shownComparison, shownVenues);
   const fullMatrix = useMemo(
@@ -67,7 +107,9 @@ export default function PricesClient({
     [competitorPrices, comparison, allVenues],
   );
 
-  const scored = comparison.filter((c) => c.ownPrice != null && c.competitorAvg != null && c.sampleCount > 0);
+  const scored = shownComparison.filter(
+    (c) => c.ownPrice != null && c.competitorAvg != null && c.sampleCount > 0,
+  );
   const yourScore = scored.filter((c) => (c.ownPrice as number) < (c.competitorAvg as number)).length;
   const localScore = scored.length - yourScore;
 
@@ -82,14 +124,25 @@ export default function PricesClient({
               yourScore > localScore ? "Crowd goes wild. 🎉" : "Room to fight back."
             }`;
 
-  const toggleItem = (key: string) => {
-    setPickedItems((prev) => {
+  const toggleRound = (key: string) => {
+    setPickedRounds((prev) => {
       const base = prev ?? comparison.map((c) => c.key);
       if (base.includes(key)) {
         const next = base.filter((k) => k !== key);
         return next.length ? next : base;
       }
       return [...base, key];
+    });
+  };
+
+  const toggleMenuItem = (id: string) => {
+    setPickedMenu((prev) => {
+      const base = prev ?? defaultMenuRows.map(rowKey);
+      if (base.includes(id)) {
+        const next = base.filter((k) => k !== id);
+        return next.length ? next : base;
+      }
+      return [...base, id];
     });
   };
 
@@ -100,13 +153,6 @@ export default function PricesClient({
       if (base.length >= MAX_VENUES) return base;
       return [...base, venue];
     });
-  };
-
-  // Which of your menu items supplied the "You" price - the matcher picks the
-  // cheapest name match, so it is worth showing what it landed on.
-  const ownItemNameFor = (key: string) => {
-    const name = comparison.find((c) => c.key === key)?.ownItemName;
-    return name ? `your ${name}` : null;
   };
 
   const breakdownFor = (key: string) => {
@@ -235,6 +281,34 @@ export default function PricesClient({
 
       {/* ---- Controls */}
       <div className="flex flex-wrap items-center gap-2.5">
+        <span className="hidden font-semibold text-[13px] text-[#5E6654] sm:inline">Compare:</span>
+        <div className="flex overflow-hidden rounded-[10px] border border-[#D8D5C8] bg-white">
+          {(
+            [
+              { mode: "rounds" as const, label: "Standard rounds" },
+              { mode: "menu" as const, label: "My menu" },
+            ]
+          ).map((m) => (
+            <button
+              key={m.mode}
+              type="button"
+              onClick={() => {
+                setCompareMode(m.mode);
+                setOpenRowKey(null);
+              }}
+              aria-pressed={compareMode === m.mode}
+              className={cn(
+                "flex h-10 items-center px-4 text-[13px] transition-colors sm:h-9.5",
+                compareMode === m.mode
+                  ? "bg-[#34451F] font-bold text-white"
+                  : "font-semibold text-[#5E6654] hover:bg-[#F4F1E8]",
+              )}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+
         <span className="hidden font-semibold text-[13px] text-[#5E6654] sm:inline">View:</span>
         <div className="flex overflow-hidden rounded-[10px] border border-[#D8D5C8] bg-white">
           {(["summary", "byVenue"] as const).map((m) => (
@@ -266,35 +340,84 @@ export default function PricesClient({
           {pickerOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setPickerOpen(false)} aria-hidden="true" />
-              <div className="absolute right-0 z-50 mt-1.5 w-64 overflow-hidden rounded-xl border border-[#D8D5C8] bg-white shadow-lg">
+              <div className="absolute right-0 z-50 mt-1.5 w-72 overflow-hidden rounded-xl border border-[#D8D5C8] bg-white shadow-lg">
                 <div className="flex items-center justify-between gap-2 border-b border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2">
-                  <span className="font-bold text-[11px] text-[#34451F]">Rounds to compare</span>
-                  {pickedItems != null && (
+                  <span className="font-bold text-[11px] text-[#34451F]">
+                    {compareMode === "menu" ? "Menu items to compare" : "Rounds to compare"}
+                  </span>
+                  {(compareMode === "menu" ? pickedMenu : pickedRounds) != null && (
                     <button
                       type="button"
-                      onClick={() => setPickedItems(null)}
+                      onClick={() => (compareMode === "menu" ? setPickedMenu(null) : setPickedRounds(null))}
                       className="font-semibold text-[11px] text-[#5E6654] hover:text-[#34451F]"
                     >
-                      Show all
+                      Reset
                     </button>
                   )}
                 </div>
-                <div className="max-h-52 overflow-y-auto p-1">
-                  {comparison.map((c) => (
-                    <label
-                      key={c.key}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#F4F1E8]"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={pickedItems == null || pickedItems.includes(c.key)}
-                        onChange={() => toggleItem(c.key)}
-                        className="h-3.5 w-3.5 shrink-0 accent-[#34451F]"
-                      />
-                      <span className="min-w-0 truncate text-[12.5px] font-semibold text-[#20231A]">{c.label}</span>
-                    </label>
-                  ))}
-                </div>
+
+                {compareMode === "menu" ? (
+                  <div className="max-h-72 overflow-y-auto p-1">
+                    {menuByCategory.length === 0 ? (
+                      <p className="px-3 py-4 text-[12px] text-[#5E6654]/70">
+                        No active menu items found — add them under Settings → Menu.
+                      </p>
+                    ) : (
+                      menuByCategory.map(([category, rows]) => (
+                        <div key={category}>
+                          <p className="px-2 pt-2 pb-1 font-bold text-[10.5px] tracking-[0.06em] text-[#5E6654] uppercase">
+                            {category}
+                          </p>
+                          {rows.map((r) => {
+                            const id = rowKey(r);
+                            const picked = pickedMenu == null ? defaultMenuRows.includes(r) : pickedMenu.includes(id);
+                            return (
+                              <label
+                                key={id}
+                                className="flex cursor-pointer items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-[#F4F1E8]"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={picked}
+                                  onChange={() => toggleMenuItem(id)}
+                                  className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#34451F]"
+                                />
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-[12.5px] font-semibold text-[#20231A]">
+                                    {r.label}
+                                  </span>
+                                  <span className="block truncate text-[10.5px] text-[#5E6654]/80">
+                                    {r.matchLabel ? `vs local ${r.matchLabel}` : "no local match"}
+                                  </span>
+                                </span>
+                                <span className="shrink-0 text-[11.5px] font-semibold text-[#5E6654] tabular-nums">
+                                  {formatGbp(r.ownPrice)}
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                ) : (
+                  <div className="max-h-52 overflow-y-auto p-1">
+                    {comparison.map((c) => (
+                      <label
+                        key={c.key}
+                        className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#F4F1E8]"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={pickedRounds == null || pickedRounds.includes(c.key)}
+                          onChange={() => toggleRound(c.key)}
+                          className="h-3.5 w-3.5 shrink-0 accent-[#34451F]"
+                        />
+                        <span className="min-w-0 truncate text-[12.5px] font-semibold text-[#20231A]">{c.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
 
                 {view === "byVenue" && allVenues.length > 0 && (
                   <>
@@ -341,7 +464,7 @@ export default function PricesClient({
       <div className="hidden flex-wrap gap-1.5 sm:flex">
         {shownComparison.map((c) => (
           <span
-            key={c.key}
+            key={rowKey(c)}
             className="flex items-center gap-1.5 rounded-full border border-[#BFD8C4] bg-[#E7F3EC] px-3 py-1 font-semibold text-[12px] text-[#22613F]"
           >
             ✓ {c.label}
@@ -395,15 +518,15 @@ export default function PricesClient({
                       </span>
                     ))}
                   </div>
-                  {matrix.rows.map((row) => (
+                  {matrix.rows.map((row, ri) => (
                     <div
-                      key={row.key}
+                      key={rowKey(shownComparison[ri] ?? row)}
                       className="grid grid-cols-(--price-cols) items-center gap-2 border-b border-[#D8D5C8]/60 px-5 py-3 last:border-b-0"
                     >
                       <span className="min-w-0">
                         <span className="block font-bold text-[14px] text-[#20231A]">{row.label}</span>
                         <span className="mt-0.5 block truncate text-[11.5px] text-[#5E6654]/80">
-                          {ownItemNameFor(row.key) ?? "nothing on your menu matched"}
+                          {shownComparison[ri] ? subLabel(shownComparison[ri]) : ""}
                         </span>
                       </span>
                       <span className="text-right font-bold text-[15px] text-[#22613F] tabular-nums">
@@ -428,7 +551,7 @@ export default function PricesClient({
                 const winning = hasData && c.ownPrice != null && c.ownPrice < (c.competitorAvg as number);
                 return (
                   <div
-                    key={c.key}
+                    key={rowKey(c)}
                     className="flex items-center gap-3 border-b border-[#D8D5C8]/60 px-5 py-3 last:border-b-0"
                   >
                     <span className="min-w-0 flex-1">
@@ -436,7 +559,7 @@ export default function PricesClient({
                         {c.label} {winning && <span aria-hidden="true">🏆</span>}
                       </span>
                       <span className="mt-0.5 block truncate text-[11.5px] text-[#5E6654]/80">
-                        {c.ownItemName ? `your ${c.ownItemName}` : "nothing on your menu matched"}
+                        {subLabel(c)}
                       </span>
                     </span>
                     <span
@@ -475,13 +598,13 @@ export default function PricesClient({
             {shownComparison.map((c) => {
               const hasData = c.sampleCount > 0 && c.competitorAvg != null;
               const winning = hasData && c.ownPrice != null && c.ownPrice < (c.competitorAvg as number);
-              const open = openRowKey === c.key;
+              const open = openRowKey === rowKey(c);
               const breakdown = open ? breakdownFor(c.key) : [];
               return (
-                <div key={c.key} className={cn("border-b border-[#D8D5C8]/60 last:border-b-0", open && "bg-[#F4F1E8]")}>
+                <div key={rowKey(c)} className={cn("border-b border-[#D8D5C8]/60 last:border-b-0", open && "bg-[#F4F1E8]")}>
                   <button
                     type="button"
-                    onClick={() => setOpenRowKey(open ? null : c.key)}
+                    onClick={() => setOpenRowKey(open ? null : rowKey(c))}
                     disabled={!hasData}
                     aria-expanded={open}
                     className="grid w-full grid-cols-[minmax(0,1fr)_58px_58px_24px] items-center gap-2 px-3.5 py-3 text-left disabled:cursor-default"
@@ -491,7 +614,7 @@ export default function PricesClient({
                         {c.label} {winning && <span aria-hidden="true">🏆</span>}
                       </span>
                       <span className="mt-0.5 block truncate text-[11px] text-[#5E6654]/80">
-                        {c.ownItemName ? `your ${c.ownItemName}` : "no menu match"}
+                        {subLabel(c)}
                       </span>
                     </span>
                     <span

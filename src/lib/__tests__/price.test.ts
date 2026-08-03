@@ -18,6 +18,15 @@ describe("parseGbp", () => {
     expect(parseGbp("£1,200")).toBe(1200);
   });
 
+  it("takes the first serve when several are listed", () => {
+    expect(parseGbp("£4.75 pint / £2.75 half pint")).toBe(4.75);
+  });
+
+  it("skips a strength or size that precedes the price", () => {
+    expect(parseGbp("0% £3.50")).toBe(3.5);
+    expect(parseGbp("500ml £6.20")).toBe(6.2);
+  });
+
   it("parses an integer pound value", () => {
     expect(parseGbp("£6")).toBe(6);
   });

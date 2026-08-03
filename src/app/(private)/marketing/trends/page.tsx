@@ -55,6 +55,7 @@ export default async function MarketingTrendsPage() {
       pricesLastRefresh={settings?.last_prices_refresh_at ?? null}
       comparison={comparison}
       competitorPrices={competitorPrices}
+      menuItems={menuItems}
     />
   );
 }
