@@ -8,6 +8,8 @@ import {
   Sparkles,
   Image as ImageIcon,
   Upload,
+  Check,
+  X,
 } from "lucide-react";
 import { saveSpecialAction, deleteSpecialAction } from "./actions";
 import { cn } from "@/lib/utils";
@@ -207,7 +209,16 @@ export default function SpecialsClient({
                     >
                       {special.title}
                     </p>
-                    <StatusPill tone={special.is_active ? "success" : "error"}>
+                    <StatusPill
+                      tone={special.is_active ? "success" : "error"}
+                      icon={
+                        special.is_active ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )
+                      }
+                    >
                       {special.is_active ? "Active" : "Inactive"}
                     </StatusPill>
                   </div>
