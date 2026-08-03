@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { BookOpen, Brain, ChevronDown, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical } from "lucide-react";
+import { BookOpen, Brain, ChevronDown, Gauge, Sparkles, Plus, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +32,14 @@ type Question = {
   hint_year?: number | null;
   release_year?: number | null;
   image_url?: string | null;
+  difficulty?: string | null;
+};
+
+const difficultyTone = (difficulty: string) => {
+  const value = difficulty.toLowerCase();
+  if (value === "easy") return "border-admin-success/25 bg-admin-success-bg text-admin-success";
+  if (value === "hard") return "border-admin-error/25 bg-admin-error-bg text-admin-error";
+  return "border-admin-warning/25 bg-admin-warning-bg text-admin-warning";
 };
 
 type Props = {
@@ -354,7 +362,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
   };
 
   return (
-    <section ref={sectionRef} className="overflow-hidden rounded-2xl border border-admin-line bg-white">
+    <section ref={sectionRef} data-category-section className="overflow-hidden rounded-2xl border border-admin-line bg-white">
       {/* Four fixed rails, same order and width on every row: name + status,
           progress chip, action slot, chevron. Complete rounds fill the action
           slot with a tag rather than collapsing it. */}
@@ -649,7 +657,20 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                     ) : (
                       <div className="space-y-2">
                         <div className="-mt-1 flex items-center justify-between gap-2">
-                          <span className="shrink-0 font-bold text-sm text-admin-primary">Question {q.question_no ?? idx + 1}:</span>
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <span className="shrink-0 font-bold text-sm text-admin-primary">Question {q.question_no ?? idx + 1}:</span>
+                            {q.difficulty && (
+                              <span
+                                className={cn(
+                                  "inline-flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-semibold",
+                                  difficultyTone(q.difficulty)
+                                )}
+                              >
+                                <Gauge className="h-3 w-3 shrink-0" />
+                                {q.difficulty}
+                              </span>
+                            )}
+                          </div>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -703,7 +724,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                                 />
                               ) : (
                                 (!includeSpotify || !q.spotify_track_id) && (
-                                  <p className="text-sm leading-snug font-bold text-admin-ink">
+                                  <p className="text-sm leading-snug text-admin-ink">
                                     {q.question_text}
                                   </p>
                                 )

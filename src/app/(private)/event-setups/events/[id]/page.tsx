@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, BookOpen, Brain, CheckCircle2 } from "lucide-react";
 import CategorySection from "./category-section";
+import JumpToTopButton from "@/components/admin/jump-to-top-button";
 
 function formatDate(dateStr: string | null) {
   if (!dateStr) return "-";
@@ -35,6 +36,7 @@ type Question = {
   hint_year?: number | null;
   release_year?: number | null;
   image_url?: string | null;
+  difficulty?: string | null;
 };
 
 export async function generateMetadata({
@@ -86,7 +88,7 @@ export default async function EventQuizQuestionsPage({
       .order("order_no", { ascending: true }),
     supabase
       .from("past_quiz_questions")
-      .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_url")
+      .select("id, question_text, answer_text, answer_text_ext, quiz_category_configs_id, question_no, spotify_track_id, hint_year, release_year, image_url, difficulty")
       .eq("events_id", id)
       .order("question_no", { ascending: true, nullsFirst: false })
       .order("created_at"),
@@ -236,6 +238,8 @@ export default async function EventQuizQuestionsPage({
             nextRound={cat.nextRound}
           />
         ))}
+
+        {withNext.length > 0 && <JumpToTopButton />}
 
         {withNext.length === 0 && (
           <div className="rounded-2xl border border-dashed border-admin-line py-14 text-center">
