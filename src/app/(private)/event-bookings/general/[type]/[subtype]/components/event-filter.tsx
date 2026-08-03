@@ -93,7 +93,7 @@ export default function EventPickerBanner({
     .join(" · ");
 
   return (
-    <section className="flex flex-wrap items-end gap-x-6 gap-y-2.5 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-3.5 py-3.5 sm:gap-y-4 sm:px-5 sm:py-4.5">
+    <section className="flex flex-wrap items-end gap-x-6 gap-y-2.5 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-3.5 py-3.5 max-sm:-mx-3 sm:gap-y-4 sm:px-5 sm:py-4.5">
       <div className="min-w-0 flex-1">
         {showPicker ? (
           <label htmlFor="event-picker" className={cn(FIELD_LABEL, "mb-1 block sm:mb-1.5")}>
