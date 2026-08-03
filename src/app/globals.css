@@ -1704,7 +1704,9 @@ body {
   }
   .ring-offset-1 {
     --tw-ring-offset-width: 1px;
-    --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0
+    /* --tw-ring-inset is unregistered in v4, so it needs the empty fallback -
+       without it the whole box-shadow is invalid and no ring renders. */
+    --tw-ring-offset-shadow: var(--tw-ring-inset, ) 0 0 0
       var(--tw-ring-offset-width) var(--tw-ring-offset-color, #fff);
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow),
       var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);

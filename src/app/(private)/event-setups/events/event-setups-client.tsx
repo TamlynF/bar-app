@@ -1156,18 +1156,20 @@ export default function EventsClient({
 
       <div className="shrink-0 rounded-2xl border border-[#D8D5C8] bg-white/60 p-2.5 shadow-sm sm:p-3">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex items-center rounded-xl border border-[#D8D5C8] bg-white p-0.5">
+        <div className="inline-flex items-center rounded-xl border border-admin-line bg-admin-surface p-1">
           <button
             type="button"
             onClick={() => setViewMode("list")}
             aria-pressed={viewMode === "list"}
             title="List view"
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[12px] transition-colors sm:px-3",
-              viewMode === "list" ? "bg-[#34451F] text-white" : "text-[#5E6654] hover:text-[#34451F]"
+              "inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold transition-all sm:h-9",
+              viewMode === "list"
+                ? "bg-admin-card text-admin-primary shadow-sm"
+                : "text-admin-muted hover:bg-admin-card/60 hover:text-admin-ink"
             )}
           >
-            <List className="h-3.5 w-3.5" /> List
+            <List className="h-4 w-4" /> List
           </button>
           <button
             type="button"
@@ -1175,11 +1177,13 @@ export default function EventsClient({
             aria-pressed={viewMode === "calendar"}
             title="Calendar view"
             className={cn(
-              "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 font-bold text-[12px] transition-colors sm:px-3",
-              viewMode === "calendar" ? "bg-[#34451F] text-white" : "text-[#5E6654] hover:text-[#34451F]"
+              "inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold transition-all sm:h-9",
+              viewMode === "calendar"
+                ? "bg-admin-card text-admin-primary shadow-sm"
+                : "text-admin-muted hover:bg-admin-card/60 hover:text-admin-ink"
             )}
           >
-            <Grid2X2 className="h-3.5 w-3.5" /> Calendar
+            <Grid2X2 className="h-4 w-4" /> Calendar
           </button>
         </div>
 
@@ -1194,7 +1198,7 @@ export default function EventsClient({
         </button>
 
       <div className="order-3 flex w-full items-center gap-2 lg:order-2 lg:min-w-0 lg:flex-1">
-        <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#D8D5C8] bg-white px-3 transition-colors focus-within:border-[#34451F]">
+        <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-admin-line bg-admin-card px-3 transition-colors focus-within:border-admin-primary focus-within:ring-2 focus-within:ring-admin-gold/30">
           <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
           <input
             type="text"
@@ -1209,7 +1213,9 @@ export default function EventsClient({
             </button>
           )}
         </div>
-        {viewMode === "list" && <DatePicker value={dateRange} onChange={setDateRange} />}
+        {viewMode === "list" && (
+          <DatePicker value={dateRange} onChange={setDateRange} appearance="secondary" />
+        )}
         <button
           type="button"
           onClick={() => setShowFilters((s) => !s)}
@@ -1217,16 +1223,16 @@ export default function EventsClient({
           aria-expanded={showFilters}
           title={showFilters ? "Hide filters" : "Show filters"}
           className={cn(
-            "inline-flex h-11 w-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border font-bold text-[13px] transition-colors sm:w-auto sm:px-4",
+            "inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-xl border text-[13px] font-semibold transition-colors sm:w-auto sm:px-4",
             showFilters || activeFilterCount > 0
-              ? "border-[#34451F] bg-[#34451F] text-white"
-              : "border-[#D8D5C8] bg-white text-[#5E6654] hover:text-[#34451F]"
+              ? "border-admin-primary/30 bg-admin-primary-soft text-admin-primary"
+              : "border-admin-line bg-admin-card text-admin-muted hover:border-admin-primary/40 hover:bg-admin-surface hover:text-admin-ink"
           )}
         >
           <SlidersHorizontal className="h-4 w-4 shrink-0" />
           <span className="hidden sm:inline">Filters</span>
           {activeFilterCount > 0 && (
-            <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-white px-1 font-bold text-[12px] text-[#34451F] tabular-nums">
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-admin-primary px-1.5 text-[11px] font-semibold text-white tabular-nums">
               {activeFilterCount}
             </span>
           )}
@@ -1240,10 +1246,13 @@ export default function EventsClient({
             type="button"
             onClick={() => setCatFilter("all")}
             className={cn(
-              "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 font-bold text-[12px] transition-colors",
-              catFilter === "all" ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-white text-[#5E6654]"
+              "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition-colors sm:h-9",
+              catFilter === "all"
+                ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
+                : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
             )}
           >
+            {catFilter === "all" && <Check className="h-3.5 w-3.5" />}
             All <span className="opacity-70">{chipBase.length}</span>
           </button>
           {chipTypes.map(({ type, count }) => {
@@ -1254,8 +1263,10 @@ export default function EventsClient({
                 type="button"
                 onClick={() => setCatFilter(sel ? "all" : type.id)}
                 className={cn(
-                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 font-bold text-[12px] transition-colors",
-                  sel ? "border-[#34451F] bg-[#34451F] text-white" : cn(badgeClassFromColor(type.color), "rounded-full")
+                  "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition-all sm:h-9",
+                  badgeClassFromColor(type.color),
+                  "rounded-full",
+                  sel && "ring-2 ring-admin-primary ring-offset-1 ring-offset-admin-card"
                 )}
               >
                 {toTitleCase(type.name)} <span className="opacity-70">{count}</span>
@@ -1268,23 +1279,27 @@ export default function EventsClient({
           <button
             type="button"
             onClick={() => setSortSoon((s) => !s)}
-            className="inline-flex h-7 shrink-0 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#EFE8D4] px-2.5 font-bold text-[12px] text-[#34451F]"
+            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-admin-line bg-admin-surface px-3 text-[12px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
           >
-            <ArrowDownUp className="h-3 w-3" /> {sortSoon ? "Soonest" : "Latest"}
+            <ArrowDownUp className="h-3.5 w-3.5" /> {sortSoon ? "Soonest" : "Latest"}
           </button>
-          <span className="h-4 w-px shrink-0 bg-[#D8D5C8]" />
+          <span className="h-4 w-px shrink-0 bg-admin-line" />
           {QUICK_FILTERS.map((q) => {
             const on = quickFilters.has(q.key);
             return (
               <button
                 key={q.key}
                 type="button"
+                aria-pressed={on}
                 onClick={() => toggleQuickFilter(q.key)}
                 className={cn(
-                  "h-7 shrink-0 rounded-full border px-3 font-bold text-[12px] transition-colors",
-                  on ? "border-[#34451F] bg-[#34451F] text-white" : "border-[#D8D5C8] bg-white text-[#5E6654]"
+                  "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition-colors sm:h-9",
+                  on
+                    ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
+                    : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
                 )}
               >
+                {on && <Check className="h-3.5 w-3.5" />}
                 {q.label}
               </button>
             );
