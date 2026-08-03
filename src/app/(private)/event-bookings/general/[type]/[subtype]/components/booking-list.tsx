@@ -665,7 +665,7 @@ export default function BookingList({
     );
   };
 
-  const headCell = "sticky top-0 z-10 bg-[#34451F] px-2.5 py-3 text-left text-[11px] font-semibold tracking-wide whitespace-nowrap text-[#EDE9D8] uppercase shadow-[inset_0_-2px_0_#26300D] sm:px-4";
+  const headCell = "bg-[#34451F] px-2.5 py-3 text-left text-[11px] font-semibold tracking-wide whitespace-nowrap text-[#EDE9D8] uppercase shadow-[inset_0_-2px_0_#26300D] sm:sticky sm:top-0 sm:z-10 sm:px-4";
   const secondaryCell = "hidden sm:table-cell";
   const bodyCell = (open: boolean) =>
     cn(
@@ -675,7 +675,7 @@ export default function BookingList({
 
   return (
     <>
-      <div className="overflow-x-auto rounded-2xl border border-[#D8D5C8] bg-white sm:max-h-[calc(100svh-24rem)] sm:overflow-y-auto">
+      <div className="overflow-x-clip rounded-2xl border border-[#D8D5C8] bg-white max-sm:-mx-3 sm:max-h-[calc(100svh-24rem)] sm:overflow-x-auto sm:overflow-y-auto">
         <table className="w-full border-collapse sm:min-w-175">
           <thead>
             <tr>
@@ -741,7 +741,7 @@ export default function BookingList({
                           {eventDate ? ` · ${format(eventDate, "d MMM yy")}` : ""}
                         </td>
                       )}
-                      <td className={cn(bodyCell(open), "max-sm:whitespace-normal")}>
+                      <td className={cn(bodyCell(open), "max-sm:wrap-anywhere max-sm:whitespace-normal")}>
                         <span className="text-sm font-semibold text-[#20231A]">{teamName}</span>
                         {booking.special_requests && (
                           <span title="Has a staff note" className="ml-1.5 inline-block align-[-2px]">
