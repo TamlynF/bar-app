@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -188,6 +188,9 @@ const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "Ju
 
 /* Month cells render at most this many chips before falling back to "+n more". */
 const DAY_CHIP_LIMIT = 4;
+
+const SHEET_PILL =
+  "inline-flex h-6.5 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold tracking-wide sm:h-8 sm:gap-2 sm:px-3.5 sm:text-[12px]";
 
 function parseDate(dateStr: string) {
   return new Date(dateStr + "T00:00:00");
@@ -1264,7 +1267,6 @@ export default function EventsClient({
     ? getQuizStatus(selected.id, quizCategories, quizQuestions)
     : null;
   const viewQuizPct = viewQuiz && viewQuiz.target > 0 ? Math.round((viewQuiz.total / viewQuiz.target) * 100) : 0;
-  const viewHostName = !showForm && selected?.host_employee_id ? employeeById.get(selected.host_employee_id) : undefined;
 
   return (
     <div className={cn(
@@ -1647,24 +1649,23 @@ export default function EventsClient({
             showForm && "lg:w-7xl xl:w-352"
           )}
         >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-2.5 pb-2 backdrop-blur-md sm:rounded-t-4xl">
+          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-3 pb-3 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 {!showForm && selected ? (
                   <>
-                    <p className="font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
-                      {sheetSubtypeLabel ? `${sheetSubtypeLabel} Event` : "Event"}
+                    <p className="text-[11px] font-semibold tracking-wide text-admin-muted uppercase">
+                      {sheetSubtypeLabel ? `${sheetSubtypeLabel} event` : "Event"}
                       <span className="normal-case tabular-nums"> · #{selected.id}</span>
                     </p>
-                    <SheetTitle className="truncate font-bold text-lg leading-tight tracking-tighter text-[#20231A]">
+                    <SheetTitle className="mt-1 truncate text-xl leading-tight font-bold tracking-tight text-admin-ink">
                       {selected.title || "Untitled Event"}
                     </SheetTitle>
-                    <p className="mt-0.5 truncate text-[13px] font-semibold text-[#5E6654]">
+                    <p className="mt-1 text-[13px] leading-relaxed font-medium text-admin-muted sm:truncate">
                       {formatDate(selected.date)}
                       {(selected.start_time || selected.end_time) && (
                         <span className="tabular-nums"> · {formatTime(selected.start_time)} – {formatTime(selected.end_time)}</span>
                       )}
-                      {viewHostName && <span> · Host: {viewHostName}</span>}
                     </p>
                   </>
                 ) : (
@@ -1697,16 +1698,17 @@ export default function EventsClient({
                         type="button"
                         aria-label="Details"
                         title="Creation and modification details"
-                        className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-300 bg-slate-100 px-2.5 text-blue-700 transition-colors hover:bg-blue-50 hover:text-blue-800 sm:px-3"
+                        className="flex h-9 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-admin-line bg-admin-surface px-2.5 text-admin-ink transition-colors hover:bg-admin-line sm:px-3"
                       >
                         <Info className="h-4.5 w-4.5 shrink-0" />
-                        <span className="hidden font-bold text-[13px] sm:inline">Details</span>
+                        <span className="hidden font-bold text-[13px] sm:inline">System</span>
                       </button>
                     </PopoverTrigger>
                     <PopoverContent align="end" className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0">
                       <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 font-bold text-[12px] text-[#34451F]">
                         System Information
                       </span>
+                      <SheetRow label="Event ID" value={<span className="tabular-nums">#{selected.id}</span>} />
                       <SheetRow label="Creation Method" value={eventCreationMethodLabel(selected.creation_method)} />
                       {selected.creation_method && selected.creation_method !== "manual" && (
                         <SheetRow
@@ -1753,27 +1755,59 @@ export default function EventsClient({
             </div>
 
             {selected && !isAdding && (
-              <div className="mt-1.5 flex items-center gap-3">
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 <span className={cn(
-                  "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border-2 px-3 font-bold text-[12px]",
-                  selected.is_active !== false ? "border-green-300 bg-green-100 text-green-700" : "border-red-300 bg-red-100 text-red-600"
+                  SHEET_PILL,
+                  selected.is_active !== false
+                    ? "border-admin-success/30 bg-admin-success-bg text-admin-success"
+                    : "border-admin-error/30 bg-admin-error-bg text-admin-error"
                 )}>
-                  <span className={cn("h-2 w-2 shrink-0 rounded-full", selected.is_active !== false ? "bg-green-500" : "bg-red-500")} />
+                  <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2", selected.is_active !== false ? "bg-admin-success" : "bg-admin-error")} />
                   {selected.is_active !== false ? "Active" : "Inactive"}
                 </span>
+                {selected.is_bookable && (
+                  <span className={cn(
+                    SHEET_PILL,
+                    selected.is_fully_booked
+                      ? "border-admin-success/30 bg-admin-success-bg text-admin-success"
+                      : "border-admin-line bg-admin-surface text-admin-muted"
+                  )}>
+                    <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2", selected.is_fully_booked ? "bg-admin-success" : "bg-admin-muted/50")} />
+                    {selected.is_fully_booked ? "Sold out" : "Not sold out"}
+                  </span>
+                )}
+                {!showForm && viewQuiz && viewQuiz.target > 0 && (
+                  <Link
+                    href={quizHrefFor(selected, "sheet")}
+                    title="Go to the quiz questions"
+                    className={cn(
+                      SHEET_PILL,
+                      "pr-1.5 transition-colors active:scale-[0.98] sm:hidden",
+                      viewQuiz.allComplete
+                        ? "border-admin-success/30 bg-admin-success-bg text-admin-success hover:bg-admin-success/15"
+                        : "border-admin-warning/30 bg-admin-warning-bg text-admin-warning hover:bg-admin-warning/15"
+                    )}
+                  >
+                    {viewQuiz.allComplete
+                      ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                      : <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
+                    <span>Quiz <span className="tabular-nums">{viewQuiz.total}/{viewQuiz.target}</span></span>
+                    <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                  </Link>
+                )}
               </div>
             )}
 
             {!showForm && selected && viewQuiz && viewQuiz.target > 0 && (
               viewQuiz.allComplete ? (
-                <div role="status" className="mt-2 flex items-center gap-2.5 rounded-2xl border border-green-300 bg-green-50 px-3.5 py-2.5">
+                <div role="status" className="mt-2 hidden items-center gap-2.5 rounded-2xl border border-green-300 bg-green-50 px-3.5 py-2.5 sm:flex">
                   <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-green-600" />
                   <p className="min-w-0 text-[13px] leading-snug font-semibold text-green-700">
                     Quiz ready - all {viewQuiz.target} questions are written.
                   </p>
                 </div>
               ) : (
-                <div role="status" className="mt-2 rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-2.5">
+                <div role="status" className="mt-2 hidden rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 sm:block">
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 sm:flex-nowrap">
                     <div className="min-w-0 flex-1 basis-full sm:basis-auto">
                       <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] font-bold text-amber-700">
@@ -1825,236 +1859,264 @@ export default function EventsClient({
               const bookingUrl = selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`);
               return (
                 <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                  {selected.is_bookable && (
-                    <ViewSection
-                      title="Bookings"
-                      open={bookingsOpen}
-                      onToggle={() => setBookingsOpen(o => !o)}
-                      headerRight={
-                        <span className="mr-2 shrink-0 font-bold text-[12px] text-[#5E6654] tabular-nums">
-                          {bk.confirmedCount} {bk.confirmedCount === 1 ? "group" : "groups"}
-                        </span>
-                      }
-                    >
-                      <div className="grid grid-cols-3 divide-x divide-[#D8D5C8]/50 border-b border-[#D8D5C8]">
-                        <div className="px-2 py-2 text-center sm:px-3">
-                          <p className="font-bold text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
-                          <p className="font-bold text-[12px] text-[#5E6654]">Confirmed</p>
-                        </div>
-                        <div className="px-2 py-2 text-center sm:px-3">
-                          <p className="font-bold text-base leading-tight text-amber-500 tabular-nums sm:text-lg">{bk.waitlistedPeople}</p>
-                          <p className="font-bold text-[12px] text-[#5E6654]">Waitlisted</p>
-                        </div>
-                        <div className="px-2 py-2 text-center sm:px-3">
-                          <p className="font-bold text-base leading-tight text-red-500 tabular-nums sm:text-lg">{bk.cancelledPeople}</p>
-                          <p className="font-bold text-[12px] text-[#5E6654]">Cancelled</p>
-                        </div>
-                      </div>
-                      <DetailCell
-                        label="Fully Booked"
-                        value={selected.is_fully_booked
-                          ? <span className="font-bold text-red-600">Yes - new bookings stopped</span>
-                          : <span className="font-bold text-green-700">No - bookings open</span>}
-                      />
-                      {showWinningTeam && (
-                        <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "-"} />
-                      )}
-                      <div className={cn("grid gap-2.5 p-3 sm:p-4", selected.seating_required ? "grid-cols-2" : "grid-cols-1")}>
-                        <Link
-                          href={viewAllHref}
-                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none active:scale-[0.98]"
+                  <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-start">
+                    <div className="flex min-w-0 flex-1 flex-col gap-4 sm:gap-5 md:order-2">
+                      {selected.is_bookable && (
+                        <ViewSection
+                          title="Bookings"
+                          open={bookingsOpen}
+                          onToggle={() => setBookingsOpen(o => !o)}
+                          headerRight={
+                            <span className="mr-2 shrink-0 font-bold text-[12px] text-[#5E6654] tabular-nums">
+                              {bk.confirmedCount} {bk.confirmedCount === 1 ? "group" : "groups"}
+                            </span>
+                          }
                         >
-                          <Users className="h-4 w-4 shrink-0" />
-                          View bookings
-                        </Link>
-                        {selected.seating_required && (
-                          <Link
-                            href={`/settings/floor-plan/${selected.id}`}
-                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-line bg-admin-card px-3 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none"
-                          >
-                            <Grid2X2 className="h-4 w-4 shrink-0" />
-                            Floor plan
-                          </Link>
-                        )}
-                      </div>
-                    </ViewSection>
-                  )}
-
-                  <ViewSection title="Event Details" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)}>
-                    {poster.url && (
-                      <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                        <span className="shrink-0 pt-0.5 font-bold text-[12px] text-[#5E6654]">Poster</span>
-                        <div className="flex min-w-0 flex-col items-end gap-1">
-                          <a
-                            href={poster.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Open the full-size poster"
-                            className="block shrink-0 overflow-hidden rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] transition-colors hover:border-[#34451F]"
-                          >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="h-16 w-28 object-contain" />
-                          </a>
-                          {posterNote && (
-                            <span className="text-right text-[12px] leading-snug font-bold text-[#5E6654]">{posterNote}</span>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
-                    <DetailCell
-                      label="Type / Subtype"
-                      value={
-                        <>
-                          {toTitleCase(type?.name) || "-"}
-                          <span className="mx-1.5 font-normal text-[#5E6654]/50">/</span>
-                          {toTitleCase(sub?.name) || "-"}
-                        </>
-                      }
-                    />
-                    <DetailCell label="Date" value={formatDate(selected.date)} />
-                    <DetailCell label="Time" value={selected.start_time || selected.end_time ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}` : "-"} />
-                    {(sub?.host_required || selected.host_employee_id != null) && <DetailCell label="Host" value={host?.full_name ?? "-"} />}
-                    {(sub?.payment_required || hasPricing) && (
-                      <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
-                    )}
-                    {(sub?.seating_required || selected.seating_required) && (
-                      <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
-                    )}
-                    {selected.tagline && <DetailCell label="Tagline" value={selected.tagline} />}
-                    {selected.external_link && <DetailCell label="External Link" value={selected.external_link} />}
-                    {sub?.behavior === "karaoke" && <DetailCell label="Singa Link" value={selected.karaoke_request_url} />}
-                  </ViewSection>
-
-                  {isQuiz && (() => {
-                    const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
-                    const savedQuestionCount = categoryCounts.reduce((total, category) => total + category.count, 0);
-                    const targetQuestionCount = categoryCounts.reduce((total, category) => total + category.question_count, 0);
-                    const quizIsComplete = categoryCounts.length > 0 && categoryCounts.every(category => category.count >= category.question_count);
-                    const quizHref = quizHrefFor(selected, "sheet");
-                    return (
-                      <ViewSection
-                        title="Quiz Rounds"
-                        open={quizOpen}
-                        onToggle={() => setQuizOpen(o => !o)}
-                        headerRight={
-                          <span className={cn(
-                            "mr-2 inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 font-bold text-[12px] tabular-nums",
-                            quizIsComplete ? "border-green-300 bg-green-100 text-green-700" : "border-amber-300 bg-amber-100 text-amber-700"
-                          )}>
-                            {savedQuestionCount} / {targetQuestionCount}
-                          </span>
-                        }
-                      >
-                        {categoryCounts.map(cat => {
-                          const remaining = cat.question_count - cat.count;
-                          const done = cat.count >= cat.question_count;
-                          return (
-                            <div key={cat.id} className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 sm:px-5">
-                              <span className="min-w-0 truncate font-bold text-[12px] text-[#5E6654]">{cat.category_name}</span>
-                              <span className={cn(
-                                "inline-flex min-w-32 shrink-0 items-center justify-center rounded-full border px-2 py-1 font-bold text-[12px] tabular-nums",
-                                done ? "border-green-300 bg-green-100 text-green-700" : cat.count > 0 ? "border-amber-300 bg-amber-100 text-amber-700" : "border-red-200 bg-red-50 text-red-600"
-                              )}>
-                                {cat.count} / {cat.question_count} · {done ? "Ready" : cat.count > 0 ? `${remaining} more` : "Not started"}
-                              </span>
+                          <div className="grid grid-cols-3 divide-x divide-[#D8D5C8]/50 border-b border-[#D8D5C8]">
+                            <div className="px-2 py-2 text-center sm:px-3">
+                              <p className="font-bold text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
+                              <p className="font-bold text-[12px] text-[#5E6654]">Confirmed</p>
                             </div>
-                          );
-                        })}
-                        <div className="p-3 sm:p-4">
-                          {quizIsComplete ? (
-                            <Link
-                              href={quizHref}
-                              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-green-300 bg-green-50 text-[13px] font-semibold text-green-700 transition-colors hover:bg-green-100"
-                            >
-                              <CheckCircle2 className="h-4 w-4 shrink-0" />
-                              All rounds complete - review quiz
-                            </Link>
-                          ) : (
-                            <Link
-                              href={quizHref}
-                              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#34451F] text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719]"
-                            >
-                              <Brain className="h-4 w-4 shrink-0" />
-                              {savedQuestionCount === 0 ? "Start quiz" : `Continue quiz - ${targetQuestionCount - savedQuestionCount} to go`}
-                            </Link>
+                            <div className="px-2 py-2 text-center sm:px-3">
+                              <p className="font-bold text-base leading-tight text-amber-500 tabular-nums sm:text-lg">{bk.waitlistedPeople}</p>
+                              <p className="font-bold text-[12px] text-[#5E6654]">Waitlisted</p>
+                            </div>
+                            <div className="px-2 py-2 text-center sm:px-3">
+                              <p className="font-bold text-base leading-tight text-red-500 tabular-nums sm:text-lg">{bk.cancelledPeople}</p>
+                              <p className="font-bold text-[12px] text-[#5E6654]">Cancelled</p>
+                            </div>
+                          </div>
+                          {showWinningTeam && (
+                            <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "-"} />
                           )}
-                        </div>
-                      </ViewSection>
-                    );
-                  })()}
+                          <div className={cn("grid gap-2.5 p-3 sm:p-4", selected.seating_required ? "grid-cols-2" : "grid-cols-1")}>
+                            <Link
+                              href={viewAllHref}
+                              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none active:scale-[0.98]"
+                            >
+                              <Users className="h-4 w-4 shrink-0" />
+                              View bookings
+                            </Link>
+                            {selected.seating_required && (
+                              <Link
+                                href={`/settings/floor-plan/${selected.id}`}
+                                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-line bg-admin-card px-3 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none"
+                              >
+                                <Grid2X2 className="h-4 w-4 shrink-0" />
+                                Floor plan
+                              </Link>
+                            )}
+                          </div>
+                        </ViewSection>
+                      )}
 
-                  <ViewSection title="Public Booking Settings" open={bookingSettingsOpen} onToggle={() => setBookingSettingsOpen(o => !o)}>
-                    <DetailCell
-                      label="Public Booking"
-                      value={selected.is_bookable
-                        ? <span className="font-bold text-green-700">Enabled</span>
-                        : "Disabled - guests can't book this event"}
-                    />
-
-                    {selected.is_bookable && (
-                      <div className="bg-[#F4F1E8]/40 p-3 sm:p-4">
-                        <BookingConfigEditor
-                          value={selected.booking_config ?? {}}
-                          readOnly
-                          bookingPageExtra={
-                            <>
-                              <div className="flex items-center justify-between gap-3 border-t border-[#D8D5C8] px-4 py-2">
-                                <span className="flex shrink-0 items-center gap-1.5 font-bold text-[12px] text-[#5E6654]">
-                                  <Link2 className="h-3.5 w-3.5" />
-                                  Booking Link
-                                </span>
-                                <div className="flex min-w-0 items-center gap-2">
-                                  <span className="truncate text-right text-[13px] font-semibold text-[#20231A]">{bookingUrl}</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      navigator.clipboard.writeText(bookingUrl);
-                                      setLinkCopied(true);
-                                      setTimeout(() => setLinkCopied(false), 2000);
-                                    }}
-                                    aria-label="Copy the booking link"
-                                    title="Copy the booking link"
-                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
-                                  >
-                                    {linkCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-                                  </button>
+                      {isQuiz && (() => {
+                        const { categoryCounts } = getQuizStatus(selected.id, quizCategories, quizQuestions);
+                        const savedQuestionCount = categoryCounts.reduce((total, category) => total + category.count, 0);
+                        const targetQuestionCount = categoryCounts.reduce((total, category) => total + category.question_count, 0);
+                        const quizIsComplete = categoryCounts.length > 0 && categoryCounts.every(category => category.count >= category.question_count);
+                        const quizHref = quizHrefFor(selected, "sheet");
+                        return (
+                          <ViewSection
+                            title="Quiz Rounds"
+                            open={quizOpen}
+                            onToggle={() => setQuizOpen(o => !o)}
+                            headerRight={
+                              <span className={cn(
+                                "mr-2 inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 font-bold text-[12px] tabular-nums",
+                                quizIsComplete ? "border-green-300 bg-green-100 text-green-700" : "border-amber-300 bg-amber-100 text-amber-700"
+                              )}>
+                                {savedQuestionCount} / {targetQuestionCount}
+                              </span>
+                            }
+                          >
+                            {categoryCounts.map(cat => {
+                              const remaining = cat.question_count - cat.count;
+                              const done = cat.count >= cat.question_count;
+                              return (
+                                <div key={cat.id} className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 sm:px-5">
+                                  <span className="min-w-0 truncate font-bold text-[12px] text-[#5E6654]">{cat.category_name}</span>
+                                  <span className={cn(
+                                    "inline-flex min-w-32 shrink-0 items-center justify-center rounded-full border px-2 py-1 font-bold text-[12px] tabular-nums",
+                                    done ? "border-green-300 bg-green-100 text-green-700" : cat.count > 0 ? "border-amber-300 bg-amber-100 text-amber-700" : "border-red-200 bg-red-50 text-red-600"
+                                  )}>
+                                    {cat.count} / {cat.question_count} · {done ? "Ready" : cat.count > 0 ? `${remaining} more` : "Not started"}
+                                  </span>
                                 </div>
-                              </div>
+                              );
+                            })}
+                            <div className="p-3 sm:p-4">
+                              {quizIsComplete ? (
+                                <Link
+                                  href={quizHref}
+                                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-green-300 bg-green-50 text-[13px] font-semibold text-green-700 transition-colors hover:bg-green-100"
+                                >
+                                  <CheckCircle2 className="h-4 w-4 shrink-0" />
+                                  All rounds complete - review quiz
+                                </Link>
+                              ) : (
+                                <Link
+                                  href={quizHref}
+                                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#34451F] text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719]"
+                                >
+                                  <Brain className="h-4 w-4 shrink-0" />
+                                  {savedQuestionCount === 0 ? "Start quiz" : `Continue quiz - ${targetQuestionCount - savedQuestionCount} to go`}
+                                </Link>
+                              )}
+                            </div>
+                          </ViewSection>
+                        );
+                      })()}
+                    </div>
 
-                              <div className="flex items-start justify-between gap-4 border-t border-[#D8D5C8] px-4 py-2">
-                                <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-bold text-[12px] text-[#5E6654]">
-                                  <QrCode className="h-3.5 w-3.5" />
-                                  Booking QR
-                                </span>
-                                {selected.booking_qr_url ? (
-                                  <div className="flex items-start gap-2">
-                                    <div className="flex flex-col items-end gap-1.5">
-                                      <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white">
-                                        {qrCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-                                        {qrCopied ? "Copied" : "Copy QR"}
-                                      </button>
-                                      <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white disabled:opacity-50">
-                                        {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
-                                        Regenerate
-                                      </button>
-                                    </div>
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={selected.booking_qr_url} alt="Booking link QR code" className="h-20 w-20 shrink-0 rounded-lg border border-[#D8D5C8] bg-white p-1" />
-                                  </div>
-                                ) : (
-                                  <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-semibold text-[12px] tracking-wider text-white transition-colors hover:bg-[#283719] disabled:opacity-50">
-                                    {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
-                                    Generate QR
-                                  </button>
-                                )}
-                              </div>
+                    <div className="flex min-w-0 flex-1 flex-col gap-4 sm:gap-5 md:order-1">
+                      <ViewSection title="Event Details" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)}>
+                        {poster.url && (
+                          <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                            <span className="shrink-0 pt-0.5 font-bold text-[12px] text-[#5E6654]">Poster</span>
+                            <div className="flex min-w-0 flex-col items-end gap-1">
+                              <a
+                                href={poster.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Open the full-size poster"
+                                className="hidden shrink-0 overflow-hidden rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] transition-colors hover:border-[#34451F] sm:block"
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img src={poster.url} alt={`Poster for ${selected.title || "event"}`} className="h-16 w-28 object-contain" />
+                              </a>
+                              <a
+                                href={poster.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex shrink-0 items-center gap-1.5 text-[13px] font-semibold text-[#34451F] underline underline-offset-2 sm:hidden"
+                              >
+                                View poster
+                                <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                              </a>
+                              {posterNote && (
+                                <span className="text-right text-[12px] leading-snug font-bold text-[#5E6654]">{posterNote}</span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                        <DetailCell
+                          label="Type / Subtype"
+                          value={
+                            <>
+                              {toTitleCase(type?.name) || "-"}
+                              <span className="mx-1.5 font-normal text-[#5E6654]/50">/</span>
+                              {toTitleCase(sub?.name) || "-"}
                             </>
                           }
                         />
-                      </div>
-                    )}
-                  </ViewSection>
+                        <DetailCell label="Title" value={selected?.title || "Untitled Event"} />
+                        {(() => {
+                          const timeLabel = selected.start_time || selected.end_time
+                            ? `${formatTime(selected.start_time)} - ${formatTime(selected.end_time)}`
+                            : null;
+                          return (
+                            <>
+                              <DetailCell
+                                className="sm:hidden"
+                                label="Date & Time"
+                                value={timeLabel ? `${formatDate(selected.date)} · ${timeLabel}` : formatDate(selected.date)}
+                              />
+                              <DetailCell className="hidden sm:flex" label="Date" value={formatDate(selected.date)} />
+                              <DetailCell className="hidden sm:flex" label="Time" value={timeLabel ?? "-"} />
+                            </>
+                          );
+                        })()}
+                        {(sub?.host_required || selected.host_employee_id != null) && <DetailCell label="Host" value={host?.full_name ?? "-"} />}
+                        {(sub?.payment_required || hasPricing) && (
+                          <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
+                        )}
+                        {(sub?.seating_required || selected.seating_required) && (
+                          <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
+                        )}
+                        {selected.tagline && (
+                          <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+                            <span className="shrink-0 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">Tagline</span>
+                            <ExpandableValue text={selected.tagline} />
+                          </div>
+                        )}
+                        {selected.external_link && <DetailCell label="External Link" value={selected.external_link} />}
+                        {sub?.behavior === "karaoke" && <DetailCell label="Singa Link" value={selected.karaoke_request_url} />}
+                      </ViewSection>
+
+                      <ViewSection title="Public Booking Settings" open={bookingSettingsOpen} onToggle={() => setBookingSettingsOpen(o => !o)}>
+                        <DetailCell
+                          label="Public Booking"
+                          value={selected.is_bookable
+                            ? <span className="font-bold text-green-700">Enabled</span>
+                            : "Disabled - guests can't book this event"}
+                        />
+
+                        {selected.is_bookable && (
+                          <div className="bg-[#F4F1E8]/40 p-3 sm:p-4">
+                            <BookingConfigEditor
+                              value={selected.booking_config ?? {}}
+                              readOnly
+                              bookingPageExtra={
+                                <>
+                                  <div className="flex items-center justify-between gap-3 border-t border-[#D8D5C8] px-4 py-2">
+                                    <span className="flex shrink-0 items-center gap-1.5 font-bold text-[12px] text-[#5E6654]">
+                                      <Link2 className="h-3.5 w-3.5" />
+                                      Booking Link
+                                    </span>
+                                    <div className="flex min-w-0 items-center gap-2">
+                                      <span className="truncate text-right text-[13px] font-semibold text-[#20231A]">{bookingUrl}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          navigator.clipboard.writeText(bookingUrl);
+                                          setLinkCopied(true);
+                                          setTimeout(() => setLinkCopied(false), 2000);
+                                        }}
+                                        aria-label="Copy the booking link"
+                                        title="Copy the booking link"
+                                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
+                                      >
+                                        {linkCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-start justify-between gap-4 border-t border-[#D8D5C8] px-4 py-2">
+                                    <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-bold text-[12px] text-[#5E6654]">
+                                      <QrCode className="h-3.5 w-3.5" />
+                                      Booking QR
+                                    </span>
+                                    {selected.booking_qr_url ? (
+                                      <div className="flex items-start gap-2">
+                                        <div className="flex flex-col items-end gap-1.5">
+                                          <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white">
+                                            {qrCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                            {qrCopied ? "Copied" : "Copy QR"}
+                                          </button>
+                                          <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white disabled:opacity-50">
+                                            {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
+                                            Regenerate
+                                          </button>
+                                        </div>
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img src={selected.booking_qr_url} alt="Booking link QR code" className="h-20 w-20 shrink-0 rounded-lg border border-[#D8D5C8] bg-white p-1" />
+                                      </div>
+                                    ) : (
+                                      <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-semibold text-[12px] tracking-wider text-white transition-colors hover:bg-[#283719] disabled:opacity-50">
+                                        {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
+                                        Generate QR
+                                      </button>
+                                    )}
+                                  </div>
+                                </>
+                              }
+                            />
+                          </div>
+                        )}
+                      </ViewSection>
+                    </div>
+                  </div>
 
                   {formError && <ErrorBox message={formError} />}
 
@@ -2389,7 +2451,7 @@ function FormRow({ label, required, error, warning, children }: { label: string;
 function ViewSection({ title, open, onToggle, headerRight, className, children }: { title: string; open: boolean; onToggle: () => void; headerRight?: React.ReactNode; className?: string; children: React.ReactNode }) {
   return (
     <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
-      <div className={cn("flex min-h-14 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-3 sm:px-5", open && "border-b border-[#D8D5C8]")}>
+      <div className={cn("flex min-h-11 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-2 sm:px-5", open && "border-b border-[#D8D5C8]")}>
         <button
           type="button"
           onClick={onToggle}
@@ -2412,9 +2474,43 @@ function ViewSection({ title, open, onToggle, headerRight, className, children }
   );
 }
 
-function DetailCell({ label, value, icon, toggle, accent }: { label: string; value?: React.ReactNode; icon?: React.ReactNode; toggle?: boolean; accent?: string }) {
+function ExpandableValue({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const [overflowing, setOverflowing] = useState(false);
+  const textRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const measure = () => {
+      const el = textRef.current;
+      if (!el || expanded) return;
+      setOverflowing(el.scrollWidth > el.clientWidth + 1);
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [text, expanded]);
+
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
+    <span className="flex min-w-0 flex-1 items-start justify-end gap-1 text-right text-[13px] font-semibold text-[#20231A]">
+      <span ref={textRef} className={cn("min-w-0", !expanded && "truncate")}>{text}</span>
+      {(overflowing || expanded) && (
+        <button
+          type="button"
+          onClick={() => setExpanded(o => !o)}
+          aria-expanded={expanded}
+          aria-label={expanded ? "Show less" : "Show the full text"}
+          className="shrink-0 font-bold text-[#34451F] underline underline-offset-2"
+        >
+          {expanded ? "less" : "…"}
+        </button>
+      )}
+    </span>
+  );
+}
+
+function DetailCell({ label, value, icon, toggle, accent, className }: { label: string; value?: React.ReactNode; icon?: React.ReactNode; toggle?: boolean; accent?: string; className?: string }) {
+  return (
+    <div className={cn("flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5", className)}>
       <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-bold text-[12px] whitespace-nowrap text-[#5E6654]">
         {icon}
         {label}
@@ -2455,7 +2551,7 @@ function ErrorBox({ message }: { message: string }) {
 function FormSection({ title, open, onToggle, children, className }: { title: string; open: boolean; onToggle: () => void; children: React.ReactNode; className?: string }) {
   return (
     <div className={cn("overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white", className)}>
-      <div className={cn("flex min-h-14 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-3 sm:px-5", open && "border-b border-[#D8D5C8]")}>
+      <div className={cn("flex min-h-11 w-full items-center gap-3 bg-[#D8D5C8] px-4 py-2 sm:px-5", open && "border-b border-[#D8D5C8]")}>
         <button
           type="button"
           onClick={onToggle}
