@@ -1128,6 +1128,13 @@ export default function EventsClient({
   }
   const hasFieldErrors = Object.keys(fieldErrors).length > 0;
 
+  const viewSubtype = !showForm && selected ? subtypeById.get(selected.event_subtypes_id) : undefined;
+  const viewQuiz = !showForm && selected && viewSubtype?.behavior === "quiz"
+    ? getQuizStatus(selected.id, quizCategories, quizQuestions)
+    : null;
+  const viewQuizPct = viewQuiz && viewQuiz.target > 0 ? Math.round((viewQuiz.total / viewQuiz.target) * 100) : 0;
+  const viewHostName = !showForm && selected?.host_employee_id ? employeeById.get(selected.host_employee_id) : undefined;
+
   return (
     <div className={cn(
       "mx-auto space-y-3 bg-[#F4F1E8] px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
@@ -1477,22 +1484,41 @@ export default function EventsClient({
           side="bottom"
           showCloseButton={false}
           onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none
-            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
-            sm:max-h-[88vh] sm:w-160 sm:max-w-[96vw] sm:-translate-x-1/2
-            sm:rounded-4xl sm:border-2 lg:max-h-[94vh] lg:w-7xl xl:w-352"
+          className={cn(
+            "flex h-[92vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8] bg-[#F4F1E8] p-0 shadow-2xl outline-none sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto sm:max-h-[88vh] sm:w-160 sm:max-w-[96vw] sm:-translate-x-1/2 sm:rounded-4xl sm:border-2 lg:max-h-[94vh]",
+            showForm && "lg:w-7xl xl:w-352"
+          )}
         >
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 px-4 pt-2.5 pb-2 backdrop-blur-md sm:rounded-t-4xl">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
-                <SheetTitle className="truncate font-bold text-lg leading-tight tracking-tighter text-[#20231A]">
-                  {sheetTitle}
-                  {selected && (
-                    <span className="ml-1.5 text-[13px] font-semibold tracking-wide text-[#5E6654] normal-case italic tabular-nums">
-                      (#ID : {selected.id})
-                    </span>
-                  )}
-                </SheetTitle>
+                {!showForm && selected ? (
+                  <>
+                    <p className="font-bold text-[12px] tracking-wide text-[#5E6654] uppercase">
+                      {sheetSubtypeLabel ? `${sheetSubtypeLabel} Event` : "Event"}
+                      <span className="normal-case tabular-nums"> · #{selected.id}</span>
+                    </p>
+                    <SheetTitle className="truncate font-bold text-lg leading-tight tracking-tighter text-[#20231A]">
+                      {selected.title || "Untitled Event"}
+                    </SheetTitle>
+                    <p className="mt-0.5 truncate text-[13px] font-semibold text-[#5E6654]">
+                      {formatDate(selected.date)}
+                      {(selected.start_time || selected.end_time) && (
+                        <span className="tabular-nums"> · {formatTime(selected.start_time)} – {formatTime(selected.end_time)}</span>
+                      )}
+                      {viewHostName && <span> · Host: {viewHostName}</span>}
+                    </p>
+                  </>
+                ) : (
+                  <SheetTitle className="truncate font-bold text-lg leading-tight tracking-tighter text-[#20231A]">
+                    {sheetTitle}
+                    {selected && (
+                      <span className="ml-1.5 text-[13px] font-semibold tracking-wide text-[#5E6654] normal-case italic tabular-nums">
+                        (#ID : {selected.id})
+                      </span>
+                    )}
+                  </SheetTitle>
+                )}
                 <SheetDescription className="sr-only">
                   {isAdding
                     ? copySourceId ? "Create a new event from a copy." : "Create a new event."
@@ -1579,6 +1605,44 @@ export default function EventsClient({
                 </span>
               </div>
             )}
+
+            {!showForm && selected && viewQuiz && viewQuiz.target > 0 && (
+              viewQuiz.allComplete ? (
+                <div role="status" className="mt-2 flex items-center gap-2.5 rounded-2xl border border-green-300 bg-green-50 px-3.5 py-2.5">
+                  <CheckCircle2 className="h-4.5 w-4.5 shrink-0 text-green-600" />
+                  <p className="min-w-0 text-[13px] leading-snug font-semibold text-green-700">
+                    Quiz ready - all {viewQuiz.target} questions are written.
+                  </p>
+                </div>
+              ) : (
+                <div role="status" className="mt-2 rounded-2xl border border-amber-300 bg-amber-50 px-3.5 py-2.5">
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 sm:flex-nowrap">
+                    <div className="min-w-0 flex-1 basis-full sm:basis-auto">
+                      <p className="flex items-center gap-1.5 text-[13px] font-bold text-amber-700">
+                        <AlertTriangle className="h-4 w-4 shrink-0" />
+                        {viewQuiz.someExist ? "Quiz not finished" : "Quiz not started"}
+                      </p>
+                      <p className="mt-0.5 text-[12px] font-semibold text-amber-700/80 tabular-nums">
+                        {viewQuiz.total} of {viewQuiz.target} questions written · {viewQuiz.target - viewQuiz.total} to go
+                      </p>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-amber-200/70">
+                        <div
+                          style={{ "--quiz-progress": `${viewQuizPct}%` } as React.CSSProperties}
+                          className="h-full w-(--quiz-progress) rounded-full bg-amber-500 transition-all"
+                        />
+                      </div>
+                    </div>
+                    <Link
+                      href={`/event-setups/events/${selected.id}`}
+                      className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-4 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719] sm:h-10 sm:w-auto"
+                    >
+                      <Brain className="h-4 w-4 shrink-0" />
+                      {viewQuiz.someExist ? "Continue quiz" : "Start quiz"}
+                    </Link>
+                  </div>
+                </div>
+              )
+            )}
           </div>
 
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
@@ -1615,8 +1679,63 @@ export default function EventsClient({
               const showWinningTeam = type?.name === "games" && (selected.booking_id != null || eventHasPassed);
               const bookingUrl = selected.booking_page_url ?? (typeof window !== "undefined" ? `${window.location.origin}/book/event/${selected.id}` : `/book/event/${selected.id}`);
               return (
-                <div className="animate-in grid-cols-2 items-start gap-5 space-y-4 duration-200 fade-in sm:space-y-5 lg:grid lg:space-y-0">
-                  <ViewSection title="Event Details" className="lg:col-start-1 lg:row-start-1" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)}>
+                <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+                  {selected.is_bookable && (
+                    <ViewSection
+                      title="Bookings"
+                      open={bookingsOpen}
+                      onToggle={() => setBookingsOpen(o => !o)}
+                      headerRight={
+                        <span className="mr-2 shrink-0 font-bold text-[12px] text-[#5E6654] tabular-nums">
+                          {bk.confirmedCount} {bk.confirmedCount === 1 ? "group" : "groups"}
+                        </span>
+                      }
+                    >
+                      <div className="grid grid-cols-3 divide-x divide-[#D8D5C8]/50 border-b border-[#D8D5C8]">
+                        <div className="px-2 py-2 text-center sm:px-3">
+                          <p className="font-bold text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
+                          <p className="font-bold text-[12px] text-[#5E6654]">Confirmed</p>
+                        </div>
+                        <div className="px-2 py-2 text-center sm:px-3">
+                          <p className="font-bold text-base leading-tight text-amber-500 tabular-nums sm:text-lg">{bk.waitlistedPeople}</p>
+                          <p className="font-bold text-[12px] text-[#5E6654]">Waitlisted</p>
+                        </div>
+                        <div className="px-2 py-2 text-center sm:px-3">
+                          <p className="font-bold text-base leading-tight text-red-500 tabular-nums sm:text-lg">{bk.cancelledPeople}</p>
+                          <p className="font-bold text-[12px] text-[#5E6654]">Cancelled</p>
+                        </div>
+                      </div>
+                      <DetailCell
+                        label="Fully Booked"
+                        value={selected.is_fully_booked
+                          ? <span className="font-bold text-red-600">Yes - new bookings stopped</span>
+                          : <span className="font-bold text-green-700">No - bookings open</span>}
+                      />
+                      {showWinningTeam && (
+                        <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "-"} />
+                      )}
+                      <div className={cn("grid gap-2.5 p-3 sm:p-4", selected.seating_required ? "grid-cols-2" : "grid-cols-1")}>
+                        <Link
+                          href={viewAllHref}
+                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719]"
+                        >
+                          <Users className="h-4 w-4 shrink-0" />
+                          View bookings
+                        </Link>
+                        {selected.seating_required && (
+                          <Link
+                            href={`/settings/floor-plan/${selected.id}`}
+                            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#34451F] bg-white px-3 text-[13px] font-semibold text-[#34451F] transition-colors hover:bg-[#E5EBD8]"
+                          >
+                            <Grid2X2 className="h-4 w-4 shrink-0" />
+                            Floor plan
+                          </Link>
+                        )}
+                      </div>
+                    </ViewSection>
+                  )}
+
+                  <ViewSection title="Event Details" open={detailsOpen} onToggle={() => setDetailsOpen(o => !o)}>
                     {poster.url && (
                       <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
                         <span className="shrink-0 pt-0.5 font-bold text-[12px] text-[#5E6654]">Poster</span>
@@ -1654,7 +1773,9 @@ export default function EventsClient({
                     {(sub?.payment_required || hasPricing) && (
                       <DetailCell label="Payment" value={hasPricing ? `£${selected.payment_amount!.toFixed(2)} / person` : "Free"} />
                     )}
-                    {(sub?.seating_required || selected.seating_required) && <DetailCell label="Seating" toggle={!!selected.seating_required} />}
+                    {(sub?.seating_required || selected.seating_required) && (
+                      <DetailCell label="Seating" value={selected.seating_required ? "Required" : "Not required"} />
+                    )}
                     {selected.tagline && <DetailCell label="Tagline" value={selected.tagline} />}
                     {selected.external_link && <DetailCell label="External Link" value={selected.external_link} />}
                     {sub?.behavior === "karaoke" && <DetailCell label="Singa Link" value={selected.karaoke_request_url} />}
@@ -1665,162 +1786,145 @@ export default function EventsClient({
                     const savedQuestionCount = categoryCounts.reduce((total, category) => total + category.count, 0);
                     const targetQuestionCount = categoryCounts.reduce((total, category) => total + category.question_count, 0);
                     const quizIsComplete = categoryCounts.length > 0 && categoryCounts.every(category => category.count >= category.question_count);
-                    const manageQuizLabel = savedQuestionCount === 0
-                      ? "Start quiz"
-                      : quizIsComplete
-                        ? "Review quiz"
-                        : `Continue quiz · ${savedQuestionCount}/${targetQuestionCount}`;
+                    const quizHref = `/event-setups/events/${selected.id}`;
                     return (
                       <ViewSection
-                        title="Quiz Questions"
-                        className="lg:col-start-1 lg:row-start-2"
+                        title="Quiz Rounds"
                         open={quizOpen}
                         onToggle={() => setQuizOpen(o => !o)}
                         headerRight={
-                          <Link
-                            href={`/event-setups/events/${selected.id}`}
-                            title={manageQuizLabel}
-                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 text-[12px] font-semibold text-white transition-colors hover:bg-[#283719]"
-                          >
-                            <Brain className="h-3.5 w-3.5 shrink-0" />
-                            {manageQuizLabel}
-                          </Link>
+                          <span className={cn(
+                            "mr-2 inline-flex h-7 shrink-0 items-center rounded-full border px-2.5 font-bold text-[12px] tabular-nums",
+                            quizIsComplete ? "border-green-300 bg-green-100 text-green-700" : "border-amber-300 bg-amber-100 text-amber-700"
+                          )}>
+                            {savedQuestionCount} / {targetQuestionCount}
+                          </span>
                         }
                       >
-                        {categoryCounts.map(cat => (
-                          <div key={cat.id} className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                            <span className="shrink-0 pt-0.5 font-bold text-[12px] text-[#5E6654]">{cat.category_name}</span>
-                            <span className="flex items-center gap-1.5 text-right text-[13px] font-semibold text-[#20231A]">
-                              {cat.count >= cat.question_count ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-green-600" /> : cat.count > 0 ? <AlertTriangle className="h-3.5 w-3.5 shrink-0 text-amber-500" /> : <AlertCircle className="h-3.5 w-3.5 shrink-0 text-red-400" />}
-                              <span className="tabular-nums">{cat.count} / {cat.question_count}</span>
-                            </span>
-                          </div>
-                        ))}
+                        {categoryCounts.map(cat => {
+                          const remaining = cat.question_count - cat.count;
+                          const done = cat.count >= cat.question_count;
+                          return (
+                            <div key={cat.id} className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 sm:px-5">
+                              <span className="min-w-0 truncate font-bold text-[12px] text-[#5E6654]">{cat.category_name}</span>
+                              <span className={cn(
+                                "inline-flex min-w-32 shrink-0 items-center justify-center rounded-full border px-2 py-1 font-bold text-[12px] tabular-nums",
+                                done ? "border-green-300 bg-green-100 text-green-700" : cat.count > 0 ? "border-amber-300 bg-amber-100 text-amber-700" : "border-red-200 bg-red-50 text-red-600"
+                              )}>
+                                {cat.count} / {cat.question_count} · {done ? "Ready" : cat.count > 0 ? `${remaining} more` : "Not started"}
+                              </span>
+                            </div>
+                          );
+                        })}
+                        <div className="p-3 sm:p-4">
+                          {quizIsComplete ? (
+                            <Link
+                              href={quizHref}
+                              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-green-300 bg-green-50 text-[13px] font-semibold text-green-700 transition-colors hover:bg-green-100"
+                            >
+                              <CheckCircle2 className="h-4 w-4 shrink-0" />
+                              All rounds complete - review quiz
+                            </Link>
+                          ) : (
+                            <Link
+                              href={quizHref}
+                              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-[#34451F] text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719]"
+                            >
+                              <Brain className="h-4 w-4 shrink-0" />
+                              {savedQuestionCount === 0 ? "Start quiz" : `Continue quiz - ${targetQuestionCount - savedQuestionCount} to go`}
+                            </Link>
+                          )}
+                        </div>
                       </ViewSection>
                     );
                   })()}
 
-                  <div className={cn("space-y-4 sm:space-y-5", isQuiz ? "lg:contents lg:space-y-0" : "lg:col-start-2 lg:row-start-1")}>
+                  <ViewSection title="Public Booking Settings" open={bookingSettingsOpen} onToggle={() => setBookingSettingsOpen(o => !o)}>
+                    <DetailCell
+                      label="Public Booking"
+                      value={selected.is_bookable
+                        ? <span className="font-bold text-green-700">Enabled</span>
+                        : "Disabled - guests can't book this event"}
+                    />
+
                     {selected.is_bookable && (
-                      <ViewSection
-                        title="Bookings"
-                        className="lg:col-start-2 lg:row-start-1"
-                        open={bookingsOpen}
-                        onToggle={() => setBookingsOpen(o => !o)}
-                        headerRight={
-                          <Link
-                            href={viewAllHref}
-                            title="View all bookings"
-                            className="mr-2 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-semibold text-[12px] tracking-wider text-white transition-colors hover:bg-[#283719]"
-                          >
-                            <Users className="h-3.5 w-3.5 shrink-0" />
-                            View All
-                          </Link>
-                        }
-                      >
-                        <DetailCell label="Fully Booked" toggle={!!selected.is_fully_booked} />
-                        {showWinningTeam && (
-                          <DetailCell label="Winning Team" value={selected.booking_id ? `#${selected.booking_id}: ${selected.group_name || "Unnamed"}` : "-"} />
-                        )}
-                        <div className="grid grid-cols-3 divide-x divide-[#D8D5C8]/50 border-b border-[#D8D5C8] last:border-0">
-                          <div className="px-2 py-2 text-center sm:px-3">
-                            <p className="font-bold text-base leading-tight text-green-600 tabular-nums sm:text-lg">{bk.confirmedPeople}</p>
-                            <p className="font-bold text-[12px] text-[#5E6654] sm:text-[12px]">Confirmed</p>
-                          </div>
-                          <div className="px-2 py-2 text-center sm:px-3">
-                            <p className="font-bold text-base leading-tight text-amber-500 tabular-nums sm:text-lg">{bk.waitlistedPeople}</p>
-                            <p className="font-bold text-[12px] text-[#5E6654] sm:text-[12px]">Waitlisted</p>
-                          </div>
-                          <div className="px-2 py-2 text-center sm:px-3">
-                            <p className="font-bold text-base leading-tight text-red-500 tabular-nums sm:text-lg">{bk.cancelledPeople}</p>
-                            <p className="font-bold text-[12px] text-[#5E6654] sm:text-[12px]">Cancelled</p>
-                          </div>
-                        </div>
-                        {selected.seating_required && (
-                          <div className="flex items-center justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0 sm:px-5">
-                            <span className="shrink-0 font-bold text-[12px] text-[#5E6654]">Floor Plan</span>
-                            <Link
-                              href={`/settings/floor-plan/${selected.id}`}
-                              title="Floor plan layout calculator"
-                              className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
-                            >
-                              <Grid2X2 className="h-3.5 w-3.5 shrink-0" />
-                              Layout Calculator
-                            </Link>
-                          </div>
-                        )}
-                      </ViewSection>
-                    )}
-
-                    <ViewSection title="Public Booking Settings" className="lg:col-start-2 lg:row-start-2" open={bookingSettingsOpen} onToggle={() => setBookingSettingsOpen(o => !o)}>
-                      <DetailCell label="Public Booking" toggle={!!selected.is_bookable} />
-
-                      {selected.is_bookable && (
-                        <div className="bg-[#F4F1E8]/40 p-3 sm:p-4">
-                          <BookingConfigEditor
-                            value={selected.booking_config ?? {}}
-                            readOnly
-                            bookingPageExtra={
-                              <>
-                                <div className="flex items-center justify-between gap-3 border-t border-[#D8D5C8] px-4 py-2">
-                                  <span className="flex shrink-0 items-center gap-1.5 font-bold text-[12px] text-[#5E6654]">
-                                    <Link2 className="h-3.5 w-3.5" />
-                                    Booking Link
-                                  </span>
-                                  <div className="flex min-w-0 items-center gap-2">
-                                    <span className="truncate text-right text-[13px] font-semibold text-[#20231A]">{bookingUrl}</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        navigator.clipboard.writeText(bookingUrl);
-                                        setLinkCopied(true);
-                                        setTimeout(() => setLinkCopied(false), 2000);
-                                      }}
-                                      aria-label="Copy the booking link"
-                                      title="Copy the booking link"
-                                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
-                                    >
-                                      {linkCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-                                    </button>
-                                  </div>
+                      <div className="bg-[#F4F1E8]/40 p-3 sm:p-4">
+                        <BookingConfigEditor
+                          value={selected.booking_config ?? {}}
+                          readOnly
+                          bookingPageExtra={
+                            <>
+                              <div className="flex items-center justify-between gap-3 border-t border-[#D8D5C8] px-4 py-2">
+                                <span className="flex shrink-0 items-center gap-1.5 font-bold text-[12px] text-[#5E6654]">
+                                  <Link2 className="h-3.5 w-3.5" />
+                                  Booking Link
+                                </span>
+                                <div className="flex min-w-0 items-center gap-2">
+                                  <span className="truncate text-right text-[13px] font-semibold text-[#20231A]">{bookingUrl}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(bookingUrl);
+                                      setLinkCopied(true);
+                                      setTimeout(() => setLinkCopied(false), 2000);
+                                    }}
+                                    aria-label="Copy the booking link"
+                                    title="Copy the booking link"
+                                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white"
+                                  >
+                                    {linkCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                  </button>
                                 </div>
+                              </div>
 
-                                <div className="flex items-start justify-between gap-4 border-t border-[#D8D5C8] px-4 py-2">
-                                  <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-bold text-[12px] text-[#5E6654]">
-                                    <QrCode className="h-3.5 w-3.5" />
-                                    Booking QR
-                                  </span>
-                                  {selected.booking_qr_url ? (
-                                    <div className="flex items-start gap-2">
-                                      <div className="flex flex-col items-end gap-1.5">
-                                        <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white">
-                                          {qrCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-                                          {qrCopied ? "Copied" : "Copy QR"}
-                                        </button>
-                                        <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white disabled:opacity-50">
-                                          {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
-                                          Regenerate
-                                        </button>
-                                      </div>
-                                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                                      <img src={selected.booking_qr_url} alt="Booking link QR code" className="h-20 w-20 shrink-0 rounded-lg border border-[#D8D5C8] bg-white p-1" />
+                              <div className="flex items-start justify-between gap-4 border-t border-[#D8D5C8] px-4 py-2">
+                                <span className="flex shrink-0 items-center gap-1.5 pt-0.5 font-bold text-[12px] text-[#5E6654]">
+                                  <QrCode className="h-3.5 w-3.5" />
+                                  Booking QR
+                                </span>
+                                {selected.booking_qr_url ? (
+                                  <div className="flex items-start gap-2">
+                                    <div className="flex flex-col items-end gap-1.5">
+                                      <button type="button" onClick={copyQr} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white">
+                                        {qrCopied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                                        {qrCopied ? "Copied" : "Copy QR"}
+                                      </button>
+                                      <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-[#F4F1E8] px-2.5 font-semibold text-[12px] tracking-wider text-[#34451F] transition-colors hover:bg-[#34451F] hover:text-white disabled:opacity-50">
+                                        {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
+                                        Regenerate
+                                      </button>
                                     </div>
-                                  ) : (
-                                    <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-semibold text-[12px] tracking-wider text-white transition-colors hover:bg-[#283719] disabled:opacity-50">
-                                      {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
-                                      Generate QR
-                                    </button>
-                                  )}
-                                </div>
-                              </>
-                            }
-                          />
-                        </div>
-                      )}
-                    </ViewSection>
-                  </div>
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={selected.booking_qr_url} alt="Booking link QR code" className="h-20 w-20 shrink-0 rounded-lg border border-[#D8D5C8] bg-white p-1" />
+                                  </div>
+                                ) : (
+                                  <button type="button" onClick={generateQr} disabled={qrBusy} className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-2.5 font-semibold text-[12px] tracking-wider text-white transition-colors hover:bg-[#283719] disabled:opacity-50">
+                                    {qrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <QrCode className="h-3.5 w-3.5" />}
+                                    Generate QR
+                                  </button>
+                                )}
+                              </div>
+                            </>
+                          }
+                        />
+                      </div>
+                    )}
+                  </ViewSection>
 
-                  {formError && <div className="lg:col-span-2 lg:row-start-3"><ErrorBox message={formError} /></div>}
+                  {formError && <ErrorBox message={formError} />}
+
+                  <div className="pt-1 text-center">
+                    <button
+                      type="button"
+                      onClick={handleDelete}
+                      disabled={isPending}
+                      className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-[13px] font-semibold text-[#B33A32] transition-colors hover:bg-red-50 disabled:opacity-50"
+                    >
+                      {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      Delete this event
+                    </button>
+                    <p className="mt-0.5 text-[12px] font-medium text-[#5E6654]">You&apos;ll be asked to confirm first.</p>
+                  </div>
                 </div>
               );
             })()}
@@ -2090,15 +2194,9 @@ export default function EventsClient({
 
           <div className="z-40 shrink-0 rounded-b-4xl border-t-2 border-[#34451F]/15 bg-[#D8D5C8] px-4 py-3 pb-6 sm:px-6">
             {!showForm && selected && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button variant="ghost" onClick={handleDelete} disabled={isPending} className="h-12 rounded-xl border-2 border-[#D8D5C8] bg-white px-4 text-[13px] font-semibold text-[#B33A32] hover:border-red-200 hover:bg-red-50">
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-2 h-4 w-4" />}
-                  Delete
-                </Button>
-                <Button variant="ghost" onClick={openEdit} className="h-12 flex-1 rounded-xl border border-[#34451F] bg-white px-4 text-[13px] font-semibold tracking-wide text-[#34451F] hover:bg-[#E5EBD8] hover:text-[#34451F] active:scale-95">
-                  <Pencil className="mr-2 h-4 w-4" />Edit
-                </Button>
-              </div>
+              <Button variant="ghost" onClick={openEdit} className="h-12 w-full rounded-xl border border-[#34451F] bg-white px-4 text-[13px] font-semibold tracking-wide text-[#34451F] hover:bg-[#E5EBD8] hover:text-[#34451F] active:scale-95">
+                <Pencil className="mr-2 h-4 w-4" />Edit event
+              </Button>
             )}
 
             {showForm && (
