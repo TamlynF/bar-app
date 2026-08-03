@@ -1584,10 +1584,10 @@ export default function EventsClient({
                       onClick={() => openCopy(selected)}
                       aria-label="Copy this event"
                       title="Copy this event"
-                      className="flex h-9 shrink-0 items-center justify-center gap-2 rounded-xl bg-[#34451F] px-2.5 text-white shadow-sm transition-colors hover:bg-[#283719] lg:px-3"
+                      className="flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-xl border border-admin-line bg-admin-card text-admin-primary transition-colors hover:border-admin-primary hover:bg-admin-primary-soft focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none sm:w-auto sm:px-3"
                     >
-                      <CopyPlus className="h-4.5 w-4.5 shrink-0" />
-                      <span className="hidden font-bold text-[13px] lg:inline">Copy</span>
+                      <CopyPlus className="h-4 w-4 shrink-0" />
+                      <span className="hidden text-[13px] font-semibold sm:inline">Copy</span>
                     </button>
                   )}
                 </div>
@@ -1717,7 +1717,7 @@ export default function EventsClient({
                       <div className={cn("grid gap-2.5 p-3 sm:p-4", selected.seating_required ? "grid-cols-2" : "grid-cols-1")}>
                         <Link
                           href={viewAllHref}
-                          className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3 text-[13px] font-semibold text-white shadow-sm transition-colors hover:bg-[#283719]"
+                          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-primary bg-admin-card px-3 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft hover:text-admin-primary focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none active:scale-[0.98]"
                         >
                           <Users className="h-4 w-4 shrink-0" />
                           View bookings
@@ -1725,7 +1725,7 @@ export default function EventsClient({
                         {selected.seating_required && (
                           <Link
                             href={`/settings/floor-plan/${selected.id}`}
-                            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-[#34451F] bg-white px-3 text-[13px] font-semibold text-[#34451F] transition-colors hover:bg-[#E5EBD8]"
+                            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-admin-line bg-admin-card px-3 text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none"
                           >
                             <Grid2X2 className="h-4 w-4 shrink-0" />
                             Floor plan
@@ -1982,16 +1982,6 @@ export default function EventsClient({
                     )}
                   </div>
 
-                  <FormRow label="Title" required error={fieldErrors.title}>
-                    <input
-                      name="title"
-                      placeholder="e.g. Music Bingo"
-                      value={formTitle}
-                      onChange={(e) => setFormTitle(e.target.value)}
-                      className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
-                    />
-                  </FormRow>
-
                   <FormRow label="Type / Sub-Type" required error={fieldErrors.event_types_id ?? fieldErrors.event_subtypes_id}>
                     <div className="flex min-w-0 items-center justify-end gap-1.5">
                       <select
@@ -2021,6 +2011,16 @@ export default function EventsClient({
                       </select>
                       <ChevronDown className="pointer-events-none h-3.5 w-3.5 shrink-0 text-[#5E6654]" />
                     </div>
+                  </FormRow>
+
+                  <FormRow label="Title" required error={fieldErrors.title}>
+                    <input
+                      name="title"
+                      placeholder="e.g. Music Bingo"
+                      value={formTitle}
+                      onChange={(e) => setFormTitle(e.target.value)}
+                      className="min-w-0 flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
+                    />
                   </FormRow>
 
                   <FormRow label="Date" required error={fieldErrors.date}>
@@ -2201,7 +2201,7 @@ export default function EventsClient({
 
             {showForm && (
               <div className="grid grid-cols-2 gap-3">
-                <Button type="button" variant="outline" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-12 rounded-xl border-2 border-[#34451F]/30 bg-white font-semibold text-[12px] tracking-wide text-[#34451F] shadow-sm hover:bg-[#F4F1E8] hover:text-[#34451F]">
+                <Button type="button" variant="ghost" onClick={() => { setFormError(null); if (isAdding) closeSheet(); else setIsEditing(false); }} disabled={isPending} className="h-12 rounded-xl border border-admin-line bg-admin-card text-[13px] font-semibold text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink focus-visible:ring-2 focus-visible:ring-admin-gold focus-visible:outline-none active:scale-[0.98]">
                   <Undo2 className="mr-2 h-4 w-4" />
                   Cancel
                 </Button>
