@@ -132,7 +132,7 @@ export default async function GeneralEventBookingsPage({
         title: eventDetails.title ?? "",
         isActive,
         dateLabel: new Date(eventDetails.date + "T00:00:00").toLocaleDateString("en-GB", {
-          weekday: "long", day: "numeric", month: "long", year: "numeric",
+          weekday: "short", day: "numeric", month: "short", year: "2-digit",
         }),
         timeLabel: `${formatTime(eventDetails.start_time)} – ${formatTime(eventDetails.end_time)}`,
         hostName: hostName ?? "-",

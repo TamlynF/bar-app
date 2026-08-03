@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
 import { ChevronDown } from "lucide-react";
@@ -54,6 +54,7 @@ export default function EventPickerBanner({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [detailsOpen, setDetailsOpen] = useState(true);
 
   const upcoming = events
     .filter(e => e.date >= todayIso)
@@ -95,13 +96,25 @@ export default function EventPickerBanner({
   return (
     <section className="flex flex-wrap items-end gap-x-6 gap-y-2.5 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-3.5 py-3.5 max-sm:-mx-3 sm:gap-y-4 sm:px-5 sm:py-4.5">
       <div className="min-w-0 flex-1">
-        {showPicker ? (
-          <label htmlFor="event-picker" className={cn(FIELD_LABEL, "mb-1 block sm:mb-1.5")}>
-            Step 1 · Choose which event to view
-          </label>
-        ) : (
-          <span className={cn(FIELD_LABEL, "mb-1 block sm:mb-1.5")}>Event</span>
-        )}
+        <div className="mb-1 flex items-center gap-2 sm:mb-1.5">
+          {showPicker ? (
+            <label htmlFor="event-picker" className={FIELD_LABEL}>
+              Step 1 · Choose which event to view
+            </label>
+          ) : (
+            <span className={FIELD_LABEL}>Event</span>
+          )}
+          <button
+            type="button"
+            onClick={() => setDetailsOpen(open => !open)}
+            aria-expanded={detailsOpen}
+            aria-controls="event-banner-details"
+            aria-label={detailsOpen ? "Hide event details" : "Show event details"}
+            className="-my-2 -mr-1.5 ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-[#5E6654] transition-colors hover:bg-black/5 sm:my-0 sm:h-8 sm:w-8"
+          >
+            <ChevronDown className={cn("h-4 w-4 transition-transform", detailsOpen && "rotate-180")} />
+          </button>
+        </div>
         {showPicker ? (
           <div className="relative inline-block w-full max-w-full sm:w-auto">
             <select
@@ -137,27 +150,32 @@ export default function EventPickerBanner({
             {summary?.title || "Untitled event"}
           </h2>
         )}
-        <p className="mt-1.5 text-[13px] leading-snug font-medium text-[#5E6654] sm:mt-2">
-          {summary ? (
-            <>
-              {summary.dateLabel} · {summary.timeLabel}
-              <span className="max-sm:hidden"> · Hosted by {summary.hostName}</span> ·{" "}
-              <span className={summary.isActive ? "text-[#2F6420]" : "text-[#96302A]"}>
-                {summary.isActive ? "Active event" : "Inactive event"}
-              </span>
-            </>
-          ) : (
-            "Showing every booking across all events — pick one above to focus on it."
-          )}
-        </p>
-        <p className="mt-1 text-[13px] leading-snug font-medium text-[#5E6654] tabular-nums sm:hidden">
-          {compactStats}
-        </p>
+        {detailsOpen && (
+          <div id="event-banner-details">
+            <p className="mt-1.5 text-[13px] leading-snug font-medium text-[#5E6654] sm:mt-2">
+              {summary ? (
+                <>
+                  {summary.dateLabel} · {summary.timeLabel}
+                  <span className="max-sm:hidden"> · Hosted by {summary.hostName}</span> ·{" "}
+                  <span className={cn("font-bold", summary.isActive ? "text-[#2F6420]" : "text-[#96302A]")}>
+                    {summary.isActive ? "Active" : "Inactive"}
+                  </span>
+                </>
+              ) : (
+                "Showing every booking across all events — pick one above to focus on it."
+              )}
+            </p>
+            <p className="mt-1 text-[13px] leading-snug font-medium text-[#5E6654] tabular-nums sm:hidden">
+              {compactStats}
+            </p>
+          </div>
+        )}
       </div>
 
       <div
         className={cn(
           "flex w-full flex-wrap items-end gap-2 sm:w-auto sm:gap-2.5",
+          !detailsOpen && "hidden",
           !(summary && showPicker) && "max-sm:hidden",
         )}
       >

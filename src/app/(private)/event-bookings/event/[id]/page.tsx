@@ -141,10 +141,10 @@ export default async function EventDetailPage({
     title: event.title ?? "",
     isActive: event.is_active !== false,
     dateLabel: new Date(event.date + "T00:00:00").toLocaleDateString("en-GB", {
-      weekday: "long",
+      weekday: "short",
       day: "numeric",
-      month: "long",
-      year: "numeric",
+      month: "short",
+      year: "2-digit",
     }),
     timeLabel: `${formatTime(event.start_time)} – ${formatTime(event.end_time)}`,
     hostName: hostName ?? "-",

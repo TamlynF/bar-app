@@ -675,7 +675,7 @@ export default function BookingList({
 
   return (
     <>
-      <div className="overflow-x-clip rounded-2xl border border-[#D8D5C8] bg-white max-sm:-mx-3 sm:max-h-[calc(100svh-24rem)] sm:overflow-x-auto sm:overflow-y-auto">
+      <div className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white max-sm:-mx-3 sm:max-h-[calc(100svh-24rem)] sm:overflow-x-auto sm:overflow-y-auto">
         <table className="w-full border-collapse sm:min-w-175">
           <thead>
             <tr>
