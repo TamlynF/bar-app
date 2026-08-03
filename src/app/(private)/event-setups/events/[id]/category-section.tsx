@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { BookOpen, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ExternalLink, Copy, Check, RefreshCw, MoreVertical } from "lucide-react";
+import { BookOpen, Brain, ChevronDown, Sparkles, Edit2, Trash2, Save, Loader2, X, Upload, Target, Printer, Music, ImageIcon, ExternalLink, Copy, Check, RefreshCw, MoreVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +47,8 @@ type Props = {
   isHigherLower?: boolean;
   playlistUrl?: string | null;
   autoOpen?: boolean;
+  // Set by "Continue building quiz" — lands on the round with its sheet open.
+  openSheet?: boolean;
   // The next round still needing questions, for the sheet's footer. Optional —
   // omit it and the footer just says the quiz is ready.
   nextRound?: NextRoundSummary | null;
@@ -75,7 +77,7 @@ const printStyles = `
   @page { size: A4; margin: 1.2cm; }
 `;
 
-export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, playlistUrl: initialPlaylistUrl, autoOpen, nextRound }: Props) {
+export default function CategorySection({ eventId, eventDate, categoryConfigId, category_name, question_count, questions: initialQuestions, orderNo, includeSpotify, isPicture, isHigherLower, playlistUrl: initialPlaylistUrl, autoOpen, openSheet, nextRound }: Props) {
   const { confirm, ConfirmDialogUI } = useConfirm();
   const [questions, setQuestions] = useState(initialQuestions);
 
@@ -91,6 +93,7 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
 
   const isHigherOrLower = includeSpotify && !!isHigherLower;
   const hideQuestionText = !!includeSpotify && !isHigherLower;
+  const RoundIcon = isPicture ? ImageIcon : includeSpotify ? Music : Brain;
   const count = questions.length;
   const isComplete = count >= question_count;
   const hasAny = count > 0;
@@ -352,13 +355,17 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
 
   return (
     <section ref={sectionRef} className="overflow-hidden rounded-2xl border border-admin-line bg-white">
-      <div className="flex items-center gap-2 border-b border-admin-line bg-admin-surface px-3 py-2.5 sm:px-4">
+      {/* Four fixed rails, same order and width on every row: name + status,
+          progress chip, action slot, chevron. Complete rounds fill the action
+          slot with a tag rather than collapsing it. */}
+      <div className="flex flex-wrap items-center gap-3 border-b border-admin-line bg-admin-surface px-3 py-2.5 sm:px-4">
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
-          className="flex min-h-11 min-w-0 flex-1 items-center gap-3 rounded-xl px-1 text-left transition-colors hover:bg-admin-card/60"
+          className="flex min-h-11 min-w-0 flex-1 basis-full items-center gap-2.5 rounded-xl px-1 text-left transition-colors hover:bg-admin-card/60 md:basis-auto"
         >
+          <RoundIcon className="h-4 w-4 shrink-0 text-admin-muted" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-bold tracking-tight text-admin-primary sm:text-[15px]">
               {orderNo != null ? `${orderNo}. ` : ''}{category_name}
@@ -367,41 +374,37 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               "mt-0.5 text-[12px] font-medium",
               isComplete ? "text-admin-success" : hasAny ? "text-admin-warning" : "text-admin-muted"
             )}>
-              {isComplete ? "Round complete" : hasAny ? `${remaining} question${remaining === 1 ? "" : "s"} still needed` : "Not started"}
+              {isComplete ? "Round complete" : hasAny ? `${remaining} more needed` : "Not started"}
             </p>
           </div>
-          <span
-            className={cn(
-              "shrink-0 rounded-lg border px-2.5 py-1 text-[13px] font-semibold tabular-nums",
-              isComplete
-                ? "border-admin-success/25 bg-admin-success-bg text-admin-success"
-                : hasAny
-                ? "border-admin-warning/25 bg-admin-warning-bg text-admin-warning"
-                : "border-admin-line bg-admin-card text-admin-muted"
-            )}
-          >
-            {count} / {question_count}
-          </span>
-          <ChevronDown
-            className={cn(
-              "h-4 w-4 shrink-0 text-admin-muted transition-transform duration-200",
-              open && "rotate-180"
-            )}
-          />
         </button>
 
-        {!isPastEvent && !isComplete && (
-          // Picture and music-snippet rounds resolve images and Spotify track IDs
-          // and lock their topic, so they still run in the full generator. Plain
-          // question rounds build in place.
-          isPicture || includeSpotify || configId == null ? (
+        <span
+          className={cn(
+            "w-18.5 shrink-0 rounded-lg border py-2 text-center text-[13px] font-semibold tabular-nums",
+            isComplete
+              ? "border-admin-success/25 bg-admin-success-bg text-admin-success"
+              : hasAny
+              ? "border-admin-warning/25 bg-admin-warning-bg text-admin-warning"
+              : "border-admin-line bg-admin-card text-admin-muted"
+          )}
+        >
+          {count} / {question_count}
+        </span>
+
+        <div className="flex flex-1 md:w-47.5 md:flex-none">
+          {isComplete ? (
+            <span className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-admin-success/40 text-[13px] font-semibold text-admin-success">
+              <Check className="h-4 w-4" />
+              Complete
+            </span>
+          ) : isPastEvent ? null : configId == null ? (
             <Link
               href={`/event-setups/quiz-generator?event_id=${eventId}&category=${encodeURIComponent(category_name)}`}
-              className="inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary px-3 text-[12px] font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:px-4 sm:text-[13px]"
+              className="inline-flex h-11 w-full shrink-0 items-center justify-center gap-1.5 rounded-xl bg-admin-primary px-3 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
             >
-              <Sparkles className="h-4 w-4" />
-              <span className="sm:hidden">{hasAny ? `Add ${remaining}` : "Start"}</span>
-              <span className="hidden sm:inline">{hasAny ? `Add ${remaining} question${remaining === 1 ? "" : "s"}` : "Start round"}</span>
+              <Sparkles className="h-4 w-4 shrink-0" />
+              {hasAny ? `Add ${remaining} more` : "Start round"}
             </Link>
           ) : (
             <QuizRoundSheet
@@ -411,11 +414,34 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
               question_count={question_count}
               savedQuestions={questions}
               orderNo={orderNo}
+              includeSpotify={includeSpotify}
+              isPicture={isPicture}
+              isHigherLower={isHigherLower}
+              playlistUrl={playlistUrl}
+              spotifyConnected={spotifyConnected}
+              autoOpen={openSheet}
               nextRound={nextRound}
               onApproved={() => setOpen(true)}
+              onPlaylistUrl={setPlaylistUrl}
             />
-          )
-        )}
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label={open ? "Hide saved questions" : "Show saved questions"}
+          title={open ? "Hide saved questions" : "Show saved questions"}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-admin-line bg-white text-admin-muted transition-colors hover:bg-admin-primary-soft hover:text-admin-primary"
+        >
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 transition-transform duration-200",
+              open && "rotate-180"
+            )}
+          />
+        </button>
       </div>
 
       {open && (

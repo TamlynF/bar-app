@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Quiz round — Add questions (redesign mockup)</title>
+<style>
+  :root{
+    --ink:#22281a;
+    --olive:#414f27;
+    --olive-dark:#333e1e;
+    --olive-tint:#e6e9d8;
+    --cream:#f4f1e3;
+    --card:#fbfaf3;
+    --line:#ddd8c4;
+    --amber:#b45309;
+    --amber-bg:#fdf3e3;
+    --green-ok:#2e6b34;
+    --spotify:#1DB954;
+    --radius:14px;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Archivo","Avenir Next","Segoe UI",system-ui,sans-serif;
+    background:var(--cream);
+    color:var(--ink);
+    min-height:100vh;
+    padding:64px 0 64px;
+  }
+  /* ============ round list page ============ */
+  .page{max-width:960px;margin:0 auto;padding:24px 16px 40px}
+  .crumbs{font-size:.82rem;color:#8a8f78;font-weight:600;margin-bottom:4px}
+  .page-title{font-size:1.5rem;font-weight:800;letter-spacing:-.01em;margin-bottom:18px}
+  .sum-card{
+    background:var(--card);border:1px solid var(--line);border-radius:18px;
+    padding:20px 22px;margin-bottom:22px;
+  }
+  .sum-top{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+  .sum-icon{
+    width:46px;height:46px;border-radius:50%;background:var(--olive-tint);
+    display:flex;align-items:center;justify-content:center;font-size:1.4rem;flex-shrink:0;
+  }
+  .sum-info{flex:1;min-width:0}
+  .sum-name{font-weight:800;font-size:1.1rem}
+  .sum-date{color:#7c816b;font-size:.88rem;margin-top:1px}
+  .sum-progress{text-align:right}
+  .sum-count{font-size:1.15rem;font-weight:800;color:var(--olive)}
+  .sum-count small{font-size:.85rem;color:#8a8f78;font-weight:700}
+  .sum-caption{display:block;font-size:.75rem;color:#8a8f78;font-weight:600}
+  .sum-bar{height:10px;border-radius:99px;background:#e3dfcb;overflow:hidden;margin-bottom:14px}
+  .sum-bar div{height:100%;border-radius:99px;background:var(--olive)}
+  .sum-bottom{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .sum-bottom p{flex:1;min-width:220px;font-size:.9rem;font-weight:600;color:#5c6350}
+  .round-row{
+    display:flex;align-items:center;gap:14px;
+    background:#efecdc;border:1px solid var(--line);border-radius:16px;
+    padding:14px 16px;margin-bottom:10px;
+  }
+  .r-main{flex:1;min-width:0}
+  .r-name{font-weight:800;font-size:1rem;display:flex;align-items:center;gap:9px}
+  .r-ico{font-size:.95rem;opacity:.75}
+  .r-status{font-size:.83rem;font-weight:600;margin-top:2px}
+  .r-status.amber{color:var(--amber)}
+  .r-status.green{color:var(--green-ok)}
+  .r-status.muted{color:#8a8f78}
+  .r-chip{
+    width:74px;flex-shrink:0;text-align:center;padding:8px 0;border-radius:10px;
+    font-weight:800;font-size:.85rem;font-variant-numeric:tabular-nums;border:1.5px solid;
+  }
+  .r-chip.amber{background:var(--amber-bg);border-color:#ecc894;color:var(--amber)}
+  .r-chip.green{background:#e7f0e3;border-color:#b7d2ae;color:var(--green-ok)}
+  .r-chip.neutral{background:#fff;border-color:var(--line);color:#8a8f78}
+  .r-action{width:190px;flex-shrink:0;display:flex}
+  .r-btn{width:100%;justify-content:center;padding:11px 8px;font-size:.85rem;white-space:nowrap;border-radius:12px}
+  .r-done{
+    width:100%;text-align:center;color:var(--green-ok);font-weight:800;font-size:.85rem;
+    padding:11px 0;background:none;border:1.5px dashed #b7d2ae;border-radius:12px;
+  }
+  .r-chev{
+    width:40px;height:40px;flex-shrink:0;border-radius:10px;border:1.5px solid var(--line);
+    background:#fff;color:#6b705c;cursor:pointer;font-size:.9rem;
+  }
+  .r-chev:hover{background:var(--olive-tint)}
+  @media (max-width:680px){
+    .round-row{flex-wrap:wrap}
+    .r-main{flex:1 1 100%}
+    .r-action{flex:1;width:auto}
+  }
+  /* overlay for the sheet */
+  .overlay{
+    position:fixed;inset:0;background:rgba(24,27,14,.5);z-index:20;
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:70px 16px 40px;overflow-y:auto;
+  }
+  /* demo banner + mode switch */
+  .demo-note{
+    position:fixed;top:0;left:0;right:0;background:#22281a;color:#f4f1e3;
+    z-index:10;padding:8px 12px;text-align:center;
+  }
+  .demo-note .txt{font-size:.78rem;font-weight:600;letter-spacing:.02em;margin-bottom:7px}
+  .mode-switch{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .mode-switch button{
+    font:inherit;font-size:.8rem;font-weight:700;cursor:pointer;
+    padding:6px 14px;border-radius:99px;border:1.5px solid #5a624a;background:none;color:#c9cfb8;
+  }
+  .mode-switch button.active{background:#f4f1e3;color:#22281a;border-color:#f4f1e3}
+  /* ============ modal shell ============ */
+  .modal{
+    background:var(--cream);
+    width:100%;max-width:760px;
+    border-radius:20px;
+    box-shadow:0 24px 60px rgba(0,0,0,.35);
+    overflow:hidden;
+    display:flex;flex-direction:column;
+    max-height:calc(100vh - 150px);
+  }
+  .modal-head{
+    padding:20px 24px 16px;
+    background:var(--cream);
+    border-bottom:1px solid var(--line);
+  }
+  .head-row{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+  .head-row h1{font-size:1.25rem;font-weight:700}
+  .head-row .close{
+    border:none;background:none;font-size:1.4rem;line-height:1;cursor:pointer;color:#6b705c;
+    padding:4px 8px;border-radius:8px;
+  }
+  .head-row .close:hover{background:var(--olive-tint)}
+  .subtitle{color:#5c6350;font-size:.95rem;margin-top:4px}
+  .progress-wrap{display:flex;align-items:center;gap:12px;margin-top:14px}
+  .dots{display:flex;gap:5px;flex:1}
+  .dot{height:10px;flex:1;border-radius:99px;background:#dcd7c2}
+  .dot.saved{background:var(--olive)}
+  .dot.new-pick{background:var(--amber);animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .progress-label{font-size:.85rem;font-weight:700;color:var(--olive);white-space:nowrap}
+  /* ============ body ============ */
+  .modal-body{overflow-y:auto;padding:20px 24px 24px;flex:1}
+  section{margin-bottom:20px}
+  .step-tag{
+    display:inline-flex;align-items:center;gap:8px;
+    font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--olive);margin-bottom:10px;
+  }
+  .step-tag .num{
+    background:var(--olive);color:#fff;width:22px;height:22px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;
+  }
+  /* spotify banner */
+  .spotify-banner{
+    border-radius:var(--radius);padding:13px 16px;margin-bottom:20px;
+    display:flex;align-items:center;gap:12px;flex-wrap:wrap;
+  }
+  .spotify-banner.disconnected{background:#eaf6ee;border:1.5px solid #bfe3cb}
+  .spotify-banner.connected{background:#eaf6ee;border:1.5px solid #bfe3cb}
+  .spotify-banner .msg{flex:1;min-width:220px;font-size:.9rem;font-weight:600;color:#1f5132}
+  .spotify-banner .msg small{display:block;font-weight:400;color:#4a7a5c;margin-top:2px;font-size:.8rem}
+  .btn-spotify{
+    font:inherit;font-weight:700;cursor:pointer;border:none;border-radius:10px;
+    background:var(--spotify);color:#fff;padding:10px 18px;display:inline-flex;align-items:center;gap:8px;
+  }
+  .btn-spotify:hover{opacity:.92}
+  .btn-spotify.outline{background:#fff;color:#178a41;border:1.5px solid var(--spotify)}
+  /* generate panel */
+  .gen-panel{
+    background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    padding:18px;
+  }
+  .gen-grid{display:flex;flex-direction:column;gap:18px}
+  .field{width:100%}
+  .field label{
+    display:block;font-weight:800;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;
+    color:#6b705c;margin-bottom:7px;
+  }
+  .field label .opt{font-weight:600;color:#9aa085;text-transform:none;letter-spacing:0}
+  .field label .req{font-weight:700;color:var(--amber);text-transform:none;letter-spacing:0}
+  .field input{
+    width:100%;height:48px;padding:0 14px;border:1.5px solid var(--line);border-radius:12px;
+    font:inherit;background:#fff;
+  }
+  .field input::placeholder{color:#a8ac97}
+  .field input:focus{outline:2px solid var(--olive);outline-offset:1px}
+  .field input:disabled{background:var(--olive-tint);color:var(--olive);font-weight:700;border-color:var(--line)}
+  .topic-locked-note{
+    display:none;margin-top:7px;font-size:.82rem;color:#6b705c;font-weight:600;
+  }
+  .topic-locked-note.show{display:block}
+  .gen-row2{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+  .gen-row2 .field{flex:1;min-width:250px;max-width:380px;width:auto}
+  .seg{display:flex;gap:8px}
+  .seg button{
+    flex:1;min-width:0;height:48px;padding:0 8px;font:inherit;font-weight:600;cursor:pointer;color:#5c6350;
+    background:#fff;border:1.5px solid var(--line);border-radius:12px;
+    display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  }
+  .seg button:hover{border-color:#b9bda6}
+  .seg button .tick{display:none;font-size:.85rem}
+  .seg button.active{
+    background:var(--olive-tint);border:2px solid var(--olive);color:var(--olive);font-weight:800;
+  }
+  .seg button.active .tick{display:inline}
+  .btn{
+    font:inherit;font-weight:700;border:none;cursor:pointer;border-radius:12px;
+    padding:13px 22px;display:inline-flex;align-items:center;gap:9px;
+    transition:transform .05s;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn-primary{background:var(--olive);color:#fff}
+  .btn-primary:hover{background:var(--olive-dark)}
+  .btn-primary:disabled{background:#b9bda6;cursor:not-allowed}
+  .btn-ghost{background:none;border:1.5px solid var(--line);color:#4c5340}
+  .btn-ghost:hover{background:var(--olive-tint)}
+  .gen-row2 .btn-primary{height:48px;white-space:nowrap;border-radius:12px}
+  .gen-footnote{color:#7c816b;font-size:.84rem;margin-top:-4px}
+  /* saved accordion */
+  details.saved{border:1px solid var(--line);border-radius:var(--radius);background:#efecdc}
+  details.saved summary{
+    list-style:none;cursor:pointer;padding:14px 16px;
+    display:flex;align-items:center;gap:10px;font-weight:600;font-size:.95rem;color:#4c5340;
+    user-select:none;
+  }
+  details.saved summary::-webkit-details-marker{display:none}
+  details.saved summary .chev{margin-left:auto;transition:transform .2s;color:#8a8f78}
+  details.saved[open] summary .chev{transform:rotate(180deg)}
+  .saved-list{padding:0 16px 12px}
+  .saved-item{
+    padding:10px 12px;border-top:1px dashed var(--line);
+    font-size:.88rem;color:#4c5340;display:flex;gap:10px;align-items:center;
+  }
+  .saved-item .lock{font-size:.8rem;color:#9aa085}
+  .saved-item .ans{color:var(--olive);font-weight:700;white-space:nowrap;margin-left:auto}
+  .pill{background:var(--olive);color:#fff;border-radius:99px;padding:2px 10px;font-size:.8rem;font-weight:700}
+  /* thumbs + song art */
+  .thumb{
+    width:52px;height:52px;border-radius:10px;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:1.6rem;
+    border:1px solid var(--line);
+  }
+  .thumb.small{width:38px;height:38px;font-size:1.15rem;border-radius:8px}
+  .thumb.photo{background:linear-gradient(135deg,#d8e0c8,#b9c6a0)}
+  .thumb.art{background:linear-gradient(135deg,#2b2b2b,#565656);color:#fff}
+  /* question cards */
+  .pick-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:4px;flex-wrap:wrap}
+  .pick-head h2{font-size:1.05rem}
+  .pick-counter{
+    background:var(--amber-bg);color:var(--amber);border:1.5px solid #ecc894;
+    font-weight:800;font-size:.9rem;border-radius:99px;padding:6px 14px;
+  }
+  .pick-counter.done{background:#e7f0e3;color:var(--green-ok);border-color:#b7d2ae}
+  .pick-sub{color:#7c816b;font-size:.88rem;margin-bottom:12px}
+  .qcard{
+    position:relative;
+    background:var(--card);
+    border:2px solid var(--line);
+    border-radius:var(--radius);
+    padding:16px 16px 16px 60px;
+    margin-bottom:12px;
+    cursor:pointer;
+    transition:border-color .15s, background .15s, opacity .15s;
+  }
+  .qcard:hover{border-color:#b9bda6}
+  .qcard .checkbox{
+    position:absolute;left:16px;top:18px;
+    width:28px;height:28px;border-radius:8px;border:2.5px solid #b9bda6;background:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:1rem;color:transparent;
+    transition:all .15s;
+  }
+  .qcard.selected{border-color:var(--olive);background:#eef0e0}
+  .qcard.selected .checkbox{background:var(--olive);border-color:var(--olive);color:#fff}
+  .qcard.locked-out{opacity:.45;cursor:not-allowed}
+  .qcard .newbadge{
+    position:absolute;top:-10px;right:14px;
+    background:var(--amber);color:#fff;font-size:.68rem;font-weight:800;letter-spacing:.08em;
+    padding:3px 9px;border-radius:99px;text-transform:uppercase;
+  }
+  .qcard.selected .newbadge{background:var(--olive)}
+  .qcard .qmain{display:flex;gap:12px;align-items:flex-start}
+  .qcard .qtext{font-weight:600;line-height:1.45;padding-right:8px}
+  .qcard .qsub{color:#7c816b;font-size:.85rem;margin-top:2px}
+  .qcard .arow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;flex-wrap:wrap}
+  .qcard .arow-left{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .qcard .answer{
+    background:var(--olive-tint);color:var(--olive);font-weight:700;font-size:.88rem;
+    border-radius:8px;padding:5px 11px;
+  }
+  .qcard.selected .answer{background:#fff}
+  .yearchip{
+    background:#fff;border:1.5px solid var(--line);color:#5c6350;font-weight:700;font-size:.82rem;
+    border-radius:8px;padding:4px 10px;
+  }
+  .playbtn{
+    font:inherit;font-size:.82rem;font-weight:700;cursor:pointer;
+    background:#fff;color:#178a41;border:1.5px solid var(--spotify);border-radius:8px;padding:5px 11px;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .playbtn:hover{background:#eaf6ee}
+  .playbtn.playing{background:var(--spotify);color:#fff}
+  .swap{
+    font:inherit;font-size:.82rem;font-weight:700;color:#7c816b;
+    background:none;border:1.5px solid var(--line);border-radius:8px;padding:5px 11px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .swap:hover{background:var(--olive-tint);color:var(--olive)}
+  .pic-frame{
+    width:110px;height:110px;border-radius:12px;border:1px solid var(--line);flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;font-size:3rem;
+    background:linear-gradient(135deg,#d8e0c8,#b9c6a0);
+  }
+  .info-note{
+    display:none;background:var(--olive-tint);border:1px solid #c3cba4;color:#3c4823;
+    border-radius:10px;padding:10px 14px;font-size:.88rem;font-weight:600;margin-bottom:12px;
+  }
+  .info-note.show{display:block}
+  .more-row{display:flex;justify-content:center;margin-top:4px}
+  .skel{height:92px;border-radius:var(--radius);margin-bottom:12px;
+    background:linear-gradient(100deg,#e9e6d5 40%,#f3f0e1 50%,#e9e6d5 60%);
+    background-size:200% 100%;animation:shimmer 1.1s infinite linear}
+  @keyframes shimmer{to{background-position:-200% 0}}
+  /* footer */
+  .modal-foot{
+    border-top:1px solid var(--line);background:#efecdc;
+    padding:14px 24px;display:flex;align-items:center;gap:14px;
+  }
+  .foot-status{flex:1;font-size:.92rem;font-weight:600;color:#5c6350}
+  .foot-status.ready{color:var(--green-ok)}
+  /* success */
+  .success{text-align:center;padding:36px 24px;overflow-y:auto}
+  .success .big{font-size:3rem;margin-bottom:8px}
+  .success h2{font-size:1.3rem;margin-bottom:6px}
+  .success p{color:#5c6350;margin-bottom:20px}
+  .success .added{
+    text-align:left;max-width:480px;margin:0 auto 16px;background:var(--card);
+    border:1px solid var(--line);border-radius:var(--radius);padding:6px 16px;
+  }
+  .success .added .saved-item{border-top:none;border-bottom:1px dashed var(--line)}
+  .success .added .saved-item:last-child{border-bottom:none}
+  .success .playlist-note{
+    display:none;max-width:480px;margin:0 auto 24px;
+    background:#eaf6ee;border:1.5px solid #bfe3cb;border-radius:10px;
+    padding:10px 14px;font-size:.88rem;font-weight:600;color:#1f5132;
+  }
+  .success .playlist-note.show{display:block}
+  .hidden{display:none !important}
+  @media (max-width:640px){
+    .qcard{padding-left:54px}
+    .modal-foot{flex-direction:column;align-items:stretch}
+    .modal-foot .btn{justify-content:center}
+    .gen-row2{align-items:stretch;flex-direction:column}
+    .gen-row2 .field{max-width:none}
+    .gen-row2 .btn-primary{width:100%;justify-content:center;margin-left:0 !important}
+    .seg button{gap:4px;padding:0 4px;font-size:.92rem}
+    .pic-frame{width:84px;height:84px;font-size:2.3rem}
+  }
+</style>
+</head>
+<body>
+<div class="demo-note">
+  <div class="txt">Interactive mockup — the quiz page and its popup. Press any round’s button to open the popup (each opens a sample round of that type: question, picture or song).</div>
+</div>
+
+<!-- ===================== ROUND LIST PAGE ===================== -->
+<div class="page" id="pageView">
+  <div class="crumbs">Events › Quiz questions</div>
+  <h1 class="page-title">Quiz questions</h1>
+
+  <div class="sum-card">
+    <div class="sum-top">
+      <div class="sum-icon">🧠</div>
+      <div class="sum-info">
+        <div class="sum-name">Thursday Quiz Night</div>
+        <div class="sum-date">Tuesday, 4 August 2026</div>
+      </div>
+      <div class="sum-progress">
+        <span class="sum-count">45 <small>of 80</small></span>
+        <span class="sum-caption">questions saved</span>
+      </div>
+    </div>
+    <div class="sum-bar"><div style="width:56%"></div></div>
+    <div class="sum-bottom">
+      <p>2 of 8 rounds complete · 35 questions still needed.</p>
+      <button class="btn btn-primary" onclick="openNext()">Continue building quiz →</button>
+    </div>
+  </div>
+
+  <div id="roundList"></div>
+</div>
+
+<!-- ===================== SHEET OVERLAY ===================== -->
+<div class="overlay hidden" id="overlay">
+<div class="modal">
+
+  <!-- ===================== HEADER ===================== -->
+  <div class="modal-head">
+    <div class="head-row">
+      <div>
+        <h1 id="title">Round 1 · General knowledge</h1>
+        <div class="subtitle" id="subtitle"></div>
+      </div>
+      <button class="close" title="Close" onclick="closeSheet()">✕</button>
+    </div>
+    <div class="progress-wrap">
+      <div class="dots" id="dots"></div>
+      <div class="progress-label" id="progressLabel"></div>
+    </div>
+  </div>
+
+  <!-- ===================== BODY ===================== -->
+  <div class="modal-body" id="mainBody">
+
+    <!-- Spotify banner (music mode only) -->
+    <div class="spotify-banner disconnected hidden" id="spotifyBanner"></div>
+
+    <!-- Step 1: generate -->
+    <section id="genSection">
+      <div class="step-tag" id="step1Tag"><span class="num">1</span> <span id="step1Label">Create new questions</span></div>
+      <div class="gen-panel">
+        <div class="gen-grid">
+          <div class="field">
+            <label for="topic" id="topicLabel">Topic <span class="opt">— optional, leave blank for a general mix</span></label>
+            <input id="topic" type="text" placeholder="Type a topic, e.g. 90s britpop">
+            <div class="topic-locked-note" id="topicLockedNote">🔒 Picture rounds keep one topic — this round is already “Dog breeds”, so new pictures stay on that topic.</div>
+          </div>
+          <div class="gen-row2">
+            <div class="field">
+              <label>Difficulty</label>
+              <div class="seg" id="difficulty">
+                <button type="button"><span class="tick">✓</span>Easy</button>
+                <button type="button" class="active"><span class="tick">✓</span>Medium</button>
+                <button type="button"><span class="tick">✓</span>Hard</button>
+              </div>
+            </div>
+            <button class="btn btn-primary" id="genBtn" onclick="generate()" style="margin-left:auto">✨ Create 5 new questions</button>
+          </div>
+          <div class="gen-footnote" id="genFootnote"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Step 2: pick -->
+    <section id="pickSection" class="hidden">
+      <div class="step-tag"><span class="num">2</span> Pick your favourites</div>
+      <div class="pick-head">
+        <h2 id="pickTitle">New questions</h2>
+        <div class="pick-counter" id="pickCounter">0 of 2 picked</div>
+      </div>
+      <p class="pick-sub" id="pickSub"></p>
+      <div class="info-note" id="autoPickNote"></div>
+      <div id="draftList"></div>
+      <div class="more-row">
+        <button class="btn btn-ghost" onclick="generate()" id="regenBtn">↻ Create 5 different ones</button>
+      </div>
+    </section>
+
+    <!-- Saved questions (demoted, collapsible) -->
+    <section>
+      <details class="saved" id="savedBox">
+        <summary>
+          <span class="pill" id="savedCount">8</span>
+          <span id="savedLabel">Already saved in this round</span>
+          <span style="font-weight:400;color:#8a8f78;font-size:.85rem">— locked, just for reference</span>
+          <span class="chev">▾</span>
+        </summary>
+        <div class="saved-list" id="savedList"></div>
+      </details>
+    </section>
+
+  </div>
+
+  <!-- ===================== SUCCESS ===================== -->
+  <div class="success hidden" id="successView">
+    <div class="big" id="successBig">🎉</div>
+    <h2 id="successTitle">Round complete!</h2>
+    <p id="successText"></p>
+    <div class="added" id="addedList"></div>
+    <div class="playlist-note" id="playlistNote"></div>
+    <button class="btn btn-primary" id="successBtn" onclick="closeSheet()">Done — back to quiz</button>
+  </div>
+
+  <!-- ===================== FOOTER ===================== -->
+  <div class="modal-foot" id="footer">
+    <div class="foot-status" id="footStatus"></div>
+    <button class="btn btn-ghost" onclick="resetAll()">Start over</button>
+    <button class="btn btn-primary" id="approveBtn" disabled onclick="approve()">Add 2 questions to round</button>
+  </div>
+</div>
+</div>
+
+<script>
+const TOTAL = 10;
+
+const MODES = {
+  standard: {
+    title: "Round 1 · General knowledge",
+    noun: "question", createLabel: "✨ Create 5 new questions",
+    step1: "Create new questions", pickTitle: "New questions",
+    topicOptional: true, topicPlaceholder: "Type a topic, e.g. 90s britpop",
+    footnote: "We’ll create <strong>5</strong> so you can pick your favourite <strong>{N}</strong> and skip the rest.",
+    pickSub: "Tap a question to pick or untick it. Don’t like one? Press <strong>Swap</strong> to replace just that one.",
+    saved: [
+      {q:"Which landlocked sea, bordering Jordan and Israel, is famous for its extremely high salt content?", a:"The Dead Sea"},
+      {q:"Which landlocked country in South America has two capital cities?", a:"Bolivia"},
+      {q:"Which famous queen of Egypt was the last pharaoh of the Ptolemaic Kingdom?", a:"Cleopatra VII"},
+      {q:"Which ancient civilization is credited with inventing concrete?", a:"The Romans"},
+      {q:"What is the only body part that is fully grown from birth?", a:"The eye"},
+      {q:"The koala belongs to what specific type of mammal group?", a:"Marsupial"},
+      {q:"Which famous European city is home to the iconic Leaning Tower?", a:"Pisa"},
+      {q:"What is the largest organ of the human body?", a:"Skin"}
+    ],
+    drafts: [
+      {q:"What is the capital city of Australia?", a:"Canberra"},
+      {q:"Who authored the dystopian novel ‘Nineteen Eighty-Four’?", a:"George Orwell"},
+      {q:"Which letter of the alphabet does not appear in the name of any US state?", a:"Q"},
+      {q:"Which major world city is famously located on two continents?", a:"Istanbul"},
+      {q:"What is the name of the longest bone in the human body?", a:"Femur"}
+    ],
+    spares: [
+      {q:"How many hearts does an octopus have?", a:"Three"},
+      {q:"Which planet has the most moons in our solar system?", a:"Saturn"},
+      {q:"In which country would you find the ancient city of Petra?", a:"Jordan"},
+      {q:"What is the national flower of Japan?", a:"Cherry blossom"},
+      {q:"Which chess piece can only move diagonally?", a:"Bishop"}
+    ]
+  },
+  picture: {
+    title: "Round 9 · Picture round",
+    noun: "picture", createLabel: "✨ Create 5 new pictures",
+    step1: "Create new pictures", pickTitle: "New pictures",
+    topicOptional: false, topicPlaceholder: "e.g. Dog breeds, World flags, Famous landmarks…",
+    topicLockedValue: "Dog breeds",
+    footnote: "We’ll create <strong>5</strong> picture cards so you can pick your favourite <strong>{N}</strong> and skip the rest.",
+    pickSub: "On the night, guests see the picture and write down the answer. Press <strong>Swap</strong> to replace a picture you don’t like.",
+    saved: [
+      {a:"Labrador Retriever", pic:"🦮"},
+      {a:"Poodle", pic:"🐩"},
+      {a:"German Shepherd", pic:"🐕‍🦺"},
+      {a:"Dachshund", pic:"🌭"},
+      {a:"Chihuahua", pic:"🐕"},
+      {a:"Husky", pic:"🐺"},
+      {a:"Pug", pic:"🐶"},
+      {a:"Border Collie", pic:"🐑"}
+    ],
+    drafts: [
+      {a:"Dalmatian", pic:"⚪"},
+      {a:"Corgi", pic:"👑"},
+      {a:"Beagle", pic:"🔍"},
+      {a:"Great Dane", pic:"🏔️"},
+      {a:"Shih Tzu", pic:"🎀"}
+    ],
+    spares: [
+      {a:"Boxer", pic:"🥊"},
+      {a:"Rottweiler", pic:"🛡️"},
+      {a:"Saint Bernard", pic:"⛑️"},
+      {a:"Greyhound", pic:"💨"},
+      {a:"Cocker Spaniel", pic:"🌟"}
+    ]
+  },
+  music: {
+    title: "Round 3 · Music snippets",
+    noun: "song", createLabel: "✨ Create 5 new songs",
+    step1: "Create new songs", pickTitle: "New songs",
+    topicOptional: true, topicPlaceholder: "e.g. 80s, Rock, Christmas…",
+    footnote: "We’ll suggest <strong>5</strong> songs so you can pick your favourite <strong>{N}</strong>. Picked songs go straight onto the round’s Spotify playlist.",
+    pickSub: "Press <strong>▶ Play</strong> to hear a snippet before deciding. On the night, guests hear the snippet and name the song and artist.",
+    saved: [
+      {t:"Wonderwall", ar:"Oasis", y:1995},
+      {t:"Bitter Sweet Symphony", ar:"The Verve", y:1997},
+      {t:"Common People", ar:"Pulp", y:1995},
+      {t:"Parklife", ar:"Blur", y:1994},
+      {t:"Place Your Hands", ar:"Reef", y:1996},
+      {t:"Alright", ar:"Supergrass", y:1995},
+      {t:"Wide Open Space", ar:"Mansun", y:1996},
+      {t:"Brimful of Asha", ar:"Cornershop", y:1997}
+    ],
+    drafts: [
+      {t:"Don’t Look Back in Anger", ar:"Oasis", y:1996},
+      {t:"Song 2", ar:"Blur", y:1997},
+      {t:"A Design for Life", ar:"Manic Street Preachers", y:1996},
+      {t:"Female of the Species", ar:"Space", y:1996},
+      {t:"The Riverboat Song", ar:"Ocean Colour Scene", y:1996}
+    ],
+    spares: [
+      {t:"Disco 2000", ar:"Pulp", y:1995},
+      {t:"Slight Return", ar:"The Bluetones", y:1996},
+      {t:"Getting Better", ar:"Shed Seven", y:1996},
+      {t:"Ladykillers", ar:"Lush", y:1996},
+      {t:"Nancy Boy", ar:"Placebo", y:1997}
+    ]
+  }
+};
+
+let mode = 'standard';
+let drafts = [], selected = new Set(), spareIx = 0, generated = false;
+let spotifyConnected = false, playingIx = null;
+let savedExtra = [];
+let autoPicked = false;
+
+const cfg = () => MODES[mode];
+const savedAll = () => cfg().saved.concat(savedExtra);
+const needed = () => Math.max(0, TOTAL - savedAll().length);
+const plural = (n, w) => n + ' ' + w + (n === 1 ? '' : 's');
+
+const ROUNDS = [
+  {no:1, name:'General knowledge', ico:'🧠', saved:8,  total:10, mode:'standard'},
+  {no:2, name:'Music',             ico:'🎶', saved:10, total:10, mode:'standard'},
+  {no:3, name:'Music Snippets',    ico:'🎵', saved:8,  total:10, mode:'music'},
+  {no:4, name:'Movies',            ico:'🎬', saved:6,  total:10, mode:'standard'},
+  {no:5, name:'Mystery Round',     ico:'❓', saved:0,  total:10, mode:'standard'},
+  {no:6, name:'Higher or Lower',   ico:'📈', saved:5,  total:10, mode:'music'},
+  {no:7, name:'High Stakes',       ico:'💰', saved:0,  total:10, mode:'standard'},
+  {no:8, name:'Picture',           ico:'🖼️', saved:8,  total:10, mode:'picture'},
+];
+
+function renderRounds(){
+  const list=document.getElementById('roundList'); list.innerHTML='';
+  ROUNDS.forEach(r=>{
+    const complete = r.saved >= r.total;
+    const started = r.saved > 0;
+    const left = r.total - r.saved;
+    const row=document.createElement('div'); row.className='round-row';
+    const statusCls = complete ? 'green' : started ? 'amber' : 'muted';
+    const statusTxt = complete ? 'Round complete' : started ? `${left} more needed` : 'Not started';
+    const chipCls = complete ? 'green' : started ? 'amber' : 'neutral';
+    const action = complete
+      ? `<span class="r-done">✓ Complete</span>`
+      : `<button class="btn btn-primary r-btn" onclick="openSheet('${r.mode}')">✨ ${started ? 'Add '+left+' more' : 'Start round'}</button>`;
+    row.innerHTML = `
+      <div class="r-main">
+        <div class="r-name"><span class="r-ico">${r.ico}</span>${r.no}. ${r.name}</div>
+        <div class="r-status ${statusCls}">${statusTxt}</div>
+      </div>
+      <span class="r-chip ${chipCls}">${r.saved} / ${r.total}</span>
+      <span class="r-action">${action}</span>
+      <button class="r-chev" aria-label="Show saved questions" title="Show saved questions">▾</button>`;
+    list.appendChild(row);
+  });
+}
+
+function openSheet(m){
+  mode = m;
+  resetAll();
+  document.getElementById('overlay').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+}
+function closeSheet(){
+  document.getElementById('overlay').classList.add('hidden');
+  document.body.style.overflow='';
+  resetAll();
+}
+function openNext(){
+  const next = ROUNDS.find(r=>r.saved < r.total);
+  openSheet(next ? next.mode : 'standard');
+}
+
+function draftText(d){
+  if(mode==='picture') return d.a;
+  if(mode==='music') return d.t+' — '+d.ar;
+  return d.q;
+}
+
+function renderDots(){
+  const dots = document.getElementById('dots'); dots.innerHTML='';
+  const saved = savedAll().length;
+  for(let i=0;i<TOTAL;i++){
+    const d=document.createElement('div'); d.className='dot';
+    if(i<saved) d.classList.add('saved');
+    else if(i<saved+selected.size) d.classList.add('new-pick');
+    dots.appendChild(d);
+  }
+  document.getElementById('progressLabel').textContent =
+    saved + (selected.size? ' + '+selected.size : '') + ' of ' + TOTAL;
+}
+
+function renderSaved(){
+  const items = savedAll();
+  document.getElementById('savedCount').textContent = items.length;
+  const list=document.getElementById('savedList'); list.innerHTML='';
+  items.forEach((s,i)=>{
+    const div=document.createElement('div'); div.className='saved-item';
+    if(mode==='picture'){
+      div.innerHTML = `<span class="lock">🔒</span><span class="thumb small photo">${s.pic}</span><span>${i+1}. Picture ${i+1}</span><span class="ans">${s.a}</span>`;
+    } else if(mode==='music'){
+      div.innerHTML = `<span class="lock">🔒</span><span class="thumb small art">♪</span><span>${i+1}. ${s.t} — ${s.ar}</span><span class="ans">${s.y}</span>`;
+    } else {
+      div.innerHTML = `<span class="lock">🔒</span><span>${i+1}. ${s.q}</span><span class="ans">${s.a}</span>`;
+    }
+    list.appendChild(div);
+  });
+}
+
+function renderSpotifyBanner(){
+  const b=document.getElementById('spotifyBanner');
+  if(mode!=='music'){ b.classList.add('hidden'); return; }
+  b.classList.remove('hidden');
+  if(spotifyConnected){
+    b.innerHTML = `<div class="msg">✓ Spotify connected<small>Songs you approve are added to this round’s playlist automatically.</small></div>
+      <button class="btn-spotify outline" onclick="fakeToast()">🎵 Open playlist</button>`;
+  } else {
+    b.innerHTML = `<div class="msg">Connect Spotify to build this round’s playlist<small>You can still pick songs now — the playlist fills in once connected.</small></div>
+      <button class="btn-spotify" onclick="connectSpotify()">🎵 Connect Spotify</button>`;
+  }
+}
+function connectSpotify(){ spotifyConnected=true; renderSpotifyBanner(); }
+function fakeToast(){ /* demo only */ }
+
+function applyModeChrome(){
+  const c = cfg();
+  document.getElementById('title').textContent = c.title;
+  document.getElementById('step1Label').textContent = c.step1;
+  document.getElementById('genBtn').textContent = c.createLabel;
+  document.getElementById('genFootnote').innerHTML = c.footnote.replaceAll('{N}', needed());
+  document.getElementById('pickTitle').textContent = c.pickTitle;
+  document.getElementById('pickSub').innerHTML = c.pickSub;
+  document.getElementById('regenBtn').textContent = '↻ Create 5 different '+c.noun+'s';
+  document.getElementById('subtitle').innerHTML =
+    `You need <strong>${needed()} more ${c.noun}${needed()===1?'':'s'}</strong> to finish this round.`;
+
+  const topic=document.getElementById('topic');
+  const label=document.getElementById('topicLabel');
+  const lockedNote=document.getElementById('topicLockedNote');
+  topic.placeholder=c.topicPlaceholder; topic.value=''; topic.disabled=false;
+  lockedNote.classList.remove('show');
+  if(mode==='picture'){
+    label.innerHTML='Topic <span class="req">— required for picture rounds</span>';
+    if(c.topicLockedValue && savedAll().length>0){
+      topic.value=c.topicLockedValue; topic.disabled=true; lockedNote.classList.add('show');
+    }
+  } else {
+    label.innerHTML='Topic <span class="opt">— optional, leave blank for a general mix</span>';
+  }
+  renderSpotifyBanner();
+}
+
+function generate(){
+  const c=cfg();
+  if(mode==='picture' && !document.getElementById('topic').value.trim()){
+    document.getElementById('topic').focus();
+    document.getElementById('footStatus').textContent='Type a topic first — picture rounds need one.';
+    return;
+  }
+  const btn=document.getElementById('genBtn'), regen=document.getElementById('regenBtn');
+  btn.disabled=true; regen.disabled=true;
+  selected.clear(); playingIx=null;
+  document.getElementById('pickSection').classList.remove('hidden');
+  const list=document.getElementById('draftList');
+  list.innerHTML='<div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+  document.getElementById('footStatus').textContent='Creating '+c.noun+'s…';
+  setTimeout(()=>{
+    drafts = c.drafts.map(d=>({...d}));
+    const k = Math.min(needed(), drafts.length);
+    for(let i=0;i<k;i++) selected.add(i);
+    autoPicked = k > 0;
+    generated = true;
+    btn.disabled=false; regen.disabled=false;
+    document.getElementById('genSection').querySelector('.gen-panel').style.display='none';
+    document.getElementById('step1Tag').innerHTML =
+      `<span class="num">✓</span> ${c.noun[0].toUpperCase()+c.noun.slice(1)}s created <button class="swap" style="margin-left:10px" onclick="reopenGen()">Change topic or difficulty</button>`;
+    renderDrafts(); updateFooter();
+    document.getElementById('pickSection').scrollIntoView({behavior:'smooth',block:'start'});
+  }, 900);
+}
+function reopenGen(){
+  document.getElementById('genSection').querySelector('.gen-panel').style.display='';
+}
+
+function renderDrafts(){
+  const list=document.getElementById('draftList'); list.innerHTML='';
+  const full = selected.size>=needed();
+  drafts.forEach((d,i)=>{
+    const card=document.createElement('div');
+    card.className='qcard'+(selected.has(i)?' selected':'')+(!selected.has(i)&&full?' locked-out':'');
+    card.onclick=(e)=>{ if(e.target.closest('.swap')||e.target.closest('.playbtn'))return; toggle(i); };
+
+    let main='', arowLeft='';
+    if(mode==='picture'){
+      main = `<div class="qmain"><div class="pic-frame">${d.pic}</div>
+        <div><div class="qtext">Picture card</div>
+        <div class="qsub">Guests see this picture and write the answer.</div></div></div>`;
+      arowLeft = `<span class="answer">Answer: ${d.a}</span>`;
+    } else if(mode==='music'){
+      main = `<div class="qmain"><div class="thumb art">♪</div>
+        <div><div class="qtext">${d.t}</div><div class="qsub">${d.ar}</div></div></div>`;
+      arowLeft = `<span class="yearchip">${d.y}</span>
+        <button class="playbtn ${playingIx===i?'playing':''}" onclick="playSnippet(${i})">${playingIx===i?'◼ Stop':'▶ Play'}</button>`;
+    } else {
+      main = `<div class="qtext">${d.q}</div>`;
+      arowLeft = `<span class="answer">Answer: ${d.a}</span>`;
+    }
+
+    card.innerHTML = `
+      <span class="newbadge">${selected.has(i)?'✓ Picked':'New'}</span>
+      <div class="checkbox">✓</div>
+      ${main}
+      <div class="arow">
+        <span class="arow-left">${arowLeft}</span>
+        ${selected.has(i) ? '' : `<button class="swap" onclick="swap(${i})" title="Replace with a different one">↻ Swap</button>`}
+      </div>`;
+    list.appendChild(card);
+  });
+  const note=document.getElementById('autoPickNote');
+  if(autoPicked && selected.size>0){
+    note.textContent = `We’ve picked ${selected.size} for you — untick one if you’d like a different ${cfg().noun}.`;
+    note.classList.add('show');
+  } else {
+    note.classList.remove('show');
+  }
+  const counter=document.getElementById('pickCounter');
+  counter.textContent = selected.size+' of '+needed()+' picked';
+  counter.classList.toggle('done', full);
+  renderDots();
+}
+
+function playSnippet(i){
+  playingIx = (playingIx===i) ? null : i;
+  renderDrafts();
+}
+
+function toggle(i){
+  if(selected.has(i)) selected.delete(i);
+  else { if(selected.size>=needed()) return; selected.add(i); }
+  autoPicked = false;
+  renderDrafts(); updateFooter();
+}
+function swap(i){
+  const c=cfg();
+  drafts[i]=c.spares[spareIx % c.spares.length]; spareIx++;
+  selected.delete(i);
+  autoPicked = false;
+  if(playingIx===i) playingIx=null;
+  renderDrafts(); updateFooter();
+}
+
+function updateFooter(){
+  const c=cfg(), n=needed(), size=selected.size;
+  const st=document.getElementById('footStatus'), btn=document.getElementById('approveBtn');
+  if(!generated){
+    st.textContent='Create some '+c.noun+'s to get started.';
+    st.classList.remove('ready'); btn.disabled=true;
+    btn.textContent='Add '+c.noun+'s to round';
+    return;
+  }
+  if(size===0){
+    st.textContent='Nothing picked yet — tick at least 1 '+c.noun+' to add.';
+    st.classList.remove('ready'); btn.disabled=true;
+    btn.textContent='Add '+c.noun+'s to round';
+  } else if(size<n){
+    st.textContent=size+' picked — you can add now, '+plural(n-size, c.noun)+' will still be needed.';
+    st.classList.remove('ready'); btn.disabled=false;
+    btn.textContent='Add '+plural(size, c.noun)+' to round';
+  } else {
+    st.textContent='✓ Ready — this completes the round.';
+    st.classList.add('ready'); btn.disabled=false;
+    btn.textContent='Add '+plural(size, c.noun)+' to round';
+  }
+}
+
+function approve(){
+  const c=cfg();
+  const added=[...selected].map(i=>drafts[i]);
+  savedExtra = savedExtra.concat(added);
+  const al=document.getElementById('addedList'); al.innerHTML='';
+  added.forEach(d=>{
+    const div=document.createElement('div'); div.className='saved-item';
+    if(mode==='picture'){
+      div.innerHTML=`<span style="color:var(--green-ok)">＋</span><span class="thumb small photo">${d.pic}</span><span>Picture card</span><span class="ans">${d.a}</span>`;
+    } else if(mode==='music'){
+      div.innerHTML=`<span style="color:var(--green-ok)">＋</span><span class="thumb small art">♪</span><span>${d.t} — ${d.ar}</span><span class="ans">${d.y}</span>`;
+    } else {
+      div.innerHTML=`<span style="color:var(--green-ok)">＋</span><span>${d.q}</span><span class="ans">${d.a}</span>`;
+    }
+    al.appendChild(div);
+  });
+  const savedN = savedAll().length;
+  const remaining = TOTAL - savedN;
+  const complete = remaining <= 0;
+  const roundName = c.title.split('· ')[1];
+
+  document.getElementById('successBig').textContent = complete ? '🎉' : '✅';
+  document.getElementById('successTitle').textContent =
+    complete ? 'Round complete!' : plural(added.length, c.noun)+' added';
+  document.getElementById('successText').innerHTML = complete
+    ? `${roundName} now has all <strong>${savedN} of ${TOTAL}</strong> ${c.noun}s.`
+    : `${roundName} now has <strong>${savedN} of ${TOTAL}</strong> — ${plural(remaining, c.noun)} still needed.`;
+
+  const pn=document.getElementById('playlistNote');
+  pn.classList.remove('show');
+  if(mode==='music'){
+    pn.textContent = spotifyConnected
+      ? `🎵 Spotify playlist updated — the ${plural(added.length,'new song')} ${added.length===1?'was':'were'} added automatically.`
+      : '🎵 Songs saved. Connect Spotify to add them to the round’s playlist.';
+    pn.classList.add('show');
+  }
+
+  const sb=document.getElementById('successBtn');
+  if(complete){
+    sb.textContent='Done — back to quiz';
+    sb.onclick=closeSheet;
+  } else {
+    sb.textContent='Keep going — add the rest';
+    sb.onclick=continueRound;
+  }
+
+  document.getElementById('mainBody').classList.add('hidden');
+  document.getElementById('footer').classList.add('hidden');
+  document.getElementById('successView').classList.remove('hidden');
+  document.getElementById('subtitle').innerHTML = complete
+    ? 'Round complete ✓'
+    : `${plural(remaining, 'more '+c.noun)} still needed.`;
+  selected.clear(); renderDots();
+}
+
+function continueRound(){
+  drafts=[]; selected.clear(); generated=false; playingIx=null; autoPicked=false;
+  document.getElementById('mainBody').classList.remove('hidden');
+  document.getElementById('footer').classList.remove('hidden');
+  document.getElementById('successView').classList.add('hidden');
+  document.getElementById('pickSection').classList.add('hidden');
+  document.getElementById('genSection').querySelector('.gen-panel').style.display='';
+  document.getElementById('step1Tag').innerHTML='<span class="num">1</span> <span id="step1Label"></span>';
+  applyModeChrome();
+  renderSaved(); renderDots(); updateFooter();
+}
+
+function resetAll(){
+  savedExtra=[]; spareIx=0;
+  continueRound();
+}
+
+document.getElementById('difficulty').addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b)return;
+  document.querySelectorAll('#difficulty button').forEach(x=>x.classList.remove('active'));
+  b.classList.add('active');
+});
+
+renderRounds();
+applyModeChrome(); renderSaved(); renderDots(); updateFooter();
+</script>
+</body>
+</html>

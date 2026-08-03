@@ -61,10 +61,14 @@ export default async function EventQuizQuestionsPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ category?: string; completed?: string }>;
+  searchParams: Promise<{ category?: string; completed?: string; open?: string }>;
 }) {
   const { id } = await params;
-  const { category: focusCategory, completed: completedCategory } = await searchParams;
+  const {
+    category: focusCategory,
+    completed: completedCategory,
+    open: openParam,
+  } = await searchParams;
   const supabase = await createClient();
 
   const [
@@ -115,17 +119,10 @@ export default async function EventQuizQuestionsPage({
   );
   const progress = targetQuestions > 0 ? Math.min(100, Math.round((totalQuestions / targetQuestions) * 100)) : 0;
 
-  // Picture and music-snippet rounds resolve images and Spotify track IDs, so
-  // they still run in the full generator. Everything else now builds in place,
-  // and the continue link just opens the round on this page.
-  const firstIncompleteNeedsGenerator =
-    !!firstIncompleteCategory &&
-    (firstIncompleteCategory.is_picture || firstIncompleteCategory.include_spotify);
-
+  // Every round type now builds in place, so continuing opens the first
+  // unfinished round's sheet on this page rather than navigating away.
   const continueHref = firstIncompleteCategory
-    ? firstIncompleteNeedsGenerator
-      ? `/event-setups/quiz-generator?event_id=${event.id}&category=${encodeURIComponent(firstIncompleteCategory.category_name)}`
-      : `/event-setups/events/${event.id}?category=${encodeURIComponent(firstIncompleteCategory.category_name)}`
+    ? `/event-setups/events/${event.id}?category=${encodeURIComponent(firstIncompleteCategory.category_name)}&open=1`
     : null;
 
   // The next round after each one that still needs questions. Drives the round
@@ -181,11 +178,11 @@ export default async function EventQuizQuestionsPage({
             </p>
           </div>
           <div className="shrink-0 text-right">
-            <p className="text-[12px] font-semibold text-admin-muted">Quiz progress</p>
-            <p className="mt-0.5 text-lg leading-none font-bold text-admin-primary tabular-nums">
+            <p className="text-lg leading-none font-bold text-admin-primary tabular-nums">
               {totalQuestions}
-              <span className="text-[13px] font-semibold text-admin-muted"> / {targetQuestions}</span>
+              <span className="text-[13px] font-semibold text-admin-muted"> of {targetQuestions}</span>
             </p>
+            <p className="mt-1 text-[12px] font-semibold text-admin-muted">questions saved</p>
           </div>
         </div>
 
@@ -230,6 +227,7 @@ export default async function EventQuizQuestionsPage({
             isHigherLower={cat.is_higher_lower}
             playlistUrl={playlistByCategory.get(cat.id) ?? null}
             autoOpen={focusCategory === cat.category_name}
+            openSheet={openParam === "1" && focusCategory === cat.category_name}
             nextRound={cat.nextRound}
           />
         ))}
