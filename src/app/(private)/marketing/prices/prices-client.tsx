@@ -1,87 +1,23 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import {
-  Zap,
-  Loader2,
-  Pencil,
-  Save,
-  MapPin,
-  Tags,
-  ChevronDown,
-  ExternalLink,
-  ArrowUp,
-  ArrowDown,
-  SlidersHorizontal,
-} from "lucide-react";
+import { Loader2, ChevronDown, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { formatGbp } from "@/lib/price";
 import { refreshPriceInsightsAction, updateComparisonAreaAction } from "./actions";
 import { buildVenueMatrix, rankedVenues } from "../lib/compare";
 import { TrendCard } from "../trends/trend-card";
-import type { BenchmarkComparison, Verdict } from "../lib/compare";
+import type { BenchmarkComparison } from "../lib/compare";
 import type { CompetitorPrice, MarketingTrend, TrendState } from "../lib/types";
 
 type PriceView = "summary" | "byVenue";
 
+const MAX_VENUES = 4;
+
 function formatWhen(iso: string | null): string {
   if (!iso) return "never";
-  return new Date(iso).toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
-
-const VERDICT_WORD: Record<Verdict, { word: string; text: string; dot: string }> = {
-  above: { word: "above avg", text: "text-red-600", dot: "#DC2626" },
-  below: { word: "below avg", text: "text-green-700", dot: "#15803D" },
-  inline: { word: "in line", text: "text-[#34451F]", dot: "#9A5B00" },
-  unknown: { word: "no data", text: "text-[#5E6654]/60", dot: "#8A8D7A" },
-};
-
-function RangeBar({ c }: { c: BenchmarkComparison }) {
-  const min = c.competitorMin as number;
-  const max = c.competitorMax as number;
-  const avg = c.competitorAvg as number;
-  const own = c.ownPrice;
-  const lo = Math.min(own ?? min, min) * 0.92;
-  const hi = Math.max(own ?? max, max) * 1.06;
-  const span = hi - lo || 1;
-  const pct = (v: number) => ((v - lo) / span) * 100;
-  const bandLeft = pct(min);
-  const bandWidth = Math.max(pct(max) - bandLeft, 1.5);
-
-  return (
-    <div className="hidden flex-col gap-1.5 sm:flex">
-      <div className="relative h-3.5">
-        <div className="absolute top-1.5 right-0 left-0 h-0.5 rounded bg-[#D8D5C8]" />
-        <div
-          className="absolute top-[5px] left-[var(--l)] h-1 w-[var(--w)] rounded bg-[#D9D2B8]"
-          style={{ "--l": `${bandLeft}%`, "--w": `${bandWidth}%` } as React.CSSProperties}
-        />
-        <div
-          className="absolute top-0.5 left-[var(--l)] h-2.5 w-0.5 -translate-x-px rounded bg-[#5E6654]"
-          style={{ "--l": `${pct(avg)}%` } as React.CSSProperties}
-        />
-        {own != null && (
-          <div
-            className="absolute top-px left-[var(--l)] h-3 w-3 -translate-x-1.5 rounded-full border-2 border-white bg-[var(--dot)] shadow-[0_1px_4px_rgba(31,31,26,0.35)]"
-            style={{ "--l": `${pct(own)}%`, "--dot": VERDICT_WORD[c.verdict].dot } as React.CSSProperties}
-          />
-        )}
-      </div>
-      <div className="flex justify-between text-[9.5px] text-[#5E6654] tabular-nums">
-        <span>{formatGbp(min)}</span>
-        <span className="font-black">
-          avg {formatGbp(avg)} <span className="opacity-55">({c.sampleCount})</span>
-        </span>
-        <span>{formatGbp(max)}</span>
-      </div>
-    </div>
-  );
+  return new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short" });
 }
 
 export default function PricesClient({
@@ -103,14 +39,15 @@ export default function PricesClient({
   onSetTrendState: (id: string, state: TrendState) => void;
   pendingTrendId: string | null;
 }) {
-  const MAX_VENUES = 4;
   const [isRefreshing, startRefresh] = useTransition();
   const [isSaving, startSave] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
   const [view, setView] = useState<PriceView>("summary");
-  const [venuePickerOpen, setVenuePickerOpen] = useState(false);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickedItems, setPickedItems] = useState<string[] | null>(null);
   const [pickedVenues, setPickedVenues] = useState<string[] | null>(null);
+  const [openRowKey, setOpenRowKey] = useState<string | null>(null);
 
   const allVenues = useMemo(() => rankedVenues(competitorPrices), [competitorPrices]);
   const shownVenues = useMemo(() => {
@@ -118,15 +55,60 @@ export default function PricesClient({
     const kept = pickedVenues.filter((v) => allVenues.includes(v));
     return (kept.length ? kept : allVenues.slice(0, MAX_VENUES)).slice(0, MAX_VENUES);
   }, [pickedVenues, allVenues]);
-  const matrix = buildVenueMatrix(competitorPrices, comparison, shownVenues);
 
-  const toggleVenue = (v: string) => {
+  const shownComparison = useMemo(
+    () => (pickedItems == null ? comparison : comparison.filter((c) => pickedItems.includes(c.key))),
+    [comparison, pickedItems],
+  );
+
+  const matrix = buildVenueMatrix(competitorPrices, shownComparison, shownVenues);
+  const fullMatrix = useMemo(
+    () => buildVenueMatrix(competitorPrices, comparison, allVenues),
+    [competitorPrices, comparison, allVenues],
+  );
+
+  const scored = comparison.filter((c) => c.ownPrice != null && c.competitorAvg != null && c.sampleCount > 0);
+  const yourScore = scored.filter((c) => (c.ownPrice as number) < (c.competitorAvg as number)).length;
+  const localScore = scored.length - yourScore;
+
+  const scoreLine =
+    scored.length === 0
+      ? "No local prices yet — give the button below a smash and we'll go looking."
+      : yourScore === scored.length
+        ? `You're the cheaper round on all ${scored.length}. Clean sweep. 🎉`
+        : yourScore === 0
+          ? `The locals are cheaper on all ${scored.length} right now. Time for a rethink.`
+          : `You're the cheaper round on ${yourScore} of ${scored.length}. ${
+              yourScore > localScore ? "Crowd goes wild. 🎉" : "Room to fight back."
+            }`;
+
+  const toggleItem = (key: string) => {
+    setPickedItems((prev) => {
+      const base = prev ?? comparison.map((c) => c.key);
+      if (base.includes(key)) {
+        const next = base.filter((k) => k !== key);
+        return next.length ? next : base;
+      }
+      return [...base, key];
+    });
+  };
+
+  const toggleVenue = (venue: string) => {
     setPickedVenues((prev) => {
       const base = prev ?? allVenues.slice(0, MAX_VENUES);
-      if (base.includes(v)) return base.filter((x) => x !== v);
-      if (base.length >= MAX_VENUES) return base; // capped at 4
-      return [...base, v];
+      if (base.includes(venue)) return base.filter((v) => v !== venue);
+      if (base.length >= MAX_VENUES) return base;
+      return [...base, venue];
     });
+  };
+
+  const breakdownFor = (key: string) => {
+    const row = fullMatrix.rows.find((r) => r.key === key);
+    if (!row) return [];
+    return allVenues
+      .map((venue, i) => ({ venue, price: row.cells[i] }))
+      .filter((x): x is { venue: string; price: number } => x.price != null)
+      .sort((a, b) => a.price - b.price);
   };
 
   const handleRefresh = () => {
@@ -153,369 +135,493 @@ export default function PricesClient({
     });
   };
 
-  const insights = comparison
-    .filter((c) => c.ownPrice != null && c.competitorAvg != null && c.sampleCount > 0)
-    .map((c) => ({ label: c.label, diff: (c.ownPrice as number) - (c.competitorAvg as number) }))
-    .sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff))
-    .slice(0, 2);
+  const changeAreaButton = (className: string) => (
+    <button type="button" onClick={() => setIsEditing(true)} className={className}>
+      ✏️ Change area
+    </button>
+  );
 
   return (
-    <div className="max-w-3xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
-      <section className="space-y-3 rounded-2xl border border-[#D8D5C8] bg-white p-4 sm:p-5">
-        {!isEditing ? (
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <div className="flex items-start gap-1.5 text-[#5E6654]">
-                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <p className="text-[11px] font-normal tracking-normal normal-case sm:hidden">{area}</p>
-                <p className="hidden font-black text-[10px] tracking-widest uppercase sm:block">
-                  Comparing {area}
-                  {radius ? ` · ${radius}` : ""} · bars, pubs, music venues &amp; hospitality only
-                </p>
-              </div>
-              <p className="mt-1 text-[11px] text-[#5E6654] tabular-nums opacity-70">
-                Prices last refreshed {formatWhen(lastRefresh)}
-              </p>
-            </div>
+    <div className="space-y-3.5 sm:space-y-4">
+      {/* ---- Score banner */}
+      {isEditing ? (
+        <form onSubmit={handleSaveArea} className="space-y-3 rounded-[20px] border border-[#D8D5C8] bg-[#FFFEFA] p-5">
+          <p className="font-bold text-[15px] text-[#20231A]">Who are we up against?</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <label className="block">
+              <span className="font-semibold text-[12px] text-[#5E6654]">Area / town</span>
+              <input
+                name="comparison_area"
+                defaultValue={area}
+                required
+                placeholder="e.g. Hinckley"
+                className="mt-1 h-11 w-full rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 text-sm font-semibold text-[#20231A] outline-none focus:border-[#34451F]"
+              />
+            </label>
+            <label className="block">
+              <span className="font-semibold text-[12px] text-[#5E6654]">Radius (optional)</span>
+              <input
+                name="comparison_radius"
+                defaultValue={radius ?? ""}
+                placeholder="e.g. 5 miles"
+                className="mt-1 h-11 w-full rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 text-sm font-semibold text-[#20231A] outline-none focus:border-[#34451F]"
+              />
+            </label>
+          </div>
+          <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => setIsEditing(true)}
-              aria-label="Change area"
-              title="Change area"
-              className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-[#34451F] px-4 font-black text-[10px] tracking-widest text-[#34451F] uppercase transition-colors hover:bg-[#E5EBD8] active:scale-95 max-sm:w-11 max-sm:justify-center max-sm:px-0"
+              onClick={() => setIsEditing(false)}
+              disabled={isSaving}
+              className="h-11 rounded-xl border border-[#D8D5C8] bg-white px-4 font-semibold text-[13px] text-[#5E6654]"
             >
-              <Pencil className="h-4 w-4" />
-              <span className="hidden sm:inline">Change area</span>
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="flex h-11 items-center gap-2 rounded-xl bg-[#34451F] px-5 font-bold text-[13px] text-white hover:bg-[#283719] disabled:opacity-60"
+            >
+              {isSaving && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save area
             </button>
           </div>
-        ) : (
-          <form onSubmit={handleSaveArea} className="space-y-3">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className="font-black text-[10px] tracking-widest text-[#5E6654] uppercase">Area / Town</span>
-                <input
-                  name="comparison_area"
-                  defaultValue={area}
-                  required
-                  placeholder="e.g. Hinckley"
-                  className="mt-1 h-11 w-full rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 text-sm font-bold text-[#20231A] outline-none focus:border-[#34451F]"
-                />
-              </label>
-              <label className="block">
-                <span className="font-black text-[10px] tracking-widest text-[#5E6654] uppercase">Radius (optional)</span>
-                <input
-                  name="comparison_radius"
-                  defaultValue={radius ?? ""}
-                  placeholder="e.g. 5 miles"
-                  className="mt-1 h-11 w-full rounded-xl border border-[#D8D5C8] bg-[#F4F1E8] px-3 text-sm font-bold text-[#20231A] outline-none focus:border-[#34451F]"
-                />
-              </label>
+          <p className="text-[11px] text-[#5E6654]/70">
+            Changed the area? Rerun the price-off afterwards to pull prices for the new patch.
+          </p>
+        </form>
+      ) : (
+        <section className="rounded-[20px] bg-[#263019] p-4 text-[#DDE2D1] sm:p-5">
+          <p className="text-center font-semibold text-[11px] tracking-[0.15em] text-[#AEB69D] uppercase sm:hidden">
+            The {area} price-off
+          </p>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-7">
+            <div className="mt-2 flex items-center justify-center gap-5 sm:mt-0 sm:gap-6">
+              <div className="text-center">
+                <p className="font-bold text-[12.5px] sm:text-[13px]">You</p>
+                <p className="text-[38px] leading-none font-extrabold text-[#D7A928] tabular-nums sm:text-[44px]">
+                  {yourScore}
+                </p>
+              </div>
+              <p className="font-bold text-[15px] text-[#AEB69D] sm:text-base">vs</p>
+              <div className="text-center">
+                <p className="font-bold text-[12.5px] sm:text-[13px]">The locals</p>
+                <p className="text-[38px] leading-none font-extrabold text-[#AEB69D] tabular-nums sm:text-[44px]">
+                  {localScore}
+                </p>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                disabled={isSaving}
-                className="h-11 rounded-xl border border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-widest text-[#5E6654] uppercase"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="flex h-11 items-center gap-2 rounded-xl bg-[#34451F] px-5 font-black text-[10px] tracking-widest text-white uppercase hover:bg-[#283719] disabled:opacity-60"
-              >
-                {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                Save
-              </button>
+            <div className="min-w-0 flex-1">
+              <p className="hidden font-bold text-[15px] sm:block">
+                The {area} price-off · updated {formatWhen(lastRefresh)}
+              </p>
+              <p className="text-center text-[12px] leading-[1.45] text-[#AEB69D] sm:mt-1 sm:text-left sm:text-[13px]">
+                {scoreLine}
+              </p>
             </div>
-            <p className="text-[10px] text-[#5E6654] opacity-70">
-              Changing the area? Hit Refresh afterwards to pull prices for the new location.
-            </p>
-          </form>
-        )}
-      </section>
-
-      {insights.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {insights.map((ins) => (
-            <span
-              key={ins.label}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 font-black text-[11px] tracking-wide uppercase",
-                ins.diff > 0
-                  ? "border-red-200 bg-red-50 text-red-700"
-                  : "border-green-200 bg-green-50 text-green-700",
-              )}
-            >
-              {ins.diff > 0 ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
-              {ins.label}: you&apos;re {formatGbp(Math.abs(ins.diff))} {ins.diff > 0 ? "above" : "below"} local avg
-            </span>
-          ))}
-        </div>
+            {changeAreaButton(
+              "hidden h-10 shrink-0 items-center gap-2 rounded-[10px] border border-[#AEB69D]/40 px-3.5 font-semibold text-[12.5px] text-[#DDE2D1] transition-colors hover:bg-[#34451F] sm:flex",
+            )}
+          </div>
+        </section>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
-        <div className="flex items-center justify-between gap-2 border-b border-[#D8D5C8] bg-[#F4F1E8] px-4 py-3 sm:px-5">
-          <p className="font-black text-[11px] tracking-widest text-[#34451F] uppercase">Your menu vs local venues</p>
-          {competitorPrices.length > 0 && (
-            <div className="flex shrink-0 items-center gap-1">
-              {(["summary", "byVenue"] as const).map((m) => (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setView(m)}
-                  className={cn(
-                    "h-7 rounded-lg border px-2.5 font-black text-[9px] tracking-widest uppercase transition-colors",
-                    view === m
-                      ? "border-[#34451F] bg-[#34451F] text-white"
-                      : "border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-white/60",
-                  )}
-                >
-                  {m === "summary" ? "Avg" : "By venue"}
-                </button>
-              ))}
+      {/* ---- Controls */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <span className="hidden font-semibold text-[13px] text-[#5E6654] sm:inline">View:</span>
+        <div className="flex overflow-hidden rounded-[10px] border border-[#D8D5C8] bg-white">
+          {(["summary", "byVenue"] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setView(m)}
+              aria-pressed={view === m}
+              className={cn(
+                "flex h-10 items-center px-4 text-[13px] transition-colors sm:h-9.5",
+                view === m ? "bg-[#34451F] font-bold text-white" : "font-semibold text-[#5E6654] hover:bg-[#F4F1E8]",
+              )}
+            >
+              {m === "summary" ? "Average" : "By venue"}
+            </button>
+          ))}
+        </div>
 
-              {view === "byVenue" && (
-                <div className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setVenuePickerOpen((o) => !o)}
-                    aria-label="Choose venues"
-                    title="Choose venues"
-                    className={cn(
-                      "flex h-7 w-7 items-center justify-center rounded-lg border transition-colors",
-                      venuePickerOpen
-                        ? "border-[#34451F] bg-[#34451F] text-white"
-                        : "border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-white/60",
-                    )}
-                  >
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
-                  </button>
+        <div className="relative ml-auto">
+          <button
+            type="button"
+            onClick={() => setPickerOpen((o) => !o)}
+            aria-expanded={pickerOpen}
+            className="flex h-10 items-center gap-2 rounded-[10px] border border-[#34451F] bg-white px-3.5 font-semibold text-[12.5px] text-[#34451F] transition-colors hover:bg-[#E5EBD8] sm:h-9.5"
+          >
+            🎛 Choose items
+          </button>
 
-                  {venuePickerOpen && (
-                    <>
-                      <div className="fixed inset-0 z-40" onClick={() => setVenuePickerOpen(false)} aria-hidden="true" />
-                      <div className="absolute right-0 z-50 mt-1 w-60 overflow-hidden rounded-xl border border-[#D8D5C8] bg-white shadow-lg">
-                        <div className="flex items-center justify-between gap-2 border-b border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2">
-                          <span className="font-black text-[9px] tracking-widest text-[#34451F] uppercase">
-                            Show venues ({shownVenues.length}/{MAX_VENUES})
-                          </span>
-                          {pickedVenues != null && (
-                            <button
-                              type="button"
-                              onClick={() => setPickedVenues(null)}
-                              className="font-black text-[9px] tracking-widest text-[#5E6654] uppercase hover:text-[#34451F]"
-                            >
-                              Reset
-                            </button>
-                          )}
-                        </div>
-                        {allVenues.length === 0 ? (
-                          <p className="px-3 py-4 text-[11px] text-[#5E6654]/70">No venues to choose yet - refresh prices first.</p>
-                        ) : (
-                          <div className="max-h-64 overflow-y-auto p-1">
-                            {allVenues.map((v) => {
-                              const checked = shownVenues.includes(v);
-                              const atCap = shownVenues.length >= MAX_VENUES;
-                              return (
-                                <label
-                                  key={v}
-                                  className={cn(
-                                    "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5",
-                                    !checked && atCap ? "cursor-not-allowed opacity-40" : "hover:bg-[#F4F1E8]",
-                                  )}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={checked}
-                                    disabled={!checked && atCap}
-                                    onChange={() => toggleVenue(v)}
-                                    className="h-3.5 w-3.5 shrink-0 accent-[#34451F]"
-                                  />
-                                  <span className="min-w-0 truncate text-[12px] font-bold text-[#20231A]">{v}</span>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </>
+          {pickerOpen && (
+            <>
+              <div className="fixed inset-0 z-40" onClick={() => setPickerOpen(false)} aria-hidden="true" />
+              <div className="absolute right-0 z-50 mt-1.5 w-64 overflow-hidden rounded-xl border border-[#D8D5C8] bg-white shadow-lg">
+                <div className="flex items-center justify-between gap-2 border-b border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2">
+                  <span className="font-bold text-[11px] text-[#34451F]">Rounds to compare</span>
+                  {pickedItems != null && (
+                    <button
+                      type="button"
+                      onClick={() => setPickedItems(null)}
+                      className="font-semibold text-[11px] text-[#5E6654] hover:text-[#34451F]"
+                    >
+                      Show all
+                    </button>
                   )}
                 </div>
-              )}
-            </div>
+                <div className="max-h-52 overflow-y-auto p-1">
+                  {comparison.map((c) => (
+                    <label
+                      key={c.key}
+                      className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2 hover:bg-[#F4F1E8]"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={pickedItems == null || pickedItems.includes(c.key)}
+                        onChange={() => toggleItem(c.key)}
+                        className="h-3.5 w-3.5 shrink-0 accent-[#34451F]"
+                      />
+                      <span className="min-w-0 truncate text-[12.5px] font-semibold text-[#20231A]">{c.label}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {view === "byVenue" && allVenues.length > 0 && (
+                  <>
+                    <p className="border-t border-[#D8D5C8] bg-[#F4F1E8] px-3 py-2 font-bold text-[11px] text-[#34451F]">
+                      Venues shown ({shownVenues.length}/{MAX_VENUES})
+                    </p>
+                    <div className="max-h-40 overflow-y-auto p-1">
+                      {allVenues.map((v) => {
+                        const checked = shownVenues.includes(v);
+                        const atCap = shownVenues.length >= MAX_VENUES;
+                        return (
+                          <label
+                            key={v}
+                            className={cn(
+                              "flex cursor-pointer items-center gap-2 rounded-lg px-2 py-2",
+                              !checked && atCap ? "cursor-not-allowed opacity-40" : "hover:bg-[#F4F1E8]",
+                            )}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              disabled={!checked && atCap}
+                              onChange={() => toggleVenue(v)}
+                              className="h-3.5 w-3.5 shrink-0 accent-[#34451F]"
+                            />
+                            <span className="min-w-0 truncate text-[12.5px] font-semibold text-[#20231A]">{v}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            </>
           )}
         </div>
 
-        {competitorPrices.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <Tags className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-            <p className="font-black text-sm text-[#20231A]">No competitor prices yet</p>
-            <p className="mt-1 text-[11px] text-[#5E6654]">Tap the scan button below to pull local prices for {area}.</p>
-          </div>
-        ) : view === "byVenue" ? (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-120 border-collapse">
-              <thead>
-                <tr className="font-black text-[9px] tracking-widest text-[#5E6654]/60 uppercase">
-                  <th className="px-4 py-2 text-left sm:px-5">Item</th>
-                  <th className="px-2 py-2 text-right text-[#34451F]">You</th>
-                  {matrix.venues.map((v) => (
-                    <th key={v} className="max-w-32 truncate px-2 py-2 text-right font-black">{v}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {matrix.rows.map((row) => {
-                  const comps = row.cells.filter((x): x is number => x != null);
-                  const avg = comps.length ? comps.reduce((s, x) => s + x, 0) / comps.length : null;
-                  const above = row.ownPrice != null && avg != null && row.ownPrice > avg;
-                  return (
-                    <tr key={row.key} className="border-t border-[#D8D5C8]/60">
-                      <td className="px-4 py-2.5 text-left text-[13px] font-bold text-[#20231A] sm:px-5">{row.label}</td>
-                      <td
-                        className={cn(
-                          "px-2 py-2.5 text-right font-black text-[13px] tabular-nums",
-                          row.ownPrice == null ? "text-[#5E6654]/40" : above ? "text-red-700" : "text-green-700",
-                        )}
-                      >
-                        {formatGbp(row.ownPrice)}
-                      </td>
-                      {row.cells.map((c, i) => (
-                        <td key={i} className="px-2 py-2.5 text-right text-[12px] text-[#5E6654] tabular-nums">
-                          {c == null ? <span className="text-[#5E6654]/40">-</span> : formatGbp(c)}
-                        </td>
-                      ))}
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            {matrix.venues.length === 0 && (
-              <p className="px-4 py-4 text-[11px] text-[#5E6654]/70 sm:px-5">
-                No venue could be matched to your benchmark items yet - try the Avg view or refresh prices.
-              </p>
-            )}
-          </div>
-        ) : (
-          <div className="divide-y divide-[#D8D5C8]/60">
-            {comparison.map((c) => {
-              const vw = VERDICT_WORD[c.verdict];
-              const hasData = c.sampleCount > 0 && c.competitorAvg != null;
-              return (
-                <div key={c.key} className="flex flex-col gap-2 px-4 py-3 sm:px-5">
-                  <div className="flex items-baseline justify-between gap-3">
-                    <p className="min-w-0 font-black text-[12.5px] text-[#20231A]">
-                      {c.label}
-                      {c.ownItemName && (
-                        <span className="ml-1 text-[10px] font-medium text-[#5E6654]/80">· your {c.ownItemName}</span>
-                      )}
-                    </p>
-                    <p className={cn("shrink-0 font-black text-[14px] whitespace-nowrap tabular-nums", vw.text)}>
-                      {formatGbp(c.ownPrice)}
-                      {hasData && <span className="ml-1 text-[8.5px] tracking-widest uppercase">{vw.word}</span>}
-                    </p>
+        {changeAreaButton(
+          "flex h-10 flex-1 items-center justify-center gap-2 rounded-[10px] border border-[#D8D5C8] bg-white px-3.5 font-semibold text-[12.5px] text-[#5E6654] sm:hidden",
+        )}
+      </div>
+
+      {/* ---- Chosen item chips */}
+      <div className="hidden flex-wrap gap-1.5 sm:flex">
+        {shownComparison.map((c) => (
+          <span
+            key={c.key}
+            className="flex items-center gap-1.5 rounded-full border border-[#BFD8C4] bg-[#E7F3EC] px-3 py-1 font-semibold text-[12px] text-[#22613F]"
+          >
+            ✓ {c.label}
+          </span>
+        ))}
+        {shownComparison.length < comparison.length && (
+          <button
+            type="button"
+            onClick={() => setPickerOpen(true)}
+            className="flex items-center gap-1.5 rounded-full border-[1.5px] border-dashed border-[#D8D5C8] bg-white px-3 py-1 font-semibold text-[12px] text-[#5E6654] hover:bg-[#F4F1E8]"
+          >
+            + Add more
+          </button>
+        )}
+      </div>
+
+      {/* ---- The board */}
+      {competitorPrices.length === 0 ? (
+        <section className="rounded-2xl border border-dashed border-[#D8D5C8] px-4 py-12 text-center">
+          <p className="text-2xl" aria-hidden="true">
+            🏆
+          </p>
+          <p className="mt-2 font-bold text-sm text-[#20231A]">No local prices yet</p>
+          <p className="mt-1 text-[12px] text-[#5E6654]">
+            {`Rerun the price-off below and we'll go and find what ${area} is charging.`}
+          </p>
+        </section>
+      ) : (
+        <>
+          {/* Desktop: by-venue matrix or average */}
+          <section className="hidden overflow-hidden rounded-2xl border border-[#D8D5C8] bg-[#FFFEFA] sm:block">
+            {view === "byVenue" ? (
+              matrix.venues.length === 0 ? (
+                <p className="px-5 py-6 text-[12px] text-[#5E6654]/70">
+                  No venue could be matched to your rounds yet — try the Average view or rerun the price-off.
+                </p>
+              ) : (
+                <div
+                  style={
+                    {
+                      "--price-cols": `1.4fr 90px repeat(${matrix.venues.length}, minmax(0,1fr))`,
+                    } as React.CSSProperties
+                  }
+                >
+                  <div className="grid grid-cols-(--price-cols) gap-2 border-b border-[#D8D5C8] bg-[#F4F1E8] px-5 py-3 font-semibold text-[11px] tracking-[0.06em] text-[#5E6654] uppercase">
+                    <span>Round</span>
+                    <span className="text-right text-[#34451F]">You</span>
+                    {matrix.venues.map((v) => (
+                      <span key={v} className="truncate text-right">
+                        {v}
+                      </span>
+                    ))}
                   </div>
-                  {hasData ? (
-                    <>
-                      <RangeBar c={c} />
-                      <p className="text-[10.5px] text-[#5E6654] tabular-nums sm:hidden">
-                        {formatGbp(c.competitorMin)} · avg{" "}
-                        <span className="font-black text-[#20231A]">{formatGbp(c.competitorAvg)}</span> ·{" "}
-                        {formatGbp(c.competitorMax)}
-                        <span className="ml-1 opacity-55">({c.sampleCount})</span>
+                  {matrix.rows.map((row) => (
+                    <div
+                      key={row.key}
+                      className="grid grid-cols-(--price-cols) items-center gap-2 border-b border-[#D8D5C8]/60 px-5 py-3 last:border-b-0"
+                    >
+                      <span className="font-bold text-[14px] text-[#20231A]">{row.label}</span>
+                      <span className="text-right font-bold text-[15px] text-[#22613F] tabular-nums">
+                        {row.ownPrice == null ? (
+                          <span className="text-[#5E6654]/45">—</span>
+                        ) : (
+                          formatGbp(row.ownPrice)
+                        )}
+                      </span>
+                      {row.cells.map((c, i) => (
+                        <span key={i} className="text-right font-medium text-[13.5px] text-[#5E6654] tabular-nums">
+                          {c == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c)}
+                        </span>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : (
+              shownComparison.map((c) => {
+                const hasData = c.sampleCount > 0 && c.competitorAvg != null;
+                const winning = hasData && c.ownPrice != null && c.ownPrice < (c.competitorAvg as number);
+                return (
+                  <div
+                    key={c.key}
+                    className="flex items-center gap-3 border-b border-[#D8D5C8]/60 px-5 py-3 last:border-b-0"
+                  >
+                    <span className="min-w-0 flex-1 font-bold text-[14px] text-[#20231A]">
+                      {c.label} {winning && <span aria-hidden="true">🏆</span>}
+                    </span>
+                    <span
+                      className={cn(
+                        "w-20 text-right font-bold text-[15px] tabular-nums",
+                        winning ? "text-[#22613F]" : "text-[#20231A]",
+                      )}
+                    >
+                      {c.ownPrice == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c.ownPrice)}
+                    </span>
+                    <span className="w-24 text-right font-medium text-[13.5px] text-[#5E6654] tabular-nums">
+                      {hasData ? `vs ${formatGbp(c.competitorAvg)}` : "—"}
+                    </span>
+                    <span
+                      className={cn(
+                        "w-28 text-right font-semibold text-[12.5px]",
+                        winning ? "text-[#22613F]" : "text-[#8A8D7A]",
+                      )}
+                    >
+                      {winning ? "You win 🏆" : hasData ? "They win" : "No match yet"}
+                    </span>
+                  </div>
+                );
+              })
+            )}
+          </section>
+
+          {/* Mobile: fixed columns so every price lines up */}
+          <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-[#FFFEFA] sm:hidden">
+            <div className="grid grid-cols-[minmax(0,1fr)_58px_58px_24px] gap-2 border-b border-[#D8D5C8] bg-[#F4F1E8] px-3.5 py-2.5 font-semibold text-[10.5px] tracking-[0.06em] text-[#5E6654] uppercase">
+              <span>Round</span>
+              <span className="text-right text-[#34451F]">You</span>
+              <span className="text-right">Them</span>
+              <span />
+            </div>
+            {shownComparison.map((c) => {
+              const hasData = c.sampleCount > 0 && c.competitorAvg != null;
+              const winning = hasData && c.ownPrice != null && c.ownPrice < (c.competitorAvg as number);
+              const open = openRowKey === c.key;
+              const breakdown = open ? breakdownFor(c.key) : [];
+              return (
+                <div key={c.key} className={cn("border-b border-[#D8D5C8]/60 last:border-b-0", open && "bg-[#F4F1E8]")}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenRowKey(open ? null : c.key)}
+                    disabled={!hasData}
+                    aria-expanded={open}
+                    className="grid w-full grid-cols-[minmax(0,1fr)_58px_58px_24px] items-center gap-2 px-3.5 py-3 text-left disabled:cursor-default"
+                  >
+                    <span className="min-w-0 text-[13px] leading-tight font-bold text-[#20231A]">
+                      {c.label} {winning && <span aria-hidden="true">🏆</span>}
+                    </span>
+                    <span
+                      className={cn(
+                        "text-right font-bold text-[13.5px] tabular-nums",
+                        winning ? "text-[#22613F]" : "text-[#20231A]",
+                      )}
+                    >
+                      {c.ownPrice == null ? <span className="text-[#5E6654]/45">—</span> : formatGbp(c.ownPrice)}
+                    </span>
+                    <span className="text-right font-medium text-[12.5px] text-[#5E6654] tabular-nums">
+                      {hasData ? formatGbp(c.competitorAvg) : <span className="text-[#5E6654]/45">—</span>}
+                    </span>
+                    {hasData ? (
+                      <ChevronDown
+                        className={cn(
+                          "h-3.5 w-3.5 justify-self-end text-[#5E6654] transition-transform",
+                          open && "rotate-180 text-[#34451F]",
+                        )}
+                      />
+                    ) : (
+                      <span />
+                    )}
+                  </button>
+
+                  {open && (
+                    <div className="px-3.5 pb-3">
+                      <p className="mb-1.5 font-bold text-[10.5px] tracking-[0.06em] text-[#5E6654] uppercase">
+                        The breakdown — venue by venue
                       </p>
-                    </>
-                  ) : (
-                    <p className="text-[10.5px] text-[#5E6654]/40">No local data yet.</p>
+                      {breakdown.length === 0 ? (
+                        <p className="py-1 text-[12px] text-[#5E6654]/70">No venue prices matched this round yet.</p>
+                      ) : (
+                        breakdown.map((b) => {
+                          const under = c.ownPrice != null && c.ownPrice < b.price;
+                          return (
+                            <div
+                              key={b.venue}
+                              className="grid grid-cols-[minmax(0,1fr)_58px] items-baseline gap-2 border-t border-[#D8D5C8]/60 py-1.5"
+                            >
+                              <span className="min-w-0 text-[12.5px] leading-tight font-semibold text-[#20231A]">
+                                {b.venue}{" "}
+                                {c.ownPrice != null && (
+                                  <span className={cn("text-[10.5px] font-normal", under ? "text-[#22613F]" : "text-[#B33A32]")}>
+                                    {under
+                                      ? `you're ${formatGbp(b.price - c.ownPrice)} under`
+                                      : `they're ${formatGbp(c.ownPrice - b.price)} under`}
+                                  </span>
+                                )}
+                              </span>
+                              <span className="text-right font-semibold text-[12.5px] text-[#5E6654] tabular-nums">
+                                {formatGbp(b.price)}
+                              </span>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
                   )}
                 </div>
               );
             })}
-          </div>
-        )}
-      </section>
+          </section>
 
-      {competitorPrices.length > 0 && (
-        <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
+          <p className="text-center text-[11px] text-[#5E6654]/60 sm:hidden">
+            Tap any row for the venue-by-venue breakdown.
+          </p>
+        </>
+      )}
+
+      {/* ---- Footer actions */}
+      <div className="flex flex-col gap-2.5 sm:flex-row">
+        <button
+          type="button"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="flex h-12.5 flex-1 items-center justify-center gap-2 rounded-[14px] bg-[#34451F] font-bold text-[14px] text-white transition-colors hover:bg-[#283719] active:scale-[0.98] disabled:opacity-60 sm:h-12 sm:rounded-xl"
+        >
+          {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <span aria-hidden="true">⚡</span>}
+          {isRefreshing ? "Running the price-off…" : "Rerun the price-off"}
+        </button>
+        {competitorPrices.length > 0 && (
           <button
             type="button"
             onClick={() => setShowRaw((s) => !s)}
-            className="flex w-full items-center justify-between gap-2 bg-[#F4F1E8] px-4 py-3 sm:px-5"
+            aria-expanded={showRaw}
+            className="flex h-12 items-center justify-center gap-2 rounded-xl border border-[#D8D5C8] bg-white px-4.5 font-semibold text-[13px] text-[#5E6654] transition-colors hover:bg-[#F4F1E8]"
           >
-            <span className="font-black text-[11px] tracking-widest text-[#34451F] uppercase">
-              All sourced prices ({competitorPrices.length})
-            </span>
-            <ChevronDown className={cn("h-4 w-4 text-[#5E6654] transition-transform", showRaw && "rotate-180")} />
+            See all {competitorPrices.length} sourced prices
+            <ChevronDown className={cn("h-4 w-4 transition-transform", showRaw && "rotate-180")} />
           </button>
-          {showRaw && (
-            <div className="divide-y divide-[#D8D5C8]/60">
-              {competitorPrices.map((p) => (
-                <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[13px] font-bold text-[#20231A]">{p.item_name}</p>
-                    <p className="truncate text-[10px] text-[#5E6654]/70">
-                      {p.venue_name}
-                      {p.item_type ? ` · ${p.item_type}` : ""}
-                    </p>
-                  </div>
-                  <span className="shrink-0 font-black text-[13px] text-[#20231A] tabular-nums">
-                    {p.price_text || formatGbp(p.price_amount)}
-                  </span>
-                  {p.source_url && (
-                    <a
-                      href={p.source_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`Source for ${p.item_name} at ${p.venue_name}`}
-                      title="View source"
-                      className="shrink-0 text-[#34451F] hover:text-[#34451F]/70"
-                    >
-                      <ExternalLink className="h-3.5 w-3.5" />
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      <p className="pt-1 text-center text-[10px] text-[#5E6654] opacity-60">
-        Competitor prices are AI-estimated from live web search and matched to your menu by keyword. Treat as a guide, not gospel.
-      </p>
-
-      <button
-        type="button"
-        onClick={handleRefresh}
-        disabled={isRefreshing}
-        className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#34451F] font-black text-[11px] tracking-widest text-white uppercase transition-colors hover:bg-[#283719] active:scale-95 disabled:opacity-60"
-      >
-        {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-        {isRefreshing ? "Scanning local prices…" : "Live AI: local price insights"}
-      </button>
+        )}
+      </div>
 
       {isRefreshing && (
         <div className="py-4 text-center">
           <Loader2 className="mx-auto h-7 w-7 animate-spin text-[#34451F]" />
-          <p className="mt-2 text-[11px] font-bold text-[#5E6654]">Reading the local price wind…</p>
+          <p className="mt-2 font-semibold text-[12px] text-[#5E6654]">Reading the local price wind…</p>
         </div>
       )}
 
-      {priceTrends.length > 0 ? (
-        <div className="space-y-3">
-          <p className="pt-1 font-black text-[10px] tracking-widest text-[#34451F] uppercase">Pricing plays</p>
-          {priceTrends.map((t) => (
-            <TrendCard key={t.id} trend={t} pending={pendingTrendId === t.id} onSetState={onSetTrendState} />
+      {showRaw && competitorPrices.length > 0 && (
+        <section className="divide-y divide-[#D8D5C8]/60 overflow-hidden rounded-2xl border border-[#D8D5C8] bg-[#FFFEFA]">
+          {competitorPrices.map((p) => (
+            <div key={p.id} className="flex items-center gap-3 px-4 py-2.5 sm:px-5">
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-[13px] font-semibold text-[#20231A]">{p.item_name}</p>
+                <p className="truncate text-[11px] text-[#5E6654]/70">
+                  {p.venue_name}
+                  {p.item_type ? ` · ${p.item_type}` : ""}
+                </p>
+              </div>
+              <span className="shrink-0 font-bold text-[13px] text-[#20231A] tabular-nums">
+                {p.price_text || formatGbp(p.price_amount)}
+              </span>
+              {p.source_url && (
+                <a
+                  href={p.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Source for ${p.item_name} at ${p.venue_name}`}
+                  title="View source"
+                  className="shrink-0 text-[#34451F] hover:opacity-70"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
+              )}
+            </div>
           ))}
+        </section>
+      )}
+
+      <p className="text-center text-[11px] text-[#5E6654]/60">
+        Friendly competition only — prices are AI-estimated from the web. Empty cells mean no price found for that
+        venue yet.
+      </p>
+
+      {priceTrends.length > 0 && (
+        <div className="space-y-3 pt-1">
+          <p className="font-bold text-[13px] text-[#34451F]">Price plays worth nicking</p>
+          <div className="grid grid-cols-2 items-start gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4 2xl:grid-cols-5">
+            {priceTrends.map((t, i) => (
+              <TrendCard
+                key={t.id}
+                trend={t}
+                index={i}
+                pending={pendingTrendId === t.id}
+                onSetState={onSetTrendState}
+              />
+            ))}
+          </div>
         </div>
-      ) : (
-        !isRefreshing && (
-          <p className="text-center text-[10px] text-[#5E6654] opacity-60">
-            Tap the button for AI pricing plays tied to live local price data.
-          </p>
-        )
       )}
 
       <div className="pb-4" />

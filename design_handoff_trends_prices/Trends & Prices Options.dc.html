@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800;900&amp;display=swap">
+<link rel="stylesheet" href="_ds/don-fenticas-poc-ba6ad8ad-ac14-4122-84b4-6611748705ed/_ds_bundle.css">
+<link rel="stylesheet" href="_ds/don-fenticas-poc-ba6ad8ad-ac14-4122-84b4-6611748705ed/styles.css">
+<script src="_ds/don-fenticas-poc-ba6ad8ad-ac14-4122-84b4-6611748705ed/_ds_bundle.js"></script>
+<style>
+body{margin:0;background:#EAE7DC;font-family:'Archivo',system-ui,sans-serif}
+a{color:#34451F}a:hover{color:#283719}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 'Archivo',sans-serif;color:#1a1a1a}
+.dv-note{max-width:880px;margin:0 0 24px;font:400 12px/1.55 'Archivo',sans-serif;color:rgba(0,0,0,.55)}
+.dv-opts{display:flex;flex-wrap:wrap;gap:36px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.1);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 12px/1.3 'Archivo',sans-serif;color:rgba(0,0,0,.6);max-width:1240px}
+.dv-frames{display:flex;flex-direction:column;gap:18px}
+.dv-frow{display:flex;gap:18px;align-items:flex-start}
+.dv-card{background:#fff;border:1px solid rgba(0,0,0,.1);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden}
+.dv-cap{font:600 10px 'Archivo',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:rgba(0,0,0,.4);margin:0 0 -12px}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:26px 0 0;font:12px/1.5 'Archivo',sans-serif;color:rgba(0,0,0,.5)}
+</style>
+</helmet>
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">The mix: <a class="dv-oid" href="#1d">1d</a> noticeboard for ideas + <a class="dv-oid" href="#1c">1c</a> price-off for prices, with your requests built in</span></div>
+<p class="dv-note">Notes now carry an <b>Easy / Medium / Hard</b> chip and a time estimate; "View more" grows the note to show <b>why your bar</b> and <b>numbered steps</b>. The price-off gets a <b>View: Average / By venue</b> toggle and a <b>Choose items</b> control on desktop; on the phone every price sits in strict aligned columns, and any row taps open to a <b>per-venue breakdown</b>.</p>
+<div class="dv-opts">
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a><b>Noticeboard + Price-off, combined</b></div>
+<div class="dv-frames">
+<p class="dv-cap">Desktop · Noticeboard — effort &amp; time on every note, one note opened via "View more"</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:1060px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;border-right:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Dashboard</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Bookings</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Requests</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Events</div>
+      <div style="padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif">Market trends</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Settings</div>
+    </div>
+    <p style="margin:0;padding:16px 32px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:860px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+          <div>
+            <h2 style="margin:0;font:800 34px/1.05 'Archivo',sans-serif;letter-spacing:-.03em;color:#20231A">The noticeboard</h2>
+            <p style="margin:6px 0 0;font:400 14px/1.5 'Archivo',sans-serif;color:#5E6654">Ideas worth nicking, pinned up fresh each week. Near Hinckley LE10 0BB.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex:none">
+            <span style="display:flex;height:44px;align-items:center;gap:8px;background:#34451F;color:#fff;border-radius:12px;padding:0 18px;font:700 13.5px 'Archivo',sans-serif">📌 Pin up fresh ideas</span>
+            <span style="display:flex;height:44px;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;border-radius:12px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif;color:#5E6654">🗂 My keepers · 9</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <span style="display:flex;height:40px;align-items:center;gap:8px;background:#20231A;color:#FFF4CC;border-radius:8px;padding:0 18px;font:700 13px 'Archivo',sans-serif;transform:rotate(-1deg)">📣 Post ideas</span>
+          <span style="display:flex;height:40px;align-items:center;gap:8px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;padding:0 18px;font:600 13px 'Archivo',sans-serif;transform:rotate(.6deg)">🎪 Event ideas</span>
+          <span style="display:flex;height:40px;align-items:center;gap:8px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;padding:0 18px;font:600 13px 'Archivo',sans-serif;transform:rotate(-.5deg)">🏆 The price-off</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;padding:8px 4px;align-items:start">
+          <article style="position:relative;grid-column:span 2;border-radius:4px;padding:22px 22px 18px;box-shadow:0 10px 24px rgba(32,35,26,.22);transform:rotate(-.6deg);background:#FFF7D6;border:1px solid rgba(154,91,0,.15)">
+            <span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:999px;background:#B33A32;box-shadow:inset -2px -3px 4px rgba(0,0,0,.3),0 2px 3px rgba(0,0,0,.3)"></span>
+            <div style="display:flex;align-items:flex-start;gap:14px">
+              <p style="margin:0;font-size:40px">😅</p>
+              <div style="flex:1;min-width:0">
+                <p style="margin:0;font:800 21px/1.2 'Archivo',sans-serif;letter-spacing:-.01em;color:#20231A">The disappointed "another round?" bit</p>
+                <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+                  <span style="border-radius:999px;padding:4px 12px;font:700 12px 'Archivo',sans-serif;background:#E7F3EC;color:#22613F">● Easy</span>
+                  <span style="border-radius:999px;padding:4px 12px;font:600 12px 'Archivo',sans-serif;background:rgba(32,35,26,.08);color:#20231A">🕐 ~ one evening</span>
+                  <span style="border-radius:999px;padding:4px 12px;font:600 12px 'Archivo',sans-serif;background:rgba(32,35,26,.08);color:#20231A">📣 Post idea</span>
+                </div>
+              </div>
+              <span style="flex:none;font:600 12.5px 'Archivo',sans-serif;color:#34451F;text-decoration:underline">Show less</span>
+            </div>
+            <div style="margin-top:14px;border:1px solid rgba(154,91,0,.25);background:rgba(255,255,255,.55);border-radius:10px;padding:12px 14px">
+              <p style="margin:0 0 4px;font:700 12px 'Archivo',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#9A5B00">Why your bar</p>
+              <p style="margin:0;font:400 13.5px/1.55 'Archivo',sans-serif;color:#20231A">The "supportive disappointed" meme is everywhere this month — it plays on how much a phrase changes with delivery. Bars are smashing it with staff-facing versions, and you've got the staff banter for it.</p>
+            </div>
+            <div style="margin-top:10px;border:1px solid rgba(52,69,31,.25);background:rgba(255,255,255,.55);border-radius:10px;padding:12px 14px">
+              <p style="margin:0 0 8px;font:700 12px 'Archivo',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#34451F">How to do it</p>
+              <div style="display:flex;flex-direction:column;gap:8px;font:400 13.5px/1.5 'Archivo',sans-serif;color:#20231A">
+                <p style="margin:0;display:flex;gap:10px"><b style="flex:none;display:flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:999px;background:#34451F;color:#fff;font:700 12px 'Archivo',sans-serif">1</b><span>Pick one phrase — "Another round?" works a treat.</span></p>
+                <p style="margin:0;display:flex;gap:10px"><b style="flex:none;display:flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:999px;background:#34451F;color:#fff;font:700 12px 'Archivo',sans-serif">2</b><span>Film a staff member saying it three ways: supportive → disappointed → sarcastic.</span></p>
+                <p style="margin:0;display:flex;gap:10px"><b style="flex:none;display:flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:999px;background:#34451F;color:#fff;font:700 12px 'Archivo',sans-serif">3</b><span>Post it with the trending sound, tag your bar and the town. Done.</span></p>
+              </div>
+            </div>
+            <div style="margin-top:14px;display:flex;gap:8px;align-items:center">
+              <span style="display:flex;height:40px;align-items:center;justify-content:center;gap:6px;background:#34451F;color:#fff;border-radius:8px;padding:0 20px;font:700 13px 'Archivo',sans-serif">📌 Keep</span>
+              <span style="display:flex;height:40px;align-items:center;justify-content:center;border:1px solid rgba(94,102,84,.4);color:#5E6654;border-radius:8px;padding:0 14px;font:600 13px 'Archivo',sans-serif">Bin it</span>
+              <span style="margin-left:auto;font:600 12px 'Archivo',sans-serif;color:#34451F">🔗 Source: NapoleonCat</span>
+            </div>
+          </article>
+          <sc-for list="{{ n2Notes }}" as="n" hint-placeholder-count="5">
+            <article style="position:relative;border-radius:4px;padding:20px 18px 16px;box-shadow:0 6px 14px rgba(32,35,26,.16);transform:rotate({{ n.rot }});background:{{ n.bg }}">
+              <span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:999px;background:#B33A32;box-shadow:inset -2px -3px 4px rgba(0,0,0,.3),0 2px 3px rgba(0,0,0,.3)"></span>
+              <p style="margin:0;font-size:34px">{{ n.emoji }}</p>
+              <p style="margin:10px 0 6px;font:800 16.5px/1.25 'Archivo',sans-serif;letter-spacing:-.01em;color:#20231A">{{ n.title }}</p>
+              <p style="margin:0 0 10px;font:400 13px/1.5 'Archivo',sans-serif;color:#5E6654">{{ n.note }}</p>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+                <span style="border-radius:999px;padding:3px 10px;font:700 11px 'Archivo',sans-serif;background:{{ n.effBg }};color:{{ n.effC }}">● {{ n.eff }}</span>
+                <span style="border-radius:999px;padding:3px 10px;font:600 11px 'Archivo',sans-serif;background:rgba(32,35,26,.08);color:#20231A">🕐 {{ n.time }}</span>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center">
+                <span style="display:flex;height:36px;flex:1;align-items:center;justify-content:center;gap:6px;background:#34451F;color:#fff;border-radius:8px;font:700 12.5px 'Archivo',sans-serif">📌 Keep</span>
+                <span style="display:flex;height:36px;align-items:center;justify-content:center;border:1px solid rgba(94,102,84,.4);color:#5E6654;border-radius:8px;padding:0 10px;font:600 12px 'Archivo',sans-serif">Bin</span>
+              </div>
+              <p style="margin:10px 0 0;text-align:center;font:600 12px 'Archivo',sans-serif;color:#34451F;text-decoration:underline">View more</p>
+            </article>
+          </sc-for>
+        </div>
+        <p style="margin:0;text-align:center;font:400 12px 'Archivo',sans-serif;color:rgba(94,102,84,.6)">Pinned fresh on 7 Jul at 08:10 · found by AI from what's going round · always sense-check before acting.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Desktop · The price-off — "View: Average / By venue" toggle + Choose items (shown in By venue view)</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:1000px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;border-right:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Dashboard</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Bookings</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Requests</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Events</div>
+      <div style="padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif">Market trends</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Settings</div>
+    </div>
+    <p style="margin:0;padding:16px 32px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:860px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:8px">
+          <span style="display:flex;height:40px;align-items:center;gap:8px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;padding:0 18px;font:600 13px 'Archivo',sans-serif;transform:rotate(-1deg)">📣 Post ideas</span>
+          <span style="display:flex;height:40px;align-items:center;gap:8px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;padding:0 18px;font:600 13px 'Archivo',sans-serif;transform:rotate(.6deg)">🎪 Event ideas</span>
+          <span style="display:flex;height:40px;align-items:center;gap:8px;background:#20231A;color:#FFF4CC;border-radius:8px;padding:0 18px;font:700 13px 'Archivo',sans-serif;transform:rotate(-.5deg)">🏆 The price-off</span>
+        </div>
+        <div style="border:1px solid #D8D5C8;background:#263019;border-radius:20px;padding:20px 24px;color:#DDE2D1;display:flex;align-items:center;gap:28px">
+          <div style="display:flex;align-items:center;gap:24px">
+            <div style="text-align:center"><p style="margin:0;font:700 13px 'Archivo',sans-serif">You</p><p style="margin:0;font:800 44px/1 'Archivo',sans-serif;color:#D7A928;font-variant-numeric:tabular-nums">5</p></div>
+            <p style="margin:0;font:700 16px 'Archivo',sans-serif;color:#AEB69D">vs</p>
+            <div style="text-align:center"><p style="margin:0;font:700 13px 'Archivo',sans-serif">The locals</p><p style="margin:0;font:800 44px/1 'Archivo',sans-serif;color:#AEB69D;font-variant-numeric:tabular-nums">0</p></div>
+          </div>
+          <div style="flex:1">
+            <p style="margin:0;font:700 15px 'Archivo',sans-serif">The Hinckley price-off · updated 7 Jul</p>
+            <p style="margin:4px 0 0;font:400 13px/1.45 'Archivo',sans-serif;color:#AEB69D">You're the cheaper pint on 5 of 6 drinks. Crowd goes wild. 🎉</p>
+          </div>
+          <span style="flex:none;display:flex;height:40px;align-items:center;gap:8px;border:1px solid rgba(174,182,157,.4);color:#DDE2D1;border-radius:10px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif">✏️ Change area</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font:600 13px 'Archivo',sans-serif;color:#5E6654">View:</span>
+          <span style="display:flex;border:1px solid #D8D5C8;border-radius:10px;overflow:hidden;background:#fff">
+            <span style="display:flex;height:38px;align-items:center;padding:0 16px;font:600 13px 'Archivo',sans-serif;color:#5E6654">Average</span>
+            <span style="display:flex;height:38px;align-items:center;padding:0 16px;font:700 13px 'Archivo',sans-serif;background:#34451F;color:#fff">By venue</span>
+          </span>
+          <span style="margin-left:auto;display:flex;height:38px;align-items:center;gap:8px;border:1px solid #34451F;color:#34451F;background:#fff;border-radius:10px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif">🎛 Choose items</span>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <sc-for list="{{ vItems }}" as="it" hint-placeholder-count="6">
+            <span style="display:flex;align-items:center;gap:6px;border:1px solid #BFD8C4;background:#E7F3EC;color:#22613F;border-radius:999px;padding:5px 12px;font:600 12px 'Archivo',sans-serif">✓ {{ it }}</span>
+          </sc-for>
+          <span style="display:flex;align-items:center;gap:6px;border:1.5px dashed #D8D5C8;background:#fff;color:#5E6654;border-radius:999px;padding:5px 12px;font:600 12px 'Archivo',sans-serif">+ Add more</span>
+        </div>
+        <section style="border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1.4fr 90px repeat(4,minmax(0,1fr));gap:8px;padding:12px 20px;background:#F4F1E8;border-bottom:1px solid #D8D5C8;font:600 11px 'Archivo',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5E6654"><span>Round</span><span style="text-align:right;color:#34451F">You</span><span style="text-align:right">Hinckley Knight</span><span style="text-align:right">Flintlock</span><span style="text-align:right">Union Tap</span><span style="text-align:right">Greyhound</span></div>
+          <sc-for list="{{ vRows }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1.4fr 90px repeat(4,minmax(0,1fr));gap:8px;align-items:center;padding:13px 20px;border-bottom:1px solid rgba(216,213,200,.6)">
+              <span style="font:700 14px 'Archivo',sans-serif;color:#20231A">{{ r.item }}</span>
+              <span style="text-align:right;font:700 15px 'Archivo',sans-serif;color:#22613F;font-variant-numeric:tabular-nums">{{ r.you }}</span>
+              <span style="text-align:right;font:500 13.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">{{ r.c1 }}</span>
+              <span style="text-align:right;font:500 13.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">{{ r.c2 }}</span>
+              <span style="text-align:right;font:500 13.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">{{ r.c3 }}</span>
+              <span style="text-align:right;font:500 13.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">{{ r.c4 }}</span>
+            </div>
+          </sc-for>
+        </section>
+        <div style="display:flex;gap:10px">
+          <span style="flex:1;display:flex;height:48px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:12px;font:700 14px 'Archivo',sans-serif">⚡ Rerun the price-off</span>
+          <span style="display:flex;height:48px;align-items:center;gap:8px;border:1px solid #D8D5C8;color:#5E6654;border-radius:12px;padding:0 18px;font:600 13px 'Archivo',sans-serif;background:#fff">See all 25 sourced prices</span>
+        </div>
+        <p style="margin:0;text-align:center;font:400 11px 'Archivo',sans-serif;color:rgba(94,102,84,.6)">Friendly competition only — prices are AI-estimated from the web. Empty cells mean no price found for that venue yet.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Mobile · Noticeboard ("View more" opened) &amp; Price-off (aligned columns, one row expanded by venue)</p>
+<div class="dv-frow">
+  <div class="dv-card" style="width:393px;height:1200px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:16px 14px 90px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <h2 style="margin:0;font:800 27px/1.05 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">The noticeboard</h2>
+        <p style="margin:4px 0 0;font:400 13px/1.5 'Archivo',sans-serif;color:#5E6654">Ideas worth nicking, pinned fresh each week.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <span style="display:flex;height:40px;align-items:center;justify-content:center;gap:5px;background:#20231A;color:#FFF4CC;border-radius:8px;font:700 11.5px 'Archivo',sans-serif;transform:rotate(-1deg)">📣 Posts</span>
+        <span style="display:flex;height:40px;align-items:center;justify-content:center;gap:5px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;font:600 11.5px 'Archivo',sans-serif;transform:rotate(.6deg)">🎪 Events</span>
+        <span style="display:flex;height:40px;align-items:center;justify-content:center;gap:5px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;font:600 11.5px 'Archivo',sans-serif;transform:rotate(-.5deg)">🏆 Price-off</span>
+      </div>
+      <span style="display:flex;height:52px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:14px;font:700 14.5px 'Archivo',sans-serif">📌 Pin up fresh ideas</span>
+      <article style="position:relative;border-radius:4px;padding:18px 16px 14px;box-shadow:0 8px 18px rgba(32,35,26,.2);transform:rotate(-.5deg);background:#FFF7D6;border:1px solid rgba(154,91,0,.15)">
+        <span style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:15px;height:15px;border-radius:999px;background:#B33A32;box-shadow:inset -2px -3px 4px rgba(0,0,0,.3),0 2px 3px rgba(0,0,0,.3)"></span>
+        <div style="display:flex;gap:10px;align-items:flex-start">
+          <p style="margin:0;font-size:30px">😅</p>
+          <p style="margin:0;flex:1;font:800 16px/1.25 'Archivo',sans-serif;color:#20231A">The disappointed "another round?" bit</p>
+          <span style="flex:none;font:600 11.5px 'Archivo',sans-serif;color:#34451F;text-decoration:underline">Show less</span>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap">
+          <span style="border-radius:999px;padding:3px 10px;font:700 11px 'Archivo',sans-serif;background:#E7F3EC;color:#22613F">● Easy</span>
+          <span style="border-radius:999px;padding:3px 10px;font:600 11px 'Archivo',sans-serif;background:rgba(32,35,26,.08);color:#20231A">🕐 ~ one evening</span>
+        </div>
+        <div style="margin-top:10px;border:1px solid rgba(154,91,0,.25);background:rgba(255,255,255,.55);border-radius:10px;padding:10px 12px">
+          <p style="margin:0 0 3px;font:700 11px 'Archivo',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#9A5B00">Why your bar</p>
+          <p style="margin:0;font:400 12.5px/1.5 'Archivo',sans-serif;color:#20231A">This meme is everywhere right now, and it only needs your staff's banter — no budget, no kit.</p>
+        </div>
+        <div style="margin-top:8px;border:1px solid rgba(52,69,31,.25);background:rgba(255,255,255,.55);border-radius:10px;padding:10px 12px">
+          <p style="margin:0 0 6px;font:700 11px 'Archivo',sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#34451F">How to do it</p>
+          <div style="display:flex;flex-direction:column;gap:6px;font:400 12.5px/1.45 'Archivo',sans-serif;color:#20231A">
+            <p style="margin:0;display:flex;gap:8px"><b style="flex:none;display:flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:999px;background:#34451F;color:#fff;font:700 11px 'Archivo',sans-serif">1</b><span>Pick one phrase — "Another round?"</span></p>
+            <p style="margin:0;display:flex;gap:8px"><b style="flex:none;display:flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:999px;background:#34451F;color:#fff;font:700 11px 'Archivo',sans-serif">2</b><span>Film it three ways: supportive → disappointed → sarcastic.</span></p>
+            <p style="margin:0;display:flex;gap:8px"><b style="flex:none;display:flex;width:20px;height:20px;align-items:center;justify-content:center;border-radius:999px;background:#34451F;color:#fff;font:700 11px 'Archivo',sans-serif">3</b><span>Post with the trending sound &amp; tag your bar.</span></p>
+          </div>
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <span style="display:flex;height:40px;flex:1;align-items:center;justify-content:center;gap:6px;background:#34451F;color:#fff;border-radius:8px;font:700 13px 'Archivo',sans-serif">📌 Keep</span>
+          <span style="display:flex;height:40px;align-items:center;justify-content:center;border:1px solid rgba(94,102,84,.4);color:#5E6654;border-radius:8px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif">Bin it</span>
+        </div>
+      </article>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:4px 2px">
+        <sc-for list="{{ n2NotesM }}" as="n" hint-placeholder-count="3">
+          <article style="position:relative;border-radius:4px;padding:16px 14px 12px;box-shadow:0 5px 12px rgba(32,35,26,.16);transform:rotate({{ n.rot }});background:{{ n.bg }}">
+            <span style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:15px;height:15px;border-radius:999px;background:#B33A32;box-shadow:inset -2px -3px 4px rgba(0,0,0,.3),0 2px 3px rgba(0,0,0,.3)"></span>
+            <p style="margin:0;font-size:26px">{{ n.emoji }}</p>
+            <p style="margin:8px 0 4px;font:800 13.5px/1.25 'Archivo',sans-serif;color:#20231A">{{ n.title }}</p>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px">
+              <span style="border-radius:999px;padding:2px 8px;font:700 10px 'Archivo',sans-serif;background:{{ n.effBg }};color:{{ n.effC }}">● {{ n.eff }}</span>
+              <span style="border-radius:999px;padding:2px 8px;font:600 10px 'Archivo',sans-serif;background:rgba(32,35,26,.08);color:#20231A">🕐 {{ n.time }}</span>
+            </div>
+            <span style="display:flex;height:34px;align-items:center;justify-content:center;gap:6px;background:#34451F;color:#fff;border-radius:8px;font:700 12px 'Archivo',sans-serif">📌 Keep</span>
+            <p style="margin:8px 0 0;text-align:center;font:600 11px 'Archivo',sans-serif;color:#34451F;text-decoration:underline">View more</p>
+          </article>
+        </sc-for>
+      </div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🛍</span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+  <div class="dv-card" style="width:393px;height:960px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:14px 12px 90px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <span style="display:flex;height:40px;align-items:center;justify-content:center;gap:5px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;font:600 11.5px 'Archivo',sans-serif;transform:rotate(-1deg)">📣 Posts</span>
+        <span style="display:flex;height:40px;align-items:center;justify-content:center;gap:5px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;font:600 11.5px 'Archivo',sans-serif;transform:rotate(.6deg)">🎪 Events</span>
+        <span style="display:flex;height:40px;align-items:center;justify-content:center;gap:5px;background:#20231A;color:#FFF4CC;border-radius:8px;font:700 11.5px 'Archivo',sans-serif;transform:rotate(-.5deg)">🏆 Price-off</span>
+      </div>
+      <div style="background:#263019;border-radius:20px;padding:18px;color:#DDE2D1">
+        <p style="margin:0;text-align:center;font:600 11px 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#AEB69D">The Hinckley price-off</p>
+        <div style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:20px">
+          <div style="text-align:center"><p style="margin:0;font:700 12.5px 'Archivo',sans-serif">You</p><p style="margin:0;font:800 38px/1 'Archivo',sans-serif;color:#D7A928">5</p></div>
+          <p style="margin:0;font:700 15px 'Archivo',sans-serif;color:#AEB69D">vs</p>
+          <div style="text-align:center"><p style="margin:0;font:700 12.5px 'Archivo',sans-serif">The locals</p><p style="margin:0;font:800 38px/1 'Archivo',sans-serif;color:#AEB69D">0</p></div>
+        </div>
+        <p style="margin:8px 0 0;text-align:center;font:400 12px/1.4 'Archivo',sans-serif">Cheaper pint on 5 of 6 drinks 🎉</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <span style="flex:1;display:flex;height:40px;align-items:center;justify-content:center;gap:6px;border:1px solid #34451F;color:#34451F;background:#fff;border-radius:10px;font:600 12.5px 'Archivo',sans-serif">🎛 Choose items</span>
+        <span style="flex:1;display:flex;height:40px;align-items:center;justify-content:center;gap:6px;border:1px solid #D8D5C8;color:#5E6654;background:#fff;border-radius:10px;font:600 12.5px 'Archivo',sans-serif">✏️ Change area</span>
+      </div>
+      <section style="border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;overflow:hidden">
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 58px 24px;gap:8px;padding:10px 14px;background:#F4F1E8;border-bottom:1px solid #D8D5C8;font:600 10.5px 'Archivo',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5E6654"><span>Round</span><span style="text-align:right;color:#34451F">You</span><span style="text-align:right">Them</span><span></span></div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 58px 24px;gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(216,213,200,.6)">
+          <span style="font:700 13px/1.3 'Archivo',sans-serif;color:#20231A">Pint (Lager) 🏆</span>
+          <span style="text-align:right;font:700 13.5px 'Archivo',sans-serif;color:#22613F;font-variant-numeric:tabular-nums">£3.50</span>
+          <span style="text-align:right;font:500 12.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">£4.50</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg>
+        </div>
+        <div style="background:#F4F1E8;border-bottom:1px solid rgba(216,213,200,.6)">
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 58px 24px;gap:8px;align-items:center;padding:12px 14px">
+            <span style="font:700 13px/1.3 'Archivo',sans-serif;color:#20231A">Ale / Bitter / Stout 🏆</span>
+            <span style="text-align:right;font:700 13.5px 'Archivo',sans-serif;color:#22613F;font-variant-numeric:tabular-nums">£1.95</span>
+            <span style="text-align:right;font:500 12.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">£4.38</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#34451F" stroke-width="2" style="transform:rotate(180deg)"><path d="m6 9 6 6 6-6"></path></svg>
+          </div>
+          <div style="padding:0 14px 12px">
+            <p style="margin:0 0 6px;font:700 10.5px 'Archivo',sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#5E6654">The breakdown — venue by venue</p>
+            <sc-for list="{{ bkdn }}" as="b" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px;gap:8px;align-items:baseline;padding:6px 0;border-top:1px solid rgba(216,213,200,.6)">
+                <span style="min-width:0;font:600 12.5px/1.3 'Archivo',sans-serif;color:#20231A">{{ b.v }} <span style="font:400 10.5px 'Archivo',sans-serif;color:#22613F">{{ b.win }}</span></span>
+                <span style="text-align:right;font:600 12.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">{{ b.p }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 58px 24px;gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(216,213,200,.6)">
+          <span style="font:700 13px/1.3 'Archivo',sans-serif;color:#20231A">Spirit + Mixer 🏆</span>
+          <span style="text-align:right;font:700 13.5px 'Archivo',sans-serif;color:#22613F;font-variant-numeric:tabular-nums">£1.95</span>
+          <span style="text-align:right;font:500 12.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">£17.00</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 58px 24px;gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(216,213,200,.6)">
+          <span style="font:700 13px/1.3 'Archivo',sans-serif;color:#20231A">Wine (Glass) 🏆</span>
+          <span style="text-align:right;font:700 13.5px 'Archivo',sans-serif;color:#22613F;font-variant-numeric:tabular-nums">£6.75</span>
+          <span style="text-align:right;font:500 12.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">£14.50</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 58px 24px;gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid rgba(216,213,200,.6)">
+          <span style="font:700 13px/1.3 'Archivo',sans-serif;color:#20231A">Soft Drink</span>
+          <span style="text-align:right;font:700 13.5px 'Archivo',sans-serif;color:#20231A;font-variant-numeric:tabular-nums">£2.50</span>
+          <span style="text-align:right;font:500 12.5px 'Archivo',sans-serif;color:rgba(94,102,84,.45);font-variant-numeric:tabular-nums">—</span>
+          <span></span>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 58px 58px 24px;gap:8px;align-items:center;padding:12px 14px">
+          <span style="font:700 13px/1.3 'Archivo',sans-serif;color:#20231A">Snacks 🏆</span>
+          <span style="text-align:right;font:700 13.5px 'Archivo',sans-serif;color:#22613F;font-variant-numeric:tabular-nums">£1.00</span>
+          <span style="text-align:right;font:500 12.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">£4.76</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg>
+        </div>
+      </section>
+      <span style="display:flex;height:50px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:14px;font:700 14px 'Archivo',sans-serif">⚡ Rerun the price-off</span>
+      <p style="margin:0;text-align:center;font:400 11px 'Archivo',sans-serif;color:rgba(94,102,84,.6)">Tap any row for the venue-by-venue breakdown.</p>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🛍</span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-next">Try next: "build 2a as a working prototype" · "different sticky-note colours per effort level" · "show the Average view on desktop too"</p>
+</section>
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Trends &amp; Prices — current UI recreated + 3 redesign directions</span></div>
+<p class="dv-note">Assumptions: rebuilt from <b>trends-client.tsx</b>, <b>trend-card.tsx</b>, <b>prices-client.tsx</b> and the admin shell in <b>private-layout-client.tsx</b>, on the admin cream/olive palette from STYLE_GUIDE.md. Your brief: both pages equally, keep comparisons visible but friendlier, browsing/understanding first, quirky &amp; fun, first-visit explainer, desktop + mobile. Option <a class="dv-oid" href="#1a">1a</a> is the faithful baseline; <a class="dv-oid" href="#1b">1b</a>–<a class="dv-oid" href="#1d">1d</a> get progressively bolder.</p>
+<div class="dv-opts">
+
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a><b>Current UI (recreated baseline)</b> — as shipped today: shouty uppercase micro-labels, three look-alike pills, dense rows.</div>
+<div class="dv-frames">
+<p class="dv-cap">Desktop · Trends (Ads tab, one card expanded)</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:960px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;display:flex;flex-direction:column;border-right:1px solid rgba(174,182,157,.22)">
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 24px;border-bottom:1px solid rgba(174,182,157,.22)">
+      <span style="display:flex;width:40px;height:40px;align-items:center;justify-content:center;border-radius:999px;background:#34451F;box-shadow:0 0 0 1px rgba(174,182,157,.22);color:#DDE2D1;font:700 14px 'Archivo',sans-serif">TF</span>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M9 3v18"></path><path d="m14 9-3 3 3 3"></path></svg>
+    </div>
+    <div style="flex:1;display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-left:2px solid transparent;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>Dashboard</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-left:2px solid transparent;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v3a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-3a3 3 0 0 1 0-6V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path><path d="M13 5v2"></path><path d="M13 11v2"></path><path d="M13 17v2"></path></svg><span style="flex:1">Bookings</span><span style="width:6px;height:6px;border-radius:999px;background:#22C55E"></span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DDE2D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-left:2px solid transparent;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span style="flex:1">Requests</span><span style="display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif;padding:0 4px">14</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DDE2D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-left:2px solid transparent;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path></svg><span style="flex:1">Events</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DDE2D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 15-6-6-6 6"></path></svg></div>
+      <div style="margin-left:16px;padding-left:8px;border-left:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;gap:4px;padding-bottom:8px">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;color:#AEB69D;font:500 13px 'Archivo',sans-serif"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"></rect><path d="M16 2v4"></path><path d="M8 2v4"></path><path d="M3 10h18"></path><path d="M8 14h.01"></path><path d="M12 14h.01"></path><path d="M16 14h.01"></path></svg>Event list</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;color:#AEB69D;font:500 13px 'Archivo',sans-serif"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5.5 8.5 9 12l-3.5 3.5L2 12l3.5-3.5Z"></path><path d="m12 2 3.5 3.5L12 9 8.5 5.5 12 2Z"></path><path d="M18.5 8.5 22 12l-3.5 3.5L15 12l3.5-3.5Z"></path><path d="m12 15 3.5 3.5L12 22l-3.5-3.5L12 15Z"></path></svg>Event categories</div>
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;color:#AEB69D;font:500 13px 'Archivo',sans-serif"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M8 12h8"></path><path d="M12 8v8"></path></svg><span style="flex:1">Quiz</span><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#DDE2D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>Market trends</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-left:2px solid transparent;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"></path></svg><span style="flex:1">Settings</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#DDE2D1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+    </div>
+    <div style="border-top:1px solid rgba(174,182,157,.22);padding:16px;display:flex;flex-direction:column;gap:8px">
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 16px;color:#AEB69D;font:500 14px 'Archivo',sans-serif"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#AEB69D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" x2="9" y1="12" y2="12"></line></svg>Sign out</div>
+      <p style="margin:0;padding:0 16px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+    </div>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:768px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <h2 style="margin:0;font:900 20px 'Archivo',sans-serif;letter-spacing:-.01em;text-transform:uppercase;color:#20231A">Trends</h2>
+            <div style="margin-top:2px;display:flex;align-items:center;gap:6px;color:#5E6654"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 1 1 16 0Z"></path><circle cx="12" cy="10" r="3"></circle></svg><span style="font:900 10px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase">Live AI · Near Hinckley LE10 0BB</span></div>
+          </div>
+          <span style="display:flex;height:44px;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;border-radius:12px;padding:0 16px;font:900 10px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#5E6654"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>Ideas (9)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <span style="display:flex;height:44px;align-items:center;justify-content:center;gap:6px;border:1px solid #34451F;background:#34451F;color:#fff;border-radius:12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">🔥 Ads</span>
+          <span style="display:flex;height:44px;align-items:center;justify-content:center;gap:6px;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">🎪 Events</span>
+          <span style="display:flex;height:44px;align-items:center;justify-content:center;gap:6px;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">💷 Prices</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <span style="display:flex;height:48px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 3 14h7l-1 8 10-12h-7l1-8z"></path></svg>Rescan for fresh trends</span>
+          <p style="margin:0;font:400 11px/1.4 'Archivo',sans-serif;color:rgba(94,102,84,.7)">Reels/TikTok formats bars &amp; venues are winning with right now - tied to current events &amp; memes.</p>
+          <p style="margin:0;font:400 10px 'Archivo',sans-serif;color:rgba(94,102,84,.5);font-variant-numeric:tabular-nums">Last refreshed 7 Jul, 08:10</p>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <article style="border:1px solid #34451F;background:#fff;border-radius:16px;box-shadow:0 8px 24px rgba(92,64,51,.14);overflow:hidden">
+            <div style="display:flex;align-items:center;gap:12px;padding:12px">
+              <span style="display:flex;width:40px;height:40px;flex:none;align-items:center;justify-content:center;border-radius:12px;border:1px solid #E2D4FB;background:#F3EBFE;font-size:18px">🔥</span>
+              <span style="display:flex;min-width:0;flex:1;flex-direction:column;gap:4px">
+                <span style="font:900 13.5px/1.35 'Archivo',sans-serif;color:#20231A">Supportive Disappointed Bar Challenge</span>
+                <span style="display:flex;align-items:center;gap:8px;font:900 8.5px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase"><span style="color:#7C3AED">Ad / Social</span><span style="color:#15803D">⚡ Easy</span></span>
+              </span>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform:rotate(180deg)"><path d="m6 9 6 6 6-6"></path></svg>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:10px;padding:0 12px 12px">
+              <p style="margin:0;font:400 12.5px/1.6 'Archivo',sans-serif;color:#5E6654">Create a humorous take on the 'supportive disappointed challenge' meme, using different emotional tones.</p>
+              <div style="border:1px solid #D8D5C8;background:#F4F1E8;border-radius:12px;padding:8px 12px"><p style="margin:0 0 2px;font:900 8.5px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#34451F">Why you</p><p style="margin:0;font:400 12px/1.45 'Archivo',sans-serif;color:#20231A">The 'supportive disappointed challenge' meme is popular this month, playing on how much meaning changes with delivery.</p></div>
+              <div style="border:1px solid rgba(52,69,31,.2);background:rgba(52,69,31,.06);border-radius:12px;padding:8px 12px"><p style="margin:0 0 2px;font:900 8.5px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#34451F">Do this week</p><p style="margin:0;font:400 12px/1.45 'Archivo',sans-serif;color:#20231A">Film staff saying a phrase like 'Another round?' in supportive, then disappointed, then sarcastic tones, relating it to customer orders or closing time.</p></div>
+              <p style="margin:0;font:600 10.5px 'Archivo',sans-serif;color:rgba(94,102,84,.8)">Effort: ⚡ Easy - roughly one evening.</p>
+              <div style="display:flex;flex-wrap:wrap;gap:4px;font:500 10px 'Archivo',sans-serif;color:rgba(94,102,84,.7)"><span>#meme</span><span>#staff</span><span>#funny</span><span>#customer</span></div>
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:2px">
+                <span style="display:inline-flex;align-items:center;gap:6px;font:700 11px 'Archivo',sans-serif;color:#34451F"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>NapoleonCat</span>
+                <span style="display:flex;gap:6px">
+                  <span style="display:flex;height:32px;align-items:center;gap:6px;border:1px solid #D8D5C8;background:#fff;border-radius:8px;padding:0 12px;font:900 9.5px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#5E6654"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"></path></svg>Save</span>
+                  <span style="display:flex;height:32px;align-items:center;gap:6px;border:1px solid #D8D5C8;background:#fff;border-radius:8px;padding:0 12px;font:900 9.5px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#5E6654"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.88 9.88a3 3 0 1 0 4.24 4.24"></path><path d="M10.73 5.08A10.43 10.43 0 0 1 12 5c7 0 10 7 10 7a13.16 13.16 0 0 1-1.67 2.68"></path><path d="M6.61 6.61A13.526 13.526 0 0 0 2 12s3 7 10 7a9.74 9.74 0 0 0 5.39-1.61"></path><line x1="2" x2="22" y1="2" y2="22"></line></svg>Ignore</span>
+                </span>
+              </div>
+            </div>
+          </article>
+          <sc-for list="{{ baseTrends }}" as="tr" hint-placeholder-count="4">
+            <article style="border:1px solid #D8D5C8;background:#fff;border-radius:16px;overflow:hidden">
+              <div style="display:flex;align-items:center;gap:12px;padding:12px">
+                <span style="display:flex;width:40px;height:40px;flex:none;align-items:center;justify-content:center;border-radius:12px;border:1px solid #E2D4FB;background:#F3EBFE;font-size:18px">🔥</span>
+                <span style="display:flex;min-width:0;flex:1;flex-direction:column;gap:4px">
+                  <span style="font:900 13.5px/1.35 'Archivo',sans-serif;color:#20231A">{{ tr.title }}</span>
+                  <span style="display:flex;align-items:center;gap:8px;font:900 8.5px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase"><span style="color:#7C3AED">Ad / Social</span><span style="color:{{ tr.effColor }}">{{ tr.eff }}</span><span style="border-radius:4px;background:#E0483C;padding:2px 6px;letter-spacing:.1em;color:#fff">New</span></span>
+                </span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Desktop · Prices tab</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:960px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;border-right:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Dashboard</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Bookings</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Requests</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Events</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif">Market trends</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Settings</div>
+    </div>
+    <p style="margin:0;padding:16px 32px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:768px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+          <div>
+            <h2 style="margin:0;font:900 20px 'Archivo',sans-serif;text-transform:uppercase;color:#20231A">Trends</h2>
+            <div style="margin-top:2px;color:#5E6654;font:900 10px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase">📍 Live AI · Near Hinckley LE10 0BB</div>
+          </div>
+          <span style="display:flex;height:44px;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;border-radius:12px;padding:0 16px;font:900 10px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#5E6654">🔖 Ideas (9)</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <span style="display:flex;height:44px;align-items:center;justify-content:center;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">🔥 Ads</span>
+          <span style="display:flex;height:44px;align-items:center;justify-content:center;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">🎪 Events</span>
+          <span style="display:flex;height:44px;align-items:center;justify-content:center;border:1px solid #34451F;background:#34451F;color:#fff;border-radius:12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">💷 Prices</span>
+        </div>
+        <section style="display:flex;align-items:center;gap:12px;border:1px solid #D8D5C8;background:#fff;border-radius:16px;padding:16px 20px">
+          <div style="min-width:0;flex:1">
+            <p style="margin:0;font:900 10px/1.5 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#5E6654">📍 Comparing Hinckley LE10 0BB · bars, pubs, music venues &amp; hospitality only</p>
+            <p style="margin:4px 0 0;font:400 11px 'Archivo',sans-serif;color:rgba(94,102,84,.7);font-variant-numeric:tabular-nums">Prices last refreshed 7 Jul, 08:10</p>
+          </div>
+          <span style="display:flex;height:44px;flex:none;align-items:center;gap:8px;border:1px solid #34451F;border-radius:12px;padding:0 16px;font:900 10px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#34451F"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"></path></svg>Change area</span>
+        </section>
+        <div style="display:flex;flex-wrap:wrap;gap:8px">
+          <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #BBF7D0;background:#F0FDF4;color:#15803D;border-radius:12px;padding:6px 12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">↓ House Spirit + Mixer: you're £15.05 below local avg</span>
+          <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #BBF7D0;background:#F0FDF4;color:#15803D;border-radius:12px;padding:6px 12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">↓ Wine (Glass): you're £7.75 below local avg</span>
+        </div>
+        <section style="border:1px solid #D8D5C8;background:#fff;border-radius:16px;overflow:hidden">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #D8D5C8;background:#F4F1E8;padding:12px 20px">
+            <span style="font:900 11px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#34451F">Your menu vs local venues</span>
+            <span style="display:flex;gap:4px">
+              <span style="display:flex;height:28px;align-items:center;border:1px solid #34451F;background:#34451F;color:#fff;border-radius:8px;padding:0 10px;font:900 9px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase">Avg</span>
+              <span style="display:flex;height:28px;align-items:center;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:8px;padding:0 10px;font:900 9px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase">By venue</span>
+            </span>
+          </div>
+          <sc-for list="{{ baseRows }}" as="r" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;gap:8px;padding:12px 20px;border-bottom:1px solid rgba(216,213,200,.6)">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px">
+                <p style="margin:0;min-width:0;font:900 12.5px 'Archivo',sans-serif;color:#20231A">{{ r.label }} <span style="font:500 10px 'Archivo',sans-serif;color:rgba(94,102,84,.8)">· your {{ r.item }}</span></p>
+                <p style="margin:0;flex:none;font:900 14px 'Archivo',sans-serif;color:{{ r.vColor }};font-variant-numeric:tabular-nums">{{ r.own }} <span style="font-size:8.5px;letter-spacing:.2em;text-transform:uppercase">{{ r.word }}</span></p>
+              </div>
+              <sc-if value="{{ r.hasData }}" hint-placeholder-val="{{ true }}">
+                <div style="position:relative;height:14px">
+                  <div style="position:absolute;top:6px;left:0;right:0;height:2px;border-radius:2px;background:#D8D5C8"></div>
+                  <div style="position:absolute;top:5px;height:4px;border-radius:2px;background:#D9D2B8;left:{{ r.bandL }};width:{{ r.bandW }}"></div>
+                  <div style="position:absolute;top:2px;height:10px;width:2px;border-radius:2px;background:#5E6654;left:{{ r.avgL }}"></div>
+                  <div style="position:absolute;top:1px;height:12px;width:12px;margin-left:-6px;border-radius:999px;border:2px solid #fff;background:{{ r.dot }};box-shadow:0 1px 4px rgba(31,31,26,.35);left:{{ r.ownL }}"></div>
+                </div>
+                <div style="display:flex;justify-content:space-between;font:400 9.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums"><span>{{ r.min }}</span><span style="font-weight:900">avg {{ r.avg }} <span style="opacity:.55">({{ r.n }})</span></span><span>{{ r.max }}</span></div>
+              </sc-if>
+              <sc-if value="{{ r.noData }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font:400 10.5px 'Archivo',sans-serif;color:rgba(94,102,84,.4)">No local data yet.</p></sc-if>
+            </div>
+          </sc-for>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:#F4F1E8;padding:12px 20px"><span style="font:900 11px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#34451F">All sourced prices (25)</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+        </section>
+        <p style="margin:0;text-align:center;font:400 10px 'Archivo',sans-serif;color:rgba(94,102,84,.6)">Competitor prices are AI-estimated from live web search and matched to your menu by keyword. Treat as a guide, not gospel.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Mobile · Trends &amp; Prices</p>
+<div class="dv-frow">
+  <div class="dv-card" style="width:393px;height:780px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:12px 8px 90px;display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+        <div><h2 style="margin:0;font:900 20px 'Archivo',sans-serif;text-transform:uppercase;color:#20231A">Trends</h2><div style="margin-top:2px;color:#5E6654;font:900 10px 'Archivo',sans-serif;letter-spacing:.2em;text-transform:uppercase">📍 Live AI · Near Hinckley LE10 …</div></div>
+        <span style="display:flex;height:44px;flex:none;align-items:center;gap:6px;border:1px solid #D8D5C8;background:#fff;border-radius:12px;padding:0 12px;font:900 10px 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#5E6654">🔖 Ideas (9)</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <span style="display:flex;height:44px;align-items:center;justify-content:center;background:#34451F;color:#fff;border-radius:12px;font:900 10.5px 'Archivo',sans-serif;text-transform:uppercase">🔥 Ads</span>
+        <span style="display:flex;height:44px;align-items:center;justify-content:center;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:12px;font:900 10.5px 'Archivo',sans-serif;text-transform:uppercase">🎪 Events</span>
+        <span style="display:flex;height:44px;align-items:center;justify-content:center;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:12px;font:900 10.5px 'Archivo',sans-serif;text-transform:uppercase">💷 Prices</span>
+      </div>
+      <span style="display:flex;height:48px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:12px;font:900 11px 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase">⚡ Rescan for fresh trends</span>
+      <p style="margin:0;font:400 11px/1.45 'Archivo',sans-serif;color:rgba(94,102,84,.7)">Reels/TikTok formats bars &amp; venues are winning with right now - tied to current events &amp; memes.</p>
+      <p style="margin:0;font:400 10px 'Archivo',sans-serif;color:rgba(94,102,84,.5)">Last refreshed 7 Jul, 08:10</p>
+      <sc-for list="{{ baseTrendsMobile }}" as="tr" hint-placeholder-count="4">
+        <article style="border:1px solid #D8D5C8;background:#fff;border-radius:16px">
+          <div style="display:flex;align-items:center;gap:10px;padding:12px">
+            <span style="display:flex;width:40px;height:40px;flex:none;align-items:center;justify-content:center;border-radius:12px;border:1px solid #E2D4FB;background:#F3EBFE;font-size:18px">🔥</span>
+            <span style="display:flex;min-width:0;flex:1;flex-direction:column;gap:4px">
+              <span style="font:900 13.5px/1.35 'Archivo',sans-serif;color:#20231A">{{ tr.title }}</span>
+              <span style="display:flex;align-items:center;gap:8px;font:900 8.5px 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase"><span style="color:#7C3AED">Ad / Social</span><span style="color:{{ tr.effColor }}">{{ tr.eff }}</span><span style="border-radius:4px;background:#E0483C;padding:2px 6px;color:#fff">New</span></span>
+            </span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg>
+          </div>
+        </article>
+      </sc-for>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;align-items:stretch;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px;box-shadow:0 -4px 20px rgba(0,0,0,.18)">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">🛍<span style="position:absolute;top:0;right:4px;width:6px;height:6px;border-radius:999px;background:#22C55E"></span></span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+  <div class="dv-card" style="width:393px;height:780px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:12px 8px 90px;display:flex;flex-direction:column;gap:10px">
+      <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #BBF7D0;background:#F0FDF4;color:#15803D;border-radius:12px;padding:8px 12px;font:900 11px/1.4 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">↓ House Spirit + Mixer: you're £15.05 below local avg</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;border:1px solid #BBF7D0;background:#F0FDF4;color:#15803D;border-radius:12px;padding:8px 12px;font:900 11px/1.4 'Archivo',sans-serif;letter-spacing:.05em;text-transform:uppercase">↓ Wine (Glass): you're £7.75 below local avg</span>
+      <section style="border:1px solid #D8D5C8;background:#fff;border-radius:16px;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;border-bottom:1px solid #D8D5C8;background:#F4F1E8;padding:12px 16px">
+          <span style="font:900 11px/1.4 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#34451F">Your menu vs local venues</span>
+          <span style="display:flex;gap:4px;flex:none">
+            <span style="display:flex;height:28px;align-items:center;background:#34451F;color:#fff;border-radius:8px;padding:0 10px;font:900 9px 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase">Avg</span>
+            <span style="display:flex;height:28px;align-items:center;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:8px;padding:0 10px;font:900 9px 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase">By venue</span>
+          </span>
+        </div>
+        <sc-for list="{{ baseRows }}" as="r" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:12px 16px;border-bottom:1px solid rgba(216,213,200,.6)">
+            <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+              <p style="margin:0;min-width:0;font:900 12.5px/1.4 'Archivo',sans-serif;color:#20231A">{{ r.label }} <span style="font:500 10px 'Archivo',sans-serif;color:rgba(94,102,84,.8)">· your {{ r.item }}</span></p>
+              <p style="margin:0;flex:none;font:900 14px 'Archivo',sans-serif;color:{{ r.vColor }};font-variant-numeric:tabular-nums">{{ r.own }} <span style="font-size:8.5px;letter-spacing:.15em;text-transform:uppercase">{{ r.word }}</span></p>
+            </div>
+            <sc-if value="{{ r.hasData }}" hint-placeholder-val="{{ true }}"><p style="margin:0;font:400 10.5px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">{{ r.min }} · avg <b style="color:#20231A">{{ r.avg }}</b> · {{ r.max }} <span style="opacity:.55">({{ r.n }})</span></p></sc-if>
+            <sc-if value="{{ r.noData }}" hint-placeholder-val="{{ false }}"><p style="margin:0;font:400 10.5px 'Archivo',sans-serif;color:rgba(94,102,84,.4)">No local data yet.</p></sc-if>
+          </div>
+        </sc-for>
+      </section>
+      <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #D8D5C8;background:#F4F1E8;border-radius:16px;padding:12px 16px"><span style="font:900 11px 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#34451F">All sourced prices (25)</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;align-items:stretch;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🛍</span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a><b>Option 1 — "Plain English"</b> — same bones, zero jargon. Sentence case, a friendly first-visit walkthrough, tabs that explain themselves, traffic-light price verdicts. The safest, most style-guide-compliant option.</div>
+<div class="dv-frames">
+<p class="dv-cap">Desktop · Ideas</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:1020px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;border-right:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Dashboard</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Bookings</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Requests</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Events</div>
+      <div style="padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif">Market trends</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Settings</div>
+    </div>
+    <p style="margin:0;padding:16px 32px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:768px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div>
+            <h2 style="margin:0;font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">What's working right now</h2>
+            <p style="margin:4px 0 0;font:400 14px/1.5 'Archivo',sans-serif;color:#5E6654">Fresh ideas for your bar, spotted by AI near <b>Hinckley LE10 0BB</b>. No homework required.</p>
+          </div>
+          <span style="display:flex;height:44px;flex:none;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;border-radius:12px;padding:0 16px;font:600 13px 'Archivo',sans-serif;color:#5E6654">🔖 My saved ideas <span style="display:flex;min-width:20px;height:20px;align-items:center;justify-content:center;border-radius:999px;background:#E5EBD8;color:#34451F;font:700 12px 'Archivo',sans-serif">9</span></span>
+        </div>
+        <div style="display:flex;gap:16px;align-items:center;border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;padding:16px 20px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+          <span style="display:flex;width:56px;height:56px;flex:none;align-items:center;justify-content:center;border-radius:999px;background:#E5EBD8;font-size:28px">🍻</span>
+          <div style="flex:1;min-width:0">
+            <p style="margin:0 0 6px;font:700 15px 'Archivo',sans-serif;color:#20231A">First time here? It's dead simple.</p>
+            <div style="display:flex;gap:20px;flex-wrap:wrap;font:400 13px 'Archivo',sans-serif;color:#5E6654">
+              <span><b style="color:#34451F">1.</b> Tap the big button below</span>
+              <span><b style="color:#34451F">2.</b> Have a read</span>
+              <span><b style="color:#34451F">3.</b> Save anything you fancy</span>
+            </div>
+          </div>
+          <span style="flex:none;font:600 13px 'Archivo',sans-serif;color:#34451F;text-decoration:underline">Got it, hide this</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div style="border:2px solid #34451F;background:#34451F;color:#fff;border-radius:16px;padding:14px 16px">
+            <p style="margin:0;font:700 20px 'Archivo',sans-serif">💡</p>
+            <p style="margin:6px 0 2px;font:700 14px 'Archivo',sans-serif">Post ideas</p>
+            <p style="margin:0;font:400 11.5px/1.4 'Archivo',sans-serif;opacity:.85">Things to film &amp; post online</p>
+          </div>
+          <div style="border:2px solid #D8D5C8;background:#fff;border-radius:16px;padding:14px 16px">
+            <p style="margin:0;font:700 20px 'Archivo',sans-serif">🎪</p>
+            <p style="margin:6px 0 2px;font:700 14px 'Archivo',sans-serif;color:#20231A">Event ideas</p>
+            <p style="margin:0;font:400 11.5px/1.4 'Archivo',sans-serif;color:#5E6654">Nights other pubs are running</p>
+          </div>
+          <div style="border:2px solid #D8D5C8;background:#fff;border-radius:16px;padding:14px 16px">
+            <p style="margin:0;font:700 20px 'Archivo',sans-serif">💷</p>
+            <p style="margin:6px 0 2px;font:700 14px 'Archivo',sans-serif;color:#20231A">Your prices</p>
+            <p style="margin:0;font:400 11.5px/1.4 'Archivo',sans-serif;color:#5E6654">How you compare locally</p>
+          </div>
+        </div>
+        <div>
+          <span style="display:flex;height:56px;align-items:center;justify-content:center;gap:10px;background:#34451F;color:#fff;border-radius:16px;font:700 16px 'Archivo',sans-serif;box-shadow:0 2px 6px rgba(52,69,31,.25)">🔍 Find me fresh ideas</span>
+          <p style="margin:6px 0 0;text-align:center;font:400 12px 'Archivo',sans-serif;color:#5E6654">Takes about 20 seconds · we last looked on 7 Jul at 08:10</p>
+        </div>
+        <sc-for list="{{ fTrends }}" as="t" hint-placeholder-count="3">
+          <article style="border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;padding:16px 20px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <span style="display:flex;width:48px;height:48px;flex:none;align-items:center;justify-content:center;border-radius:14px;background:#F4F1E8;border:1px solid #D8D5C8;font-size:24px">{{ t.emoji }}</span>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                  <p style="margin:0;font:700 16px 'Archivo',sans-serif;color:#20231A">{{ t.title }}</p>
+                  <sc-if value="{{ t.fresh }}" hint-placeholder-val="{{ true }}"><span style="border-radius:999px;background:#FFF4D6;color:#9A5B00;padding:2px 10px;font:600 11px 'Archivo',sans-serif">✨ Just in</span></sc-if>
+                </div>
+                <p style="margin:6px 0 10px;font:400 13.5px/1.55 'Archivo',sans-serif;color:#5E6654">{{ t.what }}</p>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+                  <div style="display:flex;gap:8px;align-items:center">
+                    <span style="border-radius:999px;background:#ECE9DE;color:#5E6654;padding:4px 12px;font:600 11.5px 'Archivo',sans-serif">{{ t.time }}</span>
+                    <span style="font:600 12.5px 'Archivo',sans-serif;color:#34451F;text-decoration:underline">Tell me more</span>
+                  </div>
+                  <div style="display:flex;gap:8px">
+                    <span style="display:flex;height:38px;align-items:center;gap:6px;border:1px solid #34451F;color:#34451F;border-radius:12px;padding:0 16px;font:600 13px 'Archivo',sans-serif">👍 Save it</span>
+                    <span style="display:flex;height:38px;align-items:center;border:1px solid #D8D5C8;color:#5E6654;border-radius:12px;padding:0 16px;font:600 13px 'Archivo',sans-serif">Not for us</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Desktop · Your prices</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:1020px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;border-right:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Dashboard</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Bookings</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Requests</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Events</div>
+      <div style="padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif">Market trends</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Settings</div>
+    </div>
+    <p style="margin:0;padding:16px 32px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:768px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div style="border:2px solid #D8D5C8;background:#fff;border-radius:16px;padding:10px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">💡</span><span style="font:700 13.5px 'Archivo',sans-serif;color:#20231A">Post ideas</span></div>
+          <div style="border:2px solid #D8D5C8;background:#fff;border-radius:16px;padding:10px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">🎪</span><span style="font:700 13.5px 'Archivo',sans-serif;color:#20231A">Event ideas</span></div>
+          <div style="border:2px solid #34451F;background:#34451F;border-radius:16px;padding:10px 16px;display:flex;align-items:center;gap:10px"><span style="font-size:18px">💷</span><span style="font:700 13.5px 'Archivo',sans-serif;color:#fff">Your prices</span></div>
+        </div>
+        <div style="border:1px solid #BFD8C4;background:#E7F3EC;border-radius:16px;padding:20px 24px;display:flex;gap:16px;align-items:center">
+          <span style="font-size:40px">🍻</span>
+          <div>
+            <p style="margin:0;font:700 20px 'Archivo',sans-serif;color:#20231A">Good news — you're the cheap round in town.</p>
+            <p style="margin:4px 0 0;font:400 13.5px/1.5 'Archivo',sans-serif;color:#22613F">Cheaper than nearby pubs on <b>5 of your 6</b> menu staples. Compared with bars &amp; pubs near Hinckley LE10 0BB · updated 7 Jul.</p>
+          </div>
+          <span style="margin-left:auto;flex:none;display:flex;height:40px;align-items:center;gap:8px;border:1px solid #34451F;color:#34451F;border-radius:12px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif;background:#fff">✏️ Change area</span>
+        </div>
+        <sc-for list="{{ fRows }}" as="r" hint-placeholder-count="5">
+          <article style="border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;padding:14px 20px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <p style="margin:0;min-width:0;flex:1;font:700 15px 'Archivo',sans-serif;color:#20231A">{{ r.name }} <span style="font:400 12px 'Archivo',sans-serif;color:#5E6654">({{ r.item }})</span></p>
+              <span style="border-radius:999px;padding:5px 14px;font:600 12px 'Archivo',sans-serif;background:{{ r.chipBg }};color:{{ r.chipC }}">{{ r.chip }}</span>
+              <span style="flex:none;font:700 20px 'Archivo',sans-serif;color:#20231A;font-variant-numeric:tabular-nums">{{ r.you }}</span>
+            </div>
+            <sc-if value="{{ r.noData }}" hint-placeholder-val="{{ false }}"><p style="margin:8px 0 0;font:400 12.5px 'Archivo',sans-serif;color:#5E6654">{{ r.line }}</p></sc-if>
+            <sc-if value="{{ r.hasBar }}" hint-placeholder-val="{{ true }}">
+              <div style="position:relative;height:34px;margin-top:10px">
+                <div style="position:absolute;top:22px;left:0;right:0;height:6px;border-radius:6px;background:#ECE9DE"></div>
+                <div style="position:absolute;top:0;transform:translateX(-50%);left:{{ r.youL }}"><span style="display:block;border-radius:6px;background:#34451F;color:#fff;padding:2px 8px;font:700 10.5px 'Archivo',sans-serif;white-space:nowrap">You</span><span style="display:block;margin:2px auto 0;width:10px;height:10px;border-radius:999px;background:#34451F;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25)"></span></div>
+                <div style="position:absolute;top:16px;width:2px;height:16px;background:#9A5B00;left:{{ r.avgL }}"></div>
+                <span style="position:absolute;top:32px;transform:translateX(-50%);font:600 10px 'Archivo',sans-serif;color:#9A5B00;white-space:nowrap;left:{{ r.avgL }}">local average</span>
+              </div>
+              <p style="margin:14px 0 0;font:400 12.5px 'Archivo',sans-serif;color:#5E6654">{{ r.line }}</p>
+            </sc-if>
+          </article>
+        </sc-for>
+        <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #D8D5C8;background:#F4F1E8;border-radius:16px;padding:14px 20px"><span style="font:600 13px 'Archivo',sans-serif;color:#34451F">See every price we found (25) — for the curious</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></div>
+        <p style="margin:0;text-align:center;font:400 11px 'Archivo',sans-serif;color:rgba(94,102,84,.6)">Prices are AI-estimated from the web — a good guide, not gospel.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Mobile · Ideas &amp; Your prices</p>
+<div class="dv-frow">
+  <div class="dv-card" style="width:393px;height:840px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:14px 12px 90px;display:flex;flex-direction:column;gap:12px">
+      <div>
+        <h2 style="margin:0;font:700 21px 'Archivo',sans-serif;letter-spacing:-.01em;color:#20231A">What's working right now</h2>
+        <p style="margin:4px 0 0;font:400 13px/1.5 'Archivo',sans-serif;color:#5E6654">Fresh ideas for your bar, spotted by AI. No homework required.</p>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;padding:14px 16px">
+        <span style="display:flex;width:44px;height:44px;flex:none;align-items:center;justify-content:center;border-radius:999px;background:#E5EBD8;font-size:22px">🍻</span>
+        <div style="min-width:0">
+          <p style="margin:0 0 4px;font:700 14px 'Archivo',sans-serif;color:#20231A">It's dead simple:</p>
+          <p style="margin:0;font:400 12.5px/1.6 'Archivo',sans-serif;color:#5E6654"><b style="color:#34451F">1.</b> Tap the big button &nbsp;<b style="color:#34451F">2.</b> Have a read &nbsp;<b style="color:#34451F">3.</b> Save what you fancy</p>
+          <p style="margin:6px 0 0;font:600 12px 'Archivo',sans-serif;color:#34451F;text-decoration:underline">Got it, hide this</p>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div style="border:2px solid #34451F;background:#34451F;color:#fff;border-radius:14px;padding:10px;text-align:center"><p style="margin:0;font-size:18px">💡</p><p style="margin:4px 0 0;font:700 12px 'Archivo',sans-serif">Post ideas</p></div>
+        <div style="border:2px solid #D8D5C8;background:#fff;border-radius:14px;padding:10px;text-align:center"><p style="margin:0;font-size:18px">🎪</p><p style="margin:4px 0 0;font:700 12px 'Archivo',sans-serif;color:#20231A">Event ideas</p></div>
+        <div style="border:2px solid #D8D5C8;background:#fff;border-radius:14px;padding:10px;text-align:center"><p style="margin:0;font-size:18px">💷</p><p style="margin:4px 0 0;font:700 12px 'Archivo',sans-serif;color:#20231A">Your prices</p></div>
+      </div>
+      <div>
+        <span style="display:flex;height:54px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:16px;font:700 15px 'Archivo',sans-serif">🔍 Find me fresh ideas</span>
+        <p style="margin:6px 0 0;text-align:center;font:400 11.5px 'Archivo',sans-serif;color:#5E6654">Takes about 20 seconds · last looked 7 Jul, 08:10</p>
+      </div>
+      <sc-for list="{{ fTrends }}" as="t" hint-placeholder-count="2">
+        <article style="border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;padding:14px 16px">
+          <div style="display:flex;gap:10px;align-items:center">
+            <span style="display:flex;width:42px;height:42px;flex:none;align-items:center;justify-content:center;border-radius:12px;background:#F4F1E8;border:1px solid #D8D5C8;font-size:20px">{{ t.emoji }}</span>
+            <p style="margin:0;font:700 14.5px/1.35 'Archivo',sans-serif;color:#20231A">{{ t.title }}</p>
+          </div>
+          <p style="margin:8px 0 10px;font:400 12.5px/1.55 'Archivo',sans-serif;color:#5E6654">{{ t.what }}</p>
+          <div style="display:flex;gap:8px;align-items:center">
+            <span style="border-radius:999px;background:#ECE9DE;color:#5E6654;padding:4px 10px;font:600 11px 'Archivo',sans-serif">{{ t.time }}</span>
+            <span style="margin-left:auto;display:flex;height:38px;align-items:center;border:1px solid #34451F;color:#34451F;border-radius:12px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif">👍 Save it</span>
+            <span style="display:flex;height:38px;align-items:center;border:1px solid #D8D5C8;color:#5E6654;border-radius:12px;padding:0 12px;font:600 12.5px 'Archivo',sans-serif">Skip</span>
+          </div>
+        </article>
+      </sc-for>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🛍</span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+  <div class="dv-card" style="width:393px;height:840px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:14px 12px 90px;display:flex;flex-direction:column;gap:12px">
+      <div style="border:1px solid #BFD8C4;background:#E7F3EC;border-radius:16px;padding:16px;display:flex;gap:12px;align-items:flex-start">
+        <span style="font-size:30px">🍻</span>
+        <div>
+          <p style="margin:0;font:700 16px/1.3 'Archivo',sans-serif;color:#20231A">Good news — you're the cheap round in town.</p>
+          <p style="margin:4px 0 0;font:400 12.5px/1.5 'Archivo',sans-serif;color:#22613F">Cheaper than nearby pubs on <b>5 of 6</b> staples · near Hinckley · updated 7 Jul.</p>
+        </div>
+      </div>
+      <sc-for list="{{ fRowsM }}" as="r" hint-placeholder-count="4">
+        <article style="border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;padding:14px 16px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <p style="margin:0;min-width:0;flex:1;font:700 14px/1.35 'Archivo',sans-serif;color:#20231A">{{ r.name }}</p>
+            <span style="flex:none;font:700 18px 'Archivo',sans-serif;color:#20231A;font-variant-numeric:tabular-nums">{{ r.you }}</span>
+          </div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span style="border-radius:999px;padding:4px 12px;font:600 11.5px 'Archivo',sans-serif;background:{{ r.chipBg }};color:{{ r.chipC }}">{{ r.chip }}</span>
+          </div>
+          <p style="margin:8px 0 0;font:400 12px/1.5 'Archivo',sans-serif;color:#5E6654">{{ r.line }}</p>
+        </article>
+      </sc-for>
+      <div style="display:flex;align-items:center;justify-content:space-between;border:1px solid #D8D5C8;background:#F4F1E8;border-radius:16px;padding:12px 16px"><span style="font:600 12.5px 'Archivo',sans-serif;color:#34451F">See every price we found (25)</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5E6654" stroke-width="2"><path d="m6 9 6 6 6-6"></path></svg></div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🛍</span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+<!--OPT1B-->
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a><b>Option 2 — "The Local Leaderboard"</b> — pub-quiz energy. Trends become a ranked hot-list with heat meters; prices become a match you're winning (You vs The Locals), with a scanning streak to keep people coming back.</div>
+<div class="dv-frames">
+<p class="dv-cap">Desktop · This week's hot list</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:1020px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;border-right:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Dashboard</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Bookings</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Requests</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Events</div>
+      <div style="padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif">Market trends</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Settings</div>
+    </div>
+    <p style="margin:0;padding:16px 32px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:768px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+          <div>
+            <h2 style="margin:0;font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">This week's hot list 🔥</h2>
+            <p style="margin:4px 0 0;font:400 14px/1.5 'Archivo',sans-serif;color:#5E6654">What bars near Hinckley are winning with — ranked hottest first.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex:none">
+            <span style="display:flex;height:44px;align-items:center;gap:8px;border:1px solid #D7A928;background:#FFF4D6;border-radius:12px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif;color:#9A5B00">🔥 3-week scan streak</span>
+            <span style="display:flex;height:44px;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;border-radius:12px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif;color:#5E6654">📖 My playbook <span style="display:flex;min-width:20px;height:20px;align-items:center;justify-content:center;border-radius:999px;background:#34451F;color:#fff;font:700 12px 'Archivo',sans-serif">9</span></span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <span style="display:flex;height:42px;align-items:center;gap:8px;background:#34451F;color:#fff;border-radius:999px;padding:0 20px;font:700 13px 'Archivo',sans-serif">🔥 Hot posts</span>
+          <span style="display:flex;height:42px;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:999px;padding:0 20px;font:600 13px 'Archivo',sans-serif">🎪 Hot events</span>
+          <span style="display:flex;height:42px;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:999px;padding:0 20px;font:600 13px 'Archivo',sans-serif">🏆 The price-off</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;padding:14px 20px">
+          <div style="flex:1">
+            <span style="display:flex;height:48px;align-items:center;justify-content:center;gap:10px;background:#34451F;color:#fff;border-radius:12px;font:700 15px 'Archivo',sans-serif">⚡ Spin the trend-o-meter</span>
+          </div>
+          <p style="margin:0;flex:none;font:400 12px/1.5 'Archivo',sans-serif;color:#5E6654">Fresh scan takes ~20s<br>Last spin: 7 Jul, 08:10</p>
+        </div>
+        <sc-for list="{{ sTrends }}" as="t" hint-placeholder-count="5">
+          <article style="display:flex;align-items:center;gap:16px;border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;padding:14px 20px;box-shadow:0 1px 2px rgba(0,0,0,.04)">
+            <span style="flex:none;width:44px;text-align:center;font:800 30px 'Archivo',sans-serif;color:#D7A928;font-variant-numeric:tabular-nums">{{ t.rank }}</span>
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                <p style="margin:0;font:700 15.5px 'Archivo',sans-serif;color:#20231A">{{ t.title }}</p>
+                <span style="border-radius:999px;padding:3px 10px;font:600 11px 'Archivo',sans-serif;background:{{ t.tagBg }};color:{{ t.tagC }}">{{ t.tag }}</span>
+              </div>
+              <div style="margin-top:8px;display:flex;align-items:center;gap:10px">
+                <div style="flex:1;height:8px;border-radius:8px;background:#ECE9DE;overflow:hidden"><div style="height:8px;border-radius:8px;background:linear-gradient(90deg,#D7A928,#E0483C);width:{{ t.heatW }}"></div></div>
+                <span style="flex:none;font:700 12.5px 'Archivo',sans-serif;color:#E0483C;font-variant-numeric:tabular-nums">{{ t.heat }}° hot</span>
+              </div>
+              <p style="margin:6px 0 0;font:400 12px 'Archivo',sans-serif;color:#5E6654">Takes about {{ t.time }} to pull off.</p>
+            </div>
+            <div style="flex:none;display:flex;flex-direction:column;gap:6px">
+              <span style="display:flex;height:36px;align-items:center;justify-content:center;gap:6px;border:1px solid #34451F;color:#34451F;border-radius:10px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif">+ Playbook</span>
+              <span style="display:flex;height:36px;align-items:center;justify-content:center;border:1px solid #D8D5C8;color:#5E6654;border-radius:10px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif">Pass</span>
+            </div>
+          </article>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Desktop · The price-off</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:1020px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;border-right:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Dashboard</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Bookings</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Requests</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Events</div>
+      <div style="padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif">Market trends</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Settings</div>
+    </div>
+    <p style="margin:0;padding:16px 32px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:768px;display:flex;flex-direction:column;gap:16px">
+        <div style="display:flex;gap:8px">
+          <span style="display:flex;height:42px;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:999px;padding:0 20px;font:600 13px 'Archivo',sans-serif">🔥 Hot posts</span>
+          <span style="display:flex;height:42px;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;color:#5E6654;border-radius:999px;padding:0 20px;font:600 13px 'Archivo',sans-serif">🎪 Hot events</span>
+          <span style="display:flex;height:42px;align-items:center;gap:8px;background:#34451F;color:#fff;border-radius:999px;padding:0 20px;font:700 13px 'Archivo',sans-serif">🏆 The price-off</span>
+        </div>
+        <div style="border:1px solid #D8D5C8;background:#263019;border-radius:20px;padding:24px;color:#DDE2D1">
+          <p style="margin:0;text-align:center;font:600 12px 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#AEB69D">The Hinckley price-off · updated 7 Jul</p>
+          <div style="margin-top:12px;display:flex;align-items:center;justify-content:center;gap:28px">
+            <div style="text-align:center"><p style="margin:0;font:700 14px 'Archivo',sans-serif">You</p><p style="margin:2px 0 0;font:800 52px/1 'Archivo',sans-serif;color:#D7A928;font-variant-numeric:tabular-nums">5</p></div>
+            <p style="margin:0;font:700 18px 'Archivo',sans-serif;color:#AEB69D">vs</p>
+            <div style="text-align:center"><p style="margin:0;font:700 14px 'Archivo',sans-serif">The locals</p><p style="margin:2px 0 0;font:800 52px/1 'Archivo',sans-serif;color:#AEB69D;font-variant-numeric:tabular-nums">0</p></div>
+          </div>
+          <p style="margin:12px 0 0;text-align:center;font:400 13px 'Archivo',sans-serif;color:#DDE2D1">You're the cheaper pint on 5 of 6 drinks. Crowd goes wild. 🎉</p>
+        </div>
+        <section style="border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;overflow:hidden">
+          <div style="display:grid;grid-template-columns:1fr 90px 90px 130px;gap:8px;padding:12px 20px;background:#F4F1E8;border-bottom:1px solid #D8D5C8;font:600 11px 'Archivo',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#5E6654"><span>Round</span><span style="text-align:right">You</span><span style="text-align:right">Them (avg)</span><span style="text-align:right">Result</span></div>
+          <sc-for list="{{ sRows }}" as="r" hint-placeholder-count="6">
+            <div style="display:grid;grid-template-columns:1fr 90px 90px 130px;gap:8px;align-items:center;padding:13px 20px;border-bottom:1px solid rgba(216,213,200,.6)">
+              <span style="font:700 14px 'Archivo',sans-serif;color:#20231A">{{ r.item }}</span>
+              <span style="text-align:right;font:700 15px 'Archivo',sans-serif;color:#22613F;font-variant-numeric:tabular-nums">{{ r.you }}</span>
+              <span style="text-align:right;font:500 14px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">{{ r.them }}</span>
+              <span style="text-align:right;font:600 12.5px 'Archivo',sans-serif;color:{{ r.resC }}">{{ r.result }}</span>
+            </div>
+          </sc-for>
+        </section>
+        <div style="display:flex;gap:10px">
+          <span style="flex:1;display:flex;height:48px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:12px;font:700 14px 'Archivo',sans-serif">⚡ Rerun the price-off</span>
+          <span style="display:flex;height:48px;align-items:center;gap:8px;border:1px solid #34451F;color:#34451F;border-radius:12px;padding:0 18px;font:600 13px 'Archivo',sans-serif;background:#fff">✏️ Change area</span>
+        </div>
+        <p style="margin:0;text-align:center;font:400 11px 'Archivo',sans-serif;color:rgba(94,102,84,.6)">Friendly competition only — prices are AI-estimated from the web. Full list of 25 sourced prices under "See the workings".</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Mobile · Hot list &amp; Price-off</p>
+<div class="dv-frow">
+  <div class="dv-card" style="width:393px;height:840px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:14px 12px 90px;display:flex;flex-direction:column;gap:12px">
+      <div>
+        <h2 style="margin:0;font:700 21px 'Archivo',sans-serif;color:#20231A">This week's hot list 🔥</h2>
+        <p style="margin:4px 0 0;font:400 13px/1.5 'Archivo',sans-serif;color:#5E6654">Ranked hottest first, near Hinckley.</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <span style="display:flex;height:38px;align-items:center;gap:6px;border:1px solid #D7A928;background:#FFF4D6;border-radius:999px;padding:0 12px;font:600 11.5px 'Archivo',sans-serif;color:#9A5B00">🔥 3-week streak</span>
+        <span style="display:flex;height:38px;align-items:center;gap:6px;border:1px solid #D8D5C8;background:#fff;border-radius:999px;padding:0 12px;font:600 11.5px 'Archivo',sans-serif;color:#5E6654">📖 Playbook · 9</span>
+      </div>
+      <span style="display:flex;height:52px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:14px;font:700 14.5px 'Archivo',sans-serif">⚡ Spin the trend-o-meter</span>
+      <sc-for list="{{ sTrends }}" as="t" hint-placeholder-count="4">
+        <article style="display:flex;gap:12px;border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;padding:12px 14px">
+          <span style="flex:none;width:34px;text-align:center;font:800 24px 'Archivo',sans-serif;color:#D7A928">{{ t.rank }}</span>
+          <div style="flex:1;min-width:0">
+            <p style="margin:0;font:700 13.5px/1.35 'Archivo',sans-serif;color:#20231A">{{ t.title }}</p>
+            <div style="margin-top:6px;display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:6px;border-radius:6px;background:#ECE9DE;overflow:hidden"><div style="height:6px;border-radius:6px;background:linear-gradient(90deg,#D7A928,#E0483C);width:{{ t.heatW }}"></div></div>
+              <span style="flex:none;font:700 11px 'Archivo',sans-serif;color:#E0483C">{{ t.heat }}°</span>
+            </div>
+            <div style="margin-top:8px;display:flex;gap:6px;align-items:center">
+              <span style="border-radius:999px;padding:3px 8px;font:600 10.5px 'Archivo',sans-serif;background:{{ t.tagBg }};color:{{ t.tagC }}">{{ t.tag }}</span>
+              <span style="margin-left:auto;display:flex;height:32px;align-items:center;border:1px solid #34451F;color:#34451F;border-radius:9px;padding:0 10px;font:600 11.5px 'Archivo',sans-serif">+ Playbook</span>
+            </div>
+          </div>
+        </article>
+      </sc-for>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🛍</span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+  <div class="dv-card" style="width:393px;height:840px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:14px 12px 90px;display:flex;flex-direction:column;gap:12px">
+      <div style="background:#263019;border-radius:20px;padding:20px;color:#DDE2D1">
+        <p style="margin:0;text-align:center;font:600 11px 'Archivo',sans-serif;letter-spacing:.15em;text-transform:uppercase;color:#AEB69D">The Hinckley price-off</p>
+        <div style="margin-top:10px;display:flex;align-items:center;justify-content:center;gap:20px">
+          <div style="text-align:center"><p style="margin:0;font:700 12.5px 'Archivo',sans-serif">You</p><p style="margin:0;font:800 42px/1 'Archivo',sans-serif;color:#D7A928">5</p></div>
+          <p style="margin:0;font:700 15px 'Archivo',sans-serif;color:#AEB69D">vs</p>
+          <div style="text-align:center"><p style="margin:0;font:700 12.5px 'Archivo',sans-serif">The locals</p><p style="margin:0;font:800 42px/1 'Archivo',sans-serif;color:#AEB69D">0</p></div>
+        </div>
+        <p style="margin:10px 0 0;text-align:center;font:400 12.5px/1.45 'Archivo',sans-serif">You're the cheaper pint on 5 of 6 drinks 🎉</p>
+      </div>
+      <section style="border:1px solid #D8D5C8;background:#FFFEFA;border-radius:16px;overflow:hidden">
+        <sc-for list="{{ sRows }}" as="r" hint-placeholder-count="6">
+          <div style="display:flex;align-items:center;gap:8px;padding:13px 14px;border-bottom:1px solid rgba(216,213,200,.6)">
+            <span style="flex:1;min-width:0;font:700 13px/1.3 'Archivo',sans-serif;color:#20231A">{{ r.item }}</span>
+            <span style="flex:none;font:700 13.5px 'Archivo',sans-serif;color:#22613F;font-variant-numeric:tabular-nums">{{ r.you }}</span>
+            <span style="flex:none;font:500 12px 'Archivo',sans-serif;color:#5E6654;font-variant-numeric:tabular-nums">vs {{ r.them }}</span>
+            <span style="flex:none;font:600 11.5px 'Archivo',sans-serif;color:{{ r.resC }}">{{ r.result }}</span>
+          </div>
+        </sc-for>
+      </section>
+      <span style="display:flex;height:50px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:14px;font:700 14px 'Archivo',sans-serif">⚡ Rerun the price-off</span>
+      <p style="margin:0;text-align:center;font:400 11px 'Archivo',sans-serif;color:rgba(94,102,84,.6)">Prices AI-estimated from the web — a guide, not gospel.</p>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🛍</span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+<!--OPT1C-->
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a><b>Option 3 — "The Landlord's Noticeboard"</b> — the boldest one. Trend ideas as sticky notes pinned to a corkboard-style grid; prices as beer mats with rubber "BARGAIN" stamps. Oversized type, tilted cards, maximum charm. (Deliberately bends the admin type rules for personality.)</div>
+<div class="dv-frames">
+<p class="dv-cap">Desktop · The noticeboard</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:1020px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;border-right:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Dashboard</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Bookings</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Requests</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Events</div>
+      <div style="padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif">Market trends</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Settings</div>
+    </div>
+    <p style="margin:0;padding:16px 32px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:860px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+          <div>
+            <h2 style="margin:0;font:800 34px/1.05 'Archivo',sans-serif;letter-spacing:-.03em;color:#20231A">The noticeboard</h2>
+            <p style="margin:6px 0 0;font:400 14px/1.5 'Archivo',sans-serif;color:#5E6654">Ideas worth nicking, pinned up fresh each week. Near Hinckley LE10 0BB.</p>
+          </div>
+          <div style="display:flex;gap:8px;flex:none">
+            <span style="display:flex;height:44px;align-items:center;gap:8px;background:#34451F;color:#fff;border-radius:12px;padding:0 18px;font:700 13.5px 'Archivo',sans-serif">📌 Pin up fresh ideas</span>
+            <span style="display:flex;height:44px;align-items:center;gap:8px;border:1px solid #D8D5C8;background:#fff;border-radius:12px;padding:0 14px;font:600 12.5px 'Archivo',sans-serif;color:#5E6654">🗂 My keepers · 9</span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <span style="display:flex;height:40px;align-items:center;gap:8px;background:#20231A;color:#FFF4CC;border-radius:8px;padding:0 18px;font:700 13px 'Archivo',sans-serif;transform:rotate(-1deg)">📣 Post ideas</span>
+          <span style="display:flex;height:40px;align-items:center;gap:8px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;padding:0 18px;font:600 13px 'Archivo',sans-serif;transform:rotate(.6deg)">🎪 Event ideas</span>
+          <span style="display:flex;height:40px;align-items:center;gap:8px;border:1.5px dashed #5E6654;background:#fff;color:#5E6654;border-radius:8px;padding:0 18px;font:600 13px 'Archivo',sans-serif;transform:rotate(-.5deg)">🍺 The beer mats</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;padding:8px 4px">
+          <sc-for list="{{ nNotes }}" as="n" hint-placeholder-count="6">
+            <article style="position:relative;border-radius:4px;padding:20px 18px 16px;box-shadow:0 6px 14px rgba(32,35,26,.16);transform:rotate({{ n.rot }});background:{{ n.bg }}">
+              <span style="position:absolute;top:-9px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:999px;background:#B33A32;box-shadow:inset -2px -3px 4px rgba(0,0,0,.3),0 2px 3px rgba(0,0,0,.3)"></span>
+              <p style="margin:0;font-size:34px">{{ n.emoji }}</p>
+              <p style="margin:10px 0 6px;font:800 16.5px/1.25 'Archivo',sans-serif;letter-spacing:-.01em;color:#20231A">{{ n.title }}</p>
+              <p style="margin:0 0 14px;font:400 13px/1.5 'Archivo',sans-serif;color:#5E6654">{{ n.note }}</p>
+              <div style="display:flex;gap:8px">
+                <span style="display:flex;height:36px;flex:1;align-items:center;justify-content:center;gap:6px;background:#34451F;color:#fff;border-radius:8px;font:700 12.5px 'Archivo',sans-serif">📌 Keep</span>
+                <span style="display:flex;height:36px;align-items:center;justify-content:center;border:1px solid rgba(94,102,84,.4);color:#5E6654;border-radius:8px;padding:0 12px;font:600 12.5px 'Archivo',sans-serif">Bin it</span>
+              </div>
+            </article>
+          </sc-for>
+        </div>
+        <p style="margin:0;text-align:center;font:400 12px 'Archivo',sans-serif;color:rgba(94,102,84,.6)">Pinned fresh on 7 Jul at 08:10 · found by AI from what's going round · always sense-check before acting.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Desktop · The beer mats (prices)</p>
+<div class="dv-frow">
+<div class="dv-card" style="width:1240px;height:940px;display:flex;background:#F4F1E8">
+  <div style="width:264px;flex:none;background:#263019;border-right:1px solid rgba(174,182,157,.22);display:flex;flex-direction:column;justify-content:space-between">
+    <div style="display:flex;flex-direction:column;gap:4px;padding:16px">
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Dashboard</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Bookings</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Requests</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Events</div>
+      <div style="padding:12px 16px;border-left:2px solid #D7A928;background:#34451F;border-radius:12px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif">Market trends</div>
+      <div style="padding:12px 16px;color:#DDE2D1;font:600 14px 'Archivo',sans-serif;opacity:.85">Settings</div>
+    </div>
+    <p style="margin:0;padding:16px 32px;color:rgba(174,182,157,.7);font:500 11px 'Archivo',sans-serif">v0.1.0 Alpha</p>
+  </div>
+  <div style="flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden">
+    <div style="flex:none;display:flex;align-items:center;min-height:64px;padding:0 32px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 24px 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Venue manager</span></div>
+    <div style="flex:1;overflow:hidden;padding:24px 32px 0">
+      <div style="max-width:860px;display:flex;flex-direction:column;gap:18px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+          <div>
+            <h2 style="margin:0;font:800 34px/1.05 'Archivo',sans-serif;letter-spacing:-.03em;color:#20231A">Your beer mats</h2>
+            <p style="margin:6px 0 0;font:400 14px/1.5 'Archivo',sans-serif;color:#5E6654">One mat per drink — your price on top, what the locals charge underneath. Stamped honestly.</p>
+          </div>
+          <span style="flex:none;display:flex;height:44px;align-items:center;gap:8px;border:1px solid #34451F;color:#34451F;border-radius:12px;padding:0 16px;font:600 13px 'Archivo',sans-serif;background:#fff">✏️ Change area</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:22px;padding:8px 4px">
+          <sc-for list="{{ nMats }}" as="m" hint-placeholder-count="6">
+            <article style="position:relative;aspect-ratio:1;border-radius:999px;background:#FFFEFA;border:10px solid #ECE9DE;box-shadow:0 6px 16px rgba(32,35,26,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px">
+              <p style="margin:0;font:700 14px 'Archivo',sans-serif;color:#5E6654">{{ m.drink }}</p>
+              <p style="margin:0;font:800 40px/1 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A;font-variant-numeric:tabular-nums">{{ m.you }}</p>
+              <p style="margin:0;font:500 13px 'Archivo',sans-serif;color:#5E6654">locals: <b style="font-variant-numeric:tabular-nums">{{ m.avg }}</b></p>
+              <span style="position:absolute;right:6px;top:14px;transform:rotate(14deg);border:3px solid {{ m.stampC }};color:{{ m.stampC }};border-radius:6px;padding:2px 8px;font:800 13px 'Archivo',sans-serif;letter-spacing:.08em;opacity:.85;background:rgba(255,255,255,.6)">{{ m.stamp }}</span>
+            </article>
+          </sc-for>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;justify-content:center">
+          <span style="display:flex;height:48px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:12px;padding:0 24px;font:700 14px 'Archivo',sans-serif">🍺 Restock the mats (rescan)</span>
+          <span style="font:600 13px 'Archivo',sans-serif;color:#34451F;text-decoration:underline">See all 25 prices we found</span>
+        </div>
+        <p style="margin:0;text-align:center;font:400 11px 'Archivo',sans-serif;color:rgba(94,102,84,.6)">Prices AI-estimated from the web and matched by keyword — a guide, not gospel.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+<p class="dv-cap">Mobile · Noticeboard &amp; Beer mats</p>
+<div class="dv-frow">
+  <div class="dv-card" style="width:393px;height:840px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:16px 14px 90px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <h2 style="margin:0;font:800 27px/1.05 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">The noticeboard</h2>
+        <p style="margin:4px 0 0;font:400 13px/1.5 'Archivo',sans-serif;color:#5E6654">Ideas worth nicking, pinned fresh each week.</p>
+      </div>
+      <span style="display:flex;height:52px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:14px;font:700 14.5px 'Archivo',sans-serif">📌 Pin up fresh ideas</span>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:4px 2px">
+        <sc-for list="{{ nNotes }}" as="n" hint-placeholder-count="4">
+          <article style="position:relative;border-radius:4px;padding:16px 14px 12px;box-shadow:0 5px 12px rgba(32,35,26,.16);transform:rotate({{ n.rot }});background:{{ n.bg }}">
+            <span style="position:absolute;top:-8px;left:50%;transform:translateX(-50%);width:15px;height:15px;border-radius:999px;background:#B33A32;box-shadow:inset -2px -3px 4px rgba(0,0,0,.3),0 2px 3px rgba(0,0,0,.3)"></span>
+            <p style="margin:0;font-size:26px">{{ n.emoji }}</p>
+            <p style="margin:8px 0 4px;font:800 13.5px/1.25 'Archivo',sans-serif;color:#20231A">{{ n.title }}</p>
+            <p style="margin:0 0 10px;font:400 11.5px/1.45 'Archivo',sans-serif;color:#5E6654">{{ n.note }}</p>
+            <span style="display:flex;height:34px;align-items:center;justify-content:center;gap:6px;background:#34451F;color:#fff;border-radius:8px;font:700 12px 'Archivo',sans-serif">📌 Keep</span>
+          </article>
+        </sc-for>
+      </div>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🛍</span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+  <div class="dv-card" style="width:393px;height:840px;position:relative;background:#F4F1E8;overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:center;height:56px;background:rgba(255,254,250,.95);border-bottom:1px solid #D8D5C8"><span style="font:700 17px 'Archivo',sans-serif;color:#20231A">Venue manager</span></div>
+    <div style="padding:16px 14px 90px;display:flex;flex-direction:column;gap:14px">
+      <div>
+        <h2 style="margin:0;font:800 27px/1.05 'Archivo',sans-serif;letter-spacing:-.02em;color:#20231A">Your beer mats</h2>
+        <p style="margin:4px 0 0;font:400 13px/1.5 'Archivo',sans-serif;color:#5E6654">Your price on top, the locals' underneath.</p>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:4px 2px">
+        <sc-for list="{{ nMats }}" as="m" hint-placeholder-count="6">
+          <article style="position:relative;aspect-ratio:1;border-radius:999px;background:#FFFEFA;border:8px solid #ECE9DE;box-shadow:0 5px 12px rgba(32,35,26,.14);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px">
+            <p style="margin:0;font:700 12px 'Archivo',sans-serif;color:#5E6654">{{ m.drink }}</p>
+            <p style="margin:0;font:800 28px/1 'Archivo',sans-serif;color:#20231A;font-variant-numeric:tabular-nums">{{ m.you }}</p>
+            <p style="margin:0;font:500 11px 'Archivo',sans-serif;color:#5E6654">locals: <b>{{ m.avg }}</b></p>
+            <span style="position:absolute;right:0;top:8px;transform:rotate(14deg);border:2.5px solid {{ m.stampC }};color:{{ m.stampC }};border-radius:5px;padding:1px 6px;font:800 10.5px 'Archivo',sans-serif;letter-spacing:.06em;opacity:.85;background:rgba(255,255,255,.6)">{{ m.stamp }}</span>
+          </article>
+        </sc-for>
+      </div>
+      <span style="display:flex;height:50px;align-items:center;justify-content:center;gap:8px;background:#34451F;color:#fff;border-radius:14px;font:700 14px 'Archivo',sans-serif">🍺 Restock the mats</span>
+    </div>
+    <div style="position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-around;background:#263019;border-top:1px solid rgba(174,182,157,.22);padding:8px 8px 10px">
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="display:flex;width:28px;height:28px;align-items:center;justify-content:center;border-radius:999px;background:#11150a;color:#fff;font:800 13px 'Archivo',sans-serif">N</span>Dashboard</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🛍</span>Bookings</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="position:relative;padding:3px 12px">📥<span style="position:absolute;top:-4px;right:0;display:flex;min-width:18px;height:18px;align-items:center;justify-content:center;border-radius:999px;background:#F59E0B;color:#fff;font:600 11px 'Archivo',sans-serif">14</span></span>Requests</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#AEB69D;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px">🗓</span>Events</span>
+      <span style="display:flex;flex-direction:column;align-items:center;gap:3px;color:#DDE2D1;font:600 11px 'Archivo',sans-serif"><span style="padding:3px 12px;border-radius:999px;background:#34451F">⋯</span>More</span>
+    </div>
+  </div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "build <a class="dv-oid" href="#1b">1b</a> in full with working interactions" · "mix <a class="dv-oid" href="#1c">1c</a>'s scoreboard into <a class="dv-oid" href="#1b">1b</a>" · "tone <a class="dv-oid" href="#1d">1d</a> down a notch"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const trends = [
+      { title: "Wipe Camera Venue Reveal", eff: "⚡⚡ Medium", effColor: "#34451F" },
+      { title: "World Cup Final Countdown", eff: "⚡ Easy", effColor: "#15803D" },
+      { title: "Careless Whisper Bar Humour", eff: "⚡⚡ Medium", effColor: "#34451F" },
+      { title: "Big Boom New Drink Reveal", eff: "⚡⚡ Medium", effColor: "#34451F" },
+      { title: "Epic Topped & Loaded Bites", eff: "⚡⚡ Medium", effColor: "#34451F" },
+    ];
+    const rows = [
+      { label: "Pint (Lager)", item: "Peroni 0%", own: "£3.50", word: "below avg", vColor: "#15803D", dot: "#15803D", hasData: true, noData: false, min: "£4.50", avg: "£4.50", max: "£4.50", n: 1, bandL: "60%", bandW: "3%", avgL: "61%", ownL: "18%" },
+      { label: "Pint (Ale / Bitter / Stout)", item: "Ginger Ale", own: "£1.95", word: "below avg", vColor: "#15803D", dot: "#15803D", hasData: true, noData: false, min: "£2.70", avg: "£4.38", max: "£5.95", n: 3, bandL: "22%", bandW: "70%", avgL: "62%", ownL: "3%" },
+      { label: "House Spirit + Mixer", item: "Tonic", own: "£1.95", word: "below avg", vColor: "#15803D", dot: "#15803D", hasData: true, noData: false, min: "£17.00", avg: "£17.00", max: "£17.00", n: 1, bandL: "88%", bandW: "3%", avgL: "89%", ownL: "1%" },
+      { label: "Wine (Glass)", item: "Sauvignon Blanc", own: "£6.75", word: "below avg", vColor: "#15803D", dot: "#15803D", hasData: true, noData: false, min: "£13.50", avg: "£14.50", max: "£15.50", n: 2, bandL: "72%", bandW: "16%", avgL: "80%", ownL: "6%" },
+      { label: "Soft Drink", item: "Coke Zero", own: "£2.50", word: "", vColor: "#5E6654", dot: "#8A8D7A", hasData: false, noData: true },
+      { label: "Snacks", item: "Smiths Bacon Fries", own: "£1.00", word: "below avg", vColor: "#15803D", dot: "#15803D", hasData: true, noData: false, min: "£2.79", avg: "£4.76", max: "£7.00", n: 7, bandL: "28%", bandW: "66%", avgL: "58%", ownL: "2%" },
+    ];
+    const fTrends = [
+      { emoji: "😅", title: "The 'supportive disappointed' voice trick", what: "Film staff saying 'Another round?' in a kind voice, then a disappointed one, then a sarcastic one. That's it — that's the video.", time: "🕐 One evening", fresh: true },
+      { emoji: "🫣", title: "Hand-over-the-lens venue reveal", what: "Cover the camera with your hand, whip it away to show off the bar looking its best. Works great with music.", time: "🕐🕐 A weekend", fresh: true },
+      { emoji: "⚽", title: "World Cup final countdown", what: "A simple daily countdown post to the final — where to watch it, what's on tap.", time: "🕐 One evening", fresh: true },
+    ];
+    const fRows = [
+      { name: "Pint of lager", item: "your Peroni 0%", you: "£3.50", chip: "Cheaper than nearby 😊", chipBg: "#E7F3EC", chipC: "#22613F", line: "Pubs near you charge about £4.50 — you're £1.00 cheaper.", youL: "20%", avgL: "62%", noData: false },
+      { name: "Pint of ale, bitter or stout", item: "your Ginger Ale", you: "£1.95", chip: "Cheaper than nearby 😊", chipBg: "#E7F3EC", chipC: "#22613F", line: "Locals charge £2.70–£5.95, about £4.38 on average.", youL: "5%", avgL: "60%", noData: false },
+      { name: "Spirit + mixer", item: "your Tonic", you: "£1.95", chip: "Way cheaper 🎉", chipBg: "#E7F3EC", chipC: "#22613F", line: "The going rate nearby is about £17.00. You're £15.05 under — worth a look?", youL: "3%", avgL: "88%", noData: false },
+      { name: "Glass of wine", item: "your Sauvignon Blanc", you: "£6.75", chip: "Cheaper than nearby 😊", chipBg: "#E7F3EC", chipC: "#22613F", line: "Nearby bars charge about £14.50 a glass.", youL: "10%", avgL: "78%", noData: false },
+      { name: "Soft drink", item: "your Coke Zero", you: "£2.50", chip: "No local data yet 🤷", chipBg: "#ECE9DE", chipC: "#5E6654", line: "We couldn't find nearby prices for this one yet.", youL: "50%", avgL: "50%", noData: true },
+      { name: "Snacks", item: "your Smiths Bacon Fries", you: "£1.00", chip: "Way cheaper 🎉", chipBg: "#E7F3EC", chipC: "#22613F", line: "Locals charge about £4.76 — you're £3.76 under.", youL: "4%", avgL: "58%", noData: false },
+    ];
+    fRows.forEach((r) => { r.hasBar = !r.noData; });
+    const sTrends = [
+      { rank: "1", heat: 94, heatW: "94%", title: "Supportive Disappointed Bar Challenge", tag: "Easy win", tagBg: "#E7F3EC", tagC: "#22613F", time: "one evening" },
+      { rank: "2", heat: 87, heatW: "87%", title: "Wipe Camera Venue Reveal", tag: "Weekend job", tagBg: "#FFF4D6", tagC: "#9A5B00", time: "a weekend" },
+      { rank: "3", heat: 81, heatW: "81%", title: "World Cup Final Countdown", tag: "Easy win", tagBg: "#E7F3EC", tagC: "#22613F", time: "one evening" },
+      { rank: "4", heat: 74, heatW: "74%", title: "Careless Whisper Bar Humour", tag: "Weekend job", tagBg: "#FFF4D6", tagC: "#9A5B00", time: "a weekend" },
+      { rank: "5", heat: 66, heatW: "66%", title: "Big Boom New Drink Reveal", tag: "Weekend job", tagBg: "#FFF4D6", tagC: "#9A5B00", time: "a weekend" },
+    ];
+    const sRows = [
+      { item: "Pint (Lager)", you: "£3.50", them: "£4.50", result: "You win 🏆", win: true },
+      { item: "Ale / Bitter / Stout", you: "£1.95", them: "£4.38", result: "You win 🏆", win: true },
+      { item: "Spirit + Mixer", you: "£1.95", them: "£17.00", result: "You win 🏆", win: true },
+      { item: "Wine (Glass)", you: "£6.75", them: "£14.50", result: "You win 🏆", win: true },
+      { item: "Soft Drink", you: "£2.50", them: "—", result: "No match yet", win: false },
+      { item: "Snacks", you: "£1.00", them: "£4.76", result: "You win 🏆", win: true },
+    ];
+    sRows.forEach((r) => { r.resC = r.win ? "#22613F" : "#8A8D7A"; });
+    const nNotes = [
+      { emoji: "😅", title: "The disappointed 'another round?' bit", note: "Film the staff. Three tones of voice. Instant comedy.", rot: "-1.6deg", bg: "#FFF7D6" },
+      { emoji: "🫣", title: "Big hand-over-camera reveal", note: "Hide the lens, whip it away, ta-dah — your bar.", rot: "1.2deg", bg: "#FFFEFA" },
+      { emoji: "⚽", title: "World Cup countdown", note: "One post a day til the final. Easy.", rot: "-0.8deg", bg: "#EDF3E2" },
+      { emoji: "🎷", title: "Careless Whisper humour", note: "That sax riff + last orders. You know what to do.", rot: "1.8deg", bg: "#FFFEFA" },
+      { emoji: "💥", title: "Big boom drink reveal", note: "New drink? Make it go boom.", rot: "-1.2deg", bg: "#FFF7D6" },
+      { emoji: "🍟", title: "Epic topped & loaded bites", note: "Pile it high, film it close.", rot: "0.9deg", bg: "#EDF3E2" },
+    ];
+    const nMats = [
+      { drink: "Lager", you: "£3.50", avg: "£4.50", stamp: "BARGAIN", good: true },
+      { drink: "Ale & stout", you: "£1.95", avg: "£4.38", stamp: "BARGAIN", good: true },
+      { drink: "Spirit + mixer", you: "£1.95", avg: "£17.00", stamp: "STEAL!", good: true },
+      { drink: "Wine", you: "£6.75", avg: "£14.50", stamp: "BARGAIN", good: true },
+      { drink: "Soft drink", you: "£2.50", avg: "?", stamp: "NO DATA", good: false },
+      { drink: "Snacks", you: "£1.00", avg: "£4.76", stamp: "STEAL!", good: true },
+    ];
+    nMats.forEach((m) => { m.stampC = m.good ? "#22613F" : "#8A8D7A"; });
+    const EFF = {
+      Easy: { bg: "#E7F3EC", c: "#22613F" },
+      Medium: { bg: "#FFF4D6", c: "#9A5B00" },
+      Hard: { bg: "#FDECEA", c: "#B33A32" },
+    };
+    const n2Notes = [
+      { emoji: "🫣", title: "Big hand-over-camera reveal", note: "Hide the lens, whip it away, ta-dah — your bar.", rot: "1.2deg", bg: "#FFFEFA", eff: "Medium", time: "~ a weekend" },
+      { emoji: "⚽", title: "World Cup countdown", note: "One post a day til the final. Easy.", rot: "-0.8deg", bg: "#EDF3E2", eff: "Easy", time: "~ 10 min a day" },
+      { emoji: "🎷", title: "Careless Whisper humour", note: "That sax riff + last orders. You know what to do.", rot: "1.8deg", bg: "#FFFEFA", eff: "Medium", time: "~ a weekend" },
+      { emoji: "💥", title: "Big boom drink reveal", note: "New drink? Make it go boom.", rot: "-1.2deg", bg: "#FFF7D6", eff: "Hard", time: "~ a full week" },
+      { emoji: "🍟", title: "Epic topped & loaded bites", note: "Pile it high, film it close.", rot: "0.9deg", bg: "#EDF3E2", eff: "Easy", time: "~ one evening" },
+    ];
+    n2Notes.forEach((n) => { n.effBg = EFF[n.eff].bg; n.effC = EFF[n.eff].c; });
+    const n2NotesM = n2Notes.slice(0, 3);
+    const vItems = ["Lager", "Ale & stout", "Spirit + mixer", "Wine", "Soft drink", "Snacks"];
+    const vRows = [
+      { item: "Pint (Lager)", you: "£3.50", c1: "£4.50", c2: "—", c3: "—", c4: "—" },
+      { item: "Ale / Bitter / Stout", you: "£1.95", c1: "—", c2: "£2.70", c3: "£4.50", c4: "£5.95" },
+      { item: "Spirit + Mixer", you: "£1.95", c1: "£17.00", c2: "—", c3: "—", c4: "—" },
+      { item: "Wine (Glass)", you: "£6.75", c1: "£13.50", c2: "£15.50", c3: "—", c4: "—" },
+      { item: "Soft Drink", you: "£2.50", c1: "—", c2: "—", c3: "—", c4: "—" },
+      { item: "Snacks", you: "£1.00", c1: "£2.79", c2: "£4.20", c3: "£7.00", c4: "—" },
+    ];
+    const bkdn = [
+      { v: "The Hinckley Knight", p: "£2.70", win: "you're £0.75 under" },
+      { v: "The Flintlock", p: "£4.50", win: "you're £2.55 under" },
+      { v: "The Union Tap", p: "£5.95", win: "you're £4.00 under" },
+    ];
+    return { baseTrends: trends, baseTrendsMobile: trends.slice(0, 4), baseRows: rows, fTrends: fTrends, fRows: fRows, fRowsM: fRows.slice(0, 4), sTrends: sTrends, sRows: sRows, nNotes: nNotes, nMats: nMats, n2Notes: n2Notes, n2NotesM: n2NotesM, vItems: vItems, vRows: vRows, bkdn: bkdn };
+  }
+}
+</script>
+</body>
+</html>

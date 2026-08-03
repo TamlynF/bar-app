@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Sparkles, Loader2, Bookmark, RotateCcw, MapPin, Zap } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { refreshTrendsAction, setTrendStateAction } from "./actions";
@@ -11,10 +11,11 @@ import type { BenchmarkComparison } from "../lib/compare";
 import type { CompetitorPrice, MarketingTrend, TrendState } from "../lib/types";
 
 type TrendTab = "ads" | "events" | "prices";
-const TABS: { value: TrendTab; label: string }[] = [
-  { value: "ads", label: "🔥 Ads" },
-  { value: "events", label: "🎪 Events" },
-  { value: "prices", label: "💷 Prices" },
+
+const TABS: { value: TrendTab; label: string; short: string; tilt: string }[] = [
+  { value: "ads", label: "📣 Post ideas", short: "📣 Posts", tilt: "rotate-[-1deg]" },
+  { value: "events", label: "🎪 Event ideas", short: "🎪 Events", tilt: "rotate-[0.6deg]" },
+  { value: "prices", label: "🏆 The price-off", short: "🏆 Price-off", tilt: "rotate-[-0.5deg]" },
 ];
 
 function formatWhen(iso: string | null): string {
@@ -46,6 +47,7 @@ export default function TrendsClient({
 }) {
   const [trendTab, setTrendTab] = useState<TrendTab>("ads");
   const [showSaved, setShowSaved] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [isRefreshing, startRefresh] = useTransition();
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [, startMutate] = useTransition();
@@ -64,9 +66,9 @@ export default function TrendsClient({
       if ("error" in result) {
         toast.error(result.error);
       } else if (result.added > 0) {
-        toast.success(`Added ${result.added} new trend${result.added === 1 ? "" : "s"}.`);
+        toast.success(`Pinned up ${result.added} new idea${result.added === 1 ? "" : "s"}.`);
       } else {
-        toast.info("No new trends this time - you're up to date.");
+        toast.info("Nothing new this time - the board is up to date.");
       }
     });
   };
@@ -80,161 +82,206 @@ export default function TrendsClient({
     });
   };
 
+  const toggleExpanded = (id: string) => setExpandedId((cur) => (cur === id ? null : id));
+
+  const tabRow = (
+    <div className="grid grid-cols-3 gap-1.5 sm:flex sm:gap-2">
+      {TABS.map((tab) => {
+        const active = trendTab === tab.value;
+        return (
+          <button
+            key={tab.value}
+            type="button"
+            aria-pressed={active}
+            onClick={() => {
+              setTrendTab(tab.value);
+              setShowSaved(false);
+              setExpandedId(null);
+            }}
+            className={cn(
+              "flex h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11.5px] transition-colors sm:px-4.5 sm:text-[13px]",
+              tab.tilt,
+              active
+                ? "bg-[#20231A] font-bold text-[#FFF4CC]"
+                : "border-[1.5px] border-dashed border-[#5E6654] bg-white font-semibold text-[#5E6654] hover:bg-[#FFFEFA]",
+            )}
+          >
+            <span className="sm:hidden">{tab.short}</span>
+            <span className="hidden sm:inline">{tab.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const pinButton = (className: string) => (
+    <button
+      type="button"
+      onClick={handleRefresh}
+      disabled={isRefreshing}
+      className={cn(
+        "flex items-center justify-center gap-2 bg-[#34451F] font-bold text-white transition-colors hover:bg-[#283719] active:scale-[0.98] disabled:opacity-60",
+        className,
+      )}
+    >
+      {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <span aria-hidden="true">📌</span>}
+      {isRefreshing ? "Pinning up fresh ideas…" : "Pin up fresh ideas"}
+    </button>
+  );
+
   return (
-    <div className="max-w-3xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
-      <div className="flex items-center justify-between gap-3">
+    <div className="w-full space-y-3.5 px-2 py-3 sm:space-y-4.5 sm:px-4 sm:py-0 md:px-6">
+      <div className="flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="font-black text-xl tracking-tight text-[#20231A] uppercase">Trends</h1>
-          <div className="mt-0.5 flex items-center gap-1.5 text-[#5E6654]">
-            <MapPin className="h-3 w-3 shrink-0" />
-            <p className="truncate font-black text-[10px] tracking-widest uppercase">Live AI · near {area}</p>
-          </div>
+          <h1 className="text-[27px] leading-[1.05] font-extrabold tracking-[-0.03em] text-[#20231A] sm:text-[34px]">
+            {trendTab === "prices" ? "The price-off" : "The noticeboard"}
+          </h1>
+          <p className="mt-1 text-[13px] leading-normal text-[#5E6654] sm:mt-1.5 sm:text-sm">
+            {trendTab === "prices"
+              ? `How your prices stack up against the locals. Near ${area}.`
+              : `Ideas worth nicking, pinned up fresh each week. Near ${area}.`}
+          </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setShowSaved((s) => !s)}
-          className={cn(
-            "flex h-11 shrink-0 items-center gap-2 rounded-xl border px-4 font-black text-[10px] tracking-widest uppercase transition-colors active:scale-95",
-            showSaved
-              ? "border-[#34451F] bg-[#34451F] text-white"
-              : "border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#F4F1E8]",
-          )}
-        >
-          <Bookmark className="h-4 w-4" />
-          Ideas ({savedTrends.length})
-        </button>
+        <div className="hidden shrink-0 gap-2 sm:flex">
+          {trendTab !== "prices" && pinButton("h-11 rounded-xl px-4.5 text-[13.5px]")}
+          <button
+            type="button"
+            onClick={() => setShowSaved((s) => !s)}
+            aria-pressed={showSaved}
+            className={cn(
+              "flex h-11 shrink-0 items-center gap-2 rounded-xl border px-3.5 font-semibold text-[12.5px] transition-colors active:scale-[0.98]",
+              showSaved
+                ? "border-[#34451F] bg-[#34451F] text-white"
+                : "border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#FFFEFA]",
+            )}
+          >
+            🗂 My keepers · {savedTrends.length}
+          </button>
+        </div>
       </div>
 
+      {tabRow}
+
       {showSaved ? (
-        <div className="space-y-5">
-          <div className="space-y-3">
-            <p className="font-black text-[10px] tracking-widest text-[#34451F] uppercase">My saved ideas</p>
-            {savedTrends.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
-                <Bookmark className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-                <p className="font-black text-sm text-[#20231A]">Nothing saved yet</p>
-                <p className="mt-1 text-[11px] text-[#5E6654]">Tap the bookmark on a trend to pin it here.</p>
-              </div>
-            ) : (
-              savedTrends.map((t) => (
-                <TrendCard key={t.id} trend={t} pending={pendingId === t.id} onSetState={setState} />
-              ))
-            )}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-bold text-[13px] text-[#34451F]">Everything you&apos;ve kept</p>
+            <button
+              type="button"
+              onClick={() => setShowSaved(false)}
+              className="font-semibold text-[12px] text-[#34451F] underline"
+            >
+              Back to the board
+            </button>
           </div>
 
-          {ignoredTrends.length > 0 && (
-            <div className="space-y-2">
-              <p className="font-black text-[10px] tracking-widest text-[#5E6654]/70 uppercase">
-                Ignored ({ignoredTrends.length})
+          {savedTrends.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
+              <p className="text-2xl" aria-hidden="true">
+                🗂
               </p>
-              {ignoredTrends.map((t) => (
-                <div key={t.id} className="flex items-center gap-3 rounded-xl border border-[#D8D5C8] bg-white px-3 py-2.5">
-                  <p className="min-w-0 flex-1 truncate text-[12px] font-bold text-[#5E6654]">{t.title}</p>
-                  <button
-                    type="button"
-                    onClick={() => setState(t.id, "new")}
-                    disabled={pendingId === t.id}
-                    aria-label={`Restore ${t.title}`}
-                    title="Restore"
-                    className="flex h-8 shrink-0 items-center gap-1.5 rounded-lg border border-[#D8D5C8] bg-white px-3 font-black text-[10px] tracking-widest text-[#5E6654] uppercase transition-colors hover:bg-[#F4F1E8] active:scale-95 disabled:opacity-60"
-                  >
-                    {pendingId === t.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" />}
-                    Restore
-                  </button>
-                </div>
+              <p className="mt-2 font-bold text-sm text-[#20231A]">Nothing kept yet</p>
+              <p className="mt-1 text-[12px] text-[#5E6654]">
+                Hit 📌 Keep on a note and it lands in here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 items-start gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4 2xl:grid-cols-5">
+              {savedTrends.map((t, i) => (
+                <TrendCard
+                  key={t.id}
+                  trend={t}
+                  index={i}
+                  pending={pendingId === t.id}
+                  onSetState={setState}
+                  expanded={expandedId === t.id}
+                  onToggleExpanded={toggleExpanded}
+                />
               ))}
             </div>
           )}
+
+          {ignoredTrends.length > 0 && (
+            <div className="space-y-3 pt-2">
+              <p className="font-semibold text-[12px] text-[#5E6654]">
+                Binned ({ignoredTrends.length}) — put any of them back up
+              </p>
+              <div className="grid grid-cols-2 items-start gap-4 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4 2xl:grid-cols-5">
+                {ignoredTrends.map((t, i) => (
+                  <TrendCard
+                    key={t.id}
+                    trend={t}
+                    index={i}
+                    pending={pendingId === t.id}
+                    onSetState={setState}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
+      ) : trendTab === "prices" ? (
+        <PricesClient
+          area={area}
+          radius={pricesRadius}
+          lastRefresh={pricesLastRefresh}
+          comparison={comparison}
+          competitorPrices={competitorPrices}
+          priceTrends={priceTrends}
+          onSetTrendState={setState}
+          pendingTrendId={pendingId}
+        />
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2">
-            {TABS.map((tab) => (
-              <button
-                key={tab.value}
-                type="button"
-                onClick={() => setTrendTab(tab.value)}
-                className={cn(
-                  "flex h-11 items-center justify-center gap-1.5 rounded-xl border font-black text-[11px] tracking-wide uppercase transition-colors active:scale-95",
-                  trendTab === tab.value
-                    ? "border-[#34451F] bg-[#34451F] text-white"
-                    : "border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#F4F1E8]",
-                )}
-              >
-                {tab.label}
-              </button>
-            ))}
+          <div className="flex gap-2 sm:hidden">
+            {pinButton("h-13 flex-1 rounded-[14px] text-[14.5px]")}
+            <button
+              type="button"
+              onClick={() => setShowSaved(true)}
+              className="flex h-13 shrink-0 items-center gap-1.5 rounded-[14px] border border-[#D8D5C8] bg-white px-3.5 font-semibold text-[12.5px] text-[#5E6654]"
+            >
+              🗂 {savedTrends.length}
+            </button>
           </div>
 
-          {trendTab === "prices" ? (
-            <PricesClient
-              area={area}
-              radius={pricesRadius}
-              lastRefresh={pricesLastRefresh}
-              comparison={comparison}
-              competitorPrices={competitorPrices}
-              priceTrends={priceTrends}
-              onSetTrendState={setState}
-              pendingTrendId={pendingId}
-            />
-          ) : (
-            <>
-              <div className="space-y-2">
-                <button
-                  type="button"
-                  onClick={handleRefresh}
-                  disabled={isRefreshing}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#34451F] font-black text-[11px] tracking-widest text-white uppercase transition-colors hover:bg-[#283719] active:scale-95 disabled:opacity-60"
-                >
-                  {isRefreshing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Zap className="h-4 w-4" />}
-                  {isRefreshing
-                    ? "Scanning the internet…"
-                    : feed.length
-                      ? "Rescan for fresh trends"
-                      : "Scan for live trends"}
-                </button>
-                <p className="text-[11px] leading-snug text-[#5E6654] opacity-70">
-                  {trendTab === "ads"
-                    ? "Reels/TikTok formats bars & venues are winning with right now - tied to current events & memes."
-                    : "Events other UK bars, pubs, venues & hospitality spots are running right now."}
-                </p>
-                <p className="text-[10px] text-[#5E6654] tabular-nums opacity-50">
-                  Last refreshed {formatWhen(lastRefresh)}
-                </p>
-              </div>
-
-              {isRefreshing && (
-                <div className="py-6 text-center">
-                  <Loader2 className="mx-auto h-7 w-7 animate-spin text-[#34451F]" />
-                  <p className="mt-2 text-[11px] font-bold text-[#5E6654]">
-                    {trendTab === "ads"
-                      ? "Doomscrolling so you don't have to…"
-                      : "Peeking at everyone else's party…"}
-                  </p>
-                </div>
-              )}
-
-              {feed.length === 0 && !isRefreshing ? (
-                <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
-                  <Sparkles className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-                  <p className="font-black text-sm text-[#20231A]">Nothing here yet</p>
-                  <p className="mt-1 text-[11px] text-[#5E6654]">
-                    Smash the scan button to pull live {trendTab === "ads" ? "ad" : "event"} trends.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {feed.map((t) => (
-                    <TrendCard key={t.id} trend={t} pending={pendingId === t.id} onSetState={setState} />
-                  ))}
-                </div>
-              )}
-
-              <p className="pt-2 pb-4 text-center text-[10px] text-[#5E6654] opacity-60">
-                Trends are AI-generated from live web search and link to their sources. Always sense-check before acting.
+          {isRefreshing && (
+            <div className="py-6 text-center">
+              <Loader2 className="mx-auto h-7 w-7 animate-spin text-[#34451F]" />
+              <p className="mt-2 font-semibold text-[12px] text-[#5E6654]">
+                {trendTab === "ads"
+                  ? "Doomscrolling so you don't have to…"
+                  : "Peeking at everyone else's party…"}
               </p>
-            </>
+            </div>
           )}
+
+          {feed.length === 0 && !isRefreshing ? (
+            <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
+              <p className="text-2xl" aria-hidden="true">
+                📌
+              </p>
+              <p className="mt-2 font-bold text-sm text-[#20231A]">Nothing pinned up yet</p>
+              <p className="mt-1 text-[12px] text-[#5E6654]">Smash the button above and the board fills up.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 items-start gap-4 px-0.5 pt-1 sm:grid-cols-3 sm:gap-5 xl:grid-cols-4 2xl:grid-cols-5">
+              {feed.map((t, i) => (
+                <TrendCard
+                  key={t.id}
+                  trend={t}
+                  index={i}
+                  pending={pendingId === t.id}
+                  onSetState={setState}
+                  expanded={expandedId === t.id}
+                  onToggleExpanded={toggleExpanded}
+                />
+              ))}
+            </div>
+          )}
+
+          <p className="pt-2 pb-4 text-center text-[12px] text-[#5E6654]/60">
+            {`Pinned fresh on ${formatWhen(lastRefresh)} · found by AI from what's going round · always sense-check before acting.`}
+          </p>
         </>
       )}
     </div>
