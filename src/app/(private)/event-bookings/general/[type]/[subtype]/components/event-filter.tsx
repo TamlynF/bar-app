@@ -3,8 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { format, parseISO } from "date-fns";
-import { ChevronDown } from "lucide-react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, ExternalLink } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { type EventSummary } from "./bookings-section";
 
@@ -53,6 +53,7 @@ export default function EventPickerBanner({
   showPicker?: boolean;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [detailsOpen, setDetailsOpen] = useState(true);
 
@@ -78,6 +79,12 @@ export default function EventPickerBanner({
 
   const hasPayments = !!summary && (summary.totalExpected > 0 || summary.totalPaid > 0);
   const showQuiz = !!summary?.quiz && summary.quiz.status !== "Incomplete";
+
+  const query = searchParams.toString();
+  const returnHref = query ? `${pathname}?${query}` : pathname;
+  const manageHref = summary
+    ? `/event-setups/events?open=${summary.eventId}&back=${encodeURIComponent(returnHref)}`
+    : null;
 
   const compactStats = [
     `${stats.bookings} ${stats.bookings === 1 ? "booking" : "bookings"}`,
@@ -176,7 +183,7 @@ export default function EventPickerBanner({
         className={cn(
           "flex w-full flex-wrap items-end gap-2 sm:w-auto sm:gap-2.5",
           !detailsOpen && "hidden",
-          !(summary && showPicker) && "max-sm:hidden",
+          !manageHref && "max-sm:hidden",
         )}
       >
         <div className="hidden flex-wrap gap-2 sm:flex sm:gap-2.5">
@@ -209,12 +216,13 @@ export default function EventPickerBanner({
             </Chip>
           )}
         </div>
-        {summary && showPicker && (
+        {manageHref && (
           <Link
-            href={`/event-bookings/event/${summary.eventId}`}
-            className="inline-flex h-11 items-center justify-center rounded-[11px] border border-[#D8D5C8] bg-white px-4 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE] max-sm:w-full sm:h-9.5"
+            href={manageHref}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-[11px] border border-[#34451F]/30 bg-[#E5EBD8] px-4 text-[13px] font-semibold text-[#34451F] transition-colors hover:bg-[#D9E3C4] max-sm:w-full sm:h-9.5"
           >
             Manage event
+            <ExternalLink className="h-3.5 w-3.5 shrink-0 opacity-70" />
           </Link>
         )}
       </div>
