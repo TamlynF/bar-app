@@ -35,7 +35,8 @@ import {
     MessageSquare,
     PanelLeftClose,
     PanelLeftOpen,
-    MoreHorizontal
+    MoreHorizontal,
+    Users
 } from "lucide-react"
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
@@ -128,10 +129,10 @@ export default function PrivateLayoutClient({
 
     const badgeText = pendingRequestsCount > 99 ? "99+" : String(pendingRequestsCount)
 
+    /* Mobile only: bookings and requests share one "Guests" target that opens a chooser. */
     const navItems = [
         { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-        { label: "Bookings", href: "/event-bookings", icon: Tickets },
-        { label: "Requests", href: "/requests", icon: Inbox },
+        { label: "Guests", href: "/guests", icon: Users },
         { label: "Events", href: "/event-setups", icon: CalendarCogIcon },
     ]
 
@@ -184,7 +185,7 @@ export default function PrivateLayoutClient({
 
     const settingsSubItems = [
         { label: "Company info", href: "/settings/company", icon: Building2 },
-        { label: "Guests", href: "/settings/customers", icon: BookUser },
+        { label: "Customers", href: "/settings/customers", icon: BookUser },
         { label: "Music acts", href: "/settings/music-acts", icon: Guitar },
         { label: "Seating plan", href: "/settings/tables", icon: Grid2X2 },
         { label: "Menu", href: "/settings/menu", icon: UtensilsCrossed },
@@ -201,8 +202,10 @@ export default function PrivateLayoutClient({
         const normalizedPath = pathname.replace(/\/$/, "")
         if (normalizedPath === "/dashboard") return { title: "Dashboard", subtitle: null, backHref: null, description: "An overview of bookings, requests and venue performance." }
 
+        if (normalizedPath === "/guests") return { title: "Guests", subtitle: null, backHref: null, description: "Bookings guests have made and requests waiting on you." }
+
         if (normalizedPath.startsWith("/requests")) {
-            if (normalizedPath === "/requests") return { title: "Requests", subtitle: null, backHref: null, description: "Band applications, private hire and enquiries waiting on a decision." }
+            if (normalizedPath === "/requests") return { title: "Requests", subtitle: null, backHref: "/guests", description: "Band applications, private hire and enquiries waiting on a decision." }
             const requestsMap: Record<string, string> = {
                 "enquiries": "Enquiries",
             }
@@ -256,7 +259,7 @@ export default function PrivateLayoutClient({
         }
 
         if (normalizedPath.startsWith("/event-bookings")) {
-            if (normalizedPath === "/event-bookings") return { title: "Bookings", subtitle: null, backHref: null, description: "Choose an event to view and manage its bookings." }
+            if (normalizedPath === "/event-bookings") return { title: "Bookings", subtitle: null, backHref: "/guests", description: "Choose an event to view and manage its bookings." }
 
             const segment = normalizedPath.split("/")[2]
 
@@ -296,7 +299,7 @@ export default function PrivateLayoutClient({
 
             const settingsMap: Record<string, string> = {
                 "tables": "Floor plan",
-                "customers": "Guests",
+                "customers": "Customers",
                 "users": "System users",
                 "music-acts": "Music acts",
             }
@@ -683,12 +686,12 @@ export default function PrivateLayoutClient({
                     <div className="mx-auto flex w-full max-w-md items-stretch justify-around px-2">
                         {navItems.map((item) => {
                             const normalizedHref = item.href.replace(/\/$/, "")
-                            const onRequestPath = isRequestPath(normalizedPathname)
 
-                            const isActive = item.label === "Requests"
-                                ? onRequestPath
-                                : item.label === "Bookings"
-                                ? (normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)) && !onRequestPath
+                            const isActive = item.label === "Guests"
+                                ? normalizedPathname === "/guests"
+                                    || isRequestPath(normalizedPathname)
+                                    || normalizedPathname === "/event-bookings"
+                                    || normalizedPathname.startsWith("/event-bookings/")
                                 : normalizedPathname === normalizedHref || normalizedPathname.startsWith(`${normalizedHref}/`)
 
                             return (
@@ -704,11 +707,7 @@ export default function PrivateLayoutClient({
                                     )}>
                                         <item.icon className="h-5.5 w-5.5" />
 
-                                        {item.label === "Bookings" && (
-                                            <span className="absolute top-0 right-1.5 h-1.5 w-1.5 rounded-full bg-green-500" aria-hidden="true" />
-                                        )}
-
-                                        {item.label === "Requests" && pendingRequestsCount > 0 && (
+                                        {item.label === "Guests" && pendingRequestsCount > 0 && (
                                             <span className="absolute -top-1 right-0 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-semibold text-white tabular-nums">
                                                 {badgeText}
                                             </span>

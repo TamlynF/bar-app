@@ -27,7 +27,7 @@ const settingsItems = [
     color: "bg-amber-50 text-amber-600",
   },
   {
-    title: "Guests",
+    title: "Customers",
     description: "Database and contact info",
     href: "/settings/customers",
     icon: BookUser,
