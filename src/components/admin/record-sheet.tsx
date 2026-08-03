@@ -1,0 +1,337 @@
+"use client";
+
+import React, { useCallback, useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useConfirm } from "@/components/ui/confirm-dialog";
+import { cn } from "@/lib/utils";
+import {
+  Loader2,
+  Save,
+  Pencil,
+  Trash2,
+  Hash,
+  AlertCircle,
+} from "lucide-react";
+
+export type SheetMode = "closed" | "add" | "view" | "edit";
+
+type ActionResult = { error?: string } | void | null | undefined;
+
+export function useRecordSheet<T>() {
+  const { confirm, ConfirmDialogUI } = useConfirm();
+  const [selected, setSelected] = useState<T | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isPending, startTransition] = useTransition();
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const openView = useCallback((record: T) => {
+    setFormError(null);
+    setIsEditing(false);
+    setIsAdding(false);
+    setSelected(record);
+  }, []);
+
+  const openAdd = useCallback(() => {
+    setFormError(null);
+    setIsEditing(false);
+    setSelected(null);
+    setIsAdding(true);
+  }, []);
+
+  const startEdit = useCallback(() => {
+    setFormError(null);
+    setIsEditing(true);
+  }, []);
+
+  const close = useCallback(() => {
+    setSelected(null);
+    setIsAdding(false);
+    setIsEditing(false);
+    setFormError(null);
+  }, []);
+
+  const submit = useCallback(
+    (action: (formData: FormData) => Promise<ActionResult>) =>
+      (formData: FormData) => {
+        setFormError(null);
+        startTransition(async () => {
+          const result = await action(formData);
+          if (result?.error) setFormError(result.error);
+          else close();
+        });
+      },
+    [close],
+  );
+
+  const confirmDelete = useCallback(
+    async (opts: {
+      title: string;
+      description?: string;
+      confirmLabel?: string;
+      action: () => Promise<ActionResult>;
+    }) => {
+      const ok = await confirm({
+        title: opts.title,
+        description: opts.description,
+        confirmLabel: opts.confirmLabel ?? "Delete",
+        variant: "destructive",
+      });
+      if (!ok) return;
+      startTransition(async () => {
+        const result = await opts.action();
+        if (result?.error) setFormError(result.error);
+        else close();
+      });
+    },
+    [confirm, close],
+  );
+
+  const mode: SheetMode = isAdding
+    ? "add"
+    : isEditing
+      ? "edit"
+      : selected
+        ? "view"
+        : "closed";
+
+  return {
+    mode,
+    open: isAdding || !!selected,
+    selected,
+    isPending,
+    formError,
+    setFormError,
+    openView,
+    openAdd,
+    startEdit,
+    close,
+    submit,
+    confirmDelete,
+    ConfirmDialogUI,
+  };
+}
+
+export function RecordSheet({
+  open,
+  onClose,
+  mode,
+  title,
+  recordId,
+  formId,
+  isPending,
+  saveDisabled,
+  onEdit,
+  onDelete,
+  onCancel,
+  confirmUI,
+  children,
+}: {
+  open: boolean;
+  onClose: () => void;
+  mode: SheetMode;
+  title: string;
+  recordId?: number | string;
+  formId: string;
+  isPending: boolean;
+  saveDisabled?: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  onCancel: () => void;
+  confirmUI?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const showForm = mode === "add" || mode === "edit";
+
+  return (
+    <Sheet open={open} onOpenChange={(next) => { if (!next) onClose(); }}>
+      <SheetContent
+        side="bottom"
+        showCloseButton={false}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-admin-line
+          bg-admin-bg p-0 shadow-2xl outline-none
+          sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
+          sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
+          sm:border-2 sm:border-admin-line"
+      >
+        <div className="sticky top-0 z-30 shrink-0 border-b border-admin-line bg-admin-card/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
+          <SheetTitle className="truncate text-xl leading-tight font-bold tracking-tight text-admin-ink">
+            {title}
+          </SheetTitle>
+          {recordId != null && (
+            <div className="mt-1 flex items-center gap-1.5">
+              <Hash className="h-3 w-3 text-admin-muted" />
+              <span className="text-xs font-semibold tracking-wide text-admin-muted tabular-nums">
+                ID: {recordId}
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
+          {children}
+          <div className="h-4" />
+        </div>
+
+        <div className="z-40 shrink-0 border-t-2 border-admin-primary/15 bg-admin-line px-6 py-5 pb-10 sm:rounded-b-4xl sm:pb-5">
+          {mode === "view" ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Button
+                variant="ghost"
+                onClick={onDelete}
+                disabled={isPending}
+                className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-[13px] font-semibold text-admin-error hover:border-admin-error/30 hover:bg-admin-error-bg"
+              >
+                {isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="mr-2 h-4 w-4" />
+                )}
+                Delete
+              </Button>
+              <Button
+                onClick={onEdit}
+                className="h-14 rounded-2xl border border-admin-primary text-[13px] font-semibold text-admin-primary hover:bg-admin-primary-soft active:scale-95"
+              >
+                <Pencil className="mr-2 h-4 w-4" />
+                Edit
+              </Button>
+            </div>
+          ) : (
+            showForm && (
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={onCancel}
+                  disabled={isPending}
+                  className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card text-[13px] font-semibold text-admin-muted hover:bg-admin-surface"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  form={formId}
+                  disabled={isPending || saveDisabled}
+                  className="h-14 rounded-2xl bg-admin-primary text-[13px] font-semibold text-white shadow-lg hover:bg-admin-primary-hover active:scale-95"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save
+                    </>
+                  )}
+                </Button>
+              </div>
+            )
+          )}
+        </div>
+        {confirmUI}
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+export function DetailCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "overflow-hidden rounded-3xl border-2 border-admin-line bg-admin-card",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export function DetailCell({
+  label,
+  value,
+  icon,
+  valueClassName,
+  multiline,
+}: {
+  label: string;
+  value: React.ReactNode;
+  icon?: React.ReactNode;
+  valueClassName?: string;
+  multiline?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex gap-2 border-b border-admin-line px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4",
+        multiline ? "items-start" : "items-center",
+      )}
+    >
+      <div className="flex shrink-0 items-center gap-1.5 text-admin-muted opacity-70 sm:gap-2">
+        {icon}
+        <span className="text-[11px] font-semibold tracking-wide whitespace-nowrap">
+          {label}
+        </span>
+      </div>
+      <span
+        className={cn(
+          "flex-1 text-right text-sm leading-snug font-semibold break-words text-admin-ink",
+          multiline && "text-left whitespace-pre-line",
+          valueClassName,
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+export function FormRow({
+  label,
+  required,
+  align = "center",
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  align?: "center" | "start";
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4",
+        align === "start" ? "items-start" : "items-center",
+      )}
+    >
+      <div className="flex shrink-0 items-center gap-1.5 text-admin-muted opacity-70 sm:gap-2">
+        <span className="text-[11px] font-semibold tracking-wide whitespace-nowrap">
+          {label}
+        </span>
+        {required && (
+          <span className="text-[11px] font-semibold text-admin-error">*</span>
+        )}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+export function ErrorBox({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-admin-error/30 bg-admin-error-bg p-4">
+      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-admin-error" />
+      <p className="text-sm leading-snug font-semibold text-admin-error">
+        {message}
+      </p>
+    </div>
+  );
+}
