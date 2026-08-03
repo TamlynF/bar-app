@@ -8,14 +8,19 @@ import {
   AlertCircle,
   CheckCircle2,
   ChevronRight,
+  Info,
   Loader2,
   Mail,
+  MessageSquare,
   Pencil,
+  Phone,
+  Receipt,
   RefreshCw,
   Star,
   Trash2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { toast } from "sonner";
@@ -48,6 +53,8 @@ interface EventRow {
   seating_required?: boolean | null;
 }
 
+type NamedRow = { full_name?: string | null };
+
 export interface GeneralBooking {
   id: string;
   event_id?: string;
@@ -58,7 +65,16 @@ export interface GeneralBooking {
   paid_amount?: number | null;
   total_amount?: number | null;
   special_requests?: string | null;
+  square_payment_id?: string | null;
+  square_order_id?: string | null;
   booking_created_at?: string;
+  booking_updated_at?: string | null;
+  created_by?: number | null;
+  updated_by?: number | null;
+  updated_by_contact_id?: number | null;
+  created_by_employee?: NamedRow | NamedRow[] | null;
+  updated_by_employee?: NamedRow | NamedRow[] | null;
+  updated_by_contact?: NamedRow | NamedRow[] | null;
   contacts?: ContactRow | null;
   events?: EventRow;
   booking_table_mappings?: { tables?: TableRow | null }[];
@@ -114,10 +130,23 @@ const FIELD =
   "h-10.5 w-full rounded-[11px] border-[1.5px] border-[#C9BB93] bg-white px-3 text-sm font-medium text-[#20231A] shadow-none focus-visible:border-[#34451F] focus-visible:ring-[3px] focus-visible:ring-[#D7A928]/30";
 const ACTION =
   "inline-flex items-center justify-center gap-2 text-[13px] font-semibold transition-[filter,box-shadow] hover:brightness-[0.94] active:scale-[0.98]";
+const ICON_BUTTON =
+  "relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors after:absolute after:-inset-2.5 after:content-[''] active:scale-[0.98] sm:h-8 sm:w-8";
+const INFO_PANEL = "w-72 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0";
+const INFO_PANEL_HEAD =
+  "block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 text-[12px] font-bold text-[#34451F]";
 
 const normStatus = (s?: string | null) => (s || "").trim().toLowerCase();
 
 const parseDate = (d?: string | null) => (d ? new Date(d + "T00:00:00") : null);
+
+const nameOf = (row?: NamedRow | NamedRow[] | null) => {
+  const first = Array.isArray(row) ? row[0] : row;
+  return first?.full_name?.trim() || null;
+};
+
+const formatStamp = (value?: string | null) =>
+  value ? format(new Date(value), "dd MMM yyyy · HH:mm") : "-";
 
 const initials = (name?: string | null) =>
   (name || "?")
@@ -144,12 +173,152 @@ function StatusPill({ status }: { status: string }) {
   );
 }
 
-function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
+function DetailRow({
+  label,
+  className,
+  action,
+  children,
+}: {
+  label: string;
+  className?: string;
+  action?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="flex items-baseline gap-3.5 border-b border-[#E3DCC6] px-4 py-2.5 last:border-b-0">
+    <div
+      className={cn(
+        "flex items-baseline gap-3.5 border-b border-[#E3DCC6] px-4 py-2.5 last:border-b-0",
+        className,
+      )}
+    >
       <span className={cn(FIELD_LABEL, "w-22 shrink-0 sm:w-27.5")}>{label}</span>
-      <span className="text-[13px] font-semibold text-[#20231A]">{children}</span>
+      <span className="min-w-0 text-[13px] font-semibold text-[#20231A]">{children}</span>
+      {action && <span className="-my-1 ml-auto shrink-0 self-center">{action}</span>}
     </div>
+  );
+}
+
+function SystemInfoPopover({ booking }: { booking: GeneralBooking }) {
+  const bookedBy = nameOf(booking.created_by_employee) || booking.contacts?.full_name || "-";
+  const modifiedBy =
+    booking.updated_by_contact_id != null
+      ? nameOf(booking.updated_by_contact) || booking.contacts?.full_name || "-"
+      : nameOf(booking.updated_by_employee) || "-";
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="System information"
+          title="Creation and modification details"
+          className={cn(ICON_BUTTON, "text-[#5E6654] hover:bg-[#DAD5C4]")}
+        >
+          <Info className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className={INFO_PANEL}>
+        <span className={INFO_PANEL_HEAD}>System Information</span>
+        <DetailRow label="Booking ID">
+          <span className="tabular-nums">#{booking.id}</span>
+        </DetailRow>
+        <DetailRow label="Event ID">
+          <span className="tabular-nums">{booking.event_id ? `#${booking.event_id}` : "-"}</span>
+        </DetailRow>
+        <DetailRow label="Booked on">
+          <span className="tabular-nums">{formatStamp(booking.booking_created_at)}</span>
+        </DetailRow>
+        <DetailRow label="Booked by">{bookedBy}</DetailRow>
+        <DetailRow label="Last modified">
+          <span className="tabular-nums">{formatStamp(booking.booking_updated_at)}</span>
+        </DetailRow>
+        <DetailRow label="Modified by">{modifiedBy}</DetailRow>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function TransactionInfoPopover({ booking }: { booking: GeneralBooking }) {
+  const paid = Number(booking.paid_amount) || 0;
+  const total = Number(booking.total_amount) || 0;
+  const outstanding = Math.max(0, total - paid);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label="Transaction details"
+          title="Payment and Square transaction details"
+          className={cn(ICON_BUTTON, "text-[#5E6654] hover:bg-[#ECE9DE]")}
+        >
+          <Receipt className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className={INFO_PANEL}>
+        <span className={INFO_PANEL_HEAD}>Transaction Details</span>
+        <DetailRow label="Paid">
+          <span className="tabular-nums">£{paid.toFixed(2)}</span>
+        </DetailRow>
+        <DetailRow label="Total">
+          <span className="tabular-nums">£{total.toFixed(2)}</span>
+        </DetailRow>
+        <DetailRow label="Outstanding">
+          <span className={cn("tabular-nums", outstanding > 0 && "text-[#8A5F0E]")}>
+            £{outstanding.toFixed(2)}
+          </span>
+        </DetailRow>
+        <DetailRow label="Payment ID">
+          <span className="block font-mono text-[11px] break-all">
+            {booking.square_payment_id || "-"}
+          </span>
+        </DetailRow>
+        <DetailRow label="Order ID">
+          <span className="block font-mono text-[11px] break-all">
+            {booking.square_order_id || "-"}
+          </span>
+        </DetailRow>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function BookerContactButton({ contact }: { contact?: ContactRow | null }) {
+  const email = contact?.email?.trim();
+  const phone = contact?.phone_no?.trim();
+  if (!email && !phone) return null;
+
+  const tel = `${contact?.country_code ?? ""}${phone ?? ""}`.replace(/\s+/g, "");
+  const item = "h-11 w-full justify-start rounded-xl px-3 text-[#20231A] hover:bg-[#ECE9DE]";
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={`Contact ${contact?.full_name || "booker"}`}
+          title="Contact booker"
+          className={cn(ICON_BUTTON, "text-[#34451F] hover:bg-[#E5EBD8]")}
+        >
+          <MessageSquare className="h-4 w-4" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        align="end"
+        className="w-48 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-1.5"
+      >
+        {email && (
+          <a href={`mailto:${email}`} className={cn(ACTION, item)}>
+            <Mail className="h-4 w-4 shrink-0 text-[#34451F]" /> Email
+          </a>
+        )}
+        {phone && (
+          <a href={`tel:${tel}`} className={cn(ACTION, item)}>
+            <Phone className="h-4 w-4 shrink-0 text-[#34451F]" /> Call
+          </a>
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }
 
@@ -418,12 +587,20 @@ export default function BookingList({
     return (
       <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] items-start gap-3.5 whitespace-normal">
         <div className={PANEL}>
-          <div className={PANEL_HEAD}>Booking details</div>
+          <div className={cn(PANEL_HEAD, "flex items-center justify-between gap-2 py-1.5 pr-2.5")}>
+            <span>Booking details</span>
+            <SystemInfoPopover booking={booking} />
+          </div>
           <DetailRow label="Booking ref">#{booking.id}</DetailRow>
-          <DetailRow label="Booked on">
-            {booking.booking_created_at
-              ? format(new Date(booking.booking_created_at), "dd MMM yyyy · HH:mm")
-              : "-"}
+          <DetailRow
+            label="Booker"
+            className="flex sm:hidden"
+            action={<BookerContactButton contact={contact} />}
+          >
+            <span className="block truncate">{contact?.full_name || "Unknown"}</span>
+          </DetailRow>
+          <DetailRow label="Booked on" className="hidden sm:flex">
+            {formatStamp(booking.booking_created_at)}
           </DetailRow>
           {bookingSeating && (
             <DetailRow label="Table">
@@ -438,7 +615,7 @@ export default function BookingList({
             </DetailRow>
           )}
           {hasPaymentFor(booking) && (
-            <DetailRow label="Payment">
+            <DetailRow label="Payment" action={<TransactionInfoPopover booking={booking} />}>
               <span className="tabular-nums">£{paid.toFixed(2)}</span>{" "}
               <span className="text-[#5E6654] tabular-nums">of £{total.toFixed(2)}</span>
               <span
@@ -454,7 +631,7 @@ export default function BookingList({
         </div>
 
         <div className="flex flex-col gap-2.5">
-          <div className={PANEL}>
+          <div className={cn(PANEL, "hidden sm:block")}>
             <div className={PANEL_HEAD}>Contact</div>
             <div className="flex items-center gap-3 px-4 py-3">
               <span className="flex h-9.5 w-9.5 shrink-0 items-center justify-center rounded-[10px] bg-[#E5EBD8] text-[11px] font-semibold text-[#34451F]">
@@ -506,7 +683,9 @@ export default function BookingList({
                 "h-11 flex-1 rounded-full border border-[#34451F] bg-[#E5EBD8] px-4 text-[#34451F]",
               )}
             >
-              <Pencil className="h-3.5 w-3.5" /> Edit booking
+              <Pencil className="h-3.5 w-3.5" />
+              <span className="sm:hidden">Edit</span>
+              <span className="hidden sm:inline">Edit booking</span>
             </button>
             <button
               type="button"
@@ -520,7 +699,10 @@ export default function BookingList({
                 });
                 if (ok) handleDeleteBooking(booking.id);
               }}
-              className={cn(ACTION, "h-11 rounded-full border border-[#D8D5C8] bg-white px-4 text-[#96302A]")}
+              className={cn(
+                ACTION,
+                "hidden h-11 rounded-full border border-[#D8D5C8] bg-white px-4 text-[#96302A] sm:inline-flex",
+              )}
             >
               <Trash2 className="h-3.5 w-3.5" /> Delete
             </button>
@@ -540,7 +722,7 @@ export default function BookingList({
                 }}
                 className={cn(
                   ACTION,
-                  "h-11 rounded-full border border-[#D8D5C8] bg-white px-4 text-[#96302A]",
+                  "h-11 rounded-full border border-[#E8D49A] bg-[#FBF3DC] px-4 text-[#8A5F0E]",
                 )}
               >
                 {isPending ? (
@@ -548,7 +730,8 @@ export default function BookingList({
                 ) : (
                   <RefreshCw className="h-3.5 w-3.5" />
                 )}
-                Refund via Square
+                <span className="sm:hidden">Refund</span>
+                <span className="hidden sm:inline">Refund via Square</span>
               </button>
             )}
           </div>

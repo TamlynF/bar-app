@@ -295,20 +295,31 @@ export default function PrivateLayoutClient({
             if (segment === "event") {
                 const eventId = normalizedPath.split("/")[3]
                 if (eventId) {
-                    const eventHref = internalHref(searchParams.get("back")) ?? `/event-setups/events?open=${eventId}`
+                    const setupHref = internalHref(searchParams.get("back"))
                     const eventTitle = searchParams.get("title")
-                    const trail: Crumb[] = [
-                        { label: "Events", href: "/event-setups" },
-                        { label: "Event list", href: "/event-setups/events" },
-                        { label: `#${eventId}`, href: eventHref },
-                        { label: "Bookings", href: "/event-bookings" },
-                    ]
-                    if (eventTitle) trail.push({ label: eventTitle })
+                    const subtitle = eventTitle ?? `Event #${eventId}`
+                    if (setupHref) {
+                        return {
+                            title: "Bookings",
+                            subtitle,
+                            backHref: setupHref,
+                            trail: [
+                                { label: "Events", href: "/event-setups" },
+                                { label: "Event list", href: "/event-setups/events" },
+                                { label: `#${eventId}`, href: setupHref },
+                                { label: "Bookings", href: "/event-bookings" },
+                                { label: subtitle },
+                            ],
+                        }
+                    }
                     return {
                         title: "Bookings",
-                        subtitle: eventTitle ?? `Event #${eventId}`,
-                        backHref: eventHref,
-                        trail,
+                        subtitle,
+                        backHref: "/event-bookings",
+                        trail: [
+                            { label: "Bookings", href: "/event-bookings" },
+                            { label: subtitle },
+                        ],
                     }
                 }
             }

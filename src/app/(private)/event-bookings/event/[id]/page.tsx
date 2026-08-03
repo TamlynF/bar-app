@@ -33,13 +33,22 @@ type BookingRow = {
   paid_amount: number | null;
   total_amount: number | null;
   special_requests: string | null;
+  square_payment_id: string | null;
+  square_order_id: string | null;
   created_at: string;
+  updated_at: string | null;
+  created_by: number | null;
+  updated_by: number | null;
+  updated_by_contact_id: number | null;
   contacts: {
     full_name: string | null;
     email: string | null;
     country_code: string | null;
     phone_no: string | null;
   } | null;
+  created_by_employee: { full_name: string | null } | null;
+  updated_by_employee: { full_name: string | null } | null;
+  updated_by_contact: { full_name: string | null } | null;
   booking_table_mappings: {
     tables: { id: number; name: string; max_capacity: number } | null;
   }[];
@@ -83,8 +92,13 @@ export default async function EventDetailPage({
     supabase
       .from("bookings")
       .select(
-        `id, group_name, group_size, status, payment_status, paid_amount, total_amount, special_requests, created_at,
+        `id, group_name, group_size, status, payment_status, paid_amount, total_amount, special_requests,
+        square_payment_id, square_order_id,
+        created_at, updated_at, created_by, updated_by, updated_by_contact_id,
         contacts!bookings_contact_id_fkey(full_name, email, country_code, phone_no),
+        created_by_employee:employees!created_by(full_name),
+        updated_by_employee:employees!updated_by(full_name),
+        updated_by_contact:contacts!updated_by_contact_id(full_name),
         booking_table_mappings(tables(id, name, max_capacity))`
       )
       .eq("event_id", eventId)
@@ -166,7 +180,16 @@ export default async function EventDetailPage({
     paid_amount: b.paid_amount,
     total_amount: b.total_amount,
     special_requests: b.special_requests,
+    square_payment_id: b.square_payment_id,
+    square_order_id: b.square_order_id,
     booking_created_at: b.created_at,
+    booking_updated_at: b.updated_at,
+    created_by: b.created_by,
+    updated_by: b.updated_by,
+    updated_by_contact_id: b.updated_by_contact_id,
+    created_by_employee: b.created_by_employee,
+    updated_by_employee: b.updated_by_employee,
+    updated_by_contact: b.updated_by_contact,
     contacts: b.contacts
       ? {
           full_name: b.contacts.full_name ?? undefined,
