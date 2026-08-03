@@ -91,6 +91,31 @@ These are set at runtime by the app and are irrelevant to Button/Input - **leave
 as a known warn, do not chase.**
 
 ## Run log
+- **2026-08-03 re-sync (bundled skill 2.1.220).** Remote anchor was exactly what the
+  2026-07-31 run uploaded (re-checked immediately before `finalize_plan`, still
+  unmoved). Both components **verification-unchanged** (`sourceKeys` matched → capture
+  skipped, `empty_worklist`, grades carried forward); `poc-src/` copies still byte-identical
+  to `src/components/ui/{button,input}.tsx` after the CRLF normalisation (see the diff
+  gotcha below). Two driver runs: (1) baseline, (2) after the conventions-header fix, per
+  the rebuild rule. styles.css grew **295 KB → 325 KB**. `upload.any:true` with
+  `styling:true`/`aux:true`, `components:[]`/`bundle:false`/`deletePaths:[]`. Uploaded all
+  18 DS files, render check 2/2 clean.
+- **The conventions-header token table had gone stale and was corrected - the important
+  part of this run.** The admin palette migrated espresso → olive (commits `ce426b2`,
+  `66cb074`), so **every row** of conventions.md's token table named a value the build no
+  longer ships: `--primary` `#5C4033`→`#34451F`, `--destructive` `#DC2626`→`#B33A32`,
+  `--foreground` `#1F1F1A`→`#20231A`, and the three rows that grouped tokens under one
+  value had all split apart (`--primary-foreground`/`--background`/`--accent` are now
+  `#FFFEFA`/`#F4F1E8`/`#E5EBD8`; `--secondary` `#ECE9DE` vs `--border`/`--input` `#D8D5C8`;
+  `--ring` is now gold `#D7A928`, not the primary). Rewrote the table from the shipped
+  `:root`, retitled the section "admin olive/cream", and fixed the Two-surfaces bullet.
+  Structure, voice and every other claim were left as-is (all still verify).
+- **GOTCHA - grepping the hex is NOT proof the token still holds it.** `#5C4033` still
+  appears **66×** in the shipped `_ds_bundle.css`, and `#F7F4EA` 15× / `#E6DFC8` 22× -
+  legacy espresso arbitrary classes (`bg-[#5C4033]`) that public and not-yet-migrated
+  pages still use, which Tailwind's repo-root scan pulls in. A hex-count validation would
+  have passed the stale table. **Validate the token table by grepping the DEFINITION**
+  (`grep -o -- '--primary: *#[0-9a-f]*' ds-bundle/_ds_bundle.css`), never the value.
 - **2026-07-31 re-sync (bundled skill 2.1.220).** Remote anchor was exactly the one
   the 2026-07-07 run uploaded (no concurrent sync; re-checked immediately before
   `finalize_plan` and still unmoved). Both components **verification-unchanged**
@@ -186,6 +211,10 @@ as a known warn, do not chase.**
   `--chip-c`/`--ev-theme`/`--spotify-bg`/`--badge-color`/`--bg` family. Still app
   runtime vars set inline by the app, irrelevant to Button/Input (2/2 render
   clean). Same nature - leave as a known warn.)
+  **2026-08-03 driver run listed 40 vars - the current authoritative count.** Dropped
+  back from 44; one name not seen before (`--mh`, a layout max-height inline var) on top
+  of the usual `--t`/`--y`/`--x`/`--fp-ar`/`--venue-ar`/`--radix-*` family. Still app
+  runtime vars set inline, irrelevant to Button/Input. Same nature - leave as a known warn.)
 - `[FONT_MISSING] "Cambria"` - **benign, accepted (checked 2026-06-23).** Cambria is
   NOT a brand font. It appears only inside Tailwind's default `.font-serif` fallback
   stack (`ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`) emitted into
@@ -196,6 +225,17 @@ as a known warn, do not chase.**
   (nothing to upload). Expected, not a new warn.
 
 ## Re-sync risks (what can go stale)
+- **The conventions.md token table is the highest-churn thing in this repo - re-validate
+  it EVERY sync.** It hardcodes ten admin token values, and the app's admin palette has
+  already been migrated wholesale once (espresso → olive, 2026-08-03). Nothing in the
+  pipeline catches this: the build, validate and render check all pass happily with a
+  header full of retired hexes, and the only casualty is the design agent, which trusts
+  the table and colours admin UI wrong. Validate by grepping the token DEFINITIONS in
+  `ds-bundle/_ds_bundle.css` (see the GOTCHA in the run log - hex counts lie).
+- **`diff` against `poc-src/` reports every line changed - that's CRLF, not drift.**
+  `src/components/ui/{button,input}.tsx` are CRLF; the `poc-src/` copies are LF. Pipe both
+  sides through `tr -d '\r'` before diffing or you'll conclude the components moved when
+  they didn't.
 - `node_modules/bar-app-ds/` is gitignored-by-location - a fresh clone has no
   mini-package; run `node .design-sync/build-minipkg.mjs` (durable script) then the
   `@tailwindcss/cli` styles.css step before re-running the driver.

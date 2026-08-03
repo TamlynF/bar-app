@@ -3,7 +3,7 @@
 A **proof-of-concept** import of two primitives (`Button`, `Input`) from the
 `bar-app` Next.js app. Read this before composing UI with them.
 
-## The token layer (admin espresso/cream)
+## The token layer (admin olive/cream)
 
 These shadcn-derived primitives reference semantic colour utilities - `bg-primary`,
 `text-primary-foreground`, `bg-secondary`, `bg-destructive`, `bg-accent`,
@@ -16,19 +16,25 @@ the public marketing palette:
 
 | Token | Value | Meaning |
 |---|---|---|
-| `--primary` / `--ring` | `#5C4033` | espresso |
-| `--primary-foreground` / `--background` / `--accent` | `#F7F4EA` | cream |
-| `--secondary` / `--border` / `--input` | `#E6DFC8` | soft tan border |
-| `--destructive` | `#DC2626` | status red |
-| `--foreground` | `#1F1F1A` | near-black ink |
+| `--primary` | `#34451F` | admin olive |
+| `--primary-foreground` / `--card` | `#FFFEFA` | near-white card |
+| `--background` | `#F4F1E8` | cream canvas |
+| `--secondary` / `--muted` | `#ECE9DE` | soft neutral surface |
+| `--accent` | `#E5EBD8` | soft olive tint |
+| `--border` / `--input` | `#D8D5C8` | hairline border |
+| `--foreground` / `--secondary-foreground` / `--accent-foreground` | `#20231A` | near-black ink |
+| `--muted-foreground` | `#5E6654` | muted text |
+| `--destructive` | `#B33A32` | status red |
+| `--ring` | `#D7A928` | brand gold - focus rings only |
 
-So out of the box `Button` looks like an **admin** button: espresso fill, cream text.
+So out of the box `Button` looks like an **admin** button: olive fill, near-white text.
+Gold is the focus-ring colour only - never a button fill.
 
 ## Two surfaces - pick the colour strategy per surface
 
 bar-app has two intentionally-separate surfaces:
 
-- **Admin portal** - cream canvas `#F7F4EA`, espresso primary `#5C4033`. Here the
+- **Admin portal** - cream canvas `#F4F1E8`, olive primary `#34451F`. Here the
   `variant` props match the surface: use `Button` / `Button variant="secondary"` /
   `variant="destructive"` as-is; they already carry the right colours.
 - **Public site** ("gritty bar") - deep olive `#26300D`/`#14180a`, gold accent
