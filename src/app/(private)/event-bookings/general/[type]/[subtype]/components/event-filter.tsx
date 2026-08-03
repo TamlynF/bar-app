@@ -30,7 +30,7 @@ function optionLabel(event: EventItem) {
 
 function Chip({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center gap-2.5 rounded-xl border border-[#C9BB93] bg-white px-3.5 py-2.5">
+    <div className="flex items-center gap-2 rounded-xl border border-[#C9BB93] bg-white px-3 py-2 sm:gap-2.5 sm:px-3.5 sm:py-2.5">
       <span className={FIELD_LABEL}>{label}</span>
       <span className="text-[15px] font-bold text-[#20231A] tabular-nums">{children}</span>
     </div>
@@ -78,7 +78,7 @@ export default function EventPickerBanner({
   const hasPayments = !!summary && (summary.totalExpected > 0 || summary.totalPaid > 0);
 
   return (
-    <section className="flex flex-wrap items-end gap-x-6 gap-y-4 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-5 py-4.5">
+    <section className="flex flex-wrap items-end gap-x-6 gap-y-3.5 rounded-2xl border border-[#D8D5C8] border-l-[5px] border-l-[#34451F] bg-[#ECE4CE] px-4 py-4 sm:gap-y-4 sm:px-5 sm:py-4.5">
       <div className="min-w-0 flex-1">
         {showPicker ? (
           <label htmlFor="event-picker" className={cn(FIELD_LABEL, "mb-1.5 block")}>
@@ -136,8 +136,8 @@ export default function EventPickerBanner({
         </p>
       </div>
 
-      <div className="flex flex-wrap items-end gap-2.5">
-        <div className="flex flex-wrap gap-2.5">
+      <div className="flex w-full flex-wrap items-end gap-2 sm:w-auto sm:gap-2.5">
+        <div className="flex flex-wrap gap-2 sm:gap-2.5">
           <Chip label="Bookings">{stats.bookings}</Chip>
           <Chip label="Guests">{stats.guests}</Chip>
           {summary?.seated && (
@@ -170,7 +170,7 @@ export default function EventPickerBanner({
         {summary && showPicker && (
           <Link
             href={`/event-bookings/event/${summary.eventId}`}
-            className="inline-flex h-9.5 items-center rounded-[11px] border border-[#D8D5C8] bg-white px-4 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE]"
+            className="inline-flex h-11 items-center justify-center rounded-[11px] border border-[#D8D5C8] bg-white px-4 text-[13px] font-semibold text-[#5E6654] transition-colors hover:bg-[#ECE9DE] max-sm:w-full sm:h-9.5"
           >
             Manage event
           </Link>

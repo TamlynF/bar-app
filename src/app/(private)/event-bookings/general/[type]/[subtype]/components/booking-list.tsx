@@ -146,7 +146,7 @@ function StatusPill({ status }: { status: string }) {
 function DetailRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-3.5 border-b border-[#E3DCC6] px-4 py-2.5 last:border-b-0">
-      <span className={cn(FIELD_LABEL, "w-27.5 shrink-0")}>{label}</span>
+      <span className={cn(FIELD_LABEL, "w-22 shrink-0 sm:w-27.5")}>{label}</span>
       <span className="text-[13px] font-semibold text-[#20231A]">{children}</span>
     </div>
   );
@@ -665,29 +665,30 @@ export default function BookingList({
     );
   };
 
-  const headCell = "sticky top-0 z-10 bg-[#34451F] px-4 py-3 text-left text-[11px] font-semibold tracking-wide whitespace-nowrap text-[#EDE9D8] uppercase shadow-[inset_0_-2px_0_#26300D]";
+  const headCell = "sticky top-0 z-10 bg-[#34451F] px-2.5 py-3 text-left text-[11px] font-semibold tracking-wide whitespace-nowrap text-[#EDE9D8] uppercase shadow-[inset_0_-2px_0_#26300D] sm:px-4";
+  const secondaryCell = "hidden sm:table-cell";
   const bodyCell = (open: boolean) =>
     cn(
-      "px-4 py-3.25 align-middle text-[13px] font-medium whitespace-nowrap",
+      "px-2.5 py-3.25 align-middle text-[13px] font-medium whitespace-nowrap sm:px-4",
       open ? "border-b border-dotted border-[#C4C0B0]" : "border-b border-[#EDEAE0]",
     );
 
   return (
     <>
       <div className="overflow-x-auto rounded-2xl border border-[#D8D5C8] bg-white sm:max-h-[calc(100svh-24rem)] sm:overflow-y-auto">
-        <table className="w-full min-w-175 border-collapse">
+        <table className="w-full border-collapse sm:min-w-175">
           <thead>
             <tr>
-              <th className={cn(headCell, "w-14")}>
+              <th className={cn(headCell, "w-11 px-0 sm:w-14 sm:px-1.5")}>
                 <span className="sr-only">Expand</span>
               </th>
-              {showEventColumn && <th className={headCell}>Event</th>}
+              {showEventColumn && <th className={cn(headCell, secondaryCell)}>Event</th>}
               <th className={headCell}>Team name</th>
-              <th className={headCell}>Booked by</th>
-              <th className={cn(headCell, "w-17.5 text-center")}>Guests</th>
-              {seatingRequired && <th className={cn(headCell, "w-25")}>Table</th>}
-              {showPayment && <th className={cn(headCell, "w-27.5")}>Payment</th>}
-              <th className={cn(headCell, "w-30")}>Status</th>
+              <th className={cn(headCell, secondaryCell)}>Booked by</th>
+              <th className={cn(headCell, "w-15 text-center sm:w-17.5")}>Guests</th>
+              {seatingRequired && <th className={cn(headCell, secondaryCell, "sm:w-25")}>Table</th>}
+              {showPayment && <th className={cn(headCell, secondaryCell, "sm:w-27.5")}>Payment</th>}
+              <th className={cn(headCell, "w-25 sm:w-30")}>Status</th>
             </tr>
           </thead>
           <tbody>
@@ -720,7 +721,7 @@ export default function BookingList({
                         open ? "bg-[#ECE9DE]" : "hover:bg-[#F4F1E8]",
                       )}
                     >
-                      <td className={cn(bodyCell(open), "px-1.5 py-0", open && "shadow-[inset_4px_0_0_#34451F]")}>
+                      <td className={cn(bodyCell(open), "px-0 py-0 sm:px-1.5", open && "shadow-[inset_4px_0_0_#34451F]")}>
                         <button
                           type="button"
                           aria-expanded={open}
@@ -735,12 +736,12 @@ export default function BookingList({
                         </button>
                       </td>
                       {showEventColumn && (
-                        <td className={cn(bodyCell(open), "text-[#5E6654]")}>
+                        <td className={cn(bodyCell(open), secondaryCell, "text-[#5E6654]")}>
                           {booking.events?.event_title || "Untitled event"}
                           {eventDate ? ` · ${format(eventDate, "d MMM yy")}` : ""}
                         </td>
                       )}
-                      <td className={bodyCell(open)}>
+                      <td className={cn(bodyCell(open), "max-sm:whitespace-normal")}>
                         <span className="text-sm font-semibold text-[#20231A]">{teamName}</span>
                         {booking.special_requests && (
                           <span title="Has a staff note" className="ml-1.5 inline-block align-[-2px]">
@@ -748,12 +749,14 @@ export default function BookingList({
                           </span>
                         )}
                       </td>
-                      <td className={cn(bodyCell(open), "text-[#5E6654]")}>{booking.contacts?.full_name || "-"}</td>
+                      <td className={cn(bodyCell(open), secondaryCell, "text-[#5E6654]")}>
+                        {booking.contacts?.full_name || "-"}
+                      </td>
                       <td className={cn(bodyCell(open), "text-center text-sm font-semibold text-[#20231A] tabular-nums")}>
                         {booking.group_size ?? 0}
                       </td>
                       {seatingRequired && (
-                        <td className={bodyCell(open)}>
+                        <td className={cn(bodyCell(open), secondaryCell)}>
                           {!bookingSeating ? (
                             <span className="text-[#5E6654]">—</span>
                           ) : table?.tables_name ? (
@@ -764,7 +767,7 @@ export default function BookingList({
                         </td>
                       )}
                       {showPayment && (
-                        <td className={bodyCell(open)}>
+                        <td className={cn(bodyCell(open), secondaryCell)}>
                           {!hasPaymentFor(booking) ? (
                             <span className="text-[#5E6654]">—</span>
                           ) : paid >= total ? (
@@ -786,7 +789,7 @@ export default function BookingList({
                       <tr>
                         <td
                           colSpan={columnCount}
-                          className="border-b border-dotted border-[#C4C0B0] bg-[#F6F4EC] px-5 py-4.5 shadow-[inset_4px_0_0_#34451F]"
+                          className="border-b border-dotted border-[#C4C0B0] bg-[#F6F4EC] px-3 py-4 shadow-[inset_4px_0_0_#34451F] sm:px-5 sm:py-4.5"
                         >
                           {isEditing ? renderEditor(booking) : renderView(booking)}
                         </td>

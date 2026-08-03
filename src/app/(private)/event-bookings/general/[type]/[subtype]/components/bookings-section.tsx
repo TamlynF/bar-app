@@ -97,26 +97,28 @@ export default function BookingsSection({
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className={cn(FIELD_LABEL, "mr-1")}>Step 2 · Show me</span>
-        {tabs.map(tab => {
-          const active = statusTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              type="button"
-              aria-pressed={active}
-              onClick={() => setStatusTab(tab.key)}
-              className={cn(
-                "h-11 rounded-[10px] px-3.5 text-[13px] font-semibold transition-colors sm:h-9.5",
-                active
-                  ? "bg-[#34451F] text-white"
-                  : "border border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#F4F1E8]",
-              )}
-            >
-              {tab.label} <span className="tabular-nums">({counts[tab.key] ?? 0})</span>
-            </button>
-          );
-        })}
+        <div className="no-scrollbar -mx-3 flex w-[calc(100%+1.5rem)] items-center gap-2 overflow-x-auto px-3 sm:mx-0 sm:w-auto sm:flex-wrap sm:overflow-visible sm:px-0">
+          <span className={cn(FIELD_LABEL, "shrink-0")}>Step 2 · Show me</span>
+          {tabs.map(tab => {
+            const active = statusTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                type="button"
+                aria-pressed={active}
+                onClick={() => setStatusTab(tab.key)}
+                className={cn(
+                  "h-11 shrink-0 rounded-[10px] px-3.5 text-[13px] font-semibold transition-colors sm:h-9.5",
+                  active
+                    ? "bg-[#34451F] text-white"
+                    : "border border-[#D8D5C8] bg-white text-[#5E6654] hover:bg-[#F4F1E8]",
+                )}
+              >
+                {tab.label} <span className="tabular-nums">({counts[tab.key] ?? 0})</span>
+              </button>
+            );
+          })}
+        </div>
         <div className="flex h-11 w-full items-center gap-2 rounded-[10px] border border-[#D8D5C8] bg-white px-3 focus-within:border-[#34451F] sm:ml-auto sm:h-9.5 sm:w-auto">
           <Search className="h-4 w-4 shrink-0 text-[#5E6654]" />
           <input
