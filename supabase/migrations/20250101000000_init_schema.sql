@@ -290,6 +290,7 @@ CREATE TABLE public.past_quiz_questions (
   events_id bigint,
   quiz_category_configs_id bigint,
   topic text,
+  difficulty text,
   updated_at timestamp with time zone NOT NULL DEFAULT now(),
   created_by integer,
   updated_by integer,

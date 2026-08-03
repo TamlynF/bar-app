@@ -682,9 +682,9 @@ export default function CategorySection({ eventId, eventDate, categoryConfigId, 
                           {isHigherOrLower && q.hint_year ? (
                             <div className="space-y-2">
                               <p className="text-sm leading-snug text-admin-ink">
-                                <span className="font-bold italic">{q.answer_text_ext ?? q.answer_text}</span> higher or lower than <span className="font-bold text-orange-600">{q.hint_year}</span>?
+                                <span className="font-bold italic">{q.answer_text_ext ?? q.answer_text}</span> higher or lower than <span className="font-bold text-admin-warning">{q.hint_year}</span>?
                               </p>
-                              <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#7A1F1F] px-3 py-2 text-white shadow-sm">
+                              <div className="flex w-full items-center justify-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm">
                                 <Target className="h-3 w-3 shrink-0 text-white/50" />
                                 <span className="text-center font-bold text-xs tracking-tight">
                                   {(q.release_year ?? 0) > q.hint_year ? 'Higher' : 'Lower'}

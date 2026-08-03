@@ -414,11 +414,7 @@ export default async function DashboardPage() {
       endTime: ev.end_time,
       eventType: et,
       hostName: ev.host_employee_id ? (employeeMap.get(ev.host_employee_id) ?? null) : null,
-      href: isQuiz
-        ? `/event-bookings/quiz-bookings?date=${ev.date}&eventId=${ev.id}`
-        : isBingo
-          ? `/event-bookings/bingo-bookings?date=${ev.date}&eventId=${ev.id}`
-          : isPrivate && ph
+      href: isPrivate && ph
             ? `/event-bookings/private-bookings/${ph.id}`
             : isMusic && bb
               ? `/event-bookings/music-bookings/${bb.id}`

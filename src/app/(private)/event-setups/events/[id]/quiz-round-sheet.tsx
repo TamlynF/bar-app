@@ -418,7 +418,8 @@ export default function QuizRoundSheet({
           eventId,
           category_name,
           categoryConfigId,
-          effectiveTopic
+          effectiveTopic,
+          difficulty
         );
       } else if (kind === "song") {
         const result = await saveMusicSnippetsAction(
@@ -432,7 +433,8 @@ export default function QuizRoundSheet({
           eventId,
           category_name,
           categoryConfigId,
-          effectiveTopic
+          effectiveTopic,
+          difficulty
         );
         playlistSynced = !result?.needsConnect && !!result?.ok;
         if (result?.playlistUrl) onPlaylistUrl?.(result.playlistUrl);
@@ -444,7 +446,8 @@ export default function QuizRoundSheet({
             // it to this round rather than trusting whatever the model echoed back.
             .map((q) => ({ ...q, category: category_name })),
           eventId,
-          effectiveTopic
+          effectiveTopic,
+          difficulty
         );
       }
 
@@ -467,6 +470,7 @@ export default function QuizRoundSheet({
     category_name,
     categoryConfigId,
     effectiveTopic,
+    difficulty,
     savedCount,
     noun,
     resetDrafts,

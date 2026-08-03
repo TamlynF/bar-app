@@ -368,7 +368,7 @@ export default function QuizGeneratorPage() {
       if (selectedData.length === 0) return
       setIsSaving(true)
       try {
-        await savePictureRoundAction(selectedData, parseInt(selectedEventId), category, selectedCategoryConfig!.id, topic)
+        await savePictureRoundAction(selectedData, parseInt(selectedEventId), category, selectedCategoryConfig!.id, topic, difficulty)
         setPictureItems([])
         setSelectedPictureIndices(new Set())
         await finishApproval(selectedData.length)
@@ -397,7 +397,8 @@ export default function QuizGeneratorPage() {
           parseInt(selectedEventId),
           category,
           selectedCategoryConfig!.id,
-          topic
+          topic,
+          difficulty
         )
         if (result?.needsConnect) {
           toast.warning("Connect Spotify on the event page to build the playlist.")
@@ -419,7 +420,7 @@ export default function QuizGeneratorPage() {
     if (selectedData.length === 0) return
     setIsSaving(true)
     try {
-      await saveQuizToDatabase(selectedData, parseInt(selectedEventId), topic)
+      await saveQuizToDatabase(selectedData, parseInt(selectedEventId), topic, difficulty)
       setQuestions([])
       setSelectedIndices(new Set())
       await finishApproval(selectedData.length)
@@ -635,7 +636,7 @@ export default function QuizGeneratorPage() {
                                   ) : !record.spotify_track_id && record.question_text ? (
                                     <p className="text-sm leading-snug font-bold text-admin-ink">{record.question_text}</p>
                                   ) : null}
-                                  <div className="flex w-fit items-center gap-2 rounded-xl bg-[#7A1F1F] px-3 py-2 text-white shadow-sm">
+                                  <div className="flex w-fit items-center gap-2 rounded-xl bg-admin-primary px-3 py-2 text-white shadow-sm">
                                     <Target className="h-3 w-3 text-white/50" />
                                     <span className="font-bold text-xs tracking-tight">{record.answer_text}</span>
                                   </div>
@@ -743,19 +744,19 @@ export default function QuizGeneratorPage() {
             <div className="space-y-1.5">
               <Label className="ml-0.5 block text-left text-[13px] font-semibold text-admin-ink">Difficulty</Label>
               <div className="flex gap-2">
-                {[{ value: 'Easy', label: 'Easy' }, { value: 'Medium', label: 'Medium' }, { value: 'Difficult', label: 'Hard' }].map(opt => (
+                {['Easy', 'Medium', 'Hard'].map(opt => (
                   <button
-                    key={opt.value}
+                    key={opt}
                     type="button"
-                    onClick={() => setDifficulty(opt.value)}
+                    onClick={() => setDifficulty(opt)}
                     className={cn(
                       "h-11 flex-1 rounded-xl text-[13px] font-semibold transition-all",
-                      difficulty === opt.value
+                      difficulty === opt
                         ? "bg-admin-primary text-white shadow-sm"
                         : "border border-admin-line bg-admin-bg text-admin-muted hover:bg-admin-line/50"
                     )}
                   >
-                    {opt.label}
+                    {opt}
                   </button>
                 ))}
               </div>
@@ -974,7 +975,7 @@ export default function QuizGeneratorPage() {
                       {isHigherOrLower && song.hint_year ? (
                         <div className="space-y-2">
                           <p className="text-sm leading-snug text-admin-ink">
-                            <span className="font-bold italic">{song.artist} - {song.title}</span> higher or lower than <span className="font-bold text-orange-600">{song.hint_year}</span>?
+                            <span className="font-bold italic">{song.artist} - {song.title}</span> higher or lower than <span className="font-bold text-admin-warning">{song.hint_year}</span>?
                           </p>
                           <div className="rounded-md bg-admin-bg px-2.5 py-1.5 text-center">
                             <p className="font-bold text-xs leading-tight text-admin-primary">

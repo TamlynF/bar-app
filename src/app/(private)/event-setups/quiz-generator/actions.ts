@@ -37,6 +37,20 @@ export type SavedMusicSnippet = {
   hint_year: number | null
 }
 
+export type PastQuestionCategoryJoin = {
+  category_name: string;
+  order_no?: number | null;
+  is_picture?: boolean | null;
+  include_spotify?: boolean | null;
+  is_higher_lower?: boolean | null;
+}
+
+export type PastQuestionEventJoin = {
+  id: number;
+  title: string | null;
+  date: string;
+}
+
 export type PastQuestionRecord = {
   id: string;
   question_text: string;
@@ -44,13 +58,15 @@ export type PastQuestionRecord = {
   answer_text_ext?: string | null;
   category: string;
   asked_on: string;
+  topic?: string | null;
+  difficulty?: string | null;
   events_id: number | null;
   quiz_category_configs_id: number | null;
   question_no: number | null;
-  quiz_category_configs?: {
-    category_name: string;
-  } | null;
+  quiz_category_configs?: PastQuestionCategoryJoin | null;
+  events?: PastQuestionEventJoin | PastQuestionEventJoin[] | null;
   release_year?: number | null;
+  hint_year?: number | null;
   spotify_track_id?: string | null;
   image_url?: string | null;
 }
@@ -140,7 +156,7 @@ export async function generateQuizAction(
   
   Requirements:
   - Exactly ${numberOfQuestions} unique questions.
-  - Difficulty: ${difficulty === 'Easy' ? 'All questions should be easy - common knowledge that most people would know.' : difficulty === 'Difficult' ? 'All questions should be challenging - obscure facts and "bar-room debate" level difficulty.' : 'Mixture of easy, medium, and "bar-room debate" hard.'}
+  - Difficulty: ${difficulty === 'Easy' ? 'All questions should be easy - common knowledge that most people would know.' : difficulty === 'Hard' ? 'All questions should be challenging - obscure facts and "bar-room debate" level difficulty.' : 'Mixture of easy, medium, and "bar-room debate" hard.'}
   - Each question must be a direct, concise question only. No conversational filler, no preamble, no phrases like "Right then", "Here's one for you", "A proper head scratcher" etc. Just the question itself.
   - Answers must be short and factual - just the answer, nothing else.
   - Avoid these past questions: [${pastQuestionsList}].
@@ -241,7 +257,7 @@ export async function getFullQuestionHistoryAction(eventIdFilter?: string): Prom
 
   let query = supabase
     .from('past_quiz_questions')
-    .select('*, quiz_category_configs(category_name)')
+    .select('*, quiz_category_configs(category_name, order_no, is_picture, include_spotify, is_higher_lower), events(id, title, date)')
     .order('asked_on', { ascending: false })
     .order('quiz_category_configs_id', { ascending: true })
     .order('question_no', { ascending: true, nullsFirst: false });
@@ -480,7 +496,12 @@ export async function getUpcomingQuizzesAction(): Promise<QuizEventSummary[]> {
   return (data as unknown as QuizEventSummary[]) || [];
 }
 
-export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: number | null, topic: string) {
+export async function saveQuizToDatabase(
+  questions: QuizQuestion[],
+  eventId: number | null,
+  topic: string,
+  difficulty: string = ''
+) {
   const supabase = await createClient()
 
   let currentEmployeeId: number | null = null;
@@ -529,6 +550,7 @@ export async function saveQuizToDatabase(questions: QuizQuestion[], eventId: num
       answer_text: q.answer,
       category: q.category,
       topic: topic.trim() || null,
+      difficulty: difficulty.trim() || null,
       asked_on: askedOn,
       events_id: eventId,
       quiz_category_configs_id: cid,
@@ -651,7 +673,7 @@ export async function generateMusicSnippetsAction(
 
     const difficultyLine = difficulty === 'Easy'
       ? '- Song difficulty: All songs should be very well-known hits that almost everyone would recognise.'
-      : difficulty === 'Difficult'
+      : difficulty === 'Hard'
         ? '- Song difficulty: Include obscure or lesser-known tracks that only music enthusiasts would recognise.'
         : '- Song difficulty: Mix of well-known hits and some lesser-known tracks.'
 
@@ -775,7 +797,8 @@ export async function saveMusicSnippetsAction(
   eventId: number,
   categoryName: string,
   categoryConfigId: number,
-  topic: string = ''
+  topic: string = '',
+  difficulty: string = ''
 ) {
   const supabase = await createClient()
 
@@ -814,6 +837,7 @@ export async function saveMusicSnippetsAction(
         answer_text_ext: songIdentity,
         category: categoryName,
         topic: topic.trim() || null,
+        difficulty: difficulty.trim() || null,
         release_year: s.year,
         spotify_track_id: s.spotify_track_id,
         hint_year: s.hint_year,
@@ -833,6 +857,7 @@ export async function saveMusicSnippetsAction(
       answer_text_ext: null,
       category: categoryName,
       topic: topic.trim() || null,
+      difficulty: difficulty.trim() || null,
       release_year: s.year,
       spotify_track_id: s.spotify_track_id,
       hint_year: s.hint_year || null,
@@ -1020,7 +1045,7 @@ export async function generatePictureRoundAction(
 
     const difficultyGuide = difficulty === 'Easy'
       ? 'very well-known, instantly recognisable by almost everyone'
-      : difficulty === 'Difficult'
+      : difficulty === 'Hard'
         ? 'less common or niche - a challenge for enthusiasts'
         : 'a mix of well-known and moderately challenging'
 
@@ -1090,7 +1115,8 @@ export async function savePictureRoundAction(
   eventId: number,
   categoryName: string,
   categoryConfigId: number,
-  questionText: string
+  questionText: string,
+  difficulty: string = ''
 ): Promise<void> {
   const supabase = await createClient()
   const adminClient = createAdminClient()
@@ -1145,6 +1171,7 @@ export async function savePictureRoundAction(
       answer_text: item.answer,
       category: categoryName,
       topic: questionText,
+      difficulty: difficulty.trim() || null,
       image_url: storedImageUrl,
       asked_on: askedOn,
       events_id: eventId,
