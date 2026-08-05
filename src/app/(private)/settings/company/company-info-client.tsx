@@ -556,7 +556,10 @@ export default function CompanyInfoClient({
                 <Link
                   href="/settings/venue"
                   title="Open the venue layout planner"
-                  className="inline-flex items-center gap-1 text-admin-primary underline underline-offset-2 hover:opacity-70"
+                  className={cn(
+                    "inline-flex items-center gap-1 underline underline-offset-2 hover:opacity-70",
+                    hasVenuePlan ? "text-admin-primary" : "text-admin-error",
+                  )}
                 >
                   {hasVenuePlan
                     ? "Click to view venue plan..."
