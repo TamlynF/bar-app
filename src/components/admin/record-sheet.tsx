@@ -418,17 +418,22 @@ export function DetailCell({
   icon,
   valueClassName,
   multiline,
+  dense,
 }: {
   label: string;
   value: React.ReactNode;
   icon?: React.ReactNode;
   valueClassName?: string;
   multiline?: boolean;
+  // For cards that are a run of short facts, where full-height rows push the
+  // rest of the record off the screen.
+  dense?: boolean;
 }) {
   return (
     <div
       className={cn(
-        "flex gap-2 border-b border-admin-line px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4",
+        "flex gap-2 border-b border-admin-line px-4 last:border-0 sm:gap-3 sm:px-5",
+        dense ? "py-1.5 sm:py-2" : "py-2.5 sm:py-4",
         multiline ? "items-start" : "items-center",
       )}
     >

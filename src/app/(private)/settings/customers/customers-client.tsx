@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useMemo, useState } from "react";
 import {
@@ -71,11 +71,45 @@ const FIELD_INPUT =
 
 const INDENT = ["pl-4 sm:pl-5", "pl-9 sm:pl-10", "pl-14 sm:pl-15"];
 
-// A count worth reading stands forward; a zero stays out of the way.
-function countTone(value: number): string {
-  return value > 0
-    ? "border-admin-primary/40 bg-admin-primary-soft text-admin-primary"
-    : "border-admin-line bg-admin-surface text-admin-muted";
+// Shared by the leaf rows and the heading above them, so the two cannot drift.
+const LEAF_COLUMNS =
+  "grid-cols-[minmax(0,1fr)_6.5rem_minmax(0,7rem)_6.5rem_1.5rem] items-center gap-2";
+
+// A count worth reading stands forward; a zero stays out of the way. The top
+// level carries the most weight so the three sections read before their groups.
+function countTone(value: number, depth = 1): string {
+  if (value <= 0) return "border-admin-line bg-admin-surface text-admin-muted";
+  return depth === 0
+    ? "border-admin-primary bg-admin-primary text-white"
+    : "border-admin-primary/40 bg-admin-primary-soft text-admin-primary";
+}
+
+const TREE_TONE = [
+  "bg-admin-primary-soft",
+  "bg-admin-primary-soft/40",
+  "",
+] as const;
+
+// Where a record has got to, in colour: settled, stopped, or still moving.
+const STATUS_TONES: Record<string, string> = {
+  confirmed: "text-admin-success",
+  booked: "text-admin-success",
+  paid: "text-admin-success",
+  declined: "text-admin-error",
+  cancelled: "text-admin-error",
+  canceled: "text-admin-error",
+  rejected: "text-admin-error",
+  new: "text-admin-warning",
+  reviewing: "text-admin-warning",
+  waitlisted: "text-admin-warning",
+  offered: "text-admin-warning",
+  pending: "text-admin-warning",
+  pending_review: "text-admin-warning",
+};
+
+function statusTone(status: string): string {
+  const key = status.trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return STATUS_TONES[key] ?? "text-admin-muted";
 }
 
 function toTitleCase(str?: string | null) {
@@ -233,7 +267,8 @@ function TreeRow({
         className={cn(
           "flex w-full items-center gap-2 py-2.5 pr-4 text-left sm:pr-5",
           INDENT[depth],
-          expandable && "hover:bg-admin-surface/60",
+          TREE_TONE[depth],
+          expandable && "hover:brightness-97",
           !expandable && "cursor-default",
         )}
       >
@@ -249,8 +284,8 @@ function TreeRow({
           className={cn(
             "min-w-0 flex-1 truncate",
             depth === 0
-              ? "text-[13px] font-semibold text-admin-ink"
-              : "text-[12px] font-medium text-admin-ink",
+              ? "text-[13px] font-bold text-admin-ink"
+              : "text-[12px] font-semibold text-admin-ink",
           )}
         >
           {label}
@@ -263,8 +298,9 @@ function TreeRow({
         {count != null && (
           <span
             className={cn(
-              "shrink-0 rounded-lg border px-2 py-0.5 text-[11px] font-semibold tabular-nums",
-              countTone(count),
+              "shrink-0 rounded-lg border px-2 py-0.5 text-[11px] tabular-nums",
+              depth === 0 ? "font-bold" : "font-semibold",
+              countTone(count, depth),
             )}
           >
             {count}
@@ -276,69 +312,155 @@ function TreeRow({
   );
 }
 
-function LeafRow({
-  title,
-  date,
-  tags,
-  href,
-  linkTitle = "View event",
-}: {
-  title: string;
-  date: string | null;
-  tags: string[];
-  href: string | null;
-  linkTitle?: string;
-}) {
-  const detail = tags.filter(Boolean).join(" · ");
-
+// Sits directly above a subtype's rows and names its columns. Hidden on phones,
+// where the rows fold into two lines and there are no columns to label.
+function LeafHeader({ columns }: { columns: [string, string, string, string] }) {
   return (
     <div
       className={cn(
-        "flex items-center gap-2 border-b border-admin-line py-2 pr-4 last:border-0 sm:pr-5",
+        "hidden border-b border-admin-line bg-admin-surface/70 py-1.5 pr-4 sm:block sm:pr-5",
         INDENT[2],
       )}
     >
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-[12px] font-medium text-admin-ink">{title}</p>
-        {detail && <p className="mt-0.5 truncate text-[11px] text-admin-muted">{detail}</p>}
+      <div
+        className={cn(
+          "grid text-[11px] font-semibold tracking-wide text-admin-muted uppercase",
+          LEAF_COLUMNS,
+        )}
+      >
+        {columns.map((column, index) => (
+          <span key={index} className="min-w-0 truncate">
+            {column}
+          </span>
+        ))}
+        <span />
       </div>
-      <span className="shrink-0 text-[11px] font-medium text-admin-muted tabular-nums">
-        {formatDate(date)}
-      </span>
-      {href && (
-        <Link
-          href={href}
-          aria-label={`${linkTitle}: ${title}`}
-          title={linkTitle}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-admin-primary transition-colors hover:bg-admin-primary-soft"
-        >
-          <ExternalLink className="h-3.5 w-3.5" />
-        </Link>
-      )}
     </div>
   );
 }
 
-function ActivityTree({ activity }: { activity: ContactActivity }) {
+// One shape for all three sections, so the dates and statuses line up whichever
+// branch you are in. Private hire has nothing to put in the middle column and
+// leaves it empty rather than shifting everything left.
+function LeafRow({
+  primary,
+  primaryWon = false,
+  date,
+  middle,
+  status,
+  href,
+  linkTitle = "View event",
+}: {
+  primary: string;
+  // A quiz team that took the win, marked against the name that won it.
+  primaryWon?: boolean;
+  date: string | null;
+  middle?: string;
+  status?: string;
+  href: string | null;
+  linkTitle?: string;
+}) {
+  const link = href ? (
+    <Link
+      href={href}
+      aria-label={`${linkTitle}: ${primary}`}
+      title={linkTitle}
+      className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-admin-primary transition-colors hover:bg-admin-primary-soft"
+    >
+      <ExternalLink className="h-3.5 w-3.5" />
+    </Link>
+  ) : null;
+
+  return (
+    <div
+      className={cn(
+        "border-b border-admin-line py-2 pr-4 last:border-0 sm:pr-5",
+        INDENT[2],
+      )}
+    >
+      <div className={cn("hidden sm:grid", LEAF_COLUMNS)}>
+        <span className="flex min-w-0 items-center gap-1.5 text-[12px] font-medium text-admin-ink">
+          <span className="min-w-0 truncate">{primary}</span>
+          {primaryWon && (
+            <Trophy className="h-3.5 w-3.5 shrink-0 text-admin-gold" aria-label="Won this quiz" />
+          )}
+        </span>
+        <span className="text-[11px] text-admin-muted tabular-nums">{formatDate(date)}</span>
+        <span className="min-w-0 truncate text-[11px] text-admin-muted">{middle ?? ""}</span>
+        <span className={cn("min-w-0 truncate text-[11px] font-semibold", statusTone(status ?? ""))}>
+          {status ? toTitleCase(status) : ""}
+        </span>
+        {link}
+      </div>
+
+      {/* No room for columns on a phone, so the detail folds under the name. */}
+      <div className="sm:hidden">
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-admin-ink">
+            {primary}
+          </span>
+          {primaryWon && (
+            <Trophy className="h-3.5 w-3.5 shrink-0 text-admin-gold" aria-label="Won this quiz" />
+          )}
+          {link}
+        </div>
+        <p className="mt-0.5 truncate text-[11px] text-admin-muted">
+          {[formatDate(date), middle].filter(Boolean).join(" Â· ")}
+          {status && (
+            <>
+              {" Â· "}
+              <span className={cn("font-semibold", statusTone(status))}>{toTitleCase(status)}</span>
+            </>
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ActivityTree({
+  activity,
+  contactId,
+}: {
+  activity: ContactActivity;
+  contactId: number;
+}) {
   const { bookings, bandRequests, privateHires } = activity;
+  // Tells the destination page where you came from, so its breadcrumb can lead
+  // back to this customer rather than to whichever list it normally sits under.
+  const origin = `from=customer&customerId=${contactId}`;
 
   return (
     <>
       <TreeRow label="Bookings" count={bookings.length} depth={0}>
         {bookings.length > 0 &&
-          groupBy(bookings, (b) => b.subtype).map(([subtype, rows]) => (
+          groupBy(bookings, (b) => toTitleCase(b.subtype)).map(([subtype, rows]) => (
             <TreeRow key={subtype} label={subtype} count={rows.length} depth={1}>
+              {/* The column holds the booker's own name where the form never
+                  asked for a group one, so it says so. */}
+              <LeafHeader
+                columns={[
+                  rows.some((booking) => booking.collectsGroupName) ? "Group" : "Name",
+                  "Date",
+                  "Event",
+                  "Status",
+                ]}
+              />
               {rows.map((booking) => (
                 <LeafRow
                   key={booking.id}
-                  title={booking.title}
+                  primary={booking.groupName?.trim() || "-"}
+                  primaryWon={booking.isQuiz && booking.isWinner}
                   date={booking.date}
-                  tags={[booking.groupName ?? "", toTitleCase(booking.status)]}
+                  middle={booking.title}
+                  status={booking.status}
                   // Bookings live under the event they were made against, so
-                  // that page is where you go to see this one.
+                  // that page is where you go to see this one - bookingId picks
+                  // the row out, title names the event in the header.
                   href={
                     booking.eventId != null
-                      ? `/event-bookings/event/${booking.eventId}`
+                      ? `/event-bookings/event/${booking.eventId}?bookingId=${booking.id}` +
+                        `&title=${encodeURIComponent(booking.title)}&${origin}`
                       : null
                   }
                   linkTitle="View booking"
@@ -348,28 +470,21 @@ function ActivityTree({ activity }: { activity: ContactActivity }) {
           ))}
       </TreeRow>
 
-      {/* Act first, then what they play as - one person can bring in more than
-          one act, and that is the split worth seeing before anything else. */}
       <TreeRow label="Band requests" count={bandRequests.length} depth={0}>
         {bandRequests.length > 0 &&
-          groupBy(bandRequests, (r) => r.actName).map(([actName, byAct]) => (
-            <TreeRow key={actName} label={actName} count={byAct.length} depth={1}>
-              {groupBy(byAct, (r) => toTitleCase(r.type)).map(([type, rows]) => (
-                <TreeRow key={type} label={type} count={rows.length} depth={2}>
-                  {rows.map((request) => (
-                    <LeafRow
-                      key={request.id}
-                      title={request.title}
-                      date={request.date}
-                      tags={[toTitleCase(request.genre), toTitleCase(request.status)]}
-                      href={
-                        request.eventId != null
-                          ? `/event-setups/events/${request.eventId}`
-                          : null
-                      }
-                    />
-                  ))}
-                </TreeRow>
+          groupBy(bandRequests, (r) => toTitleCase(r.type)).map(([type, rows]) => (
+            <TreeRow key={type} label={type} count={rows.length} depth={1}>
+              <LeafHeader columns={["Act", "Date", "Genre", "Status"]} />
+              {rows.map((request) => (
+                <LeafRow
+                  key={request.id}
+                  primary={request.actName}
+                  date={request.date}
+                  middle={toTitleCase(request.genre)}
+                  status={request.status}
+                  href={`/event-bookings/music-bookings?request=${request.id}&${origin}`}
+                  linkTitle="View band request"
+                />
               ))}
             </TreeRow>
           ))}
@@ -377,19 +492,17 @@ function ActivityTree({ activity }: { activity: ContactActivity }) {
 
       <TreeRow label="Private hire" count={privateHires.length} depth={0}>
         {privateHires.length > 0 &&
-          groupBy(privateHires, (h) => h.subtype).map(([subtype, rows]) => (
+          groupBy(privateHires, (h) => toTitleCase(h.subtype)).map(([subtype, rows]) => (
             <TreeRow key={subtype} label={subtype} count={rows.length} depth={1}>
+              <LeafHeader columns={["Reason", "Date", "", "Status"]} />
               {rows.map((hire) => (
                 <LeafRow
                   key={hire.id}
-                  title={hire.title}
+                  primary={toTitleCase(hire.reason)}
                   date={hire.date}
-                  tags={[
-                    toTitleCase(hire.reason),
-                    toTitleCase(hire.status),
-                    `${hire.guests} guest${hire.guests === 1 ? "" : "s"}`,
-                  ]}
-                  href={hire.eventId != null ? `/event-setups/events/${hire.eventId}` : null}
+                  status={hire.status}
+                  href={`/event-bookings/private-bookings?request=${hire.id}&${origin}`}
+                  linkTitle="View private hire request"
                 />
               ))}
             </TreeRow>
@@ -626,8 +739,9 @@ export default function CustomersClient({
         {!showForm && selected && (
           <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
             <DetailCard>
-              <DetailCell label="Full name" value={selected.full_name} />
+              <DetailCell dense label="Full name" value={selected.full_name} />
               <DetailCell
+                dense
                 label="Email"
                 value={
                   <span className="inline-flex items-center gap-1.5">
@@ -646,6 +760,7 @@ export default function CustomersClient({
                 }
               />
               <DetailCell
+                dense
                 label="Phone"
                 value={
                   <span className="inline-flex items-center gap-1.5">
@@ -666,7 +781,7 @@ export default function CustomersClient({
               {/* Marketing sits in the header pill; birthday only earns a row
                   when there is one on record. */}
               {selected.birthday && (
-                <DetailCell label="Birthday" value={formatDate(selected.birthday)} />
+                <DetailCell dense label="Birthday" value={formatDate(selected.birthday)} />
               )}
             </DetailCard>
 
@@ -682,9 +797,10 @@ export default function CustomersClient({
                 </span>
               </div>
 
-              <ActivityTree activity={selectedActivity} />
+              <ActivityTree activity={selectedActivity} contactId={selected.id} />
 
               <DetailCell
+                dense
                 label="First seen"
                 value={
                   selected.first_interaction_date
@@ -693,6 +809,7 @@ export default function CustomersClient({
                 }
               />
               <DetailCell
+                dense
                 label="Last seen"
                 value={
                   selected.last_interaction_date
@@ -709,8 +826,8 @@ export default function CustomersClient({
                   Quiz record
                 </span>
               </div>
-              <DetailCell label="Quizzes entered" value={String(quizBookings.length)} />
-              <DetailCell label="Quizzes won" value={String(quizWins.length)} />
+              <DetailCell dense label="Quizzes entered" value={String(quizBookings.length)} />
+              <DetailCell dense label="Quizzes won" value={String(quizWins.length)} />
               <DetailCell
                 label="Team names"
                 multiline

@@ -246,6 +246,11 @@ export default function PrivateLayoutClient({
 
             const segment = normalizedPath.split("/")[2]
 
+            /* Arrived from a customer's record, so the trail leads back to that
+               person rather than to the list this page normally hangs off. */
+            const customerId = searchParams.get("from") === "customer" ? searchParams.get("customerId") : null
+            const customerHref = "/settings/customers"
+
             const matchedRequest = requestSubItems.find(
                 (s) => normalizedPath === s.href || normalizedPath.startsWith(`${s.href}/`)
             )
@@ -260,6 +265,20 @@ export default function PrivateLayoutClient({
                     const eventTitle = searchParams.get("title")
                     const navLabel = eventSubItems.find((s) => normalizedPath === s.href)?.label
                     const subtitle = eventTitle ?? navLabel ?? `Event #${eventId}`
+                    if (customerId) {
+                        return {
+                            title: "Bookings",
+                            subtitle,
+                            backHref: customerHref,
+                            trail: [
+                                { label: "Settings", href: "/settings" },
+                                { label: "Customers", href: customerHref },
+                                { label: `#${customerId}`, href: customerHref },
+                                { label: "Bookings", href: "/event-bookings" },
+                                { label: subtitle },
+                            ],
+                        }
+                    }
                     if (setupHref) {
                         return {
                             title: "Bookings",
@@ -285,11 +304,22 @@ export default function PrivateLayoutClient({
                 }
             }
 
-            if (segment === "music-bookings") {
-                return { title: "Requests", subtitle: "Band applications", backHref: "/requests" }
-            }
-            if (segment === "private-bookings") {
-                return { title: "Requests", subtitle: "Private hire", backHref: "/requests" }
+            if (segment === "music-bookings" || segment === "private-bookings") {
+                const subtitle = segment === "music-bookings" ? "Band applications" : "Private hire"
+                if (customerId) {
+                    return {
+                        title: "Requests",
+                        subtitle,
+                        backHref: customerHref,
+                        trail: [
+                            { label: "Settings", href: "/settings" },
+                            { label: `Customer #${customerId}`, href: customerHref },
+                            { label: "Requests", href: "/requests" },
+                            { label: subtitle },
+                        ],
+                    }
+                }
+                return { title: "Requests", subtitle, backHref: "/requests" }
             }
 
             const matchedNav = eventSubItems.find(

@@ -1,4 +1,7 @@
 import type { createClient } from "@/lib/supabase/server";
+import { normalizeBookingConfig, type BookingConfig } from "@/lib/booking-config";
+import { resolveOwningBookingConfig } from "@/lib/resolve-booking-config";
+import type { BookingGrouping } from "@/lib/booking-grouping";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -9,6 +12,9 @@ export type ContactBooking = {
   title: string;
   date: string | null;
   groupName: string | null;
+  // False when the booking form never asked for a group name, in which case the
+  // column is holding the booker's own name.
+  collectsGroupName: boolean;
   status: string;
   isQuiz: boolean;
   isWinner: boolean;
@@ -52,8 +58,55 @@ export function activityTotal(activity: ContactActivity): number {
   return activity.bookings.length + activity.bandRequests.length + activity.privateHires.length;
 }
 
-type EventRow = { id: number; title: string | null; date: string | null; event_subtypes_id: number | null };
-type SubtypeRow = { id: number; name: string | null; is_quiz: boolean | null };
+type EventRow = {
+  id: number;
+  title: string | null;
+  date: string | null;
+  event_subtypes_id: number | null;
+  event_types_id: number | null;
+  booking_config: BookingConfig | null;
+};
+type SubtypeRow = {
+  id: number;
+  name: string | null;
+  behavior: string | null;
+  booking_config: BookingConfig | null;
+};
+type TypeRow = {
+  id: number;
+  booking_grouping: string | null;
+  booking_config: BookingConfig | null;
+};
+
+// PostgREST answers with at most 1000 rows, so a single select quietly returns a
+// slice of a busy venue's history. Every read here pages to the end.
+const PAGE_SIZE = 1000;
+
+type PageQuery = PromiseLike<{ data: unknown; error: { message: string } | null }>;
+
+async function fetchAll<T>(
+  label: string,
+  page: (from: number, to: number) => PageQuery,
+): Promise<T[]> {
+  const rows: T[] = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await page(from, from + PAGE_SIZE - 1);
+    if (error) {
+      console.error(`Contact activity: reading ${label} failed:`, error);
+      break;
+    }
+    const batch = (data as T[] | null) ?? [];
+    rows.push(...batch);
+    if (batch.length < PAGE_SIZE) break;
+  }
+  return rows;
+}
+
+// Private hires and music acts already have their own sections; counting their
+// events under Bookings as well would say the same thing twice.
+function belongsInBookings(subtype?: SubtypeRow): boolean {
+  return subtype?.behavior !== "private" && subtype?.behavior !== "music_act";
+}
 type BookingRow = {
   id: number;
   contact_id: number | null;
@@ -113,36 +166,71 @@ export async function readContactActivity(
   // Read flat and join here. `events` sits on both sides of `bookings` -
   // bookings.event_id points at it and events.booking_id points back - so an
   // embedded select is ambiguous and fails for the whole table.
-  const [subtypes, events, bookings, scores, bands, hires] = await Promise.all([
-    supabase.from("event_subtypes").select("id, name, is_quiz"),
-    supabase.from("events").select("id, title, date, event_subtypes_id"),
-    supabase.from("bookings").select("id, contact_id, group_name, status, event_id"),
-    supabase.from("booking_scores").select("booking_id, is_winner"),
-    supabase
-      .from("band_booking_requests")
-      .select(
-        "id, email, contact_id, group_name, type, genre, status, created_at, selected_date, event_id",
-      ),
-    supabase
-      .from("private_hire_requests")
-      .select(
-        "id, email, contact_id, reason_for_hire, reason, guest_count, status, created_at, selected_date, preferred_date, event_id, event_subtypes_id",
-      ),
+  const [subtypeRows, typeRows, eventRows, bookingRows, scoreRows, bandRows, hireRows] =
+    await Promise.all([
+    fetchAll<SubtypeRow>("event subtypes", (from, to) =>
+      supabase
+        .from("event_subtypes")
+        .select("id, name, behavior, booking_config")
+        .range(from, to),
+    ),
+    fetchAll<TypeRow>("event types", (from, to) =>
+      supabase.from("event_types").select("id, booking_grouping, booking_config").range(from, to),
+    ),
+    fetchAll<EventRow>("events", (from, to) =>
+      supabase
+        .from("events")
+        .select("id, title, date, event_subtypes_id, event_types_id, booking_config")
+        .range(from, to),
+    ),
+    fetchAll<BookingRow>("bookings", (from, to) =>
+      supabase
+        .from("bookings")
+        .select("id, contact_id, group_name, status, event_id")
+        .range(from, to),
+    ),
+    fetchAll<ScoreRow>("booking scores", (from, to) =>
+      supabase.from("booking_scores").select("booking_id, is_winner").range(from, to),
+    ),
+    fetchAll<BandRow>("band requests", (from, to) =>
+      supabase
+        .from("band_booking_requests")
+        .select(
+          "id, email, contact_id, group_name, type, genre, status, created_at, selected_date, event_id",
+        )
+        .range(from, to),
+    ),
+    fetchAll<HireRow>("private hire requests", (from, to) =>
+      supabase
+        .from("private_hire_requests")
+        .select(
+          "id, email, contact_id, reason_for_hire, reason, guest_count, status, created_at, selected_date, preferred_date, event_id, event_subtypes_id",
+        )
+        .range(from, to),
+    ),
   ]);
 
-  [subtypes, events, bookings, scores, bands, hires].forEach((result) => {
-    if (result.error) console.error("Contact activity read failed:", result.error);
-  });
+  const subtypeById = new Map(subtypeRows.map((s) => [s.id, s] as const));
+  const typeById = new Map(typeRows.map((t) => [t.id, t] as const));
+  const eventById = new Map(eventRows.map((e) => [e.id, e] as const));
+  const winners = new Set(scoreRows.filter((s) => s.is_winner).map((s) => s.booking_id));
 
-  const subtypeById = new Map(
-    ((subtypes.data as SubtypeRow[] | null) ?? []).map((s) => [s.id, s] as const),
-  );
-  const eventById = new Map(
-    ((events.data as EventRow[] | null) ?? []).map((e) => [e.id, e] as const),
-  );
-  const winners = new Set(
-    ((scores.data as ScoreRow[] | null) ?? []).filter((s) => s.is_winner).map((s) => s.booking_id),
-  );
+  // Which config owns the form depends on the type's grouping, so the answer to
+  // "did this booking ask for a group name" has to be resolved per event.
+  const collectsGroupName = (eventId: number | null): boolean => {
+    const event = eventId != null ? eventById.get(eventId) : undefined;
+    if (!event) return true;
+    const type = event.event_types_id != null ? typeById.get(event.event_types_id) : undefined;
+    const subtype =
+      event.event_subtypes_id != null ? subtypeById.get(event.event_subtypes_id) : undefined;
+    const owning = resolveOwningBookingConfig({
+      grouping: (type?.booking_grouping ?? null) as BookingGrouping | null,
+      eventConfig: event.booking_config,
+      typeConfig: type?.booking_config,
+      subtypeConfig: subtype?.booking_config,
+    });
+    return normalizeBookingConfig(owning).fields.group_name.visible;
+  };
 
   const eventTitle = (eventId: number | null) =>
     (eventId != null ? eventById.get(eventId)?.title?.trim() : "") || "No event yet";
@@ -160,9 +248,10 @@ export async function readContactActivity(
   const ownerOf = (row: { contact_id: number | null; email: string | null }) =>
     row.contact_id ?? byEmail.get((row.email ?? "").trim().toLowerCase()) ?? null;
 
-  ((bookings.data as BookingRow[] | null) ?? []).forEach((row) => {
+  bookingRows.forEach((row) => {
     if (row.contact_id == null) return;
     const subtype = subtypeOf(row.event_id);
+    if (!belongsInBookings(subtype)) return;
     bucket(map, row.contact_id).bookings.push({
       id: row.id,
       eventId: row.event_id,
@@ -170,13 +259,14 @@ export async function readContactActivity(
       title: eventTitle(row.event_id),
       date: eventDate(row.event_id),
       groupName: row.group_name,
+      collectsGroupName: collectsGroupName(row.event_id),
       status: row.status?.trim() || "confirmed",
-      isQuiz: !!subtype?.is_quiz,
+      isQuiz: subtype?.behavior === "quiz",
       isWinner: winners.has(row.id),
     });
   });
 
-  ((bands.data as BandRow[] | null) ?? []).forEach((row) => {
+  bandRows.forEach((row) => {
     const contactId = ownerOf(row);
     if (contactId == null) return;
     bucket(map, contactId).bandRequests.push({
@@ -186,12 +276,14 @@ export async function readContactActivity(
       type: row.type?.trim() || "Act",
       genre: row.genre?.trim() || "Unspecified",
       title: eventTitle(row.event_id),
-      date: eventDate(row.event_id) ?? row.selected_date ?? row.created_at,
+      // Only the date the venue actually settled on. A request still under
+      // review has none, and says so rather than borrowing another date.
+      date: row.selected_date,
       status: row.status?.trim() || "new",
     });
   });
 
-  ((hires.data as HireRow[] | null) ?? []).forEach((row) => {
+  hireRows.forEach((row) => {
     const contactId = ownerOf(row);
     if (contactId == null) return;
     const subtype =
@@ -202,7 +294,7 @@ export async function readContactActivity(
       subtype: subtype?.name?.trim() || "Private hire",
       title: eventTitle(row.event_id),
       reason: row.reason_for_hire?.trim() || row.reason?.trim() || "Not given",
-      date: eventDate(row.event_id) ?? row.selected_date ?? row.preferred_date ?? row.created_at,
+      date: row.selected_date,
       guests: row.guest_count ?? 0,
       status: row.status?.trim() || "pending_review",
     });

@@ -730,6 +730,16 @@ export function BandBookingCard({
   const searchParams = useSearchParams();
   const [open, setOpen] = useState(false);
   const confirmOpen = useRef(false);
+
+  // Deep link from elsewhere in admin - a customer's record, say - opens straight
+  // onto this request rather than dropping you in the board to hunt for it.
+  const requestedId = searchParams.get("request");
+  const openedFromLink = useRef(false);
+  useEffect(() => {
+    if (openedFromLink.current || requestedId !== request.id) return;
+    openedFromLink.current = true;
+    setOpen(true);
+  }, [requestedId, request.id]);
   const confirm = useCallback(
     async (opts: Parameters<typeof baseConfirm>[0]) => {
       confirmOpen.current = true;
