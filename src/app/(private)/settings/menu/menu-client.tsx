@@ -193,6 +193,8 @@ export default function MenuClient({
   const [priceText, setPriceText] = useState("");
   const [benchmarkKey, setBenchmarkKey] = useState("");
   const [serveDrafts, setServeDrafts] = useState<ServeDraft[]>([]);
+  // What the serves looked like on the way in, so backing out undoes the edits.
+  const [servesBefore, setServesBefore] = useState<ServeDraft[]>([]);
 
   const employeeById = new Map(
     employees.map((e) => [e.id, e.full_name ?? "-"] as const)
@@ -356,14 +358,33 @@ export default function MenuClient({
     });
   };
 
+  const openServes = () => {
+    if (!sheetCategory) return;
+    setServesBefore(serveDrafts);
+    setSheet({
+      type: "edit-serves",
+      categoryId: sheetCategory.id,
+      itemId: sheetItem?.id ?? null,
+    });
+  };
+
+  const backToItem = () => {
+    if (sheet?.type !== "edit-serves") return;
+    setSheet({ type: "edit-item", categoryId: sheet.categoryId, itemId: sheet.itemId });
+  };
+
+  const cancelServes = () => {
+    setServeDrafts(servesBefore);
+    backToItem();
+  };
+
   // Coming back from the serves, the display text is rewritten from them, so
   // what the public menu shows and what the comparison reads cannot drift.
   const applyServes = () => {
-    if (sheet?.type !== "edit-serves") return;
     const prices = draftPrices(serveDrafts);
     setServeDrafts(prices.map((p) => ({ serve: p.serve, amount: p.amount.toFixed(2) })));
     if (prices.length) setPriceText(formatPriceText(prices));
-    setSheet({ type: "edit-item", categoryId: sheet.categoryId, itemId: sheet.itemId });
+    backToItem();
   };
 
   const reorderPrompt = (name: string) => {
@@ -466,9 +487,6 @@ export default function MenuClient({
 
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="text-base font-bold tracking-tight text-[#20231A]">
-            Menu
-          </h3>
           <p className="text-[11px] font-medium text-[#5E6654]">
             {initialCategories.length} categories &middot;{" "}
             {initialCategories.reduce(
@@ -667,8 +685,8 @@ export default function MenuClient({
           onOpenAutoFocus={(e) => e.preventDefault()}
           className="flex h-auto max-h-[75vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8]
             bg-[#F4F1E8] p-0 shadow-2xl outline-none
-            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:max-h-[70vh]
-            sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
+            sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:max-h-[80vh]
+            sm:w-140 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-4xl
             sm:border-2 sm:border-[#D8D5C8]"
         >
           <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
@@ -864,13 +882,7 @@ export default function MenuClient({
                   <FormRow label="Serves">
                     <button
                       type="button"
-                      onClick={() =>
-                        setSheet({
-                          type: "edit-serves",
-                          categoryId: sheetCategory.id,
-                          itemId: sheetItem?.id ?? null,
-                        })
-                      }
+                      onClick={openServes}
                       className="flex flex-1 items-center justify-end gap-1.5 text-right text-[13px] font-semibold text-[#34451F]"
                     >
                       {serveSummary(serveDrafts)}
@@ -1038,14 +1050,24 @@ export default function MenuClient({
             )}
 
             {sheet?.type === "edit-serves" && (
-              <Button
-                type="button"
-                onClick={applyServes}
-                className="h-12 w-full rounded-2xl bg-[#34451F] text-[13px] font-semibold text-white shadow-lg hover:bg-[#283719] active:scale-95"
-              >
-                <Save className="mr-1.5 h-4 w-4" />
-                Use these prices
-              </Button>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={cancelServes}
+                  className="h-12 rounded-2xl border border-[#D8D5C8] bg-white text-[13px] font-semibold text-[#5E6654] hover:bg-[#ECE9DE]"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={applyServes}
+                  className="h-12 rounded-2xl bg-[#34451F] text-[13px] font-semibold text-white shadow-lg hover:bg-[#283719] active:scale-95"
+                >
+                  <Save className="mr-1.5 h-4 w-4" />
+                  Use these prices
+                </Button>
+              </div>
             )}
 
             {isEditing && (
