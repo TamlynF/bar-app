@@ -178,6 +178,9 @@ export const WIDE_PATHS: string[] = [
   "/settings/music-acts",
   "/settings/merchandise",
   "/settings/promo-content",
+  "/settings/gallery",
+  "/settings/specials",
+  "/settings/price-rounds",
   "/event-setups/quiz-categories",
 ];
 

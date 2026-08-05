@@ -1,13 +1,23 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { Plus, Loader2, Save, Pencil, Trash2, AlertCircle, Scale } from "lucide-react";
-import { useConfirm } from "@/components/ui/confirm-dialog";
+import { useMemo, useState } from "react";
+import { Plus, Scale, SearchX, Check, X } from "lucide-react";
 import { SERVES } from "@/lib/menu-price";
 import { cn } from "@/lib/utils";
 import { savePriceRoundAction, deletePriceRoundAction } from "./actions";
+import {
+  useRecordSheet,
+  RecordSheet,
+  RecordList,
+  ListRow,
+  ListSearchInput,
+  StatusPill,
+  EmptyState,
+  DetailCard,
+  DetailCell,
+  FormRow,
+  ErrorBox,
+} from "@/components/admin";
 
 export type PriceRound = {
   id: number;
@@ -24,17 +34,22 @@ export type PriceRound = {
 
 export type EmployeeOption = { id: number; full_name: string | null };
 
-type SheetMode = { type: "view"; id: number } | { type: "edit"; id: number | null };
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
+const FIELD_SELECT =
+  "flex-1 cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none";
 
-function formatDateTime(iso?: string | null) {
-  if (!iso) return "-";
-  return new Date(iso).toLocaleString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function servesOf(round: PriceRound | null | undefined): string[] {
+  if (!round?.serves) return [];
+  return round.serves
+    .split(",")
+    .map((serve) => serve.trim())
+    .filter(Boolean);
+}
+
+function servesLabel(round: PriceRound): string {
+  const serves = servesOf(round);
+  return serves.length > 0 ? serves.join(", ") : "-";
 }
 
 export default function PriceRoundsClient({
@@ -44,359 +59,292 @@ export default function PriceRoundsClient({
   initialRounds: PriceRound[];
   employees?: EmployeeOption[];
 }) {
-  const { confirm, ConfirmDialogUI } = useConfirm();
-  const [isPending, startTransition] = useTransition();
-  const [formError, setFormError] = useState<string | null>(null);
-  const [sheet, setSheet] = useState<SheetMode | null>(null);
-  const [isActive, setIsActive] = useState(true);
-  const [pickedServes, setPickedServes] = useState<string[]>(["each"]);
+  const sheet = useRecordSheet<PriceRound>({
+    records: initialRounds,
+    getId: (record) => record.id,
+  });
+  const { selected, mode } = sheet;
+  const [query, setQuery] = useState("");
 
   const employeeById = new Map(employees.map((e) => [e.id, e.full_name ?? "-"] as const));
-  const employeeName = (id?: number | null) => (id ? employeeById.get(id) ?? "-" : "-");
+  const employeeName = (id?: number | null) => (id ? (employeeById.get(id) ?? "-") : "-");
 
-  const current =
-    sheet && sheet.id != null ? initialRounds.find((r) => r.id === sheet.id) ?? null : null;
-
-  const closeSheet = () => {
-    setSheet(null);
-    setFormError(null);
-  };
-
-  const startEdit = (round: PriceRound | null) => {
-    setFormError(null);
-    setIsActive(round?.is_active ?? true);
-    setPickedServes(round ? round.serves.split(",").map((s) => s.trim()) : ["each"]);
-    setSheet({ type: "edit", id: round?.id ?? null });
-  };
-
-  const toggleServe = (serve: string) => {
-    setPickedServes((prev) =>
-      prev.includes(serve) ? prev.filter((s) => s !== serve) : [...prev, serve]
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return initialRounds;
+    return initialRounds.filter((round) =>
+      [round.label, round.key, servesLabel(round)].some((field) =>
+        field.toLowerCase().includes(needle),
+      ),
     );
+  }, [initialRounds, query]);
+
+  const showForm = mode === "add" || mode === "edit";
+  const formDefault = mode === "edit" ? selected : null;
+  const defaultServes = formDefault ? servesOf(formDefault) : ["each"];
+
+  const cancel = () => {
+    if (mode === "add") sheet.close();
+    else if (selected) sheet.openView(selected);
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    setFormError(null);
-    startTransition(async () => {
-      const result = await savePriceRoundAction(formData);
-      if (result?.error) setFormError(result.error);
-      else closeSheet();
-    });
-  };
-
-  const handleDelete = async (round: PriceRound) => {
-    const ok = await confirm({
+  const handleDelete = () => {
+    if (!selected) return;
+    sheet.confirmDelete({
       title: "Delete round",
-      description: `"${round.label}" will stop being compared. Menu items pointed at it fall back to matching by name.`,
-      confirmLabel: "Delete",
-      variant: "destructive",
-    });
-    if (!ok) return;
-    startTransition(async () => {
-      const result = await deletePriceRoundAction(round.id);
-      if (result?.error) setFormError(result.error);
-      else closeSheet();
+      description: `"${selected.label}" will stop being compared. Menu items pointed at it fall back to matching by name.`,
+      action: () => deletePriceRoundAction(selected.id),
     });
   };
+
+  const title =
+    mode === "add" ? "New round" : mode === "edit" ? "Edit round" : "View round";
 
   return (
-    <div className="space-y-3 px-2 py-2 sm:px-8 sm:py-0">
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="text-base font-bold tracking-tight text-[#20231A]">Price rounds</h3>
-          <p className="text-[11px] font-medium text-[#5E6654]">
-            {initialRounds.length} rounds compared on the price page
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => startEdit(null)}
-          className="flex h-11 shrink-0 items-center gap-1.5 rounded-lg bg-[#34451F] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#283719] sm:h-9"
-        >
-          <Plus className="h-4 w-4" />
-          Round
-        </button>
-      </div>
-
+    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {initialRounds.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
-          <Scale className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-          <p className="text-sm font-bold text-[#20231A]">No rounds yet</p>
-          <p className="mt-1 text-[11px] text-[#5E6654]">
-            Add a round to start comparing prices against it
-          </p>
-        </div>
+        <EmptyState
+          icon={Scale}
+          title="No rounds yet"
+          description="Add a round to start comparing prices against it"
+          action={
+            <button
+              type="button"
+              onClick={sheet.openAdd}
+              className="inline-flex h-9 items-center rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+            >
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Create round
+            </button>
+          }
+        />
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
-          <div className="divide-y divide-[#D8D5C8]/50">
-            {initialRounds.map((round) => (
-              <div
+        <RecordList
+          variant="panel"
+          title="Price rounds"
+          count={shown.length}
+          onAdd={sheet.openAdd}
+          addLabel="Round"
+          toolbar={
+            <ListSearchInput
+              value={query}
+              onChange={setQuery}
+              label="Search price rounds"
+              placeholder="Search by label, key or serve"
+            />
+          }
+        >
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 px-4 py-12 text-center">
+              <SearchX className="mb-1 h-7 w-7 text-admin-muted opacity-30" />
+              <p className="text-sm font-semibold text-admin-ink">No matches</p>
+              <p className="text-[11px] text-admin-muted">
+                Nothing here matches &ldquo;{query.trim()}&rdquo;
+              </p>
+            </div>
+          ) : (
+            shown.map((round) => (
+              <ListRow
                 key={round.id}
-                onClick={() => setSheet({ type: "view", id: round.id })}
-                className="flex cursor-pointer items-center gap-3 px-4 py-3 hover:bg-[#F4F1E8]"
+                onClick={() => sheet.openView(round)}
+                status={
+                  <StatusPill
+                    tone={round.is_active ? "success" : "error"}
+                    icon={
+                      round.is_active ? (
+                        <Check className="h-3 w-3" />
+                      ) : (
+                        <X className="h-3 w-3" />
+                      )
+                    }
+                    className="sm:w-24 sm:justify-center"
+                  >
+                    {round.is_active ? "Active" : "Off"}
+                  </StatusPill>
+                }
               >
-                <span className="w-6 shrink-0 text-[12px] font-semibold text-[#5E6654] tabular-nums">
+                <span
+                  className="w-6 shrink-0 text-center text-xs font-semibold text-admin-muted tabular-nums opacity-60"
+                  title={`Order ${round.display_order}`}
+                >
                   {round.display_order}
                 </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-bold text-[#20231A]">
+
+                {/* Fixed tracks rather than content-sized ones, so the key of
+                    every row starts in the same place. */}
+                <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.4fr)] sm:items-center sm:gap-3">
+                  <p
+                    className={cn(
+                      "min-w-0 truncate text-sm leading-snug font-semibold",
+                      round.is_active ? "text-admin-ink" : "text-admin-muted",
+                    )}
+                  >
                     {round.label}
-                  </span>
-                  <span className="mt-0.5 block truncate text-[11px] text-[#5E6654]">
-                    {round.key} &middot; priced off {round.serves.split(",").join(", ")}
-                  </span>
-                </span>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] font-semibold tracking-wide",
-                    round.is_active
-                      ? "border-[#22613F]/30 bg-[#E7F3EC] text-[#22613F]"
-                      : "border-[#D8D5C8] bg-[#ECE9DE] text-[#5E6654]"
-                  )}
-                >
-                  {round.is_active ? "Active" : "Off"}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+                  </p>
+
+                  <p className="mt-0.5 truncate font-mono text-[11px] font-medium text-admin-muted sm:mt-0 sm:text-[12px]">
+                    {round.key}
+                  </p>
+
+                  <p
+                    className="hidden truncate text-[11px] font-medium text-admin-muted sm:block"
+                    title={`Priced off ${servesLabel(round)}`}
+                  >
+                    Priced off {servesLabel(round)}
+                  </p>
+                </div>
+              </ListRow>
+            ))
+          )}
+        </RecordList>
       )}
 
-      <Sheet open={!!sheet} onOpenChange={(open) => !open && closeSheet()}>
-        <SheetContent
-          side="bottom"
-          className="flex h-[85vh] flex-col gap-0 rounded-t-3xl border-[#D8D5C8] bg-[#F4F1E8] p-0 sm:h-auto sm:max-h-[85vh] sm:max-w-lg sm:rounded-4xl"
-        >
-          <div className="shrink-0 border-b-2 border-[#D8D5C8] bg-white/80 px-6 py-4 backdrop-blur-md sm:rounded-t-4xl">
-            <SheetTitle className="text-[15px] font-bold text-[#20231A]">
-              {sheet?.type === "view"
-                ? "View round"
-                : sheet?.id
-                  ? "Edit round"
-                  : "New round"}
-            </SheetTitle>
+      <RecordSheet
+        open={sheet.open}
+        onClose={sheet.close}
+        mode={mode}
+        title={title}
+        recordId={selected?.id}
+        formId="round-form"
+        isPending={sheet.isPending}
+        onEdit={sheet.startEdit}
+        onDelete={handleDelete}
+        onCancel={cancel}
+        confirmUI={sheet.ConfirmDialogUI}
+        status={
+          selected && (
+            <StatusPill
+              tone={selected.is_active ? "success" : "error"}
+              icon={
+                selected.is_active ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <X className="h-3 w-3" />
+                )
+              }
+              showLabelOnMobile
+            >
+              {selected.is_active ? "Active" : "Off"}
+            </StatusPill>
+          )
+        }
+        systemInfo={
+          selected == null
+            ? undefined
+            : {
+                createdAt: selected.created_at,
+                createdBy: employeeName(selected.created_by),
+                updatedAt: selected.updated_at,
+                updatedBy: employeeName(selected.updated_by),
+              }
+        }
+      >
+        {!showForm && selected && (
+          <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+            <DetailCard>
+              <DetailCell dense label="Label" value={selected.label} />
+              <DetailCell
+                dense
+                label="Key"
+                value={selected.key}
+                valueClassName="font-mono"
+              />
+              <DetailCell dense label="Priced off" value={servesLabel(selected)} />
+              <DetailCell dense label="Order" value={String(selected.display_order)} />
+            </DetailCard>
+
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
           </div>
+        )}
 
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-            {sheet?.type === "view" && current && (
-              <div className="space-y-3">
-                <DetailCell label="Label" value={current.label} />
-                <DetailCell label="Key" value={current.key} />
-                <DetailCell label="Priced off" value={current.serves.split(",").join(", ")} />
-                <DetailCell label="Order" value={String(current.display_order)} />
-                <DetailCell label="Status" value={current.is_active ? "Active" : "Off"} />
-                <DetailCell label="Created" value={formatDateTime(current.created_at)} />
-                <DetailCell label="Created by" value={employeeName(current.created_by)} />
-                <DetailCell label="Updated" value={formatDateTime(current.updated_at)} />
-                <DetailCell label="Updated by" value={employeeName(current.updated_by)} />
-                {formError && <ErrorBox message={formError} />}
-              </div>
-            )}
+        {showForm && (
+          <form
+            id="round-form"
+            action={sheet.submit(savePriceRoundAction)}
+            className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
+          >
+            {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
 
-            {sheet?.type === "edit" && (
-              <form id="round-form" onSubmit={handleSubmit} className="space-y-3">
-                {current && <input type="hidden" name="id" value={current.id} />}
-                <input type="hidden" name="is_active" value={isActive ? "true" : "false"} />
+            <DetailCard className="divide-y divide-admin-line/50">
+              <FormRow label="Label" required>
+                <input
+                  name="label"
+                  required
+                  aria-label="Label"
+                  placeholder="e.g. Pint (Cider)"
+                  defaultValue={formDefault?.label ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
 
-                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white">
-                  <FormRow label="Label" required>
-                    <input
-                      name="label"
-                      required
-                      aria-label="Label"
-                      placeholder="e.g. Pint (Cider)"
-                      defaultValue={current?.label ?? ""}
-                      className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
-                    />
-                  </FormRow>
-                  <FormRow label="Key" required>
-                    <input
-                      name="key"
-                      required
-                      aria-label="Key"
-                      placeholder="e.g. pint_cider"
-                      defaultValue={current?.key ?? ""}
-                      className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
-                    />
-                  </FormRow>
-                  <FormRow label="Order">
-                    <input
-                      name="display_order"
-                      type="number"
-                      min="0"
-                      inputMode="numeric"
-                      aria-label="Display order"
-                      defaultValue={current?.display_order ?? initialRounds.length + 1}
-                      className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none"
-                    />
-                  </FormRow>
-                  <FormRow label="Status">
-                    <div className="flex flex-1 justify-end gap-1.5">
-                      {[true, false].map((value) => (
-                        <button
-                          key={String(value)}
-                          type="button"
-                          onClick={() => setIsActive(value)}
-                          className={cn(
-                            "rounded-lg border px-3 py-1.5 text-[12px] font-semibold",
-                            isActive === value
-                              ? "border-[#34451F] bg-[#E5EBD8] text-[#34451F]"
-                              : "border-[#D8D5C8] bg-white text-[#5E6654]"
-                          )}
-                        >
-                          {value ? "Active" : "Off"}
-                        </button>
-                      ))}
-                    </div>
-                  </FormRow>
-                </div>
+              <FormRow label="Key" required>
+                <input
+                  name="key"
+                  required
+                  aria-label="Key"
+                  placeholder="e.g. pint_cider"
+                  defaultValue={formDefault?.key ?? ""}
+                  className={cn(FIELD_INPUT, "font-mono")}
+                />
+              </FormRow>
 
-                <div className="rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 py-3">
-                  <p className="text-[11px] font-semibold tracking-wide text-[#5E6654] uppercase opacity-60">
+              <FormRow label="Status">
+                <select
+                  name="is_active"
+                  aria-label="Status"
+                  defaultValue={formDefault?.is_active === false ? "false" : "true"}
+                  className={FIELD_SELECT}
+                >
+                  <option value="true">Active</option>
+                  <option value="false">Off</option>
+                </select>
+              </FormRow>
+
+              <FormRow label="Order">
+                <input
+                  name="display_order"
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  aria-label="Display order"
+                  defaultValue={formDefault?.display_order ?? initialRounds.length + 1}
+                  className={cn(FIELD_INPUT, "tabular-nums")}
+                />
+              </FormRow>
+
+              <div className="px-4 py-3 sm:px-5">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="text-[11px] font-semibold tracking-wide text-admin-muted opacity-70">
                     Priced off
-                  </p>
-                  <p className="mt-1 mb-2.5 text-[12px] leading-snug text-[#5E6654]">
-                    Only items sold in one of these measures can price this round.
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {SERVES.map((serve) => {
-                      const picked = pickedServes.includes(serve);
-                      return (
-                        <label
-                          key={serve}
-                          className={cn(
-                            "cursor-pointer rounded-lg border px-2.5 py-1.5 text-[12px] font-semibold",
-                            picked
-                              ? "border-[#34451F] bg-[#E5EBD8] text-[#34451F]"
-                              : "border-[#D8D5C8] bg-white text-[#5E6654]"
-                          )}
-                        >
-                          <input
-                            type="checkbox"
-                            name="serves"
-                            value={serve}
-                            checked={picked}
-                            onChange={() => toggleServe(serve)}
-                            aria-label={serve}
-                            className="sr-only"
-                          />
-                          {serve}
-                        </label>
-                      );
-                    })}
-                  </div>
+                  </span>
+                  <span className="text-[11px] font-semibold text-admin-error">*</span>
                 </div>
-
-                {formError && <ErrorBox message={formError} />}
-              </form>
-            )}
-          </div>
-
-          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-4 pb-8 backdrop-blur-md sm:rounded-b-4xl sm:pb-4">
-            {sheet?.type === "view" && current && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="ghost"
-                  onClick={() => handleDelete(current)}
-                  disabled={isPending}
-                  className="h-12 rounded-2xl border border-[#D8D5C8] bg-white text-[13px] font-semibold text-[#B33A32] hover:border-[#B33A32]/30 hover:bg-[#FDECEA] hover:text-[#B33A32]"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="mr-1.5 h-4 w-4" />
-                  )}
-                  Delete
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => startEdit(current)}
-                  className="h-12 rounded-2xl border border-[#34451F] bg-white text-[13px] font-semibold text-[#34451F] hover:bg-[#E5EBD8] hover:text-[#34451F] active:scale-95"
-                >
-                  <Pencil className="mr-1.5 h-4 w-4" />
-                  Edit
-                </Button>
+                <p className="mb-2.5 text-[11px] leading-snug font-medium text-admin-muted opacity-70">
+                  Only items sold in one of these measures can price this round.
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  {SERVES.map((serve) => (
+                    <label key={serve} className="relative cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        name="serves"
+                        value={serve}
+                        defaultChecked={defaultServes.includes(serve)}
+                        className="peer sr-only"
+                      />
+                      <span className="inline-flex h-9 min-w-11 items-center justify-center rounded-xl border border-admin-line bg-admin-surface px-3 text-[11px] font-semibold tracking-wide text-admin-muted transition-colors peer-checked:border-admin-primary peer-checked:bg-admin-primary peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-admin-primary">
+                        {serve}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            )}
+            </DetailCard>
 
-            {sheet?.type === "edit" && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={closeSheet}
-                  disabled={isPending}
-                  className="h-12 rounded-2xl border border-[#D8D5C8] bg-white text-[13px] font-semibold text-[#5E6654] hover:bg-[#ECE9DE]"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form="round-form"
-                  disabled={isPending}
-                  className="h-12 rounded-2xl bg-[#34451F] text-[13px] font-semibold text-white shadow-lg hover:bg-[#283719] active:scale-95"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="mr-1.5 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-          {ConfirmDialogUI}
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
-
-function FormRow({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 px-4 py-2.5">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60">
-        <span className="text-[11px] font-semibold tracking-wide whitespace-nowrap uppercase">
-          {label}
-        </span>
-        {required && <span className="text-[11px] font-semibold text-[#B33A32]">*</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function DetailCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-xl border border-[#D8D5C8] bg-white px-4 py-2.5">
-      <span className="shrink-0 text-[11px] font-semibold tracking-wide text-[#5E6654] uppercase opacity-60">
-        {label}
-      </span>
-      <span className="flex-1 text-right text-[13px] font-semibold break-all text-[#20231A]">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-2 rounded-xl border border-[#B33A32]/30 bg-[#FDECEA] p-3">
-      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#B33A32]" />
-      <p className="text-[13px] leading-snug font-semibold text-[#B33A32]">{message}</p>
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
+          </form>
+        )}
+      </RecordSheet>
     </div>
   );
 }
