@@ -1,3 +1,5 @@
+import type { MenuItemPrice } from "@/lib/menu-price";
+
 export type TrendKind = "advertising" | "event_idea" | "price";
 export type TrendState = "new" | "saved" | "ignored";
 export type TrendEffort = "Easy" | "Medium" | "Big";
@@ -55,6 +57,21 @@ export type MenuItemLite = {
   category?: string | null;
   // Charged on top for a spirit's mixer, so the spirit round compares like for like.
   mixer_surcharge?: number | null;
+  // The round this item stands for, set by hand. Null falls back to the keyword match.
+  benchmark_key?: string | null;
+  // One row per measure sold. When present, the round takes the serve it asks
+  // for instead of the first amount in the display text.
+  prices?: MenuItemPrice[];
+};
+
+export type PriceBenchmark = {
+  id: number;
+  key: string;
+  label: string;
+  // Comma-separated serves that can price this round, e.g. "small,glass".
+  serves: string;
+  display_order: number;
+  is_active: boolean;
 };
 
 export type AiTrend = {

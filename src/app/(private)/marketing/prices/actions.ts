@@ -12,7 +12,8 @@ import {
   resolveComparisonArea,
   deriveAreaFromAddress,
 } from "../lib/settings";
-import type { AiCompetitorPrice, CompetitorItemType, MenuItemLite } from "../lib/types";
+import { readMenuItems } from "../lib/menu-data";
+import type { AiCompetitorPrice, CompetitorItemType } from "../lib/types";
 
 async function currentEmployeeId(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -33,22 +34,6 @@ const ITEM_TYPES: CompetitorItemType[] = ["drink", "snack", "food"];
 function normalizeItemType(raw?: string): CompetitorItemType | null {
   const v = (raw ?? "").toLowerCase().trim();
   return ITEM_TYPES.includes(v as CompetitorItemType) ? (v as CompetitorItemType) : null;
-}
-
-async function readMenuItems(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-): Promise<MenuItemLite[]> {
-  const { data } = await supabase
-    .from("menu_categories")
-    .select("name, menu_items(id, name, price, is_active)")
-    .eq("is_active", true);
-  const rows: MenuItemLite[] = [];
-  (data ?? []).forEach((cat: { name: string; menu_items?: { id: number; name: string; price: string; is_active: boolean }[] }) => {
-    (cat.menu_items ?? [])
-      .filter((it) => it.is_active)
-      .forEach((it) => rows.push({ id: it.id, name: it.name, price: it.price, category: cat.name }));
-  });
-  return rows;
 }
 
 export async function refreshPricesAction(): Promise<

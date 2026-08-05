@@ -11,6 +11,7 @@ import {
   Medal,
   Shapes,
   ShoppingBag,
+  Scale,
   Sparkles,
   TrendingUp,
   UserCog2,
@@ -130,6 +131,12 @@ export const SETTINGS_NAV_GROUPS: AdminNavGroup[] = [
         href: "/settings/menu",
         icon: UtensilsCrossed,
         description: "Categories and items",
+      },
+      {
+        label: "Price rounds",
+        href: "/settings/price-rounds",
+        icon: Scale,
+        description: "What the price page compares",
       },
       {
         label: "Specials",

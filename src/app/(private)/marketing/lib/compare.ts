@@ -1,9 +1,12 @@
 import { parseGbp } from "@/lib/price";
-import type { CompetitorPrice, MenuItemLite } from "./types";
+import { amountForServes, parseServes } from "@/lib/menu-price";
+import type { CompetitorPrice, MenuItemLite, PriceBenchmark } from "./types";
 
-type Benchmark = {
-  key: string;
-  label: string;
+// The rounds live in `price_benchmarks`; only the heuristics that guess at an
+// untagged item stay in code, keyed by the round they suggest. A round added in
+// settings has no rules here, so nothing auto-matches into it - it is filled by
+// setting the round on the item by hand.
+type BenchmarkRules = {
   keywords: string[];
   exclude?: string[];
   categories?: string[];
@@ -20,27 +23,27 @@ const SMALL_SERVES = ["half", "third", "baby", "shot", "taster", "schooner"];
 
 const ALCOHOL_FREE = ["0%", "0.0", "alcohol free", "alcohol-free", "non-alcoholic", "no alcohol", "zero alcohol"];
 
-const BENCHMARKS: Benchmark[] = [
-  {
-    key: "pint_lager",
-    label: "Pint (Lager)",
+const BENCHMARK_RULES: Record<string, BenchmarkRules> = {
+  pint_lager: {
     keywords: ["lager", "carling", "fosters", "madri", "amstel", "birra", "peroni", "stella"],
     exclude: ALCOHOL_FREE,
     categories: PINT_CATEGORIES,
     wrongServe: SMALL_SERVES,
   },
-  {
-    key: "pint_ale",
-    label: "Pint (Ale / Bitter / Stout)",
+  pint_ale: {
     keywords: ["ale", "bitter", "ipa", "stout", "guinness", "pale"],
     // "Ginger ale" and "ginger beer" are soft drinks wearing a beer's name.
     exclude: [...ALCOHOL_FREE, "ginger"],
     categories: PINT_CATEGORIES,
     wrongServe: SMALL_SERVES,
   },
-  {
-    key: "spirit_mixer",
-    label: "House Spirit + Mixer",
+  pint_cider: {
+    keywords: ["cider", "thatchers", "strongbow", "rekorderlig", "kopparberg", "aspall", "old mout"],
+    exclude: ALCOHOL_FREE,
+    categories: PINT_CATEGORIES,
+    wrongServe: SMALL_SERVES,
+  },
+  spirit_mixer: {
     // The round is a spirit *with* a mixer - a lone tonic is a soft drink.
     keywords: ["gin", "vodka", "rum", "whisky", "whiskey", "spirit", "bourbon", "tequila"],
     exclude: ALCOHOL_FREE,
@@ -50,28 +53,42 @@ const BENCHMARKS: Benchmark[] = [
     wrongServe: [...SMALL_SERVES, "sour", "martini", "mojito", "cocktail", "bomb"],
     addsMixer: true,
   },
-  {
-    key: "wine_glass",
-    label: "Wine (Glass)",
+  wine_glass: {
     keywords: ["wine", "merlot", "sauvignon", "chardonnay", "rose", "rosé", "prosecco", "malbec"],
     categories: ["wine", "fizz", "champagne"],
     wrongServe: ["bottle", "carafe", "magnum"],
   },
-  {
-    key: "soft_drink",
-    label: "Soft Drink",
+  soft_drink: {
     keywords: [
       "coke", "cola", "pepsi", "lemonade", "fanta", "j2o", "soft", "soda", "juice",
       "tonic", "ginger ale", "ginger beer",
     ],
   },
-  {
-    key: "snack",
-    label: "Snacks",
+  snack: {
     keywords: ["crisps", "nuts", "olives", "snack", "nachos", "fries", "chips", "pork scratching"],
     categories: ["snack", "crisp", "nut", "bar"],
   },
+};
+
+// Used only when `price_benchmarks` cannot be read, so the comparison degrades
+// to the rounds it has always had rather than to a blank page.
+export const DEFAULT_BENCHMARKS: PriceBenchmark[] = [
+  { id: -1, key: "pint_lager", label: "Pint (Lager)", serves: "pint", display_order: 1, is_active: true },
+  { id: -2, key: "pint_ale", label: "Pint (Ale / Bitter / Stout)", serves: "pint", display_order: 2, is_active: true },
+  { id: -3, key: "pint_cider", label: "Pint (Cider)", serves: "pint", display_order: 3, is_active: true },
+  { id: -4, key: "spirit_mixer", label: "House Spirit + Mixer", serves: "single", display_order: 4, is_active: true },
+  { id: -5, key: "wine_glass", label: "Wine (Glass)", serves: "small,glass", display_order: 5, is_active: true },
+  { id: -6, key: "soft_drink", label: "Soft Drink", serves: "each", display_order: 6, is_active: true },
+  { id: -7, key: "snack", label: "Snacks", serves: "each", display_order: 7, is_active: true },
 ];
+
+function rulesFor(benchmark: PriceBenchmark): BenchmarkRules {
+  return BENCHMARK_RULES[benchmark.key] ?? { keywords: [] };
+}
+
+function orderedActive(benchmarks: PriceBenchmark[]): PriceBenchmark[] {
+  return benchmarks.filter((b) => b.is_active).sort((a, z) => a.display_order - z.display_order);
+}
 
 // Whole words only - otherwise "gin" matches "Ginger" and "ale" matches nothing
 // it should. Keywords can contain spaces ("pork scratching"); the boundary is
@@ -86,6 +103,7 @@ function hasWord(haystack: string, keyword: string): boolean {
 // White Wine. Deliberately narrower than the `categories` preference lists
 // above: "Draught" pours lager, ale and cider, so it can never decide a round.
 const CATEGORY_BENCHMARKS: { match: string; key: string }[] = [
+  { match: "cider", key: "pint_cider" },
   { match: "gin", key: "spirit_mixer" },
   { match: "vodka", key: "spirit_mixer" },
   { match: "rum", key: "spirit_mixer" },
@@ -99,28 +117,61 @@ const CATEGORY_BENCHMARKS: { match: string; key: string }[] = [
   { match: "snack", key: "snack" },
 ];
 
-export function matchBenchmark(name: string, category?: string | null): Benchmark | null {
+export function matchBenchmark(
+  name: string,
+  category: string | null | undefined,
+  benchmarks: PriceBenchmark[],
+): PriceBenchmark | null {
   const n = name.toLowerCase();
-  const byName = BENCHMARKS.find(
-    (b) => !(b.exclude ?? []).some((x) => n.includes(x)) && b.keywords.some((k) => hasWord(n, k)),
-  );
+  const active = orderedActive(benchmarks);
+
+  const byName = active.find((b) => {
+    const rules = rulesFor(b);
+    return (
+      !(rules.exclude ?? []).some((x) => n.includes(x)) &&
+      rules.keywords.some((k) => hasWord(n, k))
+    );
+  });
   if (byName) return byName;
 
   const c = (category ?? "").toLowerCase();
   if (!c) return null;
 
   const viaCategory = CATEGORY_BENCHMARKS.find((entry) => c.includes(entry.match));
-  const fallback = viaCategory ? BENCHMARKS.find((b) => b.key === viaCategory.key) : undefined;
+  const fallback = viaCategory ? active.find((b) => b.key === viaCategory.key) : undefined;
   if (!fallback) return null;
 
   // The name still has the last word on a 0% serve, whatever shelf it sits on.
-  return (fallback.exclude ?? []).some((x) => n.includes(x)) ? null : fallback;
+  return (rulesFor(fallback).exclude ?? []).some((x) => n.includes(x)) ? null : fallback;
 }
 
-function competitorStats(competitorPrices: CompetitorPrice[], key: string | null) {
+// Stored on the menu item to keep it out of the comparison however its name reads.
+export const NOT_COMPARED = "none";
+
+export function isBenchmarkKey(value: string, benchmarks: PriceBenchmark[]): boolean {
+  return value === NOT_COMPARED || benchmarks.some((b) => b.key === value);
+}
+
+// A key set by hand on the item is the answer; the keyword match is only the
+// guess that fills the gap while nobody has said.
+export function resolveBenchmark(
+  item: MenuItemLite,
+  benchmarks: PriceBenchmark[],
+): PriceBenchmark | null {
+  const stored = item.benchmark_key?.trim();
+  if (stored === NOT_COMPARED) return null;
+  if (stored) return orderedActive(benchmarks).find((b) => b.key === stored) ?? null;
+  return matchBenchmark(item.name, item.category, benchmarks);
+}
+
+function competitorStats(
+  competitorPrices: CompetitorPrice[],
+  key: string | null,
+  benchmarks: PriceBenchmark[],
+) {
   const amounts = key
     ? competitorPrices
-        .filter((c) => matchBenchmark(c.item_name)?.key === key)
+        .filter((c) => matchBenchmark(c.item_name, null, benchmarks)?.key === key)
         .map((c) => c.price_amount ?? parseGbp(c.price_text))
         .filter((v): v is number => v != null)
     : [];
@@ -180,34 +231,59 @@ function verdictFor(own: number | null, centre: number | null): Verdict {
 
 export type OwnCandidate = { name: string; category: string; price: number };
 
-// A single spirit and a spirit-with-a-mixer are different rounds. Where the
-// round includes the mixer, the surcharge is part of what a guest pays.
-function priceForRound(item: MenuItemLite, benchmark: Benchmark | null): number | null {
+// Once an item lists its serves, the round simply takes the one it asks for -
+// a bottle-only wine has no glass price, so it cannot price the glass round.
+// Items still carrying only the old display text fall back to the first amount
+// in it, which is why `wrongServe` below has not retired yet.
+function priceForRound(item: MenuItemLite, benchmark: PriceBenchmark | null): number | null {
+  const addsMixer = benchmark ? rulesFor(benchmark).addsMixer : false;
+  const withMixer = (amount: number) => (addsMixer ? amount + (item.mixer_surcharge ?? 0) : amount);
+
+  if (item.prices?.length) {
+    const serves = benchmark ? parseServes(benchmark.serves) : [];
+    const amount = amountForServes(item.prices, serves);
+    return amount == null ? null : withMixer(amount);
+  }
+
   const base = parseGbp(item.price);
-  if (base == null) return null;
-  return benchmark?.addsMixer ? base + (item.mixer_surcharge ?? 0) : base;
+  return base == null ? null : withMixer(base);
+}
+
+export function hasStructuredServes(item: MenuItemLite): boolean {
+  return !!item.prices?.length;
 }
 
 // Everything of yours that could legitimately stand for a round: right name,
-// readable price, not a wrong measure, and - when any of them sit in a category
-// that serves the round properly - only those.
-export function ownPoolFor(menuItems: MenuItemLite[], benchmarkKey: string): OwnCandidate[] {
-  const b = BENCHMARKS.find((x) => x.key === benchmarkKey);
-  if (!b) return [];
+// a price for the serve the round is sold in, not a wrong measure, and - when
+// any of them sit in a category that serves the round properly - only those.
+export function ownPoolFor(
+  menuItems: MenuItemLite[],
+  benchmark: PriceBenchmark,
+  benchmarks: PriceBenchmark[],
+): OwnCandidate[] {
+  const rules = rulesFor(benchmark);
 
   const candidates = menuItems
     .map((m) => ({
       name: m.name,
       category: (m.category ?? "").toLowerCase(),
-      price: matchBenchmark(m.name, m.category)?.key === b.key ? priceForRound(m, b) : null,
+      // Naming the round by hand is a decision, so neither filter below overrules it.
+      pinned: !!m.benchmark_key?.trim(),
+      // Listed serves already settle the measure, so the name-guessing filter
+      // stands down. The category preference stays: a glass of prosecco is the
+      // right measure for the wrong round.
+      serveLed: hasStructuredServes(m),
+      price:
+        resolveBenchmark(m, benchmarks)?.key === benchmark.key ? priceForRound(m, benchmark) : null,
     }))
     .filter(
-      (m): m is OwnCandidate =>
-        m.price != null && !(b.wrongServe ?? []).some((w) => hasWord(m.name, w)),
+      (m): m is OwnCandidate & { pinned: boolean; serveLed: boolean } =>
+        m.price != null &&
+        (m.pinned || m.serveLed || !(rules.wrongServe ?? []).some((w) => hasWord(m.name, w))),
     );
 
-  const preferred = candidates.filter((c) =>
-    (b.categories ?? []).some((cat) => c.category.includes(cat)),
+  const preferred = candidates.filter(
+    (c) => c.pinned || (rules.categories ?? []).some((cat) => c.category.includes(cat)),
   );
   return preferred.length ? preferred : candidates;
 }
@@ -229,10 +305,11 @@ export function meanPriceOf(pool: OwnCandidate[]): number | null {
 export function buildComparison(
   competitorPrices: CompetitorPrice[],
   menuItems: MenuItemLite[],
+  benchmarks: PriceBenchmark[],
 ): BenchmarkComparison[] {
-  return BENCHMARKS.map((b) => {
-    const stats = competitorStats(competitorPrices, b.key);
-    const pool = ownPoolFor(menuItems, b.key);
+  return orderedActive(benchmarks).map((b) => {
+    const stats = competitorStats(competitorPrices, b.key, benchmarks);
+    const pool = ownPoolFor(menuItems, b, benchmarks);
     const own = medianOf(pool);
 
     return {
@@ -257,10 +334,11 @@ export function buildComparison(
 export function buildMenuComparison(
   competitorPrices: CompetitorPrice[],
   menuItems: MenuItemLite[],
+  benchmarks: PriceBenchmark[],
 ): BenchmarkComparison[] {
   return menuItems.map((m) => {
-    const b = matchBenchmark(m.name, m.category);
-    const stats = competitorStats(competitorPrices, b?.key ?? null);
+    const b = resolveBenchmark(m, benchmarks);
+    const stats = competitorStats(competitorPrices, b?.key ?? null, benchmarks);
     const ownPrice = priceForRound(m, b);
 
     return {
@@ -287,19 +365,27 @@ export type VenueMatrix = {
 
 type PricedEntry = { venue: string; key: string; amount: number };
 
-function pricedEntries(competitorPrices: CompetitorPrice[]): PricedEntry[] {
+function pricedEntries(
+  competitorPrices: CompetitorPrice[],
+  benchmarks: PriceBenchmark[],
+): PricedEntry[] {
   return competitorPrices
     .map((p) => ({
       venue: p.venue_name,
-      key: matchBenchmark(p.item_name)?.key ?? null,
+      key: matchBenchmark(p.item_name, null, benchmarks)?.key ?? null,
       amount: p.price_amount ?? parseGbp(p.price_text),
     }))
     .filter((p): p is PricedEntry => !!p.venue && !!p.key && p.amount != null);
 }
 
-export function rankedVenues(competitorPrices: CompetitorPrice[]): string[] {
+export function rankedVenues(
+  competitorPrices: CompetitorPrice[],
+  benchmarks: PriceBenchmark[],
+): string[] {
   const coverage = new Map<string, number>();
-  pricedEntries(competitorPrices).forEach((p) => coverage.set(p.venue, (coverage.get(p.venue) ?? 0) + 1));
+  pricedEntries(competitorPrices, benchmarks).forEach((p) =>
+    coverage.set(p.venue, (coverage.get(p.venue) ?? 0) + 1),
+  );
   return Array.from(coverage.entries())
     .sort((a, b) => b[1] - a[1])
     .map(([v]) => v);
@@ -309,8 +395,9 @@ export function buildVenueMatrix(
   competitorPrices: CompetitorPrice[],
   comparison: BenchmarkComparison[],
   venues: string[],
+  benchmarks: PriceBenchmark[],
 ): VenueMatrix {
-  const priced = pricedEntries(competitorPrices);
+  const priced = pricedEntries(competitorPrices, benchmarks);
   const venueSet = new Set(venues);
 
   const cellMin = new Map<string, number>();

@@ -8,7 +8,13 @@ import { refreshTrendsAction, setTrendStateAction } from "./actions";
 import { TrendCard } from "./trend-card";
 import PricesClient from "../prices/prices-client";
 import type { BenchmarkComparison } from "../lib/compare";
-import type { CompetitorPrice, MarketingTrend, MenuItemLite, TrendState } from "../lib/types";
+import type {
+  CompetitorPrice,
+  MarketingTrend,
+  MenuItemLite,
+  PriceBenchmark,
+  TrendState,
+} from "../lib/types";
 
 type TrendTab = "ads" | "events" | "prices";
 
@@ -37,6 +43,7 @@ export default function TrendsClient({
   comparison,
   competitorPrices,
   menuItems,
+  benchmarks,
 }: {
   initialTrends: MarketingTrend[];
   area: string;
@@ -46,6 +53,7 @@ export default function TrendsClient({
   comparison: BenchmarkComparison[];
   competitorPrices: CompetitorPrice[];
   menuItems: MenuItemLite[];
+  benchmarks: PriceBenchmark[];
 }) {
   const [trendTab, setTrendTab] = useState<TrendTab>("ads");
   const [showSaved, setShowSaved] = useState(false);
@@ -230,6 +238,7 @@ export default function TrendsClient({
           comparison={comparison}
           competitorPrices={competitorPrices}
           menuItems={menuItems}
+          benchmarks={benchmarks}
           priceTrends={priceTrends}
           onSetTrendState={setState}
           pendingTrendId={pendingId}

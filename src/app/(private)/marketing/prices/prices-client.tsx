@@ -9,7 +9,13 @@ import { refreshPriceInsightsAction, updateComparisonAreaAction } from "./action
 import { buildMenuComparison, buildVenueMatrix, rankedVenues } from "../lib/compare";
 import { TrendCard } from "../trends/trend-card";
 import type { BenchmarkComparison } from "../lib/compare";
-import type { CompetitorPrice, MarketingTrend, MenuItemLite, TrendState } from "../lib/types";
+import type {
+  CompetitorPrice,
+  MarketingTrend,
+  MenuItemLite,
+  PriceBenchmark,
+  TrendState,
+} from "../lib/types";
 
 type PriceView = "summary" | "byVenue";
 type CompareMode = "rounds" | "menu";
@@ -98,6 +104,7 @@ export default function PricesClient({
   comparison,
   competitorPrices,
   menuItems,
+  benchmarks,
   priceTrends,
   onSetTrendState,
   pendingTrendId,
@@ -108,6 +115,7 @@ export default function PricesClient({
   comparison: BenchmarkComparison[];
   competitorPrices: CompetitorPrice[];
   menuItems: MenuItemLite[];
+  benchmarks: PriceBenchmark[];
   priceTrends: MarketingTrend[];
   onSetTrendState: (id: string, state: TrendState) => void;
   pendingTrendId: string | null;
@@ -124,7 +132,10 @@ export default function PricesClient({
   const [pickedVenues, setPickedVenues] = useState<string[] | null>(null);
   const [openRowKey, setOpenRowKey] = useState<string | null>(null);
 
-  const allVenues = useMemo(() => rankedVenues(competitorPrices), [competitorPrices]);
+  const allVenues = useMemo(
+    () => rankedVenues(competitorPrices, benchmarks),
+    [competitorPrices, benchmarks],
+  );
   const shownVenues = useMemo(() => {
     if (pickedVenues == null) return allVenues.slice(0, MAX_VENUES);
     const kept = pickedVenues.filter((v) => allVenues.includes(v));
@@ -135,8 +146,8 @@ export default function PricesClient({
   // matches. Items with no local match (or no readable price) stay off by
   // default but can be ticked on.
   const menuRows = useMemo(
-    () => buildMenuComparison(competitorPrices, menuItems),
-    [competitorPrices, menuItems],
+    () => buildMenuComparison(competitorPrices, menuItems, benchmarks),
+    [competitorPrices, menuItems, benchmarks],
   );
   const defaultMenuRows = useMemo(
     () => menuRows.filter((r) => r.matchLabel && r.ownPrice != null),
@@ -172,10 +183,10 @@ export default function PricesClient({
       : `your ${c.ownItemName}`;
   };
 
-  const matrix = buildVenueMatrix(competitorPrices, shownComparison, shownVenues);
+  const matrix = buildVenueMatrix(competitorPrices, shownComparison, shownVenues, benchmarks);
   const fullMatrix = useMemo(
-    () => buildVenueMatrix(competitorPrices, comparison, allVenues),
-    [competitorPrices, comparison, allVenues],
+    () => buildVenueMatrix(competitorPrices, comparison, allVenues, benchmarks),
+    [competitorPrices, comparison, allVenues, benchmarks],
   );
 
   const scored = shownComparison.filter(

@@ -6,6 +6,7 @@ import { generateGrounded, parseJsonLoose } from "@/lib/gemini";
 import { formatGbp } from "@/lib/price";
 import { buildAdvertisingTrendsPrompt, buildEventIdeasPrompt, buildPriceTrendsPrompt } from "../lib/prompts";
 import { buildComparison } from "../lib/compare";
+import { readMenuItems, readPriceBenchmarks } from "../lib/menu-data";
 import { trendSignature } from "../lib/signature";
 import {
   ensureMarketingSettings,
@@ -13,7 +14,7 @@ import {
   resolveComparisonArea,
   deriveAreaFromAddress,
 } from "../lib/settings";
-import type { AiTrend, CompetitorPrice, MenuItemLite, TrendEffort, TrendKind, TrendState } from "../lib/types";
+import type { AiTrend, CompetitorPrice, TrendEffort, TrendKind, TrendState } from "../lib/types";
 
 function normalizeEffort(raw?: string): TrendEffort | null {
   const v = (raw ?? "").trim().toLowerCase();
@@ -42,18 +43,10 @@ async function buildPriceContext(
   supabase: Awaited<ReturnType<typeof createClient>>,
   area: string,
 ): Promise<string> {
-  const { data: cats } = await supabase
-    .from("menu_categories")
-    .select("name, menu_items(id, name, price, is_active)")
-    .eq("is_active", true);
-  const menuItems: MenuItemLite[] = [];
-  (cats ?? []).forEach(
-    (cat: { name: string; menu_items?: { id: number; name: string; price: string; is_active: boolean }[] }) => {
-      (cat.menu_items ?? [])
-        .filter((it) => it.is_active)
-        .forEach((it) => menuItems.push({ id: it.id, name: it.name, price: it.price, category: cat.name }));
-    },
-  );
+  const [menuItems, benchmarks] = await Promise.all([
+    readMenuItems(supabase),
+    readPriceBenchmarks(supabase),
+  ]);
 
   const { data: comp } = await supabase
     .from("competitor_prices")
@@ -62,7 +55,7 @@ async function buildPriceContext(
   const competitorPrices = (comp ?? []) as CompetitorPrice[];
   if (!competitorPrices.length && !menuItems.length) return "";
 
-  const gapLines = buildComparison(competitorPrices, menuItems)
+  const gapLines = buildComparison(competitorPrices, menuItems, benchmarks)
     .filter((c) => c.ownPrice != null && c.competitorAvg != null && c.sampleCount > 0)
     .map((c) => {
       const diff = (c.ownPrice as number) - (c.competitorAvg as number);

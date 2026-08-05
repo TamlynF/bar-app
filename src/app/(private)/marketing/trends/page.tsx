@@ -5,23 +5,22 @@ import {
   readCompanyAddress,
   resolveComparisonArea,
 } from "../lib/settings";
+import { readMenuItems, readPriceBenchmarks } from "../lib/menu-data";
 import { buildComparison } from "../lib/compare";
-import type { CompetitorPrice, MarketingTrend, MenuItemLite } from "../lib/types";
+import type { CompetitorPrice, MarketingTrend } from "../lib/types";
 
 export const dynamic = "force-dynamic";
 
 export default async function MarketingTrendsPage() {
   const supabase = await createClient();
 
-  const [{ data: trends }, { data: menuCats }, settings, address] = await Promise.all([
+  const [{ data: trends }, menuItems, benchmarks, settings, address] = await Promise.all([
     supabase
       .from("marketing_trends")
       .select("*")
       .order("fetched_at", { ascending: false }),
-    supabase
-      .from("menu_categories")
-      .select("name, mixer_surcharge, menu_items(id, name, price, is_active)")
-      .eq("is_active", true),
+    readMenuItems(supabase),
+    readPriceBenchmarks(supabase),
     readMarketingSettings(supabase),
     readCompanyAddress(supabase),
   ]);
@@ -34,29 +33,8 @@ export default async function MarketingTrendsPage() {
     .eq("area", area)
     .order("item_type", { ascending: true });
 
-  const menuItems: MenuItemLite[] = [];
-  (menuCats ?? []).forEach(
-    (cat: {
-      name: string;
-      mixer_surcharge: number | null;
-      menu_items?: { id: number; name: string; price: string; is_active: boolean }[];
-    }) => {
-      (cat.menu_items ?? [])
-        .filter((it) => it.is_active)
-        .forEach((it) =>
-          menuItems.push({
-            id: it.id,
-            name: it.name,
-            price: it.price,
-            category: cat.name,
-            mixer_surcharge: cat.mixer_surcharge,
-          }),
-        );
-    },
-  );
-
   const competitorPrices = (prices as CompetitorPrice[] | null) ?? [];
-  const comparison = buildComparison(competitorPrices, menuItems);
+  const comparison = buildComparison(competitorPrices, menuItems, benchmarks);
 
   return (
     <TrendsClient
@@ -68,6 +46,7 @@ export default async function MarketingTrendsPage() {
       comparison={comparison}
       competitorPrices={competitorPrices}
       menuItems={menuItems}
+      benchmarks={benchmarks}
     />
   );
 }
