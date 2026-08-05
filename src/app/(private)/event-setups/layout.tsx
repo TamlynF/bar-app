@@ -3,6 +3,7 @@
 import React from "react";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { isWidePath } from "@/lib/admin-nav";
 
 export default function EventSetupsLayout({
   children,
@@ -11,9 +12,15 @@ export default function EventSetupsLayout({
 }) {
   const pathname = usePathname();
   const isSettingsRoot = pathname === "/event-setups";
+  // The private shell has already released the width; capping again here would
+  // put the frame straight back on.
+  const wide = isWidePath(pathname);
 
   return (
-    <div className="mx-auto flex min-h-full w-full max-w-7xl flex-col bg-background px-2 pt-2 pb-2 transition-all duration-500 sm:pt-0 md:px-8 md:pb-8 lg:flex-row lg:space-x-12">
+    <div className={cn(
+      "mx-auto flex min-h-full w-full flex-col bg-background px-2 pt-2 pb-2 transition-all duration-500 sm:pt-0 md:pb-8 lg:flex-row lg:space-x-12",
+      wide ? "max-w-none md:px-4" : "max-w-7xl md:px-8",
+    )}>
       <div className="flex flex-1 flex-col">
         <main className={cn(
           "relative flex-1 overflow-clip",

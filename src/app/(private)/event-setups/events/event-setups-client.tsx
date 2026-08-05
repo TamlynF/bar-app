@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
 import {
@@ -39,6 +40,8 @@ import {
   Info,
   ExternalLink,
   CopyPlus,
+  CornerDownRight,
+  HelpCircle,
   Undo2,
   MoreVertical,
   Ban,
@@ -195,7 +198,7 @@ const MONTHS_LONG = ["January", "February", "March", "April", "May", "June", "Ju
 const DAY_CHIP_LIMIT = 4;
 
 const SHEET_PILL =
-  "inline-flex h-6.5 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold tracking-wide sm:h-8 sm:gap-2 sm:px-3.5 sm:text-[12px]";
+  "inline-flex h-6.5 shrink-0 items-center gap-1 rounded-full border px-2 text-[11px] font-semibold tracking-wide sm:h-8 sm:gap-2 sm:px-3.5 sm:text-[12px]";
 
 function parseDate(dateStr: string) {
   return new Date(dateStr + "T00:00:00");
@@ -316,6 +319,8 @@ export default function EventsClient({
   const [isPending, startTransition] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [catFilters, setCatFilters] = useState<Set<number>>(new Set());
+  const [subFilters, setSubFilters] = useState<Set<number>>(new Set());
+  const [issuesEvent, setIssuesEvent] = useState<EventRecord | null>(null);
   const [sortSoon, setSortSoon] = useState(true);
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [showFilters, setShowFilters] = useState(!!initialQuick);
@@ -419,8 +424,30 @@ export default function EventsClient({
       ?.scrollIntoView({ block: "center", behavior: "smooth" });
   }, [focusedId]);
 
+  // Dropping a category takes its subtypes with it, so a subtype can never be
+  // left filtering for a category that is no longer chosen.
   const toggleCatFilter = (id: number) =>
     setCatFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+        setSubFilters((subs) => {
+          const kept = new Set(
+            [...subs].filter((subId) => {
+              const sub = eventSubtypes.find((s) => s.id === subId);
+              return sub ? next.has(sub.event_types_id) : false;
+            })
+          );
+          return kept;
+        });
+      } else {
+        next.add(id);
+      }
+      return next;
+    });
+
+  const toggleSubFilter = (id: number) =>
+    setSubFilters((prev) => {
       const next = new Set(prev);
       if (next.has(id)) { next.delete(id); } else { next.add(id); }
       return next;
@@ -867,6 +894,42 @@ export default function EventsClient({
     });
   };
 
+  // Everything wrong with one event, in the words you would use to fix it. The
+  // same list drives the row's warning icon, its count and the dialog.
+  const eventIssues = (e: EventRecord): string[] => {
+    const sub = subtypeById.get(e.event_subtypes_id);
+    const past = !!e.date && e.date < todayStr;
+    const issues: string[] = [];
+
+    if (!e.title?.trim()) issues.push("No title has been set.");
+    if (!e.date) issues.push("No date has been set.");
+    if (!e.start_time || !e.end_time) issues.push("The start or end time is missing.");
+    if (e.is_bookable && !e.booking_page_url?.trim()) {
+      issues.push("Public booking is switched on but there is no booking URL.");
+    }
+    if (sub?.payment_required && !(e.payment_amount != null && e.payment_amount > 0)) {
+      issues.push("This event type takes payment but no amount has been set.");
+    }
+    if (sub?.host_required && !e.host_employee_id) {
+      issues.push("This event type needs a host and none has been chosen.");
+    }
+    if (sub?.behavior === "karaoke" && !e.karaoke_request_url?.trim()) {
+      issues.push("Karaoke night with no Singa request link.");
+    }
+    if (!past && needsQuiz(e)) {
+      const { total, target } = getQuizStatus(e.id, quizCategories, quizQuestions);
+      issues.push(`Quiz questions are incomplete - ${total} of ${target} written.`);
+    }
+    if (needsWinner(e)) {
+      issues.push("No winning team has been recorded for this quiz.");
+    }
+    if (past && e.is_active !== false) {
+      issues.push("This event has already happened but is still marked active.");
+    }
+
+    return issues;
+  };
+
   const missingInfo = (e: EventRecord) => {
     const sub = subtypeById.get(e.event_subtypes_id);
     if (!e.title?.trim()) return true;
@@ -888,6 +951,8 @@ export default function EventsClient({
     { key: "active", label: "Active only", test: (e) => e.is_active !== false },
     { key: "fully-booked", label: "Fully booked", test: (e) => e.is_fully_booked === true },
     { key: "missing-info", label: "Missing info", test: missingInfo },
+    { key: "upcoming", label: "Upcoming", test: (e) => e.date >= todayStr },
+    { key: "historic", label: "Historic", test: (e) => e.date < todayStr },
   ];
 
   const passesQuick = (e: EventRecord) =>
@@ -900,7 +965,23 @@ export default function EventsClient({
     .sort((a, b) => a.name.localeCompare(b.name))
     .map((t) => ({ type: t, count: typeCounts.get(t.id) ?? 0 }));
 
-  const passesCat = (e: EventRecord) => catFilters.size === 0 || catFilters.has(e.event_types_id);
+  const passesCat = (e: EventRecord) => {
+    if (catFilters.size > 0 && !catFilters.has(e.event_types_id)) return false;
+    if (subFilters.size > 0 && !subFilters.has(e.event_subtypes_id)) return false;
+    return true;
+  };
+
+  // Only the chosen categories offer their subtypes, and the counts come from
+  // the same pool the category chips are counted against.
+  const subChips = eventSubtypes
+    .filter((s) => catFilters.has(s.event_types_id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const subCounts = new Map<number, number>();
+  for (const e of chipBase) {
+    if (!catFilters.has(e.event_types_id)) continue;
+    subCounts.set(e.event_subtypes_id, (subCounts.get(e.event_subtypes_id) ?? 0) + 1);
+  }
+  const subChipTotal = [...subCounts.values()].reduce((sum, n) => sum + n, 0);
 
   const visibleEvents = baseEvents
     .filter((e) => matchesFilters(e) && passesQuick(e) && passesCat(e))
@@ -909,9 +990,14 @@ export default function EventsClient({
       return sortSoon ? cmp : -cmp;
     });
 
-  const anyFilterActive = isSearching || catFilters.size > 0 || quickFilters.size > 0;
-  const activeFilterCount = catFilters.size + quickFilters.size;
-  const clearAllFilters = () => { setCatFilters(new Set()); setQuickFilters(new Set()); setSearchQuery(""); };
+  const anyFilterActive = isSearching || catFilters.size > 0 || subFilters.size > 0 || quickFilters.size > 0;
+  const activeFilterCount = catFilters.size + subFilters.size + quickFilters.size;
+  const clearAllFilters = () => {
+    setCatFilters(new Set());
+    setSubFilters(new Set());
+    setQuickFilters(new Set());
+    setSearchQuery("");
+  };
 
   const dayGroups: { date: string; events: EventRecord[] }[] = [];
   for (const e of visibleEvents) {
@@ -1055,19 +1141,23 @@ export default function EventsClient({
       : `${bStats.confirmedPeople} booked`;
     const priceLabel = hasPricing ? `£${event.payment_amount!.toFixed(2)}` : null;
 
-    const statusFlags = (
+    // An event that has been and gone is a record, not a state to act on, so
+    // its whole trailing group reads back in grey.
+    const isPast = event.date < todayStr;
+    const PILL = "inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[12px] font-semibold";
+    const GREY = "bg-admin-surface text-admin-muted";
+
+    // Warnings and the sold-out flag ride together in one column; whether the
+    // event is on at all reads at the end of the row, next to its actions.
+    // Once the night has passed there is no point writing its questions, so
+    // only the winner is still worth chasing.
+    const rowFlags = (
       <>
-        {event.is_fully_booked && (
-          <span className="rounded bg-admin-error-bg px-1.5 py-0.5 text-[12px] font-semibold tracking-wide text-admin-error uppercase">Full</span>
-        )}
-        {inactive && (
-          <span className="rounded bg-admin-surface px-1.5 py-0.5 text-[12px] font-semibold tracking-wide text-admin-muted uppercase">Inactive</span>
-        )}
-        {quizStat && !quizStat.allComplete && (
+        {!isPast && quizStat && !quizStat.allComplete && (
           <span
             title={quizStat.someExist ? "Quiz questions incomplete" : "No quiz questions yet"}
             className={cn(
-              "inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[12px] font-semibold",
+              "inline-flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[12px] font-semibold",
               quizStat.someExist ? "bg-admin-warning-bg text-admin-warning" : "bg-admin-error-bg text-admin-error"
             )}
           >
@@ -1078,7 +1168,7 @@ export default function EventsClient({
         {needsWinner(event) && (
           <span
             title="No winning team recorded for this quiz"
-            className="inline-flex items-center gap-1 rounded bg-admin-warning-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-warning"
+            className="inline-flex shrink-0 items-center gap-1 rounded bg-admin-warning-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-warning"
           >
             <Trophy className="h-3 w-3" />
             Needs winner
@@ -1087,13 +1177,154 @@ export default function EventsClient({
         {canPickWinner && winnerBookingId && (
           <span
             title={`Winner: ${teamLabel(winnerBookingId)}`}
-            className="inline-flex max-w-40 items-center gap-1 rounded bg-admin-success-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-success"
+            className="inline-flex max-w-24 shrink-0 items-center gap-1 rounded bg-admin-success-bg px-1.5 py-0.5 text-[12px] font-semibold text-admin-success"
           >
             <Trophy className="h-3 w-3 shrink-0" />
             <span className="truncate">{teamLabel(winnerBookingId)}</span>
           </span>
         )}
       </>
+    );
+
+    // Sold out is a problem whether or not the event is switched on, so it
+    // pulls the status pill red with it.
+    const activePill = (
+      <span
+        className={cn(
+          PILL,
+          isPast
+            ? GREY
+            : inactive || event.is_fully_booked
+              ? "bg-admin-error-bg text-admin-error"
+              : "bg-admin-success-bg text-admin-success"
+        )}
+      >
+        {inactive ? <X className="h-3 w-3" /> : <Check className="h-3 w-3" />}
+        {/* The tick or cross says it on its own where the card is one column
+            wide; the word stays for screen readers and returns from sm up. */}
+        <span className="max-sm:sr-only">{inactive ? "Inactive" : "Active"}</span>
+      </span>
+    );
+
+    const fullPill = event.is_fully_booked && (
+      <span
+        title="This event is sold out"
+        className={cn(PILL, isPast ? GREY : "bg-admin-error-bg text-admin-error")}
+      >
+        Full
+      </span>
+    );
+
+    const historicPill = isPast && (
+      <span title="This event has already taken place" className={cn(PILL, GREY)}>
+        Historic
+      </span>
+    );
+
+    const statusFlags = (
+      <>
+        {rowFlags}
+        {activePill}
+        {historicPill}
+        {fullPill}
+      </>
+    );
+
+    const issues = eventIssues(event);
+    const issueLabel = `${issues.length} issue${issues.length === 1 ? "" : "s"}`;
+
+    const rowMenu = (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            title={`More actions for ${event.title || "Untitled Event"}`}
+            aria-label={`More actions for ${event.title || "Untitled Event"}`}
+            className="flex h-11 w-11 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
+          >
+            <MoreVertical className="h-4 w-4" />
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-52">
+          {issues.length > 0 && (
+            <>
+              <DropdownMenuItem onClick={() => setIssuesEvent(event)}>
+                <HelpCircle className="h-4 w-4" />
+                View {issueLabel}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          {isQuiz && (
+            <DropdownMenuItem onClick={() => navigateFromRow(event, quizHrefFor(event, "list"))}>
+              <Brain className="h-4 w-4" />
+              View quiz
+            </DropdownMenuItem>
+          )}
+          {canPickWinner && (
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger>
+                <Trophy className="h-4 w-4" />
+                {winnerBookingId ? "Change winner" : "Set winner"}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="max-h-80 w-56 overflow-y-auto">
+                {eventTeams.length === 0 ? (
+                  <DropdownMenuItem disabled>No confirmed teams</DropdownMenuItem>
+                ) : (
+                  eventTeams.map((team) => (
+                    <DropdownMenuItem
+                      key={team.id}
+                      disabled={isPending}
+                      onClick={() => chooseWinner(event, team.id)}
+                    >
+                      {team.id === winnerBookingId ? (
+                        <Check className="h-4 w-4 shrink-0" />
+                      ) : (
+                        <span className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      )}
+                      <span className="truncate">{team.group_name?.trim() || `#${team.id}`}</span>
+                    </DropdownMenuItem>
+                  ))
+                )}
+                {winnerBookingId && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      disabled={isPending}
+                      onClick={() => chooseWinner(event, null)}
+                    >
+                      <X className="h-4 w-4" />
+                      Clear winner
+                    </DropdownMenuItem>
+                  </>
+                )}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )}
+          {event.is_bookable && (
+            <DropdownMenuItem onClick={() => navigateFromRow(event, bookingsHrefFor(event, "list"))}>
+              <Users className="h-4 w-4" />
+              View bookings
+            </DropdownMenuItem>
+          )}
+          {(isQuiz || event.is_bookable) && <DropdownMenuSeparator />}
+          {canCopy(event) && (
+            <DropdownMenuItem onClick={() => openCopy(event)}>
+              <CopyPlus className="h-4 w-4" />
+              Copy event
+            </DropdownMenuItem>
+          )}
+          <DropdownMenuItem disabled={isPending} onClick={() => toggleEventActive(event)}>
+            {inactive ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+            {inactive ? "Activate event" : "Deactivate event"}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={() => handleRowDelete(event)}>
+            <Trash2 className="h-4 w-4" />
+            Delete event
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
 
     return (
@@ -1106,6 +1337,7 @@ export default function EventsClient({
           "pointer-fine:transition-shadow pointer-fine:hover:shadow-md",
           isTonight ? "border-[#FF6B35] ring-1 ring-[#FF6B35]/40" : "border-admin-line hover:border-admin-primary/40",
           inactive && "opacity-60",
+          !inactive && isPast && "border-admin-line bg-admin-line",
           focusedId === event.id && "border-admin-primary bg-admin-primary-soft/40 ring-2 ring-admin-primary/30"
         )}
       >
@@ -1146,22 +1378,33 @@ export default function EventsClient({
           <ChevronRight className="pointer-events-none mt-8 h-4 w-4 shrink-0 text-admin-muted" />
         </div>
 
-        {/* Desktop / tablet: fixed column grid so ten rows scan quickly */}
-        <div className="hidden min-h-19 grid-cols-[minmax(0,1fr)_140px_110px_100px_76px] items-center gap-4 px-4 sm:grid">
+        {/* Anything above a phone gets one line: tag, title, status, host, time,
+            bookings, price, menu, chevron. Fixed tracks rather than
+            content-sized ones, so each column starts in the same place on every
+            row - only the title gives up width. */}
+        <div className="hidden min-h-12 grid-cols-[128px_minmax(0,1fr)_150px_96px_88px_96px_56px_196px_100px_72px] items-center gap-2.5 px-3 sm:grid">
           <div className="pointer-events-none min-w-0">
-            <p className={cn("line-clamp-2 text-[15px] leading-snug font-bold", inactive ? "text-admin-muted" : "text-admin-ink")}>
-              {event.title || "Untitled Event"}
-            </p>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              {sub && <span className={cn("rounded px-1.5 py-0.5 text-[12px] font-semibold tracking-wide uppercase", badgeClass)}>{toTitleCase(sub.name)}</span>}
-              {statusFlags}
-            </div>
+            {sub && (
+              <span className={cn("inline-block max-w-full truncate rounded px-1.5 py-0.5 text-[12px] font-semibold tracking-wide uppercase", badgeClass)}>
+                {toTitleCase(sub.name)}
+              </span>
+            )}
+          </div>
+
+          <p className={cn("pointer-events-none min-w-0 truncate text-[15px] leading-snug font-bold", inactive ? "text-admin-muted" : "text-admin-ink")}>
+            {event.title || "Untitled Event"}
+          </p>
+
+          {/* A fixed track, not a content-sized one - an "auto" column takes its
+              width from that row's own pills, which is what left every warning
+              starting somewhere different. */}
+          <div className="pointer-events-none flex min-w-0 flex-wrap items-center gap-1.5">
+            {rowFlags}
           </div>
 
           <div className="pointer-events-none min-w-0 text-[12px] font-medium text-admin-muted">
-            <p className="tabular-nums">{timeLabel}</p>
             {host && (
-              <p className="mt-0.5 flex items-center gap-1.5">
+              <p className="flex items-center gap-1.5">
                 <span className="inline-grid h-4.25 w-4.25 shrink-0 place-items-center rounded-full bg-(--spine) text-[12px] font-semibold text-white">
                   {host.full_name[0]}
                 </span>
@@ -1169,6 +1412,10 @@ export default function EventsClient({
               </p>
             )}
           </div>
+
+          <p className="pointer-events-none text-[12px] font-medium text-admin-muted tabular-nums">
+            {timeLabel}
+          </p>
 
           <p className="pointer-events-none text-[12px] font-medium text-admin-muted tabular-nums" aria-label={showBooked ? bookedAria : undefined}>
             {showBooked ? bookedNode : ""}
@@ -1178,89 +1425,29 @@ export default function EventsClient({
             {priceLabel ?? ""}
           </p>
 
+          <div className="pointer-events-none flex min-w-0 items-center gap-1.5">
+            {activePill}
+            {historicPill}
+            {fullPill}
+          </div>
+
+          <div className="relative z-2 flex min-w-0 items-center">
+            {issues.length > 0 && (
+              <button
+                type="button"
+                onClick={() => setIssuesEvent(event)}
+                title={`${issueLabel} on this event`}
+                aria-label={`View ${issueLabel} on ${event.title || "this event"}`}
+                className="inline-flex h-9 min-w-0 items-center gap-1.5 rounded-lg px-2 text-admin-error transition-colors hover:bg-admin-error-bg"
+              >
+                <AlertTriangle className="h-5 w-5 shrink-0" />
+                <span className="truncate text-[12px] font-semibold whitespace-nowrap">{issueLabel}</span>
+              </button>
+            )}
+          </div>
+
           <div className="relative z-2 flex items-center justify-end gap-0.5">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  title={`More actions for ${event.title || "Untitled Event"}`}
-                  aria-label={`More actions for ${event.title || "Untitled Event"}`}
-                  className="flex h-11 w-11 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-surface hover:text-admin-ink"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                {isQuiz && (
-                  <DropdownMenuItem onClick={() => navigateFromRow(event, quizHrefFor(event, "list"))}>
-                    <Brain className="h-4 w-4" />
-                    View quiz
-                  </DropdownMenuItem>
-                )}
-                {canPickWinner && (
-                  <DropdownMenuSub>
-                    <DropdownMenuSubTrigger>
-                      <Trophy className="h-4 w-4" />
-                      {winnerBookingId ? "Change winner" : "Set winner"}
-                    </DropdownMenuSubTrigger>
-                    <DropdownMenuSubContent className="max-h-80 w-56 overflow-y-auto">
-                      {eventTeams.length === 0 ? (
-                        <DropdownMenuItem disabled>No confirmed teams</DropdownMenuItem>
-                      ) : (
-                        eventTeams.map((team) => (
-                          <DropdownMenuItem
-                            key={team.id}
-                            disabled={isPending}
-                            onClick={() => chooseWinner(event, team.id)}
-                          >
-                            {team.id === winnerBookingId ? (
-                              <Check className="h-4 w-4 shrink-0" />
-                            ) : (
-                              <span className="h-4 w-4 shrink-0" aria-hidden="true" />
-                            )}
-                            <span className="truncate">{team.group_name?.trim() || `#${team.id}`}</span>
-                          </DropdownMenuItem>
-                        ))
-                      )}
-                      {winnerBookingId && (
-                        <>
-                          <DropdownMenuSeparator />
-                          <DropdownMenuItem
-                            disabled={isPending}
-                            onClick={() => chooseWinner(event, null)}
-                          >
-                            <X className="h-4 w-4" />
-                            Clear winner
-                          </DropdownMenuItem>
-                        </>
-                      )}
-                    </DropdownMenuSubContent>
-                  </DropdownMenuSub>
-                )}
-                {event.is_bookable && (
-                  <DropdownMenuItem onClick={() => navigateFromRow(event, bookingsHrefFor(event, "list"))}>
-                    <Users className="h-4 w-4" />
-                    View bookings
-                  </DropdownMenuItem>
-                )}
-                {(isQuiz || event.is_bookable) && <DropdownMenuSeparator />}
-                {canCopy(event) && (
-                  <DropdownMenuItem onClick={() => openCopy(event)}>
-                    <CopyPlus className="h-4 w-4" />
-                    Copy event
-                  </DropdownMenuItem>
-                )}
-                <DropdownMenuItem disabled={isPending} onClick={() => toggleEventActive(event)}>
-                  {inactive ? <CheckCircle2 className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
-                  {inactive ? "Activate event" : "Deactivate event"}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem variant="destructive" onClick={() => handleRowDelete(event)}>
-                  <Trash2 className="h-4 w-4" />
-                  Delete event
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {rowMenu}
             <ChevronRight className="pointer-events-none h-4 w-4 shrink-0 text-admin-muted transition-transform group-hover:translate-x-0.5" />
           </div>
         </div>
@@ -1366,10 +1553,9 @@ export default function EventsClient({
 
   return (
     <div className={cn(
-      "mx-auto space-y-3 bg-[#F4F1E8] px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
-      viewMode === "calendar"
-        ? "sm:flex sm:h-[calc(100dvh-7rem)] sm:flex-col sm:max-w-2xl md:h-[calc(100dvh-8.5rem)] md:max-w-4xl lg:max-w-6xl xl:max-w-368 2xl:max-w-432"
-        : "sm:max-w-2xl md:max-w-4xl lg:max-w-6xl"
+      "mx-auto w-full max-w-352 space-y-3 bg-[#F4F1E8] px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6",
+      viewMode === "calendar" &&
+        "sm:flex sm:h-[calc(100dvh-7rem)] sm:flex-col md:h-[calc(100dvh-8.5rem)]"
     )}>
 
       {filter === "quiz-incomplete" && (
@@ -1383,22 +1569,26 @@ export default function EventsClient({
         </div>
       )}
 
-      <div className="shrink-0 rounded-2xl border border-[#D8D5C8] bg-white/60 p-2.5 shadow-sm sm:p-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex items-center rounded-xl border border-admin-line bg-admin-surface p-1">
+      {/* Pinned, so the search, the date range and the filters stay reachable
+          however far down the list you are. */}
+      <div className="sticky top-0 z-30 shrink-0 rounded-2xl border border-[#D8D5C8] bg-admin-card/95 p-1.5 shadow-sm backdrop-blur sm:p-3">
+      <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+        {/* Labels step aside on a phone - the toolbar is pinned, so it has to
+            cost as little of the screen as it can. */}
+        <div className="inline-flex items-center rounded-xl border border-admin-line bg-admin-surface p-0.5 sm:p-1">
           <button
             type="button"
             onClick={() => setViewMode("list")}
             aria-pressed={viewMode === "list"}
             title="List view"
             className={cn(
-              "inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold transition-all sm:h-9",
+              "inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold transition-all sm:px-3",
               viewMode === "list"
                 ? "bg-admin-card text-admin-primary shadow-sm"
                 : "text-admin-muted hover:bg-admin-card/60 hover:text-admin-ink"
             )}
           >
-            <List className="h-4 w-4" /> List
+            <List className="h-4 w-4" /> <span className="hidden sm:inline">List</span>
           </button>
           <button
             type="button"
@@ -1406,13 +1596,13 @@ export default function EventsClient({
             aria-pressed={viewMode === "calendar"}
             title="Calendar view"
             className={cn(
-              "inline-flex h-10 items-center gap-1.5 rounded-lg px-3 text-[13px] font-semibold transition-all sm:h-9",
+              "inline-flex h-9 items-center gap-1.5 rounded-lg px-2.5 text-[13px] font-semibold transition-all sm:px-3",
               viewMode === "calendar"
                 ? "bg-admin-card text-admin-primary shadow-sm"
                 : "text-admin-muted hover:bg-admin-card/60 hover:text-admin-ink"
             )}
           >
-            <Grid2X2 className="h-4 w-4" /> Calendar
+            <Grid2X2 className="h-4 w-4" /> <span className="hidden sm:inline">Calendar</span>
           </button>
         </div>
 
@@ -1420,14 +1610,15 @@ export default function EventsClient({
           type="button"
           onClick={() => openAdd()}
           title="Add event"
-          className="order-2 ml-auto inline-flex h-10 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] px-3 text-white shadow-sm transition-colors hover:bg-[#283719] lg:order-3 lg:ml-0"
+          aria-label="Add event"
+          className="order-2 ml-auto inline-flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-xl bg-[#34451F] text-white shadow-sm transition-colors hover:bg-[#283719] sm:h-10 sm:w-auto sm:px-3 lg:order-3 lg:ml-0"
         >
           <Plus className="h-3.5 w-3.5 shrink-0" />
-          <span className="text-[13px] font-semibold">Add event</span>
+          <span className="hidden text-[13px] font-semibold sm:inline">Add event</span>
         </button>
 
-      <div className="order-3 flex w-full items-center gap-2 lg:order-2 lg:min-w-0 lg:flex-1">
-        <div className="flex h-11 min-w-0 flex-1 items-center gap-2 rounded-xl border border-admin-line bg-admin-card px-3 transition-colors focus-within:border-admin-primary focus-within:ring-2 focus-within:ring-admin-gold/30">
+      <div className="order-3 flex w-full items-center gap-1.5 sm:gap-2 lg:order-2 lg:min-w-0 lg:flex-1">
+        <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-xl border border-admin-line bg-admin-card px-2.5 transition-colors focus-within:border-admin-primary focus-within:ring-2 focus-within:ring-admin-gold/30 sm:h-11 sm:px-3">
           <Search className="h-4 w-4 shrink-0 text-[#5E6654]/50" />
           <input
             type="text"
@@ -1452,7 +1643,7 @@ export default function EventsClient({
           aria-expanded={showFilters}
           title={showFilters ? "Hide filters" : "Show filters"}
           className={cn(
-            "inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-xl border text-[13px] font-semibold transition-colors sm:w-auto sm:px-4",
+            "inline-flex h-9 w-9 shrink-0 items-center justify-center gap-2 rounded-xl border text-[13px] font-semibold transition-colors sm:h-11 sm:w-auto sm:px-4",
             showFilters || activeFilterCount > 0
               ? "border-admin-primary/30 bg-admin-primary-soft text-admin-primary"
               : "border-admin-line bg-admin-card text-admin-muted hover:border-admin-primary/40 hover:bg-admin-surface hover:text-admin-ink"
@@ -1469,14 +1660,14 @@ export default function EventsClient({
       </div>
 
       {showFilters && (
-      <div className="order-4 w-full space-y-2 border-t border-[#D8D5C8] pt-3 pb-0.5">
+      <div className="order-4 w-full space-y-1.5 border-t border-[#D8D5C8] pt-2 pb-0.5 sm:space-y-2 sm:pt-3">
         <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <button
             type="button"
             onClick={() => setCatFilters(new Set())}
             aria-pressed={catFilters.size === 0}
             className={cn(
-              "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition-colors sm:h-9",
+              "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors sm:h-9 sm:px-3.5",
               catFilters.size === 0
                 ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
                 : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
@@ -1494,7 +1685,7 @@ export default function EventsClient({
                 aria-pressed={sel}
                 onClick={() => toggleCatFilter(type.id)}
                 className={cn(
-                  "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[12px] font-semibold transition-colors sm:h-9",
+                  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors sm:h-9 sm:px-3.5",
                   sel ? badgeSelectedClassFromColor(type.color) : badgeClassFromColor(type.color),
                   "rounded-full"
                 )}
@@ -1506,6 +1697,47 @@ export default function EventsClient({
           })}
         </div>
 
+        {/* Subtypes only appear once a category is chosen - "All" keeps every
+            subtype of that category, or pick the ones you want. */}
+        {subChips.length > 0 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto pl-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-admin-muted/60" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => setSubFilters(new Set())}
+              aria-pressed={subFilters.size === 0}
+              className={cn(
+                "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors sm:h-9 sm:px-3.5",
+                subFilters.size === 0
+                  ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
+                  : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
+              )}
+            >
+              {subFilters.size === 0 && <Check className="h-3.5 w-3.5" />}
+              All subtypes <span className="opacity-70">{subChipTotal}</span>
+            </button>
+            {subChips.map((subtype) => {
+              const sel = subFilters.has(subtype.id);
+              return (
+                <button
+                  key={subtype.id}
+                  type="button"
+                  aria-pressed={sel}
+                  onClick={() => toggleSubFilter(subtype.id)}
+                  className={cn(
+                    "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors sm:h-9 sm:px-3.5",
+                    sel ? badgeSelectedClassFromColor(subtype.color) : badgeClassFromColor(subtype.color)
+                  )}
+                >
+                  {sel && <Check className="h-3.5 w-3.5" />}
+                  {toTitleCase(subtype.name)}{" "}
+                  <span className="opacity-70">{subCounts.get(subtype.id) ?? 0}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         <div className="flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {/* The calendar is laid out by date, so sorting has nothing to act on. */}
           {viewMode === "list" && (
@@ -1514,7 +1746,7 @@ export default function EventsClient({
                 type="button"
                 onClick={() => setSortSoon((s) => !s)}
                 title={sortSoon ? "Sorted soonest first" : "Sorted latest first"}
-                className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-xl border border-admin-line bg-admin-surface px-3 text-[12px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
+                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-xl border border-admin-line bg-admin-surface px-3 text-[12px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft sm:h-9"
               >
                 <ArrowDownUp className="h-3.5 w-3.5" /> {sortSoon ? "Soonest" : "Latest"}
               </button>
@@ -1530,7 +1762,7 @@ export default function EventsClient({
                 aria-pressed={on}
                 onClick={() => toggleQuickFilter(q.key)}
                 className={cn(
-                  "inline-flex h-10 shrink-0 items-center gap-1.5 rounded-full border px-3.5 text-[12px] font-semibold transition-colors sm:h-9",
+                  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[12px] font-semibold transition-colors sm:h-9 sm:px-3.5",
                   on
                     ? "border-admin-primary bg-admin-primary-soft text-admin-primary"
                     : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink"
@@ -1717,15 +1949,26 @@ export default function EventsClient({
           )}
         </div>
       ) : (
-        <div className="space-y-1.5 sm:space-y-2">
+        <div className="space-y-1 sm:space-y-1.5">
           {dayGroups.map((group) => (
-            <section key={group.date} className="space-y-1.5 sm:space-y-2">
-              <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-admin-line bg-admin-bg/95 px-1 py-2 backdrop-blur">
-                <h2 className="min-w-0 truncate text-[13px] font-semibold tracking-wide text-admin-primary uppercase">
+            <section key={group.date} className="space-y-1">
+              {/* The date rides in a chip rather than a banded header, so a day
+                  costs one line; today's chip picks up the Tonight colour so
+                  the eye lands on it. */}
+              <div className="flex items-center gap-2 pt-2 pb-0.5">
+                <h2
+                  className={cn(
+                    "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-semibold tracking-wide uppercase",
+                    group.date === todayStr
+                      ? "border-[#FF6B35]/40 bg-[#FF6B35]/10 text-[#FF6B35]"
+                      : "border-admin-line bg-admin-card text-admin-primary"
+                  )}
+                >
+                  <CalendarDays className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden="true" />
                   {fullDayLabel(group.date, todayStr)}
-                  <span className="sm:hidden"> · {group.events.length} event{group.events.length === 1 ? "" : "s"}</span>
                 </h2>
-                <span className="hidden shrink-0 text-[12px] font-semibold tracking-wide text-admin-muted uppercase tabular-nums sm:inline">
+                <span className="h-px flex-1 bg-admin-line" aria-hidden="true" />
+                <span className="shrink-0 rounded-full bg-admin-surface px-2 py-0.5 text-[11px] font-medium text-admin-muted tabular-nums">
                   {group.events.length} event{group.events.length === 1 ? "" : "s"}
                 </span>
               </div>
@@ -1858,7 +2101,9 @@ export default function EventsClient({
                     ? "border-admin-success/30 bg-admin-success-bg text-admin-success"
                     : "border-admin-error/30 bg-admin-error-bg text-admin-error"
                 )}>
-                  <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2", selected.is_active !== false ? "bg-admin-success" : "bg-admin-error")} />
+                  {selected.is_active !== false
+                    ? <Check className="h-3.5 w-3.5 shrink-0" />
+                    : <X className="h-3.5 w-3.5 shrink-0" />}
                   {selected.is_active !== false ? "Active" : "Inactive"}
                 </span>
                 {selected.is_bookable && (
@@ -1869,7 +2114,13 @@ export default function EventsClient({
                       : "border-admin-line bg-admin-surface text-admin-muted"
                   )}>
                     <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2", selected.is_fully_booked ? "bg-admin-success" : "bg-admin-muted/50")} />
-                    {selected.is_fully_booked ? "Sold out" : "Not sold out"}
+                    {/* "Not sold out" is the longest label on the row and the
+                        one saying nothing is wrong, so a phone gets the venue's
+                        own shorthand for the same two states. */}
+                    <span className="sm:hidden">{selected.is_fully_booked ? "Full" : "Open"}</span>
+                    <span className="hidden sm:inline">
+                      {selected.is_fully_booked ? "Sold out" : "Not sold out"}
+                    </span>
                   </span>
                 )}
                 {!showForm && viewQuiz && viewQuiz.target > 0 && (
@@ -1887,10 +2138,33 @@ export default function EventsClient({
                     {viewQuiz.allComplete
                       ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
                       : <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
-                    <span>Quiz <span className="tabular-nums">{viewQuiz.total}/{viewQuiz.target}</span></span>
+                    <span>Quiz</span>
                     <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />
                   </Link>
                 )}
+                {/* Rides the status row at every width - a chip like the quiz
+                    one, pushed hard right once there is room for it. */}
+                {!showForm && (() => {
+                  const issues = eventIssues(selected);
+                  if (issues.length === 0) return null;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setIssuesEvent(selected)}
+                      title={`View ${issues.length} issue${issues.length === 1 ? "" : "s"} on this event`}
+                      className={cn(
+                        SHEET_PILL,
+                        "border-admin-error/30 bg-admin-error-bg pr-1.5 text-admin-error transition-colors hover:bg-admin-error/15 active:scale-[0.98] sm:ml-auto"
+                      )}
+                    >
+                      <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                      <span>
+                        {issues.length} {issues.length === 1 ? "Issue" : "Issues"}
+                      </span>
+                      <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                    </button>
+                  );
+                })()}
               </div>
             )}
 
@@ -1931,6 +2205,7 @@ export default function EventsClient({
                 </div>
               )
             )}
+
           </div>
 
           <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
@@ -2516,6 +2791,53 @@ export default function EventsClient({
           </div>
         </SheetContent>
       </Sheet>
+
+      <Dialog open={!!issuesEvent} onOpenChange={(open) => { if (!open) setIssuesEvent(null); }}>
+        <DialogContent className="max-w-md gap-0 overflow-hidden rounded-3xl border-2 border-admin-line bg-admin-surface p-0 shadow-2xl">
+          {issuesEvent && (() => {
+            const issues = eventIssues(issuesEvent);
+            return (
+              <>
+                <div className="flex flex-col gap-1 px-6 pt-6 pb-4">
+                  <DialogTitle className="flex items-center gap-2 text-base font-bold tracking-tight text-admin-ink">
+                    <HelpCircle className="h-4.5 w-4.5 shrink-0 text-admin-error" />
+                    {issues.length} issue{issues.length === 1 ? "" : "s"} to fix
+                  </DialogTitle>
+                  <DialogDescription className="text-[13px] font-medium text-admin-muted">
+                    {issuesEvent.title || "Untitled Event"}
+                    {issuesEvent.date ? ` · ${formatDate(issuesEvent.date)}` : ""}
+                  </DialogDescription>
+                </div>
+                <ul className="max-h-[50vh] divide-y divide-admin-line overflow-y-auto border-y border-admin-line bg-admin-card">
+                  {issues.map((issue) => (
+                    <li key={issue} className="flex items-start gap-2.5 px-6 py-3">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-admin-error" aria-hidden="true" />
+                      <span className="text-[13px] leading-snug font-semibold text-admin-ink">{issue}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="flex flex-row gap-2 px-6 py-5">
+                  <button
+                    type="button"
+                    onClick={() => setIssuesEvent(null)}
+                    className="h-11 flex-1 rounded-xl border-2 border-admin-muted/35 bg-admin-card text-[13px] font-semibold text-admin-ink transition-colors hover:bg-admin-surface"
+                  >
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { const target = issuesEvent; setIssuesEvent(null); openView(target); }}
+                    className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-admin-primary text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
+                  >
+                    <Pencil className="h-4 w-4" />
+                    Open event
+                  </button>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
 
       {ConfirmDialogUI}
     </div>
