@@ -95,7 +95,7 @@ export default function TrendsClient({
   const toggleExpanded = (id: string) => setExpandedId((cur) => (cur === id ? null : id));
 
   const tabRow = (
-    <div className="grid grid-cols-3 gap-1.5 sm:flex sm:gap-2">
+    <div className="grid grid-cols-3 gap-1.5 sm:flex sm:justify-center sm:gap-3">
       {TABS.map((tab) => {
         const active = trendTab === tab.value;
         return (
@@ -109,7 +109,7 @@ export default function TrendsClient({
               setExpandedId(null);
             }}
             className={cn(
-              "flex h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11.5px] transition-colors sm:px-4.5 sm:text-[13px]",
+              "flex h-10 items-center justify-center gap-2 rounded-lg px-2 text-[11.5px] transition-colors sm:h-12.5 sm:rounded-xl sm:px-7 sm:text-[15px]",
               tab.tilt,
               active
                 ? "bg-[#20231A] font-bold text-[#FFF4CC]"
@@ -141,18 +141,10 @@ export default function TrendsClient({
 
   return (
     <div className="w-full space-y-3.5 px-2 py-3 sm:space-y-4.5 sm:px-4 sm:py-0 md:px-6">
-      <div className="flex items-end justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="text-[27px] leading-[1.05] font-extrabold tracking-[-0.03em] text-[#20231A] sm:text-[34px]">
-            {trendTab === "prices" ? "The price-off" : "The noticeboard"}
-          </h1>
-          <p className="mt-1 text-[13px] leading-normal text-[#5E6654] sm:mt-1.5 sm:text-sm">
-            {trendTab === "prices"
-              ? `How your prices stack up against the locals. Near ${area}.`
-              : `Ideas worth nicking, pinned up fresh each week. Near ${area}.`}
-          </p>
-        </div>
-        <div className="hidden shrink-0 gap-2 sm:flex">
+      <div className="sm:flex sm:items-center sm:gap-3">
+        <div className="hidden flex-1 sm:block" />
+        {tabRow}
+        <div className="hidden flex-1 justify-end gap-2 sm:flex">
           {trendTab !== "prices" && pinButton("h-11 rounded-xl px-4.5 text-[13.5px]")}
           <button
             type="button"
@@ -169,8 +161,6 @@ export default function TrendsClient({
           </button>
         </div>
       </div>
-
-      {tabRow}
 
       {showSaved ? (
         <div className="space-y-4">

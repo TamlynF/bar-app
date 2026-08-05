@@ -326,36 +326,33 @@ export default function PricesClient({
           </p>
         </form>
       ) : (
-        <section className="rounded-[20px] bg-[#263019] p-4 text-[#DDE2D1] sm:p-5">
-          <p className="text-center font-semibold text-[11px] tracking-[0.15em] text-[#AEB69D] uppercase sm:hidden">
-            The {area} price-off
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-7">
-            <div className="mt-2 flex items-center justify-center gap-5 sm:mt-0 sm:gap-6">
-              <div className="text-center">
-                <p className="font-bold text-[12.5px] sm:text-[13px]">You</p>
-                <p className="text-[38px] leading-none font-extrabold text-[#D7A928] tabular-nums sm:text-[44px]">
+        <section className="rounded-2xl bg-[#263019] px-3.5 py-2.5 text-[#DDE2D1] sm:px-5 sm:py-3">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-6">
+            <div className="flex items-center justify-center gap-3.5 sm:gap-5">
+              <div className="flex items-baseline gap-1.5 sm:block sm:text-center">
+                <p className="font-bold text-[11px] sm:text-[12px]">You</p>
+                <p className="text-[22px] leading-none font-extrabold text-[#D7A928] tabular-nums sm:text-[26px]">
                   {yourScore}
                 </p>
               </div>
-              <p className="font-bold text-[15px] text-[#AEB69D] sm:text-base">vs</p>
-              <div className="text-center">
-                <p className="font-bold text-[12.5px] sm:text-[13px]">The locals</p>
-                <p className="text-[38px] leading-none font-extrabold text-[#AEB69D] tabular-nums sm:text-[44px]">
+              <p className="font-bold text-[12px] text-[#AEB69D] sm:text-[13px]">vs</p>
+              <div className="flex items-baseline gap-1.5 sm:block sm:text-center">
+                <p className="font-bold text-[11px] sm:text-[12px]">The locals</p>
+                <p className="text-[22px] leading-none font-extrabold text-[#AEB69D] tabular-nums sm:text-[26px]">
                   {localScore}
                 </p>
               </div>
             </div>
             <div className="min-w-0 flex-1">
-              <p className="hidden font-bold text-[15px] sm:block">
+              <p className="hidden font-bold text-[13px] sm:block">
                 The {area} price-off · updated {formatWhen(lastRefresh)}
               </p>
-              <p className="text-center text-[12px] leading-[1.45] text-[#AEB69D] sm:mt-1 sm:text-left sm:text-[13px]">
+              <p className="text-center text-[11.5px] leading-[1.4] text-[#AEB69D] sm:text-left sm:text-[12.5px]">
                 {scoreLine}
               </p>
             </div>
             {changeAreaButton(
-              "hidden h-10 shrink-0 items-center gap-2 rounded-[10px] border border-[#AEB69D]/40 px-3.5 font-semibold text-[12.5px] text-[#DDE2D1] transition-colors hover:bg-[#34451F] sm:flex",
+              "hidden h-9.5 shrink-0 items-center gap-2 rounded-[10px] border border-[#AEB69D]/40 px-3 font-semibold text-[12px] text-[#DDE2D1] transition-colors hover:bg-[#34451F] sm:flex",
             )}
           </div>
         </section>
@@ -543,11 +540,11 @@ export default function PricesClient({
       </div>
 
       {/* ---- Chosen item chips */}
-      <div className="hidden flex-wrap gap-1.5 sm:flex">
+      <div className="hidden items-center gap-1.5 overflow-x-auto pb-2.5 [scrollbar-width:thin] sm:flex">
         {shownComparison.map((c) => (
           <span
             key={rowKey(c)}
-            className="flex items-center gap-1.5 rounded-full border border-[#BFD8C4] bg-[#E7F3EC] px-3 py-1 font-semibold text-[12px] text-[#22613F]"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#BFD8C4] bg-[#E7F3EC] px-3 py-1 font-semibold text-[12px] whitespace-nowrap text-[#22613F]"
           >
             ✓ {c.label}
           </span>
@@ -556,7 +553,7 @@ export default function PricesClient({
           <button
             type="button"
             onClick={() => setPickerOpen(true)}
-            className="flex items-center gap-1.5 rounded-full border-[1.5px] border-dashed border-[#D8D5C8] bg-white px-3 py-1 font-semibold text-[12px] text-[#5E6654] hover:bg-[#F4F1E8]"
+            className="flex shrink-0 items-center gap-1.5 rounded-full border-[1.5px] border-dashed border-[#D8D5C8] bg-white px-3 py-1 font-semibold text-[12px] whitespace-nowrap text-[#5E6654] hover:bg-[#F4F1E8]"
           >
             + Add more
           </button>

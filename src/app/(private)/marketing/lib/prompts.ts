@@ -111,24 +111,45 @@ ${PRICE_ACTION_EFFORT_SCHEMA}
 }`;
 }
 
+// Every item, grouped by the part of the menu it sits on. A flat list used to be
+// cut at 40, which quietly dropped the wines, softs and snacks off the end and
+// left those rounds with nothing local to measure against.
+export function describeMenu(menuItems: MenuItemLite[]): string {
+  const groups = new Map<string, string[]>();
+  menuItems.forEach((m) => {
+    const group = m.category?.trim() || "Other";
+    groups.set(group, [...(groups.get(group) ?? []), m.name]);
+  });
+  return [...groups.entries()].map(([group, names]) => `- ${group}: ${names.join(", ")}`).join("\n");
+}
+
 export function buildPricesPrompt(area: string, radius: string | null, menuItems: MenuItemLite[]): string {
-  const ownItems = menuItems.slice(0, 40).map((m) => m.name).join(", ") || "common bar drinks and snacks";
+  const ownItems = describeMenu(menuItems);
   const radiusLine = radius ? ` (within roughly ${radius})` : "";
+  const menuBlock = ownItems
+    ? `\nThe venue's own menu, grouped by section - cover EVERY section below, not just the
+drinks that are easiest to find. Wine by the glass, house spirits and soft drinks are
+routinely missed; go looking for them specifically:
+${ownItems}\n`
+    : "\nTarget common bar drinks, snacks and food.\n";
+
   return `You are a hospitality pricing analyst. Use web search to find CURRENT typical prices
 at bars, pubs and music venues in and around ${area}${radiusLine} in the UK (GBP).
 
-Gather price points for common drinks, snacks and food, targeting items comparable to this
-venue's own menu: ${ownItems}. Include a spread of nearby venues (name them). Prefer real,
-recently-listed prices from menus, listings or reviews.
+Gather price points for comparable items at nearby venues.
+${menuBlock}
+Include a spread of nearby venues (name them). Prefer real, recently-listed prices from
+menus, listings or reviews.
 
 Return ONLY a JSON array (no prose, no markdown fences). Each element:
 {
   "venue_name": "name of the competitor venue",
-  "item_name": "the product, e.g. Pint of Lager, House Gin & Tonic, Nachos",
+  "item_name": "the product, naming the DRINK TYPE in plain words, not just a brand - 'Pint of Carling', 'House Gin & Tonic', 'Glass of Sauvignon Blanc', 'Coca-Cola', 'Nachos'",
   "item_type": "one of: drink, snack, food",
   "price_text": "the price as shown, e.g. £4.80",
   "source_url": "a real URL you used",
   "source_name": "the site/listing name"
 }
-Aim for 15-25 rows across several venues. Only include items where you found an actual price.`;
+Aim for 35-50 rows across several venues, spread across the menu sections above rather than
+piled onto pints. Only include items where you found an actual price.`;
 }
