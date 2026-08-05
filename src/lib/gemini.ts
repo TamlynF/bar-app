@@ -63,6 +63,69 @@ export async function generateGrounded(
   return { text, citations };
 }
 
+export type FileResult = { text: string } | { error: string };
+
+/* Reads a document directly - gemini-2.5-flash is multimodal, so a PDF goes in
+   whole and no OCR step is needed. Deliberately not `generateGrounded`: that one
+   hands the model a web search tool, which is the opposite of what you want when
+   the answer must come only from the file in front of it. */
+export async function generateFromFile(
+  file: { base64: string; mimeType: string },
+  prompt: string,
+  opts: { responseSchema?: unknown; temperature?: number } = {},
+): Promise<FileResult> {
+  const apiKey = getApiKey();
+  if (!apiKey) {
+    return { error: "AI key is missing. Set GEMINI_API_KEY in your environment." };
+  }
+
+  const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${apiKey}`;
+  const payload = {
+    contents: [
+      {
+        parts: [
+          { inline_data: { mime_type: file.mimeType, data: file.base64 } },
+          { text: prompt },
+        ],
+      },
+    ],
+    generationConfig: {
+      // Reading a document is transcription, not invention.
+      temperature: opts.temperature ?? 0,
+      ...(opts.responseSchema
+        ? { responseMimeType: "application/json", responseSchema: opts.responseSchema }
+        : {}),
+    },
+  };
+
+  let response: Response;
+  try {
+    response = await fetch(apiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to reach the AI service." };
+  }
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const message = data?.error?.message || "The AI service is currently unavailable.";
+    return { error: `AI error (${response.status}): ${message}` };
+  }
+
+  const result = await response.json();
+  const text: string | undefined = result.candidates?.[0]?.content?.parts
+    ?.map((p: { text?: string }) => p.text ?? "")
+    .join("");
+
+  if (!text) {
+    return { error: "The AI service could not read anything from that file." };
+  }
+  return { text };
+}
+
 export function parseJsonLoose<T>(text: string): T | null {
   const cleaned = text.replace(/```json/gi, "```").trim();
 

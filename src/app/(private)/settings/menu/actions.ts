@@ -6,6 +6,7 @@ import { getCurrentEmployeeId } from "@/lib/current-employee";
 import {
   planSave,
   planDelete,
+  nextPosition,
   type OrderChange,
   type OrderRow,
 } from "@/lib/merchandise-order";
@@ -14,11 +15,20 @@ import { readPriceBenchmarks } from "@/app/(private)/marketing/lib/menu-data";
 import type { PriceBenchmark } from "@/app/(private)/marketing/lib/types";
 import {
   SERVES,
+  formatPriceText,
   isLosslessPriceText,
   parsePriceText,
   type MenuItemPrice,
   type Serve,
 } from "@/lib/menu-price";
+import { generateFromFile, parseJsonLoose } from "@/lib/gemini";
+import {
+  cleanParsedMenu,
+  diffMenu,
+  normaliseName,
+  type CurrentCategory,
+  type MenuChange,
+} from "@/lib/menu-import";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 type OrderedTable = "menu_categories" | "menu_items";
@@ -387,6 +397,301 @@ export async function backfillServesAction(): Promise<
   } catch (error) {
     console.error("Error backfilling serves:", error);
     return { error: error instanceof Error ? error.message : "Failed to read prices." };
+  }
+}
+
+const MENU_UPLOAD_BUCKET = "menu-uploads";
+// Gemini takes inline file data up to ~20MB of request; a menu PDF is nowhere
+// near that, so anything bigger is a mistake worth naming rather than a timeout.
+const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
+const ACCEPTED_TYPES = ["application/pdf", "image/png", "image/jpeg", "image/webp"];
+
+const EXTRACTION_SCHEMA = {
+  type: "OBJECT",
+  properties: {
+    categories: {
+      type: "ARRAY",
+      items: {
+        type: "OBJECT",
+        properties: {
+          name: { type: "STRING" },
+          note: { type: "STRING" },
+          items: {
+            type: "ARRAY",
+            items: {
+              type: "OBJECT",
+              properties: {
+                name: { type: "STRING" },
+                price_text: { type: "STRING" },
+                serves: {
+                  type: "ARRAY",
+                  items: {
+                    type: "OBJECT",
+                    properties: {
+                      serve: { type: "STRING", enum: [...SERVES] },
+                      amount: { type: "NUMBER" },
+                    },
+                    required: ["serve", "amount"],
+                  },
+                },
+              },
+              required: ["name", "price_text", "serves"],
+            },
+          },
+        },
+        required: ["name", "items"],
+      },
+    },
+  },
+  required: ["categories"],
+};
+
+const EXTRACTION_PROMPT = `You are reading a pub drinks and snacks menu.
+
+Transcribe every category heading and every item under it. Rules:
+- Copy names and prices exactly as printed. Never invent an item or a price.
+- If a price cannot be read with confidence, omit that item entirely.
+- "serves" is the measure each price is for. Use only these values: ${SERVES.join(", ")}.
+- A line like "£4.95 / £2.95 half" is two serves: pint 4.95 and half pint 2.95.
+- An item sold one way only uses "each" unless the menu names the measure.
+- "price_text" is the printed price line as a customer reads it.
+- "note" is any small print under the category heading, such as a mixer surcharge.
+- Ignore headers, footers, addresses, opening hours and marketing copy.`;
+
+async function loadCurrentMenu(supabase: ServerClient): Promise<CurrentCategory[]> {
+  const { data, error } = await supabase
+    .from("menu_categories")
+    .select("id, name, note, is_active, menu_items(id, name, price, is_active, menu_item_prices(serve, amount))");
+  if (error) throw error;
+  return (data ?? []) as unknown as CurrentCategory[];
+}
+
+export type ParseMenuResult =
+  | { success: true; importId: number; changes: MenuChange[] }
+  | { error: string };
+
+export async function parseMenuUploadAction(formData: FormData): Promise<ParseMenuResult> {
+  const supabase = await createClient();
+  const file = formData.get("file");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { error: "Choose a PDF or photo of the menu first." };
+  }
+  if (!ACCEPTED_TYPES.includes(file.type)) {
+    return { error: "That file type is not supported - upload a PDF, PNG or JPEG." };
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return { error: "That file is too large - keep it under 15MB." };
+  }
+
+  try {
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const result = await generateFromFile(
+      { base64: bytes.toString("base64"), mimeType: file.type },
+      EXTRACTION_PROMPT,
+      { responseSchema: EXTRACTION_SCHEMA },
+    );
+    if ("error" in result) return { error: result.error };
+
+    const parsed = parseJsonLoose<unknown>(result.text);
+    if (!parsed) return { error: "The menu could not be read from that file." };
+
+    const menu = cleanParsedMenu(parsed);
+    const itemCount = menu.categories.reduce((sum, c) => sum + c.items.length, 0);
+    if (itemCount === 0) {
+      return { error: "No priced items were found in that file." };
+    }
+
+    const currentEmployeeId = await getCurrentEmployeeId(supabase);
+    const now = new Date().toISOString();
+
+    // Kept for the audit trail and so a run can be re-reviewed later. A failed
+    // upload is not fatal - the parse is what matters.
+    const storagePath = `${now.slice(0, 10)}/${Date.now()}-${file.name.replace(/[^\w.-]+/g, "_")}`;
+    const { error: uploadError } = await supabase.storage
+      .from(MENU_UPLOAD_BUCKET)
+      .upload(storagePath, file, { cacheControl: "3600", upsert: false });
+    if (uploadError) console.error("Menu upload storage error:", uploadError.message);
+
+    const { data: inserted, error: insertError } = await supabase
+      .from("menu_imports")
+      .insert({
+        file_path: uploadError ? null : storagePath,
+        file_name: file.name,
+        status: "parsed",
+        raw_result: menu,
+        category_count: menu.categories.length,
+        item_count: itemCount,
+        created_at: now,
+        updated_at: now,
+        created_by: currentEmployeeId,
+        updated_by: currentEmployeeId,
+      })
+      .select("id")
+      .single();
+    if (insertError) throw insertError;
+
+    const changes = diffMenu(await loadCurrentMenu(supabase), menu);
+    return { success: true, importId: inserted.id as number, changes };
+  } catch (error) {
+    console.error("Error parsing menu upload:", error);
+    return { error: error instanceof Error ? error.message : "Failed to read that menu." };
+  }
+}
+
+/* The diff is recomputed here from the stored parse rather than trusted from the
+   browser, so a tick can only ever apply the change it was shown against the
+   menu as it stands now. Nothing in this path deletes a row. */
+export async function applyMenuImportAction(
+  importId: number,
+  selectedKeys: string[],
+): Promise<{ success: true; applied: number } | { error: string }> {
+  const supabase = await createClient();
+  if (!selectedKeys.length) return { error: "Nothing was selected to apply." };
+
+  try {
+    const { data: run, error: runError } = await supabase
+      .from("menu_imports")
+      .select("id, raw_result, status")
+      .eq("id", importId)
+      .maybeSingle();
+    if (runError) throw runError;
+    if (!run) return { error: "That import could not be found." };
+    if (run.status === "applied") return { error: "That import has already been applied." };
+
+    const menu = cleanParsedMenu(run.raw_result);
+    const wanted = new Set(selectedKeys);
+    const changes = diffMenu(await loadCurrentMenu(supabase), menu).filter(
+      (change) => wanted.has(change.key) && change.kind !== "unchanged",
+    );
+    if (!changes.length) {
+      return { error: "Those changes are no longer pending - the menu has moved on." };
+    }
+
+    const currentEmployeeId = await getCurrentEmployeeId(supabase);
+    const now = new Date().toISOString();
+    const audit = {
+      created_at: now,
+      updated_at: now,
+      created_by: currentEmployeeId,
+      updated_by: currentEmployeeId,
+    };
+    const benchmarks = await readPriceBenchmarks(supabase);
+    let applied = 0;
+
+    // Categories first: an item in a brand new category has nowhere to go until
+    // its category has an id.
+    const categoryIdByName = new Map<string, number>();
+    for (const change of changes.filter((c) => c.kind === "new-category")) {
+      const rows = await loadCategoryRows(supabase);
+      const { data, error } = await supabase
+        .from("menu_categories")
+        .insert({
+          name: change.categoryName,
+          note: change.categoryNote,
+          mixer_surcharge: null,
+          display_order: nextPosition(rows),
+          is_active: true,
+          ...audit,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      categoryIdByName.set(normaliseName(change.categoryName), data.id as number);
+      applied += 1;
+    }
+
+    for (const change of changes.filter((c) => c.kind === "new-item")) {
+      const categoryId =
+        change.categoryId ?? categoryIdByName.get(normaliseName(change.categoryName)) ?? null;
+      // Its category was proposed but not ticked, so there is nowhere to put it.
+      if (categoryId == null || !change.itemName) continue;
+
+      const rows = await loadItemRows(supabase, categoryId);
+      const { data, error } = await supabase
+        .from("menu_items")
+        .insert({
+          category_id: categoryId,
+          name: change.itemName,
+          price: formatPriceText(change.serves),
+          display_order: nextPosition(rows),
+          is_active: true,
+          benchmark_key: await suggestBenchmarkKey(
+            supabase,
+            categoryId,
+            change.itemName,
+            benchmarks,
+          ),
+          ...audit,
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+
+      await writeServes(supabase, data.id as number, change.serves, currentEmployeeId, now);
+      applied += 1;
+    }
+
+    for (const change of changes.filter((c) => c.kind === "price-change")) {
+      if (change.itemId == null) continue;
+      const { error } = await supabase
+        .from("menu_items")
+        .update({
+          price: formatPriceText(change.serves),
+          updated_at: now,
+          updated_by: currentEmployeeId,
+        })
+        .eq("id", change.itemId);
+      if (error) throw error;
+
+      await writeServes(supabase, change.itemId, change.serves, currentEmployeeId, now);
+      applied += 1;
+    }
+
+    // The strongest thing an absence can do is take an item off the menu. The
+    // row, its prices and its comparison round all stay put.
+    for (const change of changes.filter((c) => c.kind === "absent")) {
+      if (change.itemId == null || change.categoryId == null) continue;
+      const rows = await loadItemRows(supabase, change.categoryId);
+      const plan = planSave(rows, {
+        id: change.itemId,
+        isActive: false,
+        targetPosition: null,
+      });
+
+      const { error } = await supabase
+        .from("menu_items")
+        .update({
+          is_active: false,
+          display_order: plan.position,
+          updated_at: now,
+          updated_by: currentEmployeeId,
+        })
+        .eq("id", change.itemId);
+      if (error) throw error;
+
+      await applyChanges(supabase, "menu_items", plan.changes);
+      applied += 1;
+    }
+
+    await supabase
+      .from("menu_imports")
+      .update({
+        status: "applied",
+        applied_count: applied,
+        applied_at: now,
+        updated_at: now,
+        updated_by: currentEmployeeId,
+      })
+      .eq("id", importId);
+
+    revalidatePath("/settings/menu");
+    revalidatePath("/menu");
+    revalidatePath("/marketing/trends");
+    return { success: true, applied };
+  } catch (error) {
+    console.error("Error applying menu import:", error);
+    return { error: error instanceof Error ? error.message : "Failed to apply the import." };
   }
 }
 

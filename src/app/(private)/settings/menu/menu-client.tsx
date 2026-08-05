@@ -13,7 +13,9 @@ import {
   X,
   Check,
   SearchX,
+  FileUp,
 } from "lucide-react";
+import MenuImportSheet from "./menu-import-sheet";
 import { toast } from "sonner";
 import {
   saveCategoryAction,
@@ -201,6 +203,7 @@ export default function MenuClient({
   const [isFilling, startFill] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
   const [sheet, setSheet] = useState<SheetState | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [position, setPosition] = useState(1);
@@ -596,6 +599,14 @@ export default function MenuClient({
           </button>
           <button
             type="button"
+            onClick={() => setImportOpen(true)}
+            title="Import a menu from a PDF or photo"
+            className={ICON_BUTTON}
+          >
+            <FileUp className="h-4 w-4 text-admin-muted" />
+          </button>
+          <button
+            type="button"
             onClick={handleBackfillServes}
             disabled={isFilling}
             title="Read serves from existing prices"
@@ -715,6 +726,8 @@ export default function MenuClient({
           ))}
         </div>
       )}
+
+      <MenuImportSheet open={importOpen} onClose={() => setImportOpen(false)} />
 
       <RecordSheet
         open={!!sheet}
