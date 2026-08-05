@@ -24,7 +24,8 @@ export function RecordList({
   title?: string;
   count?: number;
   countLabel?: React.ReactNode;
-  onAdd: () => void;
+  // Left off for a list nothing can be added to, which hides the add button.
+  onAdd?: () => void;
   addLabel?: string;
   collapsible?: boolean;
   toolbar?: React.ReactNode;
@@ -51,14 +52,16 @@ export function RecordList({
             <p className="text-[11px] font-semibold tracking-wide text-admin-muted">
               {countLabel}
             </p>
-            <Button
-              onClick={onAdd}
-              size="sm"
-              className="h-11 rounded-xl bg-admin-primary px-4 text-[13px] font-semibold text-white hover:bg-admin-primary-hover sm:h-9"
-            >
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              {addLabel}
-            </Button>
+            {onAdd && (
+              <Button
+                onClick={onAdd}
+                size="sm"
+                className="h-11 rounded-xl bg-admin-primary px-4 text-[13px] font-semibold text-white hover:bg-admin-primary-hover sm:h-9"
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                {addLabel}
+              </Button>
+            )}
           </div>
         )}
 
@@ -90,15 +93,17 @@ export function RecordList({
                 </button>
               )}
 
-              <Button
-                onClick={onAdd}
-                size="sm"
-                title={addLabel}
-                className="h-11 shrink-0 rounded-xl bg-admin-primary px-3 text-[13px] font-semibold text-white hover:bg-admin-primary-hover sm:h-9 sm:px-4"
-              >
-                <Plus className="h-3.5 w-3.5 shrink-0 sm:mr-1.5" />
-                <span className="hidden sm:inline">{addLabel}</span>
-              </Button>
+              {onAdd && (
+                <Button
+                  onClick={onAdd}
+                  size="sm"
+                  title={addLabel}
+                  className="h-11 shrink-0 rounded-xl bg-admin-primary px-3 text-[13px] font-semibold text-white hover:bg-admin-primary-hover sm:h-9 sm:px-4"
+                >
+                  <Plus className="h-3.5 w-3.5 shrink-0 sm:mr-1.5" />
+                  <span className="hidden sm:inline">{addLabel}</span>
+                </Button>
+              )}
             </div>
 
             {filters && showFilters && (
@@ -142,17 +147,19 @@ export function RecordList({
         {toolbar && (
           <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:flex-1">{toolbar}</div>
         )}
-        <button
-          type="button"
-          onClick={onAdd}
-          title={title ? `Add ${title}` : addLabel}
-          className="order-2 flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-admin-primary text-white transition-colors hover:bg-admin-primary-hover sm:order-3 sm:h-8 sm:w-auto sm:px-3"
-        >
-          <Plus className="h-3.5 w-3.5 shrink-0" />
-          <span className="hidden text-[11px] font-semibold sm:inline">
-            {addLabel}
-          </span>
-        </button>
+        {onAdd && (
+          <button
+            type="button"
+            onClick={onAdd}
+            title={title ? `Add ${title}` : addLabel}
+            className="order-2 flex h-9 w-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-admin-primary text-white transition-colors hover:bg-admin-primary-hover sm:order-3 sm:h-8 sm:w-auto sm:px-3"
+          >
+            <Plus className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden text-[11px] font-semibold sm:inline">
+              {addLabel}
+            </span>
+          </button>
+        )}
         {collapsible && (
           <button
             type="button"

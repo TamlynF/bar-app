@@ -1,15 +1,20 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
+import { Trophy, Medal, Target, Users, Calendar, Hash, SearchX } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { Trophy, Medal, Target, Users, Calendar, Hash } from "lucide-react";
+  useRecordSheet,
+  RecordSheet,
+  RecordList,
+  ListRow,
+  ListSearchInput,
+  InfoBadge,
+  StatusPill,
+  EmptyState,
+  DetailCard,
+  DetailCell,
+} from "@/components/admin";
 
 export type RawBookingScore = {
   id: number;
@@ -18,7 +23,7 @@ export type RawBookingScore = {
   created_at: string;
   bookings: {
     id: number;
-    group_name: string | null; 
+    group_name: string | null;
   } | { id: number; group_name: string | null; }[] | null;
   events: {
     id: number;
@@ -35,9 +40,26 @@ export type TeamStats = {
   history: RawBookingScore[];
 };
 
+function eventOf(record: RawBookingScore) {
+  return Array.isArray(record.events) ? record.events[0] : record.events;
+}
+
+function formatEventDate(date?: string | null) {
+  if (!date) return "Unknown date";
+  return new Date(date + "T00:00:00").toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function averageScore(team: TeamStats): string {
+  if (team.quizzes_attended === 0) return "-";
+  return (team.total_score / team.quizzes_attended).toFixed(1);
+}
+
 export default function TeamsClient({ initialScores = [] }: { initialScores: RawBookingScore[] }) {
-  const [selectedTeam, setSelectedTeam] = useState<TeamStats | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   const teamLeaderboard = useMemo(() => {
     const statsMap: Record<string, TeamStats> = {};
@@ -73,161 +95,231 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
     });
   }, [initialScores]);
 
-  const handleOpenHistory = (team: TeamStats) => {
-    setSelectedTeam(team);
-    setIsSheetOpen(true);
-  };
+  const sheet = useRecordSheet<TeamStats>({
+    records: teamLeaderboard,
+    getId: (record) => record.team_name,
+  });
+  const { selected } = sheet;
+
+  // The rank a team is filtered into has to stay the rank it holds on the whole
+  // board, so it is read before the search narrows anything.
+  const rankOf = useMemo(() => {
+    const ranks = new Map<string, number>();
+    teamLeaderboard.forEach((team, index) => ranks.set(team.team_name, index + 1));
+    return ranks;
+  }, [teamLeaderboard]);
+
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return teamLeaderboard;
+    return teamLeaderboard.filter((team) => team.team_name.toLowerCase().includes(needle));
+  }, [teamLeaderboard, query]);
+
+  const sortedHistory = useMemo(() => {
+    if (!selected) return [];
+    return [...selected.history].sort((a, b) => {
+      const dateA = eventOf(a)?.date ?? "";
+      const dateB = eventOf(b)?.date ?? "";
+      return dateB.localeCompare(dateA);
+    });
+  }, [selected]);
 
   return (
-    <div className="px-6 py-6 sm:py-0">
-      <div className="flex items-center justify-between border-b pb-4">
-        <div>
-          <h3 className="text-lg font-medium">Teams & Leaderboard</h3>
-          <p className="text-sm text-muted-foreground">
-            View team attendance, total scores, and past quiz victories.
-          </p>
-        </div>
-      </div>
-
-      <div className="mt-6">
-        <div className="rounded-md border">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-muted/50 text-muted-foreground">
-              <tr>
-                <th className="w-16 px-4 py-3 text-center font-medium">Rank</th>
-                <th className="px-4 py-3 font-medium">Team Name</th>
-                <th className="px-4 py-3 text-center font-medium">Quizzes Attended</th>
-                <th className="px-4 py-3 text-center font-medium">Total Score</th>
-                <th className="px-4 py-3 text-center font-medium">Wins</th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {teamLeaderboard.map((team, index) => (
-                <tr key={team.team_name} className="transition-colors hover:bg-muted/50">
-                  <td className="px-4 py-3 text-center font-bold text-muted-foreground">
-                    #{index + 1}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                        index === 0 ? 'bg-amber-100 text-amber-600' : 
-                        index === 1 ? 'bg-[#D8D5C8] text-[#5E6654]' : 
-                        index === 2 ? 'bg-orange-100 text-orange-700' : 
-                        'bg-primary/10 text-primary'
-                      }`}>
-                        {index === 0 ? <Trophy className="h-4 w-4" /> : <Users className="h-4 w-4" />}
-                      </div>
-                      <span className="font-semibold text-foreground">{team.team_name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    <span className="inline-flex items-center justify-center rounded-full bg-secondary px-2.5 py-0.5 text-xs font-medium">
-                      {team.quizzes_attended}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-center font-mono font-medium">
-                    {team.total_score}
-                  </td>
-                  <td className="px-4 py-3 text-center">
-                    {team.wins > 0 ? (
-                      <span className="inline-flex items-center justify-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">
-                        <Medal className="h-3 w-3" /> {team.wins}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">-</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleOpenHistory(team)}
-                    >
-                      View History
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-              {teamLeaderboard.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
-                    <Target className="mx-auto mb-2 h-8 w-8 text-muted-foreground/50" />
-                    No team scores recorded yet.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
-        <SheetContent className="overflow-y-auto sm:max-w-md">
-          <SheetHeader className="border-b pb-4">
-            <SheetTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              {selectedTeam?.team_name}
-            </SheetTitle>
-            <SheetDescription className="mt-2 flex items-center gap-4">
-              <span className="flex items-center gap-1">
-                <Hash className="h-3.5 w-3.5" /> {selectedTeam?.quizzes_attended} Quizzes
-              </span>
-              <span className="flex items-center gap-1">
-                <Target className="h-3.5 w-3.5" /> {selectedTeam?.total_score} Pts
-              </span>
-              <span className="flex items-center gap-1">
-                <Medal className="h-3.5 w-3.5" /> {selectedTeam?.wins} Wins
-              </span>
-            </SheetDescription>
-          </SheetHeader>
-          
-          <div className="mt-6 space-y-4">
-            <h4 className="text-sm font-semibold tracking-wider text-muted-foreground uppercase">Event History</h4>
-            
-            {selectedTeam?.history.sort((a, b) => {
-              const eventA = Array.isArray(a.events) ? a.events[0] : a.events;
-              const eventB = Array.isArray(b.events) ? b.events[0] : b.events;
-              return new Date(eventB?.date || 0).getTime() - new Date(eventA?.date || 0).getTime();
-            }).map((record) => {
-              const event = Array.isArray(record.events) ? record.events[0] : record.events;
-              
+    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+      {teamLeaderboard.length === 0 ? (
+        <EmptyState
+          icon={Target}
+          title="No team scores recorded yet"
+          description="Teams appear here once quiz scores have been entered"
+        />
+      ) : (
+        <RecordList
+          variant="panel"
+          title="Teams & leaderboard"
+          count={shown.length}
+          toolbar={
+            <ListSearchInput
+              value={query}
+              onChange={setQuery}
+              label="Search teams"
+              placeholder="Search by team name"
+            />
+          }
+        >
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 px-4 py-12 text-center">
+              <SearchX className="mb-1 h-7 w-7 text-admin-muted opacity-30" />
+              <p className="text-sm font-semibold text-admin-ink">No matches</p>
+              <p className="text-[11px] text-admin-muted">
+                Nothing here matches &ldquo;{query.trim()}&rdquo;
+              </p>
+            </div>
+          ) : (
+            shown.map((team) => {
+              const rank = rankOf.get(team.team_name) ?? 0;
+              const leading = rank === 1;
               return (
-              <div key={record.id} className="relative flex flex-col gap-2 overflow-hidden rounded-lg border bg-card p-4">
-                {record.is_winner && (
-                  <div className="absolute top-0 right-0 flex h-16 w-16 items-start justify-end rounded-bl-full bg-green-50 p-2">
-                    <Trophy className="h-4 w-4 text-green-600" />
-                  </div>
-                )}
-                
-                <div className="flex items-start justify-between pr-8">
-                  <div>
-                    <h5 className="text-sm font-medium">
-                      {event?.title || "Unnamed Event"}
-                    </h5>
-                    <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                      <Calendar className="h-3 w-3" />
-                      {event?.date ? new Date(event.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : "Unknown Date"}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-2 flex items-center justify-between border-t pt-2">
-                  <span className="text-sm text-muted-foreground">Score:</span>
-                  <span className="font-mono font-semibold">{record.score || 0} pts</span>
-                </div>
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Placement:</span>
-                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${record.is_winner ? 'bg-green-100 text-green-700' : 'bg-secondary text-secondary-foreground'}`}>
-                    {record.is_winner ? 'Winner' : 'Participant'}
+                <ListRow
+                  key={team.team_name}
+                  onClick={() => sheet.openView(team)}
+                  status={
+                    team.wins > 0 ? (
+                      <StatusPill
+                        tone="success"
+                        icon={<Medal className="h-3 w-3" />}
+                        className="sm:w-24 sm:justify-center"
+                      >
+                        {team.wins} {team.wins === 1 ? "win" : "wins"}
+                      </StatusPill>
+                    ) : (
+                      <StatusPill tone="neutral" className="sm:w-24 sm:justify-center">
+                        No wins
+                      </StatusPill>
+                    )
+                  }
+                >
+                  <span
+                    className={cn(
+                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold tabular-nums",
+                      leading
+                        ? "border-admin-gold/40 bg-admin-gold/10 text-admin-gold"
+                        : "border-admin-line bg-admin-surface text-admin-muted",
+                    )}
+                  >
+                    {leading ? <Trophy className="h-4 w-4" aria-hidden="true" /> : rank}
+                    {leading && <span className="sr-only">Rank 1</span>}
                   </span>
-                </div>
-              </div>
-            )})}
+
+                  {/* Fixed tracks so every column starts in the same place from
+                      one row to the next, whatever a team is called. */}
+                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_14rem_9rem_7rem] sm:items-center sm:gap-3">
+                    <p className="min-w-0 truncate text-sm leading-snug font-semibold text-admin-ink">
+                      {team.team_name}
+                    </p>
+
+                    <div className="mt-0.5 flex items-center gap-2 sm:mt-0">
+                      <InfoBadge icon={<Hash className="h-3 w-3" />}>
+                        {team.quizzes_attended}{" "}
+                        {team.quizzes_attended === 1 ? "quiz" : "quizzes"}
+                      </InfoBadge>
+                      <InfoBadge icon={<Target className="h-3 w-3" />}>
+                        {team.total_score} pts
+                      </InfoBadge>
+                    </div>
+
+                    <p className="hidden items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:flex">
+                      <span className="sr-only">Average score</span>
+                      <span className="tabular-nums">{averageScore(team)} avg</span>
+                    </p>
+
+                    <p className="hidden items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:flex">
+                      <span className="sr-only">Rank</span>
+                      <span className="tabular-nums">Rank {rank}</span>
+                    </p>
+                  </div>
+                </ListRow>
+              );
+            })
+          )}
+        </RecordList>
+      )}
+
+      <RecordSheet
+        open={sheet.open}
+        onClose={sheet.close}
+        mode={sheet.mode}
+        title={selected?.team_name ?? "Team"}
+        formId="team-form"
+        isPending={sheet.isPending}
+        confirmUI={sheet.ConfirmDialogUI}
+        status={
+          selected && (
+            <StatusPill
+              tone={selected.wins > 0 ? "success" : "neutral"}
+              icon={selected.wins > 0 ? <Medal className="h-3 w-3" /> : undefined}
+              showLabelOnMobile
+            >
+              {selected.wins > 0
+                ? `${selected.wins} ${selected.wins === 1 ? "win" : "wins"}`
+                : "No wins yet"}
+            </StatusPill>
+          )
+        }
+      >
+        {selected && (
+          <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+            <DetailCard>
+              <DetailCell
+                label="Team"
+                value={selected.team_name}
+                icon={<Users className="h-3.5 w-3.5" />}
+              />
+              <DetailCell
+                label="Rank"
+                value={`#${rankOf.get(selected.team_name) ?? "-"}`}
+                icon={<Trophy className="h-3.5 w-3.5" />}
+              />
+              <DetailCell
+                label="Quizzes attended"
+                value={selected.quizzes_attended}
+                icon={<Hash className="h-3.5 w-3.5" />}
+              />
+              <DetailCell
+                label="Total score"
+                value={`${selected.total_score} pts`}
+                icon={<Target className="h-3.5 w-3.5" />}
+              />
+              <DetailCell label="Average score" value={averageScore(selected)} />
+              <DetailCell
+                label="Wins"
+                value={selected.wins}
+                icon={<Medal className="h-3.5 w-3.5" />}
+              />
+            </DetailCard>
+
+            <div className="space-y-2.5">
+              <p className="px-1 text-[11px] font-semibold tracking-wide text-admin-primary">
+                Event history ({sortedHistory.length})
+              </p>
+
+              {sortedHistory.length === 0 ? (
+                <DetailCard>
+                  <p className="px-4 py-6 text-center text-[12px] text-admin-muted sm:px-5">
+                    No events recorded for this team yet.
+                  </p>
+                </DetailCard>
+              ) : (
+                sortedHistory.map((record) => {
+                  const event = eventOf(record);
+                  return (
+                    <DetailCard key={record.id}>
+                      <div className="flex items-start justify-between gap-3 border-b border-admin-line px-4 py-2.5 sm:px-5 sm:py-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-admin-ink">
+                            {event?.title || "Unnamed event"}
+                          </p>
+                          <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-admin-muted">
+                            <Calendar className="h-3 w-3 shrink-0 opacity-60" aria-hidden="true" />
+                            <span className="tabular-nums">{formatEventDate(event?.date)}</span>
+                          </p>
+                        </div>
+                        <StatusPill
+                          tone={record.is_winner ? "success" : "neutral"}
+                          icon={record.is_winner ? <Trophy className="h-3 w-3" /> : undefined}
+                          showLabelOnMobile
+                        >
+                          {record.is_winner ? "Winner" : "Participant"}
+                        </StatusPill>
+                      </div>
+                      <DetailCell label="Score" value={`${record.score || 0} pts`} dense />
+                    </DetailCard>
+                  );
+                })
+              )}
+            </div>
           </div>
-        </SheetContent>
-      </Sheet>
+        )}
+      </RecordSheet>
     </div>
   );
 }

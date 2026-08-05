@@ -240,9 +240,10 @@ export function RecordSheet({
   formId: string;
   isPending: boolean;
   saveDisabled?: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onCancel: () => void;
+  // Left off for a record that can only be read, which drops the view footer.
+  onEdit?: () => void;
+  onDelete?: () => void;
+  onCancel?: () => void;
   confirmUI?: React.ReactNode;
   // Audit trail behind an "i" in the header. Hidden while adding, since a
   // record that does not exist yet has nothing to report.
@@ -256,7 +257,9 @@ export function RecordSheet({
   emptyState?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const showForm = mode === "add" || mode === "edit";
+  // A record with nothing to change still needs a way out, since the sheet has
+  // no close button of its own.
+  const readOnly = mode === "view" && !onEdit && !onDelete;
   const isWide = useMediaQuery(SPLIT_QUERY);
   const split = layout === "split" && isWide;
   const TitleTag: React.ElementType = split ? "h2" : SheetTitle;
@@ -293,62 +296,79 @@ export function RecordSheet({
             into Save mid-click and the browser would submit the form it now
             points at. */}
         {mode === "view" ? (
-          <div key="view-actions" className="grid grid-cols-2 gap-3">
+          readOnly ? (
+            <Button
+              key="view-actions"
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              className="h-14 w-full rounded-2xl border-2 border-admin-muted/35 bg-admin-card text-[13px] font-semibold text-admin-ink shadow-sm hover:border-admin-muted/60 hover:bg-admin-surface"
+            >
+              Close
+            </Button>
+          ) : (
+            <div
+              key="view-actions"
+              className={cn("grid gap-3", onEdit && onDelete ? "grid-cols-2" : "grid-cols-1")}
+            >
+              {onDelete && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={onDelete}
+                  disabled={isPending}
+                  className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-[13px] font-semibold text-admin-error hover:border-admin-error/30 hover:bg-admin-error-bg"
+                >
+                  {isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Trash2 className="mr-2 h-4 w-4" />
+                  )}
+                  Delete
+                </Button>
+              )}
+              {onEdit && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={onEdit}
+                  className="h-14 rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
+                >
+                  <Pencil className="mr-2 h-4 w-4" />
+                  Edit
+                </Button>
+              )}
+            </div>
+          )
+        ) : (
+          <div key="form-actions" className="grid grid-cols-2 gap-3">
             <Button
               type="button"
-              variant="ghost"
-              onClick={onDelete}
+              variant="outline"
+              onClick={onCancel}
               disabled={isPending}
-              className="h-14 rounded-2xl border-2 border-admin-line bg-admin-card px-4 text-[13px] font-semibold text-admin-error hover:border-admin-error/30 hover:bg-admin-error-bg"
+              // The footer is admin-line, so an admin-line border on it is
+              // invisible. Needs its own edge and a lift off the background.
+              className="h-14 rounded-2xl border-2 border-admin-muted/35 bg-admin-card text-[13px] font-semibold text-admin-ink shadow-sm hover:border-admin-muted/60 hover:bg-admin-surface"
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form={formId}
+              disabled={isPending || saveDisabled}
+              className="h-14 rounded-2xl bg-admin-primary text-[13px] font-semibold text-white shadow-lg hover:bg-admin-primary-hover active:scale-95"
             >
               {isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Trash2 className="mr-2 h-4 w-4" />
+                <>
+                  <Save className="mr-2 h-4 w-4" />
+                  Save
+                </>
               )}
-              Delete
-            </Button>
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={onEdit}
-              className="h-14 rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
-            >
-              <Pencil className="mr-2 h-4 w-4" />
-              Edit
             </Button>
           </div>
-        ) : (
-          showForm && (
-            <div key="form-actions" className="grid grid-cols-2 gap-3">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                disabled={isPending}
-                // The footer is admin-line, so an admin-line border on it is
-                // invisible. Needs its own edge and a lift off the background.
-                className="h-14 rounded-2xl border-2 border-admin-muted/35 bg-admin-card text-[13px] font-semibold text-admin-ink shadow-sm hover:border-admin-muted/60 hover:bg-admin-surface"
-              >
-                Cancel
-              </Button>
-              <Button
-                type="submit"
-                form={formId}
-                disabled={isPending || saveDisabled}
-                className="h-14 rounded-2xl bg-admin-primary text-[13px] font-semibold text-white shadow-lg hover:bg-admin-primary-hover active:scale-95"
-              >
-                {isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <Save className="mr-2 h-4 w-4" />
-                    Save
-                  </>
-                )}
-              </Button>
-            </div>
-          )
         )}
       </div>
     </>
