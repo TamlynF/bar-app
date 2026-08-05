@@ -492,7 +492,10 @@ export default function TablesClient({
       {initialTables.length === 0 && detailPanel}
       {initialTables.length > 0 && (
         <RecordList
-          variant="cards"
+          variant="panel"
+          title="Tables"
+          count={filtered.length}
+          collapsible={false}
           onAdd={openAdd}
           addLabel="Add table"
           detail={detailPanel}
@@ -576,44 +579,15 @@ export default function TablesClient({
               }
             />
           ) : (
-            <div className="flex flex-col gap-1.5">
-              {filtered.map((table) => (
-                <ListRow
-                  key={table.id}
-                  variant="card"
-                  selected={selected?.id === table.id}
-                  onClick={() => sheet.openView(table)}
-                >
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-admin-surface text-admin-primary">
-                    {table.shape === "rect" ? (
-                      <RectangleHorizontal className="h-4 w-4" />
-                    ) : (
-                      <Circle className="h-4 w-4" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-admin-ink">
-                      {table.name}
-                    </p>
-                    {table.description && (
-                      <p className="mt-0.5 truncate text-[11px] font-medium text-admin-muted">
-                        {table.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="flex shrink-0 items-center gap-1.5">
-                    <InfoBadge
-                      className="min-w-14 justify-start"
-                      icon={<Users className="h-3 w-3" />}
-                    >
-                      {table.max_capacity}
-                    </InfoBadge>
-                  </div>
-
+            filtered.map((table) => (
+              <ListRow
+                key={table.id}
+                selected={selected?.id === table.id}
+                onClick={() => sheet.openView(table)}
+                status={
+                  // Fixed width, so "Unavailable" cannot narrow that row's grid
+                  // and knock its capacity out of line with the rest.
                   <StatusPill
-                    className="min-w-28 justify-center"
                     tone={table.available ? "success" : "error"}
                     icon={
                       table.available ? (
@@ -622,12 +596,50 @@ export default function TablesClient({
                         <X className="h-3 w-3" />
                       )
                     }
+                    className="sm:w-28 sm:justify-center"
                   >
                     {table.available ? "Available" : "Unavailable"}
                   </StatusPill>
-                </ListRow>
-              ))}
-            </div>
+                }
+              >
+                <span
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-admin-line bg-admin-surface",
+                    table.available ? "text-admin-primary" : "text-admin-muted",
+                  )}
+                >
+                  {table.shape === "rect" ? (
+                    <RectangleHorizontal className="h-4 w-4" />
+                  ) : (
+                    <Circle className="h-4 w-4" />
+                  )}
+                </span>
+
+                {/* Fixed tracks, not content-sized ones - an "auto" column takes
+                    its width from that row's own badges, which is what leaves
+                    every location starting somewhere different. */}
+                <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_5rem] sm:items-center sm:gap-3">
+                  <p
+                    className={cn(
+                      "min-w-0 truncate text-sm leading-snug font-semibold",
+                      table.available ? "text-admin-ink" : "text-admin-muted",
+                    )}
+                  >
+                    {table.name}
+                  </p>
+
+                  <p className="mt-0.5 min-w-0 truncate text-[11px] font-medium text-admin-muted sm:mt-0 sm:text-[12px]">
+                    {table.description || "No location set"}
+                  </p>
+
+                  <div className="hidden items-center sm:flex">
+                    <InfoBadge icon={<Users className="h-3 w-3" />}>
+                      {table.max_capacity}
+                    </InfoBadge>
+                  </div>
+                </div>
+              </ListRow>
+            ))
           )}
         </RecordList>
       )}

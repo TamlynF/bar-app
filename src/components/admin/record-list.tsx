@@ -136,11 +136,17 @@ export function RecordList({
     );
   }
 
-  return (
-    <section className="mx-auto w-full overflow-hidden rounded-2xl border border-admin-line bg-admin-card">
+  const panel = (
+    <section
+      className={cn(
+        "mx-auto w-full overflow-hidden rounded-2xl border border-admin-line bg-admin-card",
+        // Beside a detail pane the header stays put and only the rows scroll.
+        detail && "xl:flex xl:h-full xl:min-h-0 xl:flex-col",
+      )}
+    >
       {/* A toolbar fills the gap the title leaves on a wide table. It drops to
           its own line on phones, where there is no gap to fill. */}
-      <div className="flex flex-wrap items-center gap-2 bg-admin-surface px-4 py-3 sm:flex-nowrap sm:px-5">
+      <div className="flex flex-wrap items-center gap-2 bg-admin-surface px-4 py-3 sm:flex-nowrap sm:px-5 xl:shrink-0">
         <button
           type="button"
           onClick={() => collapsible && setCollapsed((c) => !c)}
@@ -161,6 +167,29 @@ export function RecordList({
         </button>
         {toolbar && (
           <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:flex-1">{toolbar}</div>
+        )}
+        {filters && (
+          <button
+            type="button"
+            onClick={() => setShowFilters((s) => !s)}
+            aria-pressed={showFilters}
+            aria-expanded={showFilters}
+            title={showFilters ? "Hide filters" : "Show filters"}
+            className={cn(
+              "order-2 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 text-[11px] font-semibold transition-colors sm:order-3 sm:h-8",
+              showFilters || activeFilterCount > 0
+                ? "border-admin-primary/30 bg-admin-primary-soft text-admin-primary"
+                : "border-admin-line bg-admin-card text-admin-muted hover:bg-admin-surface hover:text-admin-ink",
+            )}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" />
+            <span className="hidden sm:inline">Filters</span>
+            {activeFilterCount > 0 && (
+              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-admin-primary px-1 text-[10px] font-semibold text-white tabular-nums">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
         )}
         {/* Hard right with the row's controls, not beside the title - the group
             reads status-last the same way each of its rows does. */}
@@ -198,10 +227,32 @@ export function RecordList({
         )}
       </div>
 
+      {filters && showFilters && (
+        <div className="border-t border-admin-line bg-admin-surface px-4 py-2.5 sm:px-5 xl:shrink-0">
+          {filters}
+        </div>
+      )}
+
       {(!collapsible || !collapsed) && (
-        <div className="divide-y divide-admin-line/50">{children}</div>
+        <div
+          className={cn(
+            "divide-y divide-admin-line/50",
+            detail && "xl:min-h-0 xl:flex-1 xl:overflow-y-auto",
+          )}
+        >
+          {children}
+        </div>
       )}
     </section>
+  );
+
+  if (!detail) return panel;
+
+  return (
+    <div className="space-y-2.5 xl:grid xl:h-full xl:min-h-0 xl:grid-cols-[minmax(0,1fr)_minmax(0,27rem)] xl:items-stretch xl:gap-5 xl:space-y-0">
+      {panel}
+      {detail}
+    </div>
   );
 }
 
