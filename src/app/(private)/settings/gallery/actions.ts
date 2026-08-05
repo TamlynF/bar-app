@@ -4,19 +4,46 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { gradeGalleryMedia } from "@/lib/gallery-media-quality";
 import { readRemoteImageDimensions } from "@/lib/gallery-image-dimensions";
+import { planSave, planDelete, type OrderChange, type OrderRow } from "@/lib/merchandise-order";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
+async function loadOrderRows(supabase: SupabaseClient): Promise<OrderRow[]> {
+  const { data, error } = await supabase
+    .from("gallery_images")
+    .select("id, title, display_order, is_active");
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: row.id as number,
+    name: (row.title as string | null) ?? "",
+    display_order: (row.display_order as number | null) ?? 0,
+    is_active: row.is_active !== false,
+  }));
+}
+
+async function applyChanges(supabase: SupabaseClient, changes: OrderChange[]) {
+  for (const change of changes) {
+    const { error } = await supabase
+      .from("gallery_images")
+      .update({ display_order: change.display_order })
+      .eq("id", change.id);
+    if (error) throw error;
+  }
+}
 
 export async function saveGalleryImageAction(formData: FormData) {
   const supabase = await createClient();
 
   const id = formData.get("id")?.toString();
+  const isActive = formData.get("is_active") !== "false";
+  const targetPositionRaw = formData.get("display_order")?.toString().trim() ?? "";
+  const targetPosition = targetPositionRaw === "" ? null : Number(targetPositionRaw);
 
   const payload = {
     title: formData.get("title")?.toString() || "",
     description: formData.get("description")?.toString() || null,
     image_url: formData.get("image_url")?.toString() || "",
     media_type: formData.get("media_type")?.toString() || "image",
-    is_active: formData.get("is_active") !== "false",
-    display_order: parseInt(formData.get("display_order")?.toString() || "0", 10),
+    is_active: isActive,
   };
 
   if (!payload.title) return { error: "Title is required." };
@@ -52,11 +79,20 @@ export async function saveGalleryImageAction(formData: FormData) {
   }
 
   try {
+    const rows = await loadOrderRows(supabase);
+    const plan = planSave(rows, {
+      id: id ? Number(id) : null,
+      isActive,
+      targetPosition,
+    });
+
+    const ordered = { ...payload, display_order: plan.position };
+
     if (id) {
       const { error } = await supabase
         .from("gallery_images")
         .update({
-          ...payload,
+          ...ordered,
           updated_at: new Date().toISOString(),
           updated_by: currentEmployeeId,
         })
@@ -64,12 +100,14 @@ export async function saveGalleryImageAction(formData: FormData) {
       if (error) throw error;
     } else {
       const { error } = await supabase.from("gallery_images").insert({
-        ...payload,
+        ...ordered,
         created_by: currentEmployeeId,
         updated_by: currentEmployeeId,
       });
       if (error) throw error;
     }
+
+    await applyChanges(supabase, plan.changes);
 
     revalidatePath("/settings/gallery");
     revalidatePath("/gallery");
@@ -87,8 +125,12 @@ export async function deleteGalleryImageAction(id: number) {
   const supabase = await createClient();
 
   try {
+    const rows = await loadOrderRows(supabase);
+
     const { error } = await supabase.from("gallery_images").delete().eq("id", id);
     if (error) throw error;
+
+    await applyChanges(supabase, planDelete(rows, id));
 
     revalidatePath("/settings/gallery");
     revalidatePath("/gallery");
