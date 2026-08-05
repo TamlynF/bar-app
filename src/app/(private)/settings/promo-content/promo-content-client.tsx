@@ -1,18 +1,12 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useMemo, useRef, useState } from "react";
 import {
   Plus,
   Loader2,
-  ChevronRight,
-  ChevronDown,
-  Save,
-  Pencil,
-  Trash2,
-  Hash,
-  AlertCircle,
+  Check,
+  X,
+  SearchX,
   ImageIcon,
   Upload,
   ExternalLink,
@@ -20,8 +14,21 @@ import {
 } from "lucide-react";
 import { savePromoAction, deletePromoAction } from "./actions";
 import { cn } from "@/lib/utils";
-import { useConfirm } from "@/components/ui/confirm-dialog";
 import { createClient } from "@/lib/supabase/client";
+import {
+  useRecordSheet,
+  RecordSheet,
+  RecordList,
+  ListRow,
+  ListSearchInput,
+  InfoBadge,
+  StatusPill,
+  EmptyState,
+  DetailCard,
+  DetailCell,
+  FormRow,
+  ErrorBox,
+} from "@/components/admin";
 
 export type PromoRecord = {
   id: number;
@@ -38,551 +45,473 @@ export type PromoRecord = {
   updated_by?: number | null;
 };
 
+export type EmployeeOption = { id: number; full_name: string };
+
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
+const FIELD_SELECT =
+  "flex-1 cursor-pointer appearance-none bg-transparent text-right text-sm font-semibold text-admin-ink outline-none";
+
 export default function PromoContentClient({
   initialPromos = [],
+  employees = [],
 }: {
   initialPromos: PromoRecord[];
+  employees?: EmployeeOption[];
 }) {
-  const { confirm, ConfirmDialogUI } = useConfirm();
-  const [selected, setSelected] = useState<PromoRecord | null>(null);
-  const [isAdding, setIsAdding] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isCollapsed, setIsCollapsed] = useState(false);
-
+  const sheet = useRecordSheet<PromoRecord>({
+    records: initialPromos,
+    getId: (record) => record.id,
+  });
+  const { selected, mode } = sheet;
+  const [query, setQuery] = useState("");
   const [mediaUrl, setMediaUrl] = useState("");
   const [mediaType, setMediaType] = useState("image");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const supabase = createClient();
+  const employeeName = (id?: number | null) =>
+    employees.find((employee) => employee.id === id)?.full_name ?? "-";
 
-  const isSheetOpen = !!selected || isAdding;
+  const shown = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return initialPromos;
+    return initialPromos.filter((promo) =>
+      [promo.title, promo.description, promo.external_url, promo.media_type].some(
+        (field) => field?.toLowerCase().includes(needle),
+      ),
+    );
+  }, [initialPromos, query]);
 
-  const openView = (p: PromoRecord) => {
-    setFormError(null);
-    setIsEditing(false);
-    setIsAdding(false);
-    setSelected(p);
-  };
+  const showForm = mode === "add" || mode === "edit";
+  const formDefault = mode === "edit" ? selected : null;
 
   const openAdd = () => {
-    setFormError(null);
-    setIsEditing(false);
-    setSelected(null);
     setMediaUrl("");
     setMediaType("image");
-    setIsAdding(true);
+    sheet.openAdd();
   };
 
   const startEdit = () => {
-    setFormError(null);
     setMediaUrl(selected?.media_url ?? "");
     setMediaType(selected?.media_type ?? "image");
-    setIsEditing(true);
+    sheet.startEdit();
   };
 
   const closeSheet = () => {
-    setSelected(null);
-    setIsAdding(false);
-    setIsEditing(false);
-    setFormError(null);
     setMediaUrl("");
     setMediaType("image");
+    sheet.close();
   };
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    setFormError(null);
-    formData.set("media_url", mediaUrl);
-    formData.set("media_type", mediaType);
-    startTransition(async () => {
-      const result = await savePromoAction(formData);
-      if (result?.error) {
-        setFormError(result.error);
-      } else {
-        closeSheet();
-      }
-    });
+  const cancel = () => {
+    if (mode === "add") closeSheet();
+    else if (selected) sheet.openView(selected);
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     if (!selected) return;
-    const ok = await confirm({
+    sheet.confirmDelete({
       title: "Delete promo",
-      description: "Are you sure you want to delete this promo? This cannot be undone.",
-      confirmLabel: "Delete",
-      variant: "destructive",
-    });
-    if (!ok) return;
-    startTransition(async () => {
-      const result = await deletePromoAction(selected.id);
-      if (result?.error) {
-        setFormError(result.error);
-      } else {
-        closeSheet();
-      }
+      description:
+        "Are you sure you want to delete this promo? This cannot be undone.",
+      action: () => deletePromoAction(selected.id),
     });
   };
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     setUploading(true);
+    sheet.setFormError(null);
+
+    const supabase = createClient();
     const ext = file.name.split(".").pop();
     const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
-    const { data, error: uploadError } = await supabase.storage
+    const { data, error } = await supabase.storage
       .from("promo-media")
       .upload(path, file, { cacheControl: "3600", upsert: false });
 
-    if (uploadError) {
-      setFormError(uploadError.message);
+    if (error) {
+      sheet.setFormError(error.message);
       setUploading(false);
       return;
     }
 
     if (data) {
-      const publicUrl = supabase.storage
-        .from("promo-media")
-        .getPublicUrl(data.path).data.publicUrl;
+      const publicUrl = supabase.storage.from("promo-media").getPublicUrl(data.path)
+        .data.publicUrl;
       setMediaUrl(publicUrl);
       setMediaType(file.type.startsWith("video/") ? "video" : "image");
     }
 
     setUploading(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
-  }
+  };
 
-  const showForm = isAdding || isEditing;
-  const formDefault = isEditing ? selected : null;
+  const title =
+    mode === "add" ? "New promo" : mode === "edit" ? "Edit promo" : "View promo";
 
   return (
-    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       {initialPromos.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
-          <ImageIcon className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-          <p className="font-black text-sm text-[#20231A]">No promo content yet</p>
-          <p className="mt-1 text-[11px] text-[#5E6654]">
-            Upload social media posts and event promos
-          </p>
-          <button
-            type="button"
-            onClick={openAdd}
-            className="mt-4 h-8 rounded-lg bg-[#34451F] px-4 font-black text-[10px] tracking-widest text-white uppercase transition-colors hover:bg-[#283719]"
-          >
-            <Plus className="mr-1 inline h-3.5 w-3.5" />
-            Add Promo
-          </button>
-        </div>
-      ) : (
-        <section className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
-          <div className="flex items-center gap-2 bg-[#F4F1E8] px-4 py-3 sm:px-5">
-            <button
-              type="button"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="min-w-0 flex-1 text-left"
-            >
-              <p className="truncate text-[11px] font-bold tracking-wide text-[#34451F] uppercase">
-                Promo Content{" "}
-                <span className="text-[#5E6654]">({initialPromos.length})</span>
-              </p>
-            </button>
+        <EmptyState
+          icon={ImageIcon}
+          title="No promo content yet"
+          description="Upload social media posts and event promos"
+          action={
             <button
               type="button"
               onClick={openAdd}
-              className="flex h-7 w-7 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-[#34451F] text-white transition-colors hover:bg-[#283719] sm:h-7 sm:w-auto sm:px-2.5"
-              title="Add Promo"
+              className="inline-flex h-9 items-center rounded-lg bg-admin-primary px-4 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover"
             >
-              <Plus className="h-3.5 w-3.5 shrink-0" />
-              <span className="hidden font-black text-[10px] tracking-widest uppercase sm:inline">
-                Create
-              </span>
+              <Plus className="mr-1 h-3.5 w-3.5" />
+              Create promo
             </button>
-            <button
-              type="button"
-              onClick={() => setIsCollapsed(!isCollapsed)}
-              className="shrink-0"
-              title="Toggle group"
-            >
-              <ChevronDown
-                className={cn(
-                  "h-4 w-4 text-[#5E6654] transition-transform duration-200",
-                  !isCollapsed && "rotate-180"
-                )}
-              />
-            </button>
-          </div>
+          }
+        />
+      ) : (
+        <RecordList
+          variant="panel"
+          title="Promo content"
+          count={shown.length}
+          onAdd={openAdd}
+          toolbar={
+            <ListSearchInput
+              value={query}
+              onChange={setQuery}
+              label="Search promo content"
+              placeholder="Search by title, description or link"
+            />
+          }
+        >
+          {shown.length === 0 ? (
+            <div className="flex flex-col items-center gap-1 px-4 py-12 text-center">
+              <SearchX className="mb-1 h-7 w-7 text-admin-muted opacity-30" />
+              <p className="text-sm font-semibold text-admin-ink">No matches</p>
+              <p className="text-[11px] text-admin-muted">
+                Nothing here matches &ldquo;{query.trim()}&rdquo;
+              </p>
+            </div>
+          ) : (
+            shown.map((promo) => {
+              const inactive = !promo.is_active;
+              return (
+                <ListRow
+                  key={promo.id}
+                  onClick={() => sheet.openView(promo)}
+                  status={
+                    <StatusPill
+                      tone={promo.is_active ? "success" : "error"}
+                      icon={
+                        promo.is_active ? (
+                          <Check className="h-3 w-3" />
+                        ) : (
+                          <X className="h-3 w-3" />
+                        )
+                      }
+                      className="sm:w-24 sm:justify-center"
+                    >
+                      {promo.is_active ? "Active" : "Inactive"}
+                    </StatusPill>
+                  }
+                >
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-admin-line bg-admin-surface">
+                    {promo.media_type === "video" ? (
+                      <Film className="h-4 w-4 text-admin-muted" />
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={promo.media_url}
+                        alt=""
+                        className="h-full w-full object-cover"
+                      />
+                    )}
+                  </div>
 
-          {!isCollapsed && (
-            <div className="divide-y divide-[#D8D5C8]/50">
-              {initialPromos.map((promo) => {
-                const inactive = !promo.is_active;
-                return (
-                  <div
-                    key={promo.id}
-                    onClick={() => openView(promo)}
-                    className="flex cursor-pointer items-center gap-2 px-3 py-3 transition-colors hover:bg-[#F4F1E8]/50 active:scale-[0.99] sm:gap-3 sm:px-4"
-                  >
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#D8D5C8] bg-[#F4F1E8]">
-                      {promo.media_type === "video" ? (
-                        <Film className="h-4 w-4 text-[#5E6654]" />
-                      ) : (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={promo.media_url}
-                          alt=""
-                          className="h-full w-full object-cover"
-                        />
+                  {/* Fixed tracks rather than content-sized ones, so the order and
+                      the badges of every row line up down the list. */}
+                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_5rem_minmax(0,1.2fr)_9rem] sm:items-center sm:gap-3">
+                    <p
+                      className={cn(
+                        "min-w-0 truncate text-sm leading-snug font-semibold",
+                        inactive ? "text-admin-muted" : "text-admin-ink",
+                      )}
+                    >
+                      {promo.title}
+                    </p>
+
+                    <p className="mt-0.5 truncate text-[11px] font-medium text-admin-muted tabular-nums sm:mt-0 sm:text-[12px]">
+                      Order {promo.display_order}
+                    </p>
+
+                    <p className="hidden truncate text-[12px] font-medium text-admin-muted sm:block">
+                      {promo.description || "No description"}
+                    </p>
+
+                    <div className="mt-1 flex items-center gap-1.5 sm:mt-0">
+                      <InfoBadge icon={null} className="capitalize">
+                        {promo.media_type}
+                      </InfoBadge>
+                      {promo.external_url && (
+                        <InfoBadge icon={<ExternalLink className="h-3 w-3" />}>
+                          <span className="hidden sm:inline">Link</span>
+                        </InfoBadge>
                       )}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p
-                          className={cn(
-                            "min-w-0 flex-1 truncate font-black text-xs leading-snug sm:text-sm",
-                            inactive ? "text-[#5E6654]" : "text-[#20231A]"
-                          )}
-                        >
-                          {promo.title}
-                        </p>
-                        <span
-                          className={cn(
-                            "shrink-0 text-[10px] font-bold",
-                            promo.is_active ? "text-green-600" : "text-red-500"
-                          )}
-                        >
-                          {promo.is_active ? "Active" : "Inactive"}
-                        </span>
-                      </div>
-                      <div className="mt-0.5 flex items-center gap-1.5">
-                        <span className="rounded border border-[#D8D5C8] bg-[#F4F1E8] px-1.5 py-0.5 text-[9px] font-bold text-[#5E6654] uppercase">
-                          {promo.media_type}
-                        </span>
-                        {promo.external_url && (
-                          <ExternalLink className="h-3 w-3 text-[#5E6654] opacity-50" />
-                        )}
-                        <span className="truncate text-[10px] font-medium text-[#5E6654]">
-                          Order: {promo.display_order}
-                        </span>
-                      </div>
-                    </div>
-                    <ChevronRight className="h-4 w-4 shrink-0 text-[#5E6654] opacity-40" />
                   </div>
-                );
-              })}
-            </div>
+                </ListRow>
+              );
+            })
           )}
-        </section>
+        </RecordList>
       )}
 
-      <Sheet open={isSheetOpen} onOpenChange={(open) => { if (!open) closeSheet(); }}>
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-[85vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8]
-            bg-[#F4F1E8] p-0 shadow-2xl outline-none
-            sm:inset-x-auto sm:bottom-6 sm:left-1/2 sm:h-auto
-            sm:max-h-[80vh] sm:w-140 sm:-translate-x-1/2 sm:rounded-4xl
-            sm:border-2 sm:border-[#D8D5C8]"
-        >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <SheetTitle className="truncate font-black text-xl leading-tight tracking-tighter text-[#20231A] uppercase">
-                  {isAdding ? "New Promo" : isEditing ? "Edit Promo" : "View Promo"}
-                </SheetTitle>
-                {selected && (
-                  <div className="mt-1 flex items-center gap-1.5">
-                    <Hash className="h-3 w-3 text-[#5E6654]" />
-                    <span className="text-xs font-bold tracking-wide text-[#5E6654] uppercase tabular-nums">
-                      ID: {selected.id}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:space-y-5 sm:px-6 sm:py-6">
-            {!showForm && selected && (
-              <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
-                <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                  <DetailCell label="Title" value={selected.title} />
-                  <DetailCell label="Description" value={selected.description || "-"} />
-                  <DetailCell label="Media Type" value={selected.media_type} />
-                  <DetailCell label="External URL" value={selected.external_url || "-"} />
-                  <DetailCell label="Status" value={selected.is_active ? "Active" : "Inactive"} />
-                  <DetailCell label="Display Order" value={String(selected.display_order)} />
-                </div>
-
-                <div className="overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white p-3">
-                  <div className="mb-2 flex items-center gap-1.5">
-                    <ImageIcon className="h-3 w-3 text-[#5E6654]" />
-                    <span className="text-[10px] font-bold tracking-wide text-[#5E6654] uppercase">
-                      Preview
-                    </span>
-                  </div>
-                  {selected.media_type === "video" ? (
-                    <video
-                      src={selected.media_url}
-                      controls
-                      preload="metadata"
-                      className="max-h-60 w-full rounded-xl"
-                    />
-                  ) : (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={selected.media_url}
-                      alt={selected.title}
-                      className="h-40 w-full rounded-xl object-cover"
-                    />
-                  )}
-                </div>
-
-                {formError && <ErrorBox message={formError} />}
-              </div>
-            )}
-
-            {showForm && (
-              <form
-                id="promo-form"
-                onSubmit={handleSubmit}
-                className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
-              >
-                {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
-
-                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-3xl border-2 border-[#D8D5C8] bg-white">
-                  <FormRow label="Title" required>
-                    <input
-                      name="title"
-                      required
-                      placeholder="e.g. June Band Night"
-                      defaultValue={formDefault?.title ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Description">
-                    <input
-                      name="description"
-                      placeholder="e.g. Sat 6th June at DF"
-                      defaultValue={formDefault?.description ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <div className="px-4 py-2.5 sm:px-5 sm:py-4">
-                    <div className="mb-2 flex items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-                      <span className="text-[10px] font-bold tracking-wide uppercase">
-                        Media <span className="text-red-500">*</span>
-                      </span>
-                    </div>
-                    {mediaUrl ? (
-                      <div className="relative">
-                        {mediaType === "video" ? (
-                          <video
-                            src={mediaUrl}
-                            controls
-                            preload="metadata"
-                            className="max-h-40 w-full rounded-xl"
-                          />
-                        ) : (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={mediaUrl}
-                            alt="Preview"
-                            className="h-32 w-full rounded-xl object-cover"
-                          />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => { setMediaUrl(""); setMediaType("image"); }}
-                          className="absolute top-2 right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white"
-                        >
-                          x
-                        </button>
-                      </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={uploading}
-                        className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#D8D5C8] py-6 text-[#5E6654] transition-colors hover:border-[#34451F] hover:text-[#34451F]"
-                      >
-                        {uploading ? (
-                          <Loader2 className="h-5 w-5 animate-spin" />
-                        ) : (
-                          <Upload className="h-5 w-5" />
-                        )}
-                        <span className="text-xs font-bold tracking-wide uppercase">
-                          {uploading ? "Uploading..." : "Upload Image or Video"}
-                        </span>
-                      </button>
-                    )}
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      title="Upload media file"
-                      accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                  </div>
-
-                  <FormRow label="External URL">
-                    <input
-                      name="external_url"
-                      type="url"
-                      placeholder="https://instagram.com/p/..."
-                      defaultValue={formDefault?.external_url ?? ""}
-                      className="flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none placeholder:text-[#5E6654]/40 sm:text-sm"
-                    />
-                  </FormRow>
-
-                  <FormRow label="Status">
-                    <select
-                      title="Status"
-                      name="is_active"
-                      defaultValue={formDefault?.is_active === false ? "false" : "true"}
-                      className="dir-rtl flex-1 cursor-pointer appearance-none bg-transparent font-black text-base text-[#20231A] outline-none sm:text-sm"
+      <RecordSheet
+        open={sheet.open}
+        onClose={closeSheet}
+        mode={mode}
+        title={title}
+        recordId={selected?.id}
+        formId="promo-form"
+        isPending={sheet.isPending}
+        saveDisabled={uploading}
+        onEdit={startEdit}
+        onDelete={handleDelete}
+        onCancel={cancel}
+        confirmUI={sheet.ConfirmDialogUI}
+        status={
+          selected && (
+            <StatusPill
+              tone={selected.is_active ? "success" : "error"}
+              icon={
+                selected.is_active ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <X className="h-3 w-3" />
+                )
+              }
+              showLabelOnMobile
+            >
+              {selected.is_active ? "Active" : "Inactive"}
+            </StatusPill>
+          )
+        }
+        systemInfo={
+          selected == null
+            ? undefined
+            : {
+                createdAt: selected.created_at,
+                createdBy: employeeName(selected.created_by),
+                updatedAt: selected.updated_at,
+                updatedBy: employeeName(selected.updated_by),
+              }
+        }
+      >
+        {!showForm && selected && (
+          <div className="animate-in space-y-4 duration-200 fade-in sm:space-y-5">
+            <DetailCard>
+              <DetailCell dense label="Title" value={selected.title} />
+              <DetailCell
+                dense
+                label="Description"
+                value={selected.description || "-"}
+              />
+              <DetailCell
+                dense
+                label="Media type"
+                value={selected.media_type}
+                valueClassName="capitalize"
+              />
+              <DetailCell
+                dense
+                label="External URL"
+                value={
+                  selected.external_url ? (
+                    <a
+                      href={selected.external_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 break-all underline hover:text-admin-primary"
                     >
-                      <option value="true" className="dir-ltr">Active</option>
-                      <option value="false" className="dir-ltr">Inactive</option>
-                    </select>
-                  </FormRow>
+                      {selected.external_url}
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                    </a>
+                  ) : (
+                    "-"
+                  )
+                }
+              />
+              <DetailCell
+                dense
+                label="Display order"
+                value={String(selected.display_order)}
+              />
+            </DetailCard>
 
-                  <FormRow label="Order">
-                    <input
-                      title="Order"
-                      name="display_order"
-                      type="number"
-                      min="0"
-                      defaultValue={formDefault?.display_order ?? 0}
-                      className="w-16 flex-1 bg-transparent text-right font-black text-base text-[#20231A] outline-none sm:text-sm"
-                    />
-                  </FormRow>
+            <DetailCard className="p-3">
+              <div className="mb-2 flex items-center gap-1.5">
+                <ImageIcon className="h-3 w-3 text-admin-muted" />
+                <span className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                  Preview
+                </span>
+              </div>
+              {selected.media_type === "video" ? (
+                <video
+                  src={selected.media_url}
+                  controls
+                  preload="metadata"
+                  className="max-h-60 w-full rounded-xl"
+                />
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={selected.media_url}
+                  alt={selected.title}
+                  className="h-32 w-full rounded-xl object-contain sm:h-auto sm:max-h-64"
+                />
+              )}
+            </DetailCard>
+
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
+          </div>
+        )}
+
+        {showForm && (
+          <form
+            id="promo-form"
+            action={sheet.submit(savePromoAction)}
+            className="animate-in space-y-4 duration-200 fade-in sm:space-y-5"
+          >
+            {formDefault && <input type="hidden" name="id" value={formDefault.id} />}
+            <input type="hidden" name="media_url" value={mediaUrl} />
+            <input type="hidden" name="media_type" value={mediaType} />
+
+            <DetailCard className="divide-y divide-admin-line/50">
+              <FormRow label="Title" required>
+                <input
+                  name="title"
+                  required
+                  aria-label="Title"
+                  placeholder="e.g. June Band Night"
+                  defaultValue={formDefault?.title ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+
+              <FormRow label="Description">
+                <input
+                  name="description"
+                  aria-label="Description"
+                  placeholder="e.g. Sat 6th June at DF"
+                  defaultValue={formDefault?.description ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+
+              <div className="px-4 py-2.5 sm:px-5 sm:py-4">
+                <div className="mb-2 flex items-center gap-1.5 text-admin-muted opacity-70 sm:gap-2">
+                  <span className="text-[11px] font-semibold tracking-wide">
+                    Media <span className="text-admin-error">*</span>
+                  </span>
                 </div>
-
-                {formError && <ErrorBox message={formError} />}
-              </form>
-            )}
-
-            <div className="h-4" />
-          </div>
-
-          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-5 pb-10 backdrop-blur-md sm:rounded-b-4xl sm:pb-5">
-            {!showForm && selected && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="ghost"
-                  onClick={handleDelete}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white px-4 font-black text-[10px] tracking-wide text-red-500 uppercase hover:border-red-200 hover:bg-red-50"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="mr-2 h-4 w-4" />
-                  )}
-                  Delete
-                </Button>
-                <Button
-                  onClick={startEdit}
-                  className="h-14 flex-1 rounded-2xl border border-[#34451F] font-black text-[10px] tracking-widest text-[#34451F] uppercase hover:bg-[#E5EBD8] active:scale-95"
-                >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit
-                </Button>
+                {mediaUrl ? (
+                  <div className="relative">
+                    {mediaType === "video" ? (
+                      <video
+                        src={mediaUrl}
+                        controls
+                        preload="metadata"
+                        className="max-h-40 w-full rounded-xl"
+                      />
+                    ) : (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={mediaUrl}
+                        alt="Preview"
+                        className="h-32 w-full rounded-xl object-contain sm:h-auto sm:max-h-64"
+                      />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaUrl("");
+                        setMediaType("image");
+                      }}
+                      aria-label="Remove media"
+                      className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-lg bg-black/60 text-white transition-colors hover:bg-black/80"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading}
+                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-admin-line py-6 text-admin-muted transition-colors hover:border-admin-primary hover:text-admin-primary"
+                  >
+                    {uploading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Upload className="h-5 w-5" />
+                    )}
+                    <span className="text-[13px] font-semibold">
+                      {uploading ? "Uploading..." : "Upload image or video"}
+                    </span>
+                  </button>
+                )}
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  aria-label="Upload media file"
+                  accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm"
+                  onChange={handleFileUpload}
+                  className="hidden"
+                />
               </div>
-            )}
 
-            {showForm && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    setFormError(null);
-                    if (isAdding) closeSheet();
-                    else setIsEditing(false);
-                  }}
-                  disabled={isPending}
-                  className="h-14 rounded-2xl border-2 border-[#D8D5C8] bg-white font-black text-[10px] tracking-wide text-[#5E6654] uppercase"
+              <FormRow label="External URL">
+                <input
+                  name="external_url"
+                  type="url"
+                  aria-label="External URL"
+                  placeholder="https://instagram.com/p/..."
+                  defaultValue={formDefault?.external_url ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+
+              <FormRow label="Status">
+                <select
+                  name="is_active"
+                  aria-label="Status"
+                  defaultValue={formDefault?.is_active === false ? "false" : "true"}
+                  className={FIELD_SELECT}
                 >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form="promo-form"
-                  disabled={isPending || uploading}
-                  className="h-14 rounded-2xl bg-[#34451F] font-black text-[10px] tracking-widest text-white uppercase shadow-lg hover:bg-[#283719] active:scale-95"
-                >
-                  {isPending ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Save
-                    </>
-                  )}
-                </Button>
-              </div>
-            )}
-          </div>
-          {ConfirmDialogUI}
-        </SheetContent>
-      </Sheet>
-    </div>
-  );
-}
+                  <option value="true">Active</option>
+                  <option value="false">Inactive</option>
+                </select>
+              </FormRow>
 
-function FormRow({
-  label,
-  required,
-  children,
-}: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center gap-2 px-4 py-2.5 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
-          {label}
-        </span>
-        {required && <span className="text-[10px] font-bold text-red-500">*</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
+              <FormRow label="Order">
+                <input
+                  name="display_order"
+                  type="number"
+                  min="0"
+                  aria-label="Display order"
+                  defaultValue={formDefault?.display_order ?? 0}
+                  className={cn(FIELD_INPUT, "tabular-nums")}
+                />
+              </FormRow>
+            </DetailCard>
 
-function DetailCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 border-b border-[#D8D5C8] px-4 py-2.5 last:border-0 sm:gap-3 sm:px-5 sm:py-4">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60 sm:gap-2">
-        <span className="text-[10px] font-bold tracking-wide whitespace-nowrap uppercase">
-          {label}
-        </span>
-      </div>
-      <span className="flex-1 text-right font-black text-base leading-snug break-all text-[#20231A] sm:text-sm">
-        {value}
-      </span>
-    </div>
-  );
-}
-
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
-      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-500" />
-      <p className="text-sm leading-snug font-bold text-red-700">{message}</p>
+            {sheet.formError && <ErrorBox message={sheet.formError} />}
+          </form>
+        )}
+      </RecordSheet>
     </div>
   );
 }
