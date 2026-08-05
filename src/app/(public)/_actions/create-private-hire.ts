@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { upsertContactByEmail } from "@/lib/music-acts";
 import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -30,12 +31,21 @@ export interface PrivateHireData {
 export async function createPrivateHire(data: PrivateHireData) {
   const supabase = await createClient();
 
+  // Ties the enquiry to a person rather than to whatever address they typed,
+  // and creates the contact when this is their first dealing with the venue.
+  const contactId = await upsertContactByEmail(supabase, {
+    booker_name: data.full_name,
+    email: data.email,
+    phone_no: data.phone_no,
+  });
+
   const { data: record, error } = await supabase
     .from("private_hire_requests")
     .insert([
       {
         full_name: data.full_name,
         email: data.email,
+        contact_id: contactId,
         phone_no: data.phone_no || null,
         guest_count: data.guest_count,
         preferred_date: data.preferred_date || null,

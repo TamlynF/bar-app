@@ -10,6 +10,13 @@ export {
 } from "./record-sheet";
 
 export {
+  DateField,
+  formatRecordDate,
+  parseRecordDate,
+  toDateInputValue,
+} from "./date-field";
+
+export {
   RecordList,
   ListRow,
   ListSearchInput,

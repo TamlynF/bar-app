@@ -14,15 +14,12 @@ import {
   SearchX,
   Briefcase,
   CalendarPlus,
-  CalendarDays,
   Phone,
 } from "lucide-react";
 import { format } from "date-fns";
 import { saveEmployeeAction, deleteEmployeeAction, sendPasswordResetAction } from "./actions";
 import { cn } from "@/lib/utils";
 import { COUNTRY_CODES } from "@/lib/country-codes";
-import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   useRecordSheet,
   RecordSheet,
@@ -36,6 +33,10 @@ import {
   DetailCell,
   FormRow,
   ErrorBox,
+  DateField,
+  formatRecordDate as formatDate,
+  parseRecordDate as parseDbDate,
+  toDateInputValue as toDateInput,
 } from "@/components/admin";
 
 export type SystemUserRecord = {
@@ -94,25 +95,6 @@ const FIELD_SELECT =
 function toTitleCase(str?: string | null) {
   if (!str) return "";
   return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase());
-}
-
-function formatDate(dateStr: string | null) {
-  if (!dateStr) return "-";
-  return new Date(dateStr).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function toDateInput(value?: string | null) {
-  return value ? new Date(value).toISOString().split("T")[0] : "";
-}
-
-// Dates come back as plain YYYY-MM-DD, which parses as UTC midnight and can slip
-// a day west of Greenwich. Anchoring to local midnight keeps the month right.
-function parseDbDate(value: string): Date {
-  return new Date(value.includes("T") ? value : `${value}T00:00:00`);
 }
 
 // How long they have been employed. A leaving date that has passed stops the
@@ -230,77 +212,6 @@ function ContactActions({ user }: { user: SystemUserRecord }) {
         </a>
       )}
     </span>
-  );
-}
-
-// A native date input renders the browser's own locale format and ignores
-// text-align, so the form would read 26/07/2025 hard left while the view reads
-// 26 Jul 2025 hard right. This keeps both sides identical.
-function DateField({
-  name,
-  label,
-  value,
-  onChange,
-  clearable = true,
-}: {
-  name: string;
-  label: string;
-  value: string;
-  onChange: (next: string) => void;
-  clearable?: boolean;
-}) {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <div className="flex flex-1 justify-end">
-      <input type="hidden" name={name} value={value} />
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            aria-label={label}
-            className="flex cursor-pointer items-center gap-2 bg-transparent text-sm transition-colors hover:text-admin-primary"
-          >
-            {/* An empty date reads as a prompt, not a value - same weight and
-                colour as the record id in the header. */}
-            <span
-              className={cn(
-                value ? "font-semibold text-admin-ink" : "font-normal text-admin-muted",
-              )}
-            >
-              {value ? formatDate(value) : "Pick a date"}
-            </span>
-            <CalendarDays className="h-4 w-4 shrink-0 text-admin-muted/60" />
-          </button>
-        </PopoverTrigger>
-        <PopoverContent
-          align="end"
-          className="w-auto overflow-hidden rounded-2xl border-2 border-admin-line bg-admin-card p-0"
-        >
-          <Calendar
-            mode="single"
-            selected={value ? parseDbDate(value) : undefined}
-            onSelect={(picked) => {
-              onChange(picked ? format(picked, "yyyy-MM-dd") : "");
-              setOpen(false);
-            }}
-            autoFocus
-          />
-          {clearable && value && (
-            <button
-              type="button"
-              onClick={() => {
-                onChange("");
-                setOpen(false);
-              }}
-              className="w-full border-t border-admin-line px-4 py-2.5 text-[12px] font-semibold text-admin-error hover:bg-admin-error-bg"
-            >
-              Clear date
-            </button>
-          )}
-        </PopoverContent>
-      </Popover>
-    </div>
   );
 }
 

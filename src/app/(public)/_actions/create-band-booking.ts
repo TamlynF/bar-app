@@ -82,6 +82,7 @@ export async function createBandBooking(data: BandBookingData) {
         payment_amount: data.payment_amount ?? null,
         booker_name: data.booker_name,
         email: data.email,
+        contact_id: contactId,
         phone_no: data.phone_no || null,
         social_links: data.social_links,
         spotify_url: data.spotify_url || null,

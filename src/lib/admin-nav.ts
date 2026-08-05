@@ -174,6 +174,7 @@ export const WIDE_PATHS: string[] = [
   "/event-bookings/private-bookings",
   "/marketing/trends",
   "/settings/users",
+  "/settings/customers",
 ];
 
 export function isWidePath(pathname: string | null | undefined): boolean {
