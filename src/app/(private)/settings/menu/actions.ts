@@ -230,7 +230,13 @@ export async function saveItemAction(formData: FormData) {
     return { error: "Unknown comparison round." };
   }
 
+  // The comparison prices off these rows, not the display text, so an item
+  // without them is invisible to every round it should be competing in.
   const serves = readServes(formData);
+  if (!serves.length) {
+    return { error: "Add at least one serve and price before saving." };
+  }
+
   const currentEmployeeId = await getCurrentEmployeeId(supabase);
   const now = new Date().toISOString();
 

@@ -11,6 +11,9 @@ export function RecordList({
   title,
   count,
   countLabel,
+  badge,
+  subtitle,
+  actions,
   onAdd,
   addLabel = "Create",
   collapsible = true,
@@ -24,6 +27,13 @@ export function RecordList({
   title?: string;
   count?: number;
   countLabel?: React.ReactNode;
+  // A status pill for the group itself, beside the title and its count.
+  badge?: React.ReactNode;
+  // A second line under the title - a note about the group, not a record.
+  subtitle?: React.ReactNode;
+  // Group-level controls, left of the add button. They stop their own clicks so
+  // the title beside them still collapses the group.
+  actions?: React.ReactNode;
   // Left off for a list nothing can be added to, which hides the add button.
   onAdd?: () => void;
   addLabel?: string;
@@ -139,13 +149,24 @@ export function RecordList({
             toolbar ? "flex-1 sm:flex-none" : "flex-1",
           )}
         >
-          <p className="truncate text-[11px] font-semibold tracking-wide text-admin-primary">
+          <span className="block truncate text-[11px] font-semibold tracking-wide text-admin-primary">
             {title}{" "}
             {count != null && <span className="text-admin-muted">({count})</span>}
-          </p>
+          </span>
+          {subtitle && (
+            <span className="mt-0.5 block truncate text-[11px] font-medium text-admin-muted">
+              {subtitle}
+            </span>
+          )}
         </button>
         {toolbar && (
           <div className="order-3 w-full min-w-0 sm:order-2 sm:w-auto sm:flex-1">{toolbar}</div>
+        )}
+        {/* Hard right with the row's controls, not beside the title - the group
+            reads status-last the same way each of its rows does. */}
+        {badge && <div className="order-2 mr-1 shrink-0 sm:order-3">{badge}</div>}
+        {actions && (
+          <div className="order-2 flex shrink-0 items-center gap-0.5 sm:order-3">{actions}</div>
         )}
         {onAdd && (
           <button

@@ -629,7 +629,7 @@ export default function PrivateLayoutClient({
                 </div>
             </aside>
 
-            <div className="flex min-h-screen min-w-0 flex-1 flex-col sm:h-screen sm:overflow-y-auto">
+            <div className="flex min-h-screen min-w-0 flex-1 flex-col bg-admin-bg sm:h-screen sm:overflow-y-auto">
                 <header className="sticky top-0 z-40 w-full border-b border-admin-line bg-admin-card/95 backdrop-blur-sm">
                     <div className="mx-auto flex h-14 max-w-7xl items-center gap-1 px-2 sm:hidden">
                         {backHref ? (
@@ -695,8 +695,11 @@ export default function PrivateLayoutClient({
                     </div>
                 </header>
 
+                {/* The bottom gutter is deliberately generous: on phones it has to
+                    clear the fixed nav, and on a long list the last row otherwise
+                    sits flush against the viewport edge. */}
                 <main className={cn(
-                    "mx-auto w-full flex-1 p-1 pb-20 sm:min-h-0 sm:py-6 sm:pb-8",
+                    "mx-auto w-full flex-1 p-1 pb-28 sm:min-h-0 sm:py-6 sm:pb-16",
                     widePath ? "max-w-none" : "max-w-7xl sm:px-6"
                 )}>
                     {children}

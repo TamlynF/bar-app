@@ -1,30 +1,18 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Plus,
   Loader2,
-  ChevronDown,
-  Save,
   Pencil,
-  Trash2,
-  AlertCircle,
   UtensilsCrossed,
-  GripVertical,
   Printer,
-  Download,
-  Info,
   Wand2,
   ChevronRight,
   ListOrdered,
   X,
+  Check,
+  SearchX,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -39,6 +27,20 @@ import { cn } from "@/lib/utils";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { NOT_COMPARED, resolveBenchmark } from "@/app/(private)/marketing/lib/compare";
 import type { PriceBenchmark } from "@/app/(private)/marketing/lib/types";
+import {
+  RecordSheet,
+  RecordList,
+  ListRow,
+  ListSearchInput,
+  InfoBadge,
+  StatusPill,
+  EmptyState,
+  DetailCard,
+  DetailCell,
+  FormRow,
+  ErrorBox,
+  type SheetMode as RecordSheetMode,
+} from "@/components/admin";
 import {
   SERVES,
   formatPriceText,
@@ -115,15 +117,18 @@ export type MenuCategory = AuditFields & {
 
 export type EmployeeOption = { id: number; full_name: string | null };
 
-type SheetMode =
+type SheetState =
   | { type: "view-category"; categoryId: number }
   | { type: "edit-category"; categoryId: number | null }
   | { type: "view-item"; categoryId: number; itemId: number }
   | { type: "edit-item"; categoryId: number; itemId: number | null }
   | { type: "edit-serves"; categoryId: number; itemId: number | null };
 
-const SHEET_PILL =
-  "inline-flex h-6.5 shrink-0 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-semibold tracking-wide sm:h-8 sm:gap-2 sm:px-3.5 sm:text-[12px]";
+const ICON_BUTTON =
+  "flex h-11 w-11 items-center justify-center rounded-lg border border-admin-line bg-admin-card transition-colors hover:bg-admin-surface disabled:opacity-50 sm:h-9 sm:w-9";
+
+const FIELD_INPUT =
+  "flex-1 bg-transparent text-right text-[13px] font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40";
 
 function toOrderRow(row: {
   id: number;
@@ -159,15 +164,27 @@ function benchmarkSummary(
   return item.benchmark_key ? resolved.label : `${resolved.label} (auto)`;
 }
 
-function formatDateTime(iso?: string | null) {
-  if (!iso) return "-";
-  return new Date(iso).toLocaleString("en-GB", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function servesOf(item: MenuItem): string {
+  if (!item.menu_item_prices.length) return "No serves";
+  return item.menu_item_prices.map((p) => p.serve).join(", ");
+}
+
+function ActivePill({
+  active,
+  showLabelOnMobile,
+}: {
+  active: boolean;
+  showLabelOnMobile?: boolean;
+}) {
+  return (
+    <StatusPill
+      tone={active ? "success" : "error"}
+      icon={active ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+      showLabelOnMobile={showLabelOnMobile}
+    >
+      {active ? "Active" : "Inactive"}
+    </StatusPill>
+  );
 }
 
 export default function MenuClient({
@@ -183,8 +200,8 @@ export default function MenuClient({
   const [isPending, startTransition] = useTransition();
   const [isFilling, startFill] = useTransition();
   const [formError, setFormError] = useState<string | null>(null);
-  const [collapsed, setCollapsed] = useState<Record<number, boolean>>({});
-  const [sheet, setSheet] = useState<SheetMode | null>(null);
+  const [query, setQuery] = useState("");
+  const [sheet, setSheet] = useState<SheetState | null>(null);
   const [isActive, setIsActive] = useState(true);
   const [position, setPosition] = useState(1);
   // The item form keeps its values in state so drilling into the serves and
@@ -205,6 +222,35 @@ export default function MenuClient({
   const categoryRows = initialCategories.map(toOrderRow);
   const itemRowsFor = (cat: MenuCategory | null) =>
     (cat?.menu_items ?? []).map(toOrderRow);
+
+  const itemCount = initialCategories.reduce(
+    (sum, c) => sum + c.menu_items.length,
+    0
+  );
+
+  const searching = query.trim().length > 0;
+
+  // A category matching by name carries all of its items; otherwise only the
+  // items that match come through, so a hit is never buried in its group.
+  const needle = query.trim().toLowerCase();
+  const matchesCategory = (cat: MenuCategory) =>
+    cat.name.toLowerCase().includes(needle) ||
+    (cat.note ?? "").toLowerCase().includes(needle);
+
+  const shownGroups = !needle
+    ? initialCategories.map((cat) => ({ cat, items: cat.menu_items }))
+    : initialCategories
+        .map((cat) => ({
+          cat,
+          items: matchesCategory(cat)
+            ? cat.menu_items
+            : cat.menu_items.filter(
+                (item) =>
+                  item.name.toLowerCase().includes(needle) ||
+                  item.price.toLowerCase().includes(needle)
+              ),
+        }))
+        .filter(({ cat, items }) => items.length > 0 || matchesCategory(cat));
 
   const sheetCategory =
     sheet && sheet.categoryId != null
@@ -250,19 +296,37 @@ export default function MenuClient({
 
   const headerRecord = isItemSheet ? sheetItem : sheetCategory;
 
+  // An item priced by no serve cannot be compared against anything, so neither
+  // the item form nor the serves editor will save while the set is empty.
+  const servesMissing = draftPrices(serveDrafts).length === 0;
+  const saveDisabled =
+    (sheet?.type === "edit-item" || sheet?.type === "edit-serves") && servesMissing;
+
+  const isNewRecord =
+    (sheet?.type === "edit-category" && sheet.categoryId == null) ||
+    (sheet?.type === "edit-item" && sheet.itemId == null);
+
+  const sheetMode: RecordSheetMode = !sheet
+    ? "closed"
+    : sheet.type === "view-category" || sheet.type === "view-item"
+    ? "view"
+    : isNewRecord
+    ? "add"
+    : "edit";
+
   const sheetTitle =
     sheet?.type === "view-category"
-      ? "View Category"
+      ? "View category"
       : sheet?.type === "edit-category"
       ? sheet.categoryId
-        ? "Edit Category"
-        : "New Category"
+        ? "Edit category"
+        : "New category"
       : sheet?.type === "view-item"
-      ? "View Menu Item"
+      ? "View menu item"
       : sheet?.type === "edit-item"
       ? sheet.itemId
-        ? "Edit Menu Item"
-        : "New Menu Item"
+        ? "Edit menu item"
+        : "New menu item"
       : sheet?.type === "edit-serves"
       ? "Prices by serve"
       : "";
@@ -270,6 +334,20 @@ export default function MenuClient({
   const closeSheet = () => {
     setSheet(null);
     setFormError(null);
+  };
+
+  // Leaving an edit drops back to the record rather than dismissing the sheet -
+  // you asked to change it, not to leave. A new record has nothing to fall back
+  // to, so that one closes.
+  const backToView = () => {
+    setFormError(null);
+    if (sheet?.type === "edit-category" && sheet.categoryId != null) {
+      setSheet({ type: "view-category", categoryId: sheet.categoryId });
+    } else if (sheet?.type === "edit-item" && sheet.itemId != null) {
+      setSheet({ type: "view-item", categoryId: sheet.categoryId, itemId: sheet.itemId });
+    } else {
+      setSheet(null);
+    }
   };
 
   const printMenuPage = () => {
@@ -413,7 +491,7 @@ export default function MenuClient({
           ? await saveCategoryAction(formData)
           : await saveItemAction(formData);
         if (result?.error) setFormError(result.error);
-        else closeSheet();
+        else backToView();
       });
 
     if (affected.length === 0) {
@@ -476,8 +554,18 @@ export default function MenuClient({
     });
   };
 
+  const handleSheetEdit = () => {
+    if (sheet?.type === "view-category" && sheetCategory) startEditCategory(sheetCategory);
+    else if (sheetCategory && sheetItem) startEditItem(sheetCategory, sheetItem);
+  };
+
+  const handleSheetDelete = () => {
+    if (sheet?.type === "view-category" && sheetCategory) void handleCategoryDelete(sheetCategory);
+    else if (sheetCategory && sheetItem) void handleItemDelete(sheetCategory, sheetItem);
+  };
+
   return (
-    <div className="max-w-2xl space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
+    <div className="mx-auto w-full space-y-3 px-2 py-3 sm:space-y-4 sm:px-4 sm:py-0 md:px-6">
       <iframe
         id="menu-print-frame"
         src="/menu"
@@ -485,60 +573,53 @@ export default function MenuClient({
         title="Menu print frame"
       />
 
-      <div className="flex items-center justify-end gap-2 sm:justify-between">
-        <div className="hidden min-w-0 sm:block">
-          <p className="text-[11px] font-medium text-[#5E6654]">
-            {initialCategories.length} categories &middot;{" "}
-            {initialCategories.reduce(
-              (sum, c) => sum + c.menu_items.length,
-              0
-            )}{" "}
-            items
-          </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="min-w-0 sm:flex-1">
+          <ListSearchInput
+            value={query}
+            onChange={setQuery}
+            label="Search the menu"
+            placeholder="Search by category or item"
+          />
         </div>
-        <div className="flex shrink-0 items-center gap-1.5">
+        <p className="hidden shrink-0 text-[11px] font-medium text-admin-muted sm:block">
+          {initialCategories.length} categories &middot; {itemCount} items
+        </p>
+        <div className="flex shrink-0 items-center justify-end gap-1.5">
           <button
             type="button"
             onClick={() => printMenuPage()}
             title="Print menu"
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9"
+            className={ICON_BUTTON}
           >
-            <Printer className="h-4 w-4 text-[#5E6654]" />
-          </button>
-          <button
-            type="button"
-            onClick={() => printMenuPage()}
-            title="Save menu as PDF"
-            className="flex h-11 w-11 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] sm:h-9 sm:w-9"
-          >
-            <Download className="h-4 w-4 text-[#5E6654]" />
+            <Printer className="h-4 w-4 text-admin-muted" />
           </button>
           <button
             type="button"
             onClick={handleBackfillServes}
             disabled={isFilling}
             title="Read serves from existing prices"
-            className="hidden h-11 w-11 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex sm:h-9 sm:w-9"
+            className={cn(ICON_BUTTON, "hidden sm:flex")}
           >
-            <ListOrdered className="h-4 w-4 text-[#5E6654]" />
+            <ListOrdered className="h-4 w-4 text-admin-muted" />
           </button>
           <button
             type="button"
             onClick={handleAutoFill}
             disabled={isFilling}
             title="Auto-fill price comparison rounds"
-            className="hidden h-11 w-11 items-center justify-center rounded-lg border border-[#D8D5C8] bg-white transition-colors hover:bg-[#F4F1E8] disabled:opacity-50 sm:flex sm:h-9 sm:w-9"
+            className={cn(ICON_BUTTON, "hidden sm:flex")}
           >
             {isFilling ? (
-              <Loader2 className="h-4 w-4 animate-spin text-[#5E6654]" />
+              <Loader2 className="h-4 w-4 animate-spin text-admin-muted" />
             ) : (
-              <Wand2 className="h-4 w-4 text-[#5E6654]" />
+              <Wand2 className="h-4 w-4 text-admin-muted" />
             )}
           </button>
           <button
             type="button"
             onClick={() => startEditCategory(null)}
-            className="flex h-11 items-center gap-1.5 rounded-lg bg-[#34451F] px-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#283719] sm:h-9"
+            className="flex h-11 items-center gap-1.5 rounded-lg bg-admin-primary px-3 text-[13px] font-semibold text-white transition-colors hover:bg-admin-primary-hover sm:h-9"
           >
             <Plus className="h-4 w-4" />
             Category
@@ -547,584 +628,431 @@ export default function MenuClient({
       </div>
 
       {initialCategories.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-[#D8D5C8] py-14 text-center">
-          <UtensilsCrossed className="mx-auto mb-3 h-8 w-8 text-[#5E6654] opacity-30" />
-          <p className="text-sm font-bold text-[#20231A]">
-            No menu categories yet
-          </p>
-          <p className="mt-1 text-[11px] text-[#5E6654]">
-            Add a category to start building your menu
+        <EmptyState
+          icon={UtensilsCrossed}
+          title="No menu categories yet"
+          description="Add a category to start building your menu"
+        />
+      ) : shownGroups.length === 0 ? (
+        <div className="flex flex-col items-center gap-1 rounded-2xl border border-dashed border-admin-line px-4 py-12 text-center">
+          <SearchX className="mb-1 h-7 w-7 text-admin-muted opacity-30" />
+          <p className="text-sm font-semibold text-admin-ink">No matches</p>
+          <p className="text-[11px] text-admin-muted">
+            Nothing on the menu matches &ldquo;{query.trim()}&rdquo;
           </p>
         </div>
       ) : (
-        <div className="space-y-2">
-          {initialCategories.map((cat) => {
-            const isCollapsed = collapsed[cat.id] ?? false;
-            return (
-              <section
-                key={cat.id}
-                className="overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white"
-              >
-                <div className="flex items-center gap-1.5 bg-[#F4F1E8] px-3 py-2.5 sm:px-4">
-                  <button
-                    type="button"
+        <div className="space-y-2.5">
+          {shownGroups.map(({ cat, items }) => (
+            <RecordList
+              key={cat.id}
+              variant="panel"
+              title={cat.name}
+              count={items.length}
+              badge={<ActivePill active={cat.is_active} />}
+              subtitle={cat.note}
+              // Searching forces every group open - a hit behind a collapsed
+              // header reads as no result at all.
+              collapsible={!searching}
+              actions={
+                <button
+                  type="button"
+                  onClick={() => setSheet({ type: "view-category", categoryId: cat.id })}
+                  title={`View ${cat.name}`}
+                  className="flex h-9 w-9 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-primary-soft hover:text-admin-primary sm:h-8 sm:w-8"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+              }
+              onAdd={() => startEditItem(cat, null)}
+              addLabel="Item"
+            >
+              {items.length === 0 ? (
+                <p className="px-4 py-6 text-center text-[11px] text-admin-muted">
+                  No items - use the add button to create one
+                </p>
+              ) : (
+                items.map((item) => (
+                  <ListRow
+                    key={item.id}
                     onClick={() =>
-                      setCollapsed((p) => ({
-                        ...p,
-                        [cat.id]: !isCollapsed,
-                      }))
+                      setSheet({ type: "view-item", categoryId: cat.id, itemId: item.id })
                     }
-                    className="min-w-0 flex-1 text-left"
+                    status={<ActivePill active={item.is_active} />}
                   >
-                    <span className="flex min-w-0 items-center gap-2">
-                      <span
-                        className={cn(
-                          "truncate text-[11px] font-bold tracking-wide uppercase",
-                          cat.is_active ? "text-[#34451F]" : "text-[#5E6654]"
-                        )}
-                      >
-                        {cat.name}{" "}
-                        <span className="text-[#5E6654]">
-                          ({cat.menu_items.length})
+                    {/* Fixed tracks, not content-sized ones - an "auto" column
+                        takes its width from that row's own badges, which is what
+                        leaves every price starting somewhere different. */}
+                    <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[3rem_minmax(0,1fr)_16rem_11rem] sm:items-center sm:gap-3">
+                      <p className="hidden text-[11px] font-medium text-admin-muted sm:block">
+                        <span className="sr-only">Display order</span>
+                        <span className="tabular-nums">
+                          {item.is_active ? `#${item.display_order}` : "-"}
                         </span>
-                      </span>
-                      <StatusPill active={cat.is_active} compact />
-                    </span>
-                    {cat.note && (
-                      <span className="mt-0.5 block truncate text-[11px] font-medium text-[#5E6654]">
-                        {cat.note}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setSheet({ type: "view-category", categoryId: cat.id })
-                    }
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-colors hover:bg-[#D8D5C8]"
-                    title="View category"
-                  >
-                    <Pencil className="h-3 w-3 text-[#5E6654]" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => startEditItem(cat, null)}
-                    className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[#34451F] text-white transition-colors hover:bg-[#283719]"
-                    title="Add item"
-                  >
-                    <Plus className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCollapsed((p) => ({
-                        ...p,
-                        [cat.id]: !isCollapsed,
-                      }))
-                    }
-                    className="shrink-0"
-                    title="Toggle category items"
-                  >
-                    <ChevronDown
-                      className={cn(
-                        "h-4 w-4 text-[#5E6654] transition-transform duration-200",
-                        !isCollapsed && "rotate-180"
-                      )}
-                    />
-                  </button>
-                </div>
+                      </p>
 
-                {!isCollapsed && cat.menu_items.length > 0 && (
-                  <div className="divide-y divide-[#D8D5C8]/50">
-                    {cat.menu_items.map((item) => (
-                      <div
-                        key={item.id}
-                        onClick={() =>
-                          setSheet({
-                            type: "view-item",
-                            categoryId: cat.id,
-                            itemId: item.id,
-                          })
-                        }
+                      <p
                         className={cn(
-                          "flex cursor-pointer items-center gap-2 px-3 py-2 transition-colors hover:bg-[#F4F1E8]/50 sm:px-4",
-                          !item.is_active && "opacity-40"
+                          "min-w-0 truncate text-sm leading-snug font-semibold",
+                          item.is_active ? "text-admin-ink" : "text-admin-muted"
                         )}
                       >
-                        <GripVertical className="h-3 w-3 shrink-0 text-[#D8D5C8]" />
-                        <span className="min-w-0 flex-1 truncate text-xs font-bold text-[#20231A]">
-                          {item.name}
-                        </span>
-                        <span className="shrink-0 text-right text-[11px] font-bold text-[#5E6654]">
-                          {item.price}
-                        </span>
+                        {item.name}
+                      </p>
+
+                      <p className="mt-0.5 truncate text-[11px] font-semibold text-admin-muted sm:mt-0 sm:text-[12px]">
+                        {item.price}
+                      </p>
+
+                      <div className="hidden items-center gap-2 sm:flex">
+                        <InfoBadge icon={null}>{servesOf(item)}</InfoBadge>
                       </div>
-                    ))}
-                  </div>
-                )}
-                {!isCollapsed && cat.menu_items.length === 0 && (
-                  <div className="px-4 py-4 text-center text-[11px] text-[#5E6654]">
-                    No items - tap + to add
-                  </div>
-                )}
-              </section>
-            );
-          })}
+                    </div>
+                  </ListRow>
+                ))
+              )}
+            </RecordList>
+          ))}
         </div>
       )}
 
-      <Sheet
+      <RecordSheet
         open={!!sheet}
-        onOpenChange={(open) => {
-          if (!open) closeSheet();
-        }}
+        onClose={closeSheet}
+        mode={sheetMode}
+        title={sheetTitle}
+        recordId={headerRecord?.id}
+        formId={sheet?.type === "edit-serves" ? "serves-form" : "menu-form"}
+        isPending={isPending}
+        saveDisabled={saveDisabled}
+        onEdit={sheetMode === "view" ? handleSheetEdit : undefined}
+        onDelete={sheetMode === "view" ? handleSheetDelete : undefined}
+        onCancel={
+          sheet?.type === "edit-serves"
+            ? cancelServes
+            : isNewRecord
+            ? closeSheet
+            : backToView
+        }
+        confirmUI={ConfirmDialogUI}
+        status={headerRecord && !isEditing && <ActivePill active={headerRecord.is_active} showLabelOnMobile />}
+        systemInfo={
+          headerRecord == null
+            ? undefined
+            : {
+                createdAt: headerRecord.created_at,
+                createdBy: employeeName(headerRecord.created_by),
+                updatedAt: headerRecord.updated_at,
+                updatedBy: employeeName(headerRecord.updated_by),
+              }
+        }
       >
-        <SheetContent
-          side="bottom"
-          showCloseButton={false}
-          onOpenAutoFocus={(e) => e.preventDefault()}
-          className="flex h-auto max-h-[75vh] flex-col rounded-t-[2.5rem] border-t-2 border-[#D8D5C8]
-            bg-[#F4F1E8] p-0 shadow-2xl outline-none
-            sm:inset-x-auto sm:top-1/2 sm:bottom-auto sm:left-1/2 sm:max-h-[80vh]
-            sm:w-140 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-4xl
-            sm:border-2 sm:border-[#D8D5C8]"
-        >
-          <div className="sticky top-0 z-30 shrink-0 border-b border-[#D8D5C8] bg-white/80 p-4 pb-3 backdrop-blur-md sm:rounded-t-4xl">
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <SheetTitle className="truncate text-lg leading-tight font-bold tracking-tight text-[#20231A]">
-                  {sheetTitle}
-                </SheetTitle>
-                {headerRecord && (
-                  <p className="mt-0.5 text-[12px] font-medium text-[#5E6654] tabular-nums">
-                    #{headerRecord.id}
-                  </p>
-                )}
-              </div>
-              {headerRecord && (
-                <div className="flex shrink-0 items-center gap-2">
-                  {!isEditing && <StatusPill active={headerRecord.is_active} />}
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <button
-                        type="button"
-                        aria-label="System information"
-                        title="Creation and modification details"
-                        className="flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#D8D5C8] bg-[#ECE9DE] px-3 text-[#20231A] transition-colors hover:bg-[#D8D5C8]"
-                      >
-                        <Info className="h-4.5 w-4.5 shrink-0" />
-                        <span className="hidden text-[13px] font-semibold sm:inline">
-                          System
-                        </span>
-                      </button>
-                    </PopoverTrigger>
-                    <PopoverContent
-                      align="end"
-                      className="w-80 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white p-0"
-                    >
-                      <span className="block border-b border-[#D8D5C8] bg-[#D8D5C8] px-4 py-2.5 text-[12px] font-bold text-[#34451F]">
-                        System Information
-                      </span>
-                      <InfoRow
-                        label="ID"
-                        value={
-                          <span className="tabular-nums">
-                            #{headerRecord.id}
-                          </span>
-                        }
-                      />
-                      <InfoRow
-                        label="Created"
-                        value={formatDateTime(headerRecord.created_at)}
-                      />
-                      <InfoRow
-                        label="Created By"
-                        value={employeeName(headerRecord.created_by)}
-                      />
-                      <InfoRow
-                        label="Last Modified"
-                        value={formatDateTime(headerRecord.updated_at)}
-                      />
-                      <InfoRow
-                        label="Modified By"
-                        value={employeeName(headerRecord.updated_by)}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-              )}
-            </div>
+        {sheet?.type === "view-category" && sheetCategory && (
+          <div className="animate-in space-y-4 duration-200 fade-in">
+            <DetailCard>
+              <DetailCell label="Name" value={sheetCategory.name} />
+              <DetailCell label="Note" value={sheetCategory.note || "-"} />
+              <DetailCell
+                label="Mixer extra"
+                value={
+                  sheetCategory.mixer_surcharge
+                    ? `£${sheetCategory.mixer_surcharge.toFixed(2)}`
+                    : "-"
+                }
+              />
+              <DetailCell
+                label="Order"
+                value={
+                  sheetCategory.is_active
+                    ? String(sheetCategory.display_order)
+                    : "0 (inactive)"
+                }
+              />
+              <DetailCell label="Items" value={String(sheetCategory.menu_items.length)} />
+            </DetailCard>
+            {formError && <ErrorBox message={formError} />}
           </div>
+        )}
 
-          <div className="min-h-0 flex-1 touch-pan-y space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
-            {sheet?.type === "view-category" && sheetCategory && (
-              <div className="space-y-3">
-                <DetailCell label="Name" value={sheetCategory.name} />
-                <DetailCell label="Note" value={sheetCategory.note || "-"} />
-                <DetailCell
-                  label="Order"
-                  value={
-                    sheetCategory.is_active
-                      ? String(sheetCategory.display_order)
-                      : "0 (inactive)"
-                  }
-                />
-                <DetailCell
-                  label="Items"
-                  value={String(sheetCategory.menu_items.length)}
-                />
-                {formError && <ErrorBox message={formError} />}
-              </div>
-            )}
-
-            {sheet?.type === "edit-category" && (
-              <form id="menu-form" onSubmit={handleSubmit} className="space-y-3">
-                {sheetCategory && (
-                  <input type="hidden" name="id" value={sheetCategory.id} />
-                )}
+        {sheet?.type === "edit-category" && (
+          <form
+            id="menu-form"
+            onSubmit={handleSubmit}
+            className="animate-in space-y-4 duration-200 fade-in"
+          >
+            {sheetCategory && <input type="hidden" name="id" value={sheetCategory.id} />}
+            <input type="hidden" name="is_active" value={isActive ? "true" : "false"} />
+            <DetailCard className="divide-y divide-admin-line/50">
+              <FormRow label="Name" required>
                 <input
-                  type="hidden"
-                  name="is_active"
-                  value={isActive ? "true" : "false"}
+                  name="name"
+                  required
+                  aria-label="Name"
+                  placeholder="e.g. Cocktails"
+                  defaultValue={sheetCategory?.name ?? ""}
+                  className={FIELD_INPUT}
                 />
-                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white">
-                  <FormRow label="Name" required>
-                    <input name="name" required aria-label="Name" placeholder="e.g. Cocktails" defaultValue={sheetCategory?.name ?? ""} className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
-                  </FormRow>
-                  <FormRow label="Note">
-                    <input name="note" aria-label="Note" placeholder="e.g. +£1.45 for mixers" defaultValue={sheetCategory?.note ?? ""} className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
-                  </FormRow>
-                  <FormRow label="Mixer extra">
-                    <input
-                      name="mixer_surcharge"
-                      type="number"
-                      step="0.05"
-                      min="0"
-                      inputMode="decimal"
-                      aria-label="Mixer surcharge"
-                      placeholder="e.g. 1.45"
-                      defaultValue={sheetCategory?.mixer_surcharge ?? ""}
-                      className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40"
-                    />
-                  </FormRow>
-                  <FormRow label="Status">
-                    <StatusToggle value={isActive} onChange={setIsActive} />
-                  </FormRow>
-                  <FormRow label="Order">
-                    <OrderField
-                      canChoose={canChoosePosition}
-                      value={position}
-                      onChange={setPosition}
-                      resolved={plan.position}
-                      max={activeCount}
-                    />
-                  </FormRow>
-                  <OrderHint
-                    isActive={isActive}
-                    canChoose={canChoosePosition}
-                    activeCount={activeCount}
-                    resolved={plan.position}
-                    entityLabel="Categories"
-                  />
-                </div>
-                {formError && <ErrorBox message={formError} />}
-              </form>
-            )}
-
-            {sheet?.type === "view-item" && sheetItem && sheetCategory && (
-              <div className="space-y-3">
-                <DetailCell label="Name" value={sheetItem.name} />
-                <DetailCell label="Price" value={sheetItem.price} />
-                <DetailCell label="Category" value={sheetCategory.name} />
-                <DetailCell
-                  label="Serves"
-                  value={
-                    sheetItem.menu_item_prices.length
-                      ? sheetItem.menu_item_prices.map((p) => p.serve).join(", ")
-                      : "None recorded"
-                  }
-                />
-                <DetailCell
-                  label="Compares as"
-                  value={benchmarkSummary(sheetItem, sheetCategory.name, benchmarks)}
-                />
-                <DetailCell
-                  label="Order"
-                  value={
-                    sheetItem.is_active
-                      ? String(sheetItem.display_order)
-                      : "0 (inactive)"
-                  }
-                />
-                {formError && <ErrorBox message={formError} />}
-              </div>
-            )}
-
-            {sheet?.type === "edit-item" && sheetCategory && (
-              <form id="menu-form" onSubmit={handleSubmit} className="space-y-3">
-                {sheetItem && (
-                  <input type="hidden" name="id" value={sheetItem.id} />
-                )}
-                <input type="hidden" name="category_id" value={sheetCategory.id} />
+              </FormRow>
+              <FormRow label="Note">
                 <input
-                  type="hidden"
-                  name="is_active"
-                  value={isActive ? "true" : "false"}
+                  name="note"
+                  aria-label="Note"
+                  placeholder="e.g. +£1.45 for mixers"
+                  defaultValue={sheetCategory?.note ?? ""}
+                  className={FIELD_INPUT}
                 />
-                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white">
-                  <input type="hidden" name="serves" value={JSON.stringify(draftPrices(serveDrafts))} />
-                  <FormRow label="Name" required>
-                    <input name="name" required aria-label="Name" placeholder="e.g. Espresso Martini" value={itemName} onChange={(e) => setItemName(e.target.value)} className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
-                  </FormRow>
-                  <FormRow label="Price" required>
-                    <input name="price" required aria-label="Price" placeholder="e.g. £8.95" value={priceText} onChange={(e) => setPriceText(e.target.value)} className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none placeholder:text-[#5E6654]/40" />
-                  </FormRow>
-                  <FormRow label="Serves">
-                    <button
-                      type="button"
-                      onClick={openServes}
-                      className="flex flex-1 items-center justify-end gap-1.5 text-right text-[13px] font-semibold text-[#34451F]"
-                    >
-                      {serveSummary(serveDrafts)}
-                      <ChevronRight className="h-4 w-4 shrink-0" />
-                    </button>
-                  </FormRow>
-                  <FormRow label="Compares as">
-                    <select
-                      name="benchmark_key"
-                      aria-label="Price comparison round"
-                      value={benchmarkKey}
-                      onChange={(e) => setBenchmarkKey(e.target.value)}
-                      className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none"
-                    >
-                      <option value="">Auto - set from the name on save</option>
-                      {benchmarks
-                        .filter((b) => b.is_active)
-                        .map((option) => (
-                          <option key={option.key} value={option.key}>
-                            {option.label}
-                          </option>
-                        ))}
-                      <option value={NOT_COMPARED}>Not compared</option>
-                    </select>
-                  </FormRow>
-                  <FormRow label="Status">
-                    <StatusToggle value={isActive} onChange={setIsActive} />
-                  </FormRow>
-                  <FormRow label="Order">
-                    <OrderField
-                      canChoose={canChoosePosition}
-                      value={position}
-                      onChange={setPosition}
-                      resolved={plan.position}
-                      max={activeCount}
-                    />
-                  </FormRow>
-                  <OrderHint
-                    isActive={isActive}
-                    canChoose={canChoosePosition}
-                    activeCount={activeCount}
-                    resolved={plan.position}
-                    entityLabel="Items in this category"
-                  />
-                </div>
-                {formError && <ErrorBox message={formError} />}
-              </form>
-            )}
+              </FormRow>
+              <FormRow label="Mixer extra">
+                <input
+                  name="mixer_surcharge"
+                  type="number"
+                  step="0.05"
+                  min="0"
+                  inputMode="decimal"
+                  aria-label="Mixer surcharge"
+                  placeholder="e.g. 1.45"
+                  defaultValue={sheetCategory?.mixer_surcharge ?? ""}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+              <FormRow label="Status">
+                <StatusToggle value={isActive} onChange={setIsActive} />
+              </FormRow>
+              <FormRow label="Order">
+                <OrderField
+                  canChoose={canChoosePosition}
+                  value={position}
+                  onChange={setPosition}
+                  resolved={plan.position}
+                  max={activeCount}
+                />
+              </FormRow>
+              <OrderHint
+                isActive={isActive}
+                canChoose={canChoosePosition}
+                activeCount={activeCount}
+                resolved={plan.position}
+                entityLabel="Categories"
+              />
+            </DetailCard>
+            {formError && <ErrorBox message={formError} />}
+          </form>
+        )}
 
-            {sheet?.type === "edit-serves" && (
-              <div className="space-y-3">
-                <p className="text-[12px] leading-snug text-[#5E6654]">
-                  One row per measure you sell it in. The price comparison takes the serve
-                  each round asks for, so a half pint never stands in for the pint.
-                </p>
+        {sheet?.type === "view-item" && sheetItem && sheetCategory && (
+          <div className="animate-in space-y-4 duration-200 fade-in">
+            <DetailCard>
+              <DetailCell label="Name" value={sheetItem.name} />
+              <DetailCell label="Price" value={sheetItem.price} />
+              <DetailCell label="Category" value={sheetCategory.name} />
+              <DetailCell
+                label="Serves"
+                value={
+                  sheetItem.menu_item_prices.length
+                    ? sheetItem.menu_item_prices.map((p) => p.serve).join(", ")
+                    : "None recorded"
+                }
+              />
+              <DetailCell
+                label="Compares as"
+                value={benchmarkSummary(sheetItem, sheetCategory.name, benchmarks)}
+              />
+              <DetailCell
+                label="Order"
+                value={
+                  sheetItem.is_active ? String(sheetItem.display_order) : "0 (inactive)"
+                }
+              />
+            </DetailCard>
+            {formError && <ErrorBox message={formError} />}
+          </div>
+        )}
 
-                <div className="divide-y divide-[#D8D5C8]/50 overflow-hidden rounded-2xl border-2 border-[#D8D5C8] bg-white">
-                  {serveDrafts.length === 0 && (
-                    <p className="px-4 py-4 text-center text-[12px] text-[#5E6654]">
-                      No serves yet - add one below.
-                    </p>
-                  )}
-                  {serveDrafts.map((row, index) => (
-                    <div key={index} className="flex items-center gap-2 px-4 py-2.5">
-                      <select
-                        aria-label={`Serve ${index + 1}`}
-                        value={row.serve}
-                        onChange={(e) =>
-                          setServeDrafts((prev) =>
-                            prev.map((r, i) => (i === index ? { ...r, serve: e.target.value } : r))
-                          )
-                        }
-                        className="min-w-0 flex-1 bg-transparent text-[13px] font-semibold text-[#20231A] outline-none"
-                      >
-                        {SERVES.map((serve) => (
-                          <option key={serve} value={serve}>
-                            {serve}
-                          </option>
-                        ))}
-                      </select>
-                      <span className="text-[13px] font-semibold text-[#5E6654]">£</span>
-                      <input
-                        type="number"
-                        step="0.05"
-                        min="0"
-                        inputMode="decimal"
-                        aria-label={`Amount for serve ${index + 1}`}
-                        value={row.amount}
-                        onChange={(e) =>
-                          setServeDrafts((prev) =>
-                            prev.map((r, i) => (i === index ? { ...r, amount: e.target.value } : r))
-                          )
-                        }
-                        className="w-20 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setServeDrafts((prev) => prev.filter((_, i) => i !== index))}
-                        title={`Remove serve ${index + 1}`}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#B33A32] hover:bg-[#FDECEA]"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
+        {sheet?.type === "edit-item" && sheetCategory && (
+          <form
+            id="menu-form"
+            onSubmit={handleSubmit}
+            className="animate-in space-y-4 duration-200 fade-in"
+          >
+            {sheetItem && <input type="hidden" name="id" value={sheetItem.id} />}
+            <input type="hidden" name="category_id" value={sheetCategory.id} />
+            <input type="hidden" name="is_active" value={isActive ? "true" : "false"} />
+            <input type="hidden" name="serves" value={JSON.stringify(draftPrices(serveDrafts))} />
+            <DetailCard className="divide-y divide-admin-line/50">
+              <FormRow label="Name" required>
+                <input
+                  name="name"
+                  required
+                  aria-label="Name"
+                  placeholder="e.g. Espresso Martini"
+                  value={itemName}
+                  onChange={(e) => setItemName(e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+              <FormRow label="Price" required>
+                <input
+                  name="price"
+                  required
+                  aria-label="Price"
+                  placeholder="e.g. £8.95"
+                  value={priceText}
+                  onChange={(e) => setPriceText(e.target.value)}
+                  className={FIELD_INPUT}
+                />
+              </FormRow>
+              <FormRow label="Serves" required>
                 <button
                   type="button"
-                  onClick={() =>
-                    setServeDrafts((prev) => [
-                      ...prev,
-                      { serve: nextUnusedServe(prev), amount: "" },
-                    ])
-                  }
-                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl border border-[#34451F] bg-white text-[13px] font-semibold text-[#34451F] hover:bg-[#E5EBD8]"
+                  onClick={openServes}
+                  className={cn(
+                    "flex flex-1 items-center justify-end gap-1.5 text-right text-[13px] font-semibold",
+                    servesMissing ? "text-admin-error" : "text-admin-primary"
+                  )}
                 >
-                  <Plus className="h-4 w-4" />
-                  Add serve
+                  {serveSummary(serveDrafts)}
+                  <ChevronRight className="h-4 w-4 shrink-0" />
                 </button>
+              </FormRow>
+              <FormRow label="Compares as">
+                <select
+                  name="benchmark_key"
+                  aria-label="Price comparison round"
+                  value={benchmarkKey}
+                  onChange={(e) => setBenchmarkKey(e.target.value)}
+                  className="flex-1 cursor-pointer appearance-none bg-transparent text-right text-[13px] font-semibold text-admin-ink outline-none"
+                >
+                  <option value="">Auto - set from the name on save</option>
+                  {benchmarks
+                    .filter((b) => b.is_active)
+                    .map((option) => (
+                      <option key={option.key} value={option.key}>
+                        {option.label}
+                      </option>
+                    ))}
+                  <option value={NOT_COMPARED}>Not compared</option>
+                </select>
+              </FormRow>
+              <FormRow label="Status">
+                <StatusToggle value={isActive} onChange={setIsActive} />
+              </FormRow>
+              <FormRow label="Order">
+                <OrderField
+                  canChoose={canChoosePosition}
+                  value={position}
+                  onChange={setPosition}
+                  resolved={plan.position}
+                  max={activeCount}
+                />
+              </FormRow>
+              <OrderHint
+                isActive={isActive}
+                canChoose={canChoosePosition}
+                activeCount={activeCount}
+                resolved={plan.position}
+                entityLabel="Items in this category"
+              />
+            </DetailCard>
+            {servesMissing && (
+              <p className="px-1 text-[11px] font-medium text-admin-error">
+                At least one serve and price is needed before this item can be saved.
+              </p>
+            )}
+            {formError && <ErrorBox message={formError} />}
+          </form>
+        )}
 
-                <div className="rounded-2xl border border-[#D8D5C8] bg-[#F4F1E8] px-4 py-3">
-                  <p className="text-[11px] font-semibold tracking-wide text-[#5E6654] uppercase opacity-60">
-                    Price will read
-                  </p>
-                  <p className="mt-1 text-[14px] font-bold text-[#20231A]">
-                    {formatPriceText(draftPrices(serveDrafts)) || "-"}
-                  </p>
+        {sheet?.type === "edit-serves" && (
+          <form
+            id="serves-form"
+            onSubmit={(e) => {
+              e.preventDefault();
+              applyServes();
+            }}
+            className="animate-in space-y-4 duration-200 fade-in"
+          >
+            <p className="text-[12px] leading-snug text-admin-muted">
+              One row per measure you sell it in. The price comparison takes the serve
+              each round asks for, so a half pint never stands in for the pint.
+            </p>
+
+            <DetailCard className="divide-y divide-admin-line/50">
+              {serveDrafts.length === 0 && (
+                <p className="px-4 py-4 text-center text-[12px] text-admin-error">
+                  No serves yet - add at least one below.
+                </p>
+              )}
+              {serveDrafts.map((row, index) => (
+                <div key={index} className="flex items-center gap-2 px-4 py-2.5">
+                  <select
+                    aria-label={`Serve ${index + 1}`}
+                    value={row.serve}
+                    onChange={(e) =>
+                      setServeDrafts((prev) =>
+                        prev.map((r, i) => (i === index ? { ...r, serve: e.target.value } : r))
+                      )
+                    }
+                    className="min-w-0 flex-1 cursor-pointer bg-transparent text-[13px] font-semibold text-admin-ink outline-none"
+                  >
+                    {SERVES.map((serve) => (
+                      <option key={serve} value={serve}>
+                        {serve}
+                      </option>
+                    ))}
+                  </select>
+                  <span className="text-[13px] font-semibold text-admin-muted">£</span>
+                  <input
+                    type="number"
+                    step="0.05"
+                    min="0"
+                    inputMode="decimal"
+                    aria-label={`Amount for serve ${index + 1}`}
+                    value={row.amount}
+                    onChange={(e) =>
+                      setServeDrafts((prev) =>
+                        prev.map((r, i) => (i === index ? { ...r, amount: e.target.value } : r))
+                      )
+                    }
+                    className="w-20 bg-transparent text-right text-[13px] font-semibold text-admin-ink outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setServeDrafts((prev) => prev.filter((_, i) => i !== index))}
+                    title={`Remove serve ${index + 1}`}
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-admin-error hover:bg-admin-error-bg"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
                 </div>
-              </div>
-            )}
-          </div>
+              ))}
+            </DetailCard>
 
-          <div className="z-40 shrink-0 border-t-2 border-[#D8D5C8] bg-white/80 px-6 py-4 pb-8 backdrop-blur-md sm:rounded-b-4xl sm:pb-4">
-            {(sheet?.type === "view-category" || sheet?.type === "view-item") && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    if (sheet.type === "view-category" && sheetCategory)
-                      handleCategoryDelete(sheetCategory);
-                    else if (sheetCategory && sheetItem)
-                      handleItemDelete(sheetCategory, sheetItem);
-                  }}
-                  disabled={isPending}
-                  className="h-12 rounded-2xl border border-[#D8D5C8] bg-white text-[13px] font-semibold text-[#B33A32] hover:border-[#B33A32]/30 hover:bg-[#FDECEA] hover:text-[#B33A32]"
-                >
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="mr-1.5 h-4 w-4" />}
-                  Delete
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    if (sheet.type === "view-category" && sheetCategory)
-                      startEditCategory(sheetCategory);
-                    else if (sheetCategory && sheetItem)
-                      startEditItem(sheetCategory, sheetItem);
-                  }}
-                  className="h-12 rounded-2xl border border-[#34451F] bg-white text-[13px] font-semibold text-[#34451F] hover:bg-[#E5EBD8] hover:text-[#34451F] active:scale-95"
-                >
-                  <Pencil className="mr-1.5 h-4 w-4" />
-                  Edit
-                </Button>
-              </div>
-            )}
+            <button
+              type="button"
+              onClick={() =>
+                setServeDrafts((prev) => [
+                  ...prev,
+                  { serve: nextUnusedServe(prev), amount: "" },
+                ])
+              }
+              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-2xl border border-admin-primary bg-admin-card text-[13px] font-semibold text-admin-primary hover:bg-admin-primary-soft"
+            >
+              <Plus className="h-4 w-4" />
+              Add serve
+            </button>
 
-            {sheet?.type === "edit-serves" && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={cancelServes}
-                  className="h-12 rounded-2xl border border-[#D8D5C8] bg-white text-[13px] font-semibold text-[#5E6654] hover:bg-[#ECE9DE]"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  onClick={applyServes}
-                  className="h-12 rounded-2xl bg-[#34451F] text-[13px] font-semibold text-white shadow-lg hover:bg-[#283719] active:scale-95"
-                >
-                  <Save className="mr-1.5 h-4 w-4" />
-                  Use these prices
-                </Button>
-              </div>
-            )}
-
-            {isEditing && (
-              <div className="grid grid-cols-2 gap-3">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={closeSheet}
-                  disabled={isPending}
-                  className="h-12 rounded-2xl border border-[#D8D5C8] bg-white text-[13px] font-semibold text-[#5E6654] hover:bg-[#ECE9DE]"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  form="menu-form"
-                  disabled={isPending}
-                  className="h-12 rounded-2xl bg-[#34451F] text-[13px] font-semibold text-white shadow-lg hover:bg-[#283719] active:scale-95"
-                >
-                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Save className="mr-1.5 h-4 w-4" />Save</>}
-                </Button>
-              </div>
-            )}
-          </div>
-          {ConfirmDialogUI}
-        </SheetContent>
-      </Sheet>
+            <div className="rounded-2xl border border-admin-line bg-admin-surface px-4 py-3">
+              <p className="text-[11px] font-semibold tracking-wide text-admin-muted">
+                Price will read
+              </p>
+              <p className="mt-1 text-[14px] font-bold text-admin-ink">
+                {formatPriceText(draftPrices(serveDrafts)) || "-"}
+              </p>
+            </div>
+          </form>
+        )}
+      </RecordSheet>
     </div>
-  );
-}
-
-function StatusPill({ active, compact }: { active: boolean; compact?: boolean }) {
-  const tone = active
-    ? "border-[#22613F]/30 bg-[#E7F3EC] text-[#22613F]"
-    : "border-[#B33A32]/30 bg-[#FDECEA] text-[#B33A32]";
-  if (compact) {
-    return (
-      <span
-        className={cn(
-          "shrink-0 rounded-full border px-1.5 py-0.5 text-[11px] font-semibold tracking-wide uppercase",
-          tone
-        )}
-      >
-        {active ? "Active" : "Inactive"}
-      </span>
-    );
-  }
-  return (
-    <span className={cn(SHEET_PILL, tone)}>
-      <span
-        className={cn(
-          "h-1.5 w-1.5 shrink-0 rounded-full sm:h-2 sm:w-2",
-          active ? "bg-[#22613F]" : "bg-[#B33A32]"
-        )}
-      />
-      {active ? "Active" : "Inactive"}
-    </span>
   );
 }
 
@@ -1144,13 +1072,13 @@ function StatusToggle({
       onClick={() => onChange(!value)}
       className="flex h-11 flex-1 items-center justify-end gap-2.5"
     >
-      <span className="text-[13px] font-semibold text-[#20231A]">
+      <span className="text-[13px] font-semibold text-admin-ink">
         {value ? "Active" : "Inactive"}
       </span>
       <span
         className={cn(
           "relative h-6.5 w-11 shrink-0 rounded-full transition-colors",
-          value ? "bg-[#34451F]" : "bg-[#DCD5C0]"
+          value ? "bg-admin-primary" : "bg-admin-line"
         )}
       >
         <span
@@ -1188,7 +1116,7 @@ function OrderField({
         aria-label="Display order"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
-        className="flex-1 bg-transparent text-right text-[13px] font-semibold text-[#20231A] outline-none tabular-nums"
+        className="flex-1 bg-transparent text-right text-[13px] font-semibold text-admin-ink outline-none tabular-nums"
       />
     );
   }
@@ -1199,7 +1127,7 @@ function OrderField({
       readOnly
       aria-label="Display order"
       value={resolved}
-      className="flex-1 cursor-not-allowed bg-transparent text-right text-[13px] font-semibold text-[#5E6654] opacity-60 outline-none tabular-nums"
+      className="flex-1 cursor-not-allowed bg-transparent text-right text-[13px] font-semibold text-admin-muted opacity-60 outline-none tabular-nums"
     />
   );
 }
@@ -1225,70 +1153,27 @@ function OrderHint({
 
   return (
     <div className="px-4 pt-0 pb-3">
-      <p className="text-[11px] font-medium text-[#5E6654]">{text}</p>
+      <p className="text-[11px] font-medium text-admin-muted">{text}</p>
     </div>
   );
 }
 
 function ChangeList({ changes }: { changes: ChangeDescription[] }) {
   return (
-    <ul className="divide-y divide-[#D8D5C8] overflow-hidden rounded-2xl border border-[#D8D5C8] bg-white">
+    <ul className="divide-y divide-admin-line overflow-hidden rounded-2xl border border-admin-line bg-admin-card">
       {changes.map((change) => (
         <li
           key={change.id}
           className="flex items-center justify-between gap-3 px-3 py-2"
         >
-          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[#20231A]">
+          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-admin-ink">
             {change.name}
           </span>
-          <span className="shrink-0 text-[12px] font-semibold text-[#5E6654] tabular-nums">
+          <span className="shrink-0 text-[12px] font-semibold text-admin-muted tabular-nums">
             {change.from} → {change.to}
           </span>
         </li>
       ))}
     </ul>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-start justify-between gap-4 border-b border-[#D8D5C8] px-4 py-2 last:border-0">
-      <span className="shrink-0 pt-0.5 text-[12px] font-bold text-[#5E6654]">
-        {label}
-      </span>
-      <span className="text-right text-[13px] font-semibold text-[#20231A]">
-        {value || "-"}
-      </span>
-    </div>
-  );
-}
-
-function FormRow({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
-  return (
-    <div className="flex items-center gap-2 px-4 py-2.5">
-      <div className="flex shrink-0 items-center gap-1.5 text-[#5E6654] opacity-60">
-        <span className="text-[11px] font-semibold tracking-wide whitespace-nowrap uppercase">{label}</span>
-        {required && <span className="text-[11px] font-semibold text-[#B33A32]">*</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function DetailCell({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-2 rounded-xl border border-[#D8D5C8] bg-white px-4 py-2.5">
-      <span className="shrink-0 text-[11px] font-semibold tracking-wide text-[#5E6654] uppercase opacity-60">{label}</span>
-      <span className="flex-1 text-right text-[13px] font-semibold break-all text-[#20231A]">{value}</span>
-    </div>
-  );
-}
-
-function ErrorBox({ message }: { message: string }) {
-  return (
-    <div className="flex items-start gap-2 rounded-xl border border-[#B33A32]/30 bg-[#FDECEA] p-3">
-      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#B33A32]" />
-      <p className="text-[13px] leading-snug font-semibold text-[#B33A32]">{message}</p>
-    </div>
   );
 }
