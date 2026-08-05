@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Trophy, Medal, Target, Users, Calendar, Hash, SearchX } from "lucide-react";
+import {
+  Trophy,
+  Medal,
+  Target,
+  Users,
+  Calendar,
+  Hash,
+  SearchX,
+  Mail,
+  User,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   useRecordSheet,
@@ -16,32 +26,48 @@ import {
   DetailCell,
 } from "@/components/admin";
 
-export type RawBookingScore = {
+type Related<T> = T | T[] | null;
+
+export type RawQuizBooking = {
   id: number;
-  score: number | null;
-  is_winner: boolean | null;
+  group_name: string | null;
+  contact_id: number | null;
+  status: string | null;
   created_at: string;
-  bookings: {
-    id: number;
-    group_name: string | null;
-  } | { id: number; group_name: string | null; }[] | null;
-  events: {
-    id: number;
-    title: string | null;
-    date: string;
-  } | { id: number; title: string | null; date: string; }[] | null;
+  contacts: Related<{ id: number; full_name: string | null; email: string | null }>;
+  events: Related<{ id: number; title: string | null; date: string | null }>;
+  booking_scores: Related<{ id: number; score: number | null; is_winner: boolean | null }>;
+};
+
+export type TeamBooking = {
+  bookingId: number;
+  eventTitle: string;
+  eventDate: string | null;
+  status: string;
+  score: number | null;
+  isWinner: boolean;
 };
 
 export type TeamStats = {
+  key: string;
   team_name: string;
+  contact_id: number | null;
+  contact_name: string | null;
+  contact_email: string | null;
   quizzes_attended: number;
   total_score: number;
   wins: number;
-  history: RawBookingScore[];
+  history: TeamBooking[];
 };
 
-function eventOf(record: RawBookingScore) {
-  return Array.isArray(record.events) ? record.events[0] : record.events;
+// Supabase joins come back as an array or an object depending on the query.
+function one<T>(value: Related<T>): T | undefined {
+  return (Array.isArray(value) ? value[0] : value) ?? undefined;
+}
+
+function many<T>(value: Related<T>): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
 }
 
 function formatEventDate(date?: string | null) {
@@ -58,46 +84,89 @@ function averageScore(team: TeamStats): string {
   return (team.total_score / team.quizzes_attended).toFixed(1);
 }
 
-export default function TeamsClient({ initialScores = [] }: { initialScores: RawBookingScore[] }) {
+function statusTone(status: string): "success" | "warning" | "error" | "neutral" {
+  if (status === "confirmed") return "success";
+  if (status === "waitlisted" || status === "pending") return "warning";
+  if (status === "cancelled") return "error";
+  return "neutral";
+}
+
+function toTitleCase(value: string) {
+  return value.charAt(0).toUpperCase() + value.slice(1).toLowerCase();
+}
+
+export default function TeamsClient({
+  initialBookings = [],
+}: {
+  initialBookings: RawQuizBooking[];
+}) {
   const [query, setQuery] = useState("");
 
+  // One team is one group name booking under one contact - the same name booked
+  // by two different people is two different teams.
   const teamLeaderboard = useMemo(() => {
-    const statsMap: Record<string, TeamStats> = {};
+    const statsMap = new Map<string, TeamStats>();
 
-    initialScores.forEach((record) => {
-      const booking = Array.isArray(record.bookings) ? record.bookings[0] : record.bookings;
+    initialBookings.forEach((booking) => {
+      const contact = one(booking.contacts);
+      const event = one(booking.events);
+      const scores = many(booking.booking_scores);
 
-      const teamName = booking?.group_name || "Unknown Team";
+      const teamName =
+        booking.group_name?.trim() || contact?.full_name?.trim() || "Unknown team";
+      const key = `${booking.contact_id ?? "none"}::${teamName.toLowerCase()}`;
 
-      if (!statsMap[teamName]) {
-        statsMap[teamName] = {
+      let team = statsMap.get(key);
+      if (!team) {
+        team = {
+          key,
           team_name: teamName,
+          contact_id: booking.contact_id,
+          contact_name: contact?.full_name?.trim() || null,
+          contact_email: contact?.email?.trim() || null,
           quizzes_attended: 0,
           total_score: 0,
           wins: 0,
           history: [],
         };
+        statsMap.set(key, team);
       }
 
-      statsMap[teamName].quizzes_attended += 1;
-      statsMap[teamName].total_score += record.score || 0;
-      if (record.is_winner) {
-        statsMap[teamName].wins += 1;
+      const status = booking.status?.trim().toLowerCase() || "confirmed";
+      const score = scores.reduce<number | null>(
+        (sum, row) => (row.score == null ? sum : (sum ?? 0) + row.score),
+        null,
+      );
+      const isWinner = scores.some((row) => row.is_winner);
+
+      // A cancelled booking is not a quiz they turned up to, so it stays in the
+      // history without counting towards the totals.
+      if (status !== "cancelled") {
+        team.quizzes_attended += 1;
+        team.total_score += score ?? 0;
+        if (isWinner) team.wins += 1;
       }
-      statsMap[teamName].history.push(record);
+
+      team.history.push({
+        bookingId: booking.id,
+        eventTitle: event?.title?.trim() || "Unnamed event",
+        eventDate: event?.date ?? null,
+        status,
+        score,
+        isWinner,
+      });
     });
 
-    return Object.values(statsMap).sort((a, b) => {
-      if (b.total_score !== a.total_score) {
-        return b.total_score - a.total_score;
-      }
-      return b.wins - a.wins;
+    return [...statsMap.values()].sort((a, b) => {
+      if (b.total_score !== a.total_score) return b.total_score - a.total_score;
+      if (b.wins !== a.wins) return b.wins - a.wins;
+      return a.team_name.localeCompare(b.team_name);
     });
-  }, [initialScores]);
+  }, [initialBookings]);
 
   const sheet = useRecordSheet<TeamStats>({
     records: teamLeaderboard,
-    getId: (record) => record.team_name,
+    getId: (record) => record.key,
   });
   const { selected } = sheet;
 
@@ -105,23 +174,25 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
   // board, so it is read before the search narrows anything.
   const rankOf = useMemo(() => {
     const ranks = new Map<string, number>();
-    teamLeaderboard.forEach((team, index) => ranks.set(team.team_name, index + 1));
+    teamLeaderboard.forEach((team, index) => ranks.set(team.key, index + 1));
     return ranks;
   }, [teamLeaderboard]);
 
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
     if (!needle) return teamLeaderboard;
-    return teamLeaderboard.filter((team) => team.team_name.toLowerCase().includes(needle));
+    return teamLeaderboard.filter((team) =>
+      [team.team_name, team.contact_name, team.contact_email].some((field) =>
+        field?.toLowerCase().includes(needle),
+      ),
+    );
   }, [teamLeaderboard, query]);
 
   const sortedHistory = useMemo(() => {
     if (!selected) return [];
-    return [...selected.history].sort((a, b) => {
-      const dateA = eventOf(a)?.date ?? "";
-      const dateB = eventOf(b)?.date ?? "";
-      return dateB.localeCompare(dateA);
-    });
+    return [...selected.history].sort((a, b) =>
+      (b.eventDate ?? "").localeCompare(a.eventDate ?? ""),
+    );
   }, [selected]);
 
   return (
@@ -129,8 +200,8 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
       {teamLeaderboard.length === 0 ? (
         <EmptyState
           icon={Target}
-          title="No team scores recorded yet"
-          description="Teams appear here once quiz scores have been entered"
+          title="No quiz teams yet"
+          description="Teams appear here once a quiz event has been booked"
         />
       ) : (
         <RecordList
@@ -142,7 +213,7 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
               value={query}
               onChange={setQuery}
               label="Search teams"
-              placeholder="Search by team name"
+              placeholder="Search by team, customer or email"
             />
           }
         >
@@ -156,11 +227,11 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
             </div>
           ) : (
             shown.map((team) => {
-              const rank = rankOf.get(team.team_name) ?? 0;
+              const rank = rankOf.get(team.key) ?? 0;
               const leading = rank === 1;
               return (
                 <ListRow
-                  key={team.team_name}
+                  key={team.key}
                   onClick={() => sheet.openView(team)}
                   status={
                     team.wins > 0 ? (
@@ -192,9 +263,13 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
 
                   {/* Fixed tracks so every column starts in the same place from
                       one row to the next, whatever a team is called. */}
-                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_14rem_9rem_7rem] sm:items-center sm:gap-3">
+                  <div className="min-w-0 flex-1 sm:grid sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_14rem_9rem] sm:items-center sm:gap-3">
                     <p className="min-w-0 truncate text-sm leading-snug font-semibold text-admin-ink">
                       {team.team_name}
+                    </p>
+
+                    <p className="mt-0.5 min-w-0 truncate text-[11px] font-medium text-admin-muted sm:mt-0 sm:text-[12px]">
+                      {team.contact_name || team.contact_email || "No customer on record"}
                     </p>
 
                     <div className="mt-0.5 flex items-center gap-2 sm:mt-0">
@@ -210,11 +285,6 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
                     <p className="hidden items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:flex">
                       <span className="sr-only">Average score</span>
                       <span className="tabular-nums">{averageScore(team)} avg</span>
-                    </p>
-
-                    <p className="hidden items-center gap-1.5 text-[11px] font-medium text-admin-muted sm:flex">
-                      <span className="sr-only">Rank</span>
-                      <span className="tabular-nums">Rank {rank}</span>
                     </p>
                   </div>
                 </ListRow>
@@ -255,8 +325,33 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
                 icon={<Users className="h-3.5 w-3.5" />}
               />
               <DetailCell
+                label="Booked by"
+                value={selected.contact_name || "-"}
+                icon={<User className="h-3.5 w-3.5" />}
+              />
+              <DetailCell
+                label="Email"
+                value={
+                  selected.contact_email ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="break-all">{selected.contact_email}</span>
+                      <a
+                        href={`mailto:${selected.contact_email}`}
+                        aria-label={`Email ${selected.contact_name ?? selected.team_name}`}
+                        title={`Email ${selected.contact_email}`}
+                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg text-admin-muted transition-colors hover:bg-admin-primary-soft hover:text-admin-primary"
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                      </a>
+                    </span>
+                  ) : (
+                    "-"
+                  )
+                }
+              />
+              <DetailCell
                 label="Rank"
-                value={`#${rankOf.get(selected.team_name) ?? "-"}`}
+                value={`#${rankOf.get(selected.key) ?? "-"}`}
                 icon={<Trophy className="h-3.5 w-3.5" />}
               />
               <DetailCell
@@ -279,43 +374,43 @@ export default function TeamsClient({ initialScores = [] }: { initialScores: Raw
 
             <div className="space-y-2.5">
               <p className="px-1 text-[11px] font-semibold tracking-wide text-admin-primary">
-                Event history ({sortedHistory.length})
+                Quiz history ({sortedHistory.length})
               </p>
 
-              {sortedHistory.length === 0 ? (
-                <DetailCard>
-                  <p className="px-4 py-6 text-center text-[12px] text-admin-muted sm:px-5">
-                    No events recorded for this team yet.
-                  </p>
-                </DetailCard>
-              ) : (
-                sortedHistory.map((record) => {
-                  const event = eventOf(record);
-                  return (
-                    <DetailCard key={record.id}>
-                      <div className="flex items-start justify-between gap-3 border-b border-admin-line px-4 py-2.5 sm:px-5 sm:py-3">
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-semibold text-admin-ink">
-                            {event?.title || "Unnamed event"}
-                          </p>
-                          <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-admin-muted">
-                            <Calendar className="h-3 w-3 shrink-0 opacity-60" aria-hidden="true" />
-                            <span className="tabular-nums">{formatEventDate(event?.date)}</span>
-                          </p>
-                        </div>
+              {sortedHistory.map((entry) => (
+                <DetailCard key={entry.bookingId}>
+                  <div className="flex items-start justify-between gap-3 border-b border-admin-line px-4 py-2.5 sm:px-5 sm:py-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-admin-ink">
+                        {entry.eventTitle}
+                      </p>
+                      <p className="mt-0.5 flex items-center gap-1.5 text-[11px] font-medium text-admin-muted">
+                        <Calendar className="h-3 w-3 shrink-0 opacity-60" aria-hidden="true" />
+                        <span className="tabular-nums">{formatEventDate(entry.eventDate)}</span>
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      <StatusPill tone={statusTone(entry.status)} showLabelOnMobile>
+                        {toTitleCase(entry.status)}
+                      </StatusPill>
+                      {entry.isWinner && (
                         <StatusPill
-                          tone={record.is_winner ? "success" : "neutral"}
-                          icon={record.is_winner ? <Trophy className="h-3 w-3" /> : undefined}
+                          tone="success"
+                          icon={<Trophy className="h-3 w-3" />}
                           showLabelOnMobile
                         >
-                          {record.is_winner ? "Winner" : "Participant"}
+                          Winner
                         </StatusPill>
-                      </div>
-                      <DetailCell label="Score" value={`${record.score || 0} pts`} dense />
-                    </DetailCard>
-                  );
-                })
-              )}
+                      )}
+                    </div>
+                  </div>
+                  <DetailCell
+                    label="Score"
+                    value={entry.score == null ? "Not scored" : `${entry.score} pts`}
+                    dense
+                  />
+                </DetailCard>
+              ))}
             </div>
           </div>
         )}
