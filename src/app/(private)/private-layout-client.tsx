@@ -33,7 +33,7 @@ import {
     QUIZ_HUB_HREF,
     QUIZ_NAV_ITEMS,
     SCHEDULE_HREF,
-    SETTINGS_NAV_ITEMS,
+    SETTINGS_NAV_GROUPS,
     isMarketTrendsPath,
     isQuizPath,
     isSchedulePath,
@@ -108,6 +108,17 @@ export default function PrivateLayoutClient({
     const [requestsOpen, setRequestsOpen] = useState(() => !!pathname && isRequestPath(pathname))
     const [quizOpen, setQuizOpen] = useState(() => !!pathname && isQuizPath(pathname))
     const [settingsOpen, setSettingsOpen] = useState(() => !!pathname && pathname.startsWith("/settings") && !isQuizPath(pathname))
+    /* Both groups start open, so nothing is hidden until you choose to hide it. */
+    const [openSettingsGroups, setOpenSettingsGroups] = useState<Set<string>>(
+        () => new Set(SETTINGS_NAV_GROUPS.map((group) => group.label))
+    )
+
+    const toggleSettingsGroup = (label: string) =>
+        setOpenSettingsGroups((prev) => {
+            const next = new Set(prev)
+            if (next.has(label)) { next.delete(label) } else { next.add(label) }
+            return next
+        })
 
     const initials = employeeName
         ? employeeName.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
@@ -165,7 +176,9 @@ export default function PrivateLayoutClient({
     ]
 
     const quizSubItems = QUIZ_NAV_ITEMS
-    const settingsSubItems = SETTINGS_NAV_ITEMS
+    /* Grouped the same way the settings hub is, so the sidebar and the page it
+       opens read as one list rather than two orderings of it. */
+    const settingsSubGroups = SETTINGS_NAV_GROUPS
 
     const getPageInfo = () => {
         if (!pathname) return { title: "Venue manager", subtitle: null, backHref: null, description: null }
@@ -581,23 +594,50 @@ export default function PrivateLayoutClient({
                                 )}
 
                                 {isSettings && settingsOpen && !collapsed && (
-                                    <div className="mt-1 ml-4 space-y-1 border-l border-nav-line pb-2 pl-2">
-                                        {settingsSubItems.map((sub) => {
-                                            const isSubActive = normalizedPathname === sub.href
+                                    <div className="mt-1 ml-4 space-y-2 border-l border-nav-line pb-2 pl-2">
+                                        {settingsSubGroups.map((group) => {
+                                            const groupOpen = openSettingsGroups.has(group.label)
+                                            const holdsCurrent = group.items.some((sub) => normalizedPathname === sub.href)
                                             return (
-                                                <Link
-                                                    key={sub.href}
-                                                    href={sub.href}
-                                                    className={cn(
-                                                        "flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[13px] font-medium transition-colors duration-200",
-                                                        isSubActive
-                                                            ? "border-nav-indicator bg-nav-selected text-nav-ink"
-                                                            : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
-                                                    )}
+                                            <div key={group.label} className="space-y-1">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSettingsGroup(group.label)}
+                                                    aria-expanded={groupOpen}
+                                                    className="flex w-full items-center gap-1.5 rounded-lg px-3 pt-1 pb-0.5 text-left text-[11px] font-semibold tracking-wide text-nav-muted/70 uppercase transition-colors hover:text-nav-ink"
                                                 >
-                                                    <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-nav-indicator" : "text-nav-muted")} />
-                                                    {sub.label}
-                                                </Link>
+                                                    <span className="min-w-0 flex-1 truncate">{group.label}</span>
+                                                    {/* A closed group holding the page you are on says so, rather
+                                                        than leaving the sidebar looking like nothing is selected. */}
+                                                    {!groupOpen && holdsCurrent && (
+                                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-nav-indicator" aria-hidden="true" />
+                                                    )}
+                                                    <ChevronDown
+                                                        className={cn(
+                                                            "h-3.5 w-3.5 shrink-0 transition-transform duration-200",
+                                                            groupOpen && "rotate-180"
+                                                        )}
+                                                    />
+                                                </button>
+                                                {groupOpen && group.items.map((sub) => {
+                                                    const isSubActive = normalizedPathname === sub.href
+                                                    return (
+                                                        <Link
+                                                            key={sub.href}
+                                                            href={sub.href}
+                                                            className={cn(
+                                                                "flex items-center gap-2.5 rounded-lg border-l-2 px-3 py-2 text-[13px] font-medium transition-colors duration-200",
+                                                                isSubActive
+                                                                    ? "border-nav-indicator bg-nav-selected text-nav-ink"
+                                                                    : "border-transparent text-nav-muted hover:bg-nav-selected hover:text-nav-ink"
+                                                            )}
+                                                        >
+                                                            <sub.icon className={cn("h-3.5 w-3.5", isSubActive ? "text-nav-indicator" : "text-nav-muted")} />
+                                                            {sub.label}
+                                                        </Link>
+                                                    )
+                                                })}
+                                            </div>
                                             )
                                         })}
                                     </div>
