@@ -66,6 +66,14 @@ type SubItem = {
     count?: number;
 };
 
+/* Dark ink on amber: white on amber-500 is about 2:1 at this size, which is
+   what made the counts hard to read. The parent badge is a shade darker than
+   the sub-item badges it totals up. */
+const COUNT_BADGE =
+    "flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 text-[11px] font-bold text-[#20231A] tabular-nums"
+const COUNT_BADGE_PARENT = "bg-amber-500"
+const COUNT_BADGE_SUB = "bg-amber-300"
+
 const REQUEST_PATHS = [
     "/requests",
     "/event-bookings/music-bookings",
@@ -470,10 +478,10 @@ export default function PrivateLayoutClient({
                                                 )}
 
                                                 {isRequests && pendingRequestsCount > 0 && (
-                                                    <span className={cn(
-                                                        "flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full px-1 text-[11px] font-semibold tabular-nums",
-                                                        isActive ? "bg-amber-400 text-[#20231A]" : "bg-amber-500 text-white"
-                                                    )}>
+                                                    <span
+                                                        title={`${pendingRequestsCount} pending`}
+                                                        className={cn(COUNT_BADGE, COUNT_BADGE_PARENT)}
+                                                    >
                                                         {badgeText}
                                                     </span>
                                                 )}
@@ -560,7 +568,10 @@ export default function PrivateLayoutClient({
                                                     )}
                                                     <span className="min-w-0 flex-1 truncate">{sub.label}</span>
                                                     {typeof sub.count === "number" && sub.count > 0 && (
-                                                        <span className="flex h-4.5 min-w-4.5 shrink-0 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-semibold text-white tabular-nums">
+                                                        <span
+                                                            title={`${sub.count} pending`}
+                                                            className={cn(COUNT_BADGE, COUNT_BADGE_SUB)}
+                                                        >
                                                             {sub.count > 99 ? "99+" : sub.count}
                                                         </span>
                                                     )}
@@ -775,7 +786,12 @@ export default function PrivateLayoutClient({
                                         <item.icon className="h-5.5 w-5.5" />
 
                                         {item.label === "Guests" && pendingRequestsCount > 0 && (
-                                            <span className="absolute -top-1 right-0 flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-amber-500 px-1 text-[11px] font-semibold text-white tabular-nums">
+                                            <span
+                                                title={`${pendingRequestsCount} pending`}
+                                                /* Ringed in the bar's own colour so it reads as a badge
+                                                   rather than part of the icon it sits over. */
+                                                className={cn(COUNT_BADGE, COUNT_BADGE_PARENT, "absolute -top-1 right-0 ring-2 ring-nav-bg")}
+                                            >
                                                 {badgeText}
                                             </span>
                                         )}
