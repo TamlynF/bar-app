@@ -9,7 +9,6 @@ import {
   Guitar,
   Image as ImageIcon,
   Medal,
-  Shapes,
   ShoppingBag,
   Scale,
   Sparkles,
@@ -80,16 +79,10 @@ export const SETTINGS_NAV_GROUPS: AdminNavGroup[] = [
     label: "Venue",
     items: [
       {
-        label: "Company info",
+        label: "Company Information",
         href: "/settings/company",
         icon: Building2,
-        description: "Business details and socials",
-      },
-      {
-        label: "Venue layout",
-        href: "/settings/venue",
-        icon: Shapes,
-        description: "Room shape, obstacles, fixtures",
+        description: "Business details, socials and venue layout",
       },
       {
         label: "Seating plan",
@@ -173,6 +166,7 @@ export const WIDE_PATHS: string[] = [
   "/event-bookings/music-bookings",
   "/event-bookings/private-bookings",
   "/marketing/trends",
+  "/settings/company",
   "/settings/users",
   "/settings/customers",
   "/settings/music-acts",

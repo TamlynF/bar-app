@@ -339,6 +339,8 @@ export default function PrivateLayoutClient({
             }
 
             const settingsMap: Record<string, string> = {
+                "company": "Company Information",
+                "venue": "Venue layout",
                 "tables": "Seating plan",
                 "customers": "Customers",
                 "users": "System users",

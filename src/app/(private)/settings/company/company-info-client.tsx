@@ -15,9 +15,12 @@ import {
   Quote,
   Highlighter,
   Share2,
+  Shapes,
+  ExternalLink,
   Image as ImageIcon,
 } from "lucide-react";
 import { SiInstagram, SiFacebook, SiYoutube, SiTiktok, SiX } from "react-icons/si";
+import Link from "next/link";
 import { updateCompanyInfo } from "./actions";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -25,7 +28,6 @@ import { toast } from "sonner";
 import {
   RecordSheet,
   DetailCard,
-  DetailCell,
   FormRow,
   ErrorBox,
   EmptyState,
@@ -59,6 +61,7 @@ interface CompanyInfo {
   max_capacity: number | null;
   private_hire_min_capacity: number | null;
   created_at?: string;
+  created_by?: number | null;
   updated_at?: string | null;
   updated_by?: number | null;
 }
@@ -72,7 +75,57 @@ const AREA_INPUT =
 const TIME_INPUT =
   "h-10 flex-1 rounded-xl border border-admin-line bg-admin-surface px-3 text-sm font-semibold text-admin-ink outline-none focus:border-admin-primary";
 const HINT = "text-[11px] font-medium text-admin-muted opacity-70";
+// A phone has to fit the label and the value on one line, so the value gives up
+// a point of type rather than wrapping.
+const VALUE_TEXT = "text-[12px] sm:text-sm";
 
+// Every fact on this page is a short one, so the rows run dense unless a field
+// is prose. The label column is a fixed width rather than shrink-to-fit, so a
+// left-aligned value starts in the same place whether its label is "Address" or
+// "Description".
+function Row({
+  icon,
+  label,
+  value,
+  multiline,
+  dense = true,
+  valueClassName,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+  multiline?: boolean;
+  dense?: boolean;
+  valueClassName?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex gap-3 border-b border-admin-line px-3 last:border-0 sm:px-5",
+        dense ? "py-1.5 sm:py-2" : "py-2.5 sm:py-3",
+        multiline ? "items-start" : "items-center",
+      )}
+    >
+      <div className="flex w-24 shrink-0 items-center gap-1.5 text-admin-muted opacity-70 sm:w-28">
+        {icon}
+        <span className="text-[11px] font-semibold tracking-wide">{label}</span>
+      </div>
+      <span
+        className={cn(
+          "flex-1 leading-snug font-semibold wrap-break-word text-admin-ink",
+          VALUE_TEXT,
+          multiline ? "text-left" : "text-right",
+          valueClassName,
+        )}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+// Matches the section headers on the event sheet: a filled admin-line bar with
+// the title in olive.
 function SectionCard({
   icon,
   title,
@@ -86,8 +139,8 @@ function SectionCard({
 }) {
   return (
     <DetailCard className={className}>
-      <div className="flex items-center gap-2 border-b border-admin-line px-4 py-2 sm:px-5 sm:py-3">
-        <span className="flex items-center gap-1.5 text-[11px] font-semibold tracking-wide text-admin-primary">
+      <div className="flex min-h-11 w-full items-center gap-2 border-b border-admin-line bg-admin-line px-4 py-2 sm:px-5">
+        <span className="flex items-center gap-1.5 text-[12px] font-bold text-admin-primary">
           {icon}
           {title}
         </span>
@@ -112,18 +165,110 @@ function linkValue(value: string | null, href?: string) {
   );
 }
 
-function socialHref(value: string | null, base: string) {
-  if (!value) return undefined;
-  if (value.startsWith("http")) return value;
-  return `${base}${value.replace("@", "")}`;
+type SocialKey = "instagram" | "facebook" | "twitter" | "tiktok" | "youtube";
+
+const SOCIAL_META: Record<
+  SocialKey,
+  { label: string; hosts: string[]; base: string; placeholder: string }
+> = {
+  instagram: {
+    label: "Instagram",
+    hosts: ["instagram.com"],
+    base: "https://instagram.com/",
+    placeholder: "donfenticas",
+  },
+  facebook: {
+    label: "Facebook",
+    hosts: ["facebook.com", "fb.com"],
+    base: "https://facebook.com/",
+    placeholder: "donfenticas",
+  },
+  twitter: {
+    label: "Twitter / X",
+    hosts: ["twitter.com", "x.com"],
+    base: "https://x.com/",
+    placeholder: "donfenticas",
+  },
+  tiktok: {
+    label: "TikTok",
+    hosts: ["tiktok.com"],
+    base: "https://tiktok.com/@",
+    placeholder: "donfenticas",
+  },
+  youtube: {
+    label: "YouTube",
+    hosts: ["youtube.com", "youtu.be"],
+    base: "https://youtube.com/",
+    placeholder: "donfenticas",
+  },
+};
+
+// A pasted profile URL and a typed handle mean the same account, so only the
+// part that identifies it is kept. What survives is what the link is rebuilt
+// from, which is also what the public site expects.
+function socialPath(raw: string | null | undefined, key: SocialKey): string {
+  let value = (raw ?? "").trim().replace(/[?#].*$/, "").replace(/\/+$/, "");
+  if (!value) return "";
+  value = value.replace(/^https?:\/\//i, "").replace(/^www\./i, "");
+  for (const host of SOCIAL_META[key].hosts) {
+    if (value.toLowerCase().startsWith(host)) {
+      value = value.slice(host.length);
+      break;
+    }
+  }
+  return value.replace(/^\/+/, "").replace(/^@/, "");
+}
+
+// A channel or page sitting under a path is not an @name, so only a bare
+// handle gets the prefix.
+function socialDisplay(path: string): string {
+  if (!path) return "";
+  return path.includes("/") ? path : `@${path}`;
+}
+
+function socialValue(raw: string | null, key: SocialKey) {
+  const path = socialPath(raw, key);
+  if (!path) return "-";
+  return linkValue(socialDisplay(path), `${SOCIAL_META[key].base}${path}`);
+}
+
+// Long copy on a phone pushes everything below it off the screen, so it opens
+// only when asked. There is room for all of it from sm up.
+function ClampedText({ text }: { text: string }) {
+  const [expanded, setExpanded] = useState(false);
+  const longEnoughToClamp = text.length > 170;
+
+  return (
+    <span className="block">
+      <span
+        className={cn(
+          "block whitespace-pre-line",
+          longEnoughToClamp && !expanded && "line-clamp-4 sm:line-clamp-none",
+        )}
+      >
+        {text}
+      </span>
+      {longEnoughToClamp && (
+        <button
+          type="button"
+          onClick={() => setExpanded((open) => !open)}
+          className="mt-1 text-[12px] font-semibold text-admin-primary underline underline-offset-2 sm:hidden"
+        >
+          {expanded ? "Show less" : "Show more"}
+        </button>
+      )}
+    </span>
+  );
 }
 
 export default function CompanyInfoClient({
   initialData,
   employees = [],
+  hasVenuePlan = false,
 }: {
   initialData: CompanyInfo | null;
   employees?: EmployeeOption[];
+  hasVenuePlan?: boolean;
 }) {
   const [isPending, startTransition] = useTransition();
   const [isEditing, setIsEditing] = useState(false);
@@ -141,11 +286,11 @@ export default function CompanyInfoClient({
     tagline_accent: record?.tagline_accent ?? "",
     description: record?.description ?? "",
     opening_hours: (record?.opening_hours ?? {}) as OpeningHours,
-    instagram: record?.instagram ?? "",
-    facebook: record?.facebook ?? "",
-    twitter: record?.twitter ?? "",
-    tiktok: record?.tiktok ?? "",
-    youtube: record?.youtube ?? "",
+    instagram: socialPath(record?.instagram, "instagram"),
+    facebook: socialPath(record?.facebook, "facebook"),
+    twitter: socialPath(record?.twitter, "twitter"),
+    tiktok: socialPath(record?.tiktok, "tiktok"),
+    youtube: socialPath(record?.youtube, "youtube"),
     max_capacity: record?.max_capacity?.toString() ?? "",
     private_hire_min_capacity: record?.private_hire_min_capacity?.toString() ?? "",
   });
@@ -154,6 +299,11 @@ export default function CompanyInfoClient({
 
   const update = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
+
+  // Typing is left alone; a pasted URL collapses to its handle once you leave
+  // the field, so what is stored is never a whole address.
+  const normaliseSocial = (key: SocialKey) =>
+    setForm((prev) => ({ ...prev, [key]: socialPath(prev[key], key) }));
 
   const updateHours = (day: string, field: "open" | "close", value: string) => {
     setForm((prev) => ({
@@ -193,11 +343,11 @@ export default function CompanyInfoClient({
     fd.set("tagline_accent", form.tagline_accent);
     fd.set("description", form.description);
     fd.set("opening_hours", JSON.stringify(form.opening_hours));
-    fd.set("instagram", form.instagram);
-    fd.set("facebook", form.facebook);
-    fd.set("twitter", form.twitter);
-    fd.set("tiktok", form.tiktok);
-    fd.set("youtube", form.youtube);
+    fd.set("instagram", socialPath(form.instagram, "instagram"));
+    fd.set("facebook", socialPath(form.facebook, "facebook"));
+    fd.set("twitter", socialPath(form.twitter, "twitter"));
+    fd.set("tiktok", socialPath(form.tiktok, "tiktok"));
+    fd.set("youtube", socialPath(form.youtube, "youtube"));
     fd.set("max_capacity", form.max_capacity);
     fd.set("private_hire_min_capacity", form.private_hire_min_capacity);
 
@@ -208,8 +358,14 @@ export default function CompanyInfoClient({
         setData({
           ...data,
           ...form,
+          instagram: socialPath(form.instagram, "instagram"),
+          facebook: socialPath(form.facebook, "facebook"),
+          twitter: socialPath(form.twitter, "twitter"),
+          tiktok: socialPath(form.tiktok, "tiktok"),
+          youtube: socialPath(form.youtube, "youtube"),
           max_capacity: parseInt(form.max_capacity) || null,
           private_hire_min_capacity: parseInt(form.private_hire_min_capacity) || null,
+          ...(res.audit ?? {}),
         });
         setIsEditing(false);
         toast.success("Company information saved");
@@ -266,62 +422,62 @@ export default function CompanyInfoClient({
   });
 
   return (
-    <div className="animate-in space-y-4 px-4 py-4 duration-500 fade-in sm:px-8 sm:py-0">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-base font-bold tracking-tight text-admin-ink">Company info</h2>
+    <div className="animate-in space-y-4 px-0 py-4 duration-500 fade-in sm:px-8 sm:py-0">
+      <div className="flex justify-end">
         <button
           type="button"
           onClick={openEdit}
-          className="inline-flex h-9 items-center rounded-xl border border-admin-primary px-4 text-[13px] font-semibold text-admin-primary transition-colors hover:bg-admin-primary-soft active:scale-95"
+          className="inline-flex h-11 items-center rounded-2xl border border-admin-primary bg-admin-card px-4 text-[13px] font-semibold tracking-wide text-admin-primary transition-colors hover:bg-admin-primary-soft hover:text-admin-primary active:scale-95"
         >
-          <Pencil className="mr-2 h-3.5 w-3.5" />
+          <Pencil className="mr-2 h-4 w-4" />
           Edit
         </button>
       </div>
 
-      <div className="grid items-start gap-4 lg:grid-cols-2">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)] lg:gap-8">
         <SectionCard icon={<Building2 className="h-3.5 w-3.5" />} title="Business details">
           {data.logo_url && (
-            <div className="flex items-center gap-3 border-b border-admin-line px-4 py-3 sm:px-5">
-              <span className="shrink-0 text-[11px] font-semibold tracking-wide text-admin-muted opacity-70">
-                Logo
-              </span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={data.logo_url}
-                alt="Company logo"
-                className="ml-auto h-12 w-auto max-w-40 rounded-xl object-contain"
-              />
-            </div>
+            <Row
+              dense={false}
+              icon={<ImageIcon className="h-3.5 w-3.5" />}
+              label="Logo"
+              value={
+                /* eslint-disable-next-line @next/next/no-img-element */
+                <img
+                  src={data.logo_url}
+                  alt="Company logo"
+                  className="ml-auto h-12 w-auto max-w-40 rounded-xl object-contain"
+                />
+              }
+            />
           )}
-          <DetailCell dense icon={<Building2 className="h-3.5 w-3.5" />} label="Name" value={data.name || "-"} />
-          <DetailCell dense icon={<Quote className="h-3.5 w-3.5" />} label="Tagline" value={data.tagline || "-"} />
-          <DetailCell
-            dense
+          <Row icon={<Building2 className="h-3.5 w-3.5" />} label="Name" value={data.name || "-"} />
+          <Row icon={<Quote className="h-3.5 w-3.5" />} label="Tagline" value={data.tagline || "-"} />
+          <Row
             icon={<Highlighter className="h-3.5 w-3.5" />}
             label="Accent word"
             value={data.tagline_accent || "-"}
           />
-          <DetailCell
+          <Row
+            dense={false}
             icon={<Building2 className="h-3.5 w-3.5" />}
             label="Description"
-            value={data.description || "-"}
+            value={data.description ? <ClampedText text={data.description} /> : "-"}
             multiline
           />
-          <DetailCell
+          <Row
+            dense={false}
             icon={<MapPin className="h-3.5 w-3.5" />}
             label="Address"
             value={data.address || "-"}
             multiline
           />
-          <DetailCell
-            dense
+          <Row
             icon={<Mail className="h-3.5 w-3.5" />}
             label="Email"
             value={linkValue(data.email, data.email ? `mailto:${data.email}` : undefined)}
           />
-          <DetailCell
-            dense
+          <Row
             icon={<Phone className="h-3.5 w-3.5" />}
             label="Phone"
             value={linkValue(data.phone, data.phone ? `tel:${data.phone}` : undefined)}
@@ -331,16 +487,15 @@ export default function CompanyInfoClient({
         <div className="space-y-4">
           <SectionCard icon={<Clock className="h-3.5 w-3.5" />} title="Opening hours">
             {listedDays.length === 0 ? (
-              <p className="px-4 py-4 text-[13px] font-medium text-admin-muted sm:px-5">
+              <p className={cn("px-3 py-4 font-semibold text-admin-muted sm:px-5", VALUE_TEXT)}>
                 No opening hours set.
               </p>
             ) : (
               listedDays.map((day) => {
                 const hours = openingHours[day];
                 return (
-                  <DetailCell
+                  <Row
                     key={day}
-                    dense
                     icon={<Clock className="h-3.5 w-3.5" />}
                     label={DAY_LABELS[day]}
                     value={`${hours?.open || "-"} - ${hours?.close || "-"}`}
@@ -352,53 +507,62 @@ export default function CompanyInfoClient({
           </SectionCard>
 
           <SectionCard icon={<Share2 className="h-3.5 w-3.5" />} title="Social media">
-            <DetailCell
-              dense
+            <Row
               icon={<SiInstagram className="h-3.5 w-3.5" />}
               label="Instagram"
-              value={linkValue(data.instagram, socialHref(data.instagram, "https://instagram.com/"))}
+              value={socialValue(data.instagram, "instagram")}
             />
-            <DetailCell
-              dense
+            <Row
               icon={<SiFacebook className="h-3.5 w-3.5" />}
               label="Facebook"
-              value={linkValue(data.facebook, socialHref(data.facebook, "https://facebook.com/"))}
+              value={socialValue(data.facebook, "facebook")}
             />
-            <DetailCell
-              dense
+            <Row
               icon={<SiX className="h-3.5 w-3.5" />}
               label="Twitter / X"
-              value={linkValue(data.twitter, socialHref(data.twitter, "https://x.com/"))}
+              value={socialValue(data.twitter, "twitter")}
             />
-            <DetailCell
-              dense
+            <Row
               icon={<SiTiktok className="h-3.5 w-3.5" />}
               label="TikTok"
-              value={linkValue(data.tiktok, socialHref(data.tiktok, "https://tiktok.com/@"))}
+              value={socialValue(data.tiktok, "tiktok")}
             />
-            <DetailCell
-              dense
+            <Row
               icon={<SiYoutube className="h-3.5 w-3.5" />}
               label="YouTube"
-              value={linkValue(data.youtube, socialHref(data.youtube, "https://youtube.com/"))}
+              value={socialValue(data.youtube, "youtube")}
             />
           </SectionCard>
 
           <SectionCard icon={<Users className="h-3.5 w-3.5" />} title="Capacity">
-            <DetailCell
-              dense
+            <Row
               icon={<Users className="h-3.5 w-3.5" />}
               label="Max capacity"
               value={data.max_capacity ? `${data.max_capacity} people` : "-"}
             />
-            <DetailCell
-              dense
+            <Row
               icon={<Users className="h-3.5 w-3.5" />}
-              label="Private hire min"
+              label="Min capacity"
               value={
                 data.private_hire_min_capacity
                   ? `${data.private_hire_min_capacity} people`
                   : "-"
+              }
+            />
+            <Row
+              icon={<Shapes className="h-3.5 w-3.5" />}
+              label="Venue layout"
+              value={
+                <Link
+                  href="/settings/venue"
+                  title="Open the venue layout planner"
+                  className="inline-flex items-center gap-1 text-admin-primary underline underline-offset-2 hover:opacity-70"
+                >
+                  {hasVenuePlan
+                    ? "Click to view venue plan..."
+                    : "Click to start planning..."}
+                  <ExternalLink className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                </Link>
               }
             />
           </SectionCard>
@@ -417,6 +581,7 @@ export default function CompanyInfoClient({
         onCancel={() => setIsEditing(false)}
         systemInfo={{
           createdAt: data.created_at,
+          createdBy: employeeName(data.created_by),
           updatedAt: data.updated_at,
           updatedBy: employeeName(data.updated_by),
         }}
@@ -612,51 +777,32 @@ export default function CompanyInfoClient({
             title="Social media"
             className="divide-y divide-admin-line/50"
           >
-            <FormRow label="Instagram">
-              <input
-                value={form.instagram}
-                onChange={(e) => update("instagram", e.target.value)}
-                aria-label="Instagram"
-                placeholder="@donfenticas"
-                className={FIELD_INPUT}
-              />
-            </FormRow>
-            <FormRow label="Facebook">
-              <input
-                value={form.facebook}
-                onChange={(e) => update("facebook", e.target.value)}
-                aria-label="Facebook"
-                placeholder="facebook.com/..."
-                className={FIELD_INPUT}
-              />
-            </FormRow>
-            <FormRow label="Twitter / X">
-              <input
-                value={form.twitter}
-                onChange={(e) => update("twitter", e.target.value)}
-                aria-label="Twitter or X"
-                placeholder="@handle"
-                className={FIELD_INPUT}
-              />
-            </FormRow>
-            <FormRow label="TikTok">
-              <input
-                value={form.tiktok}
-                onChange={(e) => update("tiktok", e.target.value)}
-                aria-label="TikTok"
-                placeholder="@handle"
-                className={FIELD_INPUT}
-              />
-            </FormRow>
-            <FormRow label="YouTube">
-              <input
-                value={form.youtube}
-                onChange={(e) => update("youtube", e.target.value)}
-                aria-label="YouTube"
-                placeholder="youtube.com/..."
-                className={FIELD_INPUT}
-              />
-            </FormRow>
+            {(Object.keys(SOCIAL_META) as SocialKey[]).map((key) => (
+              <FormRow key={key} label={SOCIAL_META[key].label}>
+                <div className="flex flex-1 items-center justify-end gap-0.5">
+                  {!form[key].includes("/") && (
+                    <span
+                      aria-hidden="true"
+                      className="text-sm font-semibold text-admin-muted/60"
+                    >
+                      @
+                    </span>
+                  )}
+                  <input
+                    value={form[key]}
+                    onChange={(e) => update(key, e.target.value)}
+                    onBlur={() => normaliseSocial(key)}
+                    aria-label={SOCIAL_META[key].label}
+                    placeholder={SOCIAL_META[key].placeholder}
+                    className="w-auto min-w-0 flex-1 bg-transparent text-right text-sm font-semibold text-admin-ink outline-none placeholder:text-admin-muted/40"
+                  />
+                </div>
+              </FormRow>
+            ))}
+            <p className={cn(HINT, "px-4 pb-3 sm:px-5")}>
+              Paste a profile link or type the handle - either way only the handle is
+              kept.
+            </p>
           </SectionCard>
 
           <SectionCard

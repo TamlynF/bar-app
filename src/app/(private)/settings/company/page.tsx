@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
 import CompanyInfoClient from "./company-info-client";
-import VenueEditorClient from "../venue/_components/venue-editor-client";
 import type { Feature, Fixture, Obstacle, RoomOutline } from "@/lib/floor-plan/types";
 
 export default async function CompanyInfoPage() {
@@ -15,20 +14,18 @@ export default async function CompanyInfoPage() {
     console.error("Error fetching company info:", error);
   }
 
+  const room = (data?.room_outline as RoomOutline | null) ?? null;
+  const hasVenuePlan =
+    (room?.points?.length ?? 0) >= 3 ||
+    ((data?.obstacles as Obstacle[] | null) ?? []).length > 0 ||
+    ((data?.fixtures as Fixture[] | null) ?? []).length > 0 ||
+    ((data?.features as Feature[] | null) ?? []).length > 0;
+
   return (
-    <div className="space-y-4">
-      <CompanyInfoClient initialData={data} employees={employees ?? []} />
-
-      <div className="mx-2 border-t border-[#D8D5C8] sm:mx-4" />
-
-      <VenueEditorClient
-        companyId={data?.id ?? null}
-        companyName={data?.name ?? null}
-        initialRoom={(data?.room_outline as RoomOutline | null) ?? null}
-        initialObstacles={(data?.obstacles as Obstacle[] | null) ?? []}
-        initialFixtures={(data?.fixtures as Fixture[] | null) ?? []}
-        initialFeatures={(data?.features as Feature[] | null) ?? []}
-      />
-    </div>
+    <CompanyInfoClient
+      initialData={data}
+      employees={employees ?? []}
+      hasVenuePlan={hasVenuePlan}
+    />
   );
 }
