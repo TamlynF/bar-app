@@ -176,6 +176,7 @@ export const WIDE_PATHS: string[] = [
   "/settings/specials",
   "/settings/price-rounds",
   "/event-setups/quiz-categories",
+  "/event-setups/quiz-leaderboards",
 ];
 
 export function isWidePath(pathname: string | null | undefined): boolean {

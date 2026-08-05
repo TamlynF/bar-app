@@ -99,7 +99,7 @@ export default async function QuizLeaderboardsPage({
 
   if (events.length === 0) {
     return (
-      <div className="mx-auto max-w-4xl px-2 py-2 sm:px-4 sm:py-0 md:px-6">
+      <div className="mx-auto w-full px-2 py-2 sm:px-4 sm:py-0 md:px-6">
         <EmptyState
           title="No quiz events yet"
           hint="Quiz events with at least one booked team will appear here, where you can record scores and see the standings."
@@ -113,7 +113,7 @@ export default async function QuizLeaderboardsPage({
   const eventLabel = selectedEvent.title || format(parseDate(selectedEvent.date), "dd MMM yyyy");
   const [teams, allTimeTeams] = await Promise.all([
     getEventTeams(selectedEventId),
-    getAllTimeLeaderboard(10),
+    getAllTimeLeaderboard(100),
   ]);
 
   const scored = teams.filter((t) => t.score != null).sort((a, b) => (b.score ?? 0) - (a.score ?? 0));
@@ -127,7 +127,7 @@ export default async function QuizLeaderboardsPage({
   const totalGuests = teams.reduce((sum, t) => sum + (t.groupSize ?? 0), 0);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 px-2 py-2 sm:px-4 sm:py-0 md:px-6">
+    <div className="mx-auto w-full space-y-4 px-2 py-2 sm:px-4 sm:py-0 md:px-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="font-black text-[10px] tracking-[0.2em] text-[#5E6654] uppercase">Leaderboard</p>
@@ -173,11 +173,7 @@ export default async function QuizLeaderboardsPage({
         </div>
       )}
 
-      <section className="space-y-2.5 pt-2">
-        <div className="flex items-center gap-2 px-0.5">
-          <Crown className="h-4 w-4 text-[#D4AF37]" />
-          <p className="font-black text-[10px] tracking-[0.2em] text-[#5E6654] uppercase">All-Time Standings</p>
-        </div>
+      <section className="pt-2">
         <AllTimeLeaderboard entries={allTimeTeams} />
       </section>
     </div>
